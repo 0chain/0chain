@@ -17,6 +17,7 @@ type RewardDelegate struct {
 	PoolID      string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
 	ProviderID  string        `json:"provider_id"`
 	RewardType  spenum.Reward `json:"reward_type"`
+	ChallengeID string        `json:"challenge_id"`
 }
 
 func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round int64) error {
@@ -29,6 +30,7 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 				PoolID:      poolId,
 				ProviderID:  sp.ID,
 				RewardType:  sp.RewardType,
+				ChallengeID: sp.ChallengeID,
 			}
 			drs = append(drs, dr)
 		}
@@ -39,6 +41,7 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 				PoolID:      poolId,
 				ProviderID:  sp.ID,
 				RewardType:  sp.RewardType,
+				ChallengeID: sp.ChallengeID,
 			}
 			drs = append(drs, dp)
 		}
@@ -72,4 +75,103 @@ func (edb *EventDb) GetDelegateRewards(limit common.Pagination, PoolId string, s
 			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
 		}).Scan(&rds).Error
+}
+
+func (edb *EventDb) GetDelegateChallengeRewardsByID(challengeID string) []RewardDelegate {
+
+	var rds []RewardDelegate
+	edb.Get().Where("challenge_id = ? AND reward_type IN (6, 8)", challengeID).Find(&rds)
+
+	return rds
+}
+
+func (edb *EventDb) GetSumOfRewardsByRewardType(rewardType string) int64 {
+
+	var rds []RewardDelegate
+
+	var sum int64
+	edb.Get().Where("reward_type = ?", rewardType).Find(&rds)
+
+	for _, rp := range rds {
+		f, _ := rp.Amount.Int64()
+		sum += f
+	}
+
+	return sum
+}
+
+func (edb *EventDb) RunWhereQueryInDelegateRewards(query string) []RewardDelegate {
+
+	var rds []RewardDelegate
+
+	edb.Get().Where(query).Find(&rds)
+
+	return rds
+}
+
+func (edb *EventDb) GetAllDelegateChallengeRewards() []RewardDelegate {
+
+	var rds []RewardDelegate
+	edb.Get().Where("reward_type IN (0, 6, 8, 9, 10)").Find(&rds)
+
+	return rds
+}
+
+func (edb *EventDb) GetBlockRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber string) []RewardDelegate {
+
+	if blockNumber != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number = ? AND reward_type IN (?)", blockNumber, spenum.BlockRewardBlobber).Find(&rds)
+
+		return rds
+	}
+
+	if startBlockNumber != "" && endBlockNumber != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number >= ? AND block_number <= ? AND reward_type IN (?)", startBlockNumber, endBlockNumber, spenum.BlockRewardBlobber).Find(&rds)
+
+		return rds
+	}
+
+	return nil
+
+}
+
+func (edb *EventDb) GetReadRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber string) []RewardDelegate {
+
+	if blockNumber != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number = ? AND reward_type IN (?)", blockNumber, spenum.FileDownloadReward).Find(&rds)
+
+		return rds
+	}
+
+	if startBlockNumber != "" && endBlockNumber != "" {
+		var rds []RewardDelegate
+		edb.Get().Where("block_number >= ? AND block_number <= ? AND reward_type IN (?)", startBlockNumber, endBlockNumber, spenum.FileDownloadReward).Find(&rds)
+
+		return rds
+	}
+
+	return nil
+
+}
+
+func (edb *EventDb) GetChallengeRewardsToDelegates(challengeID string) ([]RewardDelegate, []RewardDelegate) {
+
+	var blobberRewards []RewardDelegate
+	edb.Get().Where("challenge_id = ? AND reward_type IN (?)", challengeID, spenum.ChallengePassReward).Find(&blobberRewards)
+
+	var validatorRewards []RewardDelegate
+	edb.Get().Where("challenge_id = ? AND reward_type IN (?)", challengeID, spenum.ValidationReward).Find(&validatorRewards)
+
+	return blobberRewards, validatorRewards
+}
+
+func (edb *EventDb) GetAllocationCancellationRewardsToDelegates(startBlock, endBlock string) []RewardDelegate {
+
+	var rps []RewardDelegate
+	edb.Get().Where("block_number >= ? AND block_number <= ? AND reward_type IN (?)", startBlock, endBlock, spenum.CancellationChargeReward).Find(&rps)
+
+	return rps
 }

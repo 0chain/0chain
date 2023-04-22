@@ -28,6 +28,19 @@ type Challenge struct {
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 }
 
+func (edb *EventDb) CleanDataFromChallengesAndRewardProviders() error {
+	if err := edb.Store.Get().Delete(&Challenge{}).Error; err != nil {
+		return err
+	}
+	return edb.Store.Get().Delete(&RewardProvider{}).Error
+}
+
+func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
+	var chs Challenges
+	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{AllocationID: allocationID}).Find(&chs)
+	return chs, result.Error
+}
+
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	var ch Challenge
 
@@ -81,7 +94,7 @@ func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	var (
 		challengeIdList []string
 		respondedList   []bool
-		passedList   	[]bool
+		passedList      []bool
 	)
 
 	for _, ch := range chs {
