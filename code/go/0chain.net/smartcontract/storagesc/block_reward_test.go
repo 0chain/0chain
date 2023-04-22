@@ -237,8 +237,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		serviceCharge:     []float64{.1},
 	}
 	caseResult := result{
-		blobberRewards:          []currency.Coin{50},
-		blobberDelegatesRewards: [][]currency.Coin{{113, 0, 337}},
+		blobberRewards:          []currency.Coin{100},
+		blobberDelegatesRewards: [][]currency.Coin{{226, 0, 674}},
 	}
 	tests = append(tests, TestCase{
 		name:    "Only one blobber in the partition",
