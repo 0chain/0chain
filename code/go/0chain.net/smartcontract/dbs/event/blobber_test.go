@@ -5,11 +5,15 @@ import (
 	"testing"
 
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/stakepool/spenum"
+	"gorm.io/gorm/clause"
 
 	"go.uber.org/zap"
 
 	"github.com/0chain/common/core/logging"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,6 +54,120 @@ func TestUpdateBlobber(t *testing.T) {
 	compareBlobbers(t, blobber1, *b1)
 	compareBlobbers(t, blobber2, *b2)
 
+}
+
+func TestEventDb_blobberSpecificRevenue(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	err := edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Create([]Blobber{
+		{
+			Provider: Provider{
+				ID:                "B000",
+			},
+			BaseURL: "https://blobber.zero",
+			TotalStorageIncome: 0,
+			TotalReadIncome:   0,
+			TotalSlashedStake: 0,
+		},
+		{
+			Provider: Provider{
+				ID:                "B001",
+			},
+			BaseURL: "https://blobber.one",
+			TotalStorageIncome: 0,
+			TotalReadIncome:   0,
+			TotalSlashedStake: 0,
+		},
+		{
+			Provider: Provider{
+				ID:                "B002",
+			},
+			BaseURL: "https://blobber.two",
+			TotalStorageIncome: 0,
+			TotalReadIncome:   0,
+			TotalSlashedStake: 0,
+		},
+		{
+			Provider: Provider{
+				ID:                "B003",
+			},
+			BaseURL: "https://blobber.three",
+			TotalStorageIncome: 0,
+			TotalReadIncome:   0,
+			TotalSlashedStake: 0,
+		},
+	}).Error
+	require.NoError(t, err)
+	
+	spus := []dbs.StakePoolReward{
+		{
+			// Shouldn't affect anybody
+			ProviderID: dbs.ProviderID{
+				ID: "B000",
+				Type: spenum.Blobber,
+			},
+			Reward: 10,
+			RewardType: spenum.BlockRewardBlobber,
+		},
+		{
+			// Storage income : blobber one
+			ProviderID: dbs.ProviderID{
+				ID: "B001",
+				Type: spenum.Blobber,
+			},
+			Reward: 20,
+			RewardType: spenum.ChallengePassReward,
+		},
+		{
+			// Read income : blobber two
+			ProviderID: dbs.ProviderID{
+				ID: "B002",
+				Type: spenum.Blobber,
+			},
+			Reward: 30,
+			RewardType: spenum.FileDownloadReward,
+		},
+		{
+			// Slashed stake : blobber three
+			ProviderID: dbs.ProviderID{
+				ID: "B003",
+				Type: spenum.Blobber,
+			},
+			Reward: 40,
+			RewardType: spenum.ChallengeSlashPenalty,
+		},
+	}
+
+	var (
+		blobbersBefore []Blobber
+		blobbersAfter  []Blobber
+	)
+
+	err = edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Order("id ASC").Find(&blobbersBefore).Error
+	require.NoError(t, err)
+
+	err = edb.blobberSpecificRevenue(spus)
+	require.NoError(t, err)
+
+	err = edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Order("id ASC").Find(&blobbersAfter).Error
+	require.NoError(t, err)
+
+	assert.Equal(t, blobbersBefore[0].TotalStorageIncome, blobbersAfter[0].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[0].TotalReadIncome, blobbersAfter[0].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[0].TotalSlashedStake, blobbersAfter[0].TotalSlashedStake)
+
+	assert.Equal(t, blobbersBefore[1].TotalStorageIncome + 20, blobbersAfter[1].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[1].TotalReadIncome, blobbersAfter[1].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[1].TotalSlashedStake, blobbersAfter[1].TotalSlashedStake)
+
+	assert.Equal(t, blobbersBefore[2].TotalStorageIncome, blobbersAfter[2].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[2].TotalReadIncome + 30, blobbersAfter[2].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[2].TotalSlashedStake, blobbersAfter[2].TotalSlashedStake)
+
+	assert.Equal(t, blobbersBefore[3].TotalStorageIncome, blobbersAfter[3].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[3].TotalReadIncome, blobbersAfter[3].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[3].TotalSlashedStake + 40, blobbersAfter[3].TotalSlashedStake)
 }
 
 func compareBlobbers(t *testing.T, b1, b2 Blobber) {

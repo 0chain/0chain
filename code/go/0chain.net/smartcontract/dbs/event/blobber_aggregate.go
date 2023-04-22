@@ -25,6 +25,9 @@ type BlobberAggregate struct {
 	TotalStake          currency.Coin `json:"total_stake"`
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
 	TotalRewards        currency.Coin `json:"total_rewards"`
+	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
+	TotalReadIncome	 	currency.Coin `json:"total_read_income"`
+	TotalSlashedStake	currency.Coin `json:"total_slashed_stake"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
@@ -149,6 +152,9 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+		aggregate.TotalStorageIncome = (old.TotalStorageIncome + current.TotalStorageIncome) / 2
+		aggregate.TotalReadIncome = (old.TotalReadIncome + current.TotalReadIncome) / 2
+		aggregate.TotalSlashedStake = (old.TotalSlashedStake + current.TotalSlashedStake) / 2
 		aggregate.Downtime = current.Downtime
 		
 		aggregate.ChallengesPassed = current.ChallengesPassed

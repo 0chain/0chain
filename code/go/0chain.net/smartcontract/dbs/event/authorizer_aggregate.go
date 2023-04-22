@@ -19,6 +19,8 @@ type AuthorizerAggregate struct {
 	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
+	TotalMint     currency.Coin `json:"total_mint"`
+	TotalBurn     currency.Coin `json:"total_burn"`
 	ServiceCharge float64       `json:"service_charge"`
 }
 
@@ -145,11 +147,15 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
+
+		aggregate.TotalMint = (old.TotalMint + current.TotalMint) / 2
+		aggregate.TotalBurn = (old.TotalBurn + current.TotalBurn) / 2
 		aggregate.Fee = (old.Fee + current.Fee) / 2
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
 		gsDiff.TotalStaked += int64(current.TotalStake - old.TotalStake)
+		gsDiff.TotalMint += int64(current.TotalMint - old.TotalMint)
 
 		oldAuthorizersProcessingMap[current.ID] = processingEntity
 	}

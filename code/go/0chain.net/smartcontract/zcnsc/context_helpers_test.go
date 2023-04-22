@@ -279,16 +279,20 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		event.TypeStats,
 		event.TagAddBridgeMint,
 		mock.AnythingOfType("string"),
-		mock.AnythingOfType("*event.User"),
+		mock.AnythingOfType("*event.BridgeMint"),
 	).Run(
 		func(args mock.Arguments) {
 			userId, ok := args.Get(2).(string)
 			if !ok {
 				panic("failed to convert to user id")
 			}
-			user, ok := args.Get(3).(*event.User)
+			bm, ok := args.Get(3).(*event.BridgeMint)
 			if !ok {
 				panic("failed to convert to get user")
+			}
+			user := &event.User{
+				UserID:    bm.UserID,
+				MintNonce: bm.MintNonce,
 			}
 			if user.UserID != userId {
 				panic("user id must be equal to the id given as a param")
@@ -296,7 +300,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 
 			err := ctx.eventDb.Get().Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "user_id"}},
-				DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce", "mint_nonce"}),
+				DoUpdates: clause.AssignmentColumns([]string{"mint_nonce"}),
 			}).Create(user).Error
 			if err != nil {
 				panic(err)
