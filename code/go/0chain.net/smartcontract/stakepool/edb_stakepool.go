@@ -1,12 +1,9 @@
 package stakepool
 
 import (
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
-	"0chain.net/smartcontract/dbs"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
@@ -43,8 +40,6 @@ func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Rew
 		challengeID = ""
 	}
 	spu.ChallengeID = challengeID
-
-	logging.Logger.Debug("jayashNewStakePoolReward", zap.Any("spu", spu))
 
 	return &spu
 }
