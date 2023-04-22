@@ -692,7 +692,7 @@ func TestGetBlockReward(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			reward, err := getBlockReward(br, test.currentRound, brChangePeriod, brChangeRatio, blobberWeight)
+			reward, err := getBlockReward(br, test.currentRound, brChangePeriod, brChangeRatio)
 			compareResult(t, test.result, result{reward, err})
 		})
 	}
