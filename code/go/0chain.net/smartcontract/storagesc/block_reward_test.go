@@ -110,8 +110,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 		totalWeight := blobber1Weight + blobber2Weight
 
-		blobber1TotalReward := (blobber1Weight / totalWeight) * 500
-		blobber2TotalReward := (blobber2Weight / totalWeight) * 500
+		blobber1TotalReward := (blobber1Weight / totalWeight) * 1000
+		blobber2TotalReward := (blobber2Weight / totalWeight) * 1000
 
 		blobber1Reward := blobber1TotalReward * serviceCharge1
 		blobber2Reward := blobber2TotalReward * serviceCharge2
@@ -645,7 +645,6 @@ func TestGetBlockReward(t *testing.T) {
 	br, _ := currency.Float64ToCoin(800000)
 	brChangePeriod := int64(10000)
 	brChangeRatio := 0.1
-	blobberWeight := 0.5
 
 	type result struct {
 		reward currency.Coin
@@ -662,7 +661,7 @@ func TestGetBlockReward(t *testing.T) {
 		changeBalance := 1 - brChangeRatio
 		changePeriods := currentRound / brChangePeriod
 
-		factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
+		factor := math.Pow(changeBalance, float64(changePeriods))
 		result, _ := currency.MultFloat64(br, factor)
 		return result
 	}
