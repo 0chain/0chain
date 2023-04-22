@@ -3,6 +3,8 @@ package stakepool
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs"
 
@@ -26,13 +28,24 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 	}
 }
 
-func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, options ...string) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ID = pId
 	spu.Type = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
+
+	var challengeID string
+	if len(options) > 0 {
+		challengeID = options[0]
+	} else {
+		challengeID = ""
+	}
+	spu.ChallengeID = challengeID
+
+	logging.Logger.Debug("jayashNewStakePoolReward", zap.Any("spu", spu))
+
 	return &spu
 }
 
@@ -56,5 +69,6 @@ func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolRe
 		Reward:          spu.Reward,
 		DelegateRewards: spu.DelegateRewards,
 		RewardType:      spu.RewardType,
+		ChallengeID:     spu.ChallengeID,
 	}
 }

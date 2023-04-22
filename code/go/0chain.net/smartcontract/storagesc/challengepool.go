@@ -95,6 +95,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	validators []datastore.Key,
 	vSPs []*stakePool,
 	balances cstate.StateContextI,
+	options ...string,
 ) error {
 	if len(validators) == 0 || reward == 0 {
 		return nil // nothing to move, or nothing to move to
@@ -109,8 +110,15 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 		return err
 	}
 
+	var challengeID string
+	if len(options) > 0 {
+		challengeID = options[0]
+	} else {
+		challengeID = ""
+	}
+
 	for i, sp := range vSPs {
-		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances)
+		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances, challengeID)
 		if err != nil {
 			return fmt.Errorf("moving to validator %s: %v",
 				validators[i], err)
@@ -118,7 +126,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 	}
 	if bal > 0 {
 		for i := 0; i < int(bal); i++ {
-			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, spenum.ValidationReward, balances)
+			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, spenum.ValidationReward, balances, challengeID)
 			if err != nil {
 				return fmt.Errorf("moving to validator %s: %v",
 					validators[i], err)
@@ -134,6 +142,7 @@ func (cp *challengePool) moveToBlobbers(sscKey string, reward currency.Coin,
 	blobberId datastore.Key,
 	sp *stakePool,
 	balances cstate.StateContextI,
+	options ...string,
 ) error {
 
 	if reward == 0 {
@@ -144,7 +153,13 @@ func (cp *challengePool) moveToBlobbers(sscKey string, reward currency.Coin,
 		return fmt.Errorf("not enough tokens in challenge pool: %v < %v", cp.Balance, reward)
 	}
 
-	err := sp.DistributeRewards(reward, blobberId, spenum.Blobber, spenum.ChallengePassReward, balances)
+	challengeID := ""
+
+	if len(options) > 0 {
+		challengeID = options[0]
+	}
+
+	err := sp.DistributeRewards(reward, blobberId, spenum.Blobber, spenum.ChallengePassReward, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
