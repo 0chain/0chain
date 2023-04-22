@@ -50,6 +50,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 			"cannot get block rewards: "+err.Error())
 	}
 
+	fmt.Println("bbr", bbr)
+
 	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
