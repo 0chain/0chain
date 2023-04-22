@@ -44,8 +44,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	bbr, err := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
-		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio,
-		conf.BlockReward.BlobberWeight)
+		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio)
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get block rewards: "+err.Error())
@@ -255,15 +254,14 @@ func getBlockReward(
 	br currency.Coin,
 	currentRound,
 	brChangePeriod int64,
-	brChangeRatio,
-	blobberWeight float64) (currency.Coin, error) {
+	brChangeRatio float64) (currency.Coin, error) {
 	if brChangeRatio <= 0 || brChangeRatio >= 1 {
 		return 0, fmt.Errorf("unexpected block reward change ratio: %f", brChangeRatio)
 	}
 	changeBalance := 1 - brChangeRatio
 	changePeriods := currentRound / brChangePeriod
 
-	factor := math.Pow(changeBalance, float64(changePeriods)) * blobberWeight
+	factor := math.Pow(changeBalance, float64(changePeriods))
 	return currency.MultFloat64(br, factor)
 }
 

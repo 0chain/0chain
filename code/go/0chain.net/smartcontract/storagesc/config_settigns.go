@@ -34,9 +34,7 @@ const (
 	MaxMint Setting = iota
 	TimeUnit
 	MinAllocSize
-	MinAllocDuration
 	MaxChallengeCompletionTime
-	MinOfferDuration
 	MinBlobberCapacity
 
 	ReadPoolMinLock
@@ -51,7 +49,6 @@ const (
 	FreeAllocationDataShards
 	FreeAllocationParityShards
 	FreeAllocationSize
-	FreeAllocationDuration
 	FreeAllocationReadPriceRangeMin
 	FreeAllocationReadPriceRangeMax
 	FreeAllocationWritePriceRangeMin
@@ -66,19 +63,12 @@ const (
 	MaxReadPrice
 	MaxWritePrice
 	MinWritePrice
-	FailedChallengesToCancel
-	FailedChallengesToRevokeMinLock
 	ChallengeEnabled
-	ChallengeGenerationRate
-	MaxChallengesPerGeneration
 	ValidatorsPerChallenge
 	MaxDelegates
 
 	BlockRewardBlockReward
 	BlockRewardQualifyingStake
-	BlockRewardSharderWeight
-	BlockRewardMinerWeight
-	BlockRewardBlobberWeight
 	BlockRewardGammaAlpha
 	BlockRewardGammaA
 	BlockRewardGammaB
@@ -148,9 +138,7 @@ func initSettingName() {
 	SettingName[MaxMint] = "max_mint"
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
-	SettingName[MinAllocDuration] = "min_alloc_duration"
 	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
-	SettingName[MinOfferDuration] = "min_offer_duration"
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
 	SettingName[WritePoolMinLock] = "writepool.min_lock"
@@ -162,7 +150,6 @@ func initSettingName() {
 	SettingName[FreeAllocationDataShards] = "free_allocation_settings.data_shards"
 	SettingName[FreeAllocationParityShards] = "free_allocation_settings.parity_shards"
 	SettingName[FreeAllocationSize] = "free_allocation_settings.size"
-	SettingName[FreeAllocationDuration] = "free_allocation_settings.duration"
 	SettingName[FreeAllocationReadPriceRangeMin] = "free_allocation_settings.read_price_range.min"
 	SettingName[FreeAllocationReadPriceRangeMax] = "free_allocation_settings.read_price_range.max"
 	SettingName[FreeAllocationWritePriceRangeMin] = "free_allocation_settings.write_price_range.min"
@@ -175,18 +162,11 @@ func initSettingName() {
 	SettingName[MaxReadPrice] = "max_read_price"
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
-	SettingName[FailedChallengesToCancel] = "failed_challenges_to_cancel"
-	SettingName[FailedChallengesToRevokeMinLock] = "failed_challenges_to_revoke_min_lock"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
-	SettingName[ChallengeGenerationRate] = "challenge_rate_per_mb_min"
-	SettingName[MaxChallengesPerGeneration] = "max_challenges_per_generation"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
 	SettingName[MaxDelegates] = "max_delegates"
 	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
 	SettingName[BlockRewardQualifyingStake] = "block_reward.qualifying_stake"
-	SettingName[BlockRewardSharderWeight] = "block_reward.sharder_ratio"
-	SettingName[BlockRewardMinerWeight] = "block_reward.miner_ratio"
-	SettingName[BlockRewardBlobberWeight] = "block_reward.blobber_ratio"
 	SettingName[BlockRewardGammaAlpha] = "block_reward.gamma.alpha"
 	SettingName[BlockRewardGammaA] = "block_reward.gamma.a"
 	SettingName[BlockRewardGammaB] = "block_reward.gamma.b"
@@ -209,7 +189,7 @@ func initSettingName() {
 	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
 	SettingName[CostChallengeRequest] = "cost.challenge_request"
 	SettingName[CostChallengeResponse] = "cost.challenge_response"
-	SettingName[CostGenerateChallenges] = "cost.generate_challenges"
+	SettingName[CostGenerateChallenges] = "cost.generate_challenge"
 	SettingName[CostAddValidator] = "cost.add_validator"
 	SettingName[CostUpdateValidatorSettings] = "cost.update_validator_settings"
 	SettingName[CostAddBlobber] = "cost.add_blobber"
@@ -237,9 +217,7 @@ func initSettings() {
 		MaxMint.String():                          {MaxMint, smartcontract.CurrencyCoin},
 		TimeUnit.String():                         {TimeUnit, smartcontract.Duration},
 		MinAllocSize.String():                     {MinAllocSize, smartcontract.Int64},
-		MinAllocDuration.String():                 {MinAllocDuration, smartcontract.Duration},
 		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, smartcontract.Duration},
-		MinOfferDuration.String():                 {MinOfferDuration, smartcontract.Duration},
 		MinBlobberCapacity.String():               {MinBlobberCapacity, smartcontract.Int64},
 		ReadPoolMinLock.String():                  {ReadPoolMinLock, smartcontract.CurrencyCoin},
 		WritePoolMinLock.String():                 {WritePoolMinLock, smartcontract.CurrencyCoin},
@@ -251,7 +229,6 @@ func initSettings() {
 		FreeAllocationDataShards.String():         {FreeAllocationDataShards, smartcontract.Int},
 		FreeAllocationParityShards.String():       {FreeAllocationParityShards, smartcontract.Int},
 		FreeAllocationSize.String():               {FreeAllocationSize, smartcontract.Int64},
-		FreeAllocationDuration.String():           {FreeAllocationDuration, smartcontract.Duration},
 		FreeAllocationReadPriceRangeMin.String():  {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
 		FreeAllocationReadPriceRangeMax.String():  {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
 		FreeAllocationWritePriceRangeMin.String(): {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
@@ -264,18 +241,11 @@ func initSettings() {
 		MaxReadPrice.String():                     {MaxReadPrice, smartcontract.CurrencyCoin},
 		MaxWritePrice.String():                    {MaxWritePrice, smartcontract.CurrencyCoin},
 		MinWritePrice.String():                    {MinWritePrice, smartcontract.CurrencyCoin},
-		FailedChallengesToCancel.String():         {FailedChallengesToCancel, smartcontract.Int},
-		FailedChallengesToRevokeMinLock.String():  {FailedChallengesToRevokeMinLock, smartcontract.Int},
 		ChallengeEnabled.String():                 {ChallengeEnabled, smartcontract.Boolean},
-		ChallengeGenerationRate.String():          {ChallengeGenerationRate, smartcontract.Float64},
-		MaxChallengesPerGeneration.String():       {MaxChallengesPerGeneration, smartcontract.Int},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, smartcontract.Int},
 		MaxDelegates.String():                     {MaxDelegates, smartcontract.Int},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
 		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
-		BlockRewardSharderWeight.String():         {BlockRewardSharderWeight, smartcontract.Float64},
-		BlockRewardMinerWeight.String():           {BlockRewardMinerWeight, smartcontract.Float64},
-		BlockRewardBlobberWeight.String():         {BlockRewardBlobberWeight, smartcontract.Float64},
 		BlockRewardGammaAlpha.String():            {BlockRewardGammaAlpha, smartcontract.Float64},
 		BlockRewardGammaA.String():                {BlockRewardGammaA, smartcontract.Float64},
 		BlockRewardGammaB.String():                {BlockRewardGammaB, smartcontract.Float64},
@@ -380,14 +350,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.FreeAllocationSettings.DataShards = change
 	case FreeAllocationParityShards:
 		conf.FreeAllocationSettings.ParityShards = change
-	case FailedChallengesToCancel:
-		conf.FailedChallengesToCancel = change
-	case FailedChallengesToRevokeMinLock:
-		conf.FailedChallengesToRevokeMinLock = change
 	case MaxBlobbersPerAllocation:
 		conf.MaxBlobbersPerAllocation = change
-	case MaxChallengesPerGeneration:
-		conf.MaxChallengesPerGeneration = change
 	case ValidatorsPerChallenge:
 		conf.ValidatorsPerChallenge = change
 	case MaxDelegates:
@@ -475,23 +439,6 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.StakePool.KillSlash = change
 	case BlobberSlash:
 		conf.BlobberSlash = change
-	case ChallengeGenerationRate:
-		conf.ChallengeGenerationRate = change
-	case BlockRewardSharderWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
-		}
-		conf.BlockReward.SharderWeight = change
-	case BlockRewardMinerWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
-		}
-		conf.BlockReward.MinerWeight = change
-	case BlockRewardBlobberWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
-		}
-		conf.BlockReward.BlobberWeight = change
 	case BlockRewardGammaAlpha:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
@@ -532,19 +479,13 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 	switch Settings[key].setting {
 	case TimeUnit:
 		conf.TimeUnit = change
-	case MinAllocDuration:
-		conf.MinAllocDuration = change
 	case MaxChallengeCompletionTime:
 		conf.MaxChallengeCompletionTime = change
-	case MinOfferDuration:
-		conf.MinOfferDuration = change
 	case StakePoolMinLockPeriod:
 		if conf.StakePool == nil {
 			conf.StakePool = &stakePoolConfig{}
 		}
 		conf.StakePool.MinLockPeriod = change
-	case FreeAllocationDuration:
-		conf.FreeAllocationSettings.Duration = change
 	case HealthCheckPeriod:
 		conf.HealthCheckPeriod = change
 	default:
@@ -663,12 +604,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.TimeUnit
 	case MinAllocSize:
 		return conf.MinAllocSize
-	case MinAllocDuration:
-		return conf.MinAllocDuration
 	case MaxChallengeCompletionTime:
 		return conf.MaxChallengeCompletionTime
-	case MinOfferDuration:
-		return conf.MinOfferDuration
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:
@@ -689,8 +626,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.FreeAllocationSettings.ParityShards
 	case FreeAllocationSize:
 		return conf.FreeAllocationSettings.Size
-	case FreeAllocationDuration:
-		return conf.FreeAllocationSettings.Duration
 	case HealthCheckPeriod:
 		return conf.HealthCheckPeriod
 	case FreeAllocationReadPriceRangeMin:
@@ -717,16 +652,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxWritePrice
 	case MinWritePrice:
 		return conf.MinWritePrice
-	case FailedChallengesToCancel:
-		return conf.FailedChallengesToCancel
-	case FailedChallengesToRevokeMinLock:
-		return conf.FailedChallengesToRevokeMinLock
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
-	case ChallengeGenerationRate:
-		return conf.ChallengeGenerationRate
-	case MaxChallengesPerGeneration:
-		return conf.MaxChallengesPerGeneration
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
@@ -735,12 +662,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.BlockReward
 	case BlockRewardQualifyingStake:
 		return conf.BlockReward.QualifyingStake
-	case BlockRewardSharderWeight:
-		return conf.BlockReward.SharderWeight
-	case BlockRewardMinerWeight:
-		return conf.BlockReward.MinerWeight
-	case BlockRewardBlobberWeight:
-		return conf.BlockReward.BlobberWeight
 	case BlockRewardGammaAlpha:
 		return conf.BlockReward.Gamma.Alpha
 	case BlockRewardGammaA:

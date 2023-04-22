@@ -123,7 +123,7 @@ func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, err
 func (edb *EventDb) updateValidators(validators []Validator) error {
 	updateFields := []string{
 		"base_url", "public_key", "total_stake",
-		"unstake_total", "min_stake", "max_stake",
+		"unstake_total",
 		"delegate_wallet", "num_delegates",
 		"service_charge",
 	}
@@ -168,7 +168,7 @@ func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag
 func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorUnStakeTotal, Validator{
 		Provider: Provider{
-			ID:         ID,
+			ID:           ID,
 			UnstakeTotal: totalUntake},
 	}
 }

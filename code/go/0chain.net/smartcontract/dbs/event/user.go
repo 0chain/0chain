@@ -118,7 +118,3 @@ func withPayedFeesMerged() eventMergeMiddleware {
 func mergeAddUsersEvents() *eventsMergerImpl[User] {
 	return newEventsMerger[User](TagAddOrOverwriteUser, withUniqueEventOverwrite())
 }
-
-func mergeAddBridgeMintEvents() *eventsMergerImpl[User] {
-	return newEventsMerger[User](TagAddBridgeMint, withUniqueEventOverwrite())
-}

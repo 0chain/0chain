@@ -30,6 +30,7 @@ type ZCNSConfig struct {
 	MinMintAmount      currency.Coin  `json:"min_mint"`
 	MinBurnAmount      currency.Coin  `json:"min_burn"`
 	MinStakeAmount     currency.Coin  `json:"min_stake"`
+	MaxStakeAmount     currency.Coin  `json:"max_stake"`
 	MinLockAmount      currency.Coin  `json:"min_lock"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
@@ -88,6 +89,15 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
 			gn.MinStakeAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
+		case MaxStakeAmount:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
+			}
+			gn.MaxStakeAmount, err = currency.ParseZCN(amount)
 			if err != nil {
 				return err
 			}
@@ -161,6 +171,8 @@ func (gn *GlobalNode) Validate() error {
 	switch {
 	case gn.MinStakeAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.MinStakeAmount))
+	case gn.MaxStakeAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("max stake amount (%v) is less than 1", gn.MaxStakeAmount))
 	case gn.MinMintAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.MinMintAmount))
 	case gn.MaxFee < 1:
