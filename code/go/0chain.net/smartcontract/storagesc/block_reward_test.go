@@ -652,7 +652,6 @@ func TestGetBlockReward(t *testing.T) {
 	}
 
 	compareResult := func(t *testing.T, expected, actual result) {
-		fmt.Println("expected", expected.reward, "actual", actual.reward)
 		require.Equal(t, expected.err, actual.err)
 		require.Equal(t, expected.reward, actual.reward)
 	}
