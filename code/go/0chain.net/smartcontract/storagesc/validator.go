@@ -246,8 +246,6 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 		return fmt.Errorf("invalid new stake pool settings:  %v", err)
 	}
 
-	sp.Settings.MinStake = inputValidator.StakePoolSettings.MinStake
-	sp.Settings.MaxStake = inputValidator.StakePoolSettings.MaxStake
 	sp.Settings.ServiceChargeRatio = inputValidator.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = inputValidator.StakePoolSettings.MaxNumDelegates
 

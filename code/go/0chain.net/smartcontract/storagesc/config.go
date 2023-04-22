@@ -21,13 +21,12 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type freeAllocationSettings struct {
-	DataShards       int           `json:"data_shards"`
-	ParityShards     int           `json:"parity_shards"`
-	Size             int64         `json:"size"`
-	Duration         time.Duration `json:"duration"`
-	ReadPriceRange   PriceRange    `json:"read_price_range"`
-	WritePriceRange  PriceRange    `json:"write_price_range"`
-	ReadPoolFraction float64       `json:"read_pool_fraction"`
+	DataShards       int        `json:"data_shards"`
+	ParityShards     int        `json:"parity_shards"`
+	Size             int64      `json:"size"`
+	ReadPriceRange   PriceRange `json:"read_price_range"`
+	WritePriceRange  PriceRange `json:"write_price_range"`
+	ReadPoolFraction float64    `json:"read_pool_fraction"`
 }
 
 type stakePoolConfig struct {
@@ -50,7 +49,6 @@ type blockReward struct {
 	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
 	SharderWeight           float64          `json:"sharder_weight"`
 	MinerWeight             float64          `json:"miner_weight"`
-	BlobberWeight           float64          `json:"blobber_weight"`
 	TriggerPeriod           int64            `json:"trigger_period"`
 	Gamma                   blockRewardGamma `json:"gamma"`
 	Zeta                    blockRewardZeta  `json:"zeta"`
@@ -66,29 +64,6 @@ type blockRewardZeta struct {
 	I  float64 `json:"i"`
 	K  float64 `json:"k"`
 	Mu float64 `json:"mu"`
-}
-
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bRatio float64) error {
-	total := sharderRatio + minerRatio + bRatio
-	if total == 0 {
-		br.SharderWeight = 0
-		br.MinerWeight = 0
-		br.BlobberWeight = 0
-	} else {
-		br.SharderWeight = sharderRatio / total
-		br.MinerWeight = minerRatio / total
-		br.BlobberWeight = bRatio / total
-	}
-
-	totalWeight := br.SharderWeight + br.MinerWeight + br.BlobberWeight
-	switch totalWeight {
-	case 0:
-	case 1:
-		return nil
-	default:
-		return fmt.Errorf("total weight is not 1: %v", totalWeight)
-	}
-	return nil
 }
 
 func newConfig() *Config {
@@ -115,13 +90,8 @@ type Config struct {
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
-	// MinAllocDuration is minimum possible duration of an
-	// allocation allowed by the SC.
-	MinAllocDuration time.Duration `json:"min_alloc_duration"`
 	// MaxChallengeCompletionTime is max time to complete a challenge.
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
-	// MinOfferDuration represents lower boundary of blobber's MaxOfferDuration.
-	MinOfferDuration time.Duration `json:"min_offer_duration"`
 	// MinBlobberCapacity allowed to register in the SC.
 	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
 	// ReadPool related configurations.
@@ -151,15 +121,6 @@ type Config struct {
 
 	// allocation cancellation
 	CancellationCharge float64 `json:"cancellation_charge"`
-
-	// FailedChallengesToCancel is number of failed challenges of an allocation
-	// to be able to cancel an allocation.
-	FailedChallengesToCancel int `json:"failed_challenges_to_cancel"`
-	// FailedChallengesToRevokeMinLock is number of failed challenges of a
-	// blobber to revoke its min_lock demand back to user; only part not
-	// paid yet can go back.
-	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
-
 	// free allocations
 	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation"`
 	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation"`
@@ -169,15 +130,9 @@ type Config struct {
 
 	// ChallengeEnabled is challenges generating pin.
 	ChallengeEnabled bool `json:"challenge_enabled"`
-	// MaxChallengesPerGeneration is max number of challenges can be generated
-	// at once for a blobber-allocation pair with size difference for the
-	// moment of the generation.
-	MaxChallengesPerGeneration int `json:"max_challenges_per_generation"`
 	// ValidatorsPerChallenge is the number of validators to select per
 	// challenges.
 	ValidatorsPerChallenge int `json:"validators_per_challenge"`
-	// ChallengeGenerationRate is number of challenges generated for a MB/min.
-	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
@@ -220,20 +175,12 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
 			conf.MinBlobberCapacity)
 	}
-	if conf.MinOfferDuration < 0 {
-		return fmt.Errorf("negative min_offer_duration: %v",
-			conf.MinOfferDuration)
-	}
 	if conf.MaxChallengeCompletionTime < 0 {
 		return fmt.Errorf("negative max_challenge_completion_time: %v",
 			conf.MaxChallengeCompletionTime)
 	}
 	if conf.HealthCheckPeriod <= 0 {
 		return fmt.Errorf("non-positive health check period: %v", conf.HealthCheckPeriod)
-	}
-	if conf.MinAllocDuration < 0 {
-		return fmt.Errorf("negative min_alloc_duration: %v",
-			conf.MinAllocDuration)
 	}
 	if conf.MinAllocSize < 0 {
 		return fmt.Errorf("negative min_alloc_size: %v", conf.MinAllocSize)
@@ -259,10 +206,6 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("negative free_allocation_settings.size: %v",
 			conf.FreeAllocationSettings.Size)
 	}
-	if conf.FreeAllocationSettings.Duration <= 0 {
-		return fmt.Errorf("negative free_allocation_settings.expiration_date: %v",
-			conf.FreeAllocationSettings.Duration)
-	}
 	if !conf.FreeAllocationSettings.ReadPriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.read_price_range: %v",
 			conf.FreeAllocationSettings.ReadPriceRange)
@@ -275,28 +218,10 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
 			conf.FreeAllocationSettings.ReadPoolFraction)
 	}
-
-	if conf.FailedChallengesToCancel < 0 {
-		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
-			conf.FailedChallengesToCancel)
-	}
-	if conf.FailedChallengesToRevokeMinLock < 0 {
-		return fmt.Errorf("negative failed_challenges_to_revoke_min_lock: %v",
-			conf.FailedChallengesToRevokeMinLock)
-	}
-	if conf.MaxChallengesPerGeneration <= 0 {
-		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
-			conf.MaxChallengesPerGeneration)
-	}
 	if conf.ValidatorsPerChallenge <= 0 {
 		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
 			conf.ValidatorsPerChallenge)
 	}
-	if conf.ChallengeGenerationRate < 0 {
-		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
-			conf.ChallengeGenerationRate)
-	}
-
 	if conf.MaxStake < conf.MinStake {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", conf.MinStake,
 			conf.MaxStake)
@@ -319,10 +244,6 @@ func (conf *Config) validate() (err error) {
 	if conf.BlockReward.MinerWeight < 0 {
 		return fmt.Errorf("negative block_reward.miner_weight: %v",
 			conf.BlockReward.MinerWeight)
-	}
-	if conf.BlockReward.BlobberWeight < 0 {
-		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
-			conf.BlockReward.BlobberWeight)
 	}
 	if len(conf.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
@@ -420,10 +341,8 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
-	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
 	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
-	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
@@ -473,7 +392,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
-	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
 
 	readPriceRangeMin, err := currency.MultFloat64(1e10, scc.GetFloat64(fas+"read_price_range.min"))
 	if err != nil {
@@ -506,19 +424,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
 
-	// allocation cancellation
-	conf.FailedChallengesToCancel = scc.GetInt(
-		pfx + "failed_challenges_to_cancel")
-	conf.FailedChallengesToRevokeMinLock = scc.GetInt(
-		pfx + "failed_challenges_to_revoke_min_lock")
 	// challenges generating
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
-	conf.MaxChallengesPerGeneration = scc.GetInt(
-		pfx + "max_challenges_per_generation")
 	conf.ValidatorsPerChallenge = scc.GetInt(
 		pfx + "validators_per_challenge")
-	conf.ChallengeGenerationRate = scc.GetFloat64(
-		pfx + "challenge_rate_per_mb_min")
 
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
@@ -535,11 +444,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
-	err = conf.BlockReward.setWeightsFromRatio(
-		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
-		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
-		scc.GetFloat64(pfx+"block_reward.blobber_ratio"),
-	)
 	if err != nil {
 		return nil, err
 	}

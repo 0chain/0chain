@@ -100,8 +100,6 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.Allocated = 0
 	sn.LastHealthCheck = 0
 	sn.StakePoolSettings.MaxNumDelegates = 100
-	sn.StakePoolSettings.MinStake = 0
-	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
 	sn.StakePoolSettings.DelegateWallet = c.id
 	return mustEncode(t, &sn)
@@ -121,8 +119,6 @@ func (c *Client) addValidatorRequest(t testing.TB) []byte {
 	vn.ProviderType = spenum.Validator
 	vn.BaseURL = getValidatorURL(c.id)
 	vn.StakePoolSettings.MaxNumDelegates = 100
-	vn.StakePoolSettings.MinStake = 0
-	vn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &vn)
 }
 
@@ -330,10 +326,9 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 }
 
 var avgTerms = Terms{
-	ReadPrice:        1 * x10,
-	WritePrice:       5 * x10,
-	MinLockDemand:    0.1,
-	MaxOfferDuration: 1 * time.Hour,
+	ReadPrice:     1 * x10,
+	WritePrice:    5 * x10,
+	MinLockDemand: 0.1,
 }
 
 // add allocation and 20 blobbers
@@ -363,7 +358,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		blobs = append(blobs, b)
 	}
 
-	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
+	var resp, err = nar.callNewAllocReq(t, client.id, 1000*x10, ssc, now,
 		balances)
 	require.NoError(t, err)
 
@@ -385,17 +380,11 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf = newConfig()
 
-	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = 1 * time.Minute // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
-	conf.ChallengeGenerationRate = 1
-	conf.MaxChallengesPerGeneration = 100
 	conf.ValidatorsPerChallenge = 10
 	conf.MaxBlobbersPerAllocation = 10
-	conf.FailedChallengesToCancel = 100
-	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
-	conf.MinAllocDuration = 1 * time.Minute
-	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
@@ -426,7 +415,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		BlockRewardChangePeriod: 1000,
 		BlockRewardChangeRatio:  0.1,
 		TriggerPeriod:           30,
-		BlobberWeight:           0.5,
 		Gamma: blockRewardGamma{
 			Alpha: 0.2,
 			A:     10,

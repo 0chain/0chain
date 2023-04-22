@@ -263,7 +263,7 @@ func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, erro
 	return s, nil
 }
 
-//TestGenerateCompressionTrainingData - generate the training data for compression
+// TestGenerateCompressionTrainingData - generate the training data for compression
 func TestGenerateCompressionTrainingData(t *testing.T) {
 	if err := os.MkdirAll("/tmp/txn/data/", 0700); err != nil {
 		t.Fatal(err)
@@ -295,7 +295,9 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		txn := wf.CreateSendTransaction(wt.ClientID, value, "", 0)
+		txn := wf.CreateSendTransaction(wt.ClientID, value, "", func(transaction2 *transaction.Transaction) currency.Coin {
+			return 0
+		})
 		data := common.ToMsgpack(txn)
 		err = ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
 		if err != nil {
