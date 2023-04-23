@@ -403,3 +403,20 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 		time.Sleep(HEALTH_CHECK_TIMER)
 	}
 }
+
+func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
+
+	var (
+		timer = time.NewTimer(24 * time.Hour)
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			logging.Logger.Info("TrackTransactionErrors")
+		}
+		timer = time.NewTimer(time.Hour * 24)
+	}
+}

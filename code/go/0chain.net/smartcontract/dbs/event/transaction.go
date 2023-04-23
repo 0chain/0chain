@@ -29,6 +29,26 @@ type Transaction struct {
 	Status            int           `json:"status"`
 }
 
+type TransactionErrors struct {
+	model.ImmutableModel
+	Hash              string        `json:"hash" gorm:"uniqueIndex:idx_thash"`
+	BlockHash         string        `json:"block_hash" gorm:"index:idx_tblock_hash"`
+	Round             int64         `json:"round"`
+	Version           string        `json:"version"`
+	ClientId          string        `json:"client_id" gorm:"index:idx_tclient_id"`
+	ToClientId        string        `json:"to_client_id" gorm:"index:idx_tto_client_id"`
+	TransactionData   string        `json:"transaction_data"`
+	Value             currency.Coin `json:"value"`
+	Signature         string        `json:"signature"`
+	CreationDate      int64         `json:"creation_date"  gorm:"index:idx_tcreation_date"`
+	Fee               currency.Coin `json:"fee"`
+	Nonce             int64         `json:"nonce"`
+	TransactionType   int           `json:"transaction_type"`
+	TransactionOutput string        `json:"transaction_output"`
+	OutputHash        string        `json:"output_hash"`
+	Status            int           `json:"status"`
+}
+
 func (edb *EventDb) addTransactions(txns []Transaction) error {
 	return edb.Store.Get().Create(&txns).Error
 }

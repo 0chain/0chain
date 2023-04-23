@@ -1022,6 +1022,58 @@ ALTER TABLE public.transactions_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 
+
+
+--
+-- Name: transaction_errors; Type: TABLE; Schema: public; Owner: zchain_user
+--
+
+CREATE TABLE public.transaction_errors (
+                                     id bigint NOT NULL,
+                                     created_at timestamp with time zone,
+                                     hash text,
+                                     block_hash text,
+                                     round bigint,
+                                     version text,
+                                     client_id text,
+                                     to_client_id text,
+                                     transaction_data text,
+                                     value bigint,
+                                     signature text,
+                                     creation_date bigint,
+                                     fee bigint,
+                                     nonce bigint,
+                                     transaction_type bigint,
+                                     transaction_output text,
+                                     output_hash text,
+                                     status bigint
+);
+
+
+ALTER TABLE public.transaction_errors OWNER TO zchain_user;
+
+--
+-- Name: transaction_errors_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
+--
+
+CREATE SEQUENCE public.transaction_errors_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.transaction_errors_id_seq OWNER TO zchain_user;
+
+--
+-- Name: transaction_errors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
+--
+
+ALTER SEQUENCE public.transaction_errors_id_seq OWNED BY public.transaction_errors.id;
+
+
+
 --
 -- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user
 --
