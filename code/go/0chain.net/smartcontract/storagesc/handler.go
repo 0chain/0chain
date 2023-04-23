@@ -230,7 +230,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 	var creationDate = balances.Now()
-	dur := common.ToTime(creationDate).Add(conf.FreeAllocationSettings.Duration)
+	dur := common.ToTime(creationDate).Add(conf.TimeUnit)
 	request := allocationBlobbersRequest{
 		DataShards:      conf.FreeAllocationSettings.DataShards,
 		ParityShards:    conf.FreeAllocationSettings.ParityShards,
@@ -334,7 +334,6 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		return nil, fmt.Errorf("can't get config: %v", err)
 	}
 
-	var creationDate = balances.Now()
 	var numberOfBlobbers = request.DataShards + request.ParityShards
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
@@ -348,9 +347,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 
 	var allocationSize = bSize(request.Size, request.DataShards)
 
-	dur := common.ToTime(request.Expiration).Sub(common.ToTime(creationDate))
 	allocation := event.AllocationQuery{
-		MaxOfferDuration: dur,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
@@ -372,7 +369,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
-		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max), zap.Int64("MaxOfferDuration", allocation.MaxOfferDuration.Nanoseconds()),
+		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max),
 		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Float64("AllocationSizeInGB", allocation.AllocationSizeInGB),
 		zap.Int64("last_health_check", int64(balances.Now())),
 	)
@@ -1261,11 +1258,9 @@ type validatorNodeResponse struct {
 	IsShutdown      bool             `json:"is_shutdown"`
 
 	// StakePoolSettings
-	DelegateWallet string        `json:"delegate_wallet"`
-	MinStake       currency.Coin `json:"min_stake"`
-	MaxStake       currency.Coin `json:"max_stake"`
-	NumDelegates   int           `json:"num_delegates"`
-	ServiceCharge  float64       `json:"service_charge"`
+	DelegateWallet string  `json:"delegate_wallet"`
+	NumDelegates   int     `json:"num_delegates"`
+	ServiceCharge  float64 `json:"service_charge"`
 
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
@@ -1279,8 +1274,6 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 		UnstakeTotal:             v.UnstakeTotal,
 		PublicKey:                v.PublicKey,
 		DelegateWallet:           v.DelegateWallet,
-		MinStake:                 v.MinStake,
-		MaxStake:                 v.MaxStake,
 		NumDelegates:             v.NumDelegates,
 		ServiceCharge:            v.ServiceCharge,
 		UncollectedServiceCharge: v.Rewards.Rewards,
@@ -1643,6 +1636,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		return
 	}
 
+	//TODO use maximum blobber price instead, so we need not to select blobbers here, but estimate the maximum price of blobbers combined
 	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
@@ -2163,18 +2157,15 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			Longitude: blobber.Longitude,
 		},
 		Terms: Terms{
-			ReadPrice:        blobber.ReadPrice,
-			WritePrice:       blobber.WritePrice,
-			MinLockDemand:    blobber.MinLockDemand,
-			MaxOfferDuration: time.Duration(blobber.MaxOfferDuration),
+			ReadPrice:     blobber.ReadPrice,
+			WritePrice:    blobber.WritePrice,
+			MinLockDemand: blobber.MinLockDemand,
 		},
 		Capacity:        blobber.Capacity,
 		Allocated:       blobber.Allocated,
 		LastHealthCheck: blobber.LastHealthCheck,
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     blobber.DelegateWallet,
-			MinStake:           blobber.MinStake,
-			MaxStake:           blobber.MaxStake,
 			MaxNumDelegates:    blobber.NumDelegates,
 			ServiceChargeRatio: blobber.ServiceCharge,
 		},
@@ -2450,8 +2441,8 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	}
 	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
-		err := common.NewErrInternal("missing blobber: " + blobberID)
-		common.Respond(w, r, nil, err)
+		logging.Logger.Error("get blobber failed with error: ", zap.Error(err))
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 

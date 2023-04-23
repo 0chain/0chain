@@ -263,7 +263,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 		5, 10, 15, 20, 30, 100,
 	} {
 
-		conf.MaxChallengesPerGeneration = mcpg
 		mustSave(b, scConfigKey(ADDRESS), conf, balances)
 
 		b.Run(fmt.Sprintf("max chall per gen %d", mcpg), func(b *testing.B) {

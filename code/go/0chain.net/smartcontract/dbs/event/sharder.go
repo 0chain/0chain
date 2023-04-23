@@ -196,14 +196,13 @@ type SharderQuery struct {
 	DelegateWallet    null.String
 	ServiceCharge     null.Float
 	NumberOfDelegates null.Int
-	MinStake          null.Int
-	MaxStake          null.Int
 	LastHealthCheck   null.Int
 	Rewards           null.Int
 	Fees              null.Int
 	Active            null.Bool
 	Longitude         null.Int
 	Latitude          null.Int
+	IsKilled          null.Bool
 }
 
 func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, p common2.Pagination) ([]Sharder, error) {
@@ -264,7 +263,7 @@ func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 func NewUpdateSharderTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateSharderTotalUnStake, Sharder{
 		Provider: Provider{
-			ID:         ID,
+			ID:           ID,
 			UnstakeTotal: unstakeTotal,
 		},
 	}
