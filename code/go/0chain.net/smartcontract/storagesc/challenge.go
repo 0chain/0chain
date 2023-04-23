@@ -124,6 +124,8 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		challengeID = options[0]
 	}
 
+	logging.Logger.Debug("Challenge ID for blobber reward", zap.String("challenge_id", challengeID))
+
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
@@ -198,7 +200,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -723,6 +725,8 @@ func (sc *StorageSmartContract) challengePassed(
 	if cab.success < cab.threshold {
 		partial = float64(cab.success) / float64(cab.threshold)
 	}
+
+	logging.Logger.Debug("challenge passed", zap.Any("Challenge ID", cab.challenge.ID))
 
 	err = sc.blobberReward(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators, partial, balances, cab.challenge.ID)
 	if err != nil {
