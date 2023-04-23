@@ -112,6 +112,7 @@ type MinerQuery struct {
 	Active            null.Bool
 	Longitude         null.Float
 	Latitude          null.Float
+	IsKilled          null.Bool
 }
 
 func (m *Miner) GetTotalStake() currency.Coin {

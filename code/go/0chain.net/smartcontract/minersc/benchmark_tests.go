@@ -182,6 +182,28 @@ func BenchmarkTests(
 			input: nil,
 		},
 		{
+			name: "storage.kill_miner",
+			input: (&provider.ProviderRequest{
+				ID: data.Miners[0],
+			}).Encode(),
+			endpoint: msc.killMiner,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.MinerMOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name: "storage.kill_sharder",
+			input: (&provider.ProviderRequest{
+				ID: data.Sharders[0],
+			}).Encode(),
+			endpoint: msc.killSharder,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.MinerMOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
 			name:     "miner.contributeMpk",
 			endpoint: msc.contributeMpk,
 			txn: &transaction.Transaction{
@@ -292,6 +314,8 @@ func BenchmarkTests(
 					"cost.addToDelegatePool":       "111",
 					"cost.deleteFromDelegatePool":  "111",
 					"cost.sharder_keep":            "111",
+					"cost.kill_miner":              "111",
+					"cost.kill_sharder":            "111",
 				},
 			}).Encode(),
 		},

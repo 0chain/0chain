@@ -202,6 +202,7 @@ type SharderQuery struct {
 	Active            null.Bool
 	Longitude         null.Int
 	Latitude          null.Int
+	IsKilled          null.Bool
 }
 
 func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, p common2.Pagination) ([]Sharder, error) {
