@@ -1032,6 +1032,7 @@ CREATE TABLE public.burn_tickets (
                               updated_at timestamp with time zone,
                               ethereum_address text,
                               hash text,
+                              amount bigint,
                               nonce bigint
 );
 
