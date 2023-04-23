@@ -178,7 +178,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances)
 	if err != nil {
-		return fmt.Errorf("rewarding validators: %v", err)
+		return fmt.Errorf("rewarding blobbers: %v", err)
 	}
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
@@ -964,6 +964,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			return nil, common.NewErrorf("populate_challenge",
 				"error saving expired allocation: %v", err)
 		}
+	}
+
+	if err := blobberAllocParts.Save(balances); err != nil {
+		return nil, common.NewErrorf("populate_challenge",
+			"error saving blobber allocation partitions: %v", err)
 	}
 
 	if !foundAllocation {
