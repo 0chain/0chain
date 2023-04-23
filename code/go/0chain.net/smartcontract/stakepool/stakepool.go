@@ -511,6 +511,21 @@ func (sp *StakePool) DistributeRewards(
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
 
+	defer func() {
+		if err != nil {
+			return
+		}
+
+		totalRewards := spUpdate.Reward
+		for _, p := range spUpdate.DelegateRewards {
+			totalRewards += p
+		}
+
+		if totalRewards != value {
+			logging.Logger.Panic(fmt.Sprintf("distribute rewards error: total rewards %d != value %d", totalRewards, value))
+		}
+	}()
+
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
 		sp.Reward, err = currency.AddCoin(sp.Reward, value)

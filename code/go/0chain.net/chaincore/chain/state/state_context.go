@@ -123,13 +123,15 @@ type StateContextI interface {
 
 // StateContext - a context object used to manipulate global state
 type StateContext struct {
-	block                         *block.Block
-	state                         util.MerklePatriciaTrieI
-	txn                           *transaction.Transaction
-	transfers                     []*state.Transfer
-	signedTransfers               []*state.SignedTransfer
-	mints                         []*state.Mint
-	events                        []event.Event
+	block           *block.Block
+	state           util.MerklePatriciaTrieI
+	txn             *transaction.Transaction
+	transfers       []*state.Transfer
+	signedTransfers []*state.SignedTransfer
+	mints           []*state.Mint
+	events          []event.Event
+	// clientStates is the cache for storing client states, usually for storing txn.From and txn.To
+	clientStates                  map[string]*state.State
 	getLastestFinalizedMagicBlock func() *block.Block
 	getLatestFinalizedBlock       func() *block.Block
 	getMagicBlock                 func(round int64) *block.MagicBlock
@@ -181,6 +183,7 @@ func NewStateContext(
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 		eventDb:                       eventDb,
+		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
 	}
 }
@@ -386,6 +389,12 @@ func (sc *StateContext) Validate() error {
 }
 
 func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+	if s, ok := sc.clientStates[clientID]; ok {
+		return s.Clone(), nil
+	}
+
 	s := &state.State{}
 	path := util.Path(clientID)
 	err := sc.state.GetNodeValue(path, s)
@@ -396,11 +405,21 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 		return s, err
 	}
 	//TODO: should we apply the pending transfers?
+	sc.clientStates[clientID] = s.Clone()
 	return s, nil
 }
 
 func (sc *StateContext) SetClientState(clientID string, s *state.State) (util.Key, error) {
-	return sc.state.Insert(util.Path(clientID), s)
+	k, err := sc.state.Insert(util.Path(clientID), s)
+	if err != nil {
+		return nil, err
+	}
+
+	sc.mutex.Lock()
+	sc.clientStates[clientID] = s.Clone()
+	sc.mutex.Unlock()
+
+	return k, nil
 }
 
 // GetClientBalance - get the balance of the client
