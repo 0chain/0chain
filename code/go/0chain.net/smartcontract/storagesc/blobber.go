@@ -451,6 +451,9 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}
+	if rp == nil {
+		rp = &readPool{}
+	}
 
 	var sp *stakePool
 	sp, err = sc.getStakePool(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
