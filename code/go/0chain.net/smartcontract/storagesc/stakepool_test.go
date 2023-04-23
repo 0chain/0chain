@@ -154,8 +154,6 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 	var stakePool = newStakePool()
 	stakePool.Settings = stakepool.Settings{
 		DelegateWallet:  blobberId,
-		MinStake:        value + 1,
-		MaxStake:        value + 100.0,
 		MaxNumDelegates: 20,
 	}
 	for i, stake := range delegates {

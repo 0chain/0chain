@@ -152,7 +152,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			require.NotEmpty(t, response)
 
 			mm := ctx.GetMints()
-			require.Equal(t, len(mm), 1)
+			require.Equal(t, 1, len(mm))
 
 			auths := make([]string, 0, len(payload.Signatures))
 			for _, sig := range payload.Signatures {
@@ -297,7 +297,7 @@ func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 
 	user, err := ctx.GetEventDB().GetUser(tr.ClientID)
 	require.NoError(t, err)
-	require.Equal(t, user.MintNonce, payload.Nonce)
+	require.Equal(t, payload.Nonce, user.MintNonce)
 }
 
 func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {
