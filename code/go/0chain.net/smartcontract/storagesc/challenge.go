@@ -966,6 +966,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 	}
 
+	if err := blobberAllocParts.Save(balances); err != nil {
+		return nil, common.NewErrorf("populate_challenge",
+			"error saving blobber allocation partitions: %v", err)
+	}
+
 	if !foundAllocation {
 		logging.Logger.Error("populate_generate_challenge: couldn't find appropriate allocation for a blobber",
 			zap.String("blobberId", blobberID))
