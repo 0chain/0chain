@@ -76,8 +76,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
 		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
 		zap.Int("num_delegates", newMiner.Settings.MaxNumDelegates),
-		zap.Int64("min_stake", int64(newMiner.Settings.MinStake)),
-		zap.Int64("max_stake", int64(newMiner.Settings.MaxStake)),
 	)
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
@@ -291,8 +289,6 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 
 	mn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
 	mn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
-	mn.Settings.MinStake = update.Settings.MinStake
-	mn.Settings.MaxStake = update.Settings.MaxStake
 
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
@@ -349,23 +345,6 @@ func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error 
 		return common.NewErrorf(opcode,
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			node.Settings.MaxNumDelegates, gn.MaxDelegates)
-	}
-
-	if node.Settings.MinStake < gn.MinStake {
-		return common.NewErrorf(opcode,
-			"min_stake is less than allowed by SC: %v > %v",
-			node.Settings.MinStake, gn.MinStake)
-	}
-
-	if node.Settings.MinStake > node.Settings.MaxStake {
-		return common.NewErrorf(opcode,
-			"invalid node request results in min_stake greater than max_stake: %v > %v", node.Settings.MinStake, node.Settings.MaxStake)
-	}
-
-	if node.Settings.MaxStake > gn.MaxStake {
-		return common.NewErrorf(opcode,
-			"max_stake is greater than allowed by SC: %v > %v",
-			node.Settings.MaxStake, gn.MaxStake)
 	}
 
 	return nil

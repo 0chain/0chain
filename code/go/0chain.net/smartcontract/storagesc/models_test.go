@@ -29,7 +29,7 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	)
 
 	conf.MinAllocSize = 10 * 1024
-	conf.MinAllocDuration = 48 * time.Hour
+	conf.TimeUnit = 48 * time.Hour
 	nar.DataShards = 1
 	nar.Blobbers = []string{"1", "2"}
 
@@ -63,12 +63,8 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	)
 
 	list = []*StorageNode{
-		{Terms: Terms{
-			MaxOfferDuration: 8 * time.Second,
-		}},
-		{Terms: Terms{
-			MaxOfferDuration: 6 * time.Second,
-		}},
+		{Terms: Terms{}},
+		{Terms: Terms{}},
 	}
 
 	// 1. filter all by max offer duration
@@ -175,3 +171,30 @@ func TestVerifyClientID(t *testing.T) {
 		})
 	}
 }
+
+//func TestDTU(t *testing.T) {
+//	timeUnit := 720 * time.Hour
+//	sa := StorageAllocation{}
+//
+//}
+//
+//func TestRDTU(t *testing.T) {
+//
+//	timeUnit := 720 * time.Hour
+//	sa := StorageAllocation{}
+//
+//	t.Run("Allocation Expiry is less than now", func(t *testing.T) {
+//		sa.Expiration = 50
+//		rdtu, err := sa.restDurationInTimeUnits(100, timeUnit)
+//		assert.Equal(t, int64(0), rdtu)
+//		require.Error(t, err)
+//		require.EqualValues(t, "rest duration time overflow, timestamp is beyond alloc expiration", err.Error())
+//	})
+//
+//	t.Run("Allocation Expiry is greater than now", func(t *testing.T) {
+//		sa.Expiration = 100
+//		rdtu, err := sa.restDurationInTimeUnits(50, timeUnit)
+//		assert.Equal(t, int64(1), rdtu)
+//		require.NoError(t, err)
+//	})
+//}

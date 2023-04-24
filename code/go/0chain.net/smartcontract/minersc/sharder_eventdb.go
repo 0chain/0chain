@@ -34,6 +34,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		NodeType:                      NodeTypeSharder,
 		Status:                        status,
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
+		IsKilled:                      edbSharder.IsKilled,
 	}
 
 	sn := NodeResponse{
@@ -44,8 +45,6 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 				DelegateWallet:     edbSharder.DelegateWallet,
 				ServiceChargeRatio: edbSharder.ServiceCharge,
 				MaxNumDelegates:    edbSharder.Provider.NumDelegates,
-				MinStake:           edbSharder.MinStake,
-				MaxStake:           edbSharder.MaxStake,
 			},
 		},
 	}
@@ -86,14 +85,13 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 			DelegateWallet: sn.Settings.DelegateWallet,
 			ServiceCharge:  sn.Settings.ServiceChargeRatio,
 			NumDelegates:   sn.Settings.MaxNumDelegates,
-			MinStake:       sn.Settings.MinStake,
-			MaxStake:       sn.Settings.MaxStake,
 			Rewards: event.ProviderRewards{
 				ProviderID:   sn.ID,
 				Rewards:      sn.Reward,
 				TotalRewards: sn.Reward,
 			},
 			LastHealthCheck: sn.LastHealthCheck,
+			IsKilled:        sn.IsKilled(),
 		},
 
 		Active:    sn.Status == node.NodeStatusActive,
@@ -132,8 +130,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"delegate_wallet":   sn.Settings.DelegateWallet,
 			"service_charge":    sn.Settings.ServiceChargeRatio,
 			"num_delegates":     sn.Settings.MaxNumDelegates,
-			"min_stake":         sn.Settings.MinStake,
-			"max_stake":         sn.Settings.MaxStake,
 			"last_health_check": sn.LastHealthCheck,
 			"longitude":         sn.SimpleNode.Geolocation.Longitude,
 			"latitude":          sn.SimpleNode.Geolocation.Latitude,
