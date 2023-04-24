@@ -117,6 +117,8 @@ func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
 		challengeID = ""
 	}
 
+	logging.Logger.Debug("challenge pool move to validators", zap.Any("validators", validators), zap.Any("vSPs", vSPs), zap.Any("oneReward", oneReward), zap.Any("bal", bal), zap.Any("challengeID", challengeID))
+
 	for i, sp := range vSPs {
 		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances, challengeID)
 		if err != nil {
@@ -158,6 +160,8 @@ func (cp *challengePool) moveToBlobbers(sscKey string, reward currency.Coin,
 	if len(options) > 0 {
 		challengeID = options[0]
 	}
+
+	logging.Logger.Debug("challenge pool move to blobbers", zap.Any("blobberId", blobberId), zap.Any("sp", sp), zap.Any("reward", reward), zap.Any("challengeID", challengeID))
 
 	err := sp.DistributeRewards(reward, blobberId, spenum.Blobber, spenum.ChallengePassReward, balances, challengeID)
 	if err != nil {
