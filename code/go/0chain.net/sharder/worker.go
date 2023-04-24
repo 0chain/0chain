@@ -42,6 +42,8 @@ func SetupWorkers(ctx context.Context) {
 	go sc.UpdateMagicBlockWorker(ctx)
 	go sc.RegisterSharderKeepWorker(ctx)
 	go sc.SharderHealthCheck(ctx)
+
+	go sc.TrackTransactionErrors(ctx)
 }
 
 /*BlockWorker - stores the blocks */
