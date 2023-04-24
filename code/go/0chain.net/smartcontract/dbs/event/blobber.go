@@ -447,7 +447,9 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 				totalReadIncome[i] = int64(spu.Reward)
 			case spenum.ChallengeSlashPenalty:
 				totalChanges++
-				totalSlashedStake[i] = int64(spu.Reward)
+				for _, penalty := range spu.DelegatePenalties {
+					totalSlashedStake[i] = int64(penalty)
+				}
 		}
 	}
 
