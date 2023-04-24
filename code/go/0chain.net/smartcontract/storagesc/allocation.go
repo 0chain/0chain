@@ -1487,6 +1487,8 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	t *transaction.Transaction, input []byte,
 	balances chainstate.StateContextI) (resp string, err error) {
 
+	logging.Logger.Debug("finalizeAllocation", zap.Any("input", input))
+
 	var req lockRequest
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("fini_alloc_failed", err.Error())
@@ -1565,6 +1567,9 @@ func (sc *StorageSmartContract) finishAllocation(
 	balances chainstate.StateContextI,
 	conf *Config,
 ) (err error) {
+
+	logging.Logger.Debug("finishAllocation", zap.Any("alloc", alloc))
+
 	before := make([]currency.Coin, len(sps))
 
 	// we can use the i for the blobbers list above because of algorithm
