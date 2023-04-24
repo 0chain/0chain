@@ -911,6 +911,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting blobber_challenge_allocation list: %v", err)
 	}
 
+	logging.Logger.Debug("jayash_generate_challenges", zap.Any("blobber partition ", blobberAllocParts))
+
 	// get random allocations from the partitions
 	var randBlobberAllocs []BlobberAllocationNode
 	if err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs); err != nil {
@@ -926,9 +928,17 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		randPerm                    = r.Perm(blobberAllocPartitionLength)
 	)
 
+	logging.Logger.Debug("jayash_generate_challenges", zap.Int("blobber partition length", blobberAllocPartitionLength), zap.Int("randomBlobberAllocs", len(randBlobberAllocs)))
+
 	for i := 0; i < findValidAllocRetries; i++ {
+		rID := randPerm[i]
+
+		if rID >= len(randBlobberAllocs) {
+			logging.Logger.Debug("special_jayash_generate_challenges", zap.Int("blobber partition length", blobberAllocPartitionLength), zap.Int("randomBlobberAllocs", len(randBlobberAllocs)), zap.Int("rID", rID))
+		}
+
 		// get a random allocation
-		allocID := randBlobberAllocs[randPerm[i]].ID
+		allocID := randBlobberAllocs[rID].ID
 
 		// get the storage allocation from MPT
 		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
