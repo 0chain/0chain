@@ -41,7 +41,7 @@ require (
 )
 
 require (
-	github.com/0chain/common v0.0.6-0.20230127095721-8df4d1d72565
+	github.com/0chain/common v0.0.6-0.20230424133609-f00c049071e7
 	github.com/go-faker/faker/v4 v4.1.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.7
@@ -114,8 +114,8 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.mongodb.org/mongo-driver v1.9.1 // indirect
-	golang.org/x/exp v0.0.0-20230203172020-98cc5a0785f9 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
+	golang.org/x/exp v0.0.0-20230203172020-98cc5a0785f9 // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.1.0 // indirect

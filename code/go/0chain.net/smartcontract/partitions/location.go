@@ -65,6 +65,14 @@ func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
 		zap.String("id", id))
 	_, err := state.DeleteTrieNode(kid)
 	if err != nil {
+		logging.Logger.Error("remove item location failed",
+			zap.String("kid", kid),
+			zap.String("id", id),
+			zap.String("state root", util.ToHex(state.GetState().GetRoot())),
+			zap.Int64("round", state.GetBlock().Round),
+			zap.String("block", state.GetBlock().Hash),
+			zap.Error(err),
+		)
 		return fmt.Errorf("remove item location failed: %v", err)
 	}
 	if len(p.locations) > 0 {
