@@ -178,6 +178,8 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 		return err.Error
 	}
 
+	logging.Logger.Info("transactions", zap.Any("transactions", len(transactions)))
+
 	for _, transaction := range transactions {
 		// insert the transaction in the transaction error table
 		err := edb.Store.Get().Create(&TransactionErrors{
