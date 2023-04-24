@@ -43,7 +43,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.RegisterSharderKeepWorker(ctx)
 	go sc.SharderHealthCheck(ctx)
 
-	//go sc.TrackTransactionErrors(ctx)
+	go sc.TrackTransactionErrors(ctx)
 }
 
 /*BlockWorker - stores the blocks */
@@ -406,19 +406,19 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 	}
 }
 
-//func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
-//
-//	var (
-//		timer = time.NewTimer(24 * time.Hour)
-//	)
-//
-//	for {
-//		select {
-//		case <-ctx.Done():
-//			return
-//		case <-timer.C:
-//			logging.Logger.Info("TrackTransactionErrors")
-//		}
-//		timer = time.NewTimer(time.Hour * 24)
-//	}
-//}
+func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
+
+	var (
+		timer = time.NewTimer(2 * time.Second)
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			logging.Logger.Info("TrackTransactionErrors")
+		}
+		timer = time.NewTimer(time.Second * 2)
+	}
+}
