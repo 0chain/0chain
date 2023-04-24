@@ -648,7 +648,8 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 func (sc *StorageSmartContract) commitBlobberConnection(
 	t *transaction.Transaction, input []byte, balances cstate.StateContextI) (
 	string, error) {
-
+	
+	logging.Logger.Error("Inside commitBlobberConnection, Test for logging!!!")
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",

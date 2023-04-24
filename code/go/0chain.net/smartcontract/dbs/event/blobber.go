@@ -70,6 +70,7 @@ type BlobberPriceRange struct {
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
+	logging.Logger.Error("Inside get blobber func")
 	err := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Blobber{}).Where("id = ?", id).First(&blobber).Error
