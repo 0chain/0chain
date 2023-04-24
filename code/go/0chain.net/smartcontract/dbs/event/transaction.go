@@ -171,11 +171,16 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 
 	// read all the transactions from the transaction table where status is 2 till last day
 
-	edb.Get().Model(&Transaction{}).Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash").Find(&transactions)
+	err := edb.Get().Model(&Transaction{}).Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash").Find(&transactions)
+
+	if err.Error != nil {
+		logging.Logger.Error("Error while reading transactions from transaction table", zap.Any("error", err.Error))
+		return err.Error
+	}
 
 	for _, transaction := range transactions {
 		// insert the transaction in the transaction error table
-		edb.Store.Get().Create(&TransactionErrors{
+		err := edb.Store.Get().Create(&TransactionErrors{
 			Hash:              transaction.Hash,
 			BlockHash:         transaction.BlockHash,
 			Round:             transaction.Round,
@@ -193,6 +198,10 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 			OutputHash:        transaction.OutputHash,
 			Status:            transaction.Status,
 		})
+
+		if err.Error != nil {
+			logging.Logger.Error("Error in inserting transaction error", zap.Any("err", err.Error))
+		}
 	}
 
 	return nil
