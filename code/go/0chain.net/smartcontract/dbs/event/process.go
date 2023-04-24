@@ -8,10 +8,12 @@ import (
 
 	"golang.org/x/net/context"
 
+	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 
 	"go.uber.org/zap"
 
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -143,6 +145,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUserWritePoolLockEvents(),
 			mergeUserWritePoolUnlockEvents(),
 			mergeUpdateUserPayedFeesEvents(),
+			mergeAuthorizerBurnEvents(),
 			mergeAddBridgeMintEvents(),
 		}
 
@@ -664,7 +667,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.rewardUpdate(*spus, event.BlockNumber)
+		if err := edb.rewardUpdate(*spus, event.BlockNumber); err != nil {
+			return err
+		}
+		if err := edb.blobberSpecificRevenue(*spus); err != nil {
+			return fmt.Errorf("could not update blobber specific revenue: %v", err)
+		}
+		return nil
 	case TagStakePoolPenalty:
 		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 		if !ok {
@@ -804,6 +813,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateProvidersHealthCheck(*healthCheckUpdates, ValidatorTable)
+	case TagAuthorizerBurn:
+		b, ok := fromEvent[[]state.Burn](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		logging.Logger.Debug("TagAuthorizerBurn", zap.Any("burns", b))
+		return edb.updateAuthorizersTotalBurn(*b)
 	case TagAddBurnTicket:
 		bt, ok := fromEvent[[]BurnTicket](event.Data)
 		if !ok {
@@ -815,11 +831,45 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addBurnTicket((*bt)[0])
 	case TagAddBridgeMint:
 		// challenge pool
-		u, ok := fromEvent[[]User](event.Data)
+		bms, ok := fromEvent[[]BridgeMint](event.Data)
 		if !ok {
 			return ErrInvalidEventData
+		}		
+		users := make([]User, 0, len(*bms))
+		authMint := make(map[string]currency.Coin)
+		for _, bm := range *bms {
+			users = append(users, User{
+				UserID:       bm.UserID,
+				MintNonce: bm.MintNonce,
+			})
+
+			for _, sig := range bm.Signers {
+				mv, ok := authMint[sig]
+				if !ok {
+					mv = 0
+				}
+				authMint[sig] = mv + bm.Amount
+			}
 		}
-		return edb.updateUserMintNonce(*u)
+
+		mints := make([]state.Mint, 0, len(authMint))
+		for auth, amount := range authMint {
+			mints = append(mints, state.Mint{
+				Minter: auth,
+				Amount: amount,
+			})
+		}
+
+		err := edb.updateUserMintNonce(users)
+		if err != nil {
+			return err
+		}
+
+		err = edb.updateAuthorizersTotalMint(mints)
+		if err != nil {
+			return err
+		}
+		return nil
 
 	case TagShutdownProvider:
 		u, ok := fromEvent[[]dbs.ProviderID](event.Data)
