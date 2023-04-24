@@ -46,7 +46,7 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block, waitC ...chan 
 		if b.IsStateComputed() {
 			return nil
 		}
-		return c.computeState(ctx, b, waitC...)
+		return c.computeState(ctx, b)
 	})
 }
 
@@ -76,8 +76,8 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func (c *Chain) computeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) error {
-	return b.ComputeState(ctx, c, waitC...)
+func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
+	return b.ComputeState(ctx, c)
 }
 
 // SaveChanges - persist the state changes
@@ -163,11 +163,10 @@ func (c *Chain) UpdateState(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
-	waitC ...chan struct{},
 ) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, bState, txn, waitC...)
+	return c.updateState(ctx, b, bState, txn)
 }
 
 type SyncReplyC struct {
@@ -195,7 +194,7 @@ func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
+	txn *transaction.Transaction) (int, error) {
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
@@ -215,18 +214,18 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 
 		cost, err := smartcontract.EstimateTransactionCost(txn, scData, sctx)
 		if missingKeys := sctx.GetMissingNodeKeys(); len(missingKeys) > 0 {
-			syncOpts := &SyncReplyC{}
-			for _, opt := range opts {
-				opt(syncOpts)
-			}
-
-			logging.Logger.Error("Internal error while estimate transaction cost",
-				zap.Error(util.ErrNodeNotFound),
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash))
-			if syncOpts.sync {
-				c.SyncMissingNodes(b.Round, missingKeys, syncOpts.replyC...)
-			}
+			//syncOpts := &SyncReplyC{}
+			//for _, opt := range opts {
+			//	opt(syncOpts)
+			//}
+			//
+			//logging.Logger.Error("Internal error while estimate transaction cost",
+			//	zap.Error(util.ErrNodeNotFound),
+			//	zap.Int64("round", b.Round),
+			//	zap.String("block", b.Hash))
+			//if syncOpts.sync {
+			//	c.SyncMissingNodes(b.Round, missingKeys, syncOpts.replyC...)
+			//}
 			return math.MaxInt32, util.ErrNodeNotFound
 		}
 
@@ -254,23 +253,21 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 }
 
 func (c *Chain) EstimateTransactionFeeLFB(ctx context.Context,
-	txn *transaction.Transaction,
-	opts ...SyncNodesOption) (currency.Coin, error) {
+	txn *transaction.Transaction) (currency.Coin, error) {
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
 		return 0, errors.New("LFB not ready yet")
 	}
 	lfb = lfb.Clone()
 
-	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, opts...)
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb.ClientState, txn)
 	return fee, err
 }
 
 func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	mpt util.MerklePatriciaTrieI,
-	txn *transaction.Transaction,
-	opts ...SyncNodesOption) (int, currency.Coin, error) {
-	cost, err := c.EstimateTransactionCost(ctx, nil, mpt, txn, opts...)
+	txn *transaction.Transaction) (int, currency.Coin, error) {
+	cost, err := c.EstimateTransactionCost(ctx, nil, mpt, txn)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -334,11 +331,11 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		startRoot   = sctx.GetState().GetRoot()
 	)
 
-	defer func() {
-		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(b.Round, sctx.GetMissingNodeKeys(), waitC...)
-		}
-	}()
+	//defer func() {
+	//	if bcstate.ErrInvalidState(err) {
+	//		c.SyncMissingNodes(b.Round, sctx.GetMissingNodeKeys(), waitC...)
+	//	}
+	//}()
 
 	if err = c.validateNonce(sctx, txn.ClientID, txn.Nonce); err != nil {
 		return nil, err
@@ -559,11 +556,11 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, common.InvalidRequest("from and to client should be different for balance transfer")
 	}
 
-	defer func() {
-		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
-		}
-	}()
+	//defer func() {
+	//	if bcstate.ErrInvalidState(err) {
+	//		c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
+	//	}
+	//}()
 
 	var (
 		b   = sctx.GetBlock()
@@ -636,11 +633,11 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		txn = sctx.GetTransaction()
 	)
 
-	defer func() {
-		if bcstate.ErrInvalidState(err) {
-			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
-		}
-	}()
+	//defer func() {
+	//	if bcstate.ErrInvalidState(err) {
+	//		c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
+	//	}
+	//}()
 
 	ts, err := sctx.GetClientState(toClient)
 	if !isValid(err) {

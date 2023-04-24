@@ -811,7 +811,7 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block, waitC ...chan struct{}) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC ...chan struct{}) ([]event.Event, error)
+	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error)
 	GetEventDb() *event.EventDb
 }
 
@@ -952,7 +952,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			},
 		})
 
-		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)
+		events, err := c.UpdateState(ctx, b, bState, txn)
 		switch err {
 		case context.Canceled:
 			b.SetStateStatus(StateCancelled)

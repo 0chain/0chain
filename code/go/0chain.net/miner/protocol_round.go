@@ -473,10 +473,11 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 
 		//b.SetStateDB(pb, mc.GetStateDB())
+		if err := mc.GenerateBlock(ctx, b, makeBlock); err != nil {
 
-		if err := mc.syncAndRetry(cctx, b, "generate block", func(ctx context.Context, waitC chan struct{}) error {
-			return mc.GenerateBlock(ctx, b, makeBlock, waitC)
-		}); err != nil {
+			//if err := mc.syncAndRetry(cctx, b, "generate block", func(ctx context.Context, waitC chan struct{}) error {
+			//	return mc.GenerateBlock(ctx, b, makeBlock, waitC)
+			//}); err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
 				switch cerr.Code {
@@ -1160,9 +1161,10 @@ func (mc *Chain) AddNotarizedBlock(r *Round, b *block.Block) bool {
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		if err := mc.syncAndRetry(ctx, b, "add notarized block", func(ctx context.Context, waitC chan struct{}) error {
-			return mc.ComputeState(ctx, b, waitC)
-		}); err != nil {
+
+		//if err := mc.syncAndRetry(ctx, b, "add notarized block", func(ctx context.Context, waitC chan struct{}) error {
+		//	return mc.ComputeState(ctx, b, waitC)
+		if err := mc.ComputeOrSyncState(ctx, b); err != nil {
 			logging.Logger.Error("add notarized block failed", zap.Error(err),
 				zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return false

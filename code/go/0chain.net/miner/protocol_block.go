@@ -87,9 +87,9 @@ func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) 
 func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
 	s, err := mc.GetStateById(bState, minerId)
 	if err != nil {
-		if cstate.ErrInvalidState(err) {
-			mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
-		}
+		//if cstate.ErrInvalidState(err) {
+		//	mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
+		//}
 
 		if err != util.ErrValueNotPresent {
 			logging.Logger.Error("can't get nonce", zap.Error(err))
@@ -148,7 +148,7 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 }
 
 func (mc *Chain) validateTransaction(b *block.Block,
-	bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC chan struct{}) error {
+	bState util.MerklePatriciaTrieI, txn *transaction.Transaction) error {
 	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
 		return ErrNotTimeTolerant
 	}
@@ -163,9 +163,9 @@ func (mc *Chain) validateTransaction(b *block.Block,
 			}
 			return nil
 		}
-		if cstate.ErrInvalidState(err) {
-			mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
-		}
+		//if cstate.ErrInvalidState(err) {
+		//	mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
+		//}
 		return err
 	}
 
@@ -362,19 +362,26 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var costs []int
 	for _, txn := range b.Txns {
-		if err := mc.syncAndRetry(ctx, b, "estimate cost", func(ctx context.Context, waitC chan struct{}) error {
-			c, err := mc.EstimateTransactionCost(ctx,
-				b, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
-			if err != nil {
-				return err
-			}
-
-			cost += c
-			costs = append(costs, c)
-			return nil
-		}); err != nil {
+		c, err := mc.EstimateTransactionCost(ctx, b, lfb.ClientState, txn)
+		if err != nil {
 			return nil, err
 		}
+		cost += c
+		costs = append(costs, c)
+
+		//if err := mc.syncAndRetry(ctx, b, "estimate cost", func(ctx context.Context, waitC chan struct{}) error {
+		//	c, err := mc.EstimateTransactionCost(ctx,
+		//		b, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
+		//	if err != nil {
+		//		return err
+		//	}
+		//
+		//	cost += c
+		//	costs = append(costs, c)
+		//	return nil
+		//}); err != nil {
+		//	return nil, err
+		//}
 	}
 	if cost > mc.ChainConfig.MaxBlockCost() {
 		logging.Logger.Error("cost limit exceeded", zap.Int("calculated_cost", cost),
@@ -388,11 +395,14 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		zap.Int("calculated cost", cost))
 
 	cur = time.Now()
-	if err := mc.syncAndRetry(ctx, b, "verify block", func(ctx context.Context, waitC chan struct{}) error {
-		return mc.ComputeState(ctx, b, waitC)
-	}); err != nil {
+	if err := mc.ComputeState(ctx, b); err != nil {
 		return nil, err
 	}
+	//if err := mc.syncAndRetry(ctx, b, "verify block", func(ctx context.Context, waitC chan struct{}) error {
+	//	return mc.ComputeState(ctx, b, waitC)
+	//}); err != nil {
+	//	return nil, err
+	//}
 
 	logging.Logger.Debug("verify block - ComputeState finished",
 		zap.Int64("round", b.Round),
@@ -719,21 +729,21 @@ func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 type txnProcessorHandler func(context.Context,
 	util.MerklePatriciaTrieI,
 	*transaction.Transaction,
-	*TxnIterInfo, chan struct{}) (bool, error)
+	*TxnIterInfo) (bool, error)
 
 func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 	return func(ctx context.Context,
 		bState util.MerklePatriciaTrieI,
 		txn *transaction.Transaction,
 		tii *TxnIterInfo,
-		waitC chan struct{}) (bool, error) {
+	) (bool, error) {
 
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
 			return false, nil
 		}
 		var debugTxn = txn.DebugTxn()
 
-		err := mc.validateTransaction(b, bState, txn, waitC)
+		err := mc.validateTransaction(b, bState, txn)
 		switch err {
 		case PastTransaction:
 			tii.pastTxns = append(tii.pastTxns, txn)
@@ -776,7 +786,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
 
-		events, err := mc.UpdateState(ctx, b, bState, txn, waitC)
+		events, err := mc.UpdateState(ctx, b, bState, txn)
 		if err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state",
@@ -890,8 +900,7 @@ func txnIterHandlerFunc(
 	lfb *block.Block,
 	bState util.MerklePatriciaTrieI,
 	txnProcessor txnProcessorHandler,
-	tii *TxnIterInfo,
-	waitC chan struct{}) func(context.Context, datastore.CollectionEntity) (bool, error) {
+	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) (bool, error) {
 	return func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 		tii.count++
 		if ctx.Err() != nil {
@@ -920,7 +929,8 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
-		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
+		//cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
+		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb.ClientState, txn)
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost fee",
 				zap.Error(err),
@@ -956,7 +966,7 @@ func txnIterHandlerFunc(
 			return true, nil
 		}
 
-		success, err := txnProcessor(ctx, bState, txn, tii, waitC)
+		success, err := txnProcessor(ctx, bState, txn, tii)
 		if err != nil {
 			return false, err
 		}
@@ -986,7 +996,7 @@ func txnIterHandlerFunc(
 * block published while working on this
  */
 func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
-	bsh chain.BlockStateHandler, waitOver bool, waitC chan struct{}) (err error) {
+	bsh chain.BlockStateHandler, waitOver bool) (err error) {
 
 	lfb := mc.GetLatestFinalizedBlock()
 	if lfb.ClientState == nil {
@@ -1003,7 +1013,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
 		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		beginState     = blockState.GetRoot()
-		txnIterHandler = txnIterHandlerFunc(mc, b, lfb, blockState, txnProcessor, iterInfo, waitC)
+		txnIterHandler = txnIterHandlerFunc(mc, b, lfb, blockState, txnProcessor, iterInfo)
 	)
 
 	iterInfo.roundTimeoutCount = mc.GetRoundTimeoutCount()
@@ -1089,7 +1099,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.ChainConfig.MaxBlockCost() &&
 		iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
 			// Note: optimistic block generation
 			// we would just skip the error so that the work on txns collection and state computation above
@@ -1102,7 +1112,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			break
 		}
 
-		success, err := txnProcessor(ctx, blockState, txn, iterInfo, waitC)
+		success, err := txnProcessor(ctx, blockState, txn, iterInfo)
 		if err != nil {
 			// optimistic block generation. Same as EstimateTransactionCost above
 			logging.Logger.Debug("generate block - process failed and ignored", zap.Error(err))
@@ -1218,7 +1228,7 @@ l:
 		var costs []int
 		cost := 0
 		for _, txn := range b.Txns {
-			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
+			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 			if err != nil {
 				logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 				break
@@ -1292,7 +1302,7 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state uti
 
 	var cost int
 	for _, txn := range txns {
-		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
+		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn)
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return nil, 0, err
