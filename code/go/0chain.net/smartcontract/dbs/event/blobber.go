@@ -431,10 +431,12 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		totalChanges = 0
 	)
 
-	for i, spu := range spus {
+	blobberIdx := -1
+	for _, spu := range spus {
 		if spu.Type != spenum.Blobber {
 			continue
 		}
+		blobberIdx++
 		ids = append(ids, spu.ProviderID.ID)
 		totalBlockRewards = append(totalBlockRewards, 0)
 		totalStorageIncome = append(totalStorageIncome, 0)
@@ -444,17 +446,17 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		switch (spu.RewardType) {
 			case spenum.BlockRewardBlobber:
 				totalChanges++
-				totalBlockRewards[i] = int64(spu.Reward)
+				totalBlockRewards[blobberIdx] = int64(spu.Reward)
 			case spenum.ChallengePassReward:
 				totalChanges++
-				totalStorageIncome[i] = int64(spu.Reward)
+				totalStorageIncome[blobberIdx] = int64(spu.Reward)
 			case spenum.FileDownloadReward:
 				totalChanges++
-				totalReadIncome[i] = int64(spu.Reward)
+				totalReadIncome[blobberIdx] = int64(spu.Reward)
 			case spenum.ChallengeSlashPenalty:
 				totalChanges++
 				for _, penalty := range spu.DelegatePenalties {
-					totalSlashedStake[i] = int64(penalty)
+					totalSlashedStake[blobberIdx] += int64(penalty)
 				}
 		}
 	}

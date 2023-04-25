@@ -11,6 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 
 	"github.com/stretchr/testify/assert"
@@ -142,13 +143,18 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 			RewardType: spenum.FileDownloadReward,
 		},
 		{
-			// Slashed stake : blobber three
+			// Slashed stake : blobber three slashed stake should increase by 60
 			ProviderID: dbs.ProviderID{
 				ID: "B003",
 				Type: spenum.Blobber,
 			},
 			Reward: 40,
 			RewardType: spenum.ChallengeSlashPenalty,
+			DelegatePenalties: map[string]currency.Coin{
+				"delegate1": 10,
+				"delegate2": 20,
+				"delegate3": 30,
+			},
 		},
 	}
 
@@ -184,7 +190,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	assert.Equal(t, blobbersBefore[3].TotalBlockRewards, blobbersAfter[3].TotalBlockRewards)
 	assert.Equal(t, blobbersBefore[3].TotalStorageIncome, blobbersAfter[3].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[3].TotalReadIncome, blobbersAfter[3].TotalReadIncome)
-	assert.Equal(t, blobbersBefore[3].TotalSlashedStake + 40, blobbersAfter[3].TotalSlashedStake)
+	assert.Equal(t, blobbersBefore[3].TotalSlashedStake + 60, blobbersAfter[3].TotalSlashedStake)
 }
 
 func compareBlobbers(t *testing.T, b1, b2 Blobber) {
