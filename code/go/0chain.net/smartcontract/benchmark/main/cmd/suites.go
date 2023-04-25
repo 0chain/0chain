@@ -185,7 +185,6 @@ func runSuite(
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
 					if err != nil {
-						log.Println("benchmark test", bm.Name(), "failed with error:", err)
 						mockUpdateState(bm.Transaction(), balances)
 					}
 					runCount++
