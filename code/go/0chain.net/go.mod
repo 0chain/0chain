@@ -41,7 +41,7 @@ require (
 )
 
 require (
-	github.com/0chain/common v0.0.6-0.20230424133609-f00c049071e7
+	github.com/0chain/common v0.0.6-0.20230425045828-5b4b85d0bbea
 	github.com/go-faker/faker/v4 v4.1.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.7
