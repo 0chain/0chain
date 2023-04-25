@@ -66,6 +66,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 				ID:                "B000",
 			},
 			BaseURL: "https://blobber.zero",
+			TotalBlockReward: 0,
 			TotalStorageIncome: 0,
 			TotalReadIncome:   0,
 			TotalSlashedStake: 0,
@@ -75,6 +76,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 				ID:                "B001",
 			},
 			BaseURL: "https://blobber.one",
+			TotalBlockReward: 0,
 			TotalStorageIncome: 0,
 			TotalReadIncome:   0,
 			TotalSlashedStake: 0,
@@ -84,6 +86,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 				ID:                "B002",
 			},
 			BaseURL: "https://blobber.two",
+			TotalBlockReward: 0,
 			TotalStorageIncome: 0,
 			TotalReadIncome:   0,
 			TotalSlashedStake: 0,
@@ -93,6 +96,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 				ID:                "B003",
 			},
 			BaseURL: "https://blobber.three",
+			TotalBlockReward: 0,
 			TotalStorageIncome: 0,
 			TotalReadIncome:   0,
 			TotalSlashedStake: 0,
@@ -103,6 +107,15 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	spus := []dbs.StakePoolReward{
 		{
 			// Shouldn't affect anybody
+			ProviderID: dbs.ProviderID{
+				ID: "M000",
+				Type: spenum.Miner,
+			},
+			Reward: 10,
+			RewardType: spenum.BlockRewardMiner,
+		},
+		{
+			// Block Reward: blobber zero
 			ProviderID: dbs.ProviderID{
 				ID: "B000",
 				Type: spenum.Blobber,
@@ -153,18 +166,22 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	err = edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Order("id ASC").Find(&blobbersAfter).Error
 	require.NoError(t, err)
 
+	assert.Equal(t, blobbersBefore[0].TotalBlockReward + 10, blobbersAfter[0].TotalBlockReward)
 	assert.Equal(t, blobbersBefore[0].TotalStorageIncome, blobbersAfter[0].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[0].TotalReadIncome, blobbersAfter[0].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[0].TotalSlashedStake, blobbersAfter[0].TotalSlashedStake)
 
+	assert.Equal(t, blobbersBefore[1].TotalBlockReward, blobbersAfter[1].TotalBlockReward)	
 	assert.Equal(t, blobbersBefore[1].TotalStorageIncome + 20, blobbersAfter[1].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[1].TotalReadIncome, blobbersAfter[1].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[1].TotalSlashedStake, blobbersAfter[1].TotalSlashedStake)
 
+	assert.Equal(t, blobbersBefore[2].TotalBlockReward, blobbersAfter[2].TotalBlockReward)
 	assert.Equal(t, blobbersBefore[2].TotalStorageIncome, blobbersAfter[2].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[2].TotalReadIncome + 30, blobbersAfter[2].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[2].TotalSlashedStake, blobbersAfter[2].TotalSlashedStake)
 
+	assert.Equal(t, blobbersBefore[3].TotalBlockReward, blobbersAfter[3].TotalBlockReward)
 	assert.Equal(t, blobbersBefore[3].TotalStorageIncome, blobbersAfter[3].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[3].TotalReadIncome, blobbersAfter[3].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[3].TotalSlashedStake + 40, blobbersAfter[3].TotalSlashedStake)

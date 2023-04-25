@@ -52,6 +52,7 @@ type Blobber struct {
 	ChallengesCompleted uint64  `json:"challenges_completed"`
 	OpenChallenges      uint64  `json:"open_challenges"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+	TotalBlockReward	currency.Coin   `json:"total_block_reward"`
 	TotalStorageIncome 	currency.Coin   `json:"total_storage_income"`
 	TotalReadIncome 	currency.Coin   `json:"total_read_income"`
 	TotalSlashedStake 	currency.Coin   `json:"total_slashed_stake"`
@@ -423,6 +424,7 @@ func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	var (
 		ids []string
+		totalBlockReward []int64
 		totalStorageIncome []int64
 		totalReadIncome []int64
 		totalSlashedStake []int64
@@ -434,11 +436,15 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 			continue
 		}
 		ids = append(ids, spu.ProviderID.ID)
+		totalBlockReward = append(totalBlockReward, 0)
 		totalStorageIncome = append(totalStorageIncome, 0)
 		totalReadIncome = append(totalReadIncome, 0)
 		totalSlashedStake = append(totalSlashedStake, 0)
 
 		switch (spu.RewardType) {
+			case spenum.BlockRewardBlobber:
+				totalChanges++
+				totalBlockReward[i] = int64(spu.Reward)
 			case spenum.ChallengePassReward:
 				totalChanges++
 				totalStorageIncome[i] = int64(spu.Reward)
@@ -458,6 +464,7 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
+		AddUpdate("total_block_reward", totalBlockReward, "blobbers.total_block_reward + t.total_block_reward").
 		AddUpdate("total_storage_income", totalStorageIncome, "blobbers.total_storage_income + t.total_storage_income").
 		AddUpdate("total_read_income", totalReadIncome, "blobbers.total_read_income + t.total_read_income").
 		AddUpdate("total_slashed_stake", totalSlashedStake, "blobbers.total_slashed_stake + t.total_slashed_stake").

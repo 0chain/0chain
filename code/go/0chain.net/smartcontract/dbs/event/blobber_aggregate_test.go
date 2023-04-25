@@ -173,6 +173,7 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 			"rank_metric":          gorm.Expr("rank_metric * ?", 2),
 			"challenges_passed":    gorm.Expr("challenges_passed * ?", 2),
 			"challenges_completed": gorm.Expr("challenges_completed * ?", 2),
+			"total_block_reward":   gorm.Expr("total_block_reward * ?", 2),
 			"total_storage_income": gorm.Expr("total_storage_income * ?", 2),
 			"total_read_income":	gorm.Expr("total_read_income * ?", 2),
 			"total_slashed_stake":  gorm.Expr("total_slashed_stake * ?", 2),
@@ -233,6 +234,7 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		require.Equal(t, oldBlobber.ReadData*2, curBlobber.ReadData)
 		require.Equal(t, oldBlobber.OffersTotal*2, curBlobber.OffersTotal)
 		require.Equal(t, oldBlobber.OpenChallenges*2, curBlobber.OpenChallenges)
+		require.Equal(t, oldBlobber.TotalBlockReward*2, curBlobber.TotalBlockReward)
 		require.Equal(t, oldBlobber.TotalStorageIncome*2, curBlobber.TotalStorageIncome)
 		require.Equal(t, oldBlobber.TotalReadIncome*2, curBlobber.TotalReadIncome)
 		require.Equal(t, oldBlobber.TotalSlashedStake*2, curBlobber.TotalSlashedStake)
@@ -320,6 +322,7 @@ func blobberToSnapshot(blobber *Blobber) BlobberSnapshot {
 		TotalRewards:        blobber.Rewards.TotalRewards,
 		TotalStake:          blobber.TotalStake,
 		OpenChallenges:      blobber.OpenChallenges,
+		TotalBlockReward:    blobber.TotalBlockReward,
 		TotalStorageIncome:  blobber.TotalStorageIncome,
 		TotalReadIncome:     blobber.TotalReadIncome,
 		TotalSlashedStake:   blobber.TotalSlashedStake,
@@ -376,6 +379,7 @@ func calculateBlobberAggregate(round int64, current *Blobber, old *BlobberSnapsh
 	aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+	aggregate.TotalBlockReward = (old.TotalBlockReward + current.TotalBlockReward) / 2
 	aggregate.TotalStorageIncome = (old.TotalStorageIncome + current.TotalStorageIncome) / 2
 	aggregate.TotalReadIncome = (old.TotalReadIncome + current.TotalReadIncome) / 2
 	aggregate.TotalSlashedStake = (old.TotalSlashedStake + current.TotalSlashedStake) / 2
@@ -438,6 +442,7 @@ func assertBlobberAggregate(t *testing.T, expected, actual *BlobberAggregate) {
 	require.Equal(t, expected.OpenChallenges, actual.OpenChallenges)
 	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
 	require.Equal(t, expected.ChallengesCompleted, actual.ChallengesCompleted)
+	require.Equal(t, expected.TotalBlockReward, actual.TotalBlockReward)
 	require.Equal(t, expected.TotalStorageIncome, actual.TotalStorageIncome)
 	require.Equal(t, expected.TotalReadIncome, actual.TotalReadIncome)
 	require.Equal(t, expected.TotalSlashedStake, actual.TotalSlashedStake)
@@ -458,6 +463,7 @@ func assertBlobberSnapshot(t *testing.T, expected, actual *BlobberSnapshot) {
 	require.Equal(t, expected.OffersTotal, actual.OffersTotal)
 	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
+	require.Equal(t, expected.TotalBlockReward, actual.TotalBlockReward)
 	require.Equal(t, expected.TotalStorageIncome, actual.TotalStorageIncome)
 	require.Equal(t, expected.TotalReadIncome, actual.TotalReadIncome)
 	require.Equal(t, expected.TotalSlashedStake, actual.TotalSlashedStake)
