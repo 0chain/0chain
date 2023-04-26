@@ -196,7 +196,7 @@ func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 * If the entities belong to a collection, then all entities should belong to
 * the same collection (including partitioning)
  */
-func (ms *Store) MultiWrite(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+func (ms *Store) MultiWrite(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity, batchSizeOpt ...int) error {
 	if len(entities) <= BATCH_SIZE {
 		return ms.multiWriteAux(ctx, entityMetadata, entities)
 	}

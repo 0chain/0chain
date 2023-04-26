@@ -149,12 +149,17 @@ func (ps *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 }
 
 /*MultiWrite - Write multiple entities to the store */
-func (ps *Store) MultiWrite(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
-	if len(entities) <= BATCH_SIZE {
+func (ps *Store) MultiWrite(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity, batchSizeOpt ...int) error {
+	batchSize := BATCH_SIZE
+	if len(batchSizeOpt) > 0 {
+		batchSize = batchSizeOpt[0]
+	}
+
+	if len(entities) <= batchSize {
 		return ps.multiWriteAux(ctx, entityMetadata, entities)
 	}
-	for start := 0; start < len(entities); start += BATCH_SIZE {
-		end := start + BATCH_SIZE
+	for start := 0; start < len(entities); start += batchSize {
+		end := start + batchSize
 		if end > len(entities) {
 			end = len(entities)
 		}

@@ -98,7 +98,7 @@ func (ems *Store) MultiRead(ctx context.Context, entityMetadata datastore.Entity
 	return nil
 }
 
-func (ems *Store) MultiWrite(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+func (ems *Store) MultiWrite(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity, batchSizeOpt ...int) error {
 	c := GetEntityCon(ctx, entityMetadata)
 	for _, entity := range entities {
 		data := datastore.ToJSON(entity).Bytes()

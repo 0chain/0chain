@@ -114,9 +114,12 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 
 	delay := time.Millisecond
 	ts := time.Now()
-	var success bool
+	var (
+		success      bool
+		batchSizeOpt []int
+	)
 	for tries := 1; tries <= 9; tries++ {
-		err := sc.storeTransactions(sTxns)
+		err := sc.storeTransactions(sTxns, batchSizeOpt...)
 		if err != nil {
 			var (
 				txnNames      []string
@@ -136,7 +139,11 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 				zap.Strings("txns", txnNames),
 				zap.Ints("txn_output_size", txnOutputSize),
 				zap.Int("retry", tries),
-				zap.Duration("delay", delay), zap.Error(err))
+				zap.Duration("delay", delay),
+				zap.Ints("batch_size", batchSizeOpt),
+				zap.Error(err))
+			// reduce batch size to 1 to save transactions one by one
+			batchSizeOpt = []int{1}
 			time.Sleep(delay)
 			continue
 		}
@@ -159,11 +166,11 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 	return nil
 }
 
-func (sc *Chain) storeTransactions(sTxns []datastore.Entity) error {
+func (sc *Chain) storeTransactions(sTxns []datastore.Entity, batchSizeOpt ...int) error {
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
 	defer persistencestore.Close(tctx)
-	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
+	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns, batchSizeOpt...)
 }
 
 var txnSummaryMV = false
