@@ -2,18 +2,22 @@ package zcnsc
 
 import (
 	"encoding/json"
+
+	"github.com/0chain/common/core/currency"
 )
 
 type BurnTicket struct {
-	EthereumAddress string `json:"ethereum_address"`
-	Hash            string `json:"hash"`
-	Nonce           int64  `json:"nonce"`
+	EthereumAddress string        `json:"ethereum_address"`
+	Hash            string        `json:"hash"`
+	Amount          currency.Coin `json:"amount"`
+	Nonce           int64         `json:"nonce"`
 }
 
-func NewBurnTicket(ethereumAddress, hash string, nonce int64) *BurnTicket {
+func NewBurnTicket(ethereumAddress, hash string, amount currency.Coin, nonce int64) *BurnTicket {
 	m := &BurnTicket{
 		EthereumAddress: ethereumAddress,
 		Hash:            hash,
+		Amount:          amount,
 		Nonce:           nonce,
 	}
 	return m
