@@ -1031,22 +1031,9 @@ ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 CREATE TABLE public.transaction_errors (
                                      id bigint NOT NULL,
                                      created_at timestamp with time zone,
-                                     hash text,
-                                     block_hash text,
-                                     round bigint,
-                                     version text,
-                                     client_id text,
-                                     to_client_id text,
-                                     transaction_data text,
-                                     value bigint,
-                                     signature text,
-                                     creation_date bigint,
-                                     fee bigint,
-                                     nonce bigint,
                                      transaction_type bigint,
                                      transaction_output text,
-                                     output_hash text,
-                                     status bigint
+                                     output_hash text
 );
 
 
