@@ -173,41 +173,38 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 
 	err := edb.Get().Model(&Transaction{}).Select("output_hash").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash").Find(&transactions)
 
-	for transaction := range transactions {
-		var curTransactions Transaction
-
-		edb.Get().Model(&transaction).Find(&curTransactions)
-
-		err := edb.Store.Get().Create(&TransactionErrors{
-			Hash:              curTransactions.Hash,
-			BlockHash:         curTransactions.BlockHash,
-			Round:             curTransactions.Round,
-			Version:           curTransactions.Version,
-			ClientId:          curTransactions.ClientId,
-			ToClientId:        curTransactions.ToClientId,
-			TransactionData:   curTransactions.TransactionData,
-			Value:             curTransactions.Value,
-			Signature:         curTransactions.Signature,
-			CreationDate:      curTransactions.CreationDate,
-			Fee:               curTransactions.Fee,
-			Nonce:             curTransactions.Nonce,
-			TransactionType:   curTransactions.TransactionType,
-			TransactionOutput: curTransactions.TransactionOutput,
-			OutputHash:        curTransactions.OutputHash,
-			Status:            curTransactions.Status,
-		})
-
-		if err.Error != nil {
-			logging.Logger.Error("Error in inserting transactions error", zap.Any("err", err.Error))
-		}
-	}
-
 	if err.Error != nil {
 		logging.Logger.Error("Error while reading transactions from transaction table", zap.Any("error", err.Error))
 		return err.Error
 	}
 
 	logging.Logger.Info("transactions", zap.Any("transactions", len(transactions)))
+
+	for _, transaction := range transactions {
+		// insert the transaction in the transaction error table
+		err := edb.Store.Get().Create(&TransactionErrors{
+			Hash:              transaction.Hash,
+			BlockHash:         transaction.BlockHash,
+			Round:             transaction.Round,
+			Version:           transaction.Version,
+			ClientId:          transaction.ClientId,
+			ToClientId:        transaction.ToClientId,
+			TransactionData:   transaction.TransactionData,
+			Value:             transaction.Value,
+			Signature:         transaction.Signature,
+			CreationDate:      transaction.CreationDate,
+			Fee:               transaction.Fee,
+			Nonce:             transaction.Nonce,
+			TransactionType:   transaction.TransactionType,
+			TransactionOutput: transaction.TransactionOutput,
+			OutputHash:        transaction.OutputHash,
+			Status:            transaction.Status,
+		})
+
+		if err.Error != nil {
+			logging.Logger.Error("Error in inserting transaction error", zap.Any("err", err.Error))
+		}
+	}
 
 	return nil
 }
