@@ -34,22 +34,9 @@ type Transaction struct {
 
 type TransactionErrors struct {
 	model.ImmutableModel
-	Hash              string        `json:"hash" gorm:"uniqueIndex:idx_thash"`
-	BlockHash         string        `json:"block_hash" gorm:"index:idx_tblock_hash"`
-	Round             int64         `json:"round"`
-	Version           string        `json:"version"`
-	ClientId          string        `json:"client_id" gorm:"index:idx_tclient_id"`
-	ToClientId        string        `json:"to_client_id" gorm:"index:idx_tto_client_id"`
-	TransactionData   string        `json:"transaction_data"`
-	Value             currency.Coin `json:"value"`
-	Signature         string        `json:"signature"`
-	CreationDate      int64         `json:"creation_date"  gorm:"index:idx_tcreation_date"`
-	Fee               currency.Coin `json:"fee"`
-	Nonce             int64         `json:"nonce"`
-	TransactionType   int           `json:"transaction_type"`
-	TransactionOutput string        `json:"transaction_output"`
-	OutputHash        string        `json:"output_hash"`
-	Status            int           `json:"status"`
+	TransactionType   int    `json:"transaction_type"`
+	TransactionOutput string `json:"transaction_output"`
+	OutputHash        string `json:"output_hash"`
 }
 
 func (edb *EventDb) addTransactions(txns []Transaction) error {
@@ -178,27 +165,21 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 		return err.Error
 	}
 
-	logging.Logger.Info("transactions", zap.Any("transactions", len(transactions)))
+	logging.Logger.Info("jayashtransactionsLen", zap.Any("transactions", len(transactions)))
 
 	for _, transaction := range transactions {
 		// insert the transaction in the transaction error table
-		err := edb.Store.Get().Create(&TransactionErrors{
-			Hash:              transaction.Hash,
-			BlockHash:         transaction.BlockHash,
-			Round:             transaction.Round,
-			Version:           transaction.Version,
-			ClientId:          transaction.ClientId,
-			ToClientId:        transaction.ToClientId,
-			TransactionData:   transaction.TransactionData,
-			Value:             transaction.Value,
-			Signature:         transaction.Signature,
-			CreationDate:      transaction.CreationDate,
-			Fee:               transaction.Fee,
-			Nonce:             transaction.Nonce,
+
+		logging.Logger.Info("jayashTransaction : ", zap.Any("transactions :", &TransactionErrors{
 			TransactionType:   transaction.TransactionType,
 			TransactionOutput: transaction.TransactionOutput,
 			OutputHash:        transaction.OutputHash,
-			Status:            transaction.Status,
+		}))
+
+		err = edb.Store.Get().Create(&TransactionErrors{
+			TransactionType:   transaction.TransactionType,
+			TransactionOutput: transaction.TransactionOutput,
+			OutputHash:        transaction.OutputHash,
 		})
 
 		if err.Error != nil {
