@@ -44,3 +44,7 @@ jobs:
           ../bin/start.benchmarks.sh | tee benchmark_run_output
           grep -R "Results" -A 1000 benchmark_run_output > benchmark_results
           echo "TESTS_RAN=true" >> $GITHUB_ENV   
+          if grep -aq "FAILED" benchmark_results; then
+            echo "::error::Benchmark tests failed"
+            exit 1
+          fi
