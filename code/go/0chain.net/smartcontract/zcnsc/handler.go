@@ -186,6 +186,7 @@ func (zrh *ZcnRestHandler) NotProcessedBurnTicketsHandler(w http.ResponseWriter,
 				NewBurnTicket(
 					burnTicket.EthereumAddress,
 					burnTicket.Hash,
+					burnTicket.Amount,
 					burnTicket.Nonce,
 				))
 		}
