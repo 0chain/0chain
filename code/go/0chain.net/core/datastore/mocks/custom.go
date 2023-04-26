@@ -1,12 +1,13 @@
 package mocks
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/round"
-	"0chain.net/core/datastore"
 	"context"
 	"errors"
 	"strconv"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/round"
+	"0chain.net/core/datastore"
 )
 
 type StoreCustom struct {
@@ -75,7 +76,7 @@ func (s StoreCustom) MultiRead(_ context.Context, _ datastore.EntityMetadata, _ 
 	panic("not implemented")
 }
 
-func (s StoreCustom) MultiWrite(_ context.Context, _ datastore.EntityMetadata, _ []datastore.Entity) error {
+func (s StoreCustom) MultiWrite(_ context.Context, _ datastore.EntityMetadata, _ []datastore.Entity, batchSizeOpt ...int) error {
 	panic("not implemented")
 }
 
