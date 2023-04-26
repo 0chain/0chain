@@ -29,6 +29,7 @@ type SimpleNodeResponse struct {
 	Status                        int                   `json:"-" msg:"-"`
 	LastSettingUpdateRound        int64                 `json:"last_setting_update_round"`
 	RoundServiceChargeLastUpdated int64                 `json:"round_service_charge_last_updated"`
+	IsKilled                      bool                  `json:"is_killed"`
 }
 
 type DelegatePoolResponse struct {
@@ -72,6 +73,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		LastHealthCheck:               edbMiner.LastHealthCheck,
 		Status:                        status,
 		RoundServiceChargeLastUpdated: edbMiner.Rewards.RoundServiceChargeLastUpdated,
+		IsKilled:                      edbMiner.IsKilled,
 	}
 
 	mn := NodeResponse{
@@ -127,6 +129,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 				TotalRewards: mn.Reward,
 			},
 			LastHealthCheck: mn.LastHealthCheck,
+			IsKilled:        mn.Provider.IsKilled(),
 		},
 
 		Active:    mn.Status == node.NodeStatusActive,

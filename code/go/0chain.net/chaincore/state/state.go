@@ -40,6 +40,19 @@ func (s *State) GetHashBytes() []byte {
 	return encryption.RawHash(s.Encode())
 }
 
+func (s *State) Clone() *State {
+	ns := &State{
+		TxnHash:      s.TxnHash,
+		TxnHashBytes: make([]byte, len(s.TxnHashBytes)),
+		Round:        s.Round,
+		Balance:      s.Balance,
+		Nonce:        s.Nonce,
+	}
+
+	copy(ns.TxnHashBytes, s.TxnHashBytes)
+	return ns
+}
+
 /*Encode - implement SecureSerializableValueI interface */
 func (s *State) Encode() []byte {
 	buf := bytes.NewBuffer(nil)

@@ -52,6 +52,7 @@ type Blobber struct {
 	ChallengesCompleted uint64  `json:"challenges_completed"`
 	OpenChallenges      uint64  `json:"open_challenges"`
 	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+	TotalBlockRewards	currency.Coin   `json:"total_block_rewards"`
 	TotalStorageIncome 	currency.Coin   `json:"total_storage_income"`
 	TotalReadIncome 	currency.Coin   `json:"total_read_income"`
 	TotalSlashedStake 	currency.Coin   `json:"total_slashed_stake"`
@@ -423,31 +424,40 @@ func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	var (
 		ids []string
+		totalBlockRewards []int64
 		totalStorageIncome []int64
 		totalReadIncome []int64
 		totalSlashedStake []int64
 		totalChanges = 0
 	)
 
-	for i, spu := range spus {
+	blobberIdx := -1
+	for _, spu := range spus {
 		if spu.Type != spenum.Blobber {
 			continue
 		}
+		blobberIdx++
 		ids = append(ids, spu.ProviderID.ID)
+		totalBlockRewards = append(totalBlockRewards, 0)
 		totalStorageIncome = append(totalStorageIncome, 0)
 		totalReadIncome = append(totalReadIncome, 0)
 		totalSlashedStake = append(totalSlashedStake, 0)
 
 		switch (spu.RewardType) {
+			case spenum.BlockRewardBlobber:
+				totalChanges++
+				totalBlockRewards[blobberIdx] = int64(spu.Reward)
 			case spenum.ChallengePassReward:
 				totalChanges++
-				totalStorageIncome[i] = int64(spu.Reward)
+				totalStorageIncome[blobberIdx] = int64(spu.Reward)
 			case spenum.FileDownloadReward:
 				totalChanges++
-				totalReadIncome[i] = int64(spu.Reward)
+				totalReadIncome[blobberIdx] = int64(spu.Reward)
 			case spenum.ChallengeSlashPenalty:
 				totalChanges++
-				totalSlashedStake[i] = int64(spu.Reward)
+				for _, penalty := range spu.DelegatePenalties {
+					totalSlashedStake[blobberIdx] += int64(penalty)
+				}
 		}
 	}
 
@@ -456,6 +466,7 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
+		AddUpdate("total_block_rewards", totalBlockRewards, "blobbers.total_block_rewards + t.total_block_rewards").
 		AddUpdate("total_storage_income", totalStorageIncome, "blobbers.total_storage_income + t.total_storage_income").
 		AddUpdate("total_read_income", totalReadIncome, "blobbers.total_read_income + t.total_read_income").
 		AddUpdate("total_slashed_stake", totalSlashedStake, "blobbers.total_slashed_stake + t.total_slashed_stake").
