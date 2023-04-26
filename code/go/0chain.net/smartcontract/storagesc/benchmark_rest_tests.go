@@ -374,20 +374,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getSearchHandler,
 			},
 			{
-				FuncName: "search.wm_name",
-				Params: map[string]string{
-					"searchString": benchmark.GetMockWriteMarkerFileName(0),
-				},
-				Endpoint: srh.getSearchHandler,
-			},
-			{
-				FuncName: "search.wm_content_hash",
-				Params: map[string]string{
-					"searchString": benchmark.GetMockWriteMarkerContentHash(0, 0),
-				},
-				Endpoint: srh.getSearchHandler,
-			},
-			{
 				FuncName: "alloc-blobber-term",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
