@@ -147,43 +147,36 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 
 func (edb *EventDb) UpdateTransactionErrors() error {
 
-	var transactions []Transaction
-
 	// created_at for last day from now
 	lastDay := time.Now().AddDate(0, 0, -1)
 	// convert to string
 	lastDayString := lastDay.Format("2006-01-02 15:04:05")
 
-	logging.Logger.Info("lastDayString", zap.Any("lastDayString", lastDayString), zap.Any("lastDay", lastDay), zap.Any("time.Now()", time.Now()))
-
 	// read all the transactions from the transaction table where status is 2 till last day
+	rows, err := edb.Get().Model(&Transaction{}).Select("output_hash, transaction_output, transaction_type").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash, transaction_output, transaction_type").Rows()
 
-	err := edb.Get().Model(&Transaction{}).Select("output_hash, transaction_output, transaction_type").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash, transaction_output, transaction_type").Find(&transactions)
-
-	if err.Error != nil {
-		logging.Logger.Error("Error while reading transactions from transaction table", zap.Any("error", err.Error))
-		return err.Error
+	if err != nil {
+		logging.Logger.Error("Error while reading transactions from transaction table", zap.Any("error", err))
+		return err
 	}
 
-	logging.Logger.Info("jayashtransactionsLen", zap.Any("transactions", len(transactions)))
+	for rows.Next() {
+		var transaction Transaction
+		err = edb.Get().ScanRows(rows, &transaction)
+		if err != nil {
+			logging.Logger.Error("Error while scanning rows", zap.Any("error", err))
+			return err
+		}
 
-	for _, transaction := range transactions {
 		// insert the transaction in the transaction error table
-
-		logging.Logger.Info("jayashTransaction : ", zap.Any("transactions :", &TransactionErrors{
-			TransactionType:   transaction.TransactionType,
-			TransactionOutput: transaction.TransactionOutput,
-			OutputHash:        transaction.OutputHash,
-		}))
-
 		err = edb.Store.Get().Create(&TransactionErrors{
 			CreatedAt:         time.Now(),
 			TransactionType:   transaction.TransactionType,
 			TransactionOutput: transaction.TransactionOutput,
 			OutputHash:        transaction.OutputHash,
-		})
+		}).Error
 
-		if err.Error != nil {
+		if err != nil {
 			logging.Logger.Error("Error in inserting transaction error", zap.Any("err", err.Error))
 		}
 	}
