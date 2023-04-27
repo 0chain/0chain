@@ -29,7 +29,11 @@ jobs:
         run: docker.local/bin/test.swagger.sh
 
       - name: Run unit tests
-        run: ./docker.local/bin/unit_test_build.sh
+        run: |
+          sudo groupadd docker
+          sudo usermod -aG docker $(whoami)
+          sudo service docker start
+          ./docker.local/bin/unit_test_build.sh
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
