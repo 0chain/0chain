@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, arc-runner1]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -39,7 +39,7 @@ jobs:
           verbose: true
 
   lint:
-    runs-on: [ self-hosted, build ]
+    runs-on: [ self-hosted, arc-runner1 ]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
