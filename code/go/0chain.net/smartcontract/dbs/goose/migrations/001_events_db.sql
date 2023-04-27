@@ -1040,28 +1040,6 @@ CREATE TABLE public.transaction_errors (
 ALTER TABLE public.transaction_errors OWNER TO zchain_user;
 
 --
--- Name: transaction_errors_id_seq; Type: SEQUENCE; Schema: public; Owner: zchain_user
---
-
-CREATE SEQUENCE public.transaction_errors_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.transaction_errors_id_seq OWNER TO zchain_user;
-
---
--- Name: transaction_errors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: zchain_user
---
-
-ALTER SEQUENCE public.transaction_errors_id_seq OWNED BY public.transaction_errors.id;
-
-
-
---
 -- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user
 --
 
