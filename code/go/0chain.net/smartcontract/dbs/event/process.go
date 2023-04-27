@@ -679,7 +679,15 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.penaltyUpdate(*spus, event.BlockNumber)
+		err := edb.penaltyUpdate(*spus, event.BlockNumber)
+		if err != nil {
+			return err
+		}
+		err = edb.blobberSpecificRevenue(*spus)
+		if err != nil {
+			return fmt.Errorf("could not update blobber specific revenue: %v", err)
+		}
+		return nil
 	case TagAddAllocation:
 		allocs, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
