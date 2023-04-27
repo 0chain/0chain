@@ -197,82 +197,86 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 	for {
 		es := <-edb.eventsChannel
-
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					logging.Logger.Error("Recovered panic in event main loop", zap.Any("recover", r))
-				}
-
-				es.doneC <- struct{}{}
-			}()
-
-			if es.round%edb.settings.PartitionChangePeriod == 0 {
-				edb.managePartitions(es.round)
-			}
-
-			tx, err := edb.Begin()
-			if err != nil {
-				logging.Logger.Error("error starting transaction", zap.Error(err))
-				return
-			}
-
-			if err = tx.addEvents(ctx, es); err != nil {
-				logging.Logger.Error("error saving events",
-					zap.Int64("round", es.round),
-					zap.Error(err))
-			}
-
-			tse := time.Now()
-			tags := make([]string, 0, len(es.events))
-			for _, event := range es.events {
-				tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
-				if err != nil {
-					logging.Logger.Error("error processing event",
-						zap.Int64("round", event.BlockNumber),
-						zap.Any("tag", event.Tag),
-						zap.Error(err))
-				}
-			}
-
-			// process snapshot for none adding block events only
-			if isNotAddBlockEvent(es) {
-				gs, err = updateSnapshots(gs, es, tx)
-				if err != nil {
-					logging.Logger.Error("snapshot could not be processed",
-						zap.Int64("round", es.round),
-						zap.String("block", es.block),
-						zap.Int("block size", es.blockSize),
-						zap.Error(err),
-					)
-				}
-				err = tx.updateUserAggregates(&es)
-				if err != nil {
-					logging.Logger.Error("user aggregate could not be processed",
-						zap.Error(err),
-					)
-				}
-			}
-
-			if err := tx.Commit(); err != nil {
-				logging.Logger.Error("error committing block events",
-					zap.Int64("block", es.round),
-					zap.Error(err),
-				)
-			}
-
-			due := time.Since(tse)
-			if due.Milliseconds() > 200 {
-				logging.Logger.Warn("event db work slow",
-					zap.Duration("duration", due),
-					zap.Int("events number", len(es.events)),
-					zap.Strings("tags", tags),
-					zap.Int64("round", es.round),
-					zap.String("block", es.block),
-					zap.Int("block size", es.blockSize))
-			}
-		}()
+		if s := edb.work(ctx, gs, es); s != nil {
+			gs = s
+		}
 	}
+}
+
+func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) *Snapshot {
+	defer func() {
+		if r := recover(); r != nil {
+			logging.Logger.Error("Recovered panic in event main loop", zap.Any("recover", r))
+		}
+
+		es.doneC <- struct{}{}
+	}()
+
+	if es.round%edb.settings.PartitionChangePeriod == 0 {
+		edb.managePartitions(es.round)
+	}
+
+	tx, err := edb.Begin()
+	if err != nil {
+		logging.Logger.Error("error starting transaction", zap.Error(err))
+		return nil
+	}
+
+	if err = tx.addEvents(ctx, es); err != nil {
+		logging.Logger.Error("error saving events",
+			zap.Int64("round", es.round),
+			zap.Error(err))
+	}
+
+	tse := time.Now()
+	tags := make([]string, 0, len(es.events))
+	for _, event := range es.events {
+		tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
+		if err != nil {
+			logging.Logger.Error("error processing event",
+				zap.Int64("round", event.BlockNumber),
+				zap.Any("tag", event.Tag),
+				zap.Error(err))
+		}
+	}
+
+	// process snapshot for none adding block events only
+	if isNotAddBlockEvent(es) {
+		gs, err = updateSnapshots(gs, es, tx)
+		if err != nil {
+			logging.Logger.Error("snapshot could not be processed",
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize),
+				zap.Error(err),
+			)
+		}
+		err = tx.updateUserAggregates(&es)
+		if err != nil {
+			logging.Logger.Error("user aggregate could not be processed",
+				zap.Error(err),
+			)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		logging.Logger.Error("error committing block events",
+			zap.Int64("block", es.round),
+			zap.Error(err),
+		)
+	}
+
+	due := time.Since(tse)
+	if due.Milliseconds() > 200 {
+		logging.Logger.Warn("event db work slow",
+			zap.Duration("duration", due),
+			zap.Int("events number", len(es.events)),
+			zap.Strings("tags", tags),
+			zap.Int64("round", es.round),
+			zap.String("block", es.block),
+			zap.Int("block size", es.blockSize))
+	}
+	return gs
 }
 
 func (edb *EventDb) managePartitions(round int64) {
