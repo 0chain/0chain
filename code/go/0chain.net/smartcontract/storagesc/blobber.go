@@ -214,7 +214,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
 
-//only use this function to add blobber(for update call updateBlobberSettings)
+// only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -714,34 +714,58 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
-		return "", common.NewError("commit_connection_failed",
-			"Previous allocation root does not match the latest allocation root")
+	if commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitConnection.WriteMarker.Size == 0 && blobAlloc.LastWriteMarker != nil {
+
+		if blobAlloc.LastWriteMarker.PreviousAllocationRoot != commitConnection.AllocationRoot {
+			return "", common.NewError("commit_connection_failed",
+				"Allocation root does not match the last writemarker previous allocation root")
+		}
+		changeSize := blobAlloc.LastWriteMarker.Size
+		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
+		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
+		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize - changeSize
+		// TODO: check if this is correct
+		blobAlloc.Stats.NumWrites++
+		blobber.SavedData -= changeSize
+		alloc.Stats.UsedSize -= changeSize
+		alloc.Stats.NumWrites++
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
+			AllocationId: alloc.ID,
+			FieldType:    event.Used,
+			BlobberId:    blobber.ID,
+			Delta:        -changeSize,
+		})
+	} else {
+
+		if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
+			return "", common.NewError("commit_connection_failed",
+				"Previous allocation root does not match the latest allocation root")
+		}
+
+		if blobAlloc.Stats.UsedSize+commitConnection.WriteMarker.Size >
+			blobAlloc.Size {
+
+			return "", common.NewError("commit_connection_failed",
+				"Size for blobber allocation exceeded maximum")
+		}
+
+		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
+		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
+		blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
+		blobAlloc.Stats.NumWrites++
+
+		blobber.SavedData += commitConnection.WriteMarker.Size
+
+		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
+		alloc.Stats.NumWrites++
+
+		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
+			FieldType:    event.Used,
+			AllocationId: alloc.ID,
+			BlobberId:    blobber.ID,
+			Delta:        commitConnection.WriteMarker.Size,
+		})
 	}
-
-	if blobAlloc.Stats.UsedSize+commitConnection.WriteMarker.Size >
-		blobAlloc.Size {
-
-		return "", common.NewError("commit_connection_failed",
-			"Size for blobber allocation exceeded maximum")
-	}
-
-	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
-	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
-	blobAlloc.Stats.NumWrites++
-
-	blobber.SavedData += commitConnection.WriteMarker.Size
-
-	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
-	alloc.Stats.NumWrites++
-
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.Used,
-		AllocationId: alloc.ID,
-		BlobberId:    blobber.ID,
-		Delta:        commitConnection.WriteMarker.Size,
-	})
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
