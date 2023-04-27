@@ -409,7 +409,7 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 
 	var (
-		timer = time.NewTimer(60 * time.Second)
+		timer = time.NewTimer(24 * time.Hour)
 	)
 
 	edb := sc.GetQueryStateContext().GetEventDB()
@@ -425,7 +425,7 @@ func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
 			}
 
-			timer = time.NewTimer(time.Second * 60)
+			timer = time.NewTimer(24 * time.Hour)
 		}
 	}
 }
