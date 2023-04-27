@@ -33,7 +33,6 @@ type Transaction struct {
 }
 
 type TransactionErrors struct {
-	model.ImmutableModel
 	TransactionType   int    `json:"transaction_type"`
 	TransactionOutput string `json:"transaction_output"`
 	OutputHash        string `json:"output_hash"`
@@ -158,7 +157,7 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 
 	// read all the transactions from the transaction table where status is 2 till last day
 
-	err := edb.Get().Model(&Transaction{}).Select("output_hash").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash").Find(&transactions)
+	err := edb.Get().Model(&Transaction{}).Select("output_hash, transaction_output").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash, transaction_output").Find(&transactions)
 
 	if err.Error != nil {
 		logging.Logger.Error("Error while reading transactions from transaction table", zap.Any("error", err.Error))
