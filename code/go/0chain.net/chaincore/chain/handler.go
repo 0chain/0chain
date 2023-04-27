@@ -1681,12 +1681,17 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) (bool, error) {
+func txnIterHandlerFunc(c *Chain, w http.ResponseWriter) func(context.Context, datastore.CollectionEntity) (bool, error) {
 	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
 		txn, ok := ce.(*transaction.Transaction)
 		if !ok {
 			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", ce))
 			return false, nil
+		}
+
+		s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
+		if !isValid(err) {
+			logging.Logger.Error(err.Error(), zap.Any("clientState", s))
 		}
 
 		c.txnsInPoolTableRows(w, txn, s)
@@ -1722,12 +1727,7 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
 
-	s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
-	if !isValid(err) {
-		logging.Logger.Error(err.Error(), zap.Any("clientState", s))
-	}
-
-	var txnIterHandler = txnIterHandlerFunc(c, w, s)
+	var txnIterHandler = txnIterHandlerFunc(c, w)
 
 	_ = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 
