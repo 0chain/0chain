@@ -33,10 +33,9 @@ type Transaction struct {
 }
 
 type TransactionErrors struct {
-	CreatedAt         time.Time
-	TransactionType   int    `json:"transaction_type"`
 	TransactionOutput string `json:"transaction_output"`
 	OutputHash        string `json:"output_hash"`
+	Count             int    `json:"count"`
 }
 
 func (edb *EventDb) addTransactions(txns []Transaction) error {
@@ -152,8 +151,14 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 	// convert to string
 	lastDayString := lastDay.Format("2006-01-02 15:04:05")
 
+	// clean up the transaction error table
+	err := edb.Get().Exec("TRUNCATE TABLE transaction_errors").Error
+	if err != nil {
+		return err
+	}
+
 	// read all the transactions from the transaction table where status is 2 till last day
-	rows, err := edb.Get().Model(&Transaction{}).Select("output_hash, transaction_output, transaction_type").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash, transaction_output, transaction_type").Rows()
+	rows, err := edb.Get().Model(&Transaction{}).Select("output_hash, transaction_output, transaction_type, count(*) as count").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash, transaction_output, transaction_type").Rows()
 
 	if err != nil {
 		logging.Logger.Error("Error while reading transactions from transaction table", zap.Any("error", err))
@@ -161,8 +166,13 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 	}
 
 	for rows.Next() {
-		var transaction Transaction
-		err = edb.Get().ScanRows(rows, &transaction)
+		var output struct {
+			TransactionOutput string
+			OutputHash        string
+			Count             int
+		}
+
+		err = edb.Get().ScanRows(rows, &output)
 		if err != nil {
 			logging.Logger.Error("Error while scanning rows", zap.Any("error", err))
 			return err
@@ -170,10 +180,9 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 
 		// insert the transaction in the transaction error table
 		err = edb.Store.Get().Create(&TransactionErrors{
-			CreatedAt:         time.Now(),
-			TransactionType:   transaction.TransactionType,
-			TransactionOutput: transaction.TransactionOutput,
-			OutputHash:        transaction.OutputHash,
+			TransactionOutput: output.TransactionOutput,
+			OutputHash:        output.OutputHash,
+			Count:             output.Count,
 		}).Error
 
 		if err != nil {

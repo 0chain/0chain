@@ -1031,9 +1031,9 @@ ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 CREATE TABLE public.transaction_errors (
                                      id SERIAL PRIMARY KEY,
                                      created_at timestamp with time zone,
-                                     transaction_type bigint,
                                      transaction_output text,
-                                     output_hash text
+                                     output_hash text,
+                                     count bigint
 );
 
 

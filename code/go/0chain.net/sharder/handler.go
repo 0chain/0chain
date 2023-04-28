@@ -3,8 +3,6 @@ package sharder
 import (
 	"context"
 	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"strings"
@@ -268,16 +266,7 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 
-	logging.Logger.Debug("Starting")
-	sc := GetSharderChain()
-	c := sc.Chain
-
-	edb := c.GetEventDb()
-
-	logging.Logger.Debug("jayash edb", zap.Any("edb", edb))
-
-	transactionErrors, err := edb.GetTransactionErrors()
-	logging.Logger.Debug("jayash TransactionErrors : ", zap.Any("transaction_errors", transactionErrors))
+	transactionErrors, err := GetSharderChain().Chain.GetEventDb().GetTransactionErrors()
 	if err != nil {
 		fmt.Fprintf(w, "Error getting transaction errors: %v", err)
 		return
@@ -287,13 +276,15 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
+	fmt.Fprintf(w, "<h2>Transaction Output - Count</h2>")
+
 	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<table width='100%%'>")
 
 	for _, transactionError := range transactionErrors {
-		fmt.Fprintf(w, "<tr><td class='tname'>%s</td><td>%d</td></tr>", transactionError.TransactionOutput, transactionError.TransactionType)
+		fmt.Fprintf(w, "<tr><td class='tname'>%s</td><td>%d</td></tr>", transactionError.TransactionOutput, transactionError.Count)
 	}
 
 	fmt.Fprintf(w, "</td><td valign='top'>")
