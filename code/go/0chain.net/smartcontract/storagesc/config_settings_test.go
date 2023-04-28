@@ -457,6 +457,10 @@ func getConfField(conf Config, field string) interface{} {
 	switch Settings[field].setting {
 	case MaxMint:
 		return conf.MaxMint
+	case MaxStake:
+		return conf.MaxStake
+	case MinStake:
+		return conf.MinStake
 	case TimeUnit:
 		return conf.TimeUnit
 	case MinAllocSize:
