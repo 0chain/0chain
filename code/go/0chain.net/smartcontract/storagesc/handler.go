@@ -94,7 +94,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
-		rest.MakeEndpoint(storage+"/transaction-errors", srh.getTransactionErrors),
 	}
 }
 
@@ -2977,26 +2976,4 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		users = []event.UserAggregate{}
 	}
 	common.Respond(w, r, users, nil)
-}
-
-func (srh *StorageRestHandler) getTransactionErrors(w http.ResponseWriter, r *http.Request) {
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	transactionErrors, err := edb.GetTransactionErrors()
-	if err != nil {
-		err := common.NewErrInternal("cannot get transaction errors" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	if len(transactionErrors) == 0 {
-		transactionErrors = []event.TransactionErrors{}
-	}
-
-	common.Respond(w, r, transactionErrors, nil)
 }
