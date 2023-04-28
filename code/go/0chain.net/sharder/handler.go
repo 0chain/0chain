@@ -4,6 +4,8 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"context"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"strings"
@@ -265,14 +267,13 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 }
 
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
-	sc := GetSharderChain()
-	c := sc.Chain
 
 	srh := storagesc.StorageRestHandler{}
 
 	edb := srh.GetQueryStateContext().GetEventDB()
 
 	transactionErrors, err := edb.GetTransactionErrors()
+	logging.Logger.Debug("jayash TransactionErrors : ", zap.Any("transaction_errors", transactionErrors))
 	if err != nil {
 		fmt.Fprintf(w, "Error getting transaction errors: %v", err)
 		return
@@ -282,9 +283,6 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
-	self := node.Self.Underlying()
-
-	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>")
@@ -295,13 +293,5 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "</td><td valign='top'>")
-
-	if c.GetPruneStats() != nil {
-		fmt.Fprintf(w, "<tr><td>")
-		fmt.Fprintf(w, "<h3>Prune Stats</h3>")
-		diagnostics.WritePruneStats(w, c.GetPruneStats())
-		fmt.Fprintf(w, "</td></tr>")
-	}
-
 	fmt.Fprintf(w, "</table>")
 }
