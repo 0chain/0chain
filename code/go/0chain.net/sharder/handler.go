@@ -30,7 +30,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
 		"/v1/state/nodes":                  common.ToJSONResponse(chain.StateNodesHandler),
 		"/v1/block/state_change":           common.ToJSONResponse(BlockStateChangeHandler),
-		"/v1/transaction/errors":           TransactionErrorWriter,
+		"/_transaction_errors":             TransactionErrorWriter,
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
@@ -265,6 +265,9 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 }
 
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
+	sc := GetSharderChain()
+	c := sc.Chain
+
 	srh := storagesc.StorageRestHandler{}
 
 	edb := srh.GetQueryStateContext().GetEventDB()
@@ -288,6 +291,17 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table width='100%%'>")
 
 	for _, transactionError := range transactionErrors {
-		fmt.Fprintf(w, "<tr><td class='tname'>%s</td><td>%s</td></tr>", transactionError.TransactionOutput, transactionError.TransactionType)
+		fmt.Fprintf(w, "<tr><td class='tname'>%s</td><td>%d</td></tr>", transactionError.TransactionOutput, transactionError.TransactionType)
 	}
+
+	fmt.Fprintf(w, "</td><td valign='top'>")
+
+	if c.GetPruneStats() != nil {
+		fmt.Fprintf(w, "<tr><td>")
+		fmt.Fprintf(w, "<h3>Prune Stats</h3>")
+		diagnostics.WritePruneStats(w, c.GetPruneStats())
+		fmt.Fprintf(w, "</td></tr>")
+	}
+
+	fmt.Fprintf(w, "</table>")
 }
