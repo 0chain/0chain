@@ -239,6 +239,22 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	logging.Logger.Info("get state nodes",
 		zap.Int("keys", len(keys)),
 		zap.Int("nodes", len(ns.Nodes)))
+
+	// validate the retrieved nodes keys match the requested ones
+	keysMap := make(map[string]struct{}, len(keys))
+	for _, k := range keys {
+		keysMap[util.ToHex(k)] = struct{}{}
+	}
+
+	for _, n := range ns.Nodes {
+		nk := util.ToHex(n.GetHashBytes())
+		if _, ok := keysMap[nk]; !ok {
+			logging.Logger.Error("get state nodes - retrieved node key does not match",
+				zap.String("key not requested", nk))
+			return nil, common.NewError("state_nodes_error", "retrieved node key does not match")
+		}
+	}
+
 	return ns, nil
 }
 
