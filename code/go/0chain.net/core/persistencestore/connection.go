@@ -70,7 +70,7 @@ func initSession(delay time.Duration, maxTries int) error {
 
 	cluster.ProtoVersion = 4
 	cluster.Keyspace = KeySpace
-	cluster.ConnectTimeout = time.Second * 10;
+	cluster.ConnectTimeout = time.Second * 30
 	start0 := time.Now()
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
 	for tries := 0; tries < maxTries; tries++ {
