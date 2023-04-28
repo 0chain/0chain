@@ -184,8 +184,8 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 	return nil
 }
 
-func (edb *EventDb) GetTransactionErrors(offset, limit int) ([]TransactionErrors, error) {
+func (edb *EventDb) GetTransactionErrors() ([]TransactionErrors, error) {
 	var transactions []TransactionErrors
-	err := edb.Get().Model(&TransactionErrors{}).Offset(offset).Limit(limit).Find(&transactions)
+	err := edb.Get().Model(&TransactionErrors{}).Find(&transactions)
 	return transactions, err.Error
 }

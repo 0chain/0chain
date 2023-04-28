@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/smartcontract/storagesc"
 	"context"
 	"fmt"
 	"net/http"
@@ -29,6 +30,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
 		"/v1/state/nodes":                  common.ToJSONResponse(chain.StateNodesHandler),
 		"/v1/block/state_change":           common.ToJSONResponse(BlockStateChangeHandler),
+		"/v1/transaction/errors":           TransactionErrorWriter,
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
@@ -260,4 +262,32 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 		PrevInvocationScanTime: previousElapsed,
 		MeanScanBlockStatsTime: cc.BlockSyncTimer.Mean() / 1000000.0,
 	}, nil
+}
+
+func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
+	srh := storagesc.StorageRestHandler{}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+
+	transactionErrors, err := edb.GetTransactionErrors()
+	if err != nil {
+		fmt.Fprintf(w, "Error getting transaction errors: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	chain.PrintCSS(w)
+	diagnostics.WriteStatisticsCSS(w)
+
+	self := node.Self.Underlying()
+
+	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<br>")
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<table width='100%%'>")
+
+	for _, transactionError := range transactionErrors {
+		fmt.Fprintf(w, "<tr><td class='tname'>%s</td><td>%s</td></tr>", transactionError.TransactionOutput, transactionError.TransactionType)
+	}
 }

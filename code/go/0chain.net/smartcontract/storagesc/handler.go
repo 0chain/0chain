@@ -2980,11 +2980,6 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 }
 
 func (srh *StorageRestHandler) getTransactionErrors(w http.ResponseWriter, r *http.Request) {
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
 
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -2992,7 +2987,7 @@ func (srh *StorageRestHandler) getTransactionErrors(w http.ResponseWriter, r *ht
 		return
 	}
 
-	transactionErrors, err := edb.GetTransactionErrors(pagination.Offset, pagination.Limit)
+	transactionErrors, err := edb.GetTransactionErrors()
 	if err != nil {
 		err := common.NewErrInternal("cannot get transaction errors" + err.Error())
 		common.Respond(w, r, nil, err)
