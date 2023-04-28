@@ -14,6 +14,18 @@ do
     esac
 done
 
+echo "checking if go.mod is upto date
+pushd code/go/0chain.net
+go mod tidy
+if [[ -z $(git status -s) ]]
+then
+  echo "go mod is clean"
+else
+  echo "change detected. please run 'go mod tidy' and commit the changes"
+  exit
+fi
+popd
+
 docker $cmd -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 
 #Set this to a value higher than the current number of linter errors. We should lower this number over time
