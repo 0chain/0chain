@@ -268,9 +268,15 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 
+	logging.Logger.Debug("Starting")
+
 	srh := storagesc.StorageRestHandler{}
 
+	logging.Logger.Debug("jayash srh", zap.Any("srh", srh))
+
 	edb := srh.GetQueryStateContext().GetEventDB()
+
+	logging.Logger.Debug("jayash edb", zap.Any("edb", edb))
 
 	transactionErrors, err := edb.GetTransactionErrors()
 	logging.Logger.Debug("jayash TransactionErrors : ", zap.Any("transaction_errors", transactionErrors))
