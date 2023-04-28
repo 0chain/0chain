@@ -1,7 +1,6 @@
 package sharder
 
 import (
-	"0chain.net/smartcontract/storagesc"
 	"context"
 	"fmt"
 	"github.com/0chain/common/core/logging"
@@ -153,6 +152,7 @@ func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	sc := GetSharderChain()
 	c := sc.Chain
+
 	w.Header().Set("Content-Type", "text/html")
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
@@ -269,12 +269,10 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 
 	logging.Logger.Debug("Starting")
+	sc := GetSharderChain()
+	c := sc.Chain
 
-	srh := storagesc.StorageRestHandler{}
-
-	logging.Logger.Debug("jayash srh", zap.Any("srh", srh))
-
-	edb := srh.GetQueryStateContext().GetEventDB()
+	edb := c.GetEventDb()
 
 	logging.Logger.Debug("jayash edb", zap.Any("edb", edb))
 
