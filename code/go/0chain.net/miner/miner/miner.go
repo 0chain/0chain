@@ -321,7 +321,7 @@ func main() {
 		logging.Logger.Info("Http server shut down", zap.Error(err2))
 	}()
 
-	go mc.RegisterClient()
+	// go mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
 
 	// start restart round event worker before the StartProtocol to be able
