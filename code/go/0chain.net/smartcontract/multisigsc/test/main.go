@@ -10,7 +10,6 @@ import (
 	"time"
 
 	chainconfig "0chain.net/chaincore/config"
-	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/multisigsc"
 	. "github.com/0chain/common/core/logging"
@@ -298,14 +297,6 @@ func newRegisteredMPTWallet() string {
 	}
 
 	clientID := clientIDForKey(scheme)
-
-	w := mptwallet.Wallet{
-		SignatureScheme: scheme,
-		PublicKey:       scheme.GetPublicKey(),
-		ClientID:        clientID,
-	}
-
-	registerMPTWallet(w)
 
 	return clientID
 }
