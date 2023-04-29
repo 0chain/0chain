@@ -261,15 +261,16 @@ func (c *Chain) EstimateTransactionFeeLFB(ctx context.Context,
 	}
 	lfb = lfb.Clone()
 
-	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, opts...)
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, txn, opts...)
 	return fee, err
 }
 
 func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
+	b *block.Block,
 	mpt util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
 	opts ...SyncNodesOption) (int, currency.Coin, error) {
-	cost, err := c.EstimateTransactionCost(ctx, nil, mpt, txn, opts...)
+	cost, err := c.EstimateTransactionCost(ctx, b, mpt, txn, opts...)
 	if err != nil {
 		return 0, 0, err
 	}
