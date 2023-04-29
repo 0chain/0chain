@@ -3,9 +3,11 @@ package event
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/state"
@@ -197,18 +199,20 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 	for {
 		es := <-edb.eventsChannel
-		if s := edb.work(ctx, gs, es); s != nil {
+		s, err := edb.work(ctx, gs, es)
+		if err != nil {
+			if config.Development() { //panic in case of development
+				log.Panic(err)
+			}
+		}
+		if s != nil {
 			gs = s
 		}
 	}
 }
 
-func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) *Snapshot {
+func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) (*Snapshot, error) {
 	defer func() {
-		if r := recover(); r != nil {
-			logging.Logger.Error("Recovered panic in event main loop", zap.Any("recover", r))
-		}
-
 		es.doneC <- struct{}{}
 	}()
 
@@ -219,13 +223,17 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) *Sna
 	tx, err := edb.Begin()
 	if err != nil {
 		logging.Logger.Error("error starting transaction", zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	if err = tx.addEvents(ctx, es); err != nil {
 		logging.Logger.Error("error saving events",
 			zap.Int64("round", es.round),
 			zap.Error(err))
+		if err := tx.Rollback(); err != nil {
+			return nil, err
+		}
+		return nil, err
 	}
 
 	tse := time.Now()
@@ -237,6 +245,10 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) *Sna
 				zap.Int64("round", event.BlockNumber),
 				zap.Any("tag", event.Tag),
 				zap.Error(err))
+			if err := tx.Rollback(); err != nil {
+				return nil, err
+			}
+			return nil, err
 		}
 	}
 
@@ -262,8 +274,8 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) *Sna
 	if err := tx.Commit(); err != nil {
 		logging.Logger.Error("error committing block events",
 			zap.Int64("block", es.round),
-			zap.Error(err),
-		)
+			zap.Error(err))
+		return nil, err
 	}
 
 	due := time.Since(tse)
@@ -276,7 +288,7 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) *Sna
 			zap.String("block", es.block),
 			zap.Int("block size", es.blockSize))
 	}
-	return gs
+	return gs, nil
 }
 
 func (edb *EventDb) managePartitions(round int64) {
