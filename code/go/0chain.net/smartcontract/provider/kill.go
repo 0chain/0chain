@@ -22,7 +22,7 @@ func (pr *ProviderRequest) Encode() []byte {
 	return b
 }
 
-func (pr *ProviderRequest) decode(p []byte) error {
+func (pr *ProviderRequest) Decode(p []byte) error {
 	return json.Unmarshal(p, pr)
 }
 
@@ -34,7 +34,7 @@ func Kill(
 	balances cstate.StateContextI,
 ) error {
 	var req ProviderRequest
-	if err := req.decode(input); err != nil {
+	if err := req.Decode(input); err != nil {
 		return err
 	}
 

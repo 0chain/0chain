@@ -71,9 +71,9 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 
 	b.StopTimer()
 	resp := rec.Result()
+	body, _ := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	if viper.GetBool(ShowOutput) && !qbt.shownResult {
-		body, _ := io.ReadAll(resp.Body)
-		defer resp.Body.Close()
 		var prettyJSON bytes.Buffer
 		err := json.Indent(&prettyJSON, body, "", "\t")
 		require.NoError(b, err)
@@ -81,7 +81,7 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 		qbt.shownResult = true
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("status code %v not ok: %v", resp.StatusCode, resp.Status)
+		return fmt.Errorf("status code %v not ok: %v, err: %v", resp.StatusCode, resp.Status, string(body))
 	}
 	b.StartTimer()
 

@@ -173,6 +173,10 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 			"rank_metric":          gorm.Expr("rank_metric * ?", 2),
 			"challenges_passed":    gorm.Expr("challenges_passed * ?", 2),
 			"challenges_completed": gorm.Expr("challenges_completed * ?", 2),
+			"total_block_rewards":   gorm.Expr("total_block_rewards * ?", 2),
+			"total_storage_income": gorm.Expr("total_storage_income * ?", 2),
+			"total_read_income":	gorm.Expr("total_read_income * ?", 2),
+			"total_slashed_stake":  gorm.Expr("total_slashed_stake * ?", 2),
 		}
 		err = eventDb.Store.Get().Model(&Blobber{}).Where("id", blobbersInBucket[0]).Updates(updates).Error
 		require.NoError(t, err)
@@ -230,6 +234,10 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 		require.Equal(t, oldBlobber.ReadData*2, curBlobber.ReadData)
 		require.Equal(t, oldBlobber.OffersTotal*2, curBlobber.OffersTotal)
 		require.Equal(t, oldBlobber.OpenChallenges*2, curBlobber.OpenChallenges)
+		require.Equal(t, oldBlobber.TotalBlockRewards*2, curBlobber.TotalBlockRewards)
+		require.Equal(t, oldBlobber.TotalStorageIncome*2, curBlobber.TotalStorageIncome)
+		require.Equal(t, oldBlobber.TotalReadIncome*2, curBlobber.TotalReadIncome)
+		require.Equal(t, oldBlobber.TotalSlashedStake*2, curBlobber.TotalSlashedStake)
 		require.Equal(t, oldBlobber.RankMetric*2, curBlobber.RankMetric)
 		require.Equal(t, oldBlobber.ChallengesPassed*2, curBlobber.ChallengesPassed)
 		require.Equal(t, oldBlobber.ChallengesCompleted*2, curBlobber.ChallengesCompleted)
@@ -314,6 +322,10 @@ func blobberToSnapshot(blobber *Blobber) BlobberSnapshot {
 		TotalRewards:        blobber.Rewards.TotalRewards,
 		TotalStake:          blobber.TotalStake,
 		OpenChallenges:      blobber.OpenChallenges,
+		TotalBlockRewards:    blobber.TotalBlockRewards,
+		TotalStorageIncome:  blobber.TotalStorageIncome,
+		TotalReadIncome:     blobber.TotalReadIncome,
+		TotalSlashedStake:   blobber.TotalSlashedStake,
 		ChallengesPassed:    blobber.ChallengesPassed,
 		ChallengesCompleted: blobber.ChallengesCompleted,
 		CreationRound:       blobber.CreationRound,
@@ -367,6 +379,10 @@ func calculateBlobberAggregate(round int64, current *Blobber, old *BlobberSnapsh
 	aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
 	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
+	aggregate.TotalBlockRewards = (old.TotalBlockRewards + current.TotalBlockRewards) / 2
+	aggregate.TotalStorageIncome = (old.TotalStorageIncome + current.TotalStorageIncome) / 2
+	aggregate.TotalReadIncome = (old.TotalReadIncome + current.TotalReadIncome) / 2
+	aggregate.TotalSlashedStake = (old.TotalSlashedStake + current.TotalSlashedStake) / 2
 	aggregate.Downtime = current.Downtime
 	if current.ChallengesCompleted == 0 {
 		aggregate.RankMetric = 0
@@ -426,6 +442,10 @@ func assertBlobberAggregate(t *testing.T, expected, actual *BlobberAggregate) {
 	require.Equal(t, expected.OpenChallenges, actual.OpenChallenges)
 	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
 	require.Equal(t, expected.ChallengesCompleted, actual.ChallengesCompleted)
+	require.Equal(t, expected.TotalBlockRewards, actual.TotalBlockRewards)
+	require.Equal(t, expected.TotalStorageIncome, actual.TotalStorageIncome)
+	require.Equal(t, expected.TotalReadIncome, actual.TotalReadIncome)
+	require.Equal(t, expected.TotalSlashedStake, actual.TotalSlashedStake)
 	require.Equal(t, expected.Downtime, actual.Downtime)
 	require.Equal(t, expected.RankMetric, actual.RankMetric)
 	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
@@ -443,6 +463,10 @@ func assertBlobberSnapshot(t *testing.T, expected, actual *BlobberSnapshot) {
 	require.Equal(t, expected.OffersTotal, actual.OffersTotal)
 	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
+	require.Equal(t, expected.TotalBlockRewards, actual.TotalBlockRewards)
+	require.Equal(t, expected.TotalStorageIncome, actual.TotalStorageIncome)
+	require.Equal(t, expected.TotalReadIncome, actual.TotalReadIncome)
+	require.Equal(t, expected.TotalSlashedStake, actual.TotalSlashedStake)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.ChallengesPassed, actual.ChallengesPassed)
 	require.Equal(t, expected.ChallengesCompleted, actual.ChallengesCompleted)

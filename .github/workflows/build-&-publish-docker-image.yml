@@ -26,7 +26,7 @@ env:
 
 jobs:
   miner:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, arc-runner]
     steps:
 
     - name: Set docker image tag
@@ -54,6 +54,11 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: Install Dependencies
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
     - name: Build base images
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -76,8 +81,6 @@ jobs:
 
     - name: Build & Push
       run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
         make build-mocks
 
@@ -103,7 +106,7 @@ jobs:
 
 
   sharder:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, arc-runner]
     steps:
 
     - name: Set docker image tag
@@ -132,6 +135,11 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: Install Dependencies
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
     - name: Build base images
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -157,8 +165,6 @@ jobs:
 
     - name: Build & Push
       run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
         make build-mocks
 

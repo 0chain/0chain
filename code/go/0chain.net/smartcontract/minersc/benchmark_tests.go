@@ -2,13 +2,12 @@ package minersc
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/core/common"
-
-	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -118,8 +117,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -144,8 +141,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -186,6 +181,28 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: nil,
+		},
+		{
+			name: "storage.kill_miner",
+			input: (&provider.ProviderRequest{
+				ID: data.Miners[0],
+			}).Encode(),
+			endpoint: msc.killMiner,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.MinerMOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name: "storage.kill_sharder",
+			input: (&provider.ProviderRequest{
+				ID: data.Sharders[0],
+			}).Encode(),
+			endpoint: msc.killSharder,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.MinerMOwner),
+				CreationDate: creationTime,
+			},
 		},
 		{
 			name:     "miner.contributeMpk",
@@ -263,43 +280,43 @@ func BenchmarkTests(
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
-					"min_stake":                    "0.0",
-					"max_stake":                    "100",
-					"max_n":                        "7",
-					"min_n":                        "3",
-					"t_percent":                    "0.66",
-					"k_percent":                    "0.75",
-					"x_percent":                    "0.70",
-					"max_s":                        "2",
-					"min_s":                        "1",
-					"max_delegates":                "200",
-					"reward_round_frequency":       "64250",
-					"reward_rate":                  "1.0",
-					"share_ratio":                  "50",
-					"block_reward":                 "021",
-					"max_charge":                   "0.5",
-					"epoch":                        "6415000000",
-					"reward_decline_rate":          "0.1",
-					"max_mint":                     "1500000.0",
-					"owner_id":                     "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
-					"cost.add_miner":               "111",
-					"cost.add_sharder":             "111",
-					"cost.delete_miner":            "111",
-					"cost.miner_health_check":      "111",
-					"cost.sharder_health_check":    "111",
-					"cost.contributeMpk":           "111",
-					"cost.shareSignsOrShares":      "111",
-					"cost.wait":                    "111",
-					"cost.update_globals":          "111",
-					"cost.update_settings":         "111",
-					"cost.update_miner_settings":   "111",
-					"cost.update_sharder_settings": "111",
-					"cost.payFees":                 "111",
-					"cost.feesPaid":                "111",
-					"cost.mintedTokens":            "111",
-					"cost.addToDelegatePool":       "111",
-					"cost.deleteFromDelegatePool":  "111",
-					"cost.sharder_keep":            "111",
+					"max_n":                               "7",
+					"min_n":                               "3",
+					"t_percent":                           "0.66",
+					"k_percent":                           "0.75",
+					"x_percent":                           "0.70",
+					"max_s":                               "2",
+					"min_s":                               "1",
+					"max_delegates":                       "200",
+					"reward_round_frequency":              "64250",
+					"reward_rate":                         "1.0",
+					"share_ratio":                         "50",
+					"block_reward":                        "021",
+					"max_charge":                          "0.5",
+					"epoch":                               "6415000000",
+					"reward_decline_rate":                 "0.1",
+					"max_mint":                            "1500000.0",
+					"owner_id":                            "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"cost.add_miner":                      "111",
+					"cost.add_sharder":                    "111",
+					"cost.delete_miner":                   "111",
+					"cost.miner_health_check":             "111",
+					"cost.sharder_health_check":           "111",
+					strings.ToLower("cost.contributeMpk"): "111",
+					strings.ToLower("cost.shareSignsOrShares"): "111",
+					"cost.wait":                                    "111",
+					"cost.update_globals":                          "111",
+					"cost.update_settings":                         "111",
+					"cost.update_miner_settings":                   "111",
+					"cost.update_sharder_settings":                 "111",
+					strings.ToLower("cost.payFees"):                "111",
+					strings.ToLower("cost.feesPaid"):               "111",
+					strings.ToLower("cost.mintedTokens"):           "111",
+					strings.ToLower("cost.addToDelegatePool"):      "111",
+					strings.ToLower("cost.deleteFromDelegatePool"): "111",
+					"cost.sharder_keep":                            "111",
+					"cost.kill_miner":                              "111",
+					"cost.kill_sharder":                            "111",
 				},
 			}).Encode(),
 		},
@@ -322,8 +339,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),
@@ -347,8 +362,6 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
-						MinStake:           currency.Coin(viper.GetFloat64(bk.MinerMinStake) * 1e10),
-						MaxStake:           currency.Coin(viper.GetFloat64(bk.MinerMaxStake) * 1e10),
 					},
 				},
 			}).Encode(),

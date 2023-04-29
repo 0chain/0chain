@@ -1937,6 +1937,9 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 	if err := json.Unmarshal(txData, &tx); err != nil {
 		return nil, err
 	}
+	if err := tx.ComputeProperties(); err != nil {
+		return nil, err
+	}
 
 	c := GetServerChain()
 	lfb := c.GetLatestFinalizedBlock()

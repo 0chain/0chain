@@ -161,8 +161,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
 
-	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
-	sp.Settings.MaxStake = blobber.StakePoolSettings.MaxStake
 	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
@@ -216,7 +214,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
 
-//only use this function to add blobber(for update call updateBlobberSettings)
+// only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -440,7 +438,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	var (
-		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
+		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr //todo check if it can be negative
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
 		value    = currency.Coin(float64(details.Terms.ReadPrice) * sizeRead)
 	)
@@ -448,8 +446,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	commitRead.ReadMarker.ReadSize = sizeRead
 
 	// move tokens from read pool to blobber
-	var rp *readPool
-	if rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances); err != nil {
+	rp, err := sc.getReadPool(commitRead.ReadMarker.ClientID, balances)
+	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}
