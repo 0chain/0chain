@@ -1183,7 +1183,7 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 			zap.Int64("alloc expiration", int64(sa.Expiration)))
 		return 0, errors.New("rest duration time overflow, timestamp is beyond alloc expiration")
 	}
-	logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sa.Expiration)), zap.Int64("now", int64(now)), zap.Int64("timeUnit", int64(timeUnit)), zap.Int64("rest", int64(sa.Expiration-now)))
+	logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sa.Expiration)), zap.Int64("now", int64(now)), zap.Float64("timeUnit", float64(timeUnit)), zap.Int64("rest", int64(sa.Expiration-now)))
 	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
 }
 
