@@ -169,25 +169,6 @@ func getOwnerWallet(signatureScheme, ownerKeysFile string) mptwallet.Wallet {
 	return w
 }
 
-// Register a client on the blockchain's MPT.
-func registerMPTWallet(w mptwallet.Wallet) {
-	Logger.Info("Registering MPT wallet", zap.String("ClientID", w.ClientID))
-
-	data, err := json.Marshal(w)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, ip := range members.Miners {
-		body, err := httpclientutil.SendPostRequest(ip+httpclientutil.RegisterClient, data, "", "", nil)
-		if err != nil {
-			Logger.Fatal("HTTP POST error", zap.Error(err), zap.ByteString("body", body))
-		}
-	}
-
-	Logger.Info("Success on registering MPT wallet")
-}
-
 func executeSCTransaction(from mptwallet.Wallet, scAddress string, value int64, data interface{}) httpclientutil.Transaction {
 	dataBytes, err := json.Marshal(&data)
 	if err != nil {

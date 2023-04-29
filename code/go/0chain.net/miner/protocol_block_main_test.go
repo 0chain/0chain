@@ -337,7 +337,7 @@ func TestChain_deletingTxns(t *testing.T) {
 		},
 	}
 
-	var err error
+	// var err error
 
 	require.NoError(t, initDefaultPool())
 
@@ -391,13 +391,6 @@ func TestChain_deletingTxns(t *testing.T) {
 	require.NoError(t, cl.SetPublicKey(sigScheme.GetPublicKey()))
 
 	ctx := context.Background()
-
-	_, err = client.PutClient(ctx, cl)
-	require.NoError(t, err)
-
-	require.NoError(t, client.PutClientCache(cl))
-
-	mc.RegisterClient()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
