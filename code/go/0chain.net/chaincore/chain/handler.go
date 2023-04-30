@@ -1378,6 +1378,8 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return transaction.PutTransaction(ctx, txn)
 	}
 
+	var valueNotPresent = err == util.ErrValueNotPresent
+
 	var nonce int64
 	if s != nil {
 		nonce = s.Nonce
@@ -1413,6 +1415,8 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.String("func", txn.FunctionName),
 				zap.Any("txn fee", txn.Fee),
 				zap.Any("minFee", minFee),
+				zap.Bool("client value not present", valueNotPresent),
+				zap.Int64("lfb round", lfb.Round),
 				zap.Error(err))
 			return nil, err
 		}
@@ -1420,6 +1424,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		if s.Balance < txn.Fee {
 			logging.Logger.Error("insufficient balance",
 				zap.String("txn", txn.Hash),
+				zap.String("client_id", txn.ClientID),
 				zap.String("func", txn.FunctionName),
 				zap.Any("balance", s.Balance),
 				zap.Any("fee", txn.Fee))
