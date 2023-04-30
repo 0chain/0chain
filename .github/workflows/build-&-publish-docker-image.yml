@@ -25,6 +25,166 @@ env:
   ZCHAIN_BUILD_RUN_REGISTRY: ${{ secrets.ZCHAIN_BUILD_RUN_REGISTRY }}
 
 jobs:
+  miner:
+    runs-on: [self-hosted, arc-runner]
+    steps:
+
+    - name: Set docker image tag
+      id: get_info
+      run: |
+        if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+        else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        fi
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v2
+
+    - name: Setup go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18' # The Go version to download (if necessary) and use.
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
+    - name: Build base images
+      run: |
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+
+        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+
+        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+
+    - name: Build & Push
+      run: |
+        make install-mockery
+        make build-mocks
+
+        sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+
+
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG
+        docker tag miner:latest $MINER_REGISTRY:latest
+        docker push ${MINER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+
+      env:
+        DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
+
+    - name: Push latest
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
+      run: |
+          docker push $MINER_REGISTRY:latest
+
+
+  sharder:
+    runs-on: [self-hosted, arc-runner]
+    steps:
+
+    - name: Set docker image tag
+      id: get_info
+      run: |
+        if [[ "${{github.ref}}" == refs/pull/* ]]; then
+          tag=${GITHUB_REF/\/merge/}
+          echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+        else
+          echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        fi
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+
+    - uses: actions/checkout@v1
+
+    - name: Setup go 1.18
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.18' # The Go version to download (if necessary) and use.
+
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
+    - name: Build base images
+      run: |
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+
+        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+
+        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+
+    - name: generate swagger
+      run: docker.local/bin/test.swagger.sh
+
+    - name: Build & Push
+      run: |
+        make install-mockery
+        make build-mocks
+
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
+
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
+        docker tag sharder:latest $SHARDER_REGISTRY:latest
+        docker push ${SHARDER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+
+
+    - name: Push latest
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
+      run: |
+          docker push $SHARDER_REGISTRY:latest
+
+
   system-tests:
     if: github.event_name != 'workflow_dispatch'
     needs: [miner, sharder]
