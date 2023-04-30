@@ -192,11 +192,9 @@ func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
 }
 
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
-	b *block.Block,
-	bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
+	b *block.Block, txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
 	var (
-		clientState = CreateTxnMPT(bState) // begin transaction
+		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
 
@@ -261,16 +259,15 @@ func (c *Chain) EstimateTransactionFeeLFB(ctx context.Context,
 	}
 	lfb = lfb.Clone()
 
-	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, txn, opts...)
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb, txn, opts...)
 	return fee, err
 }
 
 func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	b *block.Block,
-	mpt util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
 	opts ...SyncNodesOption) (int, currency.Coin, error) {
-	cost, err := c.EstimateTransactionCost(ctx, b, mpt, txn, opts...)
+	cost, err := c.EstimateTransactionCost(ctx, b, txn, opts...)
 	if err != nil {
 		return 0, 0, err
 	}

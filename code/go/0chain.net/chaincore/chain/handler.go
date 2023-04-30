@@ -1392,7 +1392,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	if sc.IsFeeEnabled() {
-		_, minFee, err := sc.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, txn, WithSync())
+		_, minFee, err := sc.EstimateTransactionCostFee(ctx, lfb, txn, WithSync())
 		if err != nil {
 			if cstate.ErrInvalidState(err) {
 				// put transaction into pool if got invalid state error
@@ -1949,7 +1949,7 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 
 	lfb = lfb.Clone()
 
-	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, &tx)
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb, &tx)
 	if err != nil {
 		logging.Logger.Error("failed to calculate the transaction cost",
 			zap.Int("tx-type", tx.TransactionType), zap.Error(err))
