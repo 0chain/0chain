@@ -73,7 +73,7 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 	}
 
 	if len(authorizers) == 0 {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list"))
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(errors.New("empty list"), true, "can't get authorizer list"))
 		return
 	}
 
