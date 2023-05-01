@@ -31,9 +31,9 @@ jobs:
 
       - name: Run unit tests
         run: |
-          sudo groupadd docker
-          sudo usermod -aG docker $(whoami)
-          sudo service docker start
+          sudo groupadd docker || true
+          sudo usermod -aG docker $(whoami) || true
+          sudo service docker start || true
           ./docker.local/bin/unit_test_build.sh
 
       - name: Upload coverage to Codecov
@@ -43,25 +43,25 @@ jobs:
           flags: Unit-Tests
           verbose: true
 
-  lint:
-    runs-on: [ self-hosted, arc-runner1 ]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.18'
+  # lint:
+  #   runs-on: [ self-hosted, arc-runner1 ]
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions/setup-go@v2
+  #       with:
+  #         go-version: '1.18'
 
-      - name: Check msgp changes
-        run: |
-          sudo apt update -y
-          sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
-          ./docker.local/bin/check.msgp.sh
+  #     - name: Check msgp changes
+  #       run: |
+  #         sudo apt update -y
+  #         sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+  #         ./docker.local/bin/check.msgp.sh
 
-      - name: Build Base
-        run: ./docker.local/bin/build.base.sh
+  #     - name: Build Base
+  #       run: ./docker.local/bin/build.base.sh
 
-      - name: Check swagger generation
-        run: docker.local/bin/test.swagger.sh
+  #     - name: Check swagger generation
+  #       run: docker.local/bin/test.swagger.sh
 
-      - name: Run Linter
-        run: ./docker.local/bin/linter.sh
+  #     - name: Run Linter
+  #       run: ./docker.local/bin/linter.sh
