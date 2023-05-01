@@ -31,7 +31,9 @@ var settingChangesKey = datastore.Key(ADDRESS + encryption.Hash("setting_changes
 const x10 = 10 * 1000 * 1000 * 1000
 
 const (
-	MaxMint Setting = iota
+	MaxMint  Setting = iota
+	MaxStake Setting = iota
+	MinStake Setting = iota
 	TimeUnit
 	MinAllocSize
 	MaxChallengeCompletionTime
@@ -136,6 +138,8 @@ func init() {
 
 func initSettingName() {
 	SettingName[MaxMint] = "max_mint"
+	SettingName[MaxStake] = "max_stake"
+	SettingName[MinStake] = "min_stake"
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
 	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
@@ -215,6 +219,8 @@ func initSettings() {
 		configType smartcontract.ConfigType
 	}{
 		MaxMint.String():                          {MaxMint, smartcontract.CurrencyCoin},
+		MaxStake.String():                         {MaxStake, smartcontract.CurrencyCoin},
+		MinStake.String():                         {MinStake, smartcontract.CurrencyCoin},
 		TimeUnit.String():                         {TimeUnit, smartcontract.Duration},
 		MinAllocSize.String():                     {MinAllocSize, smartcontract.Int64},
 		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, smartcontract.Duration},
@@ -367,6 +373,10 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 	switch Settings[key].setting {
 	case MaxMint:
 		conf.MaxMint = change
+	case MaxStake:
+		conf.MaxStake = change
+	case MinStake:
+		conf.MinStake = change
 	case MaxTotalFreeAllocation:
 		conf.MaxTotalFreeAllocation = change
 	case MaxIndividualFreeAllocation:
@@ -600,6 +610,10 @@ func (conf *Config) get(key Setting) interface{} {
 	switch key {
 	case MaxMint:
 		return conf.MaxMint
+	case MaxStake:
+		return conf.MaxStake
+	case MinStake:
+		return conf.MinStake
 	case TimeUnit:
 		return conf.TimeUnit
 	case MinAllocSize:
