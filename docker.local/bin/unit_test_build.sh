@@ -27,6 +27,8 @@ done
 # of code/go/0chain.net.
 # Returns 0 if all of the tests pass and 1 if any one of the tests fail.
 docker $cmd -f $dockerfile . -t zchain_unit_test
+docker ps
+whaami
 docker run --add-host=host.docker.internal:host-gateway -v /var/run/docker.sock:/var/run/docker.sock \
 	-e DOCKER_HOST_ENV=host.docker.internal \
 	$platform $INTERACTIVE -v $(pwd)/code:/codecov  \
