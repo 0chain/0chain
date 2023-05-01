@@ -33,7 +33,7 @@ jobs:
         run: |
           sudo groupadd docker || true
           sudo usermod -aG docker $(whoami) || true
-          sudo service docker start || true
+          sudo systemctl restart docker || true
           ./docker.local/bin/unit_test_build.sh
 
       - name: Upload coverage to Codecov
