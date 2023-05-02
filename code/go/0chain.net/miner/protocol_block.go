@@ -920,6 +920,8 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
+		logging.Logger.Debug("generate block - iteration process txn...", zap.String("txn_hash", txn.Hash))
+
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost fee",
