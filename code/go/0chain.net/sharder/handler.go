@@ -215,20 +215,20 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteHistogramStatistics(w, c, block.StateChangeSizeMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
-	fmt.Fprintf(w, "<h3>State Computation Statistics</h3>")
-	diagnostics.WriteHistogramStatistics(w, c, chain.StateComputationTimer)
-	fmt.Fprintf(w, "</td></tr>")
-
-	fmt.Fprintf(w, "<h3>Events Computation Statistics</h3>")
-	diagnostics.WriteHistogramStatistics(w, c, chain.EventsComputationTimer)
-	fmt.Fprintf(w, "</td></tr>")
-
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h3>State Prune Update Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>State Prune Delete Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h3>State Computation Statistics</h3>")
+	diagnostics.WriteHistogramStatistics(w, c, chain.StateComputationTimer)
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Events Computation Statistics</h3>")
+	diagnostics.WriteHistogramStatistics(w, c, chain.EventsComputationTimer)
 	fmt.Fprintf(w, "</td></tr>")
 
 	if c.GetPruneStats() != nil {
