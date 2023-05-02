@@ -476,6 +476,12 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("amount", transfer.Amount),
 				zap.Error(err))
 			return nil, err
+		} else {
+			logging.Logger.Debug("transfer amount",
+				zap.String("from", transfer.ClientID),
+				zap.String("to", transfer.ToClientID),
+				zap.Any("amount", transfer.Amount),
+				zap.Any("txn", txn))
 		}
 		for _, e := range tEvents {
 			ue[e.UserID] = e
