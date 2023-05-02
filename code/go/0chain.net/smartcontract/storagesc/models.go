@@ -549,6 +549,8 @@ func newBlobberAllocation(
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin, err error) {
 
+	logging.Logger.Debug("jayash Commit Move Tokens : ", zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("writePrice", d.Terms.WritePrice))
+
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
