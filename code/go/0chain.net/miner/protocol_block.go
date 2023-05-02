@@ -757,12 +757,12 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			return false, nil
 		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
-			if debugTxn {
-				logging.Logger.Info("generate block (debug transaction) error - "+
-					"txn creation not within tolerance",
-					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
-					zap.Any("now", common.Now()))
-			}
+			//if debugTxn {
+			logging.Logger.Info("generate block (debug transaction) error - "+
+				"txn creation not within tolerance",
+				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
+				zap.Any("now", common.Now()))
+			//}
 			return false, nil
 		default:
 			if err != nil && cstate.ErrInvalidState(err) {
