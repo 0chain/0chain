@@ -296,6 +296,43 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
 }
 
+func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
+	b *block.Block,
+	opts ...SyncNodesOption) map[string]map[string]int64 {
+
+	var (
+		clientState = CreateTxnMPT(b.ClientState) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, nil)
+	)
+
+	table := smartcontract.GetTransactionCostTable(sctx)
+
+	table["transfer"]["transfer"] = c.ChainConfig.TxnTransferCost()
+
+	for _, t := range table {
+		for name := range c.ChainConfig.TxnExempt() {
+			if _, ok := t[name]; ok {
+				t[name] = 0
+			}
+		}
+	}
+
+	fees := make(map[string]map[string]int64)
+	for sc, t := range table {
+		fees[sc] = make(map[string]int64, len(t))
+		for f, cost := range t {
+			if c.ChainConfig.MaxTxnFee() > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > c.ChainConfig.MaxTxnFee() {
+				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
+			} else {
+				fees[sc][f] = int64(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff())
+			}
+
+		}
+	}
+
+	return fees
+}
+
 // NewStateContext creation helper.
 func (c *Chain) NewStateContext(
 	b *block.Block,
