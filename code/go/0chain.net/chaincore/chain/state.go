@@ -321,6 +321,9 @@ func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
 	for sc, t := range table {
 		fees[sc] = make(map[string]int64, len(t))
 		for f, cost := range t {
+			logging.Logger.Debug("fees_map", zap.String("func", f), zap.Int("coeff", c.ChainConfig.TxnCostFeeCoeff()),
+				zap.Int("cost", cost), zap.Int64("zcn", currency.ZCN),
+				zap.Int64("product", int64(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff())))
 			if c.ChainConfig.MaxTxnFee() > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > c.ChainConfig.MaxTxnFee() {
 				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
 			} else {
