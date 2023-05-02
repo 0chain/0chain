@@ -145,6 +145,7 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 }
 
 func (edb *EventDb) UpdateTransactionErrors() error {
+	db := edb.Get()
 
 	// created_at for last day from now
 	lastDay := time.Now().AddDate(0, 0, -1)
@@ -152,42 +153,17 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 	lastDayString := lastDay.Format("2006-01-02 15:04:05")
 
 	// clean up the transaction error table
-	err := edb.Get().Exec("TRUNCATE TABLE transaction_errors").Error
+	err := db.Exec("TRUNCATE TABLE transaction_errors").Error
 	if err != nil {
 		return err
 	}
 
-	// read all the transactions from the transaction table where status is 2 till last day
-	rows, err := edb.Get().Model(&Transaction{}).Select("output_hash, transaction_output, transaction_type, count(*) as count").Where("status = ? and created_at > ?", 2, lastDayString).Group("output_hash, transaction_output, transaction_type").Rows()
+	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, output_hash, count) "+
+		"SELECT transaction_output, output_hash, count(*) as count FROM transactions WHERE status = ? and created_at > ? "+
+		"GROUP BY output_hash, transaction_output", 2, lastDayString); dbTxn.Error != nil {
 
-	if err != nil {
-		logging.Logger.Error("Error while reading transactions from transaction table", zap.Any("error", err))
-		return err
-	}
-
-	for rows.Next() {
-		var output struct {
-			TransactionOutput string
-			OutputHash        string
-			Count             int
-		}
-
-		err = edb.Get().ScanRows(rows, &output)
-		if err != nil {
-			logging.Logger.Error("Error while scanning rows", zap.Any("error", err))
-			return err
-		}
-
-		// insert the transaction in the transaction error table
-		err = edb.Store.Get().Create(&TransactionErrors{
-			TransactionOutput: output.TransactionOutput,
-			OutputHash:        output.OutputHash,
-			Count:             output.Count,
-		}).Error
-
-		if err != nil {
-			logging.Logger.Error("Error in inserting transaction error", zap.Any("err", err.Error))
-		}
+		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
+		return dbTxn.Error
 	}
 
 	return nil
