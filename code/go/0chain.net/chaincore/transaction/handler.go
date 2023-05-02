@@ -29,15 +29,15 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
 
-	debugTxn := txn.DebugTxn()
+	//debugTxn := txn.DebugTxn()
 	err := txn.Validate(ctx)
 	if err != nil {
 		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
 	}
-	if debugTxn {
-		logging.Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
-	}
+	//if debugTxn {
+	logging.Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
+	//}
 
 	//cli, err := txn.GetClient(ctx)
 	//if err != nil || cli == nil || cli.PublicKey == "" {
@@ -52,6 +52,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		logging.Logger.Error("put transaction", zap.Error(err), zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 		return nil, err
 	}
+	logging.Logger.Info("put transaction - saved (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 
 	IncTransactionCount()
 	return txn, nil
