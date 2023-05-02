@@ -307,7 +307,7 @@ func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
 
 	table := smartcontract.GetTransactionCostTable(sctx)
 
-	table["transfer"]["transfer"] = c.ChainConfig.TxnTransferCost()
+	table["transfer"] = map[string]int{"transfer": c.ChainConfig.TxnTransferCost()}
 
 	for _, t := range table {
 		for name := range c.ChainConfig.TxnExempt() {

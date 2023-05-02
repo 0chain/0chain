@@ -79,8 +79,6 @@ func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContrac
 		return 0, errors.New("estimate transaction cost - invalid to client id")
 	}
 
-	strings.ToLower(scData.FunctionName)
-
 	table, err := contractObj.GetCostTable(balances)
 	if err != nil {
 		return math.MaxInt, err
