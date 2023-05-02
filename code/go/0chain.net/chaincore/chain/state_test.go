@@ -1,11 +1,12 @@
 package chain
 
 import (
+	"context"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
-	"context"
 	"github.com/0chain/common/core/util"
-	"testing"
 )
 
 func Test_EstimateTransactionCost(t *testing.T) {
@@ -57,7 +58,8 @@ func Test_EstimateTransactionCost(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := ch.EstimateTransactionCost(tt.args.ctx, tt.args.b, tt.args.bState, tt.args.txn); got != tt.want {
+			tt.args.b.ClientState = tt.args.bState
+			if got, _ := ch.EstimateTransactionCost(tt.args.ctx, tt.args.b, tt.args.txn); got != tt.want {
 				t.Errorf("EstimateTransactionCost() = %v, want %v", got, tt.want)
 			}
 		})
