@@ -1417,6 +1417,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.Any("minFee", minFee),
 				zap.Bool("client value not present", valueNotPresent),
 				zap.Int64("lfb round", lfb.Round),
+				zap.String("lfb", lfb.Hash),
 				zap.Error(err))
 			return nil, err
 		}
@@ -1427,6 +1428,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.String("client_id", txn.ClientID),
 				zap.String("func", txn.FunctionName),
 				zap.Any("balance", s.Balance),
+				zap.Bool("client value not present", valueNotPresent),
 				zap.Any("fee", txn.Fee))
 			return nil, errors.New("insufficient balance to pay fee")
 		}
