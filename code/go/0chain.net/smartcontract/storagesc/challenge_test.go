@@ -3,6 +3,7 @@ package storagesc
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -325,8 +326,8 @@ func TestAddChallenge(t *testing.T) {
 func TestBlobberReward(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = currency.Coin(73000000)
-	var challengePoolBalance = currency.Coin(700000)
-	var partial = 0.9
+	var challengePoolBalance = currency.Coin(730000000000)
+	var partial = 1.0
 	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
@@ -339,7 +340,7 @@ func TestBlobberReward(t *testing.T) {
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 30 * time.Minute,
+		MaxChallengeCompletionTime: 5 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
@@ -354,6 +355,7 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
+		//require.EqualValues(t, true, false)
 	})
 
 	t.Run(errLate, func(t *testing.T) {
@@ -363,6 +365,16 @@ func TestBlobberReward(t *testing.T) {
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
+	})
+
+	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
+
+		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("test old challenge", func(t *testing.T) {
@@ -381,6 +393,25 @@ func TestBlobberReward(t *testing.T) {
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
+	})
+
+	t.Run("Setting Validator reward ratio to 100%", func(t *testing.T) {
+		newSCYaml := scYaml
+		newSCYaml.ValidatorReward = 1
+		err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+		require.NoError(t, err)
+	})
+
+	t.Run("uint64 minus overflow", func(t *testing.T) {
+		newSCYaml := scYaml
+		newSCYaml.ValidatorReward = 2
+		err := testBlobberReward(t, newSCYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+			writePoolBalance, challengePoolIntegralValue,
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
+		require.Error(t, err)
+		require.EqualValues(t, err.Error(), "uint64 minus overflow")
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {
@@ -420,7 +451,7 @@ func TestBlobberPenalty(t *testing.T) {
 		MaxMint:                    zcnToBalance(4000000.0),
 		BlobberSlash:               0.1,
 		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 30 * time.Minute,
+		MaxChallengeCompletionTime: 5 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
@@ -1105,7 +1136,7 @@ type formulaeBlobberReward struct {
 func (f formulaeBlobberReward) reward() int64 {
 	var challengePool = float64(f.challengePoolIntegralValue)
 	var passedPrevious = float64(f.previousChallange)
-	var passedCurrent = float64(f.thisChallange)
+	var passedCurrent = math.Min(float64(f.thisChallange), float64(f.thisExpires))
 	var currentExpires = float64(f.thisExpires)
 	var interpolationFraction = (passedCurrent - passedPrevious) / (currentExpires - passedPrevious)
 

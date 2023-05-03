@@ -1,8 +1,9 @@
 package main
 
 import (
-	"0chain.net/smartcontract/benchmark/main/cmd"
 	"fmt"
+
+	"0chain.net/smartcontract/benchmark/main/cmd"
 )
 
 func main() {

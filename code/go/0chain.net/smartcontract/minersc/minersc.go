@@ -40,6 +40,9 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["delete_sharder"] = msc.DeleteSharder
 	msc.smartContractFunctions["collect_reward"] = msc.collectReward
 
+	msc.smartContractFunctions["kill_miner"] = msc.killMiner
+	msc.smartContractFunctions["kill_sharder"] = msc.killSharder
+
 	msc.smartContractFunctions["miner_health_check"] = msc.minerHealthCheck
 	msc.smartContractFunctions["sharder_health_check"] = msc.sharderHealthCheck
 
