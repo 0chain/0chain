@@ -4,7 +4,10 @@ import (
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
+	"time"
 )
 
 // Transaction model to save the transaction data
@@ -27,6 +30,12 @@ type Transaction struct {
 	TransactionOutput string        `json:"transaction_output"`
 	OutputHash        string        `json:"output_hash"`
 	Status            int           `json:"status"`
+}
+
+type TransactionErrors struct {
+	TransactionOutput string `json:"transaction_output"`
+	OutputHash        string `json:"output_hash"`
+	Count             int    `json:"count"`
 }
 
 func (edb *EventDb) addTransactions(txns []Transaction) error {
@@ -133,4 +142,35 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 		Order("round asc").
 		Find(&tr)
 	return tr, res.Error
+}
+
+func (edb *EventDb) UpdateTransactionErrors() error {
+	db := edb.Get()
+
+	// created_at for last day from now
+	lastDay := time.Now().AddDate(0, 0, -1)
+	// convert to string
+	lastDayString := lastDay.Format("2006-01-02 15:04:05")
+
+	// clean up the transaction error table
+	err := db.Exec("TRUNCATE TABLE transaction_errors").Error
+	if err != nil {
+		return err
+	}
+
+	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, output_hash, count) "+
+		"SELECT transaction_output, output_hash, count(*) as count FROM transactions WHERE status = ? and created_at > ? "+
+		"GROUP BY output_hash, transaction_output", 2, lastDayString); dbTxn.Error != nil {
+
+		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
+		return dbTxn.Error
+	}
+
+	return nil
+}
+
+func (edb *EventDb) GetTransactionErrors() ([]TransactionErrors, error) {
+	var transactions []TransactionErrors
+	err := edb.Get().Model(&TransactionErrors{}).Find(&transactions)
+	return transactions, err.Error
 }
