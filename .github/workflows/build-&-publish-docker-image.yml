@@ -257,7 +257,7 @@ jobs:
           deploy_report_page: false
           archive_results: true
           run_flaky_tests: false
-          run_smoke_tests: ${{ github.base_ref == 'staging' }}
+          run_smoke_tests: ${{ github.base_ref != 'staging' }}
           retry_failures: true
           TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
