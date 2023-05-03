@@ -199,6 +199,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 	for {
 		es := <-edb.eventsChannel
+    
 		s, err := edb.work(ctx, gs, es)
 		if err != nil {
 			if config.Development() { //panic in case of development
