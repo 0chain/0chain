@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"0chain.net/smartcontract/provider"
@@ -1255,10 +1254,10 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing challenge: %v", err)
 	}
 
-	atomic.AddInt64(&alloc.Stats.OpenChallenges, 1)
-	atomic.AddInt64(&alloc.Stats.TotalChallenges, 1)
-	atomic.AddInt64(&blobAlloc.Stats.OpenChallenges, 1)
-	atomic.AddInt64(&blobAlloc.Stats.TotalChallenges, 1)
+	alloc.Stats.OpenChallenges++
+	alloc.Stats.TotalChallenges++
+	blobAlloc.Stats.OpenChallenges++
+	blobAlloc.Stats.TotalChallenges++
 
 	if err := alloc.save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"0chain.net/smartcontract/provider"
@@ -1369,10 +1368,10 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
-			atomic.AddInt64(&ba.Stats.FailedChallenges, 1)
-			atomic.AddInt64(&ba.Stats.OpenChallenges, -1)
-			atomic.AddInt64(&sa.Stats.FailedChallenges, 1)
-			atomic.AddInt64(&sa.Stats.OpenChallenges, -1)
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			sa.Stats.FailedChallenges++
+			sa.Stats.OpenChallenges--
 		}
 	}
 
