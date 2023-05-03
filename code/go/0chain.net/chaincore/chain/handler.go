@@ -1422,6 +1422,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			return nil, err
 		}
 
+		// DEBUG
+		logging.Logger.Debug("Debug - increase number to update image: 1")
+
 		if s.Nonce+1 == txn.Nonce && s.Balance < txn.Fee {
 			logging.Logger.Error("insufficient balance",
 				zap.String("txn", txn.Hash),
