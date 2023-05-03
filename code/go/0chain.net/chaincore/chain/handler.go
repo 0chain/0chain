@@ -1422,7 +1422,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			return nil, err
 		}
 
-		if s.Balance < txn.Fee {
+		if s.Nonce+1 == txn.Nonce && s.Balance < txn.Fee {
 			logging.Logger.Error("insufficient balance",
 				zap.String("txn", txn.Hash),
 				zap.String("client_id", txn.ClientID),
