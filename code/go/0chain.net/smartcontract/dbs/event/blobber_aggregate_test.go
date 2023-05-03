@@ -359,10 +359,10 @@ func calculateBlobberAggregatesAndSnapshots(round, expectedBucketId int64, curBl
 			}
 		}
 
-		if curBlobber.IsKilled || curBlobber.IsShutdown {
+		if !curBlobber.IsOffline() {
 			aggregates = append(aggregates, calculateBlobberAggregate(round, &curBlobber, oldBlobber))
 		}
-		
+
 		snapshots = append(snapshots, blobberToSnapshot(&curBlobber))
 	}
 
@@ -492,7 +492,7 @@ func assertBlobberGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBuck
 
 	expectedGlobal := Snapshot{ Round: round }
 	for _, blobber := range actualBlobbers {
-		if blobber.BucketId != expectedBucketId || blobber.IsShutdown || blobber.IsKilled {
+		if blobber.BucketId != expectedBucketId || blobber.IsOffline() {
 			continue
 		}
 		expectedGlobal.SuccessfulChallenges += int64(blobber.ChallengesPassed)
