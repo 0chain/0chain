@@ -380,10 +380,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		logging.Logger.Info("pay_fee could not find sharder to reward", zap.Int64("round", b.Round))
 	}
 
-	// save node first, for the VC pools work
-	if err = mn.save(balances); err != nil {
-		return "", common.NewErrorf("pay_fees",
-			"saving generator node: %v", err)
+	if mn != nil {
+		// save node first, for the VC pools work
+		if err = mn.save(balances); err != nil {
+			return "", common.NewErrorf("pay_fees",
+				"saving generator node: %v", err)
+		}
 	}
 
 	if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
