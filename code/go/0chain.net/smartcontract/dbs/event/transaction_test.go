@@ -13,33 +13,60 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAddTransaction(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            "events_db",
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	eventDb, err := NewEventDb(access, config.DbSettings{})
-	require.NoError(t, err)
-	defer eventDb.Close()
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
+func TestTagAddTransactions(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
 
-	tr := Transaction{}
-	err = eventDb.addTransactions([]Transaction{tr})
-	require.NoError(t, err, "Error while inserting Transaction to event Database")
-	var count int64
-	eventDb.Get().Table("transactions").Count(&count)
-	require.Equal(t, int64(1), count, "Transaction not getting inserted")
-	err = eventDb.Drop()
+	round := int64(7)
+
+	transactionsEvents := []Event{
+		{
+			BlockNumber: round,
+			Type:        TypeStats,
+			Tag:         TagAddTransactions,
+			Index:       "one",
+			Data:        Transaction{Hash: "one", Fee: 3},
+		},
+		{
+			BlockNumber: round,
+			Type:        TypeStats,
+			Tag:         TagAddTransactions,
+			Index:       "one",
+			Data:        Transaction{Hash: "one", Fee: 3},
+		},
+		{
+			BlockNumber: round,
+			TxHash:      "2",
+			Type:        TypeStats,
+			Tag:         TagAddTransactions,
+			Index:       "two",
+			Data:        Transaction{Hash: "two", Fee: 5},
+		},
+		{
+			BlockNumber: round,
+			Type:        TypeStats,
+			Tag:         TagAddTransactions,
+			Index:       "two",
+			Data:        Transaction{Hash: "two", Fee: 7},
+		},
+		{
+			BlockNumber: round,
+			Type:        TypeStats,
+			Tag:         TagAddTransactions,
+			Index:       "three",
+			Data:        Transaction{Hash: "three", Fee: 11},
+		},
+	}
+	events, err := mergeEvents(round, "", transactionsEvents)
 	require.NoError(t, err)
+	require.Len(t, events, 1)
+	require.Len(t, events[0].Data, 3, "the five events should have been merged into three")
+
+	require.NoError(t, edb.addStat(events[0]))
+
+	var txs []Transaction
+	edb.Get().Find(&txs)
+	require.Len(t, txs, 3)
 }
 
 func TestFindTransactionByHash(t *testing.T) {
