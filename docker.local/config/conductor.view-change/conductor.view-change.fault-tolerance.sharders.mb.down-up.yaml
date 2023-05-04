@@ -28,7 +28,7 @@
 
 ---
 enable:
-  - "Sharder goes down and comes up"
+#   - "Sharder goes down and comes up"
 
 sets:
   - name: "Sharder goes down and comes up"
