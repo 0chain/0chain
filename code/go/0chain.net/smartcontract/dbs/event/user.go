@@ -36,7 +36,7 @@ func (edb *EventDb) GetUser(userID string) (*User, error) {
 func (edb *EventDb) addOrUpdateUsers(users []User) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce", "mint_nonce"}),
+		DoUpdates: clause.AssignmentColumns([]string{"txn_hash", "round", "balance", "nonce"}),
 	}).Create(&users).Error
 }
 

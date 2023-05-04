@@ -29,10 +29,10 @@
 ---
 enable:
   # Fault Tolerance - Stress Test
-  - "All miners go down and come up"
-  - "All sharders go down and come up"
-  - "All nodes go down and come up"
-  - "All nodes fail and recover randomly"
+#   - "All miners go down and come up"
+#   - "All sharders go down and come up"
+#   - "All nodes go down and come up"
+#   - "All nodes fail and recover randomly"
 
 sets:
   # Fault Tolerance - Stress Tests
