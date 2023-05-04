@@ -1389,7 +1389,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, errors.New("invalid transaction nonce")
 	}
 
-	if txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
+	if nonce+1 == txn.Nonce && txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
 		return nil, errors.New("insufficient balance to send")
 	}
 
@@ -1422,7 +1422,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			return nil, err
 		}
 
-		if s.Nonce+1 == txn.Nonce && s.Balance < txn.Fee {
+		if nonce+1 == txn.Nonce && s.Balance < txn.Fee {
 			logging.Logger.Error("insufficient balance",
 				zap.String("txn", txn.Hash),
 				zap.String("client_id", txn.ClientID),
