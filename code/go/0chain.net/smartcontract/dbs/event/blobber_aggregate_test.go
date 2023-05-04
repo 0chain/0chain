@@ -187,8 +187,10 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 
 		// Kill one blobber and shut down another
 		err = eventDb.Store.Get().Model(&Blobber{}).Where("id = ?", blobbersInBucket[1]).Update("is_killed", true).Error
+		require.NoError(t, err)
 		err = eventDb.Store.Get().Model(&Blobber{}).Where("id = ?", blobbersInBucket[2]).Update("is_shutdown", true).Error
-
+		require.NoError(t, err)
+		
 		// Get blobbers and snapshots after update
 		err = eventDb.Get().Model(&Blobber{}).Find(&blobbersAfter).Error
 		require.NoError(t, err)
