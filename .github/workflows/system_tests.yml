@@ -74,3 +74,5 @@ jobs:
       SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
       TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
       DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+      graphnode_network: ${{ secrets.GRAPHNODE_NETWORK }}
+      graphnode_ethereum_node_url: https://rpc.tenderly.co/fork/${{ secrets.TENDERLY_FORK_ID }}
