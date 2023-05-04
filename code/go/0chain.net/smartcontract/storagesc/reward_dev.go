@@ -16,7 +16,12 @@ func (srh *StorageRestHandler) getAllChallenges(w http.ResponseWriter, r *http.R
 
 	allocationID := r.URL.Query().Get("allocation_id")
 
-	challenges, _ := edb.GetAllChallengesByAllocationID(allocationID)
+	challenges, err := edb.GetAllChallengesByAllocationID(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
 	common.Respond(w, r, challenges, nil)
 }
 
@@ -32,8 +37,17 @@ func (srh *StorageRestHandler) getBlockRewards(w http.ResponseWriter, r *http.Re
 	startBlockNumber := r.URL.Query().Get("start_block_number")
 	endBlockNumber := r.URL.Query().Get("end_block_number")
 
-	providerRewards := edb.GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber, spenum.BlockRewardBlobber.Int())
-	delegateRewards := edb.GetRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber, spenum.BlockRewardBlobber.Int())
+	providerRewards, err := edb.GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber, spenum.BlockRewardBlobber.Int())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	delegateRewards, err := edb.GetRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber, spenum.BlockRewardBlobber.Int())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	result := map[string]interface{}{
 		"provider_rewards": providerRewards,
@@ -55,8 +69,17 @@ func (srh *StorageRestHandler) getReadRewards(w http.ResponseWriter, r *http.Req
 	startBlockNumber := r.URL.Query().Get("start_block_number")
 	endBlockNumber := r.URL.Query().Get("end_block_number")
 
-	providerRewards := edb.GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber, spenum.FileDownloadReward.Int())
-	delegateRewards := edb.GetRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber, spenum.FileDownloadReward.Int())
+	providerRewards, err := edb.GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber, spenum.FileDownloadReward.Int())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	delegateRewards, err := edb.GetRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber, spenum.FileDownloadReward.Int())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
 
 	result := map[string]interface{}{
 		"provider_rewards": providerRewards,
@@ -76,8 +99,16 @@ func (srh *StorageRestHandler) getChallengeRewards(w http.ResponseWriter, r *htt
 
 	challengeID := r.URL.Query().Get("challenge_id")
 
-	blobberRewards, validatorRewards := edb.GetChallengeRewardsToProviders(challengeID)
-	blobberDelegateRewards, validatorDelegateRewards := edb.GetChallengeRewardsToDelegates(challengeID)
+	blobberRewards, validatorRewards, err := edb.GetChallengeRewardsToProviders(challengeID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+		return
+	}
+	blobberDelegateRewards, validatorDelegateRewards, err := edb.GetChallengeRewardsToDelegates(challengeID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+		return
+	}
 
 	result := map[string]interface{}{
 		"blobber_rewards":            blobberRewards,
@@ -99,13 +130,23 @@ func (srh *StorageRestHandler) getTotalChallengeRewards(w http.ResponseWriter, r
 
 	allocationID := r.URL.Query().Get("allocation_id")
 
-	challenges, _ := edb.GetAllChallengesByAllocationID(allocationID)
+	challenges, err := edb.GetAllChallengesByAllocationID(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while getting challenges"))
+		return
+	}
 
 	totalBlobberRewards := map[string]int64{}
 	totalValidatorRewards := map[string]int64{}
 
 	for _, challenge := range challenges {
-		blobberRewards, validatorRewards := edb.GetChallengeRewardsToProviders(challenge.ChallengeID)
+		blobberRewards, validatorRewards, err := edb.GetChallengeRewardsToProviders(challenge.ChallengeID)
+
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+			return
+		}
+
 		for _, reward := range blobberRewards {
 			// check if the provider_id is already in the map totalBlobberRewards
 			if _, ok := totalBlobberRewards[reward.ProviderId]; ok {
@@ -128,7 +169,12 @@ func (srh *StorageRestHandler) getTotalChallengeRewards(w http.ResponseWriter, r
 			}
 		}
 
-		blobberDelegateRewards, validatorDelegateRewards := edb.GetChallengeRewardsToDelegates(challenge.ChallengeID)
+		blobberDelegateRewards, validatorDelegateRewards, err := edb.GetChallengeRewardsToDelegates(challenge.ChallengeID)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+			return
+		}
+
 		for _, reward := range blobberDelegateRewards {
 			// check if the provider_id is already in the map totalBlobberRewards
 			if _, ok := totalBlobberRewards[reward.ProviderID]; ok {
@@ -171,8 +217,17 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 	startBlock := r.URL.Query().Get("start_block")
 	endBlock := r.URL.Query().Get("end_block")
 
-	providerRewards := edb.GetAllocationCancellationRewardsToProviders(startBlock, endBlock)
-	delegateRewards := edb.GetAllocationCancellationRewardsToDelegates(startBlock, endBlock)
+	providerRewards, err := edb.GetAllocationCancellationRewardsToProviders(startBlock, endBlock)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while getting allocation cancellation rewards"))
+		return
+	}
+
+	delegateRewards, err := edb.GetAllocationCancellationRewardsToDelegates(startBlock, endBlock)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while getting allocation cancellation rewards"))
+		return
+	}
 
 	result := map[string]interface{}{
 		"provider_rewards": providerRewards,

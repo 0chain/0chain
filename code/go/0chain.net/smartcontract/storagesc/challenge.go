@@ -201,7 +201,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
