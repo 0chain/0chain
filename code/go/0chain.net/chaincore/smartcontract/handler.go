@@ -85,7 +85,9 @@ func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContrac
 	}
 	cost, ok := table[strings.ToLower(scData.FunctionName)]
 	if !ok {
-		return math.MaxInt, errors.New("no cost found for function")
+		//TODO figure out what to do with such transactions, do not return err now for backward compatibility
+		//return math.MaxInt, errors.New("no cost found for function")
+		return math.MaxInt, nil
 	}
 	return cost, nil
 }
