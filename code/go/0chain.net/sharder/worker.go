@@ -48,8 +48,10 @@ func SetupWorkers(ctx context.Context) {
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	const stuckDuration = 3 * time.Second
 	var (
-		endRound int64
-		syncing  bool
+		endRound   int64
+		syncing    bool
+		syncTimer  time.Time
+		timingSync bool
 
 		syncBlocksTimer  = time.NewTimer(7 * time.Second)
 		aheadN           = int64(config.GetLFBTicketAhead())
@@ -103,6 +105,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			endRound = lfbTk.Round + aheadN
 
 			if endRound <= cr || lfb.Round >= lfbTk.Round {
+				if timingSync {
+					syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
+					timingSync = false
+				}
+
 				logging.Logger.Debug("process block, synced already, continue...")
 				continue
 			}
@@ -121,6 +128,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 			endRound = cr + reqNum
 			syncing = true
+			if !timingSync {
+				timingSync = true
+				syncTimer = time.Now()
+			}
 
 			logging.Logger.Debug("process block, sync blocks",
 				zap.Int64("start round", cr+1),
