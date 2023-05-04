@@ -487,13 +487,13 @@ func (c *ConfigImpl) FromViper() error {
 	if err != nil {
 		return err
 	}
-	conf.MaxTxnFee, err = currency.ParseZCN(viper.GetFloat64("server_chain.transaction.max_fee"))
-	if err != nil {
-		return err
-	}
-	if conf.MaxTxnFee == 0 {
-		conf.MaxTxnFee = DefaultMaxTxnFee
-	}
+	//conf.MaxTxnFee, err = currency.ParseZCN(viper.GetFloat64("server_chain.transaction.max_fee"))
+	//if err != nil {
+	//	return err
+	//}
+	//if conf.MaxTxnFee == 0 {
+	conf.MaxTxnFee = DefaultMaxTxnFee
+	//}
 
 	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
 	// DEBUG: change back later
