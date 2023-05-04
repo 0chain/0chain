@@ -12,7 +12,6 @@ import (
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
 
-	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/pkg/errors"
 )
@@ -57,10 +56,10 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var (
-		authorizers []event.Authorizer
-		err         error
-	)
+	var err error
+
+	authorizers := make([]event.Authorizer, 0)
+
 	if active == "true" {
 		authorizers, err = edb.GetActiveAuthorizers()
 	} else {
@@ -69,11 +68,6 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 
 	if err != nil {
 		common.Respond(w, r, nil, errors.Wrap(err, "getAuthorizerNodes DB error"))
-		return
-	}
-
-	if len(authorizers) == 0 {
-		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get authorizer list"))
 		return
 	}
 
@@ -186,6 +180,7 @@ func (zrh *ZcnRestHandler) NotProcessedBurnTicketsHandler(w http.ResponseWriter,
 				NewBurnTicket(
 					burnTicket.EthereumAddress,
 					burnTicket.Hash,
+					burnTicket.Amount,
 					burnTicket.Nonce,
 				))
 		}

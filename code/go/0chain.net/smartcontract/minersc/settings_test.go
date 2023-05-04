@@ -219,6 +219,8 @@ func TestUpdateSettings(t *testing.T) {
 					strings.ToLower("cost.addToDelegatePool"):      "111",
 					strings.ToLower("cost.deleteFromDelegatePool"): "111",
 					"cost.sharder_keep":                            "111",
+					"cost.kill_miner":                              "111",
+					"cost.kill_sharder":                            "111",
 				},
 			},
 		},
