@@ -25,7 +25,7 @@ const (
 	BlockProposalWaitDynamic = iota
 
 	// DefaultMaxTxnFee represents the default max transaction fee
-	DefaultMaxTxnFee = 1e10
+	DefaultMaxTxnFee = 1e9
 )
 
 // HealthCheckScan - Set in 0chain.yaml
@@ -496,7 +496,9 @@ func (c *ConfigImpl) FromViper() error {
 	}
 
 	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
-	conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
+	// DEBUG: change back later
+	//conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
+	conf.TxnCostFeeCoeff = 100000
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {
@@ -729,21 +731,22 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	}
 	conf.MinTxnFee = minTxnFee
 
+	// DEBUG: change back
 	// get max txn fee from cf and parse it to currency.Coin
-	maxTxnFeeF, err := cf.GetFloat64(enums.TransactionMaxFee)
-	if err != nil {
-		return err
-	}
+	//maxTxnFeeF, err := cf.GetFloat64(enums.TransactionMaxFee)
+	//if err != nil {
+	//	return err
+	//}
 
-	maxTxnFee, err := currency.ParseZCN(maxTxnFeeF)
-	if err != nil {
-		return err
-	}
+	//maxTxnFee, err := currency.ParseZCN(maxTxnFeeF)
+	//if err != nil {
+	//	return err
+	//}
 
-	conf.MaxTxnFee = maxTxnFee
-	if maxTxnFee == 0 {
-		conf.MaxTxnFee = DefaultMaxTxnFee
-	}
+	////conf.MaxTxnFee = maxTxnFee
+	////if maxTxnFee == 0 {
+	conf.MaxTxnFee = DefaultMaxTxnFee
+	//}
 
 	conf.ClientSignatureScheme, err = cf.GetString(enums.ClientSignatureScheme)
 	if err != nil {
