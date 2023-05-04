@@ -227,6 +227,14 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<tr><td>")
 		fmt.Fprintf(w, "<h3>Prune Stats</h3>")
 		diagnostics.WritePruneStats(w, c.GetPruneStats())
+		fmt.Fprintf(w, "</td><td valign='top'>")
+		fmt.Fprintf(w, "<h3>Sync catchup time Statistics</h3>")
+		diagnostics.WriteHistogramStatistics(w, c, syncCatchupTime)
+		fmt.Fprintf(w, "</td></tr>")
+	} else {
+		fmt.Fprintf(w, "<tr><td>")
+		fmt.Fprintf(w, "<h3>Sync catchup time Statistics</h3>")
+		diagnostics.WriteHistogramStatistics(w, c, syncCatchupTime)
 		fmt.Fprintf(w, "</td></tr>")
 	}
 

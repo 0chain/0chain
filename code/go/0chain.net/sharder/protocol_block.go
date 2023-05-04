@@ -26,10 +26,12 @@ import (
 
 var blockSaveTimer metrics.Timer
 var bsHistogram metrics.Histogram
+var syncCatchupTime metrics.Histogram
 
 func init() {
 	blockSaveTimer = metrics.GetOrRegisterTimer("block_save_time", nil)
 	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
+	syncCatchupTime = metrics.GetOrRegisterHistogram("sync_catch_up_time", nil, metrics.NewUniformSample(1024))
 }
 
 /*UpdatePendingBlock - update the pending block */
