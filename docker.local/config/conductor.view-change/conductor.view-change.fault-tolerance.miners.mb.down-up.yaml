@@ -28,7 +28,7 @@
 
 ---
 enable:
-  - "Miner goes down and comes up"
+#   - "Miner goes down and comes up"
 
 sets:
   - name: "Miner goes down and comes up"

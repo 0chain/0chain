@@ -31,9 +31,13 @@ import (
 
 // SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
 var SmartContractExecutionTimer metrics.Timer
+var StateComputationTimer metrics.Histogram
+var EventsComputationTimer metrics.Histogram
 
 func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
+	StateComputationTimer = metrics.NewHistogram(metrics.NewUniformSample(1024))
+	EventsComputationTimer = metrics.NewHistogram(metrics.NewUniformSample(1024))
 }
 
 var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid")
@@ -76,7 +80,10 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) error {
-	return b.ComputeState(ctx, c, waitC...)
+	timer := time.Now()
+	err := b.ComputeState(ctx, c, waitC...)
+	StateComputationTimer.Update(time.Since(timer).Microseconds())
+	return err
 }
 
 // SaveChanges - persist the state changes
@@ -807,7 +814,7 @@ func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	return tmpt
 }
 
-func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
+func GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
 		return nil, common.NewError("GetStateById", "client state does not exist")
 	}
