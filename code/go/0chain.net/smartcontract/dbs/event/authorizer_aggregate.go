@@ -132,12 +132,17 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 			old = AuthorizerSnapshot{ /* zero values */ }
 			gsDiff.AuthorizerCount += 1
 		} else {
-			processingEntity.Processed = true
 			old, ok = processingEntity.Entity.(AuthorizerSnapshot)
 			if !ok {
 				logging.Logger.Error("error converting processable entity to authorizer snapshot")
 				continue
 			}
+		}
+
+		// Case: authorizer becomes killed/shutdown
+		if (current.IsOffline() && !old.IsOffline()) {
+			handleOfflineAuthorizer(&gsDiff, old)
+			continue
 		}
 
 		aggregate := AuthorizerAggregate{
@@ -160,28 +165,6 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 		oldAuthorizersProcessingMap[current.ID] = processingEntity
 	}
 
-	// Decrease global snapshot values for not processed entities (deleted)
-	var snapshotIdsToDelete []string
-	for _, processingEntity := range oldAuthorizersProcessingMap {
-		if processingEntity.Entity == nil || processingEntity.Processed {
-			continue
-		}
-		old, ok = processingEntity.Entity.(AuthorizerSnapshot)
-		if !ok {
-			logging.Logger.Error("error converting processable entity to authorizer snapshot")
-			continue
-		}
-		snapshotIdsToDelete = append(snapshotIdsToDelete, old.AuthorizerID)
-		gsDiff.AuthorizerCount -= 1
-		gsDiff.TotalRewards -= int64(old.TotalRewards)
-		gsDiff.TotalStaked -= int64(old.TotalStake)
-	}
-	if len(snapshotIdsToDelete) > 0 {
-		if result := edb.Store.Get().Where("authorizer_id in (?)", snapshotIdsToDelete).Delete(&AuthorizerSnapshot{}); result.Error != nil {
-			logging.Logger.Error("deleting Authorizer snapshots", zap.Error(result.Error))
-		}
-	}
-	
 	gs.ApplyDiff(&gsDiff)
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
@@ -199,7 +182,12 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 		zap.Int("current_authorizers", len(currentAuthorizers)),
 		zap.Int("old_authorizers", len(oldAuthorizers)),
 		zap.Int("aggregates", len(aggregates)),
-		zap.Int("deleted_snapshots", len(snapshotIdsToDelete)),
 		zap.Any("global_snapshot_after", gs),
 	)
+}
+
+func handleOfflineAuthorizer(gs *Snapshot, old AuthorizerSnapshot) {
+	gs.AuthorizerCount -= 1
+	gs.TotalRewards -= int64(old.TotalRewards)
+	gs.TotalStaked -= int64(old.TotalStake)
 }
