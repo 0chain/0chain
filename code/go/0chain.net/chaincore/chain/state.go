@@ -289,11 +289,11 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		zap.String("txn", txn.TransactionData))
 
 	maxFee := c.ChainConfig.MaxTxnFee()
-	if maxFee > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > maxFee {
+	if maxFee > 0 && currency.Coin(currency.ZCN*(cost/c.ChainConfig.TxnCostFeeCoeff())) > maxFee {
 		return cost, maxFee, nil
 	}
 
-	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
+	return cost, currency.Coin(currency.ZCN * (cost / c.ChainConfig.TxnCostFeeCoeff())), nil
 }
 
 func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
