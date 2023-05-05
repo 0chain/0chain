@@ -1,9 +1,9 @@
 name: CONDUCTOR SHARDER STANDARD TESTS
 
 on:
-  # schedule:
-  #   # Runs everyday at 01:00 am
-  #   - cron: '0 0 * * * '
+  schedule:
+    # Runs everyday at 12:00 am
+    - cron: '0 0 * * * '
   workflow_dispatch:
 
 env:
