@@ -54,11 +54,23 @@ type PartitionItem interface {
 func CreateIfNotExists(state state.StateContextI, name string, partitionSize int) (*Partitions, error) {
 	p := Partitions{}
 	err := state.GetTrieNode(name, &p)
+
+	logging.Logger.Debug("jayash partitions already exist", zap.String("name", name), zap.Error(err))
 	switch err {
 	case nil:
+		logging.Logger.Debug("jayash partitions already exist", zap.String("name", name), zap.Error(err))
 		return &p, nil
 	case util.ErrValueNotPresent:
+		logging.Logger.Debug("jayash partitions not exist", zap.String("name", name), zap.Error(err))
 		p, err := newPartitions(name, partitionSize)
+
+		logging.Logger.Debug("jayash ErrValueNotPresent",
+			zap.Any("p", p),
+			zap.Any("numpartitions", p.NumPartitions),
+			zap.Any("partitionSize", p.PartitionSize),
+			zap.Any("state", state),
+			zap.Any("partitions", p.Partitions))
+
 		if err != nil {
 			return nil, err
 		}
