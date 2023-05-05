@@ -1022,6 +1022,23 @@ ALTER TABLE public.transactions_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
 
+
+
+--
+-- Name: transaction_errors; Type: TABLE; Schema: public; Owner: zchain_user
+--
+
+CREATE TABLE public.transaction_errors (
+                                     id SERIAL PRIMARY KEY,
+                                     created_at timestamp with time zone,
+                                     transaction_output text,
+                                     output_hash text,
+                                     count bigint
+);
+
+
+ALTER TABLE public.transaction_errors OWNER TO zchain_user;
+
 --
 -- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user
 --
