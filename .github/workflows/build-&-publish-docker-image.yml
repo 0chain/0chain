@@ -249,7 +249,7 @@ jobs:
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@fix/stakepool_test
         with:
-          system_tests_branch: 172-stake-pool-unlock-and-unstaked-tokens
+          system_tests_branch: test/staked-capacity
           network: ${{ env.NETWORK_URL }}
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
