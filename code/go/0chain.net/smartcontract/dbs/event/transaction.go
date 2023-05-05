@@ -43,7 +43,7 @@ func (edb *EventDb) addTransactions(txns []Transaction) error {
 }
 
 func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
-	return newEventsMerger[Transaction](TagAddTransactions)
+	return newEventsMerger[Transaction](TagAddTransactions, withUniqueEventOverwrite())
 }
 
 // GetTransactionByHash finds the transaction record by hash

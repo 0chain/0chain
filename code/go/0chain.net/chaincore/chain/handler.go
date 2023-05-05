@@ -258,7 +258,7 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
 }
 
-func (c *Chain) txnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
+func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
 	//Row start
 	fmt.Fprintf(w, "<tr>")
 
@@ -1376,7 +1376,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	lfb = lfb.Clone()
 
-	s, err := sc.GetStateById(lfb.ClientState, txn.ClientID)
+	s, err := GetStateById(lfb.ClientState, txn.ClientID)
 	if cstate.ErrInvalidState(err) {
 		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
 		// of the 'error' of the miner itself.
@@ -1686,7 +1686,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) (bool, error) {
+func txnIterHandlerFunc(w http.ResponseWriter, lfb *block.Block) func(context.Context, datastore.CollectionEntity) (bool, error) {
 	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
 		txn, ok := ce.(*transaction.Transaction)
 		if !ok {
@@ -1694,7 +1694,12 @@ func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(co
 			return false, nil
 		}
 
-		c.txnsInPoolTableRows(w, txn, s)
+		s, err := GetStateById(util.CloneMPT(lfb.ClientState), txn.ClientID)
+		if !isValid(err) {
+			logging.Logger.Error(err.Error(), zap.Any("clientState", s))
+		}
+
+		TxnsInPoolTableRows(w, txn, s)
 		return true, nil
 	}
 }
@@ -1727,12 +1732,8 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
 
-	s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
-	if !isValid(err) {
-		logging.Logger.Error(err.Error(), zap.Any("clientState", s))
-	}
-
-	var txnIterHandler = txnIterHandlerFunc(c, w, s)
+	lfb := c.GetLatestFinalizedBlock()
+	var txnIterHandler = txnIterHandlerFunc(w, lfb)
 
 	_ = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 
