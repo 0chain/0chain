@@ -29,6 +29,7 @@ func handlersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		"/v1/sharder/get/stats":            common.ToJSONResponse(SharderStatsHandler),
 		"/v1/state/nodes":                  common.ToJSONResponse(chain.StateNodesHandler),
 		"/v1/block/state_change":           common.ToJSONResponse(BlockStateChangeHandler),
+		"/_transaction_errors":             TransactionErrorWriter,
 	}
 
 	handlers := make(map[string]func(http.ResponseWriter, *http.Request))
@@ -149,6 +150,7 @@ func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	sc := GetSharderChain()
 	c := sc.Chain
+
 	w.Header().Set("Content-Type", "text/html")
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
@@ -227,6 +229,14 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<tr><td>")
 		fmt.Fprintf(w, "<h3>Prune Stats</h3>")
 		diagnostics.WritePruneStats(w, c.GetPruneStats())
+		fmt.Fprintf(w, "</td><td valign='top'>")
+		fmt.Fprintf(w, "<h3>Sync catchup time Statistics</h3>")
+		diagnostics.WriteHistogramStatistics(w, c, syncCatchupTime)
+		fmt.Fprintf(w, "</td></tr>")
+	} else {
+		fmt.Fprintf(w, "<tr><td>")
+		fmt.Fprintf(w, "<h3>Sync catchup time Statistics</h3>")
+		diagnostics.WriteHistogramStatistics(w, c, syncCatchupTime)
 		fmt.Fprintf(w, "</td></tr>")
 	}
 
@@ -260,4 +270,31 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 		PrevInvocationScanTime: previousElapsed,
 		MeanScanBlockStatsTime: cc.BlockSyncTimer.Mean() / 1000000.0,
 	}, nil
+}
+
+func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
+
+	transactionErrors, err := GetSharderChain().Chain.GetEventDb().GetTransactionErrors()
+	if err != nil {
+		fmt.Fprintf(w, "Error getting transaction errors: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	chain.PrintCSS(w)
+	diagnostics.WriteStatisticsCSS(w)
+
+	fmt.Fprintf(w, "<h2>Transaction Output - Count</h2>")
+
+	fmt.Fprintf(w, "<br>")
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<table width='100%%'>")
+
+	for _, transactionError := range transactionErrors {
+		fmt.Fprintf(w, "<tr><td class='tname'>%s</td><td>%d</td></tr>", transactionError.TransactionOutput, transactionError.Count)
+	}
+
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "</table>")
 }
