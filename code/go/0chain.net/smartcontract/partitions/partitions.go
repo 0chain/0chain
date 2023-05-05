@@ -341,7 +341,12 @@ func (p *Partitions) removeItem(
 	return nil
 }
 
-func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}) error {
+func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}, options ...string) error {
+
+	logging.Logger.Debug("jayash GetRandomItems",
+		zap.Any("options", options),
+		zap.Any("p", p))
+
 	if p.partitionsNum() == 0 {
 		return errors.New("empty list, no items to return")
 	}

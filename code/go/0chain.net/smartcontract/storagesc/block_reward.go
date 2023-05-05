@@ -51,6 +51,11 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	}
 
 	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+	logging.Logger.Debug("jayash activePassedBlobberRewardPart : ",
+		zap.Any("activePassedBlobberRewardPart", activePassedBlobberRewardPart),
+		zap.Any("err", err),
+		zap.Any("balances", balances))
+
 	if err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
@@ -66,7 +71,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(
 	r := rand.New(rand.NewSource(randomSeed))
 
 	var blobberRewards []BlobberRewardNode
-	if err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards); err != nil {
+	if err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards, "Block Reward"); err != nil {
 		logging.Logger.Info("blobber_block_rewards_failed",
 			zap.String("getting random partition", err.Error()))
 		if err != util.ErrValueNotPresent {
