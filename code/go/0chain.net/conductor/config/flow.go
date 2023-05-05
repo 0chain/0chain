@@ -10,6 +10,13 @@ type Directive map[string]interface{}
 
 type Flow []Directive
 
+func (d Directive) GetName() (name string) {
+	for name = range d {
+		return
+	}
+	return
+}
+
 func (d Directive) unwrap() (name string, val interface{}, ok bool) {
 	for name, val = range d {
 		ok = true
