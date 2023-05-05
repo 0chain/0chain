@@ -1,7 +1,7 @@
 FROM zchain_build_base
 ENV SRC_DIR=/0chain
 
-RUN apk add --update --no-cache curl
+RUN apk add --update --no-cache curl docker
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.46.2
 
 # Download the dependencies:
