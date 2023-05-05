@@ -1078,6 +1078,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		Validators:       selectedValidators,
 		Seed:             seed,
 		AllocationRoot:   allocBlobber.AllocationRoot,
+		Timestamp:        allocBlobber.LastWriteMarker.Timestamp,
 	}
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)

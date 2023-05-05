@@ -28,6 +28,7 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int
 		AllocationRoot: ch.AllocationRoot,
 		Responded:      ch.Responded,
 		ExpiredN:       expiredN,
+		Timestamp:      ch.Timestamp,
 	}
 }
 

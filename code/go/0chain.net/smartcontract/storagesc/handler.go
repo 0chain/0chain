@@ -1130,6 +1130,7 @@ type StorageChallengeResponse struct {
 	Validators        []*ValidationNode `json:"validators"`
 	Seed              int64             `json:"seed"`
 	AllocationRoot    string            `json:"allocation_root"`
+	Timestamp         common.Timestamp  `json:"timestamp"`
 }
 
 // swagger:model ChallengesResponse
