@@ -214,7 +214,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
 
-//only use this function to add blobber(for update call updateBlobberSettings)
+// only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
@@ -766,8 +766,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"insufficient funds: %v", err)
 	}
 
+	logging.Logger.Debug("jayash updateBlobberChallengeReady", zap.Any("blobber", blobber), zap.Any("balances", balances), zap.Any("blobAlloc", blobAlloc), zap.Any("blobber.SavedData", blobber.SavedData), zap.Any("blobber", blobber))
+
 	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, uint64(blobber.SavedData)); err != nil {
-		return "", common.NewErrorf("commit_connection_failed", err.Error())
+		return "", common.NewErrorf("jayash commit_connection_failed", err.Error())
 	}
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
@@ -831,20 +833,25 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	logging.Logger.Info("commit_connection, add or update blobber challenge ready partitions",
 		zap.String("blobber", blobAlloc.BlobberID))
 	if blobUsedCapacity == 0 {
+		logging.Logger.Debug("jayash blobUsedCapacity is 0")
 		// remove from challenge ready partitions if this blobber has no data stored
 		return partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
 	}
 
 	sp, err := getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances)
+	logging.Logger.Debug("jayash getStakePool", zap.Any("sp", sp), zap.Error(err))
 	if err != nil {
 		return fmt.Errorf("unable to fetch blobbers stake pool: %v", err)
 	}
 	stakedAmount, err := sp.cleanStake()
+	logging.Logger.Debug("jayash cleanStake", zap.Any("stakedAmount", stakedAmount), zap.Error(err))
 	if err != nil {
 		return fmt.Errorf("unable to clean stake pool: %v", err)
 	}
 	weight := uint64(stakedAmount) * blobUsedCapacity
+	logging.Logger.Debug("jayash weight", zap.Any("weight", weight))
 	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {
+		logging.Logger.Debug("jayash partitionsChallengeReadyBlobberAddOrUpdate failed", zap.Error(err))
 		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
 	}
 	return nil

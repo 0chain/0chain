@@ -2,6 +2,8 @@ package storagesc
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
@@ -55,11 +57,14 @@ func partitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 
 func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID string) error {
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(state)
+	logging.Logger.Debug("jayash partitionsChallengeReadyBlobbersRemove", zap.Any("challengeReadyParts", challengeReadyParts), zap.Any("err", err))
 	if err != nil {
 		return err
 	}
 
 	err = challengeReadyParts.Remove(state, blobberID)
+	logging.Logger.Debug("jayash partitionsChallengeReadyBlobbersRemove", zap.Any("err", err))
+
 	if err != nil {
 		return err
 	}
