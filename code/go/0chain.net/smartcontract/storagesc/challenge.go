@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
 	"time"
 
@@ -1213,11 +1214,18 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
 
+	var expChalIDs []string
+	for challengeID := range expiredIDsMap {
+		expChalIDs = append(expChalIDs, challengeID)
+	}
+	sort.Strings(expChalIDs)
+
 	// maps blobberID to count of its expiredIDs.
 	expiredCountMap := make(map[string]int)
 
 	// TODO: maybe delete them periodically later instead of remove immediately
-	for challengeID, blobberID := range expiredIDsMap {
+	for _, challengeID := range expChalIDs {
+		blobberID := expiredIDsMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
 			return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)

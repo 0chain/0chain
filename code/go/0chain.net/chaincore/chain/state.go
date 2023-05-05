@@ -807,7 +807,7 @@ func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	return tmpt
 }
 
-func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
+func GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
 		return nil, common.NewError("GetStateById", "client state does not exist")
 	}
