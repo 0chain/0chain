@@ -144,7 +144,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	// update stake pool settings
 	var sp *stakePool
 	if sp, err = sc.getStakePool(spenum.Blobber, blobber.ID, balances); err != nil {
-		return fmt.Errorf("can't get stake pool:  %v", err)
+		return fmt.Errorf("can't get stake pool :  %v", err)
 	}
 	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
 	if err != nil {
@@ -214,7 +214,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
 
-//only use this function to add blobber(for update call updateBlobberSettings)
+// only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
