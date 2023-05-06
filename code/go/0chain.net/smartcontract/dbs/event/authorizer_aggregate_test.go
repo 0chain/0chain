@@ -99,14 +99,16 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		err = eventDb.Store.Get().Model(&ProviderRewards{}).Where("provider_id", authorizersInBucket[0]).UpdateColumn("total_rewards", gorm.Expr("total_rewards * ?", 2)).Error
 		require.NoError(t, err)
 
-		// Delete 2 authorizers
-		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id IN (?)", authorizersInBucket[1:]).Delete(&Authorizer{}).Error
+		// Kill one authorizer and shutdown another
+		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id", authorizersInBucket[1]).Update("is_killed", true).Error
+		require.NoError(t, err)
+		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id", authorizersInBucket[2]).Update("is_shutdown", true).Error
 		require.NoError(t, err)
 
 		// Get authorizers and snapshot after update
 		err = eventDb.Get().Model(&Authorizer{}).Find(&authorizersAfter).Error
 		require.NoError(t, err)
-		require.Equal(t, 4, len(authorizersAfter)) // 5 + 1 - 2
+		require.Equal(t, 6, len(authorizersAfter)) // 5 + 1
 		err = eventDb.Get().Model(&AuthorizerSnapshot{}).Find(&authorizerSnapshots).Error
 		require.NoError(t, err)
 
@@ -117,33 +119,29 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		}
 		require.Contains(t, actualIds, newAuthorizer.ID)
 
-		// Check the deleted authorizers are not there
-		require.NotContains(t, actualIds, authorizersInBucket[1])
-		require.NotContains(t, actualIds, authorizersInBucket[2])
-
-		// Check the updated authorizer is updated
-		var (
-			oldAuthorizer Authorizer
-			curAuthorizer Authorizer
-		)
+		// Check the updated authorizers
+		authorizerBeforeMap := make(map[string]Authorizer)
+		authorizerAfterMap := make(map[string]Authorizer)
 		for _, authorizer := range authorizersBefore {
-			if authorizer.ID == authorizersInBucket[0] {
-				oldAuthorizer = authorizer
-				break
-			}
+			authorizerBeforeMap[authorizer.ID] = authorizer
 		}
 		for _, authorizer := range authorizersAfter {
-			if authorizer.ID == authorizersInBucket[0] {
-				curAuthorizer = authorizer
-				break
-			}
+			authorizerAfterMap[authorizer.ID] = authorizer
 		}
+		oldAuthorizer := authorizerBeforeMap[authorizersInBucket[0]]
+		curAuthorizer := authorizerAfterMap[authorizersInBucket[0]]
 		require.Equal(t, oldAuthorizer.TotalStake*2, curAuthorizer.TotalStake)
 		require.Equal(t, oldAuthorizer.UnstakeTotal*2, curAuthorizer.UnstakeTotal)
 		require.Equal(t, oldAuthorizer.Downtime*2, curAuthorizer.Downtime)
 		require.Equal(t, oldAuthorizer.Rewards.TotalRewards*2, curAuthorizer.Rewards.TotalRewards)
 		require.Equal(t, oldAuthorizer.TotalMint*2, curAuthorizer.TotalMint)
 		require.Equal(t, oldAuthorizer.TotalBurn*2, curAuthorizer.TotalBurn)
+
+		// Check the killed authorizer
+		require.True(t, authorizerAfterMap[authorizersInBucket[1]].IsKilled)
+
+		// Check the shutdown authorizer
+		require.True(t, authorizerAfterMap[authorizersInBucket[2]].IsShutdown)
 
 		// Check generated snapshots/aggregates
 		totalMintedBefore := initialSnapshot.TotalMint
@@ -180,6 +178,8 @@ func createAuthorizers(t *testing.T, eventDb *EventDb, n int, targetBucket int64
 		require.NoError(t, err)
 		curAuthorizer.DelegateWallet = OwnerId
 		curAuthorizer.BucketId = int64((i % 2)) * targetBucket
+		curAuthorizer.IsKilled = false
+		curAuthorizer.IsShutdown = false
 		authorizers = append(authorizers, curAuthorizer)
 		ids = append(ids, curAuthorizer.ID)
 	}
@@ -215,6 +215,8 @@ func authorizerToSnapshot(authorizer *Authorizer, round int64) AuthorizerSnapsho
 		TotalBurn:          authorizer.TotalBurn,
 		CreationRound:      authorizer.CreationRound,
 		ServiceCharge: 	 	authorizer.ServiceCharge,
+		IsKilled: 		 	authorizer.IsKilled,
+		IsShutdown: 	 	authorizer.IsShutdown,
 	}
 	return snapshot
 }
@@ -241,7 +243,10 @@ func calculateAuthorizerAggregatesAndSnapshots(round, expectedBucketId int64, cu
 			}
 		}
 
-		aggregates = append(aggregates, calculateAuthorizerAggregate(round, &curAuthorizer, oldAuthorizer))
+		if !curAuthorizer.IsOffline() {
+			aggregates = append(aggregates, calculateAuthorizerAggregate(round, &curAuthorizer, oldAuthorizer))
+		}
+
 		snapshots = append(snapshots, authorizerToSnapshot(&curAuthorizer, round))
 	}
 
@@ -321,12 +326,14 @@ func assertAuthorizerSnapshot(t *testing.T, expected, actual *AuthorizerSnapshot
 	require.Equal(t, expected.TotalBurn, actual.TotalBurn)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.CreationRound, actual.CreationRound)
+	require.Equal(t, expected.IsKilled, actual.IsKilled)
+	require.Equal(t, expected.IsShutdown, actual.IsShutdown)
 }
 
 func assertAuthorizerGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualAuthorizers []Authorizer, actualSnapshot *Snapshot) {
 	expectedGlobal := Snapshot{ Round: round }
 	for _, authorizer := range actualAuthorizers {
-		if authorizer.BucketId != expectedBucketId {
+		if authorizer.BucketId != expectedBucketId || authorizer.IsOffline() {
 			continue
 		}
 		expectedGlobal.TotalRewards += int64(authorizer.Rewards.TotalRewards)
