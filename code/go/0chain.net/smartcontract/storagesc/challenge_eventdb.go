@@ -53,6 +53,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
 		Validators:     validators,
+		Timestamp:      ch.Timestamp,
 	}, nil
 }
 
