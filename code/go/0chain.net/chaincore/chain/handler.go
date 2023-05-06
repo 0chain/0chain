@@ -1375,7 +1375,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if cstate.ErrInvalidState(err) {
 		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
 		// of the 'error' of the miner itself.
-		return transaction.PutTransaction(ctx, txn)
+		txnRsp, err := transaction.PutTransaction(ctx, txn)
+		if err != nil {
+			logging.Logger.Error("failed to save transaction",
+				zap.Error(err),
+				zap.Any("txn", txn))
+			return nil, common.NewErrInternal("failed to save transaction")
+		}
+		return txnRsp, nil
 	}
 
 	var valueNotPresent = err == util.ErrValueNotPresent
@@ -1399,7 +1406,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			if cstate.ErrInvalidState(err) {
 				// put transaction into pool if got invalid state error
 				// to avoid txn rejected due to miner's own fault
-				return transaction.PutTransaction(ctx, txn)
+				txnRsp, err := transaction.PutTransaction(ctx, txn)
+				if err != nil {
+					logging.Logger.Error("failed to save transaction",
+						zap.Error(err),
+						zap.Any("txn", txn))
+					return nil, common.NewErrInternal("failed to save transaction")
+				}
+				return txnRsp, nil
 			}
 			return nil, fmt.Errorf("could not get estimated txn cost: %v", err)
 		}
@@ -1436,7 +1450,15 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		}
 	}
 
-	return transaction.PutTransaction(ctx, txn)
+	txnRsp, err := transaction.PutTransaction(ctx, txn)
+	if err != nil {
+		logging.Logger.Error("failed to save transaction",
+			zap.Error(err),
+			zap.Any("txn", txn))
+		return nil, common.NewErrInternal("failed to save transaction")
+	}
+
+	return txnRsp, nil
 }
 
 // RoundInfoHandler collects and writes information about current round
