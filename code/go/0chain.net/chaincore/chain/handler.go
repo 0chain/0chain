@@ -57,10 +57,47 @@ func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Requ
 	return m
 }
 
-func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+func minerHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := map[string]func(http.ResponseWriter, *http.Request){
+		"/": common.WithCORS(common.UserRateLimit(
+			HomePageAndNotFoundHandler,
+		)),
+		"/_diagnostics": common.UserRateLimit(
+			DiagnosticsHomepageHandler,
+		),
+		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
+			DiagnosticsNodesHandler,
+		),
+		"/_diagnostics/dkg_process": common.UserRateLimit(
+			DiagnosticsDKGHandler,
+		),
+		"/_diagnostics/round_info": common.UserRateLimit(
+			RoundInfoHandler(c),
+		),
+		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
+			datastore.ToJSONEntityReqResponse(
+				datastore.DoAsyncEntityJSONHandler(
+					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+					transaction.TransactionEntityChannel,
+				),
+				transactionEntityMetadata,
+			),
+		)),
+	}
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		m[GetBlockV1Pattern] = common.UserRateLimit(
+			common.ToJSONResponse(
+				GetBlockHandler,
+			),
+		)
+	}
 
+	return m
+}
+
+func sharderHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
@@ -106,15 +143,6 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				SuggestedFeeHandler,
 			),
 		)),
-		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
-			datastore.ToJSONEntityReqResponse(
-				datastore.DoAsyncEntityJSONHandler(
-					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
-					transaction.TransactionEntityChannel,
-				),
-				transactionEntityMetadata,
-			),
-		)),
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
@@ -123,13 +151,6 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				LFBTicketHandler,
 			),
 		),
-	}
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[GetBlockV1Pattern] = common.UserRateLimit(
-			common.ToJSONResponse(
-				GetBlockHandler,
-			),
-		)
 	}
 
 	return m
@@ -1921,13 +1942,13 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 // SetupHandlers sets up the necessary API end points for miners
 func SetupMinerHandlers(c Chainer) {
-	setupHandlers(handlersMap(c))
+	setupHandlers(minerHandlersMap(c))
 	setupHandlers(chainhandlersMap(c))
 }
 
 // SetupHandlers sets up the necessary API end points for sharders
 func SetupSharderHandlers(c Chainer) {
-	setupHandlers(handlersMap(c))
+	setupHandlers(sharderHandlersMap(c))
 }
 
 func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
