@@ -58,9 +58,10 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]int, expiredN int, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
-		AllocationID:    ch.AllocationID,
-		OpenChallenges:  int64(1 - expiredN), // increase one challenge and remove expired ones
-		TotalChallenges: int64(1),
+		AllocationID:     ch.AllocationID,
+		OpenChallenges:   int64(1 - expiredN), // increase one challenge and remove expired ones
+		TotalChallenges:  int64(1),
+		FailedChallenges: int64(expiredN),
 	})
 
 	chBlobberOpenDelta := 1
