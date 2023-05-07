@@ -38,7 +38,7 @@ jobs:
       - name: Create zip
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
         run: sudo zip -r 0chain.zip /github-backup/0chain
-        
+
       - name: Set AWS credentials
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
         uses: aws-actions/configure-aws-credentials@v1
