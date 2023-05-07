@@ -18,10 +18,17 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.18'
+    - name: "Setup Go"
+      shell: 'script --return --quiet --command "bash {0}"'
+      run: |
+        [ -f ./https://go.dev/dl/go1.18.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.3.linux-amd64.tar.gz
+        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
+        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
+        tar -C /usr/local -xzf ./go1.18.3.linux-amd64.tar.gz
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        which go
+        go env
 
     - name: Docker Compose Setup.
       run: |
@@ -37,6 +44,7 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
+        export HOME="/root"
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
@@ -61,6 +69,7 @@ jobs:
 
     - name: Running No VC Byzantine Tests.
       run: |
+        export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
     - uses: actions/upload-artifact@v3
@@ -70,16 +79,6 @@ jobs:
         path: |
           0chain/conductor/logs/
           0chain/docker.local/
-
-    # - name: Creating Artifact con-byz-tests-logs.tar.gz file.
-    #   run: |
-    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-byz-tests-logs.tar.gz --null --files-from -
-
-    # - name: Uploading artifact con-byz-tests-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-byz-tests-logs.tar.gz
 
     - name: Cleanup
       run: |
@@ -92,4 +91,4 @@ jobs:
     steps:
       - name: "Notify Slack"
         run: |
-          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
