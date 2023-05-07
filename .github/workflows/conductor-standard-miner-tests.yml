@@ -82,6 +82,7 @@ jobs:
 
     - name: Running Standard Tests for Miners.
       run: |
+        export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh miners
 
     - uses: actions/upload-artifact@v3
