@@ -1243,7 +1243,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	// Save challenge to MPT
 	if err := challenge.Save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",
-			"error storing challenge: %v", err)
+			"error storing challenge : %v", err)
 	}
 
 	alloc.Stats.OpenChallenges++
