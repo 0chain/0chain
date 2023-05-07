@@ -84,10 +84,13 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().
 		Preload("Rewards").
-		Model(&Blobber{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"},
-		Desc:   limit.IsDescending,
-	}).Find(&blobbers)
+		Model(&Blobber{}).Offset(limit.Offset).
+		Where("is_killed = ? AND is_shutdown = ?", false, false).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   limit.IsDescending,
+		}).Find(&blobbers)
 
 	return blobbers, result.Error
 }
@@ -98,10 +101,13 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, erro
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Blobber{}).Offset(limit.Offset).
-		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix()).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"},
-		Desc:   limit.IsDescending,
-	}).Find(&blobbers)
+		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
+			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   limit.IsDescending,
+		}).Find(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -111,6 +117,7 @@ func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Select("id").
+		Where("is_killed = ? AND is_shutdown = ?", false, false).
 		Offset(limit.Offset).Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "rank_metric"},

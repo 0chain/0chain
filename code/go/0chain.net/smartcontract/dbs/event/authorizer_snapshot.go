@@ -20,6 +20,12 @@ type AuthorizerSnapshot struct {
 	TotalBurn     currency.Coin `json:"total_burn"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (a *AuthorizerSnapshot) IsOffline() bool {
+	return a.IsKilled || a.IsShutdown
 }
 
 func (a *AuthorizerSnapshot) GetTotalStake() currency.Coin {
@@ -91,6 +97,8 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer, round int64)
 			TotalRewards:  authorizer.Rewards.TotalRewards,
 			TotalMint:     authorizer.TotalMint,
 			TotalBurn:     authorizer.TotalBurn,
+			IsKilled:      authorizer.IsKilled,
+			IsShutdown:    authorizer.IsShutdown,
 		})
 	}
 
