@@ -296,11 +296,62 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		zap.String("txn", txn.TransactionData))
 
 	maxFee := c.ChainConfig.MaxTxnFee()
-	if maxFee > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > maxFee {
+
+	zcn := float64(cost) / float64(c.ChainConfig.TxnCostFeeCoeff())
+	parseZCN, err := currency.ParseZCN(zcn)
+	if err != nil {
 		return cost, maxFee, nil
 	}
 
-	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
+	if maxFee > 0 && parseZCN > maxFee {
+		return cost, maxFee, nil
+	}
+
+	return cost, parseZCN, nil
+}
+
+func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
+	b *block.Block,
+	opts ...SyncNodesOption) map[string]map[string]int64 {
+
+	var (
+		clientState = CreateTxnMPT(b.ClientState) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, nil)
+	)
+
+	table := smartcontract.GetTransactionCostTable(sctx)
+
+	table["transfer"] = map[string]int{"transfer": c.ChainConfig.TxnTransferCost()}
+
+	for _, t := range table {
+		for name := range c.ChainConfig.TxnExempt() {
+			if _, ok := t[name]; ok {
+				t[name] = 0
+			}
+		}
+	}
+
+	fees := make(map[string]map[string]int64)
+	for sc, t := range table {
+		fees[sc] = make(map[string]int64, len(t))
+		for f, cost := range t {
+			zcn := float64(cost) / float64(c.ChainConfig.TxnCostFeeCoeff())
+			parseZCN, err := currency.ParseZCN(zcn)
+			if err != nil {
+				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
+				continue
+			}
+
+			if c.ChainConfig.MaxTxnFee() > 0 && parseZCN > c.ChainConfig.MaxTxnFee() {
+				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
+			} else {
+				fees[sc][f] = int64(parseZCN)
+			}
+
+		}
+	}
+
+	return fees
 }
 
 // NewStateContext creation helper.

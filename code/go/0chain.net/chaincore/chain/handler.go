@@ -143,6 +143,11 @@ func sharderHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Re
 				SuggestedFeeHandler,
 			),
 		)),
+		"/v1/fees_table": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				FeesTableHandler,
+			),
+		)),
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
@@ -1986,4 +1991,18 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 	return map[string]uint64{
 		"fee": uint64(fee),
 	}, nil
+}
+func FeesTableHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, errors.New("LFB not ready yet")
+	}
+
+	lfb = lfb.Clone()
+
+	table := c.GetTransactionCostFeeTable(ctx, lfb)
+
+	return table, nil
 }
