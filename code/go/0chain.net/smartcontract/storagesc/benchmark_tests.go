@@ -778,7 +778,6 @@ func BenchmarkTests(
 					"block_reward.block_reward":     "1000",
 					"block_reward.qualifying_stake": "1",
 					"block_reward.sharder_ratio":    "80.0",
-					"block_reward.miner_ratio":      "20.0",
 					"block_reward.gamma.alpha":      "0.2",
 					"block_reward.gamma.a":          "10",
 					"block_reward.gamma.b":          "9",
