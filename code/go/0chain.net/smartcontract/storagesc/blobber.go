@@ -858,7 +858,7 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if blobUsedCapacity == 0 {
 		// remove from challenge ready partitions if this blobber has no data stored
 		err := partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
-		if err != nil && err != partitions.ErrItemNotFoundInPartition {
+		if err != nil && !partitions.ErrItemNotFound(err) {
 			return err
 		}
 		return nil
