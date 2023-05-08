@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/big"
 
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -856,7 +857,11 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 		zap.String("blobber", blobAlloc.BlobberID))
 	if blobUsedCapacity == 0 {
 		// remove from challenge ready partitions if this blobber has no data stored
-		return partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
+		err := partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
+		if err != nil && err != partitions.ErrItemNotFoundInPartition {
+			return err
+		}
+		return nil
 	}
 
 	sp, err := getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances)

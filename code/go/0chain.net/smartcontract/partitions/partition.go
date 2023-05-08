@@ -13,6 +13,7 @@ import (
 
 var (
 	ErrPartitionItemAlreadyExist = errors.New("item already exists")
+	ErrItemNotFoundInPartition   = errors.New("item not found")
 )
 
 // item represent the partition item
@@ -85,7 +86,7 @@ func (p *partition) update(it PartitionItem) error {
 			return nil
 		}
 	}
-	return errors.New("item not found")
+	return ErrItemNotFoundInPartition
 }
 
 func (p *partition) remove(id string) error {
