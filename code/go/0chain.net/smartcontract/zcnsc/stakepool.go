@@ -163,7 +163,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
 	gn, err := GetGlobalNode(balances)
 	if err != nil {
 		return "", common.NewErrorf("add-to-delegate-pool-failed",
-			"failed to get global node error: %v, %s", err)
+			"failed to get global node error: %v", err)
 	}
 
 	return stakepool.StakePoolLock(t, input, balances, stakepool.ValidationSettings{
