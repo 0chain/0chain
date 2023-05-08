@@ -685,7 +685,7 @@ func BenchmarkTests(
 					validationTickets = append(validationTickets, vt)
 				}
 				bytes, _ := json.Marshal(&ChallengeResponse{
-					ID:                getMockChallengeId(encryption.Hash("0"), getMockAllocationId(0)),
+					ID:                getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 					ValidationTickets: validationTickets,
 				})
 				return bytes
@@ -751,8 +751,6 @@ func BenchmarkTests(
 
 					"writepool.min_lock": "10",
 
-					"stakepool.min_lock": "10",
-
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
 					"cancellation_charge":            "0.2",
@@ -760,7 +758,6 @@ func BenchmarkTests(
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
 					"free_allocation_settings.size":                  "10000000000",
-					"free_allocation_settings.duration":              "5000h",
 					"free_allocation_settings.read_price_range.min":  "0.0",
 					"free_allocation_settings.read_price_range.max":  "0.04",
 					"free_allocation_settings.write_price_range.min": "0.0",
@@ -777,7 +774,6 @@ func BenchmarkTests(
 
 					"block_reward.block_reward":     "1000",
 					"block_reward.qualifying_stake": "1",
-					"block_reward.sharder_ratio":    "80.0",
 					"block_reward.gamma.alpha":      "0.2",
 					"block_reward.gamma.a":          "10",
 					"block_reward.gamma.b":          "9",
