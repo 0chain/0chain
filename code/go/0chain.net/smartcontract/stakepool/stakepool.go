@@ -505,11 +505,18 @@ func (sp *StakePool) DistributeRewards(
 	providerType spenum.Provider,
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
+	options ...string,
 ) (err error) {
 	if value == 0 || sp.HasBeenKilled {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+
+	var spUpdate *StakePoolReward
+	if len(options) > 0 {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
+	} else {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+	}
 
 	defer func() {
 		if err != nil {

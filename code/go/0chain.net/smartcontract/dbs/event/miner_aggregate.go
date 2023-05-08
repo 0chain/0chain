@@ -129,13 +129,18 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 			old = MinerSnapshot{ /* zero values */ }
 			gsDiff.MinerCount += 1
 		} else {
-			processingEntity.Processed = true
 			old, ok = processingEntity.Entity.(MinerSnapshot)
 			if !ok {
 				logging.Logger.Error("error converting processable entity to miner snapshot")
 				continue
 			}
 		}
+		// Case: blobber becomes killed/shutdown
+		if (current.IsOffline() && !old.IsOffline()) {
+			handleOfflineMiner(&gsDiff, old)
+			continue
+		}
+		
 		aggregate := MinerAggregate{
 			Round:        round,
 			MinerID:      current.ID,
@@ -152,28 +157,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 
 		oldMinersProcessingMap[current.ID] = processingEntity
 	}
-	// Decrease global snapshot values for not processed entities (deleted)
-	var snapshotIdsToDelete []string
-	for _, processingEntity := range oldMinersProcessingMap {
-		if processingEntity.Entity == nil || processingEntity.Processed {
-			continue
-		}
-		old, ok = processingEntity.Entity.(MinerSnapshot)
-		if !ok {
-			logging.Logger.Error("error converting processable entity to miner snapshot")
-			continue
-		}
-		snapshotIdsToDelete = append(snapshotIdsToDelete, old.MinerID)
-		gsDiff.MinerCount -= 1
-		gsDiff.TotalRewards -= int64(old.TotalRewards)
-		gsDiff.TotalStaked -= int64(old.TotalStake)
-	}
-	if len(snapshotIdsToDelete) > 0 {
-		if result := edb.Store.Get().Where("miner_id in (?)", snapshotIdsToDelete).Delete(&MinerSnapshot{}); result.Error != nil {
-			logging.Logger.Error("deleting Miner snapshots", zap.Error(result.Error))
-		}
-	}
-	
+
 	gs.ApplyDiff(&gsDiff)
 	if len(aggregates) > 0 {
 		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
@@ -191,8 +175,13 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 		zap.Int("current_miners", len(currentMiners)),
 		zap.Int("old_miners", len(oldMiners)),
 		zap.Int("aggregates", len(aggregates)),
-		zap.Int("deleted_snapshots", len(snapshotIdsToDelete)),
 		zap.Any("global_snapshot_after", gs),
 	)
 
+}
+
+func handleOfflineMiner(gsDiff *Snapshot, old MinerSnapshot) {
+	gsDiff.MinerCount -= 1
+	gsDiff.TotalRewards -= int64(old.TotalRewards)
+	gsDiff.TotalStaked -= int64(old.TotalStake)
 }

@@ -1,10 +1,9 @@
 package stakepool
 
 import (
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-
-	"0chain.net/smartcontract/dbs"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
@@ -26,13 +25,22 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 	}
 }
 
-func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, options ...string) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ID = pId
 	spu.Type = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
+
+	var challengeID string
+	if len(options) > 0 {
+		challengeID = options[0]
+	} else {
+		challengeID = ""
+	}
+	spu.ChallengeID = challengeID
+
 	return &spu
 }
 
@@ -57,5 +65,6 @@ func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolRe
 		DelegateRewards: spu.DelegateRewards,
 		DelegatePenalties: spu.DelegatePenalties,
 		RewardType:      spu.RewardType,
+		ChallengeID:     spu.ChallengeID,
 	}
 }

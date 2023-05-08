@@ -16,6 +16,12 @@ type ValidatorSnapshot struct {
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled 	bool          	`json:"is_killed"`
+	IsShutdown 	bool          	`json:"is_shutdown"`
+}
+
+func (v *ValidatorSnapshot) IsOffline() bool {
+	return v.IsKilled || v.IsShutdown
 }
 
 func (v *ValidatorSnapshot) GetTotalStake() currency.Coin {
@@ -83,6 +89,8 @@ func (edb *EventDb) addValidatorSnapshot(validators []Validator) error {
 			ServiceCharge: validator.ServiceCharge,
 			CreationRound: validator.CreationRound,
 			TotalRewards:  validator.Rewards.TotalRewards,
+			IsKilled:      validator.IsKilled,
+			IsShutdown:    validator.IsShutdown,
 		})
 	}
 
