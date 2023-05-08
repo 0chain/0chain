@@ -742,7 +742,8 @@ CREATE TABLE public.reward_delegates (
                                          amount bigint,
                                          block_number bigint,
                                          pool_id text,
-                                         reward_type bigint
+                                         reward_type bigint,
+                                         challenge_id text
 );
 
 
@@ -820,7 +821,8 @@ CREATE TABLE public.reward_providers (
                                          amount bigint,
                                          block_number bigint,
                                          provider_id text,
-                                         reward_type bigint
+                                         reward_type bigint,
+                                         challenge_id text
 );
 
 
@@ -1021,6 +1023,23 @@ ALTER TABLE public.transactions_id_seq OWNER TO zchain_user;
 --
 
 ALTER SEQUENCE public.transactions_id_seq OWNED BY public.transactions.id;
+
+
+
+--
+-- Name: transaction_errors; Type: TABLE; Schema: public; Owner: zchain_user
+--
+
+CREATE TABLE public.transaction_errors (
+                                     id SERIAL PRIMARY KEY,
+                                     created_at timestamp with time zone,
+                                     transaction_output text,
+                                     output_hash text,
+                                     count bigint
+);
+
+
+ALTER TABLE public.transaction_errors OWNER TO zchain_user;
 
 --
 -- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user

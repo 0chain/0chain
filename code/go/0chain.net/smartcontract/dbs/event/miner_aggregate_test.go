@@ -97,14 +97,16 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 		err = eventDb.Store.Get().Model(&ProviderRewards{}).Where("provider_id", minersInBucket[0]).UpdateColumn("total_rewards", gorm.Expr("total_rewards * ?", 2)).Error
 		require.NoError(t, err)
 
-		// Delete 2 miners
-		err = eventDb.Store.Get().Model(&Miner{}).Where("id IN (?)", minersInBucket[1:]).Delete(&Miner{}).Error
+		// Kill one miner and shut down another
+		err = eventDb.Store.Get().Model(&Miner{}).Where("id = ?", minersInBucket[1]).Update("is_killed", true).Error
+		require.NoError(t, err)
+		err = eventDb.Store.Get().Model(&Miner{}).Where("id = ?", minersInBucket[2]).Update("is_shutdown", true).Error
 		require.NoError(t, err)
 
 		// Get miners and snapshot after update
 		err = eventDb.Get().Model(&Miner{}).Find(&minersAfter).Error
 		require.NoError(t, err)
-		require.Equal(t, 4, len(minersAfter)) // 5 + 1 - 2
+		require.Equal(t, 6, len(minersAfter)) // 5 + 1
 		err = eventDb.Get().Model(&MinerSnapshot{}).Find(&minerSnapshots).Error
 		require.NoError(t, err)
 
@@ -115,31 +117,27 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 		}
 		require.Contains(t, actualIds, newMiner.ID)
 
-		// Check the deleted miners are not there
-		require.NotContains(t, actualIds, minersInBucket[1])
-		require.NotContains(t, actualIds, minersInBucket[2])
-
 		// Check the updated miner is updated
-		var (
-			oldMiner Miner
-			curMiner Miner
-		)
+		minerBeforeMap := make(map[string]Miner)
+		minerAfterMap := make(map[string]Miner)
 		for _, miner := range minersBefore {
-			if miner.ID == minersInBucket[0] {
-				oldMiner = miner
-				break
-			}
+			minerBeforeMap[miner.ID] = miner
 		}
 		for _, miner := range minersAfter {
-			if miner.ID == minersInBucket[0] {
-				curMiner = miner
-				break
-			}
+			minerAfterMap[miner.ID] = miner
 		}
+		oldMiner := minerBeforeMap[minersInBucket[0]]
+		curMiner := minerAfterMap[minersInBucket[0]]
 		require.Equal(t, oldMiner.TotalStake*2, curMiner.TotalStake)
 		require.Equal(t, oldMiner.UnstakeTotal*2, curMiner.UnstakeTotal)
 		require.Equal(t, oldMiner.Downtime*2, curMiner.Downtime)
 		require.Equal(t, oldMiner.Rewards.TotalRewards*2, curMiner.Rewards.TotalRewards)
+
+		// Check the killed miner is killed
+		require.True(t, minerAfterMap[minersInBucket[1]].IsKilled)
+
+		// Check the shutdown miner is shutdown
+		require.True(t, minerAfterMap[minersInBucket[2]].IsShutdown)
 
 		// Check generated snapshots/aggregates
 		expectedAggregates, expectedSnapshots = calculateMinerAggregatesAndSnapshots(updateRound, expectedBucketId, minersAfter, minerSnapshots)
@@ -174,6 +172,8 @@ func createMockMiners(t *testing.T, eventDb *EventDb, n int, targetBucket int64,
 		require.NoError(t, err)
 		curMiner.DelegateWallet = OwnerId
 		curMiner.BucketId = int64((i % 2)) * targetBucket
+		curMiner.IsKilled = false
+		curMiner.IsShutdown = false
 		miners = append(miners, curMiner)
 		ids = append(ids, curMiner.ID)
 	}
@@ -207,6 +207,8 @@ func minerToSnapshot(miner *Miner, round int64) MinerSnapshot {
 		TotalStake:         miner.TotalStake,
 		CreationRound:      miner.CreationRound,
 		ServiceCharge: 	 	miner.ServiceCharge,
+		IsKilled: 		 miner.IsKilled,
+		IsShutdown: 	 miner.IsShutdown,
 	}
 	return snapshot
 }
@@ -233,7 +235,10 @@ func calculateMinerAggregatesAndSnapshots(round, expectedBucketId int64, curMine
 			}
 		}
 
-		aggregates = append(aggregates, calculateMinerAggregate(round, &curMiner, oldMiner))
+		if !curMiner.IsOffline() {
+			aggregates = append(aggregates, calculateMinerAggregate(round, &curMiner, oldMiner))
+		}
+
 		snapshots = append(snapshots, minerToSnapshot(&curMiner, round))
 	}
 
@@ -307,12 +312,14 @@ func assertMinerSnapshot(t *testing.T, expected, actual *MinerSnapshot) {
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.CreationRound, actual.CreationRound)
+	require.Equal(t, expected.IsKilled, actual.IsKilled)
+	require.Equal(t, expected.IsShutdown, actual.IsShutdown)
 }
 
 func assertMinerGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualMiners []Miner, actualSnapshot *Snapshot) {
 	expectedGlobal := Snapshot{ Round: round }
 	for _, miner := range actualMiners {
-		if miner.BucketId != expectedBucketId {
+		if miner.BucketId != expectedBucketId || miner.IsOffline() {
 			continue
 		}
 		expectedGlobal.TotalRewards += int64(miner.Rewards.TotalRewards)
