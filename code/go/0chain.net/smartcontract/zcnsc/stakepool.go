@@ -7,10 +7,10 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-
 	"github.com/0chain/common/core/util"
 )
 
@@ -160,12 +160,16 @@ func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode
 func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (
 	resp string, err error) {
-	conf := getConfig()
+	gn, err := GetGlobalNode(balances)
+	if err != nil {
+		return "", common.NewErrorf("add-to-delegate-pool-failed",
+			"failed to get global node error: %v, %s", err)
+	}
 
 	return stakepool.StakePoolLock(t, input, balances, stakepool.ValidationSettings{
-		MinStake:        conf.MinStakeAmount,
-		MaxStake:        conf.MaxStakeAmount,
-		MaxNumDelegates: conf.MaxDelegates,
+		MinStake:        gn.MinStakeAmount,
+		MaxStake:        gn.MaxStakeAmount,
+		MaxNumDelegates: gn.MaxDelegates,
 	}, zcn.getStakePoolAdapter)
 }
 
