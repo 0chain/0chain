@@ -18,6 +18,12 @@ type MinerSnapshot struct {
 	TotalRewards  currency.Coin	`json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled 	bool          	`json:"is_killed"`
+	IsShutdown 	bool          	`json:"is_shutdown"`
+}
+
+func (m *MinerSnapshot) IsOffline() bool {
+	return m.IsKilled || m.IsShutdown
 }
 
 func (m *MinerSnapshot) GetTotalStake() currency.Coin {
@@ -87,6 +93,8 @@ func (edb *EventDb) addMinerSnapshot(miners []Miner, round int64) error {
 			ServiceCharge: miner.ServiceCharge,
 			CreationRound: miner.CreationRound,
 			TotalRewards:  miner.Rewards.TotalRewards,
+			IsKilled:      miner.IsKilled,
+			IsShutdown:    miner.IsShutdown,
 		})
 	}
 

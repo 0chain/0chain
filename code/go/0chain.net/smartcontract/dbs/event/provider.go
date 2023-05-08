@@ -53,6 +53,10 @@ func recalculateProviderFields(prev, curr, result ProviderAggregate) {
 	result.SetTotalRewards((curr.GetTotalRewards() + prev.GetTotalRewards()) / 2)
 }
 
+func (p *Provider) IsOffline() bool {
+	return p.IsKilled || p.IsShutdown
+}
+
 func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
 	intID := new(big.Int)
 	intID.SetString(p.ID, 16)
