@@ -65,7 +65,7 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	const mockWriePoolSize = 12345678
+	const mockWriePoolSize = 600000000
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:              id,
@@ -98,13 +98,14 @@ func addMockAllocation(
 		bIndex := startBlobbers + j
 		bId := getMockBlobberId(bIndex)
 		ba := BlobberAllocation{
-			BlobberID:      bId,
-			AllocationID:   sa.ID,
-			Size:           viper.GetInt64(sc.StorageMinAllocSize),
-			Stats:          &StorageAllocationStats{},
-			Terms:          getMockBlobberTerms(),
-			MinLockDemand:  mockMinLockDemand,
-			AllocationRoot: encryption.Hash("allocation root"),
+			BlobberID:       bId,
+			AllocationID:    sa.ID,
+			Size:            viper.GetInt64(sc.StorageMinAllocSize),
+			Stats:           &StorageAllocationStats{},
+			Terms:           getMockBlobberTerms(),
+			MinLockDemand:   mockMinLockDemand,
+			AllocationRoot:  encryption.Hash("allocation root"),
+			LastWriteMarker: &WriteMarker{},
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 
@@ -406,7 +407,7 @@ func AddMockBlobbers(
 				RankMetric:          float64(i) / (float64(i) + 1),
 				IsAvailable:         blobber.IsAvailable,
 			}
-			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
+			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake) / 2)
 			if err != nil {
 				log.Fatal("convert currency", err)
 			}

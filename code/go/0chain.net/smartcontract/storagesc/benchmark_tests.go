@@ -151,7 +151,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "commit_connection",
+			name:     "storage.commit_connection",
 			endpoint: ssc.commitBlobberConnection,
 			txn: &transaction.Transaction{
 				ClientID:     getMockBlobberId(0),
@@ -430,6 +430,7 @@ func BenchmarkTests(
 					BaseURL:           "my_new_validator.com",
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator")),
 				})
+				fmt.Println("piers new validator", encryption.Hash("my_new_validator"))
 				return bytes
 			}(),
 		},
@@ -666,7 +667,7 @@ func BenchmarkTests(
 					//startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 
 					vt := &ValidationTicket{
-						ChallengeID:  getMockChallengeId(encryption.Hash("0"), getMockAllocationId(0)),
+						ChallengeID:  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 						BlobberID:    getMockBlobberId(0),
 						ValidatorID:  getMockValidatorId(i),
 						ValidatorKey: data.PublicKeys[0],

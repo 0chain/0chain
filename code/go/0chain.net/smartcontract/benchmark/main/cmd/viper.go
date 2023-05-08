@@ -126,4 +126,9 @@ func validateConfig() {
 	if viper.GetInt(bk.BenchDataListLength) <= 0 {
 		log.Fatal(fmt.Errorf("bench_data_list_length %d, must be greater than zero", viper.GetInt(bk.BenchDataListLength)))
 	}
+	if viper.GetInt(bk.BenchDataListLength) <= viper.GetInt(bk.NumAuthorizers) {
+		log.Fatal(fmt.Errorf("bench data list length %v must be strickly greater the authorizers %v"),
+			viper.GetInt(bk.BenchDataListLength), viper.GetInt(bk.NumAuthorizers),
+		)
+	}
 }
