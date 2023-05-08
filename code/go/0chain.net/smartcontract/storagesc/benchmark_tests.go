@@ -418,7 +418,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: creationTime + 1,
-				ClientID:     data.Clients[0],
+				ClientID:     encryption.Hash("my_new_validator"),
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {

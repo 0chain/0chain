@@ -70,7 +70,7 @@ func getBalances(
 		},
 		PrevBlock: &block.Block{},
 	}
-	bk.Round = 2
+	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	bk.CreationDate = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 	bk.MinerID = data.Miners[0]
 	node.Self.Underlying().SetKey(data.Miners[0])

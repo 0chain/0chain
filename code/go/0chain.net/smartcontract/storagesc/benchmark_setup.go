@@ -586,7 +586,7 @@ func GetMockBlobberStakePools(
 			id := getMockBlobberStakePoolId(i, j, clients)
 			clientIndex := (i&len(clients) + j) % len(clients)
 			sp.Pools[id] = &stakepool.DelegatePool{}
-			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
+			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10 / 2)
 			sp.Pools[id].DelegateID = clients[clientIndex]
 
 			if viper.GetBool(sc.EventDbEnabled) {
@@ -629,7 +629,7 @@ func GetMockValidatorStakePools(
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
 			id := getMockValidatorStakePoolId(i, j)
 			sp.Pools[id] = &stakepool.DelegatePool{}
-			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
+			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10 / 2)
 			err := sp.Save(spenum.Validator, getMockValidatorId(i), balances)
 			if err != nil {
 				panic(err)
