@@ -37,7 +37,7 @@ type SmartContractInterface interface {
 	GetExecutionStats() map[string]interface{}
 	GetName() string
 	GetAddress() string
-	GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error)
+	GetCostTable(balances c_state.StateContextI) (map[string]int, error)
 }
 
 /*
