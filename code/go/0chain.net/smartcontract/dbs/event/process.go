@@ -103,7 +103,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddChallengePoolsEvents(),
 			//mergeUpdateBlobberChallengesEvents(),
 			//mergeAddChallengesToBlobberEvents(),
-			mergeUpdateAllocChallengesEvents(),
+			//mergeUpdateAllocChallengesEvents(),
 
 			mergeUpdateBlobbersEvents(),
 			mergeUpdateBlobberTotalStakesEvents(),
