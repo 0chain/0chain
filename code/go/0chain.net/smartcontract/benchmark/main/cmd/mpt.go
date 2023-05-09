@@ -636,6 +636,32 @@ func newEventsDb() *event.EventDb {
 	return eventDb
 }
 
+func createKeys(number int) ([]string, []string, []string) {
+	var ids, publicKeys, privateKeys []string
+	for i := 0; i < number; i++ {
+		id, public, private, err := createKey()
+		if err != nil {
+			log.Fatal("error creating key" + err.Error())
+		}
+		ids = append(ids, id)
+		publicKeys = append(publicKeys, public)
+		privateKeys = append(privateKeys, private)
+	}
+	return ids, publicKeys, privateKeys
+}
+
+func createKey() (id string, public string, private string, err error) {
+	blsScheme := BLS0ChainScheme{}
+	if err := blsScheme.GenerateKeys(); err != nil {
+		return "", "", "", err
+	}
+	publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
+	if err != nil {
+		return "", "", "", err
+	}
+	return encryption.Hash(publicKeyBytes), blsScheme.GetPublicKey(), blsScheme.GetPrivateKey(), nil
+}
+
 func addMockClients(ctx context.Context,
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
@@ -644,21 +670,12 @@ func addMockClients(ctx context.Context,
 	for i := 0; i < viper.GetInt(benchmark.NumClients); i++ {
 		err := executor.Run(ctx, func(i int) func() error {
 			return func() error {
-				blsScheme := BLS0ChainScheme{}
-				err := blsScheme.GenerateKeys()
-				if err != nil {
-					return err
-				}
-				publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
-				if err != nil {
-					return err
-				}
-				clientID := encryption.Hash(publicKeyBytes)
+				clientID, publicKey, privateKey, err := createKey()
 
 				if i < activeClients {
 					clientIds = append(clientIds, clientID)
-					publicKeys = append(publicKeys, blsScheme.GetPublicKey())
-					privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
+					publicKeys = append(publicKeys, publicKey)
+					privateKeys = append(privateKeys, privateKey)
 				}
 				is := &state.State{}
 				_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")

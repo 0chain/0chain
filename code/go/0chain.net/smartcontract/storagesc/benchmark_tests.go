@@ -670,7 +670,7 @@ func BenchmarkTests(
 						ChallengeID:  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 						BlobberID:    getMockBlobberId(0),
 						ValidatorID:  getMockValidatorId(i),
-						ValidatorKey: data.PublicKeys[0],
+						ValidatorKey: data.PublicKeys[i],
 						Result:       true,
 						Message:      "mock message",
 						MessageCode:  "mock message code",
