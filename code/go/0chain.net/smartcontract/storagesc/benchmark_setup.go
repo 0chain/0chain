@@ -294,11 +294,6 @@ func setupMockChallenge(
 ) []*StorageChallenge {
 	ac.AllocationID = allocationId
 
-	//ids := make([]string, 0, totalValidatorsNum)
-	//for i := 0; i < totalValidatorsNum; i++ {
-	//	ids = append(ids, getMockValidatorId(i))
-	//}
-
 	if len(validatorIds) < viper.GetInt(sc.StorageValidatorsPerChallenge) {
 		log.Fatalf("number of validators %d less than validators per challenge %d",
 			len(validatorIds), viper.GetInt(sc.StorageValidatorsPerChallenge))
