@@ -430,7 +430,7 @@ func BenchmarkTests(
 					BaseURL:           "my_new_validator.com",
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator")),
 				})
-				fmt.Println("piers new validator", encryption.Hash("my_new_validator"))
+
 				return bytes
 			}(),
 		},

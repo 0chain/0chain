@@ -71,7 +71,6 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 		publicKey := publicKeys[i]
 
 		authorizer := NewAuthorizer(id, publicKey, "http://localhost:303"+strconv.Itoa(i))
-		fmt.Println(i, "piers authoriser", authorizer.ID)
 
 		err := authorizer.Save(ctx)
 		if err != nil {
