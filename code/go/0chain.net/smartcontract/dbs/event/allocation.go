@@ -352,12 +352,13 @@ func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
-		AddUpdate("open_challenges", openChallengesList, "allocations.open_challenges - t.open_challenges").
+		AddUpdate("open_challenges", openChallengesList).
 		AddUpdate("latest_closed_challenge_txn", latestClosedChallengeTxnList).
-		AddUpdate("successful_challenges", successfulChallengesList, "allocations.successful_challenges + t.successful_challenges").
-		AddUpdate("failed_challenges", failedChallengeList, "allocations.failed_challenges + t.failed_challenges").Exec(edb).Error
+		AddUpdate("successful_challenges", successfulChallengesList).
+		AddUpdate("failed_challenges", failedChallengeList).Exec(edb).Error
 }
 
+// TODO : modify this function to sync data directly from MPT
 func (edb *EventDb) addChallengesToAllocations(allocs []Allocation) error {
 	var (
 		allocationIdList     []string

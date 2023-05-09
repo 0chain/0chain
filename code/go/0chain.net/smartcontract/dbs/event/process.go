@@ -734,7 +734,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 
 		return edb.addChallengesToAllocations(*as)
 	case TagUpdateBlobberOpenChallenges:
-		updates, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
+		updates, ok := fromEvent[Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
@@ -747,7 +747,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		bs, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
+		bs, ok := fromEvent[Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}

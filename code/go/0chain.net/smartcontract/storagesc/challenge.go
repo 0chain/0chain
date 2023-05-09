@@ -704,7 +704,7 @@ func (sc *StorageSmartContract) challengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	emitUpdateChallenge(cab.challenge, true, balances)
+	emitUpdateChallenge(cab.challenge, true, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 
 	err = ongoingParts.UpdateItem(balances, &brStats)
 	if err != nil {
@@ -761,7 +761,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	emitUpdateChallenge(cab.challenge, false, balances)
+	emitUpdateChallenge(cab.challenge, false, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 
 	if err := cab.allocChallenges.Save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
@@ -1278,7 +1278,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	beforeEmitAddChallenge(challInfo)
 
-	emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances)
+	emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances, alloc.Stats, blobAlloc.Stats)
 	return nil
 }
 

@@ -48,14 +48,14 @@ type Blobber struct {
 	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
 	Description string `json:"description" gorm:"description"`
 
-	ChallengesPassed    uint64  `json:"challenges_passed"`
-	ChallengesCompleted uint64  `json:"challenges_completed"`
-	OpenChallenges      uint64  `json:"open_challenges"`
-	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
-	TotalBlockRewards	currency.Coin   `json:"total_block_rewards"`
-	TotalStorageIncome 	currency.Coin   `json:"total_storage_income"`
-	TotalReadIncome 	currency.Coin   `json:"total_read_income"`
-	TotalSlashedStake 	currency.Coin   `json:"total_slashed_stake"`
+	ChallengesPassed    uint64        `json:"challenges_passed"`
+	ChallengesCompleted uint64        `json:"challenges_completed"`
+	OpenChallenges      uint64        `json:"open_challenges"`
+	RankMetric          float64       `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
+	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
+	TotalReadIncome     currency.Coin `json:"total_read_income"`
+	TotalSlashedStake   currency.Coin `json:"total_slashed_stake"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:ID"`
@@ -395,27 +395,16 @@ func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas]
 	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withBlobberChallengesMerged())
 }
 
-func (edb *EventDb) updateOpenBlobberChallenges(deltas []ChallengeStatsDeltas) error {
-	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(deltas)).Scan(&Blobber{}).Error
+func (edb *EventDb) updateOpenBlobberChallenges(blobber Blobber) error {
+	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobber)).Scan(&Blobber{}).Error
 }
 
-func sqlUpdateOpenChallenges(deltas []ChallengeStatsDeltas) string {
-	if len(deltas) == 0 {
-		return ""
-	}
+func sqlUpdateOpenChallenges(blobber Blobber) string {
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
 	sql += "  open_challenges = open_challenges + v.open\n"
 	sql += "FROM ( VALUES"
-	first := true
-	for _, delta := range deltas {
-		if first {
-			first = false
-		} else {
-			sql += ","
-		}
-		sql += fmt.Sprintf("('%s', %d)", delta.Id, delta.OpenDelta)
-	}
+	sql += fmt.Sprintf("('%s', %d)", blobber.ID, blobber.OpenChallenges)
 	sql += "  )\n"
 	sql += "AS v (id, open)\n"
 	sql += "WHERE\n"
@@ -424,18 +413,18 @@ func sqlUpdateOpenChallenges(deltas []ChallengeStatsDeltas) string {
 	return sql
 }
 
-func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error {
-	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(deltas)).Scan(&Blobber{}).Error
+func (edb *EventDb) updateBlobberChallenges(blobber Blobber) error {
+	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(blobber)).Scan(&Blobber{}).Error
 }
 
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	var (
-		ids []string
-		totalBlockRewards []int64
+		ids                []string
+		totalBlockRewards  []int64
 		totalStorageIncome []int64
-		totalReadIncome []int64
-		totalSlashedStake []int64
-		totalChanges = 0
+		totalReadIncome    []int64
+		totalSlashedStake  []int64
+		totalChanges       = 0
 	)
 
 	blobberIdx := -1
@@ -450,21 +439,21 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		totalReadIncome = append(totalReadIncome, 0)
 		totalSlashedStake = append(totalSlashedStake, 0)
 
-		switch (spu.RewardType) {
-			case spenum.BlockRewardBlobber:
-				totalChanges++
-				totalBlockRewards[blobberIdx] = int64(spu.Reward)
-			case spenum.ChallengePassReward:
-				totalChanges++
-				totalStorageIncome[blobberIdx] = int64(spu.Reward)
-			case spenum.FileDownloadReward:
-				totalChanges++
-				totalReadIncome[blobberIdx] = int64(spu.Reward)
-			case spenum.ChallengeSlashPenalty:
-				totalChanges++
-				for _, penalty := range spu.DelegatePenalties {
-					totalSlashedStake[blobberIdx] += int64(penalty)
-				}
+		switch spu.RewardType {
+		case spenum.BlockRewardBlobber:
+			totalChanges++
+			totalBlockRewards[blobberIdx] = int64(spu.Reward)
+		case spenum.ChallengePassReward:
+			totalChanges++
+			totalStorageIncome[blobberIdx] = int64(spu.Reward)
+		case spenum.FileDownloadReward:
+			totalChanges++
+			totalReadIncome[blobberIdx] = int64(spu.Reward)
+		case spenum.ChallengeSlashPenalty:
+			totalChanges++
+			for _, penalty := range spu.DelegatePenalties {
+				totalSlashedStake[blobberIdx] += int64(penalty)
+			}
 		}
 	}
 
@@ -481,25 +470,14 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 }
 
 // ref https://www.postgresql.org/docs/9.1/sql-values.html
-func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
-	if len(deltas) == 0 {
-		return ""
-	}
+func sqlUpdateBlobberChallenges(blobber Blobber) string {
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
 	sql += "  challenges_completed = challenges_completed + v.completed,\n"
 	sql += "  challenges_passed = challenges_passed + v.passed\n"
 	//sql += ",  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n" todo
 	sql += "FROM ( VALUES "
-	first := true
-	for _, delta := range deltas {
-		if first {
-			first = false
-		} else {
-			sql += ",\n"
-		}
-		sql += fmt.Sprintf("('%s', %d, %d)", delta.Id, delta.PassedDelta, delta.CompletedDelta)
-	}
+	sql += fmt.Sprintf("('%s', %d, %d)", blobber.ID, blobber.ChallengesPassed, blobber.ChallengesCompleted)
 	sql += ")\n"
 	sql += "AS v (id, passed, completed)\n"
 	sql += "WHERE\n"
