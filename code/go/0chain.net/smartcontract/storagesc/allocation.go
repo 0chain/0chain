@@ -1550,6 +1550,24 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"saving allocation: "+err.Error())
 	}
 
+	for _, ba := range alloc.BlobberAllocs {
+		blobber, err := sc.getBlobber(ba.BlobberID, balances)
+		if err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't get blobber "+ba.BlobberID+": "+err.Error())
+		}
+		blobber.SavedData += (-ba.Stats.UsedSize)
+		blobber.Allocated += (-ba.Size)
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		if err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"saving blobber "+ba.BlobberID+": "+err.Error())
+		}
+
+		// Update saved data on events_db
+		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+	}
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	emitUpdateAllocationBlobberTerms(alloc, balances, t)
