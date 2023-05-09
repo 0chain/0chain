@@ -29,7 +29,7 @@ func TestStorageBenchmarkRestTests(t *testing.T) {
 
 	numberEndpoints := len(GetEndpoints(rest.NewRestHandler(nil))) +
 		numberDuplicatedTests - numberDevelopmentEndpoints - numberMissingTests
-	require.Less(
+	require.Equal(
 		t,
 		numberEndpoints,
 		len(BenchmarkRestTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
