@@ -319,20 +319,20 @@ func withAllocBlobberTermsMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withAllocChallengesMerged())
-}
-
-func withAllocChallengesMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
-		a.OpenChallenges += b.OpenChallenges
-		a.LatestClosedChallengeTxn = b.LatestClosedChallengeTxn
-		a.SuccessfulChallenges += b.SuccessfulChallenges
-		a.FailedChallenges += b.FailedChallenges
-
-		return a, nil
-	})
-}
+//func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
+//	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withAllocChallengesMerged())
+//}
+//
+//func withAllocChallengesMerged() eventMergeMiddleware {
+//	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
+//		a.OpenChallenges += b.OpenChallenges
+//		a.LatestClosedChallengeTxn = b.LatestClosedChallengeTxn
+//		a.SuccessfulChallenges += b.SuccessfulChallenges
+//		a.FailedChallenges += b.FailedChallenges
+//
+//		return a, nil
+//	})
+//}
 
 func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 	var (
@@ -375,9 +375,9 @@ func (edb *EventDb) addChallengesToAllocations(allocs []Allocation) error {
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
-		AddUpdate("total_challenges", totalChallengesList, "allocations.total_challenges + t.total_challenges").
-		AddUpdate("open_challenges", openChallengesList, "allocations.open_challenges + t.open_challenges").
-		AddUpdate("failed_challenges", failedChallengesList, "allocations.failed_challenges + t.failed_challenges").Exec(edb).Error
+		AddUpdate("total_challenges", totalChallengesList).
+		AddUpdate("open_challenges", openChallengesList).
+		AddUpdate("failed_challenges", failedChallengesList).Exec(edb).Error
 }
 
 func mergeAddChallengesToAllocsEvents() *eventsMergerImpl[Allocation] {

@@ -64,11 +64,11 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]i
 		SuccessfulChallenges: allocStats.SuccessChallenges,
 		FailedChallenges:     allocStats.FailedChallenges,
 	})
-
-	chBlobberOpenDelta := 1
-	if exp, ok := expiredCountMap[ch.BlobberID]; ok {
-		chBlobberOpenDelta -= exp
-	}
+	//
+	//chBlobberOpenDelta := 1
+	//if exp, ok := expiredCountMap[ch.BlobberID]; ok {
+	//	chBlobberOpenDelta -= exp
+	//}
 
 	// Update open challenges count of challenge blobber
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.Blobber{
