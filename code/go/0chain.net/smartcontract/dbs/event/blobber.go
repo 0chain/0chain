@@ -371,16 +371,15 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	})
 }
 
-type ChallengeStatsDeltas struct {
-	Id             string `json:"id"`
-	PassedDelta    int64  `json:"passed_delta"`
-	CompletedDelta int64  `json:"completed_delta"`
-	OpenDelta      int64  `json:"open_delta"`
-}
-
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
-	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
-}
+//	type ChallengeStatsDeltas struct {
+//		Id             string `json:"id"`
+//		PassedDelta    int64  `json:"passed_delta"`
+//		CompletedDelta int64  `json:"completed_delta"`
+//		OpenDelta      int64  `json:"open_delta"`
+//	}
+//func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+//	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
+//}
 
 //func withBlobberChallengesMerged() eventMergeMiddleware {
 //	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
@@ -391,9 +390,9 @@ func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas
 //	})
 //}
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
-	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
-}
+//func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+//	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
+//}
 
 func (edb *EventDb) updateOpenBlobberChallenges(blobber Blobber) error {
 	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobber)).Scan(&Blobber{}).Error
