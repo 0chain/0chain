@@ -379,20 +379,20 @@ type ChallengeStatsDeltas struct {
 }
 
 func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
-	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
 }
 
-func withBlobberChallengesMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
-		a.CompletedDelta += b.CompletedDelta
-		a.PassedDelta += b.PassedDelta
-		a.OpenDelta += b.OpenDelta
-		return a, nil
-	})
-}
+//func withBlobberChallengesMerged() eventMergeMiddleware {
+//	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
+//		a.CompletedDelta += b.CompletedDelta
+//		a.PassedDelta += b.PassedDelta
+//		a.OpenDelta += b.OpenDelta
+//		return a, nil
+//	})
+//}
 
 func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
-	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withBlobberChallengesMerged())
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateOpenBlobberChallenges(blobber Blobber) error {
@@ -402,7 +402,7 @@ func (edb *EventDb) updateOpenBlobberChallenges(blobber Blobber) error {
 func sqlUpdateOpenChallenges(blobber Blobber) string {
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
-	sql += "  open_challenges = open_challenges + v.open\n"
+	sql += "  open_challenges = v.open\n"
 	sql += "FROM ( VALUES"
 	sql += fmt.Sprintf("('%s', %d)", blobber.ID, blobber.OpenChallenges)
 	sql += "  )\n"
@@ -473,8 +473,8 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 func sqlUpdateBlobberChallenges(blobber Blobber) string {
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
-	sql += "  challenges_completed = challenges_completed + v.completed,\n"
-	sql += "  challenges_passed = challenges_passed + v.passed\n"
+	sql += "  challenges_completed = v.completed,\n"
+	sql += "  challenges_passed = v.passed\n"
 	//sql += ",  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n" todo
 	sql += "FROM ( VALUES "
 	sql += fmt.Sprintf("('%s', %d, %d)", blobber.ID, blobber.ChallengesPassed, blobber.ChallengesCompleted)
