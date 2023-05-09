@@ -455,7 +455,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: creationTime + 1,
-				ClientID:     getMockValidatorId(0),
+				ClientID:     data.ValidatorIds[0],
 				ToClientID:   ADDRESS,
 			},
 			input: []byte{},
@@ -494,17 +494,17 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				CreationDate: creationTime + 1,
-				ClientID:     getMockValidatorId(0),
+				ClientID:     data.ValidatorIds[0],
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
 					Provider: provider.Provider{
-						ID:           getMockValidatorId(0),
+						ID:           data.ValidatorIds[0],
 						ProviderType: spenum.Validator,
 					},
-					BaseURL:           getMockValidatorUrl(0),
-					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
+					BaseURL:           getMockValidatorUrl(data.ValidatorIds[0]),
+					StakePoolSettings: getMockStakePoolSettings(data.ValidatorIds[0]),
 				})
 				return bytes
 			}(),
@@ -664,23 +664,20 @@ func BenchmarkTests(
 				//always use first NumBlobbersPerAllocation/2 validators the same we use for challenge creation.
 				//to randomize it we need to load challenge here, not sure if it's needed
 				for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation)/2; i++ {
-					//startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
-
 					vt := &ValidationTicket{
 						ChallengeID:  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 						BlobberID:    getMockBlobberId(0),
-						ValidatorID:  getMockValidatorId(i),
-						ValidatorKey: data.PublicKeys[i],
+						ValidatorID:  data.ValidatorIds[i],
+						ValidatorKey: data.ValidatorPublicKeys[i],
 						Result:       true,
 						Message:      "mock message",
 						MessageCode:  "mock message code",
 						Timestamp:    creationTime,
-						Signature:    "",
 					}
 					hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
 						vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp))
-					_ = sigScheme.SetPublicKey(data.PublicKeys[0])
-					sigScheme.SetPrivateKey(data.PrivateKeys[0])
+					_ = sigScheme.SetPublicKey(data.ValidatorPublicKeys[i])
+					sigScheme.SetPrivateKey(data.ValidatorPrivateKeys[i])
 					vt.Signature, _ = sigScheme.Sign(hash)
 					validationTickets = append(validationTickets, vt)
 				}
@@ -710,7 +707,7 @@ func BenchmarkTests(
 		{
 			name: "storage.kill_validator",
 			input: (&provider.ProviderRequest{
-				ID: getMockValidatorId(0),
+				ID: data.ValidatorIds[0],
 			}).Encode(),
 			endpoint: ssc.killValidator,
 			txn: &transaction.Transaction{
@@ -729,7 +726,7 @@ func BenchmarkTests(
 			name:     "storage.shutdown_validator",
 			endpoint: ssc.shutdownValidator,
 			txn: &transaction.Transaction{
-				ClientID: getMockValidatorId(0),
+				ClientID: data.ValidatorIds[0],
 			},
 		},
 		{

@@ -131,4 +131,14 @@ func validateConfig() {
 			viper.GetInt(bk.BenchDataListLength), viper.GetInt(bk.NumAuthorizers),
 		)
 	}
+	if viper.GetInt(bk.NumBlobbersPerAllocation) > viper.GetInt(bk.BenchDataListLength) {
+		log.Fatal(fmt.Errorf("blobbers per allocation %d grater than bench data length %d",
+			viper.GetInt(bk.NumBlobbersPerAllocation), viper.GetInt(bk.BenchDataListLength)))
+	}
+
+	if viper.GetInt(bk.NumValidators) < viper.GetInt(bk.StorageValidatorsPerChallenge) {
+		log.Fatal(fmt.Errorf("number of validators %d less than validators per challenge %d",
+			viper.GetInt(bk.NumValidators), viper.GetInt(bk.StorageValidatorsPerChallenge)))
+	}
+
 }

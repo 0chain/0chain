@@ -248,8 +248,8 @@ func setUpMpt(
 
 	var wg sync.WaitGroup
 	var (
-		blobbers                      []*storagesc.StorageNode
-		miners, sharders, sharderKeys []string
+		blobbers                                                                             []*storagesc.StorageNode
+		miners, sharders, sharderKeys, validators, validatorPublicKeys, ValidatorPrivateKeys []string
 	)
 
 	wg.Add(1)
@@ -281,7 +281,8 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		_ = storagesc.AddMockValidators(publicKeys, eventDb, balances)
+		validators, validatorPublicKeys, ValidatorPrivateKeys = createKeys(viper.GetInt(benchmark.NumValidators))
+		_ = storagesc.AddMockValidators(validators, validatorPublicKeys, eventDb, balances)
 		log.Println("added validators\t", time.Since(timer))
 	}()
 
@@ -339,7 +340,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.GetMockValidatorStakePools(clients, balances)
+		storagesc.GetMockValidatorStakePools(validators, balances)
 		log.Println("added validator stake pools\t", time.Since(timer))
 	}()
 
@@ -363,7 +364,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockChallenges(blobbers, eventDb, balances)
+		storagesc.AddMockChallenges(validators, blobbers, eventDb, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
@@ -527,6 +528,18 @@ func setUpMpt(
 		} else {
 			benchData.SharderKeys = sharderKeys[:listLength]
 		}
+		if len(validators) < listLength {
+			benchData.ValidatorIds = validators
+		} else {
+			benchData.ValidatorIds = validators[:listLength]
+		}
+		if len(validatorPublicKeys) < listLength {
+			benchData.ValidatorPublicKeys = validatorPublicKeys[:listLength]
+		}
+		if len(ValidatorPrivateKeys) < listLength {
+			benchData.ValidatorPrivateKeys = ValidatorPrivateKeys[:listLength]
+		}
+
 		benchData.InactiveSharder, benchData.InactiveSharderPK, err = getMockIdKeyPair()
 		if err != nil {
 			log.Fatal(err)
