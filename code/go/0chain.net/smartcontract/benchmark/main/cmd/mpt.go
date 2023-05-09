@@ -535,8 +535,12 @@ func setUpMpt(
 		}
 		if len(validatorPublicKeys) < listLength {
 			benchData.ValidatorPublicKeys = validatorPublicKeys[:listLength]
+		} else {
+			benchData.ValidatorPublicKeys = validatorPublicKeys[:listLength]
 		}
 		if len(ValidatorPrivateKeys) < listLength {
+			benchData.ValidatorPrivateKeys = ValidatorPrivateKeys[:listLength]
+		} else {
 			benchData.ValidatorPrivateKeys = ValidatorPrivateKeys[:listLength]
 		}
 
