@@ -570,16 +570,8 @@ func setUpMpt(
 }
 
 func getMockIdKeyPair() (string, string, error) {
-	blsScheme := BLS0ChainScheme{}
-	if err := blsScheme.GenerateKeys(); err != nil {
-		return "", "", err
-	}
-	pk := blsScheme.GetPublicKey()
-	b, err := hex.DecodeString(pk)
-	if err != nil {
-		return "", "", err
-	}
-	return encryption.Hash(b), pk, nil
+	id, pbk, _, err := createKey()
+	return id, pbk, err
 }
 
 func openEventsDb() *event.EventDb {
