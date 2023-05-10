@@ -335,6 +335,9 @@ func withAllocBlobberTermsMerged() eventMergeMiddleware {
 //}
 
 func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
+
+	logging.Logger.Debug("jayash ", zap.Any("allocs", allocs))
+
 	var (
 		allocationIdList             []string
 		openChallengesList           []int64

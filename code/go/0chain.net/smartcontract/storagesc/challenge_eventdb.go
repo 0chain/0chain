@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"errors"
+	"go.uber.org/zap"
 	"strings"
 	"time"
 
@@ -118,6 +119,8 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 		ChallengesPassed:    uint64(blobberStats.SuccessChallenges),
 		OpenChallenges:      uint64(blobberStats.OpenChallenges),
 	}
+
+	logging.Logger.Debug("jayash A ", zap.Any("a", a), zap.Any("b", b), zap.Any("clg", clg))
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)

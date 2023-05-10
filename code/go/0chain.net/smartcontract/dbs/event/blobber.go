@@ -49,7 +49,7 @@ type Blobber struct {
 	Description string `json:"description" gorm:"description"`
 
 	ChallengesPassed    uint64        `json:"challenges_passed"`
-	ChallengesCompleted uint64        `json:"challenges_completed"`
+	ChallengesCompleted uint64        `json:"challenges_completed"` // total challenges
 	OpenChallenges      uint64        `json:"open_challenges"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
