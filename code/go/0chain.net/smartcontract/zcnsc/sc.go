@@ -2,12 +2,8 @@ package zcnsc
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math"
 	"net/url"
-
-	"github.com/0chain/common/core/util"
 
 	"github.com/rcrowley/go-metrics"
 
@@ -113,22 +109,15 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 	return zcn.SmartContract.HandlerStats(ctx, params)
 }
 
-func (zcn *ZCNSmartContract) GetCost(_ *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
+func (zcn *ZCNSmartContract) GetCostTable(balances cstate.StateContextI) (map[string]int, error) {
 	node, err := GetGlobalNode(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return math.MaxInt32, err
+	if err != nil {
+		return map[string]int{}, err
 	}
-
 	if node.Cost == nil {
-		return math.MaxInt32, errors.New("can't get cost")
+		return map[string]int{}, err
 	}
-
-	cost, ok := node.Cost[funcName]
-	if !ok {
-		return math.MaxInt32, errors.New("no cost given for " + funcName)
-	}
-
-	return cost, nil
+	return node.Cost, nil
 }
 
 // Execute ...

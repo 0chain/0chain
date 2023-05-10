@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -77,5 +78,28 @@ func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContrac
 	if contractObj == nil {
 		return 0, errors.New("estimate transaction cost - invalid to client id")
 	}
-	return contractObj.GetCost(t, strings.ToLower(scData.FunctionName), balances)
+
+	table, err := contractObj.GetCostTable(balances)
+	if err != nil {
+		return math.MaxInt, err
+	}
+	cost, ok := table[strings.ToLower(scData.FunctionName)]
+	if !ok {
+		//TODO figure out what to do with such transactions, do not return err now for backward compatibility
+		//return math.MaxInt, errors.New("no cost found for function")
+		return math.MaxInt, nil
+	}
+	return cost, nil
+}
+
+func GetTransactionCostTable(balances c_state.StateContextI) map[string]map[string]int {
+	res := make(map[string]map[string]int)
+	for addr, sc := range ContractMap {
+		table, err := sc.GetCostTable(balances)
+		if err != nil {
+			logging.Logger.Error("no cost found", zap.String("addr", addr), zap.Error(err))
+		}
+		res[addr] = table
+	}
+	return res
 }
