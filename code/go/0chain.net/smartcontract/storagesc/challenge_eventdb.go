@@ -106,6 +106,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 		OpenChallenges:           allocStats.OpenChallenges,
 		TotalChallenges:          allocStats.TotalChallenges,
 		FailedChallenges:         allocStats.FailedChallenges,
+		SuccessfulChallenges:     allocStats.SuccessChallenges,
 		LatestClosedChallengeTxn: sc.ID,
 	}
 
