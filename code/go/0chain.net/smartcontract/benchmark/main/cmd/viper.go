@@ -140,4 +140,9 @@ func validateConfig() {
 			viper.GetInt(bk.NumValidators), viper.GetInt(bk.StorageValidatorsPerChallenge)))
 	}
 
+	if viper.GetInt(bk.BenchDataListLength) < multisigsc.MaxSigners {
+		log.Fatal(fmt.Errorf("mulitsinc max signers %d must not exceed the bench data length %d",
+			multisigsc.MaxSigners, viper.GetInt(bk.BenchDataListLength)))
+	}
+
 }

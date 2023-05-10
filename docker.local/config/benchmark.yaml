@@ -208,4 +208,4 @@ internal:
   control_m: 25000
   control_n: 90
   show_output: true
-  bench_data_list_length: 14
+  bench_data_list_length: 20
