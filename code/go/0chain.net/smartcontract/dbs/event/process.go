@@ -462,12 +462,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateBlobber(*blobbers)
-	case TagUpdateBlobberAllocatedHealth:
+	case TagUpdateBlobberAllocatedSavedHealth:
 		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobbersAllocatedAndHealth(*blobbers)
+		return edb.updateBlobbersAllocatedSavedAndHealth(*blobbers)
 	case TagUpdateBlobberTotalStake:
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {

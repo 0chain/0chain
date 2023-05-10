@@ -48,14 +48,14 @@ type Blobber struct {
 	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
 	Description string `json:"description" gorm:"description"`
 
-	ChallengesPassed    uint64  `json:"challenges_passed"`
-	ChallengesCompleted uint64  `json:"challenges_completed"`
-	OpenChallenges      uint64  `json:"open_challenges"`
-	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
-	TotalBlockRewards	currency.Coin   `json:"total_block_rewards"`
-	TotalStorageIncome 	currency.Coin   `json:"total_storage_income"`
-	TotalReadIncome 	currency.Coin   `json:"total_read_income"`
-	TotalSlashedStake 	currency.Coin   `json:"total_slashed_stake"`
+	ChallengesPassed    uint64        `json:"challenges_passed"`
+	ChallengesCompleted uint64        `json:"challenges_completed"`
+	OpenChallenges      uint64        `json:"open_challenges"`
+	RankMetric          float64       `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
+	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
+	TotalReadIncome     currency.Coin `json:"total_read_income"`
+	TotalSlashedStake   currency.Coin `json:"total_slashed_stake"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:ID"`
@@ -154,23 +154,28 @@ func (edb *EventDb) deleteBlobber(id string) error {
 	return edb.Store.Get().Model(&Blobber{}).Where("id = ?", id).Delete(&Blobber{}).Error
 }
 
-func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
+func (edb *EventDb) updateBlobbersAllocatedSavedAndHealth(blobbers []Blobber) error {
 	var ids []string
 	var allocated []int64
+	var savedData []int64
 	var lastHealthCheck []int64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		allocated = append(allocated, m.Allocated)
+		savedData = append(savedData, m.SavedData)
 		lastHealthCheck = append(lastHealthCheck, int64(m.LastHealthCheck))
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
-		AddUpdate("allocated", allocated).AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
+		AddUpdate("allocated", allocated).
+		AddUpdate("last_health_check", lastHealthCheck).
+		AddUpdate("saved_data", savedData).
+		Exec(edb).Error
 
 }
 
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
+	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedSavedHealth, withUniqueEventOverwrite())
 }
 
 type AllocationQuery struct {
@@ -430,12 +435,12 @@ func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error
 
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	var (
-		ids []string
-		totalBlockRewards []int64
+		ids                []string
+		totalBlockRewards  []int64
 		totalStorageIncome []int64
-		totalReadIncome []int64
-		totalSlashedStake []int64
-		totalChanges = 0
+		totalReadIncome    []int64
+		totalSlashedStake  []int64
+		totalChanges       = 0
 	)
 
 	blobberIdx := -1
@@ -450,21 +455,21 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		totalReadIncome = append(totalReadIncome, 0)
 		totalSlashedStake = append(totalSlashedStake, 0)
 
-		switch (spu.RewardType) {
-			case spenum.BlockRewardBlobber:
-				totalChanges++
-				totalBlockRewards[blobberIdx] = int64(spu.Reward)
-			case spenum.ChallengePassReward:
-				totalChanges++
-				totalStorageIncome[blobberIdx] = int64(spu.Reward)
-			case spenum.FileDownloadReward:
-				totalChanges++
-				totalReadIncome[blobberIdx] = int64(spu.Reward)
-			case spenum.ChallengeSlashPenalty:
-				totalChanges++
-				for _, penalty := range spu.DelegatePenalties {
-					totalSlashedStake[blobberIdx] += int64(penalty)
-				}
+		switch spu.RewardType {
+		case spenum.BlockRewardBlobber:
+			totalChanges++
+			totalBlockRewards[blobberIdx] = int64(spu.Reward)
+		case spenum.ChallengePassReward:
+			totalChanges++
+			totalStorageIncome[blobberIdx] = int64(spu.Reward)
+		case spenum.FileDownloadReward:
+			totalChanges++
+			totalReadIncome[blobberIdx] = int64(spu.Reward)
+		case spenum.ChallengeSlashPenalty:
+			totalChanges++
+			for _, penalty := range spu.DelegatePenalties {
+				totalSlashedStake[blobberIdx] += int64(penalty)
+			}
 		}
 	}
 
