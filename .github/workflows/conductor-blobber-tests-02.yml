@@ -16,10 +16,18 @@ jobs:
       run: |
         rm -rf *
     
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.18'
+    - name: "Setup Go"
+      shell: 'script --return --quiet --command "bash {0}"'
+      run: |
+        [ -f ./https://go.dev/dl/go1.18.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.3.linux-amd64.tar.gz
+        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
+        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
+        tar -C /usr/local -xzf ./go1.18.3.linux-amd64.tar.gz
+
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        which go
+        go env
       
     - name: Docker Compose Setup.
       run: |
