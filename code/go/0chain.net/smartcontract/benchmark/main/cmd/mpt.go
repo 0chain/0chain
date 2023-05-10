@@ -62,7 +62,7 @@ func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatrici
 func getBalances(
 	txn *transaction.Transaction,
 	mpt *util.MerklePatriciaTrie,
-	data benchmark.BenchData,
+	data *benchmark.BenchData,
 ) (*util.MerklePatriciaTrie, cstate.StateContextI) {
 	bk := &block.Block{
 		MagicBlock: &block.MagicBlock{
@@ -72,35 +72,39 @@ func getBalances(
 	}
 	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	bk.CreationDate = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-	bk.MinerID = data.Miners[0]
-	node.Self.Underlying().SetKey(data.Miners[0])
 	magicBlock := &block.MagicBlock{
 		Miners:   node.NewPool(node.NodeTypeMiner),
 		Sharders: node.NewPool(node.NodeTypeSharder),
-	}
-
-	for i := range data.Sharders {
-		var n = node.Provider()
-		if err := n.SetID(data.Sharders[i]); err != nil {
-			log.Fatal(err)
-		}
-		n.PublicKey = data.SharderKeys[i]
-		n.Type = node.NodeTypeSharder
-		n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
-		if err := magicBlock.Sharders.AddNode(n); err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// add miner and sharder that is in magic block but not active for add sharder and add miner
 	magicBlock.Miners.NodesMap = make(map[string]*node.Node)
 	magicBlock.Miners.NodesMap[encryption.Hash("magic_block_miner_1")] = &node.Node{}
 	magicBlockSharder := node.Node{}
-	magicBlockSharder.ID = data.InactiveSharder
-	magicBlockSharder.PublicKey = data.InactiveSharderPK
 	magicBlockSharder.Type = magicBlock.Sharders.Type
-	if err := magicBlock.Sharders.AddNode(&magicBlockSharder); err != nil {
-		log.Fatal(err)
+
+	var edb *event.EventDb
+	if data != nil {
+		bk.MinerID = data.Miners[0]
+		node.Self.Underlying().SetKey(data.Miners[0])
+		for i := range data.Sharders {
+			var n = node.Provider()
+			if err := n.SetID(data.Sharders[i]); err != nil {
+				log.Fatal(err)
+			}
+			n.PublicKey = data.SharderKeys[i]
+			n.Type = node.NodeTypeSharder
+			n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
+			if err := magicBlock.Sharders.AddNode(n); err != nil {
+				log.Fatal(err)
+			}
+		}
+		magicBlockSharder.ID = data.InactiveSharder
+		magicBlockSharder.PublicKey = data.InactiveSharderPK
+		if err := magicBlock.Sharders.AddNode(&magicBlockSharder); err != nil {
+			log.Fatal(err)
+		}
+		edb = data.EventDb
 	}
 
 	signatureScheme := &encryption.BLS0ChainScheme{}
@@ -113,11 +117,11 @@ func getBalances(
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
 		func() *block.Block { return bk },
-		data.EventDb,
+		edb,
 	)
 }
 
-func getMpt(loadPath, configPath string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in getMpt", r)
@@ -148,7 +152,7 @@ func getMpt(loadPath, configPath string, exec *common.WithContextFunc) (*util.Me
 	return openMpt(mptDir)
 }
 
-func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	pNode, err := util.NewPNodeDB(
 		loadPath,
 		loadPath+"log",
@@ -169,15 +173,16 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 	}
 
 	creationDate := common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-	benchData := benchmark.BenchData{EventDb: eventDb}
+
 	_, balances := getBalances(
 		&transaction.Transaction{CreationDate: creationDate},
 		extractMpt(pMpt, rootBytes),
-		benchData,
+		nil,
 	)
+	benchData := &benchmark.BenchData{EventDb: eventDb}
 	benchData.Now = creationDate
 
-	err = balances.GetTrieNode(BenchDataKey, &benchData)
+	err = balances.GetTrieNode(BenchDataKey, benchData)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,7 +192,7 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 
 func setUpMpt(
 	dbPath string,
-) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in setUpMpt", r)
@@ -566,7 +571,7 @@ func setUpMpt(
 	log.Println("saved simulation parameters\t", time.Since(timer))
 	log.Println("mpt generation took:", time.Since(mptGenTime))
 
-	return pMpt, balances.GetState().GetRoot(), benchData
+	return pMpt, balances.GetState().GetRoot(), &benchData
 }
 
 func getMockIdKeyPair() (string, string, error) {

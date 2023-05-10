@@ -104,7 +104,6 @@ func BenchmarkTests(
 	}
 
 	var ssc = StorageSmartContract{
-
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
