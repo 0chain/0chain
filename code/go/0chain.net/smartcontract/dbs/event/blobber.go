@@ -413,6 +413,7 @@ func sqlUpdateOpenChallenges(blobber Blobber) string {
 }
 
 func (edb *EventDb) updateBlobberChallenges(blobber Blobber) error {
+	logging.Logger.Debug("jayash updateBlobberChallenges", zap.Any("blobber", blobber))
 	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(blobber)).Scan(&Blobber{}).Error
 }
 

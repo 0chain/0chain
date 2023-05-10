@@ -334,9 +334,9 @@ func withAllocBlobberTermsMerged() eventMergeMiddleware {
 //	})
 //}
 
-func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
+func (edb *EventDb) updateAllocationChallenges(alloc Allocation) error {
 
-	logging.Logger.Debug("jayash ", zap.Any("allocs", allocs))
+	logging.Logger.Debug("jayash updateAllocationChallenges", zap.Any("allocs", alloc))
 
 	var (
 		allocationIdList             []string
@@ -346,23 +346,23 @@ func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 		failedChallengeList          []int64
 	)
 
-	for _, alloc := range allocs {
-		logging.Logger.Debug("updateAllocationChallenges", zap.Any("alloc", alloc))
+	//for _, alloc := range allocs {
+	logging.Logger.Debug("updateAllocationChallenges", zap.Any("alloc", alloc))
 
-		allocationIdList = append(allocationIdList, alloc.AllocationID)
-		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
-		latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
-		successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
-		failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
+	allocationIdList = append(allocationIdList, alloc.AllocationID)
+	openChallengesList = append(openChallengesList, alloc.OpenChallenges)
+	latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
+	successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
+	failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
 
-		logging.Logger.Debug("updateAllocationChallenges",
-			zap.Any("allocationIdList", allocationIdList),
-			zap.Any("openChallengesList", openChallengesList),
-			zap.Any("latestClosedChallengeTxnList", latestClosedChallengeTxnList),
-			zap.Any("successfulChallengesList", successfulChallengesList),
-			zap.Any("failedChallengeList", failedChallengeList))
+	logging.Logger.Debug("updateAllocationChallenges",
+		zap.Any("allocationIdList", allocationIdList),
+		zap.Any("openChallengesList", openChallengesList),
+		zap.Any("latestClosedChallengeTxnList", latestClosedChallengeTxnList),
+		zap.Any("successfulChallengesList", successfulChallengesList),
+		zap.Any("failedChallengeList", failedChallengeList))
 
-	}
+	//}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
 		AddUpdate("open_challenges", openChallengesList).
