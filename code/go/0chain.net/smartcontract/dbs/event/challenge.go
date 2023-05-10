@@ -26,6 +26,7 @@ type Challenge struct {
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded" gorm:"index"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
+	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
 
 func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
