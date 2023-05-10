@@ -344,11 +344,21 @@ func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 	)
 
 	for _, alloc := range allocs {
+		logging.Logger.Debug("updateAllocationChallenges", zap.Any("alloc", alloc))
+
 		allocationIdList = append(allocationIdList, alloc.AllocationID)
 		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
 		latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
 		successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
 		failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
+
+		logging.Logger.Debug("updateAllocationChallenges",
+			zap.Any("allocationIdList", allocationIdList),
+			zap.Any("openChallengesList", openChallengesList),
+			zap.Any("latestClosedChallengeTxnList", latestClosedChallengeTxnList),
+			zap.Any("successfulChallengesList", successfulChallengesList),
+			zap.Any("failedChallengeList", failedChallengeList))
+
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
