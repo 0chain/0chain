@@ -386,6 +386,12 @@ func TestPartitionsRemove(t *testing.T) {
 			num:       11,
 			removeIdx: 9,
 		},
+		{
+			name:      "4 partition, remove from 1, cut 3 tail",
+			size:      10,
+			num:       31,
+			removeIdx: 16,
+		},
 	}
 
 	for _, tc := range tt {
@@ -952,6 +958,16 @@ func FuzzRemove(f *testing.F) {
 			_, ok, err := p.getItemPartIndex(s, lastItem.ID)
 			require.NoError(t, err)
 			require.True(t, ok)
+		}
+
+		//verify all the item except the removed item could be found
+		for i := 0; i < num; i++ {
+			if i == ks {
+				continue
+			}
+
+			err = p.Get(s, fmt.Sprintf("k%d", i), &testItem{})
+			require.NoError(t, err, "i=%d, k: %d, num: %d", i, ks, num)
 		}
 	})
 }

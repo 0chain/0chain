@@ -380,7 +380,7 @@ func (p *Partitions) loadLastFromPrev(state state.StateContextI) error {
 		return fmt.Errorf("could not remove prev partition: %s, err: %v", prev.Key, err)
 	}
 
-	delete(p.Partitions, p.Last.Loc-1)
+	delete(p.Partitions, p.Last.Loc)
 	return nil
 }
 
