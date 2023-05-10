@@ -145,9 +145,11 @@ func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatri
 	}
 
 	if len(loadPath) == 0 {
+		log.Println("no database to load, build new one in", mptDir)
 		return setUpMpt(mptDir)
 	}
 
+	log.Println("loading saved database", mptDir)
 	return openMpt(mptDir)
 }
 
