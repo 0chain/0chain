@@ -107,7 +107,6 @@ func getBalances(
 		edb = data.EventDb
 	}
 
-	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
@@ -115,7 +114,7 @@ func getBalances(
 		func(int64) *block.MagicBlock { return magicBlock },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
-		func() encryption.SignatureScheme { return signatureScheme },
+		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 		func() *block.Block { return bk },
 		edb,
 	)
