@@ -43,6 +43,7 @@ type AbstractStakePool interface {
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
+	DeletePool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (error)
 	Kill(float64, string, spenum.Provider, cstate.StateContextI) error
 	IsDead() bool
 	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
@@ -815,15 +816,21 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		}
 	}
 
+	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	if err != nil {
+		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
+	}
+	
 	err = sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
 	}
 
-	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	err = sp.DeletePool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
+		return "", common.NewErrorf("stake_pool_unlock_failed",
+			"deleting stake pool: %v", err)
 	}
 
 	// Save the pool
