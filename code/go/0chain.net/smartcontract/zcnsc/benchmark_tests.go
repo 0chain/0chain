@@ -64,7 +64,7 @@ func (bt benchTest) Run(state cstate.TimedQueryStateContext, b *testing.B) error
 func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
 
-	indexOfNewAuth := len(data.Clients) - 1
+	indexOfNewAuth := viper.GetInt(benchmark.NumAuthorizers)
 
 	return createTestSuite(
 		[]benchTest{
@@ -77,10 +77,10 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 			{
 				name:     benchmark.ZcnSc + AuthorizerHealthCheckFunc,
 				endpoint: sc.AuthorizerHealthCheck,
-				txn:      createTransaction(owner, "", 3000),
+				txn:      createTransaction(data.Clients[0], "", 3000),
 				input: func() []byte {
 					input, _ := (&AuthorizerHealthCheckPayload{
-						ID: data.Clients[indexOfNewAuth],
+						ID: data.Clients[0],
 					}).Encode()
 					return input
 				}(),
@@ -240,7 +240,7 @@ func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
 	an := &AddAuthorizerPayload{
 		PublicKey:         data.PublicKeys[index],
 		URL:               "http://localhost:303" + strconv.Itoa(index),
-		StakePoolSettings: getMockStakePoolSettings(data.Clients[index]),
+		StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
 	}
 	ap, err := an.Encode()
 	if err != nil {

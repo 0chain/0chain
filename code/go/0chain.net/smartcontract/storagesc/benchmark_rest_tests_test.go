@@ -11,17 +11,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	numberDevelopmentEndpoints = 6
+	numberDuplicatedTests      = 3
+	numberMissingTests         = 8
+)
+
+// TestStorageBenchmarkRestTests
+// Checks that we have benchmarks for all endpoints.
+// If this test fails either add a new benchmark or increment missing tests.
 func TestStorageBenchmarkRestTests(t *testing.T) {
-	t.Skip("not sure this check is needed")
 	mockSigScheme := &mocks.SignatureScheme{}
 	mockSigScheme.On("SetPublicKey", mock.Anything).Return(nil)
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()
 	mockSigScheme.On("Sign", mock.Anything).Return("", nil)
 	common.ConfigRateLimits()
 
-	require.Less(
+	numberEndpoints := len(GetEndpoints(rest.NewRestHandler(nil))) +
+		numberDuplicatedTests - numberDevelopmentEndpoints - numberMissingTests
+	require.Equal(
 		t,
-		len(GetEndpoints(rest.NewRestHandler(nil))),
+		numberEndpoints,
 		len(BenchmarkRestTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }
