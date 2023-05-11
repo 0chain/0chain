@@ -81,13 +81,14 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	return nil
 }
 
-func emitUpdateBlobberAllocatedHealth(sn *StorageNode, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
+func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, sn.ID, event.Blobber{
 		Provider: event.Provider{
 			ID:              sn.ID,
 			LastHealthCheck: sn.LastHealthCheck,
 		},
 		Allocated: sn.Allocated,
+		SavedData: sn.SavedData,
 	})
 }
 
