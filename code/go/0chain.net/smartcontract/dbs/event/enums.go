@@ -41,7 +41,7 @@ const (
 	TagNone EventTag = iota
 	TagAddBlobber
 	TagUpdateBlobber
-	TagUpdateBlobberAllocatedHealth
+	TagUpdateBlobberAllocatedSavedHealth
 	TagUpdateBlobberTotalStake
 	TagUpdateBlobberTotalUnStake
 	TagUpdateBlobberTotalOffers
@@ -144,7 +144,7 @@ func initTagString() {
 	TagString[TagNone] = "none"
 	TagString[TagAddBlobber] = "TagAddBlobber"
 	TagString[TagUpdateBlobber] = "TagUpdateBlobber"
-	TagString[TagUpdateBlobberAllocatedHealth] = "TagUpdateBlobberAllocatedHealth"
+	TagString[TagUpdateBlobberAllocatedSavedHealth] = "TagUpdateBlobberAllocatedSavedHealth"
 	TagString[TagUpdateBlobberTotalStake] = "TagUpdateBlobberTotalStake"
 	TagString[TagUpdateBlobberTotalUnStake] = "TagUpdateBlobberTotalUnStake"
 	TagString[TagUpdateBlobberTotalOffers] = "TagUpdateBlobberTotalOffers"

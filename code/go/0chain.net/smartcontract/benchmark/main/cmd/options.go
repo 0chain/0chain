@@ -29,13 +29,13 @@ func suitesOmits() ([]string, []string) {
 }
 
 func getTestSuites(
-	data bk.BenchData,
+	data *bk.BenchData,
 	bkNames, omit []string,
 ) []bk.TestSuite {
 	var suites []bk.TestSuite
 	if len(bkNames) == 0 {
 		for _, bks := range benchmarkSources {
-			suite := bks(data, &BLS0ChainScheme{})
+			suite := bks(*data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
 			suites = append(suites, suite)
 		}
@@ -46,7 +46,7 @@ func getTestSuites(
 
 	for _, name := range bkNames {
 		if code, ok := bk.SourceCode[name]; ok {
-			suite := benchmarkSources[code](data, &BLS0ChainScheme{})
+			suite := benchmarkSources[code](*data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
 			suites = append(suites, suite)
 		} else {

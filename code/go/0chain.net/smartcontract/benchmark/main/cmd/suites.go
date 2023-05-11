@@ -51,7 +51,7 @@ func runSuites(
 	suites []benchmark.TestSuite,
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
-	data benchmark.BenchData,
+	data *benchmark.BenchData,
 ) []suiteResults {
 	var results []suiteResults
 	var wg sync.WaitGroup
@@ -103,7 +103,7 @@ func runReadOnlySuite(
 	suite benchmark.TestSuite,
 	_ *util.MerklePatriciaTrie,
 	_ util.Key,
-	_ benchmark.BenchData,
+	_ *benchmark.BenchData,
 	balances cstate.TimedQueryStateContext,
 ) []benchmarkResults {
 	if !viper.GetBool(benchmark.EventDbEnabled) || balances.GetEventDB() == nil {
@@ -149,7 +149,7 @@ func runSuite(
 	suite benchmark.TestSuite,
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
-	data benchmark.BenchData,
+	data *benchmark.BenchData,
 ) []benchmarkResults {
 	var benchmarkResult []benchmarkResults
 	var wg sync.WaitGroup

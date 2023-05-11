@@ -53,6 +53,22 @@ func (sp *StakePool) UnlockPool(clientID string, providerType spenum.Provider, p
 		Total:        b + i,
 	}
 
+	err = sp.EmitUnStakeEvent(providerType, providerId, amount, balances)
+	if err != nil {
+		return "", fmt.Errorf(
+			"stake pool staking error: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
+	return toJson(lock), nil
+}
+
+func (sp *StakePool) DeletePool(clientID string, providerType spenum.Provider, providerId datastore.Key,
+	balances cstate.StateContextI) (error) {
+	dp, ok := sp.Pools[clientID]
+	if !ok {
+		return fmt.Errorf("can't find pool of %v", clientID)
+	}
+
 	if dp.Status == spenum.Deleted {
 		delete(sp.Pools, clientID)
 	}
@@ -61,13 +77,7 @@ func (sp *StakePool) UnlockPool(clientID string, providerType spenum.Provider, p
 	dpUpdate.Updates["status"] = dp.Status
 	dpUpdate.emitUpdate(balances)
 
-	err = sp.EmitUnStakeEvent(providerType, providerId, amount, balances)
-	if err != nil {
-		return "", fmt.Errorf(
-			"stake pool staking error: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUnlockStakePool, clientID, lock)
-	return toJson(lock), nil
+	return nil
 }
 
 func (sp *StakePool) EmitUnStakeEvent(providerType spenum.Provider, providerID string, amount currency.Coin, balances cstate.StateContextI) error {

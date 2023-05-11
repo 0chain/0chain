@@ -154,23 +154,28 @@ func (edb *EventDb) deleteBlobber(id string) error {
 	return edb.Store.Get().Model(&Blobber{}).Where("id = ?", id).Delete(&Blobber{}).Error
 }
 
-func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
+func (edb *EventDb) updateBlobbersAllocatedSavedAndHealth(blobbers []Blobber) error {
 	var ids []string
 	var allocated []int64
+	var savedData []int64
 	var lastHealthCheck []int64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		allocated = append(allocated, m.Allocated)
+		savedData = append(savedData, m.SavedData)
 		lastHealthCheck = append(lastHealthCheck, int64(m.LastHealthCheck))
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
-		AddUpdate("allocated", allocated).AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
+		AddUpdate("allocated", allocated).
+		AddUpdate("last_health_check", lastHealthCheck).
+		AddUpdate("saved_data", savedData).
+		Exec(edb).Error
 
 }
 
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
+	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedSavedHealth, withUniqueEventOverwrite())
 }
 
 type AllocationQuery struct {
