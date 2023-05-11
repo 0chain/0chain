@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 9
+	// map header, size 12
 	// string "Clients"
-	o = append(o, 0x89, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
+	o = append(o, 0x8c, 0xa7, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Clients)))
 	for za0001 := range z.Clients {
 		o = msgp.AppendString(o, z.Clients[za0001])
@@ -45,6 +45,24 @@ func (z *BenchDataMpt) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendArrayHeader(o, uint32(len(z.SharderKeys)))
 	for za0006 := range z.SharderKeys {
 		o = msgp.AppendString(o, z.SharderKeys[za0006])
+	}
+	// string "ValidatorIds"
+	o = append(o, 0xac, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x49, 0x64, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.ValidatorIds)))
+	for za0007 := range z.ValidatorIds {
+		o = msgp.AppendString(o, z.ValidatorIds[za0007])
+	}
+	// string "ValidatorPublicKeys"
+	o = append(o, 0xb3, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.ValidatorPublicKeys)))
+	for za0008 := range z.ValidatorPublicKeys {
+		o = msgp.AppendString(o, z.ValidatorPublicKeys[za0008])
+	}
+	// string "ValidatorPrivateKeys"
+	o = append(o, 0xb4, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.ValidatorPrivateKeys)))
+	for za0009 := range z.ValidatorPrivateKeys {
+		o = msgp.AppendString(o, z.ValidatorPrivateKeys[za0009])
 	}
 	// string "InactiveSharder"
 	o = append(o, 0xaf, 0x49, 0x6e, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72)
@@ -194,6 +212,63 @@ func (z *BenchDataMpt) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "ValidatorIds":
+			var zb0008 uint32
+			zb0008, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ValidatorIds")
+				return
+			}
+			if cap(z.ValidatorIds) >= int(zb0008) {
+				z.ValidatorIds = (z.ValidatorIds)[:zb0008]
+			} else {
+				z.ValidatorIds = make([]string, zb0008)
+			}
+			for za0007 := range z.ValidatorIds {
+				z.ValidatorIds[za0007], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "ValidatorIds", za0007)
+					return
+				}
+			}
+		case "ValidatorPublicKeys":
+			var zb0009 uint32
+			zb0009, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ValidatorPublicKeys")
+				return
+			}
+			if cap(z.ValidatorPublicKeys) >= int(zb0009) {
+				z.ValidatorPublicKeys = (z.ValidatorPublicKeys)[:zb0009]
+			} else {
+				z.ValidatorPublicKeys = make([]string, zb0009)
+			}
+			for za0008 := range z.ValidatorPublicKeys {
+				z.ValidatorPublicKeys[za0008], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "ValidatorPublicKeys", za0008)
+					return
+				}
+			}
+		case "ValidatorPrivateKeys":
+			var zb0010 uint32
+			zb0010, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ValidatorPrivateKeys")
+				return
+			}
+			if cap(z.ValidatorPrivateKeys) >= int(zb0010) {
+				z.ValidatorPrivateKeys = (z.ValidatorPrivateKeys)[:zb0010]
+			} else {
+				z.ValidatorPrivateKeys = make([]string, zb0010)
+			}
+			for za0009 := range z.ValidatorPrivateKeys {
+				z.ValidatorPrivateKeys[za0009], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "ValidatorPrivateKeys", za0009)
+					return
+				}
+			}
 		case "InactiveSharder":
 			z.InactiveSharder, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -249,6 +324,18 @@ func (z *BenchDataMpt) Msgsize() (s int) {
 	s += 12 + msgp.ArrayHeaderSize
 	for za0006 := range z.SharderKeys {
 		s += msgp.StringPrefixSize + len(z.SharderKeys[za0006])
+	}
+	s += 13 + msgp.ArrayHeaderSize
+	for za0007 := range z.ValidatorIds {
+		s += msgp.StringPrefixSize + len(z.ValidatorIds[za0007])
+	}
+	s += 20 + msgp.ArrayHeaderSize
+	for za0008 := range z.ValidatorPublicKeys {
+		s += msgp.StringPrefixSize + len(z.ValidatorPublicKeys[za0008])
+	}
+	s += 21 + msgp.ArrayHeaderSize
+	for za0009 := range z.ValidatorPrivateKeys {
+		s += msgp.StringPrefixSize + len(z.ValidatorPrivateKeys[za0009])
 	}
 	s += 16 + msgp.StringPrefixSize + len(z.InactiveSharder) + 18 + msgp.StringPrefixSize + len(z.InactiveSharderPK) + 4 + z.Now.Msgsize()
 	return
