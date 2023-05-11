@@ -94,14 +94,35 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]i
 	logging.Logger.Debug("emitted add_challenge")
 }
 
+func emitUpdateChallengeResponded(sc *StorageChallenge, balances cstate.StateContextI, passed bool) {
+	clg := event.Challenge{
+		ChallengeID:    sc.ID,
+		AllocationID:   sc.AllocationID,
+		BlobberID:      sc.BlobberID,
+		RoundResponded: balances.GetBlock().Round,
+		Passed:         passed,
+	}
+	if passed {
+		clg.Responded = 2 // Failed challenge
+	} else {
+		clg.Responded = 1 // Successful challenge
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
+}
+
 func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI, allocStats, blobberStats *StorageAllocationStats) {
 	clg := event.Challenge{
 		ChallengeID:    sc.ID,
 		AllocationID:   sc.AllocationID,
 		BlobberID:      sc.BlobberID,
-		Responded:      sc.Responded,
 		RoundResponded: balances.GetBlock().Round,
 		Passed:         passed,
+	}
+	if passed {
+		clg.Responded = 2 // Failed challenge
+	} else {
+		clg.Responded = 1 // Successful challenge
 	}
 
 	a := event.Allocation{

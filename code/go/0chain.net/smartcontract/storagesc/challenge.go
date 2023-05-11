@@ -510,7 +510,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		// TODO: remove this challenge already redeemed response. This response will be returned only when the
 		// challenge is the last completed challenge, which means if we have more challenges completed after it, we
 		// will see different result, even the challenge's state is the same as 'it has been redeemed'.
-		if lcc != nil && challResp.ID == lcc.ID && lcc.Responded {
+		if lcc != nil && challResp.ID == lcc.ID && lcc.Responded == 1 {
 			return "challenge already redeemed", nil
 		}
 
@@ -525,7 +525,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		latestCompletedChallTime = lcc.Created
 	}
 
-	challenge.Responded = true
+	challenge.Responded = 1
 	cab := &challengeAllocBlobberPassResult{
 		verifyTicketsResult:      result,
 		alloc:                    alloc,
@@ -1220,7 +1220,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created)
+	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created, balances)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}

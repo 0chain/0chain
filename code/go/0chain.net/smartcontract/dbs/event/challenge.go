@@ -22,7 +22,7 @@ type Challenge struct {
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
+	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded" gorm:"index"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
@@ -87,7 +87,7 @@ func (edb *EventDb) addChallenges(chlgs []Challenge) error {
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	var (
 		challengeIdList []string
-		respondedList   []bool
+		respondedList   []int64
 		passedList      []bool
 	)
 
