@@ -110,11 +110,7 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 	var moved currency.Coin
 	currentBalance := rp.Balance
 
-	if currentBalance == 0 {
-		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-	if value >= currentBalance {
+	if value > currentBalance {
 		return "", fmt.Errorf("not enough tokens in read pool for "+
 			"allocation: %s, blobber: %s", allocID, blobID)
 	} else {
@@ -229,6 +225,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 	}
 
 	i, _ := txn.Value.Int64()
+
 	balances.EmitEvent(event.TypeStats, event.TagLockReadPool, txn.ClientID, event.ReadPoolLock{
 		Client: txn.ClientID,
 		PoolId: targetId,
@@ -260,6 +257,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, _ 
 
 	i, _ := balance.Int64()
 	key := readPoolKey(ssc.ID, txn.ClientID)
+
 	balances.EmitEvent(event.TypeStats, event.TagUnlockReadPool, key, event.ReadPoolLock{
 		Client: txn.ClientID,
 		PoolId: key,

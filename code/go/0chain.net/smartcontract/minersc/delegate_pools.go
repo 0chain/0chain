@@ -13,11 +13,12 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	return stakepool.StakePoolLock(t, input, balances, msc.getStakePoolAdapter)
+	return stakepool.StakePoolLock(t, input, balances,
+		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter)
 }
 
 // getStakePool of given blobber
-func (msc *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, providerID string,
+func (_ *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, providerID string,
 	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
 	var mn *MinerNode
 	switch pType {

@@ -15,13 +15,13 @@ type DelegatePoolUpdate dbs.DelegatePoolUpdate
 func newDelegatePoolUpdate(poolID, pId string, pType spenum.Provider) *DelegatePoolUpdate {
 	var spu DelegatePoolUpdate
 	spu.PoolId = poolID
-	spu.ProviderId = pId
-	spu.ProviderType = pType
+	spu.ID = pId
+	spu.Type = pType
 	spu.Updates = make(map[string]interface{})
 	return &spu
 }
 
-func (dp DelegatePool) emitNew(
+func (dp DelegatePool) EmitNew(
 	poolId, providerId string,
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
@@ -35,6 +35,7 @@ func (dp DelegatePool) emitNew(
 
 		Status:       dp.Status,
 		RoundCreated: balances.GetBlock().Round,
+		StakedAt:     dp.StakedAt,
 	}
 
 	balances.EmitEvent(

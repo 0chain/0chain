@@ -68,7 +68,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.8${SHARDER}
-    command: dlv --listen=:234${SHARDER} --headless=true --api-version=2 --accept-multiclient exec ./bin/sharder -- --deployment_mode 0 --keys_file config/b0snode${SHARDER}_keys.txt --minio_file config/minio_config.txt
+    command: dlv --listen=:234${SHARDER} --headless=true --api-version=2 --accept-multiclient exec ./bin/sharder -- --deployment_mode 0 --keys_file config/b0snode${SHARDER}_keys.txt
 
 networks:
   default:

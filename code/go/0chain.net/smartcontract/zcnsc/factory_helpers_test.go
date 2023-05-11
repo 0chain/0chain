@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
 	. "0chain.net/smartcontract/zcnsc"
 )
@@ -22,7 +23,8 @@ const (
 )
 
 var (
-	events map[string]*AuthorizerNode
+	addAuthorizerEvents map[string]*AuthorizerNode
+	burnTicketEvents    map[string][]*event.BurnTicket
 	//authorizers       = make(map[string]*Authorizer, len(authorizersID))
 	authorizersID       = []string{authorizerPrefixID + "_0", authorizerPrefixID + "_1", authorizerPrefixID + "_2"}
 	clients             = []string{clientPrefixID + "_0", clientPrefixID + "_1", clientPrefixID + "_2"}
@@ -140,8 +142,6 @@ func CreateAuthorizerParam(delegateWalletID string, publicKey string) *AddAuthor
 		URL:       "http://localhost:2344",
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     delegateWalletID,
-			MinStake:           12345678,
-			MaxStake:           12345678,
 			MaxNumDelegates:    12345678,
 			ServiceChargeRatio: 12345678,
 		},
@@ -152,8 +152,6 @@ func CreateAuthorizerStakingPoolParam(delegateWalletID string) *UpdateAuthorizer
 	return &UpdateAuthorizerStakePoolPayload{
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     delegateWalletID,
-			MinStake:           100,
-			MaxStake:           100,
 			MaxNumDelegates:    100,
 			ServiceChargeRatio: 100,
 		},
@@ -187,6 +185,7 @@ func CreateSmartContractGlobalNode() *GlobalNode {
 			MinMintAmount:      111,
 			MinBurnAmount:      100,
 			MinStakeAmount:     200,
+			MaxStakeAmount:     1200,
 			MinLockAmount:      0,
 			MinAuthorizers:     1,
 			PercentAuthorizers: 70,

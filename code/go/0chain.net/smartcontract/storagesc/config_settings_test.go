@@ -125,14 +125,11 @@ func TestUpdateSettings(t *testing.T) {
 					"max_mint":                      "1500000.02",
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
-					"min_alloc_duration":            "5m",
 					"max_challenge_completion_time": "3m",
-					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
 					"readpool.min_lock":  "10",
 					"writepool.min_lock": "10",
-					"stakepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
@@ -141,68 +138,57 @@ func TestUpdateSettings(t *testing.T) {
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
 					"free_allocation_settings.size":                  "10000000000",
-					"free_allocation_settings.duration":              "5000h",
 					"free_allocation_settings.read_price_range.min":  "0.0",
 					"free_allocation_settings.read_price_range.max":  "0.04",
 					"free_allocation_settings.write_price_range.min": "0.0",
 					"free_allocation_settings.write_price_range.max": "0.1",
 					"free_allocation_settings.read_pool_fraction":    "0.2",
 
-					"validator_reward":                     "0.025",
-					"blobber_slash":                        "0.1",
-					"max_read_price":                       "100",
-					"max_write_price":                      "100",
-					"failed_challenges_to_cancel":          "20",
-					"failed_challenges_to_revoke_min_lock": "0",
-					"challenge_enabled":                    "true",
-					"challenge_rate_per_mb_min":            "1.0",
-					"max_challenges_per_generation":        "100",
-					"validators_per_challenge":             "2",
-					"max_delegates":                        "100",
-					"owner_id":                             "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
-					"block_reward.block_reward":            "1000",
-					"block_reward.qualifying_stake":        "1",
-					"block_reward.sharder_ratio":           "80.0",
-					"block_reward.miner_ratio":             "20.0",
-					"block_reward.blobber_ratio":           "20.0",
-					"block_reward.gamma.alpha":             "0.2",
-					"block_reward.gamma.a":                 "10",
-					"block_reward.gamma.b":                 "9",
-					"block_reward.zeta.i":                  "1",
-					"block_reward.zeta.k":                  "0.9",
-					"block_reward.zeta.mu":                 "0.2",
-					"cost.update_settings":                 "105",
-					"cost.read_redeem":                     "105",
-					"cost.commit_connection":               "105",
-					"cost.new_allocation_request":          "105",
-					"cost.update_allocation_request":       "105",
-					"cost.finalize_allocation":             "105",
-					"cost.cancel_allocation":               "105",
-					"cost.add_free_storage_assigner":       "105",
-					"cost.free_allocation_request":         "105",
-					"cost.free_update_allocation":          "105",
-					"cost.add_curator":                     "105",
-					"cost.remove_curator":                  "105",
-					"cost.blobber_health_check":            "105",
-					"cost.update_blobber_settings":         "105",
-					"cost.pay_blobber_block_rewards":       "105",
-					"cost.curator_transfer_allocation":     "105",
-					"cost.challenge_request":               "105",
-					"cost.challenge_response":              "105",
-					"cost.generate_challenges":             "105",
-					"cost.add_validator":                   "105",
-					"cost.update_validator_settings":       "105",
-					"cost.add_blobber":                     "105",
-					"cost.new_read_pool":                   "105",
-					"cost.read_pool_lock":                  "105",
-					"cost.read_pool_unlock":                "105",
-					"cost.write_pool_lock":                 "105",
-					"cost.write_pool_unlock":               "105",
-					"cost.stake_pool_lock":                 "105",
-					"cost.stake_pool_unlock":               "105",
-					"cost.stake_pool_pay_interests":        "105",
-					"cost.commit_settings_changes":         "105",
-					"cost.collect_reward":                  "105",
+					"validator_reward":               "0.025",
+					"blobber_slash":                  "0.1",
+					"max_read_price":                 "100",
+					"max_write_price":                "100",
+					"challenge_enabled":              "true",
+					"validators_per_challenge":       "2",
+					"max_delegates":                  "100",
+					"owner_id":                       "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"block_reward.block_reward":      "1000",
+					"block_reward.qualifying_stake":  "1",
+					"block_reward.gamma.alpha":       "0.2",
+					"block_reward.gamma.a":           "10",
+					"block_reward.gamma.b":           "9",
+					"block_reward.zeta.i":            "1",
+					"block_reward.zeta.k":            "0.9",
+					"block_reward.zeta.mu":           "0.2",
+					"cost.update_settings":           "105",
+					"cost.read_redeem":               "105",
+					"cost.commit_connection":         "105",
+					"cost.new_allocation_request":    "105",
+					"cost.update_allocation_request": "105",
+					"cost.finalize_allocation":       "105",
+					"cost.cancel_allocation":         "105",
+					"cost.add_free_storage_assigner": "105",
+					"cost.free_allocation_request":   "105",
+					"cost.free_update_allocation":    "105",
+					"cost.blobber_health_check":      "105",
+					"cost.update_blobber_settings":   "105",
+					"cost.pay_blobber_block_rewards": "105",
+					"cost.challenge_request":         "105",
+					"cost.challenge_response":        "105",
+					"cost.generate_challenge":        "105",
+					"cost.add_validator":             "105",
+					"cost.update_validator_settings": "105",
+					"cost.add_blobber":               "105",
+					"cost.new_read_pool":             "105",
+					"cost.read_pool_lock":            "105",
+					"cost.read_pool_unlock":          "105",
+					"cost.write_pool_lock":           "105",
+					"cost.write_pool_unlock":         "105",
+					"cost.stake_pool_lock":           "105",
+					"cost.stake_pool_unlock":         "105",
+					"cost.stake_pool_pay_interests":  "105",
+					"cost.commit_settings_changes":   "105",
+					"cost.collect_reward":            "105",
 				},
 			},
 		},
@@ -380,13 +366,11 @@ func TestCommitSettingChanges(t *testing.T) {
 					"max_mint":                      "1500000.02",
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
-					"min_alloc_duration":            "5m",
 					"max_challenge_completion_time": "3m",
-					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
 					"readpool.min_lock":  "10",
-					"stakepool.min_lock": "10",
+					"writepool.min_lock": "10",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
@@ -395,70 +379,58 @@ func TestCommitSettingChanges(t *testing.T) {
 					"free_allocation_settings.data_shards":           "10",
 					"free_allocation_settings.parity_shards":         "5",
 					"free_allocation_settings.size":                  "10000000000",
-					"free_allocation_settings.duration":              "5000h",
 					"free_allocation_settings.read_price_range.min":  "0.0",
 					"free_allocation_settings.read_price_range.max":  "0.04",
 					"free_allocation_settings.write_price_range.min": "0.0",
 					"free_allocation_settings.write_price_range.max": "0.1",
 					"free_allocation_settings.read_pool_fraction":    "0.2",
-
-					"validator_reward":                     "0.025",
-					"blobber_slash":                        "0.1",
-					"max_read_price":                       "100",
-					"max_write_price":                      "100",
-					"max_blobbers_per_allocation":          "40",
-					"failed_challenges_to_cancel":          "20",
-					"failed_challenges_to_revoke_min_lock": "0",
-					"challenge_enabled":                    "true",
-					"challenge_rate_per_mb_min":            "1.0",
-					"max_challenges_per_generation":        "100",
-					"validators_per_challenge":             "2",
-					"max_delegates":                        "100",
-
-					"block_reward.block_reward":        "1000",
-					"block_reward.qualifying_stake":    "1",
-					"block_reward.sharder_ratio":       "80.0",
-					"block_reward.miner_ratio":         "20.0",
-					"block_reward.blobber_ratio":       "100.0",
-					"block_reward.gamma.alpha":         "0.2",
-					"block_reward.gamma.a":             "10",
-					"block_reward.gamma.b":             "9",
-					"block_reward.zeta.i":              "1",
-					"block_reward.zeta.k":              "0.9",
-					"block_reward.zeta.mu":             "0.2",
-					"owner_id":                         "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
-					"cost.update_settings":             "105",
-					"cost.read_redeem":                 "105",
-					"cost.commit_connection":           "105",
-					"cost.new_allocation_request":      "105",
-					"cost.update_allocation_request":   "105",
-					"cost.finalize_allocation":         "105",
-					"cost.cancel_allocation":           "105",
-					"cost.add_free_storage_assigner":   "105",
-					"cost.free_allocation_request":     "105",
-					"cost.free_update_allocation":      "105",
-					"cost.add_curator":                 "105",
-					"cost.remove_curator":              "105",
-					"cost.blobber_health_check":        "105",
-					"cost.update_blobber_settings":     "105",
-					"cost.pay_blobber_block_rewards":   "105",
-					"cost.curator_transfer_allocation": "105",
-					"cost.challenge_request":           "105",
-					"cost.challenge_response":          "105",
-					"cost.generate_challenges":         "105",
-					"cost.add_validator":               "105",
-					"cost.update_validator_settings":   "105",
-					"cost.add_blobber":                 "105",
-					"cost.new_read_pool":               "105",
-					"cost.read_pool_lock":              "105",
-					"cost.read_pool_unlock":            "105",
-					"cost.write_pool_lock":             "105",
-					"cost.write_pool_unlock":           "105",
-					"cost.stake_pool_lock":             "105",
-					"cost.stake_pool_unlock":           "105",
-					"cost.stake_pool_pay_interests":    "105",
-					"cost.commit_settings_changes":     "105",
-					"cost.collect_reward":              "105",
+					"max_blobbers_per_allocation":                    "40",
+					"health_check_period":                            "40h",
+					"validator_reward":                               "0.025",
+					"blobber_slash":                                  "0.1",
+					"max_read_price":                                 "100",
+					"max_write_price":                                "100",
+					"challenge_enabled":                              "true",
+					"validators_per_challenge":                       "2",
+					"max_delegates":                                  "100",
+					"owner_id":                                       "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
+					"block_reward.block_reward":                      "1000",
+					"block_reward.qualifying_stake":                  "1",
+					"block_reward.gamma.alpha":                       "0.2",
+					"block_reward.gamma.a":                           "10",
+					"block_reward.gamma.b":                           "9",
+					"block_reward.zeta.i":                            "1",
+					"block_reward.zeta.k":                            "0.9",
+					"block_reward.zeta.mu":                           "0.2",
+					"cost.update_settings":                           "105",
+					"cost.read_redeem":                               "105",
+					"cost.commit_connection":                         "105",
+					"cost.new_allocation_request":                    "105",
+					"cost.update_allocation_request":                 "105",
+					"cost.finalize_allocation":                       "105",
+					"cost.cancel_allocation":                         "105",
+					"cost.add_free_storage_assigner":                 "105",
+					"cost.free_allocation_request":                   "105",
+					"cost.free_update_allocation":                    "105",
+					"cost.blobber_health_check":                      "105",
+					"cost.update_blobber_settings":                   "105",
+					"cost.pay_blobber_block_rewards":                 "105",
+					"cost.challenge_request":                         "105",
+					"cost.challenge_response":                        "105",
+					"cost.generate_challenge":                        "105",
+					"cost.add_validator":                             "105",
+					"cost.update_validator_settings":                 "105",
+					"cost.add_blobber":                               "105",
+					"cost.new_read_pool":                             "105",
+					"cost.read_pool_lock":                            "105",
+					"cost.read_pool_unlock":                          "105",
+					"cost.write_pool_lock":                           "105",
+					"cost.write_pool_unlock":                         "105",
+					"cost.stake_pool_lock":                           "105",
+					"cost.stake_pool_unlock":                         "105",
+					"cost.stake_pool_pay_interests":                  "105",
+					"cost.commit_settings_changes":                   "105",
+					"cost.collect_reward":                            "105",
 				},
 			},
 		},
@@ -485,16 +457,16 @@ func getConfField(conf Config, field string) interface{} {
 	switch Settings[field].setting {
 	case MaxMint:
 		return conf.MaxMint
+	case MaxStake:
+		return conf.MaxStake
+	case MinStake:
+		return conf.MinStake
 	case TimeUnit:
 		return conf.TimeUnit
 	case MinAllocSize:
 		return conf.MinAllocSize
-	case MinAllocDuration:
-		return conf.MinAllocDuration
 	case MaxChallengeCompletionTime:
 		return conf.MaxChallengeCompletionTime
-	case MinOfferDuration:
-		return conf.MinOfferDuration
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity
 
@@ -503,9 +475,8 @@ func getConfField(conf Config, field string) interface{} {
 	case WritePoolMinLock:
 		return conf.WritePool.MinLock
 
-	case StakePoolMinLock:
-		return conf.StakePool.MinLock
-
+	case HealthCheckPeriod:
+		return conf.HealthCheckPeriod
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
@@ -519,8 +490,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.FreeAllocationSettings.ParityShards
 	case FreeAllocationSize:
 		return conf.FreeAllocationSettings.Size
-	case FreeAllocationDuration:
-		return conf.FreeAllocationSettings.Duration
 	case FreeAllocationReadPriceRangeMin:
 		return conf.FreeAllocationSettings.ReadPriceRange.Min
 	case FreeAllocationReadPriceRangeMax:
@@ -542,16 +511,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxWritePrice
 	case MinWritePrice:
 		return conf.MinWritePrice
-	case FailedChallengesToCancel:
-		return conf.FailedChallengesToCancel
-	case FailedChallengesToRevokeMinLock:
-		return conf.FailedChallengesToRevokeMinLock
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
-	case ChallengeGenerationRate:
-		return conf.ChallengeGenerationRate
-	case MaxChallengesPerGeneration:
-		return conf.MaxChallengesPerGeneration
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case MaxDelegates:
@@ -560,12 +521,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.BlockReward.BlockReward
 	case BlockRewardQualifyingStake:
 		return conf.BlockReward.QualifyingStake
-	case BlockRewardSharderWeight:
-		return conf.BlockReward.SharderWeight
-	case BlockRewardMinerWeight:
-		return conf.BlockReward.MinerWeight
-	case BlockRewardBlobberWeight:
-		return conf.BlockReward.BlobberWeight
 	case MaxBlobbersPerAllocation:
 		return conf.MaxBlobbersPerAllocation
 	case BlockRewardGammaAlpha:

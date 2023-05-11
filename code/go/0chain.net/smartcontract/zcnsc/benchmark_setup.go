@@ -41,6 +41,10 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	if err != nil {
 		panic(err)
 	}
+	gn.MaxStakeAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxStakeAmount))
+	if err != nil {
+		panic(err)
+	}
 	gn.MinLockAmount = currency.Coin(config.SmartContractConfig.GetUint64(benchmark.ZcnMinLockAmount))
 	gn.MinMintAmount, err = currency.Float64ToCoin(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
 	if err != nil {
@@ -72,17 +76,18 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 		if err != nil {
 			panic(err)
 		}
+		if err := increaseAuthorizerCount(ctx); err != nil {
+			log.Fatal(err)
+		}
 
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			settings := getMockStakePoolSettings(id)
 			authorizer := event.Authorizer{
-				URL:             authorizer.URL,
+				URL: authorizer.URL,
 				Provider: event.Provider{
-					ID:             authorizer.ID,
-					DelegateWallet: clients[i],
-					MinStake:       settings.MinStake,
-					MaxStake:       settings.MaxStake,
-					ServiceCharge:  settings.ServiceChargeRatio,
+					ID:              authorizer.ID,
+					DelegateWallet:  clients[i],
+					ServiceCharge:   settings.ServiceChargeRatio,
 					LastHealthCheck: common.Now(),
 				},
 			}
@@ -102,7 +107,7 @@ func addMockStakePools(clients []string, ctx cstate.StateContextI) {
 		}
 		sp.Reward = 11
 		sp.Minter = cstate.MinterZcn
-		_, err := ctx.InsertTrieNode(StakePoolKey(ADDRESS, clients[i]), sp)
+		_, err := ctx.InsertTrieNode(stakepool.StakePoolKey(spenum.Authorizer, clients[i]), sp)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -151,8 +156,6 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 func getMockStakePoolSettings(wallet string) stakepool.Settings {
 	return stakepool.Settings{
 		DelegateWallet:     wallet,
-		MinStake:           currency.Coin(1 * 1e10),
-		MaxStake:           currency.Coin(100 * 1e10),
 		MaxNumDelegates:    10,
 		ServiceChargeRatio: 0.1,
 	}

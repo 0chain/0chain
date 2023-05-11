@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -23,7 +25,6 @@ import (
 )
 
 const (
-	CHUNK_SIZE           = 64 * KB
 	allocationId         = "my allocation id"
 	delegateWallet       = "my wallet"
 	errCommitBlobber     = "commit_blobber_read"
@@ -32,7 +33,6 @@ const (
 	errPreviousMarker    = "validations with previous marker failed"
 	errEarlyAllocation   = "early reading, allocation not started yet"
 	errExpiredAllocation = "late reading, allocation expired"
-	errNoTokensReadPool  = "no tokens"
 	errNotEnoughTokens   = "not enough tokens"
 )
 
@@ -58,6 +58,9 @@ var (
 	blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.3,
 		readPrice:     0.01,
+	}
+	freeReadBlobberYaml = mockBlobberYaml{
+		serviceCharge: 0.3,
 	}
 )
 
@@ -93,11 +96,16 @@ func TestCommitBlobberRead(t *testing.T) {
 		)
 		require.NoError(t, err)
 	})
+	t.Run("test commit blobber read empty pool", func(t *testing.T) {
+		var err = testCommitBlobberRead(
+			t, blobberYaml, lastRead, read, allocation, stakes, rPool,
+		)
+		require.NoError(t, err)
+	})
 
 	t.Run("check blobber sort needed", func(t *testing.T) {
-		var bRPool = mockReadPool{11 * 1e10}
 		var err = testCommitBlobberRead(
-			t, blobberYaml, lastRead, read, allocation, stakes, bRPool,
+			t, freeReadBlobberYaml, lastRead, read, allocation, stakes, mockReadPool{},
 		)
 		require.NoError(t, err)
 	})
@@ -173,16 +181,6 @@ func TestCommitBlobberRead(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
 		require.True(t, strings.Contains(err.Error(), errExpiredAllocation))
-	})
-
-	t.Run(errNoTokensReadPool+" expired blobbers", func(t *testing.T) {
-		var expiredReadPools = mockReadPool{}
-		var err = testCommitBlobberRead(
-			t, blobberYaml, lastRead, read, allocation, stakes, expiredReadPools,
-		)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
-		require.True(t, strings.Contains(err.Error(), errNoTokensReadPool))
 	})
 
 	t.Run(errNotEnoughTokens+" expired blobbers", func(t *testing.T) {
@@ -304,18 +302,23 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 
 	blobber := &StorageNode{
-		ID: blobberId,
+		Provider: provider.Provider{
+			ID:           blobberId,
+			ProviderType: spenum.Blobber,
+		},
 		Terms: Terms{
 			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
 	}
 
-	_, err = ctx.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 
 	var rPool = readPool{readPoolIn.Balance}
 
-	require.NoError(t, rPool.save(ssc.ID, client.id, ctx))
+	if readPoolIn.Balance != 0 {
+		require.NoError(t, rPool.save(ssc.ID, client.id, ctx))
+	}
 
 	var sPool = stakePool{
 		StakePool: &stakepool.StakePool{
@@ -343,7 +346,11 @@ func testCommitBlobberRead(
 	newRp, err := ssc.getReadPool(client.id, ctx)
 	require.NoError(t, err)
 
-	require.NotEqualValues(t, rPool.Balance, newRp.Balance)
+	if blobberYaml.readPrice != 0 {
+		require.NotEqualValues(t, rPool.Balance, newRp.Balance)
+	} else {
+		require.EqualValues(t, 0, newRp.Balance)
+	}
 
 	newSp, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)

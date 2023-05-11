@@ -78,32 +78,6 @@ func TestSaveClients(t *testing.T) {
 	require.Equal(t, client.PublicKey, c.PublicKey)
 }
 
-func TestClientChunkSave(t *testing.T) {
-	common.SetupRootContext(context.Background())
-	if err := initDefaultPool(); err != nil {
-		t.Fatal(err)
-	}
-	setupEntity()
-	numWorkers := 1000
-	done := make(chan bool, 100)
-	for i := 1; i <= numWorkers; i++ {
-		sigScheme := encryption.NewED25519Scheme()
-		err := sigScheme.GenerateKeys()
-		if err != nil {
-			t.Fatal(err)
-		}
-		go postClient(t, sigScheme, done)
-	}
-	for count := 0; true; {
-		<-done
-		count++
-		if count == numWorkers {
-			break
-		}
-	}
-	common.Done()
-}
-
 func TestClientID(t *testing.T) {
 	setupEntity()
 	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"

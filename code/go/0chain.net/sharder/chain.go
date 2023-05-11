@@ -111,7 +111,7 @@ func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		for err != nil {
 			tries++
-			logging.Logger.Error("setup genesis block -- failed to store magic block map", zap.Any("error", err), zap.Any("tries", tries))
+			logging.Logger.Error("setup genesis block -- failed to store magic block map", zap.Error(err), zap.Int64("tries", tries))
 			time.Sleep(time.Millisecond * 100)
 			err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		}
@@ -194,7 +194,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	bl.lfb.SetStateStatus(block.StateSuccessful)
 	if err = sc.InitBlockState(bl.lfb); err != nil {
 		bl.lfb.SetStateStatus(0)
-		logging.Logger.Info("load_lfb -- can't initialize stored block state",
+		logging.Logger.Error("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
 		// return common.NewErrorf("load_lfb",
 		//	"can't init block state: %v", err) // fatal
@@ -266,8 +266,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 		zap.Int64("block_with_magic_block_round",
 			lfb.LatestFinalizedMagicBlockRound))
 
-	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash,
-		lfb.LatestFinalizedMagicBlockRound)
+	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
 	if err != nil {
 		// fatality, can't find related LFMB
 		return nil, common.NewErrorf("load_lfb",
@@ -331,8 +330,14 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator, r *round.Round)
 		if rollBackCount >= sc.PruneStateBelowCount() {
 			// could not recovery as the state of round below prune count may have nodes missing, and
 			// we can not sync from remote neither, so just panic.
-			logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
-				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+			if lfb != nil {
+				logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
+					zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("round_block_hash", r.BlockHash),
+					zap.Int64("round_number", r.GetRoundNumber()))
+			} else {
+				logging.Logger.Panic("load_lfb, could not rollback to LFB with full state, please clean DB and sync again",
+					zap.String("round_block_hash", r.BlockHash), zap.Int64("round_number", r.GetRoundNumber()))
+			}
 		}
 
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {

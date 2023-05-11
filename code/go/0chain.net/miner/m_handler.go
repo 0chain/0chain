@@ -462,7 +462,7 @@ func notarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	//reject cur_round -2 is a locked round, there can't be new notarization important for us
 	if nb.Round < mc.GetCurrentRound()-1 {
 		logging.Logger.Debug("notarized block handler (round older than the current round)",
-			zap.String("block", nb.Hash), zap.Any("round", nb.Round))
+			zap.String("block", nb.Hash), zap.Int64("round", nb.Round))
 		return
 	}
 

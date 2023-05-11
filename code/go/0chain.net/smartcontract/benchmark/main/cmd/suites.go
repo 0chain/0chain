@@ -166,13 +166,16 @@ func runSuite(
 			timer := time.Now()
 			log.Println("starting", bm.Name())
 			var err error
-
+			var runCount int
 			result := testing.Benchmark(func(b *testing.B) {
+				b.StopTimer()
+				var prevMptHashRoot string
+				_ = prevMptHashRoot
 				for i := 0; i < b.N; i++ {
-					b.StopTimer()
+					cloneMPT := util.CloneMPT(mpt)
 					_, balances := getBalances(
 						bm.Transaction(),
-						extractMpt(mpt, root),
+						extractMpt(cloneMPT, root),
 						data,
 					)
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
@@ -180,11 +183,23 @@ func runSuite(
 					})
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
+					b.StopTimer()
 					if err != nil {
 						mockUpdateState(bm.Transaction(), balances)
 					}
+					runCount++
+					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
+					if i > 0 && currMptHashRoot != prevMptHashRoot {
+						log.Println("MPT state root mismatch detected! benchmark test name:", bm.Name())
+						log.Println("Run:", i, "Previous MPT state root:", prevMptHashRoot, "Current MPT state root:", currMptHashRoot)
+						err = fmt.Errorf("MPT hash root mismatch detected: running same function resulted in different MPT states")
+						b.FailNow()
+					} else {
+						prevMptHashRoot = currMptHashRoot
+					}
 				}
 			})
+			log.Println(bm.Name(), "run count is:", runCount)
 			var resTimings map[string]time.Duration
 			if wt, ok := bm.(benchmark.WithTimings); ok && len(wt.Timings()) > 0 {
 				resTimings = wt.Timings()

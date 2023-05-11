@@ -147,15 +147,15 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<tr><td class='tname'>Current Round</td><td>%v</td></tr>", c.GetCurrentRound())
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil {
-		fmt.Fprintf(w, "<tr><td class='tname'>Finalized Round</td><td>%v (%v)</td></tr>", lfb.Round, len(lfb.UniqueBlockExtensions))
+		fmt.Fprintf(w, "<tr><td class='tname'>Finalized Round</td><td>%v (%v)</td></tr>", lfb.Round, len(lfb.GetUniqueBlockExtensions()))
 	}
 	if c.LatestDeterministicBlock != nil {
-		fmt.Fprintf(w, "<tr><td class='tname'>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.UniqueBlockExtensions))
+		fmt.Fprintf(w, "<tr><td class='tname'>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.GetUniqueBlockExtensions()))
 		if c.LatestDeterministicBlock != lfb {
 			var maxUBE int
 			var maxUBERound int64
 			for b := lfb; b != nil && b != c.LatestDeterministicBlock; b = b.PrevBlock {
-				var ube = len(b.UniqueBlockExtensions)
+				var ube = len(b.GetUniqueBlockExtensions())
 				if ube > maxUBE {
 					maxUBE = ube
 					maxUBERound = b.Round

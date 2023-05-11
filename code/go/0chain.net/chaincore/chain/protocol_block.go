@@ -378,13 +378,14 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				logging.Logger.Error("emit update block event error", zap.Error(err))
 			}
 			fb.Events = append(fb.Events, ev)
-
+			ts := time.Now()
 			if err := c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns)); err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
 			}
+			EventsComputationTimer.Update(time.Since(ts).Microseconds())
 			fb.Events = nil
 		})
 	}
@@ -459,7 +460,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	logging.Logger.Debug("finalized block - done",
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-		zap.Any("duration", time.Since(ts)))
+		zap.Duration("duration", time.Since(ts)))
 	return nil
 }
 
@@ -483,7 +484,7 @@ func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("Run slow on", zap.String("name", name),
 				zap.Int64("round", round),
-				zap.Any("duration", du))
+				zap.Duration("duration", du))
 		}
 	}()
 }
@@ -499,7 +500,7 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount() {
+	if len(b.GetUniqueBlockExtensions())*100 >= mb.Miners.Size()*c.ThresholdByCount() {
 		return true
 	}
 	return false

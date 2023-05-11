@@ -4,7 +4,7 @@ import (
 	"0chain.net/core/common"
 )
 
-//Transaction entity that encapsulates the transaction related data and meta data
+// Transaction entity that encapsulates the transaction related data and meta data
 type Transaction struct {
 	Hash              string           `json:"hash,omitempty"`
 	Version           string           `json:"version,omitempty"`
@@ -44,19 +44,21 @@ const (
 	TxnTypeSmartContract = 1000
 )
 
-//SmartContractTxnData Smart Contract Txn Data
+// SmartContractTxnData Smart Contract Txn Data
 type SmartContractTxnData struct {
 	Name      string      `json:"name"`
 	InputArgs interface{} `json:"input"`
 }
 
-// NewTransactionEntity creates a new transaction
-func NewTransactionEntity(ID string, chainID string, pkey string) *Transaction {
-	txn := &Transaction{}
-	txn.Version = "1.0"
-	txn.ClientID = ID //node.Self.ID
-	txn.CreationDate = common.Now()
-	txn.ChainID = chainID //chain.GetServerChain().ID
-	txn.PublicKey = pkey  //node.Self.PublicKey
-	return txn
+// NewSmartContractTxn creates a new transaction
+func NewSmartContractTxn(ID string, chainID, pkey, toClientID string) *Transaction {
+	return &Transaction{
+		Version:         "1.0",
+		ClientID:        ID,
+		CreationDate:    common.Now(),
+		ChainID:         chainID,
+		PublicKey:       pkey,
+		ToClientID:      toClientID,
+		TransactionType: TxnTypeSmartContract,
+	}
 }

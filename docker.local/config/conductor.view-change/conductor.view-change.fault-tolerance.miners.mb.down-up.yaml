@@ -1,0 +1,519 @@
+###
+### View Change Fault Tolerance Tests
+### Phases:
+###  - 'start'
+###  - 'contribute'
+###  - 'share'
+###  - 'publish'
+###  - 'wait'
+### Default MagicBlock:
+###   sharders: ["sharder-1"]
+###   miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+###   k_percent: 0.75 of registered
+###   t_percent: 0.51 of active
+###   x_percent: 0.70 of min(max_n, num_dkg_miners)
+###   min_s: 1, max_s: 2
+###   min_n: 3, max_n: 7
+###
+### Outside Miners: ["miner-5", "miner-6", "miner-7", "miner-8"]
+### Outside Sharders: ["sharder-3"]
+###
+### Phase Rounds:
+###   start_rounds: 50
+###   contribute_rounds: 50
+###   share_rounds: 50
+###   publish_rounds: 50
+###   wait_rounds: 50
+###
+
+---
+enable:
+#   - "Miner goes down and comes up"
+
+sets:
+  - name: "Miner goes down and comes up"
+    tests:
+      - "Miner goes down in phase 'start' and comes up in phase 'start'"
+      - "Miner goes down in phase 'start' and comes up in phase 'contribute'"
+      - "Miner goes down in phase 'start' and comes up in phase 'share'"
+      - "Miner goes down in phase 'start' and comes up in phase 'publish'"
+      - "Miner goes down in phase 'start' and comes up in phase 'wait'"
+      - "Miner goes down in phase 'contribute' and comes up in phase 'contribute'"
+      - "Miner goes down in phase 'contribute' and comes up in phase 'share'"
+      - "Miner goes down in phase 'contribute' and comes up in phase 'publish'"
+      - "Miner goes down in phase 'contribute' and comes up in phase 'wait'"
+      - "Miner goes down in phase 'share' and comes up in phase 'share'"
+      - "Miner goes down in phase 'share' and comes up in phase 'publish'"
+      - "Miner goes down in phase 'share' and comes up in phase 'wait'"
+      - "Miner goes down in phase 'publish' and comes up in phase 'publish'"
+      - "Miner goes down in phase 'publish' and comes up in phase 'wait'"
+      - "Miner goes down in phase 'wait' and comes up in phase 'wait'"
+      - "Miner goes down and comes up at VC - 1" #
+      - "Miner goes down and comes up at VC" #
+      - "Miner goes down and comes up at VC + 1" #
+
+tests:
+  # Miner goes down and comes up
+  - name: "Miner goes down in phase 'start' and comes up in phase 'start'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "start"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_round:
+          shift: 5
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+
+  - name: "Miner goes down in phase 'start' and comes up in phase 'contribute'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "start"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "contribute"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'start' and comes up in phase 'share'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "start"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "share"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'start' and comes up in phase 'publish'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "start"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "publish"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'start' and comes up in phase 'wait'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "start"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "wait"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'contribute' and comes up in phase 'contribute'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "contribute"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_round:
+          shift: 5
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'contribute' and comes up in phase 'share'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "contribute"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "share"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'contribute' and comes up in phase 'publish'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "contribute"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "publish"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'contribute' and comes up in phase 'wait'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "contribute"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "wait"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'share' and comes up in phase 'share'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "share"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_round:
+          shift: 15
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'share' and comes up in phase 'publish'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "share"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "publish"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'share' and comes up in phase 'wait'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "share"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "wait"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'publish' and comes up in phase 'publish'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "publish"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_round:
+          shift: 5
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'publish' and comes up in phase 'wait'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "publish"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_phase:
+          phase: "wait"
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Miner goes down in phase 'wait' and comes up in phase 'wait'"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "wait"
+      - stop: ["miner-4"]
+      - start_lock: ["miner-4"]
+      - wait_round:
+          shift: 5
+      - unlock: ["miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+
+  - name: "Miner goes down and comes up at VC - 1"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "wait"
+      - wait_round:
+          shift: 48
+      - stop: ["miner-1"]
+      - start: ["miner-1"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+            sharders: ["sharder-1"]
+      - wait_round:
+          shift: 10 # make sure it moves on after the VC
+
+  - name: "Miner goes down and comes up at VC"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
+      - wait_phase:
+          phase: "wait"
+      - wait_round:
+          shift: 49
+      - stop: ["miner-1"]
+      - start: ["miner-1"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+            sharders: ["sharder-1"]
+      - wait_round:
+          shift: 10 # make sure it moves on after the VC
+
+  - name: "Miner goes down and comes up at VC + 1"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+            sharders: ["sharder-1"]
+      - wait_round:
+          shift: 1
+      - stop: ["miner-1"]
+      - start: ["miner-1"]
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+            sharders: ["sharder-1"]

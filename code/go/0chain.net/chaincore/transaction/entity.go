@@ -12,8 +12,9 @@ import (
 
 	"0chain.net/core/viper"
 
-	"github.com/0chain/common/core/currency"
 	"encoding/json"
+
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -36,6 +37,7 @@ var transactionCount uint64 = 0
 var (
 	ErrTxnMissingPublicKey = errors.New("transaction missing public key")
 	ErrTxnInvalidPublicKey = errors.New("transaction public key is invalid")
+	ErrTxnInsufficientFee  = errors.New("insufficient transaction fee")
 )
 
 func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
@@ -52,6 +54,7 @@ type Transaction struct {
 	datastore.HashIDField
 	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
+	*SmartContractData `json:"-" msgpack:"-"`
 
 	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`
 	PublicKey string `json:"public_key,omitempty" msgpack:"puk,omitempty"`
@@ -90,10 +93,18 @@ func (t *Transaction) ComputeProperties() error {
 	if t.ChainID == "" {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
+	t.SmartContractData = &SmartContractData{}
+	if t.TransactionType == TxnTypeSmartContract {
+		if err := json.Unmarshal([]byte(t.TransactionData), t.SmartContractData); err != nil {
+			logging.Logger.Debug("transaction data", zap.Any("data", t.TransactionData))
+			return fmt.Errorf("invalid smart contract data: %v", err)
+		}
+	}
 	return t.ComputeClientID()
 }
 
-type smartContractTransactionData struct {
+// SmartContractData represents the smart contract data
+type SmartContractData struct {
 	FunctionName string          `json:"name"`
 	InputData    json.RawMessage `json:"input"`
 }
@@ -109,35 +120,27 @@ func (t *Transaction) ValidateNonce() error {
 // ValidateFee - Validate fee
 func (t *Transaction) ValidateFee(txnExempted map[string]bool, minTxnFee currency.Coin) error {
 	if t.TransactionData != "" {
-		var smartContractData smartContractTransactionData
-		dataBytes := []byte(t.TransactionData)
-		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err != nil {
-			logging.Logger.Error("unmarshal txn data failed", zap.Error(err))
-			return errors.New("invalid transaction data")
-		}
-
-		if _, ok := txnExempted[smartContractData.FunctionName]; ok {
+		if _, ok := txnExempted[t.FunctionName]; ok {
 			return nil
 		}
 	}
 	if t.Fee < minTxnFee {
-		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
+		return ErrTxnInsufficientFee
 	}
 	return nil
 }
 
 /*ComputeClientID - compute the client id if there is a public key in the transaction */
 func (t *Transaction) ComputeClientID() error {
-	if t.ClientID != "" {
-		return nil
-	}
-
 	if t.PublicKey == "" {
 		logging.Logger.Error("invalid transaction",
 			zap.Error(ErrTxnMissingPublicKey),
 			zap.String("txn", datastore.ToJSON(t).String()))
 		return ErrTxnMissingPublicKey
+	}
+
+	if t.ClientID != "" {
+		return encryption.VerifyPublicKeyClientID(t.PublicKey, t.ClientID)
 	}
 
 	// Doing this is OK because the transaction signature has ClientID
@@ -309,7 +312,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 
 /*GetSignatureScheme - get the signature scheme associated with this transaction */
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
-	var err error
+
 	co, err := client.GetClientFromCache(t.ClientID)
 	if err != nil {
 		co = client.NewClient()
@@ -326,6 +329,7 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 		if t.PublicKey == "" {
 			return nil, errors.New("get signature scheme failed, empty public key in transaction")
 		}
+
 		co.ID = t.ClientID
 		if err := co.SetPublicKey(t.PublicKey); err != nil {
 			return nil, err
@@ -358,6 +362,7 @@ func Provider() datastore.Entity {
 	t.CreationDate = common.Now()
 	t.ChainID = datastore.ToKey(config.GetServerChainID())
 	t.EntityCollection = txnEntityCollection
+	t.SmartContractData = &SmartContractData{}
 	return t
 }
 
@@ -386,7 +391,7 @@ func SetupEntity(store datastore.Store) {
 	TransactionEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
 }
 
-/*Sign - given a client and client's private key, sign this tranasction */
+/*Sign - given a client and client's private key, sign this transaction */
 func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme) (string, error) {
 	t.Hash = t.ComputeHash()
 	signature, err := signatureScheme.Sign(t.Hash)
@@ -423,7 +428,7 @@ func (t *Transaction) ComputeOutputHash() string {
 /*VerifyOutputHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 	if t.OutputHash != t.ComputeOutputHash() {
-		logging.Logger.Info("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
+		logging.Logger.Error("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
 		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v %v", t.Hash, t.OutputHash, t.ComputeOutputHash(), t.TransactionOutput))
 	}
 	return nil
@@ -448,6 +453,12 @@ func (t *Transaction) Clone() *Transaction {
 		TransactionOutput: t.TransactionOutput,
 		OutputHash:        t.OutputHash,
 		Status:            t.Status,
+	}
+
+	if t.SmartContractData != nil {
+		scData := &SmartContractData{}
+		*scData = *t.SmartContractData
+		clone.SmartContractData = scData
 	}
 
 	if ent := t.CollectionMemberField.EntityCollection; ent != nil {

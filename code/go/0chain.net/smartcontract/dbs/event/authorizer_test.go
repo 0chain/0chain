@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
-	"github.com/0chain/common/core/currency"
+	"0chain.net/chaincore/state"
+	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -42,31 +43,27 @@ func TestAuthorizers(t *testing.T) {
 	require.NoError(t, err)
 
 	authorizer_1 := Authorizer{
-		URL:             "http://localhost:8080",
-		Latitude:        0.0,
-		Longitude:       0.0,
+		URL:       "http://localhost:8080",
+		Latitude:  0.0,
+		Longitude: 0.0,
 		Provider: Provider{
-			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
-			DelegateWallet: "delegate wallet",
-			MinStake:       currency.Coin(53),
-			MaxStake:       currency.Coin(57),
-			NumDelegates:   59,
-			ServiceCharge:  61.0,
+			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
+			DelegateWallet:  "delegate wallet",
+			NumDelegates:    59,
+			ServiceCharge:   61.0,
 			LastHealthCheck: common.Timestamp(time.Now().Unix()),
 		},
 	}
 
 	authorizer_2 := Authorizer{
-		URL:             "http://localhost:8888",
-		Latitude:        1.0,
-		Longitude:       1.0,
+		URL:       "http://localhost:8888",
+		Latitude:  1.0,
+		Longitude: 1.0,
 		Provider: Provider{
-			ID:             encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
-			DelegateWallet: "delegate wallet",
-			MinStake:       currency.Coin(52),
-			MaxStake:       currency.Coin(57),
-			NumDelegates:   60,
-			ServiceCharge:  50.0,
+			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
+			DelegateWallet:  "delegate wallet",
+			NumDelegates:    60,
+			ServiceCharge:   50.0,
 			LastHealthCheck: common.Timestamp(time.Now().Unix()),
 		},
 	}
@@ -90,7 +87,73 @@ func TestAuthorizers(t *testing.T) {
 	_, err = authorizer_2.exists(eventDb)
 	require.NoError(t, err, "Error while checking if Authorizer exists in event Database")
 
+	activeAuthorizers, err := eventDb.GetActiveAuthorizers()
+	require.NoError(t, err, "Error while active Authorizer retrieval")
+	require.Len(t, activeAuthorizers, 2)
+
+	require.Equal(t, authorizer_1.ID, activeAuthorizers[0].ID)
+	require.Equal(t, authorizer_2.ID, activeAuthorizers[1].ID)
+
 	err = eventDb.Drop()
 	require.NoError(t, err)
 
+}
+
+func Test_authorizerMintAndBurn(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	err := edb.Store.Get().Model(&Authorizer{}).Omit(clause.Associations).Create([]Authorizer{
+		{
+			Provider: Provider{
+				ID: "auth1",
+			},
+			TotalMint: 0,
+			TotalBurn: 0,
+		},
+		{
+			Provider: Provider{
+				ID: "auth2",
+			},
+			TotalMint: 0,
+			TotalBurn: 0,
+		},
+	}).Error
+	require.NoError(t, err)
+
+	var (
+		authorizersBefore, authorizersAfter []Authorizer
+	)
+
+	err = edb.Store.Get().Model(&Authorizer{}).Omit(clause.Associations).Order("id ASC").Find(&authorizersBefore).Error
+	require.NoError(t, err)
+	err = edb.updateAuthorizersTotalMint([]state.Mint{
+		{
+			ToClientID: "auth1",
+			Amount:     20,
+		},
+		{
+			ToClientID: "auth2",
+			Amount:     200,
+		},
+	})
+	require.NoError(t, err)
+	err = edb.updateAuthorizersTotalBurn([]state.Burn{
+		{
+			Burner: "auth1",
+			Amount: 5,
+		},
+		{
+			Burner: "auth2",
+			Amount: 50,
+		},
+	})
+	require.NoError(t, err)
+
+	err = edb.Store.Get().Model(&Authorizer{}).Omit(clause.Associations).Order("id ASC").Find(&authorizersAfter).Error
+	require.NoError(t, err)
+	require.Equal(t, authorizersBefore[0].TotalMint+20, authorizersAfter[0].TotalMint)
+	require.Equal(t, authorizersBefore[0].TotalBurn+5, authorizersAfter[0].TotalBurn)
+	require.Equal(t, authorizersBefore[1].TotalMint+200, authorizersAfter[1].TotalMint)
+	require.Equal(t, authorizersBefore[1].TotalBurn+50, authorizersAfter[1].TotalBurn)
 }

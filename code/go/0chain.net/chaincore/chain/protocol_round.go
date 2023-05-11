@@ -391,7 +391,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					if du > 3*time.Second {
 						logging.Logger.Debug("finalize round slow",
 							zap.Int64("round", roundNumber),
-							zap.Any("duration", time.Since(ts)))
+							zap.Duration("duration", time.Since(ts)))
 					}
 				}
 			case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
@@ -504,15 +504,13 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 // magic blocks from all the sharders. It uses provided MagicBlock to get list
 // of sharders to request data from, and returns the block with highest magic
 // block starting round.
-func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
-	mb *block.MagicBlock) *block.Block {
+func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context, mb *block.MagicBlock) *block.Block {
 	if mb == nil {
 		return nil
 	}
 
 	var (
-		sharders = mb.Sharders
-
+		sharders  = mb.Sharders
 		listMutex sync.Mutex
 	)
 

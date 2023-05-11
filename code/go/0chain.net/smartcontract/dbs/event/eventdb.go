@@ -7,15 +7,18 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
 	"0chain.net/smartcontract/dbs/sqlite"
 )
 
 func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+	goose.Init()
 	db, err := postgresql.GetPostgresSqlDb(config)
 	if err != nil {
 		return nil, err
 	}
+
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
@@ -23,9 +26,12 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
-	if err := eventDb.AutoMigrate(); err != nil {
+	sqldb, err := eventDb.Store.Get().DB()
+	if err != nil {
 		return nil, err
 	}
+	goose.Migrate(sqldb)
+
 	return eventDb, nil
 }
 
@@ -98,6 +104,9 @@ func (edb *EventDb) PageLimit() int64 {
 }
 
 func (edb *EventDb) Debug() bool {
+	if edb == nil {
+		return false
+	}
 	return edb.settings.Debug
 }
 
@@ -114,6 +123,8 @@ func (edb *EventDb) AutoMigrate() error {
 		&Event{},
 		&Blobber{},
 		&User{},
+		&UserAggregate{},
+		&BurnTicket{},
 		&Transaction{},
 		&WriteMarker{},
 		&Validator{},
@@ -122,7 +133,6 @@ func (edb *EventDb) AutoMigrate() error {
 		&Error{},
 		&Miner{},
 		&Sharder{},
-		&Curator{},
 		&DelegatePool{},
 		&Allocation{},
 		&RewardMint{},

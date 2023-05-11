@@ -83,10 +83,10 @@ func copyBlock(b *Block) *Block {
 		}
 	}
 
-	if b.UniqueBlockExtensions != nil {
-		copiedB.UniqueBlockExtensions = make(map[string]bool)
-		for k, v := range b.UniqueBlockExtensions {
-			copiedB.UniqueBlockExtensions[k] = v
+	if b.uniqueBlockExtensions != nil {
+		copiedB.uniqueBlockExtensions = make(map[string]bool)
+		for k, v := range b.uniqueBlockExtensions {
+			copiedB.uniqueBlockExtensions[k] = v
 		}
 	}
 
@@ -206,7 +206,7 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	var tests = []struct {
@@ -247,7 +247,7 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if gotVts := b.GetVerificationTickets(); !reflect.DeepEqual(gotVts, tt.wantVts) {
@@ -283,7 +283,7 @@ func TestBlock_VerificationTicketsSize(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -316,7 +316,7 @@ func TestBlock_VerificationTicketsSize(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.VerificationTicketsSize(); got != tt.want {
@@ -342,7 +342,7 @@ func TestBlock_GetEntityMetadata(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -372,7 +372,7 @@ func TestBlock_GetEntityMetadata(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.GetEntityMetadata(); !reflect.DeepEqual(got, tt.want) {
@@ -388,8 +388,12 @@ func TestBlock_ComputeProperties(t *testing.T) {
 	b := NewBlock("", 1)
 	txn := new(transaction.Transaction)
 
+	td, err := json.Marshal(struct{}{})
+	require.NoError(t, err)
+	txn.TransactionData = string(td)
+
 	scheme := encryption.NewBLS0ChainScheme()
-	err := scheme.GenerateKeys()
+	err = scheme.GenerateKeys()
 	require.NoError(t, err)
 	txn.PublicKey = scheme.GetPublicKey()
 
@@ -456,7 +460,7 @@ func TestBlock_ComputeProperties(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
@@ -492,7 +496,7 @@ func TestBlock_Decode(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -539,7 +543,7 @@ func TestBlock_Decode(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if err := b.Decode(tt.args.input); (err != nil) != tt.wantErr {
@@ -581,7 +585,7 @@ func TestBlock_Validate(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -614,7 +618,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -641,7 +645,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -669,7 +673,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -698,7 +702,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -727,7 +731,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -759,7 +763,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -788,7 +792,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -817,7 +821,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -847,7 +851,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -881,7 +885,7 @@ func TestBlock_Validate(t *testing.T) {
 					isNotarized:           b.isNotarized,
 					verificationStatus:    b.verificationStatus,
 					RunningTxnCount:       b.RunningTxnCount,
-					UniqueBlockExtensions: b.UniqueBlockExtensions,
+					uniqueBlockExtensions: b.uniqueBlockExtensions,
 					MagicBlock:            b.MagicBlock,
 				}
 			}(),
@@ -905,7 +909,7 @@ func TestBlock_Validate(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if err := b.Validate(tt.args.ctx); (err != nil) != tt.wantErr {
@@ -942,7 +946,7 @@ func TestBlock_Read(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -977,7 +981,7 @@ func TestBlock_Read(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if err := b.Read(tt.args.ctx, tt.args.key); (err != nil) != tt.wantErr {
@@ -1003,7 +1007,7 @@ func TestBlock_GetScore(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -1034,7 +1038,7 @@ func TestBlock_GetScore(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			got, err := b.GetScore()
@@ -1073,7 +1077,7 @@ func TestBlock_Write(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1107,7 +1111,7 @@ func TestBlock_Write(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if err := b.Write(tt.args.ctx); (err != nil) != tt.wantErr {
@@ -1144,7 +1148,7 @@ func TestBlock_Delete(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1178,7 +1182,7 @@ func TestBlock_Delete(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if err := b.Delete(tt.args.ctx); (err != nil) != tt.wantErr {
@@ -1207,7 +1211,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1236,7 +1240,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{prevBlock: prevB},
@@ -1269,7 +1273,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
@@ -1300,7 +1304,7 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1350,7 +1354,7 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			b.SetStateDB(tt.args.prevBlock, util.NewMemoryNodeDB())
@@ -1389,7 +1393,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1419,7 +1423,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{prevBlock: prevB},
@@ -1449,7 +1453,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{
@@ -1487,7 +1491,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{prevBlock: prevB},
@@ -1517,7 +1521,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{
@@ -1565,7 +1569,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			b.SetStateDB(tt.args.prevBlock, util.NewMemoryNodeDB())
@@ -1600,7 +1604,7 @@ func TestBlock_InitStateDB(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1652,7 +1656,7 @@ func TestBlock_InitStateDB(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if err := b.InitStateDB(tt.args.ndb); (err != nil) != tt.wantErr {
@@ -1689,7 +1693,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1735,7 +1739,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.AddVerificationTicket(tt.args.vt); got != tt.want {
@@ -1771,7 +1775,7 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -1853,7 +1857,7 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
@@ -1892,7 +1896,7 @@ func TestBlock_GetMerkleTree(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -1925,7 +1929,7 @@ func TestBlock_GetMerkleTree(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.GetMerkleTree(); !reflect.DeepEqual(got, tt.want) {
@@ -1969,7 +1973,7 @@ func TestBlock_HashBlock(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		StateChangesCount     int
 		MagicBlock            *MagicBlock
 	}
@@ -1995,7 +1999,7 @@ func TestBlock_HashBlock(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				StateChangesCount:     b.StateChangesCount,
 				MagicBlock:            b.MagicBlock,
 			},
@@ -2019,7 +2023,7 @@ func TestBlock_HashBlock(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				StateChangesCount:     tt.fields.StateChangesCount,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
@@ -2051,7 +2055,7 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2076,7 +2080,7 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			want: func() map[string]bool {
@@ -2106,7 +2110,7 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
@@ -2141,7 +2145,7 @@ func TestBlock_HasTransaction(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -2170,7 +2174,7 @@ func TestBlock_HasTransaction(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{hash: b.Txns[0].Hash},
@@ -2193,7 +2197,7 @@ func TestBlock_HasTransaction(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{hash: "unknown hash"},
@@ -2217,7 +2221,7 @@ func TestBlock_HasTransaction(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.HasTransaction(tt.args.hash); got != tt.want {
@@ -2268,7 +2272,7 @@ func TestBlock_GetSummary(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2293,7 +2297,7 @@ func TestBlock_GetSummary(t *testing.T) {
 				isNotarized:           b.isNotarized,
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
-				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				uniqueBlockExtensions: b.uniqueBlockExtensions,
 				MagicBlock:            b.MagicBlock,
 			},
 			want: bs,
@@ -2316,7 +2320,7 @@ func TestBlock_GetSummary(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.GetSummary(); !reflect.DeepEqual(got, tt.want) {
@@ -2342,7 +2346,7 @@ func TestBlock_Weight(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2373,7 +2377,7 @@ func TestBlock_Weight(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.Weight(); got != tt.want {
@@ -2399,7 +2403,7 @@ func TestBlock_GetBlockState(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2429,7 +2433,7 @@ func TestBlock_GetBlockState(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
@@ -2470,7 +2474,7 @@ func TestBlock_GetClients(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2508,7 +2512,7 @@ func TestBlock_GetClients(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			got, err := b.GetClients()
@@ -2534,7 +2538,7 @@ func TestBlock_GetStateStatus(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2565,7 +2569,7 @@ func TestBlock_GetStateStatus(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.GetStateStatus(); got != tt.want {
@@ -2591,7 +2595,7 @@ func TestBlock_IsStateComputed(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2627,7 +2631,7 @@ func TestBlock_IsStateComputed(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.IsStateComputed(); got != tt.want {
@@ -2660,7 +2664,7 @@ func TestBlock_GetTransaction(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -2702,7 +2706,7 @@ func TestBlock_GetTransaction(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.GetTransaction(tt.args.hash); !reflect.DeepEqual(got, tt.want) {
@@ -2728,7 +2732,7 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2759,7 +2763,7 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
@@ -2787,7 +2791,7 @@ func TestBlock_GetVerificationStatus(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -2817,7 +2821,7 @@ func TestBlock_GetVerificationStatus(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
@@ -2862,7 +2866,7 @@ func TestBlock_UnknownTickets(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -2908,7 +2912,7 @@ func TestBlock_UnknownTickets(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.UnknownTickets(tt.args.vts); !reflect.DeepEqual(got, tt.want) {
@@ -2936,7 +2940,7 @@ func TestBlock_AddUniqueBlockExtension(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	type args struct {
@@ -2973,13 +2977,13 @@ func TestBlock_AddUniqueBlockExtension(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
 			b.AddUniqueBlockExtension(tt.args.eb)
-			if !reflect.DeepEqual(b.UniqueBlockExtensions, tt.want) {
-				t.Errorf("AddUniqueBlockExtension() got = %v, want = %v", b.UniqueBlockExtensions, tt.want)
+			if !reflect.DeepEqual(b.uniqueBlockExtensions, tt.want) {
+				t.Errorf("AddUniqueBlockExtension() got = %v, want = %v", b.uniqueBlockExtensions, tt.want)
 			}
 		})
 	}
@@ -3010,7 +3014,7 @@ func TestBlock_GetPrevBlockVerificationTickets(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -3048,7 +3052,7 @@ func TestBlock_GetPrevBlockVerificationTickets(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if gotPbvts := b.GetPrevBlockVerificationTickets(); !reflect.DeepEqual(gotPbvts, tt.wantPbvts) {
@@ -3085,7 +3089,7 @@ func TestBlock_PrevBlockVerificationTicketsSize(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -3118,7 +3122,7 @@ func TestBlock_PrevBlockVerificationTicketsSize(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.PrevBlockVerificationTicketsSize(); got != tt.want {
@@ -3194,7 +3198,7 @@ func TestBlock_DoReadLock(t *testing.T) {
 		isNotarized           bool
 		verificationStatus    int
 		RunningTxnCount       int64
-		UniqueBlockExtensions map[string]bool
+		uniqueBlockExtensions map[string]bool
 		MagicBlock            *MagicBlock
 	}
 	tests := []struct {
@@ -3223,7 +3227,7 @@ func TestBlock_DoReadLock(t *testing.T) {
 				isNotarized:           tt.fields.isNotarized,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
-				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				uniqueBlockExtensions: tt.fields.uniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 

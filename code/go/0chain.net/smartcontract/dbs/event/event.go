@@ -63,10 +63,12 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func (edb *EventDb) addEvents(ctx context.Context, events blockEvents) {
+func (edb *EventDb) addEvents(ctx context.Context, events blockEvents) error {
 	if edb.Store != nil && len(events.events) > 0 {
-		edb.Store.Get().WithContext(ctx).Create(&events.events)
+		return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
 	}
+
+	return nil
 }
 
 func (edb *EventDb) Drop() error {
@@ -165,11 +167,6 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&Curator{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
 	if err != nil {
 		return err
@@ -196,6 +193,11 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&User{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&UserAggregate{})
 	if err != nil {
 		return err
 	}

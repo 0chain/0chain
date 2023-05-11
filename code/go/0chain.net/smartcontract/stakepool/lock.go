@@ -77,7 +77,7 @@ func (sp *StakePool) LockPool(
 			StakedAt:     txn.CreationDate,
 		}
 		sp.Pools[newPoolId] = dp
-		dp.emitNew(newPoolId, providerId, providerType, balances)
+		dp.EmitNew(newPoolId, providerId, providerType, balances)
 	} else {
 		// stake from the same clients
 		if dp.DelegateID != txn.ClientID {
@@ -110,7 +110,7 @@ func (sp *StakePool) LockPool(
 		ProviderId:   providerId,
 		ProviderType: providerType,
 		Amount:       i,
-		Reward: 	  currency.Coin(0),
+		Reward:       currency.Coin(0),
 		Total:        i,
 	}
 	balances.EmitEvent(event.TypeStats, event.TagLockStakePool, newPoolId, lock)

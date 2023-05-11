@@ -15,7 +15,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-	"gorm.io/gorm/clause"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
@@ -47,7 +46,11 @@ import (
 const notifySyncLFRStateTimeout = 3 * time.Second
 
 // genesisRandomSeed is the geneisis block random seed
-const genesisRandomSeed = 839695260482366273
+const (
+	genesisRandomSeed = 839695260482366273
+	// genesisBlockCreationDate is the time when the genesis block was created.
+	genesisBlockCreationDate = 1676096659 // TODO: make it configurable
+)
 
 var (
 	ErrInsufficientChain = common.NewError("insufficient_chain",
@@ -558,29 +561,47 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState(tokens currency.Coin) util.MPTSerializable {
-	balance := &state.State{}
-	_ = balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	balance.Balance = tokens
+func mustInitialState(tokens currency.Coin) *state.State {
+	balance := &state.State{
+		Balance: tokens,
+		Nonce:   1,
+	}
+	err := balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+	if err != nil {
+		panic(err)
+	}
 	return balance
 }
 
-/*setupInitialState - setup the initial state based on configuration */
+/*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
-	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
+	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
+	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
+	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
+	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
+	mustInitPartitions(stateCtx)
 	for _, v := range initStates.States {
-		if _, err := pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens)); err != nil {
+		s := mustInitialState(v.Tokens)
+		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
 			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
 		}
-		logging.Logger.Debug("init state", zap.String("sc ID", v.ID), zap.Any("tokens", v.Tokens))
-	}
 
-	stateCtx := cstate.NewStateContext(gb, pmt, nil, nil, nil, nil, nil, nil, nil)
-	mustInitPartitions(stateCtx)
+		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
+		logging.Logger.Debug("init state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
+	}
 
 	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
 		logging.Logger.Error("init stake failed", zap.Error(err))
 		panic(err)
+	}
+
+	eventDB := c.GetEventDb()
+	if eventDB != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1); err != nil {
+			panic(err)
+		}
 	}
 
 	err := faucetsc.InitConfig(stateCtx)
@@ -613,15 +634,29 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		panic(err)
 	}
 
-	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
-		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
+	gbInitedKey := encryption.RawHash("genesis block state init")
+	_, err = c.stateDB.GetNode(gbInitedKey)
+	switch err {
+	case nil:
+	case util.ErrNodeNotFound:
+		logging.Logger.Info("initialize genesis block state",
+			zap.Int("changes", pmt.GetChangeCount()), zap.String("root", util.ToHex(pmt.GetRoot())))
+		if err := pmt.SaveChanges(context.Background(), c.stateDB, false); err != nil {
+			logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
+		}
+
+		if err := stateDB.PutNode(gbInitedKey, util.NewValueNode()); err != nil {
+			logging.Logger.Panic("set gb initialized failed", zap.Error(err))
+		}
+	default:
+		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
 	}
+
 	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
 
-func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.StateContextI) error {
-	edbDelegatePools := make([]*event.DelegatePool, 0, len(stakes))
+func (c *Chain) addInitialStakes(stakes []state.InitStake, balances *cstate.StateContext) error {
 	for _, v := range stakes {
 		providerType := spenum.ToProviderType(v.ProviderType)
 		sp := stakepool.StakePool{}
@@ -643,43 +678,44 @@ func (c *Chain) addInitialStakes(stakes []state.InitStake, balances cstate.State
 				v.ProviderType, v.ProviderID, v.ClientID)
 		}
 
-		sp.Pools[v.ClientID] = &stakepool.DelegatePool{
+		dp := &stakepool.DelegatePool{
 			Balance:      v.Tokens,
+			Status:       spenum.Active,
 			DelegateID:   v.ClientID,
-			RoundCreated: 0, // genesis round
+			RoundCreated: balances.GetBlock().Round,
+			StakedAt:     balances.GetBlock().CreationDate,
 		}
 
-		edbDelegatePools = append(edbDelegatePools, &event.DelegatePool{
-			PoolID:       v.ClientID,
-			ProviderType: providerType,
-			ProviderID:   v.ProviderID,
-			DelegateID:   v.ClientID,
-			Balance:      v.Tokens,
-			RoundCreated: 0, // genesis round
-		})
+		sp.Pools[v.ClientID] = dp
 
 		if err := sp.Save(providerType, v.ProviderID, balances); err != nil {
 			logging.Logger.Debug("init stake - save staking pool failed", zap.Error(err))
 			return err
 		}
 
-		logging.Logger.Info("init stake", zap.String("sc ID", v.ProviderID), zap.Any("tokens", v.Tokens))
-	}
+		if c.EventDb == nil {
+			continue
+		}
 
-	if c.EventDb == nil {
-		return nil
-	}
+		amount, _ := v.Tokens.Int64()
+		logging.Logger.Info("emmit TagLockStakePool", zap.String("client_id", v.ClientID), zap.String("provider_id", v.ProviderType))
+		lock := event.DelegatePoolLock{
+			Client:       v.ClientID,
+			ProviderId:   v.ProviderID,
+			ProviderType: providerType,
+			Amount:       amount,
+		}
+		balances.EmitEvent(event.TypeStats, event.TagLockStakePool, v.ClientID, lock)
 
-	if len(edbDelegatePools) == 0 {
-		return nil
-	}
-
-	if err := c.EventDb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "pool_id"}, {Name: "provider_type"}, {Name: "provider_id"}},
-		UpdateAll: true,
-	}).Create(&edbDelegatePools).Error; err != nil {
-		logging.Logger.Debug("initial stake insert failed", zap.Error(err))
-		return fmt.Errorf("creating delegatePools in eventDB from initStakes failed: %s", err.Error())
+		dp.EmitNew(v.ClientID, v.ProviderID, providerType, balances)
+		if err := sp.EmitStakeEvent(lock.ProviderType, lock.ProviderId, balances); err != nil {
+			return common.NewErrorf("stake_pool_lock_failed",
+				"init stake error: %v", err)
+		}
+		logging.Logger.Info("init stake",
+			zap.String("provider ID", v.ProviderID),
+			zap.String("stake client ID", v.ClientID),
+			zap.Any("tokens", v.Tokens))
 	}
 
 	return nil
@@ -695,6 +731,7 @@ func mustInitPartitions(state cstate.StateContextI) {
 func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, initStates *state.InitStates) (round.RoundI, *block.Block) {
 	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
+	gb.CreationDate = common.Timestamp(genesisBlockCreationDate)
 	gb.Hash = hash
 	gb.ClientState = c.setupInitialState(initStates, gb)
 	gb.SetStateStatus(block.StateSuccessful)
@@ -936,8 +973,8 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
-			zap.Any("num_generators", genNum), zap.Int("miner_by_rank", len(miners)),
-			zap.Any("round", r.GetRoundNumber()))
+			zap.Int("num_generators", genNum), zap.Int("miner_by_rank", len(miners)),
+			zap.Int64("round", r.GetRoundNumber()))
 		return miners
 	}
 	return miners[:genNum]
@@ -1198,12 +1235,12 @@ func (c *Chain) getBlocks() []*block.Block {
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
 	if miners == nil || miners.Size() == 0 {
-		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
+		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
 	if bNode == nil {
-		logging.Logger.Warn("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
-			zap.Any("block", b.Hash), zap.Any("miner_id", b.MinerID), zap.Any("miners", miners))
+		logging.Logger.Warn("set_round_rank  --  get node by id", zap.Int64("round", r.GetRoundNumber()),
+			zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
 		return
 	}
 	b.RoundRank = r.GetMinerRank(bNode)
@@ -1477,7 +1514,7 @@ func (c *Chain) updateConfig(pb *block.Block) {
 
 	configMap, err := getConfigMap(clientState)
 	if err != nil {
-		logging.Logger.Info("cannot get global settings",
+		logging.Logger.Error("cannot get global settings",
 			zap.Int64("start of round", pb.Round),
 			zap.Error(err),
 		)
@@ -1548,8 +1585,8 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 		lfmb.MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 
 		logging.Logger.Error("failed to update magic block",
-			zap.Any("finalized_magic_block_hash", lfmb.MagicBlock.Hash),
-			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
+			zap.String("finalized_magic_block_hash", lfmb.MagicBlock.Hash),
+			zap.String("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block",
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlock.Hash))
 	}
@@ -1573,8 +1610,8 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 		if lfmb.Hash == newMagicBlock.PreviousMagicBlockHash {
 			logging.Logger.Info("update magic block -- hashes match ",
-				zap.Any("LFMB previous MB hash", lfmb.PreviousMagicBlockHash),
-				zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
+				zap.String("LFMB previous MB hash", lfmb.PreviousMagicBlockHash),
+				zap.String("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
 			c.PreviousMagicBlock = lfmb.MagicBlock
 		}
 	}

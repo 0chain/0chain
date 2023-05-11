@@ -18,12 +18,12 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/state"
-
 	"0chain.net/chaincore/block"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/metric"
 	"go.uber.org/zap"
@@ -101,9 +101,14 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/round_info": common.UserRateLimit(
 			RoundInfoHandler(c),
 		),
-		"/v1/estimate_tx_cost": common.WithCORS(common.UserRateLimit(
+		"/v1/estimate_txn_fee": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				SuggestedFeeHandler,
+			),
+		)),
+		"/v1/fees_table": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				FeesTableHandler,
 			),
 		)),
 		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
@@ -258,7 +263,7 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
 }
 
-func (c *Chain) txnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
+func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
 	//Row start
 	fmt.Fprintf(w, "<tr>")
 
@@ -758,6 +763,11 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
+
+	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
+		fmt.Fprintf(w, "<li><a href='_transaction_errors'>/_transaction_errors</a></li>")
+	}
+
 	if node.NodeType(selfNodeType) == node.NodeTypeSharder {
 		fmt.Fprintf(w, "<li><a href='_healthcheck'>/_healthcheck</a></li>")
 	}
@@ -1361,27 +1371,70 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		}
 	}
 
-	// Calculate and update fee
-	if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), sc.ChainConfig.MinTxnFee()); err != nil {
-		return nil, err
-	}
 	if err := txn.ValidateNonce(); err != nil {
 		return nil, err
 	}
 
-	s, err := sc.GetStateById(sc.GetLatestFinalizedBlock().ClientState, txn.ClientID)
-	if !isValid(err) {
-		// put txn to pool if the miner has 'node not found', we should not ignore the txn because
+	lfb := sc.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, errors.New("nil latest finalized block")
+	}
+	lfb = lfb.Clone()
+
+	s, err := GetStateById(lfb.ClientState, txn.ClientID)
+	if cstate.ErrInvalidState(err) {
+		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
 		// of the 'error' of the miner itself.
 		return transaction.PutTransaction(ctx, txn)
 	}
-	nonce := int64(0)
+
+	var nonce int64
 	if s != nil {
 		nonce = s.Nonce
 	}
 	if txn.Nonce <= nonce {
 		logging.Logger.Error("invalid transaction nonce", zap.Int64("txn_nonce", txn.Nonce), zap.Int64("nonce", nonce))
 		return nil, errors.New("invalid transaction nonce")
+	}
+
+	if txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
+		return nil, errors.New("insufficient balance to send")
+	}
+
+	if sc.IsFeeEnabled() {
+		_, minFee, err := sc.EstimateTransactionCostFee(ctx, lfb, txn, WithSync())
+		if err != nil {
+			if cstate.ErrInvalidState(err) {
+				// put transaction into pool if got invalid state error
+				// to avoid txn rejected due to miner's own fault
+				return transaction.PutTransaction(ctx, txn)
+			}
+			return nil, fmt.Errorf("could not get estimated txn cost: %v", err)
+		}
+
+		confMinFee := sc.ChainConfig.MinTxnFee()
+		if confMinFee > minFee {
+			minFee = confMinFee
+		}
+
+		if err := txn.ValidateFee(sc.ChainConfig.TxnExempt(), minFee); err != nil {
+			logging.Logger.Error("invalid transaction fee",
+				zap.String("txn", txn.Hash),
+				zap.String("func", txn.FunctionName),
+				zap.Any("txn fee", txn.Fee),
+				zap.Any("minFee", minFee),
+				zap.Error(err))
+			return nil, err
+		}
+
+		if s.Balance < txn.Fee {
+			logging.Logger.Error("insufficient balance",
+				zap.String("txn", txn.Hash),
+				zap.String("func", txn.FunctionName),
+				zap.Any("balance", s.Balance),
+				zap.Any("fee", txn.Fee))
+			return nil, errors.New("insufficient balance to pay fee")
+		}
 	}
 
 	return transaction.PutTransaction(ctx, txn)
@@ -1638,7 +1691,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(context.Context, datastore.CollectionEntity) (bool, error) {
+func txnIterHandlerFunc(w http.ResponseWriter, lfb *block.Block) func(context.Context, datastore.CollectionEntity) (bool, error) {
 	return func(ctx context.Context, ce datastore.CollectionEntity) (bool, error) {
 		txn, ok := ce.(*transaction.Transaction)
 		if !ok {
@@ -1646,7 +1699,12 @@ func txnIterHandlerFunc(c *Chain, w http.ResponseWriter, s *state.State) func(co
 			return false, nil
 		}
 
-		c.txnsInPoolTableRows(w, txn, s)
+		s, err := GetStateById(util.CloneMPT(lfb.ClientState), txn.ClientID)
+		if !isValid(err) {
+			logging.Logger.Error(err.Error(), zap.Any("clientState", s))
+		}
+
+		TxnsInPoolTableRows(w, txn, s)
 		return true, nil
 	}
 }
@@ -1679,12 +1737,8 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
 
-	s, err := c.GetStateById(c.GetLatestFinalizedBlock().ClientState, txn.ClientID)
-	if !isValid(err) {
-		logging.Logger.Error(err.Error(), zap.Any("clientState", s))
-	}
-
-	var txnIterHandler = txnIterHandlerFunc(c, w, s)
+	lfb := c.GetLatestFinalizedBlock()
+	var txnIterHandler = txnIterHandlerFunc(w, lfb)
 
 	_ = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 
@@ -1882,8 +1936,6 @@ func SetupSharderHandlers(c Chainer) {
 }
 
 func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	// Tx fee = cost * coeff + fix
-
 	txData, err := io.ReadAll(r.Body)
 	if err != nil {
 		logging.Logger.Error("failed to get transaction data from request body",
@@ -1896,19 +1948,40 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 	if err := json.Unmarshal(txData, &tx); err != nil {
 		return nil, err
 	}
+	if err := tx.ComputeProperties(); err != nil {
+		return nil, err
+	}
 
 	c := GetServerChain()
 	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, errors.New("LFB not ready yet")
+	}
 
-	cost, err := c.EstimateTransactionCost(ctx, lfb, lfb.ClientState, &tx)
+	lfb = lfb.Clone()
+
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb, &tx)
 	if err != nil {
 		logging.Logger.Error("failed to calculate the transaction cost",
 			zap.Int("tx-type", tx.TransactionType), zap.Error(err))
 		return nil, err
 	}
 
-	return map[string]float64{
-		// TODO: add coeff
-		"fee": float64(cost),
+	return map[string]uint64{
+		"fee": uint64(fee),
 	}, nil
+}
+func FeesTableHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, errors.New("LFB not ready yet")
+	}
+
+	lfb = lfb.Clone()
+
+	table := c.GetTransactionCostFeeTable(ctx, lfb)
+
+	return table, nil
 }

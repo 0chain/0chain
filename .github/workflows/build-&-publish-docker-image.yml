@@ -21,10 +21,12 @@ env:
   ZCHAIN_BUILDRUN: zchain_run_base
   SHARDER_REGISTRY: ${{ secrets.SHARDER_REGISTRY }}
   MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
+  ZCHAIN_BUILD_BASE_REGISTRY: ${{ secrets.ZCHAIN_BUILD_BASE_REGISTRY }}
+  ZCHAIN_BUILD_RUN_REGISTRY: ${{ secrets.ZCHAIN_BUILD_RUN_REGISTRY }}
 
 jobs:
   miner:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, arc-runner]
     steps:
 
     - name: Set docker image tag
@@ -46,21 +48,39 @@ jobs:
       with:
         go-version: '1.18' # The Go version to download (if necessary) and use.
 
-    - name: Build base images
-      run: |
-        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Build & Push
+    - name: Install Dependencies
       run: |
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
+    - name: Build base images
+      run: |
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+
+        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+
+        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+
+    - name: Build & Push
+      run: |
         make install-mockery
         make build-mocks
 
@@ -86,7 +106,7 @@ jobs:
 
 
   sharder:
-    runs-on: [self-hosted, build]
+    runs-on: [self-hosted, arc-runner]
     steps:
 
     - name: Set docker image tag
@@ -109,24 +129,42 @@ jobs:
         go-version: '1.18' # The Go version to download (if necessary) and use.
 
 
-    - name: Build base images
-      run: |
-        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: Install Dependencies
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
+    - name: Build base images
+      run: |
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
+
+        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
+
+        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
+        docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
+
     - name: generate swagger
       run: docker.local/bin/test.swagger.sh
 
     - name: Build & Push
       run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
         make build-mocks
 
@@ -203,6 +241,10 @@ jobs:
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
           custom_go_sdk_version: staging
+          SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
+          TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
+          graphnode_network: ${{ secrets.GRAPHNODE_NETWORK }}
+          graphnode_ethereum_node_url: https://rpc.tenderly.co/fork/${{ secrets.TENDERLY_FORK_ID }}
 
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
@@ -215,7 +257,9 @@ jobs:
           deploy_report_page: false
           archive_results: true
           run_flaky_tests: false
+          run_smoke_tests: ${{ github.ref != 'refs/heads/staging' && github.base_ref != 'staging' && github.ref != 'refs/heads/master' && github.base_ref != 'master' }}
           retry_failures: true
+          TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
       - name: "Set PR status as ${{ job.status }}"

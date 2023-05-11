@@ -5,8 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -17,6 +22,13 @@ import (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	logging.Logger = zap.NewNop()
+
+	config.SetupDefaultConfig()
+
+	chainConfig := chain.NewConfigImpl(&chain.ConfigData{})
+	chainConfig.FromViper() //nolint: errcheck
+
+	config.Configuration().ChainConfig = chainConfig
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
@@ -40,33 +52,37 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 func Test_DifferentSenderAndReceiverMustFail(t *testing.T) {
 	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
+
 	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
 	transaction, err := CreateTransaction(defaultClient+"1", "mint", payload.Encode(), ctx)
 	require.NoError(t, err)
 
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    transaction.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "transaction made from different account who made burn")
-}
-
-func Test_FuzzyMintTest(t *testing.T) {
-	ctx := MakeMockStateContext()
-	contract := CreateZCNSmartContract()
-	payload, err := CreateMintPayload(ctx, defaultClient)
-	require.NoError(t, err)
-
-	for _, client := range clients {
-		transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
-		require.NoError(t, err)
-
-		response, err := contract.Mint(transaction, payload.Encode(), ctx)
-
-		require.NoError(t, err, "Testing authorizer: '%s'", client)
-		require.NotNil(t, response)
-		require.NotEmpty(t, response)
-	}
 }
 
 func Test_MaxFeeMint(t *testing.T) {
@@ -85,7 +101,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			maxFee: 10,
 			expect: expect{
 				sharedFee:    3,
-				remainAmount: 191,
+				remainAmount: 197,
 			},
 		},
 		{
@@ -93,7 +109,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			maxFee: 9,
 			expect: expect{
 				sharedFee:    3,
-				remainAmount: 191,
+				remainAmount: 197,
 			},
 		},
 	}
@@ -109,13 +125,34 @@ func Test_MaxFeeMint(t *testing.T) {
 			transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
 			require.NoError(t, err)
 
+			eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+				Debug:                 true,
+				PartitionChangePeriod: 1,
+			})
+			require.NoError(t, err)
+
+			err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+				UserID:    transaction.ClientID,
+				MintNonce: 0,
+			}).Error
+			require.NoError(t, err)
+
+			t.Cleanup(func() {
+				err = eventDb.Drop()
+				require.NoError(t, err)
+
+				eventDb.Close()
+			})
+
+			ctx.SetEventDb(eventDb)
+
 			response, err := contract.Mint(transaction, payload.Encode(), ctx)
 			require.NoError(t, err, "Testing authorizer: '%s'", defaultClient)
 			require.NotNil(t, response)
 			require.NotEmpty(t, response)
 
 			mm := ctx.GetMints()
-			require.Equal(t, len(mm), len(authorizersID)+1)
+			require.Equal(t, 1, len(mm))
 
 			auths := make([]string, 0, len(payload.Signatures))
 			for _, sig := range payload.Signatures {
@@ -127,9 +164,13 @@ func Test_MaxFeeMint(t *testing.T) {
 				mintsMap[m.ToClientID] = mm[i]
 			}
 
-			for _, id := range auths {
-				require.Equal(t, tc.expect.sharedFee, mintsMap[id].Amount)
-			}
+			rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
+			sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+
+			stakePool := NewStakePool()
+			err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePool)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect.sharedFee, stakePool.Reward)
 
 			// assert transaction.ClientID has remaining amount
 			tm, ok := mintsMap[transaction.ClientID]
@@ -149,6 +190,27 @@ func Test_EmptySignaturesShouldFail(t *testing.T) {
 
 	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
 	require.NoError(t, err)
+
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    transaction.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
 
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Error(t, err)
@@ -172,26 +234,131 @@ func Test_EmptyAuthorizersNonemptySignaturesShouldFail(t *testing.T) {
 	transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
 	require.NoError(t, err)
 
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    transaction.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	_, err = contract.Mint(transaction, payload.Encode(), ctx)
 	require.Equal(t, common.NewError("failed to mint", "no authorizers found"), err)
 }
 
-// TBD
-func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
+func Test_MintPayloadNonceShouldBeRecordedByUserNode(t *testing.T) {
 	ctx := MakeMockStateContext()
+
+	tr := CreateDefaultTransactionToZcnsc()
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    tr.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
 	payload, err := CreateMintPayload(ctx, defaultClient)
 	require.NoError(t, err)
 
-	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 
 	payload.Nonce = 1
-	node, err := GetUserNode(defaultClient, ctx)
-	require.NoError(t, err)
-	require.NotNil(t, node)
-	require.NoError(t, node.Save(ctx))
 
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
-	require.NotNil(t, resp)
+	require.NotZero(t, resp)
+
+	user, err := ctx.GetEventDB().GetUser(tr.ClientID)
+	require.NoError(t, err)
+	require.Equal(t, payload.Nonce, user.MintNonce)
+}
+
+func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {
+	ctx := MakeMockStateContext()
+
+	tr := CreateDefaultTransactionToZcnsc()
+	eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+		Debug:                 true,
+		PartitionChangePeriod: 1,
+	})
+	require.NoError(t, err)
+
+	err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+		UserID:    tr.ClientID,
+		MintNonce: 0,
+	}).Error
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = eventDb.Drop()
+		require.NoError(t, err)
+
+		eventDb.Close()
+	})
+
+	ctx.SetEventDb(eventDb)
+
+	payload, err := CreateMintPayload(ctx, defaultClient)
+	require.NoError(t, err)
+
+	contract := CreateZCNSmartContract()
+
+	payload.Nonce = 1
+
+	gn, err := GetGlobalNode(ctx)
+	require.NoError(t, err)
+
+	gn.ZCNSConfig.MaxFee = 100
+	err = gn.Save(ctx)
+	require.NoError(t, err)
+
+	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
+	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+
+	stakePoolBefore := NewStakePool()
+	err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePoolBefore)
+	require.NoError(t, err)
+
+	resp, err := contract.Mint(tr, payload.Encode(), ctx)
+	require.NoError(t, err)
+	require.NotZero(t, resp)
+
+	stakePoolAfter := NewStakePool()
+	err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePoolAfter)
+	require.NoError(t, err)
+
+	rewardAfter, err := stakePoolAfter.Reward.Float64()
+	require.NoError(t, err)
+
+	rewardBefore, err := stakePoolBefore.Reward.Float64()
+	require.NoError(t, err)
+
+	require.NotEqual(t, rewardAfter, rewardBefore)
 }

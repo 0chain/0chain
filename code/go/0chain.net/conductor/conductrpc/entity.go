@@ -203,16 +203,16 @@ func (e *Entity) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (
 // checks
 
 func (e *Entity) ConfigureTestCase(blob []byte) error {
-	if !e.isMonitor() {
-		return nil // not a monitor
-	}
+	// if !e.isMonitor() {
+	// 	return nil // not a monitor
+	// }
 	return e.client.configureTestCase(blob)
 }
 
 func (e *Entity) AddTestCaseResult(blob []byte) error {
-	if !e.isMonitor() {
-		return nil // not a monitor
-	}
+	// if !e.isMonitor() {
+	// 	return nil // not a monitor
+	// }
 	return e.client.addTestCaseResult(blob)
 }
 

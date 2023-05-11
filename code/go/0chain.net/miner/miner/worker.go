@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -24,6 +25,8 @@ import (
 	"0chain.net/smartcontract/faucetsc"
 	"github.com/0chain/common/core/logging"
 )
+
+const defaultGenerateTxnFee = 1e9
 
 var (
 	wallets  []*wallet.Wallet
@@ -117,13 +120,13 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 		}
 		select {
 		case <-ctx.Done():
-			logging.Logger.Info("transaction generation", zap.Any("timer_count", timerCount))
+			logging.Logger.Info("transaction generation", zap.Int64("timer_count", timerCount))
 			return
 		case <-timer.C:
 			timerCount++
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 			if timerCount%300 == 0 {
-				logging.Logger.Info("transaction generation", zap.Any("txn_count", txnCount), zap.Any("blocks_per_miner", blocksPerMiner), zap.Any("num_txns", numTxns))
+				logging.Logger.Info("transaction generation", zap.Int32("txn_count", txnCount), zap.Float64("blocks_per_miner", blocksPerMiner), zap.Int32("num_txns", numTxns))
 			}
 			if float64(txnCount) >= blocksPerMiner*float64(8*numTxns) {
 				continue
@@ -144,14 +147,14 @@ func TransactionGenerator(c *chain.Chain, workdir string) {
 						if r < 25 {
 							txn, err = createSendTransaction(c, prng)
 							if err != nil {
-								logging.Logger.Info("transaction generator", zap.Any("error", err))
+								logging.Logger.Error("transaction generator", zap.Error(err))
 							}
 						} else {
 							txn = createDataTransaction(prng)
 						}
 						_, err = transaction.PutTransactionWithoutVerifySig(ctx, txn)
 						if err != nil {
-							logging.Logger.Info("transaction generator", zap.Any("error", err))
+							logging.Logger.Error("transaction generator", zap.Error(err))
 						}
 					}
 					wg.Done()
@@ -172,15 +175,19 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) (*transaction.Transa
 			break
 		}
 	}
-	fee, err := currency.Int64ToCoin(prng.Int63n(maxFee-minFee) + minFee)
-	if err != nil {
-		return nil, err
-	}
 	value, err := currency.Int64ToCoin(prng.Int63n(maxValue-minValue) + minValue)
 	if err != nil {
 		return nil, err
 	}
-	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, fee)
+
+	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, func(txn *transaction.Transaction) currency.Coin {
+		fee, err := c.EstimateTransactionFeeLFB(context.Background(), txn)
+		if err != nil {
+			return defaultGenerateTxnFee
+		}
+
+		return fee
+	})
 	return txn, nil
 }
 
@@ -213,14 +220,6 @@ func GetOwnerWallet(c *chain.Chain, workdir string) *wallet.Wallet {
 	if err != nil {
 		panic(err)
 	}
-	clientMetadataProvider := datastore.GetEntityMetadata("client")
-	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
-	defer memorystore.Close(ctx)
-	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-	err = w.Register(ctx)
-	if err != nil {
-		panic(err)
-	}
 	return w
 }
 
@@ -247,37 +246,47 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 			panic(err)
 		}
 		wallets = append(wallets, w)
-
-		//Server side code bypassing REST for speed
-		err := w.Register(ctx)
-		if err != nil {
-			panic(err)
-		}
 	}
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
-		//generous airdrop in dev/test mode :)
-		fee, err := currency.Int64ToCoin(prng.Int63n(10) + 1)
-		if err != nil {
-			logging.Logger.Info("client generator", zap.Any("error", err))
-		}
 		val, err := currency.Int64ToCoin(prng.Int63n(100) * 10000000000)
 		if err != nil {
-			logging.Logger.Info("client generator", zap.Any("error", err))
+			logging.Logger.Error("client generator", zap.Error(err))
 		}
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, val, "generous air drop! :)", fee)
+
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, val, "generous air drop! :)",
+			func(txn *transaction.Transaction) currency.Coin {
+				fee, err := c.EstimateTransactionFeeLFB(context.Background(), txn)
+				if err != nil {
+					return defaultGenerateTxnFee
+				}
+
+				return fee
+			})
+
 		_, err = transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
-			logging.Logger.Info("client generator", zap.Any("error", err))
+			logging.Logger.Error("client generator", zap.Error(err))
 		}
 	}
 	if c.ChainConfig.IsFaucetEnabled() {
-		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
+		txn, err := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
 			currency.Coin(viper.GetUint64("development.faucet.refill_amount")),
-			`{"name":"refill","input":{}}`, 0)
-		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn)
+			`{"name":"refill","input":{}}`,
+			func(txn *transaction.Transaction) currency.Coin {
+				fee, err := c.EstimateTransactionFeeLFB(context.Background(), txn)
+				if err != nil {
+					return defaultGenerateTxnFee
+				}
+				return fee
+			})
 		if err != nil {
-			logging.Logger.Info("client generator - faucet refill", zap.Any("error", err))
+			logging.Logger.Error("client generator - faucet refill", zap.Error(err))
+		}
+
+		_, err = transaction.PutTransactionWithoutVerifySig(tctx, txn)
+		if err != nil {
+			logging.Logger.Error("client generator - faucet refill", zap.Error(err))
 		}
 	}
 	logging.Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))

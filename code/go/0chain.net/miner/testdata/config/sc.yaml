@@ -71,9 +71,9 @@ smart_contracts:
     # miner delegates to get paid each round when paying fees and rewards
     num_miner_delegates_rewarded: 10
     # sharders rewarded each round
-    num_sharders_rewarded: 5
+    num_sharders_rewarded: 1
     # sharder delegates to get paid each round when paying fees and rewards
-    num_sharder_delegates_rewarded: 1
+    num_sharder_delegates_rewarded: 5
     cooldown_period: 100
     cost:
       add_miner: 100
@@ -144,12 +144,11 @@ smart_contracts:
     # these values are applied to all free allocations
     free_allocation_settings:
       data_shards: 2
-      duration: 50h
       parity_shards: 2
       read_pool_fraction: 0.2
       mint_amount: 0.5
       read_price_range:
-        max: 1
+        max: 0
         min: 0
       size: 10000000
       write_price_range:
@@ -159,6 +158,8 @@ smart_contracts:
     # blobber_slash represents blobber's stake penalty when a challenge not
     # passed
     blobber_slash: 0.10
+    # duration between health check after which a blobber or validator is considered inactive
+    health_check_period: 1h
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
@@ -222,13 +223,11 @@ smart_contracts:
       add_free_storage_assigner: 100
       free_allocation_request: 1500
       free_update_allocation: 2500
-      add_curator: 100
-      remove_curator: 100
       blobber_health_check: 100
+      validator_health_check: 100
       update_blobber_settings: 100
       update_validator_settings: 100
       pay_blobber_block_rewards: 100
-      curator_transfer_allocation: 100
       challenge_request: 100
       challenge_response: 1600
       add_validator: 100
@@ -245,6 +244,10 @@ smart_contracts:
       generate_challenge: 100
       blobber_block_rewards: 0
       collect_reward: 100
+      kill_blobber: 100
+      kill_validator: 100
+      shutdown_blobber: 100
+      shutdown_validator: 100
   vestingsc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_lock: 0.01
@@ -274,4 +277,5 @@ smart_contracts:
       mint: 100
       burn: 100
       add-authorizer: 100
+      authorizer-health-check: 100
       delete-authorizer: 100

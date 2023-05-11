@@ -604,9 +604,11 @@ func newEventsDb() *event.EventDb {
 				ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
 			},
 			config.DbSettings{
-				Debug:           viper.GetBool(benchmark.EventDbDebug),
-				AggregatePeriod: viper.GetInt64(benchmark.EventDbAggregatePeriod),
-				PageLimit:       viper.GetInt64(benchmark.EventDbPageLimit),
+				Debug:                 viper.GetBool(benchmark.EventDbDebug),
+				AggregatePeriod:       viper.GetInt64(benchmark.EventDbAggregatePeriod),
+				PartitionChangePeriod: viper.GetInt64(benchmark.EventDbPartitionChangePeriod),
+				PartitionKeepCount:    viper.GetInt64(benchmark.EventDbPartitionKeepCount),
+				PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
 			},
 		)
 

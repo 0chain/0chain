@@ -1,15 +1,20 @@
 package event
 
 import (
+	"fmt"
 	"math/big"
+	"sort"
 	"time"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -19,8 +24,6 @@ type Provider struct {
 	UpdatedAt       time.Time
 	BucketId        int64            `gorm:"not null,default:0"`
 	DelegateWallet  string           `json:"delegate_wallet"`
-	MinStake        currency.Coin    `json:"min_stake"`
-	MaxStake        currency.Coin    `json:"max_stake"`
 	NumDelegates    int              `json:"num_delegates"`
 	ServiceCharge   float64          `json:"service_charge"`
 	UnstakeTotal    currency.Coin    `json:"unstake_total"`
@@ -28,6 +31,8 @@ type Provider struct {
 	Rewards         ProviderRewards  `json:"rewards" gorm:"foreignKey:ProviderID"`
 	Downtime        uint64           `json:"downtime"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	IsKilled        bool             `json:"is_killed"`
+	IsShutdown      bool             `json:"is_shutdown"`
 }
 
 type ProviderAggregate interface {
@@ -46,6 +51,10 @@ func recalculateProviderFields(prev, curr, result ProviderAggregate) {
 	result.SetUnstakeTotal((curr.GetUnstakeTotal() + prev.GetUnstakeTotal()) / 2)
 	result.SetServiceCharge((curr.GetServiceCharge() + prev.GetServiceCharge()) / 2)
 	result.SetTotalRewards((curr.GetTotalRewards() + prev.GetTotalRewards()) / 2)
+}
+
+func (p *Provider) IsOffline() bool {
+	return p.IsKilled || p.IsShutdown
 }
 
 func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
@@ -94,7 +103,6 @@ func (edb *EventDb) updateProvidersTotalUnStakes(providers []Provider, tablename
 
 func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tableName ProviderTable) error {
 	table := string(tableName)
-	logging.Logger.Info("Running update provider health check with data: ", zap.Any("updates", updates), zap.String("tableName", table))
 
 	var ids []string
 	var lastHealthCheck []int64
@@ -108,4 +116,71 @@ func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tabl
 	return CreateBuilder(table, "id", ids).
 		AddUpdate("downtime", downtime, table+".downtime + t.downtime").
 		AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
+}
+
+func (edb *EventDb) ReplicateProviderAggregates(round int64, limit int, offset int, provider string, scanInto interface{}) error {
+	query := fmt.Sprintf("SELECT * FROM %v_aggregates WHERE round >= %v ORDER BY round, %v_id ASC LIMIT %v OFFSET %v", provider, round, provider, limit, offset)
+	result := edb.Store.Get().
+		Raw(query).Scan(scanInto)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func providerToTableName(pType spenum.Provider) string {
+	return pType.String() + "s"
+}
+
+func mapProviders(
+	providers []dbs.ProviderID,
+) map[spenum.Provider][]string {
+	idSlices := make(map[spenum.Provider][]string, 5)
+	for _, provider := range providers {
+		var ids []string
+		ids = idSlices[provider.Type]
+		ids = append(ids, provider.ID)
+		idSlices[provider.Type] = ids
+	}
+	return idSlices
+}
+
+func (edb *EventDb) providersSetBoolean(providers []dbs.ProviderID, field string, value bool) error {
+	mappedProviders := mapProviders(providers)
+	sortedTypes := sortProviderTypes(mappedProviders)
+	for _, pType := range sortedTypes {
+		ids := mappedProviders[pType]
+		table := providerToTableName(pType)
+		var values []bool
+		for i := 0; i < len(ids); i++ {
+			values = append(values, value)
+		}
+		if err := edb.setBoolean(table, ids, field, values); err != nil {
+			logging.Logger.Error("updating boolean field "+table+"."+field,
+				zap.Error(err))
+		}
+	}
+	return nil
+}
+
+func (edb *EventDb) setBoolean(
+	table string,
+	ids []string,
+	column string,
+	values []bool,
+) error {
+	return CreateBuilder(table, "id", ids).
+		AddUpdate(column, values).
+		Exec(edb).Error
+}
+
+func sortProviderTypes(m map[spenum.Provider][]string) []spenum.Provider {
+	var keys []spenum.Provider
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	return keys
 }

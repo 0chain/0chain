@@ -181,7 +181,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 		zap.Int("round_timeout", r.GetTimeoutCount()),
 		zap.Int64("prev_rseed", pr.GetRandomSeed()),
 		zap.String("prev round vrf random seed", prrs),
-		zap.Any("bls_msg", blsMsg))
+		zap.String("bls_msg", blsMsg))
 
 	return blsMsg, nil
 }
@@ -289,7 +289,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		// cache the vrf share if the previous round is not ready yet
 		mr.vrfSharesCache.add(vrfs)
 
-		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
+		Logger.Warn("failed to get bls message", zap.String("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
 
@@ -318,8 +318,8 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 
 	if err := share.SetHexString(vrfs.Share); err != nil {
 		Logger.Error("failed to decode share hex string",
-			zap.Any("vrfs_share", vrfs.Share),
-			zap.Any("message", blsMsg))
+			zap.String("vrfs_share", vrfs.Share),
+			zap.String("message", blsMsg))
 		return false
 	}
 
@@ -327,10 +327,10 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 		stringID := (&partyID).GetHexString()
 		pi := dkg.GetPublicKeyByID(partyID)
 		Logger.Error("failed to verify share",
-			zap.Any("share", share.GetHexString()),
-			zap.Any("message", blsMsg),
-			zap.Any("from", stringID),
-			zap.Any("pi", pi.GetHexString()),
+			zap.String("share", share.GetHexString()),
+			zap.String("message", blsMsg),
+			zap.String("from", stringID),
+			zap.String("pi", pi.GetHexString()),
 			zap.String("node_id", vrfs.GetParty().GetKey()),
 			zap.Int64("round", vrfs.Round),
 			zap.Int64("dkg_starting_round", dkg.StartingRound),
@@ -343,9 +343,9 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 	Logger.Info("verified vrf",
 		zap.Int64("round", vrfs.Round),
 		zap.String("node_id", vrfs.GetParty().GetKey()),
-		zap.Any("share", share.GetHexString()),
-		zap.Any("from", (&partyID).GetHexString()),
-		zap.Any("message", blsMsg))
+		zap.String("share", share.GetHexString()),
+		zap.String("from", (&partyID).GetHexString()),
+		zap.String("message", blsMsg))
 	return true
 }
 
@@ -436,7 +436,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	var rbOutput = encryption.Hash(groupSignature.GetHexString())
 	Logger.Info("receive bls sign",
 		zap.Int64("round", mr.GetRoundNumber()),
-		zap.Any("group_signature", groupSignature.GetHexString()),
+		zap.String("group_signature", groupSignature.GetHexString()),
 		zap.String("rboOutput", rbOutput))
 
 	//mc.computeRBO(ctx, mr, rbOutput)

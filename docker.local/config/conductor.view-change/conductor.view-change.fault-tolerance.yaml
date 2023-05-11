@@ -1,0 +1,115 @@
+###
+### View Change Fault Tolerance Tests
+### Phases:
+###  - 'start'
+###  - 'contribute'
+###  - 'share'
+###  - 'publish'
+###  - 'wait'
+### Default MagicBlock:
+###   sharders: ["sharder-1"]
+###   miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+###   k_percent: 0.75 of registered
+###   t_percent: 0.51 of active
+###   x_percent: 0.70 of min(max_n, num_dkg_miners)
+###   min_s: 1, max_s: 2
+###   min_n: 3, max_n: 7
+###
+### Outside Miners: ["miner-5", "miner-6", "miner-7", "miner-8"]
+### Outside Sharders: ["sharder-3"]
+###
+### Phase Rounds:
+###   start_rounds: 50
+###   contribute_rounds: 50
+###   share_rounds: 50
+###   publish_rounds: 50
+###   wait_rounds: 50
+###
+
+---
+enable:
+  # - "Complex scenarios"
+
+sets:
+  - name: "Complex scenarios"
+    tests:
+      #- "All nodes fail and recover randomly (scenario 2)"
+      #- "Generators fail at start of round"
+
+tests:
+  - name: "All nodes fail and recover randomly (scenario 2)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3"] # a
+      - wait_add:
+          timeout: "3m"
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3"]
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 2 # round 350
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+      - start: ["miner-4", "sharder-2"] # b
+      - wait_round:
+          timeout: "5m"
+          round: 1000
+      - expect_active_set:
+          sharders: ["sharder-1", "sharder-2"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - start: ["miner-5", "miner-6", "miner-7", "sharder-3", "sharder-4"] # c
+      - wait_round:
+          timeout: "3m"
+          shift: 500
+      - expect_active_set:
+          sharders_count: 3
+          miners_count: 6
+      - stop: ["miner-5", "miner-6", "miner-7", "sharder-3", "sharder-4"] # d drop 3 miners and 2 sharders
+      - wait_round:
+          timeout: "5m"
+          shift: 500
+      - expect_active_set:
+          sharders: ["sharder-1", "sharder-2"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - stop: ["miner-4"] # e drop 1 miner
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            sharders: ["sharder-1", "sharder-2"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+      - stop: ["sharder-2"] # drop 1 sharder
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Generators fail at start of round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - env:
+          KEYS_CONFIG_PATH: "/test.generators_failure"
+          DKG_CONFIG_PATH: "/test.generators_failure"
+          CLI_ARGS: "--magic_block_file config/test.generators_failure/b0magicBlock_7_miners_1_sharder.json"
+          DKG_AFFIX: "7_miners_1_sharder_"
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6", "miner-7"]
+          start: true
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners_count: 7
+      - wait_round:
+          round: 300
+      - generators_failure: 310 # setup failure for generators selected on start of round 310
+      - wait_round:
+          round: 330
+          timeout: "20m" # it's progressing, but slowly

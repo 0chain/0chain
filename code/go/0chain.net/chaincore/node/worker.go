@@ -23,7 +23,7 @@ const (
 func (np *Pool) StatusMonitor(ctx context.Context, startRound int64, waitC chan struct{}) {
 	logging.N2n.Debug("[monitor] start status monitor",
 		zap.Int64("starting round", startRound),
-		zap.Any("node type", NodeTypeNames[np.Type].Code))
+		zap.String("node type", NodeTypeNames[np.Type].Code))
 	np.statusMonitor(ctx, startRound)
 	updateTimer := time.NewTimer(time.Second)
 	monitorTimer := time.NewTimer(time.Second)
@@ -31,7 +31,7 @@ func (np *Pool) StatusMonitor(ctx context.Context, startRound int64, waitC chan 
 		select {
 		case <-ctx.Done():
 			logging.N2n.Debug("[monitor] status monitor canceled, StatusMonitor",
-				zap.Any("node type", NodeTypeNames[np.Type].Code),
+				zap.String("node type", NodeTypeNames[np.Type].Code),
 				zap.Int64("start round", startRound))
 			close(waitC)
 			return
@@ -82,12 +82,12 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 
 func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 	logging.N2n.Debug("[monitor] status monitor for", zap.Int64("starting round", startRound))
-	nodes := np.shuffleNodes(true)
+	nodes := np.ShuffleNodes(true)
 	for i, node := range nodes {
 		select {
 		case <-ctx.Done():
 			logging.N2n.Debug("[monitor] status monitor canceled - statusMonitor",
-				zap.Any("node type", NodeTypeNames[np.Type].Code),
+				zap.String("node type", NodeTypeNames[np.Type].Code),
 				zap.Int64("starting round", startRound))
 			return
 		default:
@@ -167,7 +167,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 				logging.N2n.Info("Node active",
 					zap.String("node_type", nd.GetNodeTypeName()),
 					zap.Int("set_index", nd.SetIndex),
-					zap.Any("key", nd.GetKey()))
+					zap.String("key", nd.GetKey()))
 			}
 			nd.SetErrorCount(0)
 			nd.SetStatus(NodeStatusActive)
@@ -181,7 +181,7 @@ func (n *Node) MemoryUsage() {
 	ticker := time.NewTicker(5 * time.Minute)
 	for {
 		<-ticker.C
-		common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
+		common.LogRuntime(logging.MemUsage, zap.Int(n.Description, n.SetIndex))
 
 		// Average time duration to add go routine logs to 0chain.log file => 618.184µs
 		// Average increase in file size for each update => 10 kB

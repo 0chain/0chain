@@ -9,12 +9,14 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// swagger:model RewardProvider
 type RewardProvider struct {
 	model.UpdatableModel
 	Amount      currency.Coin `json:"amount"`
 	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
 	ProviderId  string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
 	RewardType  spenum.Reward `json:"reward_type"`
+	ChallengeID string        `json:"challenge_id"`
 }
 
 func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {
@@ -26,7 +28,7 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 		pr := RewardProvider{
 			Amount:      sp.Reward,
 			BlockNumber: round,
-			ProviderId:  sp.ProviderId,
+			ProviderId:  sp.ID,
 			RewardType:  sp.RewardType,
 		}
 		prs = append(prs, pr)

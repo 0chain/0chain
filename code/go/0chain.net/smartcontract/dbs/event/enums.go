@@ -22,6 +22,7 @@ const (
 	BlobberTable    ProviderTable = "blobbers"
 	AuthorizerTable ProviderTable = "authorizers"
 	ValidatorTable  ProviderTable = "validators"
+	UserTable       ProviderTable = "users"
 )
 
 func (t EventType) String() string {
@@ -40,7 +41,7 @@ const (
 	TagNone EventTag = iota
 	TagAddBlobber
 	TagUpdateBlobber
-	TagUpdateBlobberAllocatedHealth
+	TagUpdateBlobberAllocatedSavedHealth
 	TagUpdateBlobberTotalStake
 	TagUpdateBlobberTotalUnStake
 	TagUpdateBlobberTotalOffers
@@ -62,9 +63,8 @@ const (
 	TagAddSharder
 	TagUpdateSharder
 	TagDeleteSharder
-	TagAddOrOverwriteCurator
-	TagRemoveCurator
 	TagStakePoolReward
+	TagStakePoolPenalty
 	TagAddDelegatePool
 	TagUpdateDelegatePool
 	TagAddAllocation
@@ -108,6 +108,13 @@ const (
 	TagBlobberHealthCheck
 	TagAuthorizerHealthCheck
 	TagValidatorHealthCheck
+	TagUpdateUserPayedFees
+	TagUpdateUserCollectedRewards
+	TagAddBurnTicket
+	TagAuthorizerBurn
+	TagAddBridgeMint
+	TagKillProvider
+	TagShutdownProvider
 	NumberOfTags
 )
 
@@ -135,7 +142,7 @@ func initTagString() {
 	TagString[TagNone] = "none"
 	TagString[TagAddBlobber] = "TagAddBlobber"
 	TagString[TagUpdateBlobber] = "TagUpdateBlobber"
-	TagString[TagUpdateBlobberAllocatedHealth] = "TagUpdateBlobberAllocatedHealth"
+	TagString[TagUpdateBlobberAllocatedSavedHealth] = "TagUpdateBlobberAllocatedSavedHealth"
 	TagString[TagUpdateBlobberTotalStake] = "TagUpdateBlobberTotalStake"
 	TagString[TagUpdateBlobberTotalUnStake] = "TagUpdateBlobberTotalUnStake"
 	TagString[TagUpdateBlobberTotalOffers] = "TagUpdateBlobberTotalOffers"
@@ -157,9 +164,8 @@ func initTagString() {
 	TagString[TagAddSharder] = "TagAddSharder"
 	TagString[TagUpdateSharder] = "TagUpdateSharder"
 	TagString[TagDeleteSharder] = "TagDeleteSharder"
-	TagString[TagAddOrOverwriteCurator] = "TagAddOrOverwriteCurator"
-	TagString[TagRemoveCurator] = "TagRemoveCurator"
 	TagString[TagStakePoolReward] = "TagStakePoolReward"
+	TagString[TagStakePoolPenalty] = "TagStakePoolPenalty"
 	TagString[TagAddDelegatePool] = "TagAddDelegatePool"
 	TagString[TagUpdateDelegatePool] = "TagUpdateDelegatePool"
 	TagString[TagAddAllocation] = "TagAddAllocation"
@@ -200,6 +206,12 @@ func initTagString() {
 	TagString[TagBlobberHealthCheck] = "TagBlobberHealthCheck"
 	TagString[TagAuthorizerHealthCheck] = "TagAuthorizerHealthCheck"
 	TagString[TagValidatorHealthCheck] = "TagValidatorHealthCheck"
+	TagString[TagUpdateUserPayedFees] = "TagUpdateUserPayedFees"
+	TagString[TagUpdateUserCollectedRewards] = "TagUpdateUserCollectedRewards"
+	TagString[TagAuthorizerBurn] = "TagAuthorizerBurn"
+	TagString[TagAddBurnTicket] = "TagAddBurnTicket"
+	TagString[TagKillProvider] = "TagKillProvider"
+	TagString[TagShutdownProvider] = "TagShutdownProvider"
 	TagString[NumberOfTags] = "invalid"
 }
 

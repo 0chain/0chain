@@ -91,6 +91,7 @@ func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContext
 	return err
 }
 
+//TODO test that we really send some value here
 func (fsa *freeStorageAssigner) validate(
 	marker freeStorageMarker,
 	now common.Timestamp,
@@ -253,7 +254,13 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, txn.Value, balances); err != nil {
+	coin, err := currency.ParseZCN(marker.FreeTokens)
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed",
+			"marker verification failed: %v", err)
+	}
+	//todo query sharder on 0box to get the price of allocation
+	if err := assigner.validate(marker, txn.CreationDate, coin, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
 	}
@@ -262,7 +269,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		DataShards:      conf.FreeAllocationSettings.DataShards,
 		ParityShards:    conf.FreeAllocationSettings.ParityShards,
 		Size:            conf.FreeAllocationSettings.Size,
-		Expiration:      common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.FreeAllocationSettings.Duration).Unix()),
+		Expiration:      common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()),
 		Owner:           marker.Recipient,
 		OwnerPublicKey:  inputObj.RecipientPublicKey,
 		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
@@ -363,7 +370,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		ID:         inputObj.AllocationId,
 		OwnerID:    marker.Recipient,
 		Size:       conf.FreeAllocationSettings.Size,
-		Expiration: common.Timestamp(conf.FreeAllocationSettings.Duration.Seconds()),
+		Expiration: common.Timestamp(conf.TimeUnit.Seconds()),
 	}
 	input, err = json.Marshal(request)
 	if err != nil {

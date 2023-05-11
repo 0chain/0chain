@@ -5,8 +5,10 @@ package zcnsc_test
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"0chain.net/chaincore/block"
+	"gorm.io/gorm/clause"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
@@ -14,7 +16,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/util"
@@ -37,11 +42,17 @@ type mockStateContext struct {
 	globalNode   *GlobalNode
 	stakingPools map[string]*StakePool
 	authCount    *AuthCount
+	block        *block.Block
+	eventDb      *event.EventDb
 }
 
 func (ctx *mockStateContext) GetLatestFinalizedBlock() *block.Block {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (ctx *mockStateContext) SetEventDb(eventDb *event.EventDb) {
+	ctx.eventDb = eventDb
 }
 
 func MakeMockStateContext() *mockStateContext {
@@ -76,6 +87,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		ID: ADDRESS,
 		ZCNSConfig: &ZCNSConfig{
 			MinStakeAmount: 11,
+			MaxStakeAmount: 111,
 			OwnerId:        "8a15e216a3b4237330c1fff19c7b3916ece5b0f47341013ceb64d53595a4cebb",
 		},
 	}
@@ -88,13 +100,22 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		ctx.userNodes[userNode.GetKey()] = userNode
 	}
 
+	ctx.block = block.NewBlock("", 0)
+
 	// Transfers
 
 	var transfers []*state.Transfer
 	var mints []*state.Mint
 
 	// EventsDB
-	events = make(map[string]*AuthorizerNode, 100)
+	addAuthorizerEvents = make(map[string]*AuthorizerNode, 100)
+	burnTicketEvents = make(map[string][]*event.BurnTicket, 100)
+
+	ctx.On("GetEventDB").Return(
+		func() *event.EventDb {
+			return ctx.eventDb
+		},
+	)
 
 	/// GetClientBalance
 
@@ -114,11 +135,17 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 		return transfers
 	})
 
+	/// GetBlock
+
+	ctx.On("GetBlock").Return(func() *block.Block {
+		return ctx.block
+	})
+
 	/// DeleteTrieNode
 
 	ctx.On("DeleteTrieNode", mock.AnythingOfType("string")).Return(
 		func(key datastore.Key) datastore.Key {
-			if strings.Contains(key, AuthorizerNodeType) {
+			if strings.Contains(key, Porvider) {
 				delete(ctx.authorizers, key)
 				return key
 			}
@@ -136,6 +163,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 				ctx.userNodes[key] = node.(*UserNode)
 				return node
 			}
+
 			if strings.Contains(key, AuthorizerNodeType) {
 				authorizerNode := node.(*AuthorizerNode)
 				ctx.authorizers[key] = &Authorizer{
@@ -148,6 +176,16 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			return nil
 		},
 		func(_ datastore.Key) error {
+			return nil
+		})
+
+	ctx.On("InsertTrieNode", ctx.globalNode.GetKey(),
+		mock.AnythingOfType("*zcnsc.GlobalNode")).Return(
+		func(_ datastore.Key, node util.MPTSerializable) datastore.Key {
+			ctx.globalNode = node.(*GlobalNode)
+			return ""
+		},
+		func(_ datastore.Key, _ util.MPTSerializable) error {
 			return nil
 		})
 
@@ -204,16 +242,6 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 	// EventsDB
 
 	ctx.On("EmitEvent",
-		mock.AnythingOfType("event.EventType"),
-		mock.AnythingOfType("event.EventTag"),
-		mock.AnythingOfType("string"), // authorizerID
-		mock.Anything,                 // authorizer payload
-	).Return(
-		func(_ event.EventType, _ event.EventTag, id string, body string) {
-			fmt.Println(".")
-		})
-
-	ctx.On("EmitEvent",
 		event.TypeStats,
 		event.TagAddAuthorizer,
 		mock.AnythingOfType("string"), // authorizerID
@@ -227,7 +255,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			if authorizerNode.ID != id {
 				panic("authorizerID must be equal to ID")
 			}
-			events[id] = authorizerNode
+			addAuthorizerEvents[id] = authorizerNode
 		})
 
 	ctx.On("EmitEvent",
@@ -244,7 +272,90 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			if authorizerNode.ID != id {
 				panic("authorizerID must be equal to ID")
 			}
-			events[id] = authorizerNode
+			addAuthorizerEvents[id] = authorizerNode
+		})
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagAddBridgeMint,
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("*event.BridgeMint"),
+	).Run(
+		func(args mock.Arguments) {
+			userId, ok := args.Get(2).(string)
+			if !ok {
+				panic("failed to convert to user id")
+			}
+			bm, ok := args.Get(3).(*event.BridgeMint)
+			if !ok {
+				panic("failed to convert to get user")
+			}
+			user := &event.User{
+				UserID:    bm.UserID,
+				MintNonce: bm.MintNonce,
+			}
+			if user.UserID != userId {
+				panic("user id must be equal to the id given as a param")
+			}
+
+			err := ctx.eventDb.Get().Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "user_id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"mint_nonce"}),
+			}).Create(user).Error
+			if err != nil {
+				panic(err)
+			}
+		},
+	)
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagAddBurnTicket,
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("*event.BurnTicket"),
+	).Run(
+		func(args mock.Arguments) {
+			ethereumAdress, ok := args.Get(2).(string)
+			if !ok {
+				panic("failed to convert to user id")
+			}
+			burnTicket, ok := args.Get(3).(*event.BurnTicket)
+			if !ok {
+				panic("failed to convert to get user")
+			}
+			if burnTicket.EthereumAddress != ethereumAdress {
+				panic("given ethereum address as index should be equal to the one given as a payload")
+			}
+			burnTicketEvents[ethereumAdress] = append(burnTicketEvents[ethereumAdress], burnTicket)
+		})
+
+	ctx.On("EmitEvent",
+		event.TypeStats,
+		event.TagStakePoolReward,
+		mock.AnythingOfType("string"),
+		mock.AnythingOfType("*dbs.StakePoolReward"),
+	).Run(func(args mock.Arguments) {
+		stakePoolReward, ok := args.Get(3).(*dbs.StakePoolReward)
+		if !ok {
+			panic("failed to convert to get stake pool reward")
+		}
+
+		stakePool, ok := ctx.stakingPools[stakepool.StakePoolKey(spenum.Authorizer, stakePoolReward.ID)]
+		if !ok {
+			panic("failed to retreive a stake pool")
+		}
+
+		stakePool.Reward = stakePoolReward.Reward
+	})
+
+	ctx.On("EmitEvent",
+		mock.AnythingOfType("event.EventType"),
+		mock.AnythingOfType("event.EventTag"),
+		mock.AnythingOfType("string"), // authorizerID
+		mock.Anything,                 // authorizer payload
+	).Return(
+		func(_ event.EventType, _ event.EventTag, id string, body string) {
+			fmt.Println(".")
 		})
 
 	return ctx
@@ -306,7 +417,7 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 		return nil
 	}
 
-	if strings.Contains(key, AuthorizerNodeType) {
+	if strings.Contains(key, Porvider) {
 		authorizer, ok := ctx.authorizers[key]
 		if !ok {
 			return util.ErrValueNotPresent
@@ -398,7 +509,7 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 		return key, fmt.Errorf("failed to convert key: %s to UserNode: %v", key, node)
 	}
 
-	if strings.Contains(key, AuthorizerNodeType) {
+	if strings.Contains(key, Porvider) {
 		if authorizer, ok := node.(*AuthorizerNode); ok {
 			ctx.authorizers[key] = &Authorizer{
 				Scheme: nil,
@@ -434,4 +545,24 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 	}
 
 	return "", fmt.Errorf("node with key: %s is not supported", key)
+}
+
+var (
+	_ cstate.TimedQueryStateContextI = (*mocks.TimedQueryStateContextI)(nil)
+)
+
+type mockTimedQueryStateContext struct {
+	*mockStateContext
+}
+
+func MakeMockTimedQueryStateContext() *mockTimedQueryStateContext {
+	ctx := new(mockTimedQueryStateContext)
+
+	ctx.mockStateContext = MakeMockStateContext()
+
+	return ctx
+}
+
+func (ctx mockTimedQueryStateContext) Now() common.Timestamp {
+	return common.Timestamp(time.Now().Unix())
 }

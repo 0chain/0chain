@@ -26,6 +26,7 @@ const (
 	GlobalNodeType        = "globalnode"
 	StakePoolNodeType     = "stakepool"
 	UserNodeType          = "usernode"
+	Porvider              = "provider"
 )
 
 type (
@@ -251,8 +252,6 @@ func (pk *UpdateAuthorizerStakePoolPayload) Decode(input []byte) error {
 //		URL           string
 //		ClientID      string
 //		ClientKey     string
-//		MinStake      int64
-//		MaxStake      int64
 //		NumDelegates  int
 //		ServiceCharge float64
 //	}
@@ -341,5 +340,19 @@ func (dap *DeleteAuthorizerPayload) Encode() (data []byte, err error) {
 
 func (dap *DeleteAuthorizerPayload) Decode(input []byte) error {
 	err := json.Unmarshal(input, dap)
+	return err
+}
+
+type AuthorizerHealthCheckPayload struct {
+	ID string `json:"id"`
+}
+
+func (ahp *AuthorizerHealthCheckPayload) Encode() (data []byte, err error) {
+	data, err = json.Marshal(ahp)
+	return
+}
+
+func (ahp *AuthorizerHealthCheckPayload) Decode(input []byte) error {
+	err := json.Unmarshal(input, ahp)
 	return err
 }

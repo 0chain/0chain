@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-
-	"github.com/0chain/common/core/encryption"
 )
 
 const (
@@ -180,7 +178,7 @@ func VerifyPublicKeyClientID(pubKey string, clientID string) error {
 		return fmt.Errorf("invalid public key: %v", err)
 	}
 
-	if encryption.Hash(pubKeyBytes) != clientID {
+	if Hash(pubKeyBytes) != clientID {
 		return fmt.Errorf("mismatched public key and client ID")
 	}
 

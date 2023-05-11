@@ -77,11 +77,11 @@ func initSession(delay time.Duration, maxTries int) error {
 		start := time.Now()
 		s, err := cluster.CreateSession()
 		if err != nil {
-			Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
+			Logger.Error("error creating session", zap.Int("retry", tries), zap.Error(err))
 			time.Sleep(delay)
 		} else {
 			Session = NewSession(s)
-			Logger.Info("time to create cassandra session", zap.Duration("total_duration", time.Since(start0)), zap.Any("try_duration", time.Since(start)))
+			Logger.Info("time to create cassandra session", zap.Duration("total_duration", time.Since(start0)), zap.Duration("try_duration", time.Since(start)))
 			return nil
 		}
 	}

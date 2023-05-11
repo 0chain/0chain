@@ -7,6 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/smartcontract/stakepool/spenum"
+
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -26,6 +30,7 @@ type ZCNSConfig struct {
 	MinMintAmount      currency.Coin  `json:"min_mint"`
 	MinBurnAmount      currency.Coin  `json:"min_burn"`
 	MinStakeAmount     currency.Coin  `json:"min_stake"`
+	MaxStakeAmount     currency.Coin  `json:"max_stake"`
 	MinLockAmount      currency.Coin  `json:"min_lock"`
 	MinAuthorizers     int64          `json:"min_authorizers"`
 	PercentAuthorizers float64        `json:"percent_authorizers"`
@@ -84,6 +89,15 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
 			gn.MinStakeAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
+		case MaxStakeAmount:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
+			}
+			gn.MaxStakeAmount, err = currency.ParseZCN(amount)
 			if err != nil {
 				return err
 			}
@@ -157,6 +171,8 @@ func (gn *GlobalNode) Validate() error {
 	switch {
 	case gn.MinStakeAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.MinStakeAmount))
+	case gn.MaxStakeAmount < 1:
+		return common.NewError(Code, fmt.Sprintf("max stake amount (%v) is less than 1", gn.MaxStakeAmount))
 	case gn.MinMintAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.MinMintAmount))
 	case gn.MaxFee < 1:
@@ -221,10 +237,11 @@ func (c *AuthorizerConfig) Decode(input []byte) (err error) {
 
 // AuthorizerNode used in `UpdateAuthorizerConfig` functions
 type AuthorizerNode struct {
-	ID        string            `json:"id"`
-	PublicKey string            `json:"public_key"`
-	URL       string            `json:"url"`
-	Config    *AuthorizerConfig `json:"config"`
+	provider.Provider
+	PublicKey       string            `json:"public_key"`
+	URL             string            `json:"url"`
+	Config          *AuthorizerConfig `json:"config"`
+	LastHealthCheck common.Timestamp  `json:"last_health_check"`
 }
 
 // NewAuthorizer To review: tokenLock init values
@@ -232,14 +249,16 @@ type AuthorizerNode struct {
 // ID = authorizer node public id = Client ID
 func NewAuthorizer(ID string, PK string, URL string) *AuthorizerNode {
 	a := &AuthorizerNode{
-		ID:        ID,
+		Provider: provider.Provider{
+			ID:           ID,
+			ProviderType: spenum.Authorizer,
+		},
 		PublicKey: PK,
 		URL:       URL,
 		Config: &AuthorizerConfig{
 			Fee: 0,
 		},
 	}
-
 	return a
 }
 
@@ -254,7 +273,7 @@ func (an *AuthorizerNode) UpdateConfig(cfg *AuthorizerConfig) error {
 }
 
 func (an *AuthorizerNode) GetKey() string {
-	return fmt.Sprintf("%s:%s:%s", ADDRESS, AuthorizerNodeType, an.ID)
+	return provider.GetKey(an.ID)
 }
 
 func (an *AuthorizerNode) Encode() []byte {

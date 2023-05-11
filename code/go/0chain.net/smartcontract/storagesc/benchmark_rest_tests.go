@@ -36,14 +36,6 @@ func BenchmarkRestTests(
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
-				FuncName: "get_blobber_count",
-				Endpoint: srh.getBlobberCount,
-			},
-			{
-				FuncName: "get_blobber_total_stakes",
-				Endpoint: srh.getBlobberTotalStakes,
-			},
-			{
 				FuncName: "blobbers-by-geolocation",
 				Params: map[string]string{
 					"max_latitude":  "40",
@@ -79,8 +71,8 @@ func BenchmarkRestTests(
 					"client_id":    data.Clients[1],
 					"to_client_id": data.Clients[2],
 					"block_hash":   benchmark.GetMockBlockHash(1),
-					"block-start":  "1",
-					"block-end":    "10",
+					"start":        "7",
+					"end":          "15",
 				},
 				Endpoint: srh.getTransactionByFilter,
 			},
@@ -99,10 +91,6 @@ func BenchmarkRestTests(
 					"round":      "1",
 				},
 				Endpoint: srh.getBlock,
-			},
-			{
-				FuncName: "total-saved-data",
-				Endpoint: srh.getTotalData,
 			},
 			{
 				FuncName: "latestreadmarker",
@@ -160,7 +148,7 @@ func BenchmarkRestTests(
 							DataShards:      len(blobbers) / 2,
 							ParityShards:    len(blobbers) / 2,
 							Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:      common.Timestamp(2*viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
+							Expiration:      common.Timestamp(2*viper.GetDuration(bk.TimeUnit).Seconds()) + creationTime,
 							Blobbers:        blobbers,
 							ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
 							WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
@@ -180,7 +168,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "getchallenge",
 				Params: map[string]string{
-					"challenge":  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
+					"challenge": getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 				},
 				Endpoint: srh.getChallenge,
 			},
@@ -219,7 +207,6 @@ func BenchmarkRestTests(
 				FuncName: "getWriteMarkers",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
-					"filename":      "",
 				},
 				Endpoint: srh.getWriteMarkers,
 			},
@@ -257,30 +244,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.validators,
 			},
 			{
-				FuncName: "alloc_written_size",
-				Params: map[string]string{
-					"allocation_id": getMockAllocationId(0),
-					"block_number":  "1",
-				},
-				Endpoint: srh.getWrittenAmount,
-			},
-			{
-				FuncName: "allocWrittenSizePerPeriod",
-				Params: map[string]string{
-					"block-start": "1",
-					"block-end":   "100",
-				},
-				Endpoint: srh.getWrittenAmountPerPeriod,
-			},
-			{
-				FuncName: "alloc_read_size",
-				Params: map[string]string{
-					"allocation_id": getMockAllocationId(0),
-					"block_number":  "1",
-				},
-				Endpoint: srh.getReadAmount,
-			},
-			{
 				FuncName: "alloc_write_marker_count",
 				Params: map[string]string{
 					"allocation_id": getMockAllocationId(0),
@@ -307,7 +270,7 @@ func BenchmarkRestTests(
 							DataShards:      viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							ParityShards:    viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
 							Size:            100 * viper.GetInt64(bk.StorageMinAllocSize),
-							Expiration:      2 * common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
+							Expiration:      2 * common.Timestamp(viper.GetDuration(bk.TimeUnit).Seconds()),
 							ReadPriceRange:  PriceRange{0, maxReadPrice},
 							WritePriceRange: PriceRange{0, maxWritePrice},
 						}).encode()
@@ -407,20 +370,6 @@ func BenchmarkRestTests(
 				FuncName: "search.user",
 				Params: map[string]string{
 					"searchString": data.Clients[0],
-				},
-				Endpoint: srh.getSearchHandler,
-			},
-			{
-				FuncName: "search.wm_name",
-				Params: map[string]string{
-					"searchString": benchmark.GetMockWriteMarkerFileName(0),
-				},
-				Endpoint: srh.getSearchHandler,
-			},
-			{
-				FuncName: "search.wm_content_hash",
-				Params: map[string]string{
-					"searchString": benchmark.GetMockWriteMarkerContentHash(0, 0),
 				},
 				Endpoint: srh.getSearchHandler,
 			},

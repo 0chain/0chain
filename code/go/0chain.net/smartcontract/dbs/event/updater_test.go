@@ -14,9 +14,22 @@ func TestUpdateBuilder_build(t *testing.T) {
 		val       interface{}
 	}
 
+	type idPart struct {
+		key string
+		val interface{}
+	}
+
+	type condition struct {
+		column string
+		operator string
+		value string
+	}
+
 	type fields struct {
 		ids     interface{}
 		updates []update
+		idParts []idPart
+		conditions []condition
 	}
 
 	tests := []struct {
@@ -92,12 +105,56 @@ func TestUpdateBuilder_build(t *testing.T) {
 			},
 			want: "UPDATE table SET column1 = column1 + t.column1, column2 = column2 - t.column2, column3 = t.column3, column4 = column4 * t.column4 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::bigint[]) AS column2, unnest(?::bytea[]) AS column3, unnest(?::decimal[]) AS column4) AS t WHERE table.id = t.id",
 		},
+		{
+			name: "multiple id parts",
+			fields: fields{
+				ids: []string{"1", "2", "3"},
+				updates: []update{
+					{val: []string{"c11", "c12", "c13"}, key: "column1"},
+				},
+				idParts: []idPart{
+					{key: "id2", val: []string{"1_2", "2_2", "3_2"}},
+					{key: "id3", val: []string{"1_3", "2_3", "3_3"}},
+				},
+			},
+			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS id2, unnest(?::text[]) AS id3, unnest(?::text[]) AS column1) AS t WHERE table.id = t.id AND table.id2 = t.id2 AND table.id3 = t.id3",
+		},
+		{
+			name: "add custom where condition not related to join",
+			fields: fields{
+				ids: []string{"1", "2", "3"},
+				updates: []update{
+					{val: []string{"c11", "c12", "c13"}, key: "column1"},
+				},
+				conditions: []condition{
+					{column: "column2", operator: ">=", value: "100"},
+				},
+			},
+			want: "UPDATE table SET column1 = t.column1 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1) AS t WHERE table.id = t.id AND table.column2 >= 100",
+		},
+		{
+			name: "Unnest []interface{} to correct elements type",
+			fields: fields{
+				ids: []string{"1", "2", "3"},
+				updates: []update{
+					{val: []interface{}{"c11", "c12", "c13"}, key: "column1"},
+					{val: []interface{}{true, false, true}, key: "column2"},
+					{val: []interface{}{int64(100), int64(120), int64(140)}, key: "column3"},
+				},
+			},
+			want: "UPDATE table SET column1 = t.column1, column2 = t.column2, column3 = t.column3 FROM (SELECT unnest(?::text[]) AS id, unnest(?::text[]) AS column1, unnest(?::boolean[]) AS column2, unnest(?::bigint[]) AS column3) AS t WHERE table.id = t.id",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			toTest := CreateBuilder("table", "id", tt.fields.ids)
 			var vals []interface{}
 			vals = append(vals, []interface{}{pq.Array(tt.fields.ids)})
+
+			for _, c := range tt.fields.idParts {
+				toTest.AddCompositeId(c.key, c.val)
+				vals = append(vals, []interface{}{pq.Array(c.val)})
+			}
 
 			for _, u := range tt.fields.updates {
 				if len(u.condition) > 0 {
@@ -106,6 +163,10 @@ func TestUpdateBuilder_build(t *testing.T) {
 					toTest.AddUpdate(u.key, u.val)
 				}
 				vals = append(vals, []interface{}{pq.Array(u.val)})
+			}
+
+			for _, c := range tt.fields.conditions {
+				toTest.AddCondition(c.column, c.operator, c.value)
 			}
 			assert.Equalf(t, &Query{tt.want, vals}, toTest.build(), "build()")
 		})

@@ -19,8 +19,8 @@ type RewardMint struct {
 }
 
 type RewardMintQuery struct {
-	StartBlock   int       `json:"start_block"`
-	EndBlock     int       `json:"end_block"`
+	StartBlock   int64     `json:"start_block"`
+	EndBlock     int64     `json:"end_block"`
 	DataPoints   int64     `json:"data_points"`
 	StartDate    time.Time `json:"start_date"`
 	EndDate      time.Time `json:"end_date"`
@@ -71,7 +71,7 @@ func (edb *EventDb) GetRewardClaimedTotalBetweenDates(query RewardMintQuery) ([]
 		WHERE r.r_max <= r.max_round + 1
 		GROUP BY r.r_min
 		ORDER BY r.r_min;
-	`, query.DataPoints, query.StartDate.UnixNano(), query.EndDate.UnixNano(), "sum(amount)", query.ClientID)
+	`, query.DataPoints, query.StartDate.Unix(), query.EndDate.Unix(), "sum(amount)", query.ClientID)
 
 	return rewards, edb.Store.Get().Raw(rawQuery).Scan(&rewards).Error
 }

@@ -40,7 +40,7 @@ func (bc *BCContext) GetNodepoolInfo() interface{} {
 		pm.Port = strconv.Itoa(n.Port)
 		typename, err := node.GetNodeTypeName(n)
 		if err != nil {
-			logging.Logger.Info(err.Error())
+			logging.Logger.Error(err.Error())
 		} else {
 			pm.Type = typename
 		}

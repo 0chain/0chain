@@ -1,9 +1,10 @@
 package event
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
+
+	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 	"gorm.io/gorm/clause"
 
@@ -72,11 +73,13 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id %s", id, minerDps[0].Miner.ID)
 	}
 	m = minerDps[0].Miner
-	if id != minerDps[0].ProviderRewards.ProviderID {
-		return m, nil, fmt.Errorf("mismatched miner; want id %s but have id%s in provider rewrards",
-			id, minerDps[0].Miner.ID)
-	}
+
 	m.Rewards = minerDps[0].ProviderRewards
+	m.Rewards.ProviderID = id
+	if len(minerDps) == 1 && minerDps[0].DelegatePool.PoolID == "" {
+		// The miner has no delegate pools
+		return m, nil, nil
+	}
 	for i := range minerDps {
 		dps = append(dps, minerDps[i].DelegatePool)
 		if id != minerDps[i].DelegatePool.ProviderID {
@@ -103,14 +106,13 @@ type MinerQuery struct {
 	DelegateWallet    null.String
 	ServiceCharge     null.Float
 	NumberOfDelegates null.Int
-	MinStake          null.Int
-	MaxStake          null.Int
 	LastHealthCheck   null.Int
 	Rewards           null.Int
 	Fees              null.Int
 	Active            null.Bool
 	Longitude         null.Float
 	Latitude          null.Float
+	IsKilled          null.Bool
 }
 
 func (m *Miner) GetTotalStake() currency.Coin {
@@ -203,13 +205,6 @@ func (edb *EventDb) CountInactiveMiners() (int64, error) {
 	return count, result.Error
 }
 
-func (edb *EventDb) GetMinersTotalStake() (int64, error) {
-	var count int64
-
-	err := edb.Store.Get().Table("miners").Select("sum(total_stake)").Row().Scan(&count)
-	return count, err
-}
-
 func (edb *EventDb) GetMiners() ([]Miner, error) {
 	var miners []Miner
 
@@ -293,8 +288,8 @@ func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag Eve
 func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateMinerTotalUnStake, Miner{
 		Provider: Provider{
-			ID:         ID,
-			TotalStake: unstakeTotal,
+			ID:           ID,
+			UnstakeTotal: unstakeTotal,
 		},
 	}
 }

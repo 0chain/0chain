@@ -3,6 +3,7 @@ package minersc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
@@ -12,8 +13,23 @@ import (
 )
 
 type SimpleNodeResponse struct {
-	SimpleNode
-	RoundServiceChargeLastUpdated int64 `json:"round_service_charge_last_updated"`
+	ID                            string                `json:"id" validate:"hexadecimal,len=64"`
+	N2NHost                       string                `json:"n2n_host"`
+	Host                          string                `json:"host"`
+	Port                          int                   `json:"port"`
+	Geolocation                   SimpleNodeGeolocation `json:"geolocation"`
+	Path                          string                `json:"path"`
+	PublicKey                     string                `json:"public_key"`
+	ShortName                     string                `json:"short_name"`
+	BuildTag                      string                `json:"build_tag"`
+	TotalStaked                   currency.Coin         `json:"total_stake"`
+	Delete                        bool                  `json:"delete"`
+	NodeType                      NodeType              `json:"node_type,omitempty"`
+	LastHealthCheck               common.Timestamp      `json:"last_health_check"`
+	Status                        int                   `json:"-" msg:"-"`
+	LastSettingUpdateRound        int64                 `json:"last_setting_update_round"`
+	RoundServiceChargeLastUpdated int64                 `json:"round_service_charge_last_updated"`
+	IsKilled                      bool                  `json:"is_killed"`
 }
 
 type DelegatePoolResponse struct {
@@ -39,26 +55,25 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNodeResponse{
-		SimpleNode: SimpleNode{
-			ID:          edbMiner.ID,
-			N2NHost:     edbMiner.N2NHost,
-			Host:        edbMiner.Host,
-			Port:        edbMiner.Port,
-			Path:        edbMiner.Path,
-			PublicKey:   edbMiner.PublicKey,
-			ShortName:   edbMiner.ShortName,
-			BuildTag:    edbMiner.BuildTag,
-			TotalStaked: edbMiner.Provider.TotalStake,
-			Delete:      edbMiner.Delete,
-			Geolocation: SimpleNodeGeolocation{
-				Latitude:  edbMiner.Latitude,
-				Longitude: edbMiner.Longitude,
-			},
-			NodeType:        NodeTypeMiner,
-			LastHealthCheck: edbMiner.LastHealthCheck,
-			Status:          status,
+		ID:          edbMiner.ID,
+		N2NHost:     edbMiner.N2NHost,
+		Host:        edbMiner.Host,
+		Port:        edbMiner.Port,
+		Path:        edbMiner.Path,
+		PublicKey:   edbMiner.PublicKey,
+		ShortName:   edbMiner.ShortName,
+		BuildTag:    edbMiner.BuildTag,
+		TotalStaked: edbMiner.Provider.TotalStake,
+		Delete:      edbMiner.Delete,
+		Geolocation: SimpleNodeGeolocation{
+			Latitude:  edbMiner.Latitude,
+			Longitude: edbMiner.Longitude,
 		},
+		NodeType:                      NodeTypeMiner,
+		LastHealthCheck:               edbMiner.LastHealthCheck,
+		Status:                        status,
 		RoundServiceChargeLastUpdated: edbMiner.Rewards.RoundServiceChargeLastUpdated,
+		IsKilled:                      edbMiner.IsKilled,
 	}
 
 	mn := NodeResponse{
@@ -69,8 +84,6 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 				DelegateWallet:     edbMiner.DelegateWallet,
 				ServiceChargeRatio: edbMiner.ServiceCharge,
 				MaxNumDelegates:    edbMiner.Provider.NumDelegates,
-				MinStake:           edbMiner.MinStake,
-				MaxStake:           edbMiner.MaxStake,
 			},
 		},
 	}
@@ -86,6 +99,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 				Status:       spenum.PoolStatus(delegate.Status),
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
+				StakedAt:     delegate.StakedAt,
 			},
 			RoundPoolLastUpdated: delegate.RoundPoolLastUpdated,
 		}
@@ -109,14 +123,13 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 			DelegateWallet: mn.Settings.DelegateWallet,
 			ServiceCharge:  mn.Settings.ServiceChargeRatio,
 			NumDelegates:   mn.Settings.MaxNumDelegates,
-			MinStake:       mn.Settings.MinStake,
-			MaxStake:       mn.Settings.MaxStake,
 			Rewards: event.ProviderRewards{
 				ProviderID:   mn.ID,
 				Rewards:      mn.Reward,
 				TotalRewards: mn.Reward,
 			},
 			LastHealthCheck: mn.LastHealthCheck,
+			IsKilled:        mn.Provider.IsKilled(),
 		},
 
 		Active:    mn.Status == node.NodeStatusActive,
@@ -130,7 +143,7 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
 }
 
-func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) error {
+func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              mn.ID,
 		LastHealthCheck: mn.LastHealthCheck,
@@ -138,7 +151,6 @@ func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateC
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagMinerHealthCheck, mn.ID, data)
-	return nil
 }
 
 func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
@@ -160,8 +172,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"delegate_wallet":   mn.Settings.DelegateWallet,
 			"service_charge":    mn.Settings.ServiceChargeRatio,
 			"num_delegates":     mn.Settings.MaxNumDelegates,
-			"min_stake":         mn.Settings.MinStake,
-			"max_stake":         mn.Settings.MaxStake,
 			"last_health_check": mn.LastHealthCheck,
 			"longitude":         mn.SimpleNode.Geolocation.Longitude,
 			"latitude":          mn.SimpleNode.Geolocation.Latitude,

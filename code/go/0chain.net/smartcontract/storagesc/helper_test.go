@@ -93,17 +93,15 @@ func getValidatorURL(id string) string {
 }
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
-	var sn StorageNode
-	sn.ID = c.id
+	var sn = newBlobber(c.id)
 	sn.BaseURL = getBlobberURL(c.id)
 	sn.Terms = c.terms
 	sn.Capacity = c.cap
 	sn.Allocated = 0
 	sn.LastHealthCheck = 0
 	sn.StakePoolSettings.MaxNumDelegates = 100
-	sn.StakePoolSettings.MinStake = 0
-	sn.StakePoolSettings.MaxStake = 1000e10
 	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
+	sn.StakePoolSettings.DelegateWallet = c.id
 	return mustEncode(t, &sn)
 }
 
@@ -117,12 +115,10 @@ func (c *Client) stakeLockRequest(t testing.TB) []byte {
 }
 
 func (c *Client) addValidatorRequest(t testing.TB) []byte {
-	var vn ValidationNode
-	vn.ID = c.id
+	var vn = newValidator(c.id)
+	vn.ProviderType = spenum.Validator
 	vn.BaseURL = getValidatorURL(c.id)
 	vn.StakePoolSettings.MaxNumDelegates = 100
-	vn.StakePoolSettings.MinStake = 0
-	vn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &vn)
 }
 
@@ -152,12 +148,24 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
-	blobber := new(StorageNode)
-	blobber.ID = c.id
-	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
-	require.NoError(t, err)
+	blobber := newBlobber(c.id)
+	blobber.ProviderType = spenum.Blobber
+	//_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	//require.NoError(t, err)
 	var input = c.addValidatorRequest(t)
 	return ssc.addValidator(tx, input, balances)
+}
+
+func updateBlobberUsingAddBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
+	ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = blob.Encode()
+		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	return ssc.addBlobber(tx, input, balances)
 }
 
 func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64,
@@ -169,7 +177,39 @@ func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int
 		tx    = newTransaction(blob.ID, ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
-	return ssc.addBlobber(tx, input, balances)
+	return ssc.updateBlobberSettings(tx, input, balances)
+}
+
+func healthCheckBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = blob.Encode()
+		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	resp, err = ssc.blobberHealthCheck(tx, input, balances)
+	require.NoError(t, err)
+	b, err := ssc.getBlobber(blob.ID, balances)
+	require.NoError(t, err)
+	require.Equal(t, b.LastHealthCheck, tx.CreationDate)
+	return resp, err
+}
+
+func healthCheckValidator(t testing.TB, validator *ValidationNode, value currency.Coin, now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = validator.Encode()
+		tx    = newTransaction(validator.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).setTransaction(t, tx)
+	resp, err = ssc.validatorHealthCheck(tx, input, balances)
+	require.NoError(t, err)
+	v, err := ssc.getValidator(validator.ID, balances)
+	require.NoError(t, err)
+	require.Equal(t, v.LastHealthCheck, tx.CreationDate)
+	return resp, err
 }
 
 // pseudo-random IPv4 address by ID (never used)
@@ -286,10 +326,9 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 }
 
 var avgTerms = Terms{
-	ReadPrice:        1 * x10,
-	WritePrice:       5 * x10,
-	MinLockDemand:    0.1,
-	MaxOfferDuration: 1 * time.Hour,
+	ReadPrice:     1 * x10,
+	WritePrice:    5 * x10,
+	MinLockDemand: 0.1,
 }
 
 // add allocation and 20 blobbers
@@ -319,7 +358,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		blobs = append(blobs, b)
 	}
 
-	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
+	var resp, err = nar.callNewAllocReq(t, client.id, 1000*x10, ssc, now,
 		balances)
 	require.NoError(t, err)
 
@@ -341,17 +380,11 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf = newConfig()
 
-	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = 1 * time.Minute // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
-	conf.ChallengeGenerationRate = 1
-	conf.MaxChallengesPerGeneration = 100
 	conf.ValidatorsPerChallenge = 10
 	conf.MaxBlobbersPerAllocation = 10
-	conf.FailedChallengesToCancel = 100
-	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
-	conf.MinAllocDuration = 1 * time.Minute
-	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
@@ -367,7 +400,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxStake = 1000e10 // 100 toks
 	conf.MaxMint = 100e10
 	conf.MaxBlobbersPerAllocation = 50
-
+	conf.HealthCheckPeriod = time.Hour
 	conf.ReadPool = &readPoolConfig{
 		MinLock: 10,
 	}
@@ -375,16 +408,13 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MinLock: 10,
 	}
 
-	conf.StakePool = &stakePoolConfig{
-		MinLock: 10,
-	}
+	conf.StakePool = &stakePoolConfig{}
 
 	conf.BlockReward = &blockReward{
 		BlockReward:             1000,
 		BlockRewardChangePeriod: 1000,
 		BlockRewardChangeRatio:  0.1,
 		TriggerPeriod:           30,
-		BlobberWeight:           0.5,
 		Gamma: blockRewardGamma{
 			Alpha: 0.2,
 			A:     10,

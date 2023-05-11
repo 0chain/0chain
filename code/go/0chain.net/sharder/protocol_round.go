@@ -31,8 +31,8 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		nb := r.GetNotarizedBlocks()
 		if len(nb) > 0 {
 			Logger.Error("*** different blocks for the same round ***",
-				zap.Any("round", b.Round), zap.Any("block", b.Hash),
-				zap.Any("existing_block", nb[0].Hash))
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.String("existing_block", nb[0].Hash))
 		}
 	}
 
@@ -78,7 +78,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 
 	select {
 	case <-doneC:
-		Logger.Debug("AddNotarizedBlock compute state successfully", zap.Any("duration", time.Since(t)))
+		Logger.Debug("AddNotarizedBlock compute state successfully", zap.Duration("duration", time.Since(t)))
 	case err := <-errC:
 		Logger.Error("AddNotarizedBlock failed to compute state",
 			zap.Int64("round", b.Round),

@@ -1,12 +1,10 @@
 #!/bin/bash
 set -e
 
-# generate mocks
-make build-mocks
-
 cmd="build"
 dockerfile="docker.local/build.unit_test/Dockerfile"
 platform=""
+generate_mocks=1
 
 for arg in "$@"
 do
@@ -18,8 +16,17 @@ do
         platform="--platform=linux/amd64"
         shift
         ;;
+        --no-mocks)
+            generate_mocks=0
+        shift
+        ;;
     esac
 done
+
+# generate mocks
+if (( generate_mocks == 1 )); then
+    make build-mocks
+fi
 
 # Allocate interactive TTY to allow Ctrl-C.
 INTERACTIVE="-it"
@@ -43,9 +50,9 @@ if [[ -n "$PACKAGE" ]]; then
     # Run tests from a single package.
     # assume that $PACKAGE looks something like: 0chain.net/chaincore/threshold/bls
     echo "Running unit tests from $PACKAGE:"
-    docker run "$INTERACTIVE" zchain_unit_test sh -c "cd /0chain/code/go/$PACKAGE; go test -tags bn256 ./..."
+    docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock zchain_unit_test sh -c "cd /0chain/code/go/$PACKAGE; go test -tags bn256 ./..."
 else
     # Run all tests.
     echo "Running general unit tests:"
-    docker run "$INTERACTIVE" -v $(pwd)/code:/codecov zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..." 
+    docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd)/code:/codecov zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..." 
 fi

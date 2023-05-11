@@ -11,19 +11,16 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
@@ -40,67 +37,6 @@ const (
 	scRestAPIGetSharderList     = "/getSharderList"
 	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
-
-// RegisterClient registers client on BC.
-func (c *Chain) RegisterClient() {
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		var (
-			clientMetadataProvider = datastore.GetEntityMetadata("client")
-			ctx                    = memorystore.WithEntityConnection(
-				common.GetRootContext(), clientMetadataProvider)
-		)
-		defer memorystore.Close(ctx)
-		ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-		_, err := client.PutClient(ctx, &node.Self.Underlying().Client)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	nodeBytes, err := json.Marshal(node.Self.Underlying().Client.Clone())
-	if err != nil {
-		logging.Logger.DPanic("Encode self node failed", zap.Error(err))
-	}
-
-	var (
-		mb               = c.GetCurrentMagicBlock()
-		miners           = mb.Miners.CopyNodesMap()
-		registered       = 0
-		thresholdByCount = config.GetThresholdCount()
-		consensus        = int(math.Ceil((float64(thresholdByCount) / 100) *
-			float64(len(miners))))
-	)
-
-	if consensus > len(miners) {
-		logging.Logger.DPanic(fmt.Sprintf("number of miners %d is not enough"+
-			" relative to the threshold parameter %d%%(%d)", len(miners),
-			thresholdByCount, consensus))
-	}
-
-	for registered < consensus {
-		for key, miner := range miners {
-			body, err := httpclientutil.SendPostRequest(
-				miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes,
-				"", "", nil,
-			)
-			if err != nil {
-				logging.Logger.Error("error in register client",
-					zap.Error(err),
-					zap.Any("body", body),
-					zap.Int("registered", registered),
-					zap.Int("consensus", consensus))
-			} else {
-				delete(miners, key)
-				registered++
-			}
-		}
-		time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
-	}
-
-	logging.Logger.Info("register client success",
-		zap.Int("registered", registered),
-		zap.Int("consensus", consensus))
-}
 
 func (c *Chain) isRegistered(ctx context.Context) (is bool) {
 	getStatePathFunc := func(n *node.Node) string {
@@ -133,28 +69,31 @@ func (c *Chain) isRegistered(ctx context.Context) (is bool) {
 
 func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string, remote bool) bool {
-
 	var (
+		allNodeIDs   = minersc.NodeIDs{}
 		allNodesList = &minersc.MinerNodes{}
 		selfNode     = node.Self.Underlying()
 		selfNodeKey  = selfNode.GetKey()
 	)
 
 	if c.IsActiveInChain() && !remote {
-
 		var (
 			sp  = getStatePath(selfNode)
-			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, allNodesList)
+			err = c.GetBlockStateNode(c.GetLatestFinalizedBlock(), sp, &allNodeIDs)
 		)
 
 		if err != nil {
 			logging.Logger.Error("failed to get block state node",
-				zap.Any("error", err), zap.String("path", sp))
+				zap.Error(err), zap.String("path", sp))
 			return false
 		}
 
+		for _, id := range allNodeIDs {
+			if id == selfNodeKey {
+				return true
+			}
+		}
 	} else {
-
 		var (
 			mb       = c.GetCurrentMagicBlock()
 			sharders = mb.Sharders.N2NURLs()
@@ -165,18 +104,18 @@ func (c *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.No
 		err = httpclientutil.MakeSCRestAPICall(ctx, minersc.ADDRESS, relPath, nil,
 			sharders, allNodesList, 1)
 		if err != nil {
-			logging.Logger.Error("is registered", zap.Any("error", err))
+			logging.Logger.Error("is registered", zap.Error(err))
 			return false
 		}
-	}
 
-	for _, miner := range allNodesList.Nodes {
-		if miner == nil {
-			continue
-		}
+		for _, miner := range allNodesList.Nodes {
+			if miner == nil {
+				continue
+			}
 
-		if miner.ID == selfNodeKey {
-			return true
+			if miner.ID == selfNodeKey {
+				return true
+			}
 		}
 	}
 
@@ -222,7 +161,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		} else {
 			blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
 			if err != nil {
-				logging.Logger.Info("confirm transaction", zap.Any("confirmation", false))
+				logging.Logger.Info("confirm transaction", zap.Bool("confirmation", false))
 				return false
 			}
 			pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
@@ -238,9 +177,6 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 
 func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	selfNode := node.Self.Underlying()
-	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		c.ID, selfNode.PublicKey)
-
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
 	mn.N2NHost = selfNode.N2NHost
@@ -256,37 +192,83 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.Settings.ServiceChargeRatio = viper.GetFloat64("service_charge")
 	mn.Settings.MaxNumDelegates = viper.GetInt("number_of_delegates")
 
-	var err error
-	mn.Settings.MinStake, err = currency.ParseZCN(viper.GetFloat64("min_stake"))
-	if err != nil {
-		return nil, err
-	}
-	mn.Settings.MaxStake, err = currency.ParseZCN(viper.GetFloat64("max_stake"))
-	if err != nil {
-		return nil, err
-	}
 	mn.Geolocation = minersc.SimpleNodeGeolocation{
 		Latitude:  viper.GetFloat64("latitude"),
 		Longitude: viper.GetFloat64("longitude"),
 	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
+		mn.ProviderType = spenum.Miner
 		scData.Name = scNameAddMiner
 	} else if selfNode.Type == node.NodeTypeSharder {
+		mn.ProviderType = spenum.Sharder
 		scData.Name = scNameAddSharder
 	}
 
 	scData.InputArgs = mn
 
-	txn.ToClientID = minersc.ADDRESS
-	txn.PublicKey = selfNode.PublicKey
+	txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), c.ID, selfNode.PublicKey, minersc.ADDRESS)
+
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to",
 		zap.Strings("urls", minerUrls),
 		zap.String("id", mn.ID))
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
+	err := c.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
+}
+
+func (c *Chain) estimateTxnFee(txn *httpclientutil.Transaction) (currency.Coin, error) {
+	tTxn := &transaction.Transaction{
+		TransactionType: txn.TransactionType,
+		TransactionData: txn.TransactionData,
+		CreationDate:    txn.CreationDate,
+		ToClientID:      txn.ToClientID,
+		PublicKey:       txn.PublicKey,
+	}
+	if err := tTxn.ComputeProperties(); err != nil {
+		return 0, err
+	}
+
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		err := errors.New("could not get latest finalized block")
+		logging.Logger.Error("could not register miner", zap.Error(err))
+		return 0, err
+	}
+
+	lfb = lfb.Clone()
+
+	_, fee, err := c.EstimateTransactionCostFee(common.GetRootContext(), lfb, tTxn)
+	if err != nil {
+		logging.Logger.Error("estimate transaction cost fee failed", zap.Error(err))
+		return 0, err
+	}
+
+	return fee, nil
+}
+
+func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
+	scData *httpclientutil.SmartContractTxnData,
+	minerUrls []string,
+	sharderUrls []string) error {
+	txn.TransactionType = httpclientutil.TxnTypeSmartContract
+	if txn.Fee == 0 {
+		scBytes, err := json.Marshal(scData)
+		if err != nil {
+			return err
+		}
+
+		txn.TransactionData = string(scBytes)
+		fee, err := c.estimateTxnFee(txn)
+		if err != nil {
+			return err
+		}
+
+		txn.Fee = int64(fee)
+	}
+
+	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
 }
 
 func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
@@ -294,9 +276,6 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	if selfNode.Type != node.NodeTypeSharder {
 		return nil, errors.New("only sharder")
 	}
-	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
-		c.ID, selfNode.PublicKey)
-
 	mn := minersc.NewMinerNode()
 	mn.ID = selfNode.GetKey()
 	mn.N2NHost = selfNode.N2NHost
@@ -310,11 +289,11 @@ func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 
 	scData.Name = scNameSharderKeep
 	scData.InputArgs = mn
 
-	txn.ToClientID = minersc.ADDRESS
-	txn.PublicKey = selfNode.PublicKey
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
-	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs())
+
+	txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), c.ID, selfNode.PublicKey, minersc.ADDRESS)
+	err := c.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
 }
 
@@ -477,14 +456,14 @@ func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder st
 // The GetFromSharders used to obtains an information from sharders using REST
 // API interface of a SC. About the arguments:
 //
-//     - address    -- SC address
-//     - relative   -- REST API relative path (e.g. handler name)
-//     - sharders   -- list of sharders to request from (N2N URLs)
-//     - newFunc    -- factory to create new value of type you want to request
-//     - rejectFunc -- filter to reject some values, can't be nil (feel free
-//                     to modify)
-//     - highFunc   -- function that returns value highness; used to choose
-//                     highest values
+//   - address    -- SC address
+//   - relative   -- REST API relative path (e.g. handler name)
+//   - sharders   -- list of sharders to request from (N2N URLs)
+//   - newFunc    -- factory to create new value of type you want to request
+//   - rejectFunc -- filter to reject some values, can't be nil (feel free
+//     to modify)
+//   - highFunc   -- function that returns value highness; used to choose
+//     highest values
 //
 // TODO (sfxdx): to trust or not to trust, that is the question
 //
@@ -507,7 +486,7 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 
 	t := time.Now()
 	defer func() {
-		logging.Logger.Debug("GetFromSharders", zap.Any("duration", time.Since(t)))
+		logging.Logger.Debug("GetFromSharders", zap.Duration("duration", time.Since(t)))
 	}()
 
 	wg := &sync.WaitGroup{}

@@ -72,8 +72,8 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
 		if !ok || err != nil {
 			logging.Logger.Error("invalid share or sign",
-				zap.Error(err), zap.Any("minersc/dkg.gosign_status", ok),
-				zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+				zap.Error(err), zap.Bool("minersc/dkg.gosign_status", ok),
+				zap.String("message", share.Message), zap.String("sign", share.Sign))
 			return
 		}
 		shareOrSignSuccess[n.ID] = share
@@ -155,26 +155,23 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		logging.Logger.Error("failed to verify share or signs", zap.Any("mpks", mpks))
 	}
 
-	tx = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID,
-		selfNode.PublicKey)
-
 	var data = &httpclientutil.SmartContractTxnData{}
 	data.Name = scNamePublishShares
 	data.InputArgs = sos.Clone()
 
-	tx.ToClientID = minersc.ADDRESS
+	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
 
 	var minerUrls []string
 	for id := range dmn.SimpleNodes {
 		var nodeSend = node.GetNode(id)
 		if nodeSend == nil {
-			logging.Logger.Warn("failed to get node", zap.Any("id", id))
+			logging.Logger.Warn("failed to get node", zap.String("id", id))
 			continue
 		}
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
-	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		minerUrls, mb.Sharders.N2NURLs())
+
+	err = mc.SendSmartContractTxn(tx, data, minerUrls, mb.Sharders.N2NURLs())
 	return
 }
 
@@ -188,7 +185,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
-		logging.Logger.Error("can't contribute", zap.Any("error", err))
+		logging.Logger.Error("can't contribute", zap.Error(err))
 		return
 	}
 
@@ -227,12 +224,8 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	data.Name = scNameContributeMpk
 	data.InputArgs = mpk
 
-	tx = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID,
-		selfNode.PublicKey)
-	tx.ToClientID = minersc.ADDRESS
-
-	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
-		mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
+	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
+	err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	return
 }
 

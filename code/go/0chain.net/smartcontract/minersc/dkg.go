@@ -248,17 +248,17 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 			}
 
 			Logger.Error("failed to move phase, restartDKG",
-				zap.Any("phase", pn.Phase),
+				zap.String("phase", pn.Phase.String()),
 				zap.Int64("phase start round", pn.StartRound),
 				zap.Int64("phase current round", pn.CurrentRound),
-				zap.Any("move_func", getFunctionName(currentMoveFunc)),
+				zap.String("move_func", getFunctionName(currentMoveFunc)),
 				zap.Error(err))
 			if err := msc.RestartDKG(pn, balances); err != nil {
 				Logger.Error("setPhaseNode restart DKG failed",
 					zap.Error(err),
 					zap.Int64("phase start round", pn.StartRound),
 					zap.Int64("phase current round", pn.CurrentRound),
-					zap.Any("move_func", getFunctionName(currentMoveFunc)))
+					zap.String("move_func", getFunctionName(currentMoveFunc)))
 				return err
 			}
 		} else {
@@ -282,8 +282,8 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 					}
 
 					Logger.Error("setPhaseNode failed to set phase node - restarting DKG",
-						zap.Any("error", err),
-						zap.Any("phase", pn.Phase))
+						zap.Error(err),
+						zap.String("phase", pn.Phase.String()))
 
 					if err := msc.RestartDKG(pn, balances); err != nil {
 						Logger.Debug("setPhaseNode move phase failed",
@@ -309,7 +309,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	_, err := balances.InsertTrieNode(pn.GetKey(), pn)
 	if err != nil && err != util.ErrValueNotPresent {
 		Logger.Error("failed to set phase node -- insert failed",
-			zap.Any("error", err))
+			zap.Error(err))
 		return err
 	}
 
@@ -322,7 +322,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	allMinersList, err := msc.getMinersList(balances)
 	if err != nil {
 		Logger.Error("createDKGMinersForContribute -- failed to get miner list",
-			zap.Any("error", err))
+			zap.Error(err))
 		return err
 	}
 
@@ -371,7 +371,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	dkgMiners, err := getDKGMinersList(balances)
 	if err != nil {
 		Logger.Error("widdle dkg miners -- failed to get dkgMiners",
-			zap.Any("error", err))
+			zap.Error(err))
 		return err
 	}
 
@@ -381,7 +381,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	mpks, err := getMinersMPKs(balances)
 	if err != nil {
 		Logger.Error("widdle dkg miners -- failed to get miners mpks",
-			zap.Any("error", err))
+			zap.Error(err))
 		return err
 	}
 
@@ -398,7 +398,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 
 	if err := updateDKGMinersList(balances, dkgMiners); err != nil {
 		Logger.Error("widdle dkg miners -- failed to insert dkg miners",
-			zap.Any("error", err))
+			zap.Error(err))
 		return err
 	}
 	return nil
@@ -572,7 +572,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	err = updateMagicBlock(balances, magicBlock)
 	if err != nil {
-		Logger.Error("failed to insert magic block", zap.Any("error", err))
+		Logger.Error("failed to insert magic block", zap.Error(err))
 		return err
 	}
 	// dkgMinersList = NewDKGMinerNodes()
@@ -869,7 +869,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 	defer msc.mutexMinerMPK.Unlock()
 	mpks := block.NewMpks()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
-		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
 
@@ -877,19 +877,19 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 
 	gsos := block.NewGroupSharesOrSigns()
 	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
-		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
 	dkgMinersList := NewDKGMinerNodes()
 	dkgMinersList.StartRound = pn.CurrentRound
 	if err := updateDKGMinersList(balances, dkgMinersList); err != nil {
-		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
 
 	sharderKeepList := new(MinerNodes)
 	if err := updateShardersKeepList(balances, sharderKeepList); err != nil {
-		Logger.Error("failed to restart dkg", zap.Any("error", err))
+		Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
 	pn.Phase = Start

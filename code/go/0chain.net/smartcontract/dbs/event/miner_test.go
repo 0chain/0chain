@@ -53,9 +53,6 @@ func TestGetMinerWithDelegatePools(t *testing.T) {
 	})
 	require.NoError(t, err, "Error while inserting DelegatePool to event Database")
 
-	miners, err := edb.GetMiners()
-	miners = miners
-
 	p, err := edb.GetDelegatePool("pool_id", minerIds[1])
 	require.NoError(t, err, "Error while retrieving DelegatePool from event Database")
 	require.Equal(t, p.PoolID, "pool_id")
@@ -70,11 +67,28 @@ func TestGetMinerWithDelegatePools(t *testing.T) {
 	require.Equal(t, minerIds[1], dps[0].ProviderID)
 }
 
+func TestGetMinerWithDelegatePoolsNoPools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	minerIds := createMiners(t, edb, 2)
+
+	s, dps, err := edb.GetMinerWithDelegatePools(minerIds[1])
+
+	require.NoError(t, err, "Error while getting miner with delegate pools")
+	require.Nil(t, dps, "there should be no delegate pools")
+	require.Equal(t, s.ID, minerIds[1])
+}
+
 func TestMinersBatchUpdate(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 	logging.InitLogging("development", "")
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	type Stat struct {
 		// for miner (totals)
@@ -109,10 +123,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -144,8 +154,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
 				NumDelegates:   mn.NumberOfDelegates,
-				MinStake:       mn.MinStake,
-				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID: mn.ID,
 					Rewards:    mn.Stat.GeneratorRewards,
@@ -175,7 +183,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		t.Error(err)
 	}
 	eventDb.AutoMigrate()
-	defer eventDb.Drop()
+	//defer eventDb.Drop()
 
 	// Miner - Add Event
 	mn := MinerNode{
@@ -193,8 +201,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -221,8 +227,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -278,7 +282,12 @@ func TestMiners(t *testing.T) {
 		SharderFees    currency.Coin `json:"sharder_fees,omitempty"`
 	}
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
+
 	type NodeType int
 
 	type SimpleNode struct {
@@ -303,11 +312,6 @@ func TestMiners(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
-
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
 
@@ -339,8 +343,6 @@ func TestMiners(t *testing.T) {
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
 				NumDelegates:   mn.NumberOfDelegates,
-				MinStake:       mn.MinStake,
-				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID: mn.ID,
 					Rewards:    mn.Stat.GeneratorRewards,
@@ -378,8 +380,6 @@ func TestMiners(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -406,8 +406,6 @@ func TestMiners(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -546,8 +544,11 @@ func TestGetMiners(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
-
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 	assert.NoError(t, err, "error while migrating database")
 	_ = createMiners(t, eventDb, 10)
 
@@ -590,7 +591,11 @@ func TestGetMinerLocations(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{AggregatePeriod: 10}}}
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
 
 	assert.NoError(t, err, "error while migrating database")
 	createMinersWithLocation(t, eventDb, 12)
@@ -646,8 +651,6 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) []string {
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
-				MinStake:       0,
-				MaxStake:       1000000000000,
 				Rewards: ProviderRewards{
 					ProviderID: id,
 					Rewards:    9725520000000,
@@ -688,8 +691,6 @@ func compareMiners(t *testing.T, miners []Miner, offset, limit int) {
 				DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 				ServiceCharge:  0.1,
 				NumDelegates:   10,
-				MinStake:       0,
-				MaxStake:       1000000000000,
 				Rewards: ProviderRewards{
 					ProviderID: fmt.Sprintf("bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d%v", i),
 					Rewards:    9725520000000,
@@ -745,8 +746,6 @@ func ReturnValue() Miner {
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,
-			MinStake:       0,
-			MaxStake:       1000000000000,
 			Rewards: ProviderRewards{
 				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 				Rewards:    9725520000000,
@@ -772,8 +771,6 @@ func ReturnPointer() *Miner {
 			DelegateWallet: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8",
 			ServiceCharge:  0.1,
 			NumDelegates:   10,
-			MinStake:       0,
-			MaxStake:       1000000000000,
 			Rewards: ProviderRewards{
 				ProviderID: "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d",
 				Rewards:    9725520000000,

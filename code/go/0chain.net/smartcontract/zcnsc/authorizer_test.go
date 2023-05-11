@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/currency"
 
@@ -30,7 +33,12 @@ func init() {
 func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
 	ctx := MakeMockStateContext()
 	for _, authorizerKey := range authorizersID {
-		node := &AuthorizerNode{ID: authorizerKey}
+		node := &AuthorizerNode{
+			Provider: provider.Provider{
+				ID:           authorizerKey,
+				ProviderType: spenum.Authorizer,
+			},
+		}
 		err := ctx.GetTrieNode(node.GetKey(), node)
 		require.NoError(t, err)
 	}
@@ -220,6 +228,45 @@ func Test_UpdateAuthorizerSettings(t *testing.T) {
 	node = GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
 	require.NotNil(t, node.Config)
 	require.Equal(t, currency.Coin(111), node.Config.Fee)
+}
+
+func Test_AuthorizerHealthCheck(t *testing.T) {
+	ctx := MakeMockStateContext()
+
+	tr := CreateDefaultTransactionToZcnsc()
+	sc := CreateZCNSmartContract()
+
+	globalNode, err := GetGlobalNode(ctx)
+	require.NoError(t, err)
+
+	tr.ClientID = globalNode.ZCNSConfig.OwnerId
+
+	addAuthorizerPayload := CreateAuthorizerParam(tr.ClientID, tr.PublicKey)
+	data, err := json.Marshal(addAuthorizerPayload)
+	require.NoError(t, err)
+
+	_, err = sc.AddAuthorizer(tr, data, ctx)
+	require.NoError(t, err)
+
+	node1 := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node1)
+	require.Zero(t, node1.LastHealthCheck)
+
+	tr.ClientID = defaultAuthorizer
+
+	authorizerHealthCheckPayload := AuthorizerHealthCheckPayload{
+		ID: defaultAuthorizer,
+	}
+	data, err = json.Marshal(authorizerHealthCheckPayload)
+	require.NoError(t, err)
+
+	_, err = sc.AuthorizerHealthCheck(tr, data, ctx)
+	require.NoError(t, err)
+
+	node2 := GetAuthorizerNodeFromCtx(t, ctx, defaultAuthorizer)
+	require.NotNil(t, node2)
+	require.NotEqual(t, node2.LastHealthCheck, node1.LastHealthCheck)
+	require.Equal(t, tr.CreationDate, node2.LastHealthCheck)
 }
 
 func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string) *AuthorizerNode {

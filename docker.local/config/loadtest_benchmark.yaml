@@ -11,7 +11,6 @@ simulation:
   num_blocks: 100
   num_challenges_blobber: 1
   num_clients: 1000000
-  num_curators: 1
   num_free_storage_assigners: 1
   num_miner_delegates: 10
   num_miners: 100
@@ -57,7 +56,7 @@ smart_contracts:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_delegates: 0
     max_delegates: 200
-    min_stakke: 0.0
+    min_stake: 0.0
     max_stake: 170.0
     max_n: 7 # 100
     min_n: 3 # 3
@@ -83,9 +82,9 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     num_miner_delegates_rewarded: 10
     # sharders rewarded each round
-    num_sharders_rewarded: 5
+    num_sharders_rewarded: 1
     # sharder delegates to get paid each round when paying fees and rewards
-    num_sharder_delegates_rewarded: 1
+    num_sharder_delegates_rewarded: 5
 
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
@@ -160,6 +159,7 @@ smart_contracts:
       mint: 100
       burn: 100
       delete-authorizer: 100
+      authorizer-health-check: 100
       add-authorizer: 100
 
   faucetsc:

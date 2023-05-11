@@ -22,14 +22,22 @@ jobs:
           echo $GIT_COMMIT_DATE
           echo $YESTERDAY_DATE
           
+      - name: Install AWS
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          
       - name: Create backup
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
         run: |
-          github-backup -O 0chain -P -t ${{ secrets.ACCESS_TOKEN }} --output-directory=/github-backup/0chain --all -O -R 0chain
+          sudo apt update && sudo apt install python3-pip -y
+          sudo pip3 install github-backup
+          sudo github-backup -O 0chain -P -t ${{ secrets.ACCESS_TOKEN }} --output-directory=/github-backup/0chain --all -O -R 0chain
           
       - name: Create zip
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
-        run: zip -r 0chain.zip /github-backup/0chain
+        run: sudo zip -r 0chain.zip /github-backup/0chain
         
       - name: Set AWS credentials
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE

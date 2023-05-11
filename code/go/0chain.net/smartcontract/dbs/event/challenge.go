@@ -26,6 +26,13 @@ type Challenge struct {
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded" gorm:"index"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
+	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
+}
+
+func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
+	var chs Challenges
+	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{AllocationID: allocationID}).Find(&chs)
+	return chs, result.Error
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
@@ -78,10 +85,21 @@ func (edb *EventDb) addChallenges(chlgs []Challenge) error {
 }
 
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "challenge_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"responded", "passed"}),
-	}).Create(chs).Error
+	var (
+		challengeIdList []string
+		respondedList   []bool
+		passedList      []bool
+	)
+
+	for _, ch := range chs {
+		challengeIdList = append(challengeIdList, ch.ChallengeID)
+		respondedList = append(respondedList, ch.Responded)
+		passedList = append(passedList, ch.Passed)
+	}
+
+	return CreateBuilder("challenges", "challenge_id", challengeIdList).
+		AddUpdate("responded", respondedList).
+		AddUpdate("passed", passedList).Exec(edb).Error
 }
 
 func mergeAddChallengesEvents() *eventsMergerImpl[Challenge] {

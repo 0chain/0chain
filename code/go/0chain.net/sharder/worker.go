@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/remeh/sizedwaitgroup"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -18,7 +17,6 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
-	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/minersc"
 
 	"github.com/0chain/common/core/logging"
@@ -33,6 +31,8 @@ func SetupWorkers(ctx context.Context) {
 	go sc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go sc.FinalizedBlockWorker(ctx, sc) // 3) sequentially processes finalized blocks
 
+	go sc.SyncLFBStateWorker(ctx)
+
 	// Setup the deep and proximity scan
 	go sc.HealthCheckSetup(ctx, DeepScan)
 	go sc.HealthCheckSetup(ctx, ProximityScan)
@@ -41,20 +41,19 @@ func SetupWorkers(ctx context.Context) {
 		sc.MagicBlockStorage)
 	go sc.UpdateMagicBlockWorker(ctx)
 	go sc.RegisterSharderKeepWorker(ctx)
-	// Move old blocks to cloud
-	if viper.GetBool("minio.enabled") {
-		go sc.MinioWorker(ctx)
-	}
-
 	go sc.SharderHealthCheck(ctx)
+
+	go sc.TrackTransactionErrors(ctx)
 }
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	const stuckDuration = 3 * time.Second
 	var (
-		endRound int64
-		syncing  bool
+		endRound   int64
+		syncing    bool
+		syncTimer  time.Time
+		timingSync bool
 
 		syncBlocksTimer  = time.NewTimer(7 * time.Second)
 		aheadN           = int64(config.GetLFBTicketAhead())
@@ -108,6 +107,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			endRound = lfbTk.Round + aheadN
 
 			if endRound <= cr || lfb.Round >= lfbTk.Round {
+				if timingSync {
+					syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
+					timingSync = false
+				}
+
 				logging.Logger.Debug("process block, synced already, continue...")
 				continue
 			}
@@ -126,6 +130,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 			endRound = cr + reqNum
 			syncing = true
+			if !timingSync {
+				timingSync = true
+				syncTimer = time.Now()
+			}
 
 			logging.Logger.Debug("process block, sync blocks",
 				zap.Int64("start round", cr+1),
@@ -385,56 +393,6 @@ func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 	}
 }
 
-func (sc *Chain) MinioWorker(ctx context.Context) {
-	if !viper.GetBool("minio.enabled") {
-		return
-	}
-	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
-	var numWorkers = viper.GetInt("minio.num_workers")
-	ticker := time.NewTicker(time.Duration(viper.GetInt64("minio.worker_frequency")) * time.Second)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			roundToProcess := sc.GetCurrentRound() - oldBlockRoundRange
-			fs := blockstore.GetStore()
-			swg := sizedwaitgroup.New(numWorkers)
-			for roundToProcess > 0 {
-				hash, err := sc.GetBlockHash(ctx, roundToProcess)
-				if err != nil {
-					logging.Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
-					roundToProcess--
-					continue
-				}
-				if fs.CloudObjectExists(hash) {
-					logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
-					break
-				} else {
-					swg.Add()
-					go sc.moveBlockToCloud(ctx, roundToProcess, hash, fs, &swg)
-					roundToProcess--
-				}
-			}
-			swg.Wait()
-			logging.Logger.Info("Moved old blocks to cloud successfully")
-		}
-	}
-}
-
-func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, hash string, fs blockstore.BlockStore, swg *sizedwaitgroup.SizedWaitGroup) {
-	err := fs.UploadToCloud(hash, round)
-	if err != nil {
-		logging.Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
-	} else {
-		logging.Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
-		sc.TieringStats.TotalBlocksUploaded++
-		sc.TieringStats.LastRoundUploaded = round
-		sc.TieringStats.LastUploadTime = time.Now()
-	}
-	swg.Done()
-}
-
 func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 	// TODO: Move to a config file
 	const HEALTH_CHECK_TIMER = 5 * time.Minute // 5 Minute
@@ -444,20 +402,41 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 			return
 		default:
 			selfNode := node.Self.Underlying()
-			txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(), sc.ID, selfNode.PublicKey)
+			txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), sc.ID, selfNode.PublicKey, minersc.ADDRESS)
 			scData := &httpclientutil.SmartContractTxnData{}
 			scData.Name = minerScSharderHealthCheck
 
-			txn.ToClientID = minersc.ADDRESS
-			txn.PublicKey = selfNode.PublicKey
-
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
+			if err := sc.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
 				logging.Logger.Warn("sharder health check failed, try again")
 			}
 
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)
+	}
+}
+
+func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
+
+	var (
+		timer = time.NewTimer(10 * time.Minute)
+	)
+
+	edb := sc.GetQueryStateContext().GetEventDB()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+
+			err := edb.UpdateTransactionErrors()
+			if err != nil {
+				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
+			}
+
+			timer = time.NewTimer(10 * time.Minute)
+		}
 	}
 }

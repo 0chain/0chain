@@ -82,7 +82,6 @@ const (
 	SimulationNumAllocationPayerPools
 	SimulationNumAllocationPayer
 	SimulationNumBlobberDelegates
-	SimulationNumCurators
 	SimulationNumValidators
 	SimulationNumFreeStorageAssigners
 	SimulationNumMinerDelegates
@@ -145,18 +144,15 @@ const (
 
 	StorageOwner                       = SmartContract + StorageSc + "owner_id"
 	StorageMinAllocSize                = SmartContract + StorageSc + "min_alloc_size"
-	StorageMinAllocDuration            = SmartContract + StorageSc + "min_alloc_duration"
 	StorageMaxReadPrice                = SmartContract + StorageSc + "max_read_price"
 	StorageMaxWritePrice               = SmartContract + StorageSc + "max_write_price"
 	StorageMaxChallengeCompletionTime  = SmartContract + StorageSc + "max_challenge_completion_time"
-	StorageMinOfferDuration            = SmartContract + StorageSc + "min_offer_duration"
 	StorageMinBlobberCapacity          = SmartContract + StorageSc + "min_blobber_capacity"
 	StorageMaxCharge                   = SmartContract + StorageSc + "max_charge"
 	StorageMinStake                    = SmartContract + StorageSc + "min_stake"
 	StorageMaxStake                    = SmartContract + StorageSc + "max_stake"
 	StorageMaxDelegates                = SmartContract + StorageSc + "max_delegates"
 	StorageDiverseBlobbers             = SmartContract + StorageSc + "diverse_blobbers"
-	StorageFailedChallengesToCancel    = SmartContract + StorageSc + "failed_challenges_to_cancel"
 	StorageReadPoolMinLock             = SmartContract + StorageSc + "readpool.min_lock"
 	StorageWritePoolMinLock            = SmartContract + StorageSc + "writepool.min_lock"
 	StorageStakePoolMinLock            = SmartContract + StorageSc + "stakepool.min_lock"
@@ -173,7 +169,6 @@ const (
 	StorageFasWritePriceMax            = SmartContract + StorageSc + Fas + "write_price_range.max"
 	StorageFasReadPoolFraction         = SmartContract + StorageSc + Fas + "read_pool_fraction"
 	StorageMaxMint                     = SmartContract + StorageSc + "max_mint"
-	StorageMaxChallengesPerGeneration  = SmartContract + StorageSc + "max_challenges_per_generation"
 	StorageValidatorsPerChallenge      = SmartContract + StorageSc + "validators_per_challenge"
 	StorageMaxBlobbersPerAllocation    = SmartContract + StorageSc + "max_blobbers_per_allocation"
 
@@ -205,6 +200,7 @@ const (
 	ZcnMinMintAmount      = SmartContract + ZcnSc + "min_mint"
 	ZcnMinBurnAmount      = SmartContract + ZcnSc + "min_burn"
 	ZcnMinStakeAmount     = SmartContract + ZcnSc + "min_stake"
+	ZcnMaxStakeAmount     = SmartContract + ZcnSc + "max_stake"
 	ZcnMinLockAmount      = SmartContract + ZcnSc + "min_lock"
 	ZcnMaxFee             = SmartContract + ZcnSc + "max_fee"
 	ZcnPercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
@@ -222,9 +218,11 @@ const (
 	EventDbOpenConns       = DbsEvents + "max_open_conns"
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
 
-	EventDbDebug           = DbSettings + "debug"
-	EventDbAggregatePeriod = DbSettings + "aggregate_period"
-	EventDbPageLimit       = DbSettings + "page_limit"
+	EventDbDebug                 = DbSettings + "debug"
+	EventDbAggregatePeriod       = DbSettings + "aggregate_period"
+	EventDbPartitionChangePeriod = DbSettings + "partition_change_period"
+	EventDbPartitionKeepCount    = DbSettings + "partition_keep_count"
+	EventDbPageLimit             = DbSettings + "page_limit"
 )
 
 func (s Source) String() string {
@@ -250,7 +248,6 @@ var parameterName = []string{
 	"num_allocation_payers_pools",
 	"num_allocation_payers",
 	"num_blobber_delegates",
-	"num_curators",
 	"num_validators",
 	"num_free_storage_assigners",
 	"num_miner_delegates",
@@ -281,7 +278,6 @@ var (
 	NumAllocationPayerPools      = Simulation + SimulationNumAllocationPayerPools.String()
 	NumAllocationPayer           = Simulation + SimulationNumAllocationPayer.String()
 	NumBlobberDelegates          = Simulation + SimulationNumBlobberDelegates.String()
-	NumCurators                  = Simulation + SimulationNumCurators.String()
 	NumValidators                = Simulation + SimulationNumValidators.String()
 	NumFreeStorageAssigners      = Simulation + SimulationNumFreeStorageAssigners.String()
 	NumMinerDelegates            = Simulation + SimulationNumMinerDelegates.String()

@@ -27,7 +27,7 @@ func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) er
 	return common.RunWithRetries(ctx, 20, func() error {
 		err := c.GetBlockStateChange(b)
 		if err != nil {
-			logging.Logger.Info("can't get block state changes, retrying", zap.Error(err))
+			logging.Logger.Error("can't get block state changes, retrying", zap.Error(err))
 		}
 		return err
 	})
@@ -37,7 +37,7 @@ func (c *Chain) GetBlockStateChangeForce(ctx context.Context, b *block.Block) er
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	ts := time.Now()
 	if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
-		logging.Logger.Debug("block has the same state", zap.Any("block", b.Hash),
+		logging.Logger.Debug("block has the same state", zap.String("block", b.Hash),
 			zap.Any("block_state_hash", b.ClientStateHash))
 		if !b.PrevBlock.IsStateComputed() {
 			return common.NewError("get_block_state_changes", "block is not changed but prev block state is not computed")
@@ -48,7 +48,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 
 		logging.Logger.Debug("get_block_state_changes - apply took",
 			zap.Int64("round", b.Round),
-			zap.Any("duration", time.Since(ts)))
+			zap.Duration("duration", time.Since(ts)))
 		return nil
 	}
 	bsc, err := c.getBlockStateChange(b)
@@ -57,7 +57,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	}
 	logging.Logger.Debug("get_block_state_changes - get took",
 		zap.Int64("round", b.Round),
-		zap.Any("duration", time.Since(ts)))
+		zap.Duration("duration", time.Since(ts)))
 
 	ts = time.Now()
 	err = c.ApplyBlockStateChange(b, bsc)
@@ -67,7 +67,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 
 	logging.Logger.Debug("get_block_state_changes - apply took",
 		zap.Int64("round", b.Round),
-		zap.Any("duration", time.Since(ts)))
+		zap.Duration("duration", time.Since(ts)))
 	return nil
 }
 
@@ -106,7 +106,7 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 			skeys[idx] = util.ToHex(key)
 		}
 		logging.Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
-			zap.Any("keys", skeys), zap.Error(err))
+			zap.Strings("keys", skeys), zap.Error(err))
 		return
 	}
 	keysStr := make([]string, len(keys))

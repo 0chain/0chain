@@ -81,7 +81,7 @@ func discoverPoolMembers(discoveryFile string) {
 		} else {
 			if !isSliceEq(pm.Miners, members.Miners) || !isSliceEq(pm.Sharders, members.Sharders) {
 				Logger.Fatal("The members are different from", zap.String("URL", ip),
-					zap.Any("Miners", members.Miners), zap.Any("Sharders", pm.Sharders))
+					zap.Strings("Miners", members.Miners), zap.Strings("Sharders", pm.Sharders))
 			}
 		}
 	}
@@ -90,7 +90,7 @@ func discoverPoolMembers(discoveryFile string) {
 		Logger.Fatal("Could not discover blockchain")
 	}
 
-	Logger.Info("Discovered pool members", zap.Any("Miners", pm.Miners), zap.Any("Sharders", pm.Sharders))
+	Logger.Info("Discovered pool members", zap.Strings("Miners", pm.Miners), zap.Strings("Sharders", pm.Sharders))
 }
 
 func extractDiscoverIps(discFile string) []string {
@@ -167,25 +167,6 @@ func getOwnerWallet(signatureScheme, ownerKeysFile string) mptwallet.Wallet {
 	}
 
 	return w
-}
-
-// Register a client on the blockchain's MPT.
-func registerMPTWallet(w mptwallet.Wallet) {
-	Logger.Info("Registering MPT wallet", zap.Any("ClientID", w.ClientID))
-
-	data, err := json.Marshal(w)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, ip := range members.Miners {
-		body, err := httpclientutil.SendPostRequest(ip+httpclientutil.RegisterClient, data, "", "", nil)
-		if err != nil {
-			Logger.Fatal("HTTP POST error", zap.Error(err), zap.Any("body", body))
-		}
-	}
-
-	Logger.Info("Success on registering MPT wallet")
 }
 
 func executeSCTransaction(from mptwallet.Wallet, scAddress string, value int64, data interface{}) httpclientutil.Transaction {

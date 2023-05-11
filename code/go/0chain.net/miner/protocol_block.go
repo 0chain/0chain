@@ -69,19 +69,23 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 	return nil
 }
 
-func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
+func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) {
 	feeTxn := transaction.Provider().(*transaction.Transaction)
-	feeTxn.ClientID = b.MinerID
+	feeTxn.ClientID = node.Self.ID
+	feeTxn.PublicKey = node.Self.PublicKey
 	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
 	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
-	return feeTxn
+	if err := feeTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return feeTxn, nil
 }
 
 func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
-	s, err := mc.GetStateById(bState, minerId)
+	s, err := chain.GetStateById(bState, minerId)
 	if err != nil {
 		if cstate.ErrInvalidState(err) {
 			mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
@@ -98,37 +102,49 @@ func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState 
 	return node.Self.GetNextNonce(), nil
 }
 
-func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
+func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) (*transaction.Transaction, error) {
 	scTxn := transaction.Provider().(*transaction.Transaction)
-	scTxn.ClientID = b.MinerID
+	scTxn.ClientID = node.Self.ID
+	scTxn.PublicKey = node.Self.PublicKey
 	scTxn.ToClientID = storagesc.ADDRESS
 	scTxn.CreationDate = b.CreationDate
 	scTxn.TransactionType = transaction.TxnTypeSmartContract
 	scTxn.TransactionData = fmt.Sprintf(`{"name":"commit_settings_changes","input":{"round":%v}}`, b.Round)
 	scTxn.Fee = 0
-	return scTxn
+	if err := scTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return scTxn, nil
 }
 
-func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
+func (mc *Chain) createBlockRewardTxn(b *block.Block) (*transaction.Transaction, error) {
 	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
 	brTxn.TransactionData = fmt.Sprintf(`{"name":"blobber_block_rewards","input":{"round":%v}}`, b.Round)
 	brTxn.Fee = 0
-	return brTxn
+	if err := brTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return brTxn, nil
 }
 
-func (mc *Chain) createGenerateChallengeTxn(b *block.Block) *transaction.Transaction {
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
 	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
 	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
 	brTxn.Fee = 0
-	return brTxn
+	if err := brTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return brTxn, nil
 }
 
 func (mc *Chain) validateTransaction(b *block.Block,
@@ -136,7 +152,7 @@ func (mc *Chain) validateTransaction(b *block.Block,
 	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
 		return ErrNotTimeTolerant
 	}
-	state, err := mc.GetStateById(bState, txn.ClientID)
+	state, err := chain.GetStateById(bState, txn.ClientID)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
 			if txn.Nonce > 1 {
@@ -147,7 +163,9 @@ func (mc *Chain) validateTransaction(b *block.Block,
 			}
 			return nil
 		}
-		mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
+		if cstate.ErrInvalidState(err) {
+			mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
+		}
 		return err
 	}
 
@@ -184,7 +202,7 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 		if txn.TransactionType == transaction.TxnTypeSmartContract {
 			err := txn.VerifyOutputHash(ctx)
 			if err != nil {
-				logging.Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))
+				logging.Logger.Error("Smart contract output verification failed", zap.Error(err), zap.String("output", txn.TransactionOutput))
 				return common.NewError("txn_output_verification_failed", "Transaction output hash verification failed")
 			}
 		}
@@ -345,8 +363,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	var costs []int
 	for _, txn := range b.Txns {
 		if err := mc.syncAndRetry(ctx, b, "estimate cost", func(ctx context.Context, waitC chan struct{}) error {
-			c, err := mc.EstimateTransactionCost(ctx,
-				b, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
+			c, err := mc.EstimateTransactionCost(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 			if err != nil {
 				return err
 			}
@@ -400,9 +417,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	bpTimer.UpdateSince(start)
 	logging.Logger.Debug("SignBlock finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
-	logging.Logger.Info("verify block successful", zap.Any("round", b.Round),
-		zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
-		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash),
+	logging.Logger.Info("verify block successful", zap.Int64("round", b.Round),
+		zap.Int("block_size", len(b.Txns)), zap.Duration("time", time.Since(start)),
+		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash),
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Int8("state_status", b.GetStateStatus()))
 
@@ -505,13 +522,13 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				}
 				if txn.OutputHash == "" {
 					cancel = true
-					logging.Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
+					logging.Logger.Error("validate transactions - no output hash", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
 					return
 				}
 				err := txn.ValidateWrtTimeForBlock(ctx, b.CreationDate, !aggregate)
 				if err != nil {
 					cancel = true
-					logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
+					logging.Logger.Error("validate transactions", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
 					return
 				}
 
@@ -554,7 +571,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				return ctx.Err()
 			case result := <-validChannel:
 				if roundMismatch {
-					logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
+					logging.Logger.Info("validate transactions (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("current_round", mc.GetCurrentRound()))
 					return ErrRoundMismatch
 				}
 				if !result {
@@ -902,10 +919,11 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn,
-			chain.WithSync(), chain.WithNotifyC(waitC))
+		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
-			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
+			logging.Logger.Debug("Bad transaction cost fee",
+				zap.Error(err),
+				zap.String("txn_hash", txn.Hash))
 
 			// return error to break iteration due to the invalid state error
 			if cstate.ErrInvalidState(err) {
@@ -915,6 +933,23 @@ func txnIterHandlerFunc(
 			// skipping and continue
 			return true, nil
 		}
+
+		if mc.IsFeeEnabled() {
+			confMinFee := mc.ChainConfig.MinTxnFee()
+			if confMinFee > fee {
+				fee = confMinFee
+			}
+
+			if err := txn.ValidateFee(mc.ChainConfig.TxnExempt(), fee); err != nil {
+				logging.Logger.Error("invalid transaction fee",
+					zap.Any("txn", txn),
+					zap.Any("estimated fee", fee),
+					zap.Error(err))
+				tii.invalidTxns = append(tii.invalidTxns, txn)
+				return true, nil // skipping and continue
+			}
+		}
+
 		if tii.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
 			return true, nil
@@ -994,12 +1029,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	collectionName := txn.GetCollectionName()
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	err = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	if cstate.ErrInvalidState(err) {
+		logging.Logger.Error("generate block - process txn failed",
+			zap.Error(err),
+			zap.Int64("round", b.Round))
+		return err
+	}
+
 	if len(iterInfo.invalidTxns) > 0 {
 		var keys []string
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round),
+		logging.Logger.Info("generate block (found txns very old)", zap.Int64("round", b.Round),
 			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
 			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
@@ -1012,19 +1054,19 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Any("round", b.Round), zap.Int("txn num", len(keys)))
+		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Int64("round", b.Round), zap.Int("txn num", len(keys)))
 	}
 	if iterInfo.roundMismatch {
-		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("generate block (round mismatch)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
 		return ErrRoundMismatch
 	}
 	if iterInfo.roundTimeout {
-		logging.Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("generate block (round timeout)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
 		return ErrRoundTimeout
 	}
 	if iterInfo.reInclusionErr != nil {
 		logging.Logger.Error("generate block (txn reinclusion check)",
-			zap.Any("round", b.Round), zap.Error(iterInfo.reInclusionErr))
+			zap.Int64("round", b.Round), zap.Error(iterInfo.reInclusionErr))
 	}
 
 	switch err {
@@ -1046,7 +1088,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.ChainConfig.MaxBlockCost() &&
 		iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
 		txn := iterInfo.currentTxns[i]
-		cost, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
+		cost, err := mc.EstimateTransactionCost(ctx, lfb, txn, chain.WithSync())
 		if err != nil {
 			// Note: optimistic block generation
 			// we would just skip the error so that the work on txns collection and state computation above
@@ -1163,7 +1205,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		var costs []int
 		cost := 0
 		for _, txn := range b.Txns {
-			c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
+			c, err := mc.EstimateTransactionCost(ctx, lfb, txn, chain.WithSync())
 			if err != nil {
 				logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 				break
@@ -1201,27 +1243,43 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state uti
 	txns := make([]*transaction.Transaction, 0, 4)
 
 	if mc.ChainConfig.IsFeeEnabled() {
-		txns = append(txns, mc.createFeeTxn(b))
+		feeTxn, err := mc.createFeeTxn(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		txns = append(txns, feeTxn)
 	}
 
 	if config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled") {
-		txns = append(txns, mc.createGenerateChallengeTxn(b))
+		gcTxn, err := mc.createGenerateChallengeTxn(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		txns = append(txns, gcTxn)
 	}
 
 	if mc.ChainConfig.IsBlockRewardsEnabled() &&
 		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
 		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
-		txns = append(txns, mc.createBlockRewardTxn(b))
+		brTxn, err := mc.createBlockRewardTxn(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		txns = append(txns, brTxn)
 	}
 
 	if mc.SmartContractSettingUpdatePeriod() != 0 &&
 		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
-		txns = append(txns, mc.storageScCommitSettingChangesTx(b))
+		cscTxn, err := mc.storageScCommitSettingChangesTx(b)
+		if err != nil {
+			return nil, 0, err
+		}
+		txns = append(txns, cscTxn)
 	}
 
 	var cost int
 	for _, txn := range txns {
-		c, err := mc.EstimateTransactionCost(ctx, lfb, lfb.ClientState, txn, chain.WithSync())
+		c, err := mc.EstimateTransactionCost(ctx, lfb, txn, chain.WithSync())
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err))
 			return nil, 0, err

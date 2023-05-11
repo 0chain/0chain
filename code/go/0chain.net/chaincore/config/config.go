@@ -32,6 +32,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 	viper.SetDefault("server_chain.transaction.transfer_cost", 10)
+	viper.SetDefault("server_chain.transaction.cost_fee_coeff", 1000)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 66)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
@@ -113,7 +114,6 @@ func SetupDefaultSmartContractConfig() {
 	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_reset", "24h")
 
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
-	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", "3m")
 }
 
@@ -193,7 +193,9 @@ type ChainConfig interface {
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
 	MinTxnFee() currency.Coin
+	MaxTxnFee() currency.Coin
 	TxnTransferCost() int
+	TxnCostFeeCoeff() int
 }
 
 type DbAccess struct {
@@ -210,9 +212,11 @@ type DbAccess struct {
 }
 
 type DbSettings struct {
-	Debug           bool  `json:"debug"`
-	AggregatePeriod int64 `json:"aggregate_period"`
-	PageLimit       int64 `json:"page_limit"`
+	Debug                 bool  `json:"debug"`
+	AggregatePeriod       int64 `json:"aggregate_period"`
+	PartitionChangePeriod int64 `json:"partition_change_period"`
+	PartitionKeepCount    int64 `json:"partition_keep_count"`
+	PageLimit             int64 `json:"page_limit"`
 }
 
 func (s *DbSettings) Update(updates map[string]string) error {
@@ -229,6 +233,20 @@ func (s *DbSettings) Update(updates map[string]string) error {
 			return err
 		}
 		s.AggregatePeriod = iValue.(int64)
+	}
+	if value, found := updates[enums.DbsPartitionChangePeriod.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.PartitionChangePeriod = iValue.(int64)
+	}
+	if value, found := updates[enums.DbsPartitionKeepCount.String()]; found {
+		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+		if err != nil {
+			return err
+		}
+		s.PartitionKeepCount = iValue.(int64)
 	}
 	if value, found := updates[enums.DbsAggregatePageLimit.String()]; found {
 		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)

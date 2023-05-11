@@ -71,7 +71,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		duration := time.Since(start)
 		if err != nil {
 			logging.N2n.Error("message pull", zap.String("from", nd.GetPseudoName()),
-				zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+				zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.String("id", entity.GetKey()), zap.Error(err))
 			return nil, err
 		}
 		//N2n.Debug("message pull", zap.String("from", nd.GetPseudoName()), zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))

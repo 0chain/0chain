@@ -2,12 +2,8 @@ package zcnsc
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math"
 	"net/url"
-
-	"github.com/0chain/common/core/util"
 
 	"github.com/rcrowley/go-metrics"
 
@@ -23,6 +19,7 @@ const (
 	NAME                          = "zcnsc"
 	AddAuthorizerFunc             = "add-authorizer"
 	DeleteAuthorizerFunc          = "delete-authorizer"
+	AuthorizerHealthCheckFunc     = "authorizer-health-check"
 	UpdateGlobalConfigFunc        = "update-global-config"
 	UpdateAuthorizerConfigFunc    = "update-authorizer-config"
 	MintFunc                      = "mint"
@@ -51,7 +48,6 @@ func NewZCNSmartContract() smartcontractinterface.SmartContractInterface {
 }
 
 // InitSC ...
-//
 func (zcn *ZCNSmartContract) InitSC() {
 	// Config
 	zcn.smartContractFunctions[UpdateGlobalConfigFunc] = zcn.UpdateGlobalConfig
@@ -62,6 +58,8 @@ func (zcn *ZCNSmartContract) InitSC() {
 	// Authorizer
 	zcn.smartContractFunctions[AddAuthorizerFunc] = zcn.AddAuthorizer
 	zcn.smartContractFunctions[DeleteAuthorizerFunc] = zcn.DeleteAuthorizer
+	zcn.smartContractFunctions[AuthorizerHealthCheckFunc] = zcn.AuthorizerHealthCheck
+
 	// Provider
 	zcn.smartContractFunctions[UpdateAuthorizerStakePoolFunc] = zcn.UpdateAuthorizerStakePool
 	// Rewards
@@ -111,22 +109,15 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 	return zcn.SmartContract.HandlerStats(ctx, params)
 }
 
-func (zcn *ZCNSmartContract) GetCost(_ *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
+func (zcn *ZCNSmartContract) GetCostTable(balances cstate.StateContextI) (map[string]int, error) {
 	node, err := GetGlobalNode(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return math.MaxInt32, err
+	if err != nil {
+		return map[string]int{}, err
 	}
-
 	if node.Cost == nil {
-		return math.MaxInt32, errors.New("can't get cost")
+		return map[string]int{}, err
 	}
-
-	cost, ok := node.Cost[funcName]
-	if !ok {
-		return math.MaxInt32, errors.New("no cost given for " + funcName)
-	}
-
-	return cost, nil
+	return node.Cost, nil
 }
 
 // Execute ...

@@ -4,11 +4,8 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
-	"gorm.io/gorm/clause"
 
 	"go.uber.org/zap"
-
-	"github.com/0chain/common/core/currency"
 )
 
 //max_capacity - maybe change it max capacity in blobber config and everywhere else to be less confusing.
@@ -27,12 +24,11 @@ type Snapshot struct {
 	TotalChallengePools  int64 `json:"total_challenge_pools"`  //486 AVG show how much we moved to the challenge pool maybe we should subtract the returned to r/w pools
 	ActiveAllocatedDelta int64 `json:"active_allocated_delta"` //496 SUM total amount of new allocation storage in a period (number of allocations active)
 	ZCNSupply            int64 `json:"zcn_supply"`             //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
-	TotalValueLocked     int64 `json:"total_value_locked"`     //487 SUM Total value locked = Total staked ZCN * Price per ZCN (across all pools)
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
 	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
-	AverageWritePrice    int64 `json:"average_write_price"`              //*494 AVG it's the price from the terms and triggered with their updates //???
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
+	StorageTokenStake	 int64 `json:"storage_token_stake"`              //*485 SUM of all stake amount for storage blobbers
 	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
 	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
 	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
@@ -43,8 +39,51 @@ type Snapshot struct {
 	TransactionsCount    int64 `json:"transactions_count"`               // Total number of transactions in a block
 	UniqueAddresses      int64 `json:"unique_addresses"`                 // Total unique address
 	BlockCount           int64 `json:"block_count"`                      // Total number of blocks currently
-	AverageTxnFee        int64 `json:"avg_txn_fee"`                      // Average transaction fee per block
+	TotalTxnFee        int64 `json:"avg_txn_fee"`                        // Total fees of all transactions
 	CreatedAt            int64 `gorm:"autoCreateTime" json:"created_at"` // Snapshot creation date
+	BlobberCount		 int64 `json:"blobber_count"`                    // Total number of blobbers
+	MinerCount			 int64 `json:"miner_count"`                      // Total number of miners
+	SharderCount		 int64 `json:"sharder_count"`                    // Total number of sharders
+	ValidatorCount		 int64 `json:"validator_count"`                  // Total number of validators
+	AuthorizerCount		 int64 `json:"authorizer_count"`                  // Total number of authorizers
+	MinerTotalRewards	 int64 `json:"miner_total_rewards"`              // Total rewards of miners
+	SharderTotalRewards	 int64 `json:"sharder_total_rewards"`            // Total rewards of sharders
+	BlobberTotalRewards  int64 `json:"blobber_total_rewards"`            // Total rewards of blobbers
+}
+
+// ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
+func (s *Snapshot) ApplyDiff(diff *Snapshot) {
+	s.TotalMint += diff.TotalMint
+	s.TotalChallengePools += diff.TotalChallengePools
+	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
+	s.ZCNSupply += diff.ZCNSupply
+	s.ClientLocks += diff.ClientLocks
+	s.MinedTotal += diff.MinedTotal
+	s.TotalStaked += diff.TotalStaked
+	s.TotalRewards += diff.TotalRewards
+	s.MinerTotalRewards += diff.MinerTotalRewards
+	s.SharderTotalRewards += diff.SharderTotalRewards
+	s.BlobberTotalRewards += diff.BlobberTotalRewards
+	s.StorageTokenStake += diff.StorageTokenStake
+	s.SuccessfulChallenges += diff.SuccessfulChallenges
+	s.TotalChallenges += diff.TotalChallenges
+	s.AllocatedStorage += diff.AllocatedStorage
+	s.MaxCapacityStorage += diff.MaxCapacityStorage
+	s.StakedStorage +=  diff.StakedStorage
+	s.UsedStorage += diff.UsedStorage
+	s.TransactionsCount += diff.TransactionsCount
+	s.UniqueAddresses += diff.UniqueAddresses
+	s.BlockCount += diff.BlockCount
+	s.TotalTxnFee += diff.TotalTxnFee
+	s.BlobberCount += diff.BlobberCount
+	s.MinerCount += diff.MinerCount
+	s.SharderCount += diff.SharderCount
+	s.ValidatorCount += diff.ValidatorCount
+	s.AuthorizerCount += diff.AuthorizerCount
+
+	if s.StakedStorage > s.MaxCapacityStorage {
+		s.StakedStorage = s.MaxCapacityStorage
+	}
 }
 
 type FieldType int
@@ -68,35 +107,17 @@ type AllocationBlobberValueChanged struct {
 	Delta        int64
 }
 
-func (edb *EventDb) ReplicateSnapshots(offset int, limit int) ([]Snapshot, error) {
+func (edb *EventDb) ReplicateSnapshots(round int64, limit int) ([]Snapshot, error) {
 	var snapshots []Snapshot
-
-	queryBuilder := edb.Store.Get().
-		Model(&Snapshot{}).Offset(offset).Limit(limit)
-
-	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "round"},
-		Desc:   false,
-	})
-
-	result := queryBuilder.Scan(&snapshots)
+	result := edb.Store.Get().
+		Raw("SELECT * FROM snapshots WHERE round > ? ORDER BY round LIMIT ?", round, limit).Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-
 	return snapshots, nil
 }
 
-type globalSnapshot struct {
-	Snapshot
-	totalWritePricePeriod currency.Coin
-	blobberCount          int
-
-	totalTxnFees currency.Coin
-}
-
 func (edb *EventDb) addSnapshot(s Snapshot) error {
-	logging.Logger.Info("add_snapshot", zap.Any("snapshot", s))
 	return edb.Store.Get().Create(&s).Error
 }
 
@@ -106,7 +127,7 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 	return s, res.Error
 }
 
-func (gs *globalSnapshot) update(e []Event) {
+func (gs *Snapshot) update(e []Event) {
 	for _, event := range e {
 		logging.Logger.Debug("update snapshot",
 			zap.String("tag", event.Tag.String()),
@@ -138,7 +159,7 @@ func (gs *globalSnapshot) update(e []Event) {
 			gs.TotalMint += int64(m.Amount)
 			gs.ZCNSupply += int64(m.Amount)
 			logging.Logger.Info("snapshot update TagAddMint",
-				zap.Any("total mint and zcn mint", gs))
+				zap.Int64("total_mint", gs.TotalMint), zap.Int64("zcn_supply", gs.ZCNSupply))
 		case TagBurn:
 			m, ok := fromEvent[state.Burn](event.Data)
 			if !ok {
@@ -148,63 +169,47 @@ func (gs *globalSnapshot) update(e []Event) {
 			}
 			gs.ZCNSupply -= int64(m.Amount)
 			logging.Logger.Info("snapshot update TagBurn",
-				zap.Any("zcn burn", gs))
-		case TagLockStakePool:
-			d, ok := fromEvent[DelegatePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			gs.TotalValueLocked += d.Amount
-			gs.TotalStaked += d.Amount
-			logging.Logger.Debug("update lock stake pool", zap.Int64("round", event.BlockNumber), zap.Int64("amount", d.Amount),
-				zap.Int64("total_amount", gs.TotalValueLocked))
-		case TagUnlockStakePool:
-			d, ok := fromEvent[DelegatePoolLock](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			gs.TotalValueLocked -= d.Amount
-			gs.TotalStaked -= d.Amount
+				zap.Int64("zcn_supply", gs.ZCNSupply))
 		case TagLockWritePool:
-			d, ok := fromEvent[WritePoolLock](event.Data)
+			ds, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks += d.Amount
-			gs.TotalValueLocked += d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks += d.Amount
+			}
 		case TagUnlockWritePool:
-			d, ok := fromEvent[WritePoolLock](event.Data)
+			ds, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks -= d.Amount
-			gs.TotalValueLocked -= d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks -= d.Amount
+			}
 		case TagLockReadPool:
-			d, ok := fromEvent[ReadPoolLock](event.Data)
+			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks += d.Amount
-			gs.TotalValueLocked += d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks += d.Amount
+			}
 		case TagUnlockReadPool:
-			d, ok := fromEvent[ReadPoolLock](event.Data)
+			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			gs.ClientLocks -= d.Amount
-			gs.TotalValueLocked -= d.Amount
+			for _, d := range *ds {
+				gs.ClientLocks -= d.Amount
+			}
 		case TagStakePoolReward:
 			spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 			if !ok {
@@ -224,13 +229,6 @@ func (gs *globalSnapshot) update(e []Event) {
 				}
 			}
 		case TagFinalizeBlock:
-			block, ok := fromEvent[Block](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
-			}
-			gs.TransactionsCount += int64(block.NumTxns)
 			gs.BlockCount += 1
 		case TagUniqueAddress:
 			gs.UniqueAddresses += 1
@@ -241,13 +239,28 @@ func (gs *globalSnapshot) update(e []Event) {
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				continue
 			}
-			averageFee := 0
+			gs.TransactionsCount += int64(len(*txns))
+			totalFee := 0
 			for _, txn := range *txns {
-				averageFee += int(txn.Fee)
+				totalFee += int(txn.Fee)
 			}
-			averageFee = averageFee / len(*txns)
-			gs.AverageTxnFee = int64(averageFee)
+			gs.TotalTxnFee += int64(totalFee)
 		}
 
 	}
+}
+
+
+type ProcessingEntity struct {
+	Entity interface{}
+	Processed bool
+}
+
+// MakeProcessingMap wraps map entries into a struct with "Processed" boolean flag
+func MakeProcessingMap[T any](mapIn map[string]T) (map[string]ProcessingEntity) {
+	mpOut := make(map[string]ProcessingEntity)
+	for k, v := range mapIn {
+		mpOut[k] = ProcessingEntity{Entity: v, Processed: false}
+	}
+	return mpOut
 }

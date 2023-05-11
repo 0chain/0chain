@@ -3,7 +3,10 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
@@ -93,7 +96,26 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Validator{}).
-		Offset(pg.Offset).Limit(pg.Limit).
+		Where("is_killed = ? AND is_shutdown = ?", false, false).
+		Offset(pg.Offset).
+		Limit(pg.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pg.IsDescending,
+		}).Find(&validators)
+
+	return validators, result.Error
+}
+
+func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, error) {
+	now := common.Now()
+	var validators []Validator
+	result := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Validator{}).
+		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
+			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
+		Limit(pg.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},
 			Desc:   pg.IsDescending,
@@ -105,14 +127,39 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 func (edb *EventDb) updateValidators(validators []Validator) error {
 	updateFields := []string{
 		"base_url", "public_key", "total_stake",
-		"unstake_total", "min_stake", "max_stake",
+		"unstake_total",
 		"delegate_wallet", "num_delegates",
 		"service_charge",
 	}
-	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		DoUpdates: clause.AssignmentColumns(updateFields),
-	}).Create(&validators).Error
+
+	// Create column-based listing of the given data
+	columns, err := Columnize(validators)
+	if err != nil {
+		return err
+	}
+
+	// Create the updater
+	ids, ok := columns["id"]
+	if !ok {
+		return common.NewError("update_validators", "no id field provided in event Data")
+	}
+	updater := CreateBuilder("validators", "id", ids)
+
+	// Bind the required fields for update to the updater
+	for _, fieldKey := range updateFields {
+		if fieldKey == "id" {
+			continue
+		}
+
+		fieldList, ok := columns[fieldKey]
+		if !ok {
+			logging.Logger.Warn("update_validator: required update field not found in event data", zap.String("field", fieldKey))
+		} else {
+			updater = updater.AddUpdate(fieldKey, fieldList)
+		}
+	}
+
+	return updater.Exec(edb).Debug().Error
 }
 
 func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
@@ -125,8 +172,8 @@ func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag
 func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateValidatorUnStakeTotal, Validator{
 		Provider: Provider{
-			ID:         ID,
-			TotalStake: totalUntake},
+			ID:           ID,
+			UnstakeTotal: totalUntake},
 	}
 }
 

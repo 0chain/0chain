@@ -49,7 +49,7 @@ func AddMockNodes(
 	var (
 		err                error
 		nodes, publickKeys []string
-		allNodes           MinerNodes
+		allNodes           NodeIDs
 		nodeMap            = make(map[string]*SimpleNode)
 		numNodes           int
 		numActive          int
@@ -57,6 +57,7 @@ func AddMockNodes(
 		key                string
 		dRewards           []event.RewardDelegate
 		dps                []event.DelegatePool
+		providerType       spenum.Provider
 	)
 
 	if nodeType == spenum.Miner {
@@ -64,11 +65,13 @@ func AddMockNodes(
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
 		key = AllMinersKey
+		providerType = spenum.Miner
 	} else {
 		numActive = viper.GetInt(benchmark.NumActiveSharders)
 		numNodes = viper.GetInt(benchmark.NumSharders)
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
+		providerType = spenum.Sharder
 	}
 
 	for i := 0; i < numNodes; i++ {
@@ -77,11 +80,10 @@ func AddMockNodes(
 		if err != nil {
 			log.Fatal(err)
 		}
+		newNode.ProviderType = providerType
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
 		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
-		newNode.Settings.MinStake = currency.Coin(viper.GetInt64(benchmark.MinerMinStake))
-		newNode.Settings.MaxStake = currency.Coin(viper.GetFloat64(benchmark.MinerMaxStake) * 1e10)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
 		newNode.Reward = providerReward
@@ -119,7 +121,7 @@ func AddMockNodes(
 		}
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
-		allNodes.Nodes = append(allNodes.Nodes, newNode)
+		allNodes = append(allNodes, newNode.ID)
 
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			if nodeType == spenum.Miner {
@@ -130,8 +132,6 @@ func AddMockNodes(
 						ID:            newNode.ID,
 						ServiceCharge: newNode.Settings.ServiceChargeRatio,
 						NumDelegates:  newNode.Settings.MaxNumDelegates,
-						MinStake:      newNode.Settings.MinStake,
-						MaxStake:      newNode.Settings.MaxStake,
 						Rewards: event.ProviderRewards{
 							ProviderID:                    newNode.ID,
 							RoundServiceChargeLastUpdated: 7,
@@ -150,8 +150,6 @@ func AddMockNodes(
 						ID:              newNode.ID,
 						ServiceCharge:   newNode.Settings.ServiceChargeRatio,
 						NumDelegates:    newNode.Settings.MaxNumDelegates,
-						MinStake:        newNode.Settings.MinStake,
-						MaxStake:        newNode.Settings.MaxStake,
 						Rewards: event.ProviderRewards{
 							ProviderID:                    newNode.ID,
 							RoundServiceChargeLastUpdated: 11,
@@ -162,7 +160,9 @@ func AddMockNodes(
 					log.Fatal(err)
 				}
 			}
-			for id, pool := range newNode.Pools {
+			orderedPoolIds := newNode.OrderedPoolIds()
+			for _, id := range orderedPoolIds {
+				pool := newNode.Pools[id]
 				dps = append(dps, event.DelegatePool{
 					PoolID:               id,
 					ProviderType:         nodeType,
@@ -174,6 +174,7 @@ func AddMockNodes(
 					Status:               pool.Status,
 					RoundCreated:         pool.RoundCreated,
 					RoundPoolLastUpdated: viper.GetInt64(benchmark.NumBlocks),
+					StakedAt:             pool.StakedAt,
 				})
 			}
 		}
@@ -205,9 +206,8 @@ func AddMockNodes(
 			panic(err)
 		}
 	} else {
-		_, err = balances.InsertTrieNode(ShardersKeepKey, &MinerNodes{
-			Nodes: allNodes.Nodes[1:],
-		})
+		allIDs := allNodes[1:]
+		_, err = balances.InsertTrieNode(ShardersKeepKey, &allIDs)
 		if err != nil {
 			panic(err)
 		}

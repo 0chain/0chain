@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
@@ -89,11 +91,9 @@ type AllocOpenChallenge struct {
 }
 
 type AllocationChallenges struct {
-	AllocationID   string                `json:"allocation_id"`
-	OpenChallenges []*AllocOpenChallenge `json:"open_challenges"`
-	//OpenChallenges               []*StorageChallenge          `json:"challenges"`
-	ChallengeMap             map[string]*AllocOpenChallenge `json:"-" msg:"-"`
-	LatestCompletedChallenge *StorageChallenge              `json:"latest_completed_challenge"`
+	AllocationID   string                         `json:"allocation_id"`
+	OpenChallenges []*AllocOpenChallenge          `json:"open_challenges"`
+	ChallengeMap   map[string]*AllocOpenChallenge `json:"-" msg:"-"`
 }
 
 func (acs *AllocationChallenges) GetKey(globalKey string) datastore.Key {
@@ -156,8 +156,6 @@ func (acs *AllocationChallenges) removeChallenge(challenge *StorageChallenge) bo
 		if acs.OpenChallenges[i].ID == challenge.ID {
 			acs.OpenChallenges = append(
 				acs.OpenChallenges[:i], acs.OpenChallenges[i+1:]...)
-
-			acs.LatestCompletedChallenge = challenge
 			return true
 		}
 	}
@@ -194,14 +192,15 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 }
 
 type ValidationNode struct {
-	ID                string             `json:"id"`
+	provider.Provider
 	BaseURL           string             `json:"url"`
 	PublicKey         string             `json:"-" msg:"-"`
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	LastHealthCheck   common.Timestamp   `json:"last_health_check"`
 }
 
 // validate the validator configurations
-func (sn *ValidationNode) validate(conf *Config) (err error) {
+func (sn *ValidationNode) validate(_ *Config) (err error) {
 	if strings.Contains(sn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
 		return errors.New("invalid validator base url")
@@ -210,8 +209,8 @@ func (sn *ValidationNode) validate(conf *Config) (err error) {
 	return
 }
 
-func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.ID)
+func (sn *ValidationNode) GetKey(_ string) datastore.Key {
+	return provider.GetKey(sn.ID)
 }
 
 func (sn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
@@ -255,8 +254,6 @@ type Terms struct {
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
 	MinLockDemand float64 `json:"min_lock_demand"`
-	// MaxOfferDuration with this prices and the demand.
-	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
@@ -273,10 +270,6 @@ func (t *Terms) validate(conf *Config) (err error) {
 	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
 		return errors.New("invalid min_lock_demand")
 	}
-	if t.MaxOfferDuration < conf.MinOfferDuration {
-		return errors.New("insufficient max_offer_duration")
-	}
-
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
@@ -331,13 +324,12 @@ type Info struct {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID                      string                 `json:"id"`
+	provider.Provider
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
 	Allocated               int64                  `json:"allocated"` // allocated capacity
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
@@ -345,6 +337,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
+	IsAvailable       bool               `json:"is_available"`
 }
 
 // validate the blobber configurations
@@ -368,8 +361,8 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 	return
 }
 
-func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ID)
+func (sn *StorageNode) GetKey() datastore.Key {
+	return provider.GetKey(sn.ID)
 }
 
 func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
@@ -523,7 +516,8 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin `json:"challenge_pool_integral_value"`
+	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
+	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
 }
 
 func newBlobberAllocation(
@@ -533,16 +527,19 @@ func newBlobberAllocation(
 	date common.Timestamp,
 	timeUnit time.Duration,
 ) (*BlobberAllocation, error) {
-	var err error
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
 	ba.Terms = blobber.Terms
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
-	ba.MinLockDemand, err = blobber.Terms.minLockDemand(
-		sizeInGB(size), allocation.restDurationInTimeUnits(date, timeUnit),
-	)
+
+	rdtu, err := allocation.restDurationInTimeUnits(date, timeUnit)
+	if err != nil {
+		return nil, fmt.Errorf("new blobber allocation failed: %v", err)
+	}
+
+	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu)
 	return ba, err
 }
 
@@ -581,9 +578,20 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // challenge (doesn't matter rewards or penalty). The RDTU should be based on
 // previous challenge time. And the DTU should be based on previous - current
 // challenge time.
-func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin) {
+func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin, err error) {
 	move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
-	d.ChallengePoolIntegralValue -= move
+	cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
+	if err != nil {
+		logging.Logger.Warn("challenge minus failed",
+			zap.Error(err),
+			zap.Any("dtu", dtu),
+			zap.Any("rdtu", rdtu),
+			zap.Any("challenge value", d.ChallengePoolIntegralValue),
+			zap.Any("move", move))
+		err = fmt.Errorf("minus challenge pool value failed: %v", err)
+		return
+	}
+	d.ChallengePoolIntegralValue = cv
 	return
 }
 
@@ -626,9 +634,6 @@ type StorageAllocation struct {
 	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
 
-	// Defines mutability of the files in the allocation, used by blobber on CommitWrite
-	IsImmutable bool `json:"is_immutable"`
-
 	// Flag to determine if anyone can extend this allocation
 	ThirdPartyExtendable bool `json:"third_party_extendable"`
 
@@ -641,7 +646,7 @@ type StorageAllocation struct {
 	// 00001000 - 8  - move
 	// 00010000 - 16 - copy
 	// 00100000 - 32 - rename
-	FileOptions uint8 `json:"file_options"`
+	FileOptions uint16 `json:"file_options"`
 
 	WritePool currency.Coin `json:"write_pool"`
 
@@ -672,10 +677,6 @@ type StorageAllocation struct {
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
 	TimeUnit time.Duration `json:"time_unit"`
-
-	Curators []string `json:"curators"`
-	// Name is the name of an allocation
-	Name string `json:"name"`
 }
 
 type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
@@ -723,20 +724,30 @@ func (sa *StorageAllocation) addToWritePool(
 		} else {
 			sa.WritePool = writePool
 		}
-		return nil
+	} else {
+		for _, opt := range opts {
+			value, err := opt(balances)
+			if err != nil {
+				return err
+			}
+			if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+				return err
+			} else {
+				sa.WritePool = writePool
+			}
+		}
+
 	}
 
-	for _, opt := range opts {
-		value, err := opt(balances)
-		if err != nil {
-			return err
-		}
-		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
-			return err
-		} else {
-			sa.WritePool = writePool
-		}
+	i, err := txn.Value.Int64()
+	if err != nil {
+		return err
 	}
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
+		Client:       txn.ClientID,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
 	return nil
 }
 
@@ -791,19 +802,21 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	return nil
 }
 
-func (sa *StorageAllocation) validateAllocationBlobber(
+func (sa *StorageAllocation) isActive(
 	blobber *StorageNode,
 	total, offers currency.Coin,
+	conf *Config,
 	now common.Timestamp,
 ) error {
-	bSize := sa.bSize()
-	duration := common.ToTime(sa.Expiration).Sub(common.ToTime(now))
-
-	// filter by max offer duration
-	if blobber.Terms.MaxOfferDuration < duration {
-		return fmt.Errorf("duration %v exceeds blobber %s maximum %v",
-			duration, blobber.ID, blobber.Terms.MaxOfferDuration)
+	active, reason := blobber.Provider.IsActive(now, common.ToSeconds(conf.HealthCheckPeriod))
+	if !active {
+		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
 	}
+
+	if !blobber.IsAvailable {
+		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
+	}
+
 	// filter by read price
 	if !sa.ReadPriceRange.isMatch(blobber.Terms.ReadPrice) {
 		return fmt.Errorf("read price range %v does not match blobber %s read price %v",
@@ -814,14 +827,12 @@ func (sa *StorageAllocation) validateAllocationBlobber(
 		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
 			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
 	}
+
+	bSize := sa.bSize()
 	// filter by blobber's capacity left
 	if blobber.Capacity-blobber.Allocated < bSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
-	}
-
-	if blobber.LastHealthCheck <= (now - blobberHealthTime) {
-		return fmt.Errorf("blobber %s failed health check", blobber.ID)
 	}
 
 	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
@@ -844,7 +855,10 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 		if err != nil {
 			return 0, err
 		}
-		cost += c
+		cost, err = currency.AddCoin(cost, c)
+		if err != nil {
+			return 0, err
+		}
 	}
 	return cost, nil
 }
@@ -927,7 +941,7 @@ func (sa *StorageAllocation) removeBlobber(
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
 	}
 
-	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(ADDRESS), removedBlobber); err != nil {
+	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
 		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
 
@@ -961,7 +975,27 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, err
 	}
-	addedBlobber.Allocated += sa.bSize()
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
+		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+	staked, err := sp.stake()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
+		return nil, err
+	}
+
+	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
+	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
+		FieldType:    event.Allocated,
+		AllocationId: sa.ID,
+		BlobberId:    addedBlobber.ID,
+		Delta:        sa.bSize(),
+	})
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
@@ -977,24 +1011,11 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
 	}
 
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
-		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
-	}
-	staked, err := sp.stake()
-	if err != nil {
-		return nil, err
-	}
-
 	if err := sp.addOffer(ba.Offer()); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)
 	}
 
 	if err := sp.Save(spenum.Blobber, addId, balances); err != nil {
-		return nil, err
-	}
-
-	if err := sa.validateAllocationBlobber(addedBlobber, staked, sp.TotalOffers, now); err != nil {
 		return nil, err
 	}
 
@@ -1072,21 +1093,18 @@ func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error)
 
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
+type filterValidatorFunc func(validator *ValidationNode) (kick bool, err error)
+
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
 	filtered []*StorageNode, err error) {
 
 	var (
-		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
-		i   int
+		i int
 	)
 
 List:
 	for _, b := range list {
-		// filter by max offer duration
-		if b.Terms.MaxOfferDuration < dur {
-			continue
-		}
 		// filter by read price
 		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
 			continue
@@ -1121,19 +1139,21 @@ List:
 func (sa *StorageAllocation) validateEachBlobber(
 	blobbers []*storageNodeResponse,
 	creationDate common.Timestamp,
+	conf *Config,
 ) ([]*StorageNode, []string) {
 	var (
 		errs     = make([]string, 0, len(blobbers))
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
 	for _, b := range blobbers {
-		err := sa.validateAllocationBlobber(b.StorageNode, b.TotalStake, b.TotalOffers, creationDate)
+		sn := StoragNodeResponseToStorageNode(*b)
+		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, conf, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errs = append(errs, err.Error())
 			continue
 		}
-		filtered = append(filtered, b.StorageNode)
+		filtered = append(filtered, &sn)
 	}
 	return filtered, errs
 }
@@ -1146,13 +1166,23 @@ func (sa *StorageAllocation) Until(maxChallengeCompletionTime time.Duration) com
 // The durationInTimeUnits returns given duration (represented as
 // common.Timestamp) as duration in time units (float point value) for
 // this allocation (time units for the moment of the allocation creation).
-func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) float64 {
-	return float64(dur.Duration()) / float64(timeUnit)
+func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) (float64, error) {
+	if dur < 0 {
+		return 0, errors.New("negative duration")
+	}
+	return float64(dur.Duration()) / float64(timeUnit), nil
 }
 
 // The restDurationInTimeUnits return rest duration of the allocation in time
 // units as a float64 value.
-func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) float64 {
+func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) (float64, error) {
+	if sa.Expiration < now {
+		logging.Logger.Error("rest duration time overflow, timestamp is beyond alloc expiration",
+			zap.Int64("now", int64(now)),
+			zap.Int64("alloc expiration", int64(sa.Expiration)))
+		return 0, errors.New("rest duration time overflow, timestamp is beyond alloc expiration")
+	}
+	logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sa.Expiration)), zap.Int64("now", int64(now)), zap.Float64("timeUnit", float64(timeUnit)), zap.Int64("rest", int64(sa.Expiration-now)))
 	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
 }
 
@@ -1196,16 +1226,21 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // we are using the same terms. And for this method, the oterms argument is
 // nil for this case (meaning, terms hasn't changed).
 func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, timeUnit time.Duration,
-	oterms []Terms) (values []currency.Coin) {
+	oterms []Terms) (values []currency.Coin, err error) {
 
 	// odr -- old duration remaining
 	// ndr -- new duration remaining
 
 	// in time units, instead of common.Timestamp
-	var (
-		odrtu = sa.durationInTimeUnits(odr, timeUnit)
-		ndrtu = sa.durationInTimeUnits(ndr, timeUnit)
-	)
+	odrtu, err := sa.durationInTimeUnits(odr, timeUnit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get old challenge pool duration: %v", err)
+	}
+
+	ndrtu, err := sa.durationInTimeUnits(ndr, timeUnit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get new challenge pool duration: %v", err)
+	}
 
 	values = make([]currency.Coin, 0, len(sa.BlobberAllocs))
 
@@ -1312,6 +1347,8 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 
 	cct := getMaxChallengeCompletionTime()
 
+	var nonExpiredChallenges []*AllocOpenChallenge
+
 	for _, oc := range allocChallenges.OpenChallenges {
 		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
 		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
@@ -1322,8 +1359,8 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		}
 
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
-			// not expired, following open challenges would not expire too, so break here
-			break
+			nonExpiredChallenges = append(nonExpiredChallenges, oc)
+			continue
 		}
 
 		// expired
@@ -1338,7 +1375,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		}
 	}
 
-	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallengeBlobberMap):]
+	allocChallenges.OpenChallenges = nonExpiredChallenges
 
 	return expiredChallengeBlobberMap, nil
 }
@@ -1385,18 +1422,13 @@ func (bc *BlobberCloseConnection) Verify() bool {
 type WriteMarker struct {
 	AllocationRoot         string           `json:"allocation_root"`
 	PreviousAllocationRoot string           `json:"prev_allocation_root"`
+	FileMetaRoot           string           `json:"file_meta_root"`
 	AllocationID           string           `json:"allocation_id"`
 	Size                   int64            `json:"size"`
 	BlobberID              string           `json:"blobber_id"`
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
 	Signature              string           `json:"signature"`
-	Operation              string           `json:"operation"`
-
-	// file info
-	LookupHash  string `json:"lookup_hash"`
-	Name        string `json:"name"`
-	ContentHash string `json:"content_hash"`
 }
 
 func (wm *WriteMarker) VerifySignature(
@@ -1420,9 +1452,11 @@ func (wm *WriteMarker) VerifySignature(
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot,
-		wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID,
-		wm.Size, wm.Timestamp)
+	hashData := fmt.Sprintf(
+		"%s:%s:%s:%s:%s:%s:%d:%d",
+		wm.AllocationRoot, wm.PreviousAllocationRoot,
+		wm.FileMetaRoot, wm.AllocationID,
+		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
 	return hashData
 }
 
@@ -1440,7 +1474,7 @@ type ReadConnection struct {
 
 func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey +
-		encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+		encryption.Hash(rc.ReadMarker.BlobberID+rc.ReadMarker.ClientID+rc.ReadMarker.AllocationID))
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {

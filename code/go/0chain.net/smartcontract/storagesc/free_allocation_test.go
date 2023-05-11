@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -216,23 +220,22 @@ func TestFreeAllocationRequest(t *testing.T) {
 	)
 	var (
 		mockMaxAnnualFreeAllocation = zcnToBalance(100354)
+		timeUnit                    = 24 * 365 * time.Hour
 		mockFreeAllocationSettings  = freeAllocationSettings{
 			DataShards:       5,
 			ParityShards:     5,
 			Size:             123456,
 			ReadPriceRange:   PriceRange{0, 5000},
 			WritePriceRange:  PriceRange{0, 5000},
-			Duration:         24 * 365 * time.Hour,
 			ReadPoolFraction: mockReadPoolFraction,
 		}
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
 			MinAllocSize:               1027,
-			MinAllocDuration:           5 * time.Minute,
 			MaxChallengeCompletionTime: 1 * time.Hour,
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
-			TimeUnit:                   time.Hour,
+			TimeUnit:                   timeUnit,
 			ReadPool: &readPoolConfig{
 				MinLock: mockMinLock,
 			},
@@ -245,15 +248,17 @@ func TestFreeAllocationRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{
-			ID:        blob[i],
+			Provider: provider.Provider{
+				ID:              blob[i],
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
-				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
-				MinLockDemand:    mockMinLock,
+				ReadPrice:     mockFreeAllocationSettings.ReadPriceRange.Max,
+				MinLockDemand: mockMinLock,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}
@@ -426,7 +431,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 			_, err := args.ssc.freeAllocationRequest(args.txn, args.input, args.balances)
 
-			require.EqualValues(t, test.want.err, err != nil, err)
+			if (test.want.err) != (err != nil) {
+				require.EqualValues(t, test.want.err, err != nil, err)
+			}
+
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
 				return
@@ -451,36 +459,37 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	)
 	var mockTimeUnit = 1 * time.Hour
 	var mockMaxAnnualFreeAllocation = zcnToBalance(100354)
+	timeUnit := 24 * 365 * time.Hour
 	var mockFreeAllocationSettings = freeAllocationSettings{
 		DataShards:      5,
 		ParityShards:    5,
 		Size:            123456,
 		ReadPriceRange:  PriceRange{0, 5000},
 		WritePriceRange: PriceRange{0, 5000},
-		Duration:        24 * 365 * time.Hour,
 	}
 	var mockAllBlobbers = &StorageNodes{}
 	var conf = &Config{
 		MinAllocSize:               1027,
-		MinAllocDuration:           5 * time.Minute,
 		MaxChallengeCompletionTime: 1 * time.Hour,
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
 		MaxBlobbersPerAllocation:   40,
-		TimeUnit:                   mockTimeUnit,
+		TimeUnit:                   timeUnit,
 	}
 	var now = common.Timestamp(29000000)
 
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
-			ID:        strconv.Itoa(i),
+			Provider: provider.Provider{
+				ID:              strconv.Itoa(i),
+				ProviderType:    spenum.Blobber,
+				LastHealthCheck: now - blobberHealthTime + 1,
+			},
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				MaxOfferDuration: mockFreeAllocationSettings.Duration * 2,
-				ReadPrice:        mockFreeAllocationSettings.ReadPriceRange.Max,
+				ReadPrice: mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
-			LastHealthCheck: now - blobberHealthTime + 1,
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}
@@ -559,10 +568,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
-				"GetTrieNode", blobber.GetKey(ssc.ID),
+				"GetTrieNode", blobber.GetKey(),
 				mockSetValue(blobber)).Return(nil).Once()
 			balances.On(
-				"InsertTrieNode", blobber.GetKey(ssc.ID), mock.Anything,
+				"InsertTrieNode", blobber.GetKey(), mock.Anything,
 			).Return("", nil).Once()
 			sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 				BlobberID:    blobber.ID,
@@ -613,11 +622,14 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On(
 			"EmitEvent",
-			event.TypeStats, event.TagUpdateAllocationBlobberTerm, mock.Anything, mock.Anything,
+			event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, mock.Anything, mock.Anything,
 		).Return().Maybe()
 
 		balances.On(
-			"EmitEvent", event.TypeStats, event.TagUpdateBlobberAllocatedHealth,
+			"EmitEvent", event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth,
+			mock.Anything, mock.Anything).Return().Maybe()
+		balances.On(
+			"EmitEvent", event.TypeStats, event.TagLockWritePool,
 			mock.Anything, mock.Anything).Return().Maybe()
 
 		return args{ssc, txn, input, balances}

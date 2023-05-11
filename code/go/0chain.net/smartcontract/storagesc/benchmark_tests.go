@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/provider"
+
 	"github.com/0chain/common/core/currency"
 
 	sc "0chain.net/smartcontract"
@@ -61,7 +63,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, b *testing.B) error {
+func (bt BenchTest) Run(balances cstate.TimedQueryStateContext, _ *testing.B) error {
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	return err
 }
@@ -201,7 +203,7 @@ func BenchmarkTests(
 					DataShards:      len(blobbers) / 2,
 					ParityShards:    len(blobbers) / 2,
 					Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:      common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + creationTime,
+					Expiration:      common.Timestamp(viper.GetDuration(bk.TimeUnit).Seconds()) + creationTime,
 					Owner:           data.Clients[0],
 					OwnerPublicKey:  data.PublicKeys[0],
 					Blobbers:        blobbers,
@@ -229,9 +231,9 @@ func BenchmarkTests(
 					OwnerID:         data.Clients[0],
 					Size:            10000000,
 					Expiration:      common.Timestamp(50 * 60 * 60),
-					SetImmutable:    true,
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
+					FileOptions:     63,
 				}
 				bytes, _ := json.Marshal(&uar)
 				return bytes
@@ -244,9 +246,8 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				//CreationDate: common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
 				CreationDate: creationTime + benchAllocationExpire(creationTime) + 1,
-				ClientID:     data.Clients[0],
+				ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
@@ -398,6 +399,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
+					Provider: provider.Provider{
+						ProviderType: spenum.Blobber,
+					},
 					BaseURL:           "my_new_blobber.com",
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
@@ -419,7 +423,10 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                encryption.Hash("my_new_validator"),
+					Provider: provider.Provider{
+						ID:           encryption.Hash("my_new_validator"),
+						ProviderType: spenum.Validator,
+					},
 					BaseURL:           "my_new_validator.com",
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator")),
 				})
@@ -440,6 +447,19 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
+			name:     "storage.validator_health_check",
+			endpoint: ssc.validatorHealthCheck,
+			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: creationTime + 1,
+				ClientID:     getMockValidatorId(0),
+				ToClientID:   ADDRESS,
+			},
+			input: []byte{},
+		},
+		{
 			name:     "storage.update_blobber_settings",
 			endpoint: ssc.updateBlobberSettings,
 			txn: &transaction.Transaction{
@@ -454,7 +474,10 @@ func BenchmarkTests(
 				stake := currency.Coin(viper.GetInt64(bk.StorageMaxStake) * 1e10)
 				totalStake := stake * currency.Coin(viper.GetInt(bk.NumBlobberDelegates))
 				bytes, _ := json.Marshal(&StorageNode{
-					ID:                getMockBlobberId(0),
+					Provider: provider.Provider{
+						ID:           getMockBlobberId(0),
+						ProviderType: spenum.Blobber,
+					},
 					Terms:             getMockBlobberTerms(),
 					Capacity:          int64(totalStake * GB),
 					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
@@ -475,59 +498,12 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
-					ID:                getMockValidatorId(0),
+					Provider: provider.Provider{
+						ID:           getMockValidatorId(0),
+						ProviderType: spenum.Validator,
+					},
 					BaseURL:           getMockValidatorUrl(0),
 					StakePoolSettings: getMockStakePoolSettings(getMockValidatorId(0)),
-				})
-				return bytes
-			}(),
-		},
-		// add_curator
-		{
-			name:     "storage.curator_transfer_allocation",
-			endpoint: ssc.curatorTransferAllocation,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[0],
-				CreationDate: creationTime,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&transferAllocationInput{
-					AllocationId:      getMockAllocationId(0),
-					NewOwnerId:        data.Clients[1],
-					NewOwnerPublicKey: data.PublicKeys[1],
-				})
-				return bytes
-			}(),
-		},
-		{
-			name:     "storage.add_curator",
-			endpoint: ssc.addCurator,
-			txn: &transaction.Transaction{
-				ClientID:     data.Clients[0],
-				CreationDate: creationTime,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&curatorInput{
-					CuratorId:    data.Clients[viper.GetInt(bk.NumCurators)],
-					AllocationId: getMockAllocationId(0),
-				})
-				return bytes
-			}(),
-		},
-		{
-			name:     "storage.remove_curator",
-			endpoint: ssc.removeCurator,
-			txn: &transaction.Transaction{
-				ClientID:     data.Clients[0],
-				CreationDate: creationTime,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&curatorInput{
-					CuratorId:    data.Clients[0],
-					AllocationId: getMockAllocationId(0),
 				})
 				return bytes
 			}(),
@@ -599,12 +575,12 @@ func BenchmarkTests(
 				},
 				Value: rpMinLock,
 				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
-					viper.GetInt(bk.NumAllocations)-1, viper.GetInt(bk.NumActiveClients))],
+					mockFinalizedAllocationIndex, viper.GetInt(bk.NumActiveClients))],
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&unlockRequest{
-					AllocationID: getMockAllocationId(viper.GetInt(bk.NumAllocations) - 1),
+					AllocationID: getMockAllocationId(mockFinalizedAllocationIndex),
 				})
 				return bytes
 			}(),
@@ -719,7 +695,42 @@ func BenchmarkTests(
 			endpoint: ssc.commitSettingChanges,
 			txn:      &transaction.Transaction{},
 		},
-
+		{
+			name: "storage.kill_blobber",
+			input: (&provider.ProviderRequest{
+				ID: getMockBlobberId(0),
+			}).Encode(),
+			endpoint: ssc.killBlobber,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.StorageOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name: "storage.kill_validator",
+			input: (&provider.ProviderRequest{
+				ID: getMockValidatorId(0),
+			}).Encode(),
+			endpoint: ssc.killValidator,
+			txn: &transaction.Transaction{
+				ClientID:     viper.GetString(bk.StorageOwner),
+				CreationDate: creationTime,
+			},
+		},
+		{
+			name:     "storage.shutdown_blobber",
+			endpoint: ssc.shutdownBlobber,
+			txn: &transaction.Transaction{
+				ClientID: getMockBlobberId(0),
+			},
+		},
+		{
+			name:     "storage.shutdown_validator",
+			endpoint: ssc.shutdownValidator,
+			txn: &transaction.Transaction{
+				ClientID: getMockValidatorId(0),
+			},
+		},
 		{
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,
@@ -732,9 +743,7 @@ func BenchmarkTests(
 					"max_mint":                      "1500000.02",
 					"time_unit":                     "720h",
 					"min_alloc_size":                "1024",
-					"min_alloc_duration":            "5m",
 					"max_challenge_completion_time": "3m",
-					"min_offer_duration":            "10h",
 					"min_blobber_capacity":          "1024",
 
 					"readpool.min_lock": "10",
@@ -757,17 +766,13 @@ func BenchmarkTests(
 					"free_allocation_settings.write_price_range.max": "0.1",
 					"free_allocation_settings.read_pool_fraction":    "0.2",
 
-					"validator_reward":                     "0.025",
-					"blobber_slash":                        "0.1",
-					"max_read_price":                       "100",
-					"max_write_price":                      "100",
-					"failed_challenges_to_cancel":          "20",
-					"failed_challenges_to_revoke_min_lock": "0",
-					"challenge_enabled":                    "true",
-					"challenge_rate_per_mb_min":            "1.0",
-					"max_challenges_per_generation":        "100",
-					"validators_per_challenge":             "2",
-					"max_delegates":                        "100",
+					"validator_reward":         "0.025",
+					"blobber_slash":            "0.1",
+					"max_read_price":           "100",
+					"max_write_price":          "100",
+					"challenge_enabled":        "true",
+					"validators_per_challenge": "2",
+					"max_delegates":            "100",
 
 					"block_reward.block_reward":     "1000",
 					"block_reward.qualifying_stake": "1",
@@ -780,38 +785,35 @@ func BenchmarkTests(
 					"block_reward.zeta.k":           "0.9",
 					"block_reward.zeta.mu":          "0.2",
 
-					"cost.update_settings":             "105",
-					"cost.read_redeem":                 "105",
-					"cost.commit_connection":           "105",
-					"cost.new_allocation_request":      "105",
-					"cost.update_allocation_request":   "105",
-					"cost.finalize_allocation":         "105",
-					"cost.cancel_allocation":           "105",
-					"cost.add_free_storage_assigner":   "105",
-					"cost.free_allocation_request":     "105",
-					"cost.free_update_allocation":      "105",
-					"cost.add_curator":                 "105",
-					"cost.remove_curator":              "105",
-					"cost.blobber_health_check":        "105",
-					"cost.update_blobber_settings":     "105",
-					"cost.pay_blobber_block_rewards":   "105",
-					"cost.curator_transfer_allocation": "105",
-					"cost.challenge_request":           "105",
-					"cost.challenge_response":          "105",
-					"cost.generate_challenges":         "105",
-					"cost.add_validator":               "105",
-					"cost.update_validator_settings":   "105",
-					"cost.add_blobber":                 "105",
-					"cost.new_read_pool":               "105",
-					"cost.read_pool_lock":              "105",
-					"cost.read_pool_unlock":            "105",
-					"cost.write_pool_lock":             "105",
-					"cost.write_pool_unlock":           "105",
-					"cost.stake_pool_lock":             "105",
-					"cost.stake_pool_unlock":           "105",
-					"cost.stake_pool_pay_interests":    "105",
-					"cost.commit_settings_changes":     "105",
-					"cost.collect_reward":              "105",
+					"cost.update_settings":           "105",
+					"cost.read_redeem":               "105",
+					"cost.commit_connection":         "105",
+					"cost.new_allocation_request":    "105",
+					"cost.update_allocation_request": "105",
+					"cost.finalize_allocation":       "105",
+					"cost.cancel_allocation":         "105",
+					"cost.add_free_storage_assigner": "105",
+					"cost.free_allocation_request":   "105",
+					"cost.free_update_allocation":    "105",
+					"cost.blobber_health_check":      "105",
+					"cost.update_blobber_settings":   "105",
+					"cost.pay_blobber_block_rewards": "105",
+					"cost.challenge_request":         "105",
+					"cost.challenge_response":        "105",
+					"cost.generate_challenge":        "105",
+					"cost.add_validator":             "105",
+					"cost.update_validator_settings": "105",
+					"cost.add_blobber":               "105",
+					"cost.new_read_pool":             "105",
+					"cost.read_pool_lock":            "105",
+					"cost.read_pool_unlock":          "105",
+					"cost.write_pool_lock":           "105",
+					"cost.write_pool_unlock":         "105",
+					"cost.stake_pool_lock":           "105",
+					"cost.stake_pool_unlock":         "105",
+					"cost.stake_pool_pay_interests":  "105",
+					"cost.commit_settings_changes":   "105",
+					"cost.collect_reward":            "105",
 				},
 			}).Encode(),
 		},

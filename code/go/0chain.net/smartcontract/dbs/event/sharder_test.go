@@ -67,6 +67,19 @@ func TestGetSharderWithDelegatePools(t *testing.T) {
 	require.Equal(t, "1", dps[0].ProviderID) // failed, the provider id is ""
 }
 
+func TestGetSharderWithDelegatePoolsNoPools(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	createSharders(t, edb, 2)
+
+	s, dps, err := edb.GetSharderWithDelegatePools("1")
+
+	require.NoError(t, err, "Error while getting sharder with delegate pools")
+	require.Nil(t, dps, "there should be no delegate pools")
+	require.Equal(t, s.ID, "1")
+}
+
 func TestSharders(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 
@@ -101,10 +114,6 @@ func TestSharders(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -137,8 +146,6 @@ func TestSharders(t *testing.T) {
 				DelegateWallet: sn.DelegateWallet,
 				ServiceCharge:  sn.ServiceCharge,
 				NumDelegates:   sn.NumberOfDelegates,
-				MinStake:       sn.MinStake,
-				MaxStake:       sn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID: sn.ID,
 					Rewards:    sn.Stat.GeneratorRewards,
@@ -188,8 +195,6 @@ func TestSharders(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,

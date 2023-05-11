@@ -9,6 +9,7 @@ import (
 // swagger:model SharderSnapshot
 type SharderSnapshot struct {
 	SharderID string `json:"id" gorm:"index"`
+	BucketId	 int64  `json:"bucket_id"`
 	Round     int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
@@ -17,6 +18,12 @@ type SharderSnapshot struct {
 	TotalRewards  currency.Coin	`json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled 	bool          	`json:"is_killed"`
+	IsShutdown 	bool          	`json:"is_shutdown"`
+}
+
+func (s *SharderSnapshot) IsOffline() bool {
+	return s.IsKilled || s.IsShutdown
 }
 
 func (s *SharderSnapshot) GetTotalStake() currency.Coin {
@@ -54,7 +61,7 @@ func (s *SharderSnapshot) SetTotalRewards(value currency.Coin) {
 func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]SharderSnapshot, error) {
 	var snapshots []SharderSnapshot
 	result := edb.Store.Get().
-		Raw("SELECT * FROM sharder_snapshots WHERE sharder_id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
+		Raw("SELECT * FROM sharder_snapshots WHERE sharder_id in (select id from sharder_old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Scan(&snapshots)
 	if result.Error != nil {
 		return nil, result.Error
@@ -73,17 +80,21 @@ func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]Sharder
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addSharderSnapshot(sharders []Sharder) error {
+func (edb *EventDb) addSharderSnapshot(sharders []Sharder, round int64) error {
 	var snapshots []SharderSnapshot
 	for _, sharder := range sharders {
 		snapshots = append(snapshots, SharderSnapshot{
 			SharderID:     sharder.ID,
+			BucketId:      sharder.BucketId,
+			Round:         round,
 			UnstakeTotal:  sharder.UnstakeTotal,
 			Fees:          sharder.Fees,
 			TotalStake:    sharder.TotalStake,
 			ServiceCharge: sharder.ServiceCharge,
 			CreationRound: sharder.CreationRound,
 			TotalRewards:  sharder.Rewards.TotalRewards,
+			IsKilled:      sharder.IsKilled,
+			IsShutdown:    sharder.IsShutdown,
 		})
 	}
 

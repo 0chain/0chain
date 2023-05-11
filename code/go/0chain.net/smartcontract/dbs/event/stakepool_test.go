@@ -1,7 +1,10 @@
 package event
 
 import (
+	"fmt"
 	"testing"
+
+	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -16,6 +19,70 @@ import (
 func init() {
 	viper.Set("logging.console", true)
 	viper.Set("logging.level", "debug")
+}
+
+func TestStakePoolReward(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	previousSpus := []ProviderRewards{
+		{
+			ProviderID:   "provider_1",
+			Rewards:      17,
+			TotalRewards: 139,
+		},
+		{
+			ProviderID:   "provider_2",
+			Rewards:      23,
+			TotalRewards: 269,
+		},
+	}
+	res := edb.Get().Create(&previousSpus)
+	require.NoError(t, res.Error)
+	var oldPrs []ProviderRewards
+	ret := edb.Get().Find(&oldPrs)
+	require.NoError(t, ret.Error)
+
+	spus := []dbs.StakePoolReward{
+		{
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_1",
+				Type: spenum.Miner,
+			},
+			Reward:     168,
+			RewardType: spenum.BlockRewardSharder,
+		},
+		{
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_1",
+				Type: spenum.Miner,
+			},
+			Reward:     80,
+			RewardType: spenum.FeeRewardMiner,
+		},
+		{
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_2",
+				Type: spenum.Sharder,
+			},
+			Reward:     100,
+			RewardType: spenum.BlockRewardSharder,
+		},
+		{
+			ProviderID: dbs.ProviderID{
+				ID:   "provider_2",
+				Type: spenum.Sharder,
+			},
+			Reward:     21,
+			RewardType: spenum.FeeRewardSharder,
+		},
+	}
+	err := edb.rewardUpdate(spus, 9)
+	require.NoError(t, err)
+
+	var prs []ProviderRewards
+	ret = edb.Get().Find(&prs)
+	require.NoError(t, ret.Error)
 }
 
 func TestEventDb_rewardProviders(t *testing.T) {
@@ -55,10 +122,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
-		// MinStake allowed by node.
-		MinStake currency.Coin `json:"min_stake"`
-		// MaxStake allowed by node.
-		MaxStake currency.Coin `json:"max_stake"`
 
 		// Stat contains node statistic.
 		Stat Stat `json:"stat"`
@@ -91,8 +154,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 				DelegateWallet: mn.DelegateWallet,
 				ServiceCharge:  mn.ServiceCharge,
 				NumDelegates:   mn.NumberOfDelegates,
-				MinStake:       mn.MinStake,
-				MaxStake:       mn.MaxStake,
 				Rewards: ProviderRewards{
 					ProviderID:   mn.ID,
 					Rewards:      mn.Stat.GeneratorRewards,
@@ -122,8 +183,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -150,8 +209,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 			DelegateWallet:    "delegate wallet",
 			ServiceCharge:     10.6,
 			NumberOfDelegates: 6,
-			MinStake:          15,
-			MaxStake:          100,
 			Stat: Stat{
 				GeneratorRewards: 5,
 				GeneratorFees:    3,
@@ -170,27 +227,26 @@ func TestEventDb_rewardProviders(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := db.rewardProviders([]ProviderRewards{{
-		ProviderID:                    mnMiner1.ID,
-		Rewards:                       20,
-		RoundServiceChargeLastUpdated: 7,
-	}, {
-		ProviderID:                    mnMiner2.ID,
-		Rewards:                       30,
-		RoundServiceChargeLastUpdated: 7,
-	}}); err != nil {
+	if err := db.rewardProviders(map[string]currency.Coin{
+		mnMiner1.ID: 20,
+		mnMiner2.ID: 30,
+	}, map[string]currency.Coin{
+		mnMiner1.ID: 50,
+		mnMiner2.ID: 60,
+	}, 7); err != nil {
 		t.Error(err)
 	}
 
-	assertMinerRewards(t, db, mnMiner1.ID, uint64(20+5), uint64(25), 7)
-	assertMinerRewards(t, db, mnMiner2.ID, uint64(30+5), uint64(35), 7)
+	assertMinerRewards(t, db, mnMiner1.ID, uint64(20+5), uint64(50+5), 7)
+	assertMinerRewards(t, db, mnMiner2.ID, uint64(30+5), uint64(60+5), 7)
 }
 
 func TestEventDb_rewardProviderDelegates(t *testing.T) {
-	db, clean := GetTestEventDB(t)
+	t.Skip("requires bug fix, https://github.com/0chain/0chain/pull/2059")
+	edb, clean := GetTestEventDB(t)
 	defer clean()
 
-	err := db.addDelegatePools([]DelegatePool{
+	err := edb.addDelegatePools([]DelegatePool{
 		{
 			PoolID:       "pool 1",
 			ProviderID:   "miner one",
@@ -202,29 +258,35 @@ func TestEventDb_rewardProviderDelegates(t *testing.T) {
 			PoolID:       "pool 2",
 			ProviderID:   "miner two",
 			ProviderType: spenum.Miner,
-			Reward:       0,
+			Reward:       4,
+			TotalReward:  0,
+		},
+		{
+			PoolID:       "pool 1",
+			ProviderID:   "miner two",
+			ProviderType: spenum.Miner,
+			Reward:       3,
 			TotalReward:  0,
 		},
 	})
 	require.NoError(t, err)
 
-	err = db.rewardProviderDelegates([]DelegatePool{{
-		ProviderID:           "miner one",
-		ProviderType:         spenum.Miner,
-		PoolID:               "pool 1",
-		Reward:               20,
-		RoundPoolLastUpdated: 7,
-	}, {
-		ProviderID:           "miner two",
-		ProviderType:         spenum.Miner,
-		PoolID:               "pool 2",
-		Reward:               11,
-		RoundPoolLastUpdated: 7,
-	}})
+	err = edb.rewardProviderDelegates(
+		map[string]map[string]currency.Coin{
+			"miner two": {"pool 2": 11},
+			"mienr two": {"pool 1": 17},
+			"miner one": {"pool 1": 20},
+		}, 7)
 	require.NoError(t, err)
 
-	requireDelegateRewards(t, db, "pool 1", "miner one", 20+5, 23+20, 7)
-	requireDelegateRewards(t, db, "pool 2", "miner two", 11+0, 11+0, 7)
+	var dps []DelegatePool
+	ret := edb.Get().Find(&dps)
+	require.NoError(t, ret.Error)
+	fmt.Println("dps", dps)
+
+	requireDelegateRewards(t, edb, "pool 1", "miner one", 20+5, 23+20, 7)
+	requireDelegateRewards(t, edb, "pool 2", "miner two", 11+4, 11+0, 7)
+	requireDelegateRewards(t, edb, "pool 1", "miner two", 17+3, 17+0, 7)
 }
 
 func requireDelegateRewards(

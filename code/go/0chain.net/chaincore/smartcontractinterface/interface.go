@@ -37,10 +37,11 @@ type SmartContractInterface interface {
 	GetExecutionStats() map[string]interface{}
 	GetName() string
 	GetAddress() string
-	GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error)
+	GetCostTable(balances c_state.StateContextI) (map[string]int, error)
 }
 
-/*BCContextI interface for smart contracts to access blockchain.
+/*
+BCContextI interface for smart contracts to access blockchain.
 These functions should not modify blockchain states in anyway.
 */
 type BCContextI interface {

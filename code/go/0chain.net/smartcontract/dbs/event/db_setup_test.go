@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
 	"github.com/0chain/common/core/logging"
 	_ "github.com/jackc/pgx/v5"
@@ -25,6 +26,8 @@ var gEventDB *EventDb
 func GetTestEventDB(t *testing.T) (*EventDb, func()) {
 	db, err := gEventDB.Begin()
 	require.NoError(t, err)
+
+	db.managePartitions(0)
 
 	return db, func() {
 		db.Rollback()
@@ -91,8 +94,10 @@ func TestMain(m *testing.M) {
 	}
 
 	dbSetting := config.DbSettings{
-		AggregatePeriod: 10,
-		PageLimit:       10,
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+		PageLimit:             10,
 	}
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: dbSetting}}
@@ -103,9 +108,12 @@ func TestMain(m *testing.M) {
 		settings:      dbSetting,
 	}
 
-	if err := gEventDB.AutoMigrate(); err != nil {
-		log.Fatalf("Could not auto migrate database: %s", err)
+	s, err := gormDB.DB()
+	if err != nil {
+		log.Fatal(err)
 	}
+	goose.Init()
+	goose.Migrate(s)
 
 	//Run tests
 	code := m.Run()
