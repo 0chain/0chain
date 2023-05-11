@@ -34,6 +34,10 @@ func ShutDown(
 		return err
 	}
 
+	if id != sp.GetSettings().DelegateWallet {
+		return fmt.Errorf("access denied, allowed for delegate_wallet owner only")
+	}
+
 	balances.EmitEvent(event.TypeStats, event.TagShutdownProvider, p.Id(), dbs.ProviderID{
 		ID:   p.Id(),
 		Type: p.Type(),
