@@ -1668,15 +1668,6 @@ func (sc *StorageSmartContract) finishAllocation(
 
 		tag, data := event.NewUpdateBlobberTotalStakeEvent(ba.BlobberID, staked)
 		balances.EmitEvent(event.TypeStats, tag, ba.BlobberID, data)
-		if ba.Terms.WritePrice > 0 {
-			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange,
-				ba.BlobberID, event.AllocationBlobberValueChanged{
-					FieldType:    event.Staked,
-					AllocationId: "",
-					BlobberId:    ba.BlobberID,
-					Delta:        int64((staked - before[i]) / ba.Terms.WritePrice),
-				})
-		}
 
 		blobber, err := sc.getBlobber(ba.BlobberID, balances)
 		if err != nil {

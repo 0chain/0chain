@@ -701,12 +701,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobber.SavedData -= changeSize
 		alloc.Stats.UsedSize -= changeSize
 		alloc.Stats.NumWrites++
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
-			AllocationId: alloc.ID,
-			FieldType:    event.Used,
-			BlobberId:    blobber.ID,
-			Delta:        -changeSize,
-		})
 	} else {
 
 		if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
@@ -731,12 +725,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 		alloc.Stats.NumWrites++
 
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
-			FieldType:    event.Used,
-			AllocationId: alloc.ID,
-			BlobberId:    blobber.ID,
-			Delta:        commitConnection.WriteMarker.Size,
-		})
 	}
 
 	// check time boundaries

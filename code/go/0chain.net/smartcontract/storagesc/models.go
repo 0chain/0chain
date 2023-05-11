@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/smartcontract/partitions"
@@ -990,12 +991,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.Allocated,
-		AllocationId: sa.ID,
-		BlobberId:    addedBlobber.ID,
-		Delta:        sa.bSize(),
-	})
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
