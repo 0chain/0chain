@@ -321,7 +321,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			Delta:        bSize(request.Size, request.DataShards),
 		})
 
-		emitUpdateBlobberAllocatedHealth(b, balances)
+		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 
 	var options []WithOption
@@ -670,7 +670,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
-		emitUpdateBlobberAllocatedHealth(b, balances)
+		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 	// Save allocation
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
@@ -1027,7 +1027,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 				return fmt.Errorf("can't Save stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
-			emitUpdateBlobberAllocatedHealth(b, balances)
+			emitUpdateBlobberAllocatedSavedHealth(b, balances)
 		}
 	}
 
@@ -1709,6 +1709,22 @@ func (sc *StorageSmartContract) finishAllocation(
 					Delta:        int64((staked - before[i]) / ba.Terms.WritePrice),
 				})
 		}
+
+		blobber, err := sc.getBlobber(ba.BlobberID, balances)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't get blobber "+ba.BlobberID+": "+err.Error())
+		}
+		blobber.SavedData += (-ba.Stats.UsedSize)
+		blobber.Allocated += (-ba.Size)
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"saving blobber "+ba.BlobberID+": "+err.Error())
+		}
+
+		// Update saved data on events_db
+		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
