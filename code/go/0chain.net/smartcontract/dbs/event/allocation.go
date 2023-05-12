@@ -319,9 +319,10 @@ func withAllocBlobberTermsMerged() eventMergeMiddleware {
 	})
 }
 
-//func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
-//	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withAllocChallengesMerged())
-//}
+func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
+	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withUniqueEventOverwrite())
+}
+
 //
 //func withAllocChallengesMerged() eventMergeMiddleware {
 //	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
