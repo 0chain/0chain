@@ -175,6 +175,7 @@ jobs:
 
     - name: Starting blobber Tests.
       run: |
+        export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh blobber-2
 
