@@ -335,9 +335,9 @@ func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
 //	})
 //}
 
-func (edb *EventDb) updateAllocationChallenges(alloc Allocation) error {
+func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 
-	logging.Logger.Debug("jayash updateAllocationChallenges", zap.Any("allocs", alloc))
+	logging.Logger.Debug("jayash updateAllocationChallenges", zap.Any("allocs", allocs))
 
 	var (
 		allocationIdList             []string
@@ -347,15 +347,15 @@ func (edb *EventDb) updateAllocationChallenges(alloc Allocation) error {
 		failedChallengeList          []int64
 	)
 
-	//for _, alloc := range allocs {
-	logging.Logger.Debug("updateAllocationChallenges", zap.Any("alloc", alloc))
+	for _, alloc := range allocs {
+		logging.Logger.Debug("updateAllocationChallenges", zap.Any("alloc", alloc))
 
-	allocationIdList = append(allocationIdList, alloc.AllocationID)
-	openChallengesList = append(openChallengesList, alloc.OpenChallenges)
-	latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
-	successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
-	failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
-
+		allocationIdList = append(allocationIdList, alloc.AllocationID)
+		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
+		latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
+		successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
+		failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
+	}
 	logging.Logger.Debug("updateAllocationChallenges",
 		zap.Any("allocationIdList", allocationIdList),
 		zap.Any("openChallengesList", openChallengesList),

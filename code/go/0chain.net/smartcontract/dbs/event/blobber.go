@@ -49,7 +49,7 @@ type Blobber struct {
 	Description string `json:"description" gorm:"description"`
 
 	ChallengesPassed    uint64        `json:"challenges_passed"`
-	ChallengesCompleted uint64        `json:"challenges_completed"` // total challenges
+	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	RankMetric          float64       `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
 	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
@@ -399,16 +399,27 @@ func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
 }
 
-func (edb *EventDb) updateOpenBlobberChallenges(blobber Blobber) error {
-	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobber)).Scan(&Blobber{}).Error
+func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
+	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobbers)).Scan(&Blobber{}).Error
 }
 
-func sqlUpdateOpenChallenges(blobber Blobber) string {
+func sqlUpdateOpenChallenges(blobbers []Blobber) string {
+	if len(blobbers) == 0 {
+		return ""
+	}
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
 	sql += "  open_challenges = v.open\n"
 	sql += "FROM ( VALUES"
-	sql += fmt.Sprintf("('%s', %d)", blobber.ID, blobber.OpenChallenges)
+	first := true
+	for _, blobber := range blobbers {
+		if first {
+			first = false
+		} else {
+			sql += ","
+		}
+		sql += fmt.Sprintf("('%s', %d)", blobber.ID, blobber.OpenChallenges)
+	}
 	sql += "  )\n"
 	sql += "AS v (id, open)\n"
 	sql += "WHERE\n"
@@ -417,9 +428,8 @@ func sqlUpdateOpenChallenges(blobber Blobber) string {
 	return sql
 }
 
-func (edb *EventDb) updateBlobberChallenges(blobber Blobber) error {
-	logging.Logger.Debug("jayash updateBlobberChallenges", zap.Any("blobber", blobber))
-	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(blobber)).Scan(&Blobber{}).Error
+func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
+	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(blobbers)).Scan(&Blobber{}).Error
 }
 
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
@@ -475,14 +485,22 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 }
 
 // ref https://www.postgresql.org/docs/9.1/sql-values.html
-func sqlUpdateBlobberChallenges(blobber Blobber) string {
+func sqlUpdateBlobberChallenges(blobbers []Blobber) string {
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
 	sql += "  challenges_completed = v.completed,\n"
 	sql += "  challenges_passed = v.passed\n"
 	//sql += ",  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n" todo
 	sql += "FROM ( VALUES "
-	sql += fmt.Sprintf("('%s', %d, %d)", blobber.ID, blobber.ChallengesPassed, blobber.ChallengesCompleted)
+	first := true
+	for _, blobber := range blobbers {
+		if first {
+			first = false
+		} else {
+			sql += ",\n"
+		}
+		sql += fmt.Sprintf("('%s', %d, %d)", blobber.ID, blobber.ChallengesPassed, blobber.ChallengesCompleted)
+	}
 	sql += ")\n"
 	sql += "AS v (id, passed, completed)\n"
 	sql += "WHERE\n"
