@@ -1360,11 +1360,11 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 		}
 
 		// Updating responded
-		var sc *StorageChallenge
-
-		sc.ID = oc.ID
-		sc.AllocationID = sa.ID
-		sc.BlobberID = oc.BlobberID
+		sc := &StorageChallenge{
+			ID:           oc.ID,
+			AllocationID: sa.ID,
+			BlobberID:    oc.BlobberID,
+		}
 
 		emitUpdateChallengeResponded(sc, balances, false)
 
