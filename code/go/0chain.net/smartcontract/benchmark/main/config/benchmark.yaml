@@ -186,6 +186,7 @@ smart_contracts:
     min_mint: 1
     min_burn: 1
     min_stake: 0
+    max_stake: 2.7
     min_lock: 0
     min_authorizers: 1
     percent_authorizers: 0
@@ -215,4 +216,4 @@ internal:
   control_m: 25000
   control_n: 90
   show_output: false
-  bench_data_list_length: 12
+  bench_data_list_length: 20
