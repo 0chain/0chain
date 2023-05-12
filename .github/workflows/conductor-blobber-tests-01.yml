@@ -125,10 +125,6 @@ jobs:
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
 
-    - name: Blobbers Patching
-      run: |
-        cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
-
     - name: Build 0dns
       run: |
         cd 0dns
