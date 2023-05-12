@@ -19,10 +19,10 @@ jobs:
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
       run: |
-        [ -f ./https://go.dev/dl/go1.18.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.3.linux-amd64.tar.gz
+        [ -f ./https://go.dev/dl/go1.18.10.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.10.linux-amd64.tar.gz
         [ -d /usr/local/go ] &&  rm -rf /usr/local/go
         [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
-        tar -C /usr/local -xzf ./go1.18.3.linux-amd64.tar.gz
+        tar -C /usr/local -xzf ./go1.18.10.linux-amd64.tar.gz
 
         echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
         export PATH=$PATH:/usr/local/go/bin
@@ -91,6 +91,7 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
+        cd blobber && git checkout fix/conductor-issues
 
     - name: Git clone zboxcli
       run: |
@@ -113,10 +114,12 @@ jobs:
 
     - name: Install zboxcli
       run: |
+        export HOME="/root"
         cd zboxcli && make install
 
     - name: Install zwalletcli
       run: |
+        export HOME="/root"
         cd zwalletcli && make install
 
     - name: 0dns Patching
@@ -172,7 +175,6 @@ jobs:
 
     - name: Starting blobber Tests.
       run: |
-        export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh blobber-2
 
