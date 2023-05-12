@@ -99,9 +99,13 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 		ChallengeID:    sc.ID,
 		AllocationID:   sc.AllocationID,
 		BlobberID:      sc.BlobberID,
-		Responded:      sc.Responded,
 		RoundResponded: balances.GetBlock().Round,
 		Passed:         passed,
+	}
+	if passed {
+		clg.Responded = 2 // Failed challenge
+	} else {
+		clg.Responded = 1 // Successful challenge
 	}
 
 	a := event.Allocation{
