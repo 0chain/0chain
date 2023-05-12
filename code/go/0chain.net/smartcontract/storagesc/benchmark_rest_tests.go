@@ -235,7 +235,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "get_validator",
 				Params: map[string]string{
-					"validator_id": getMockValidatorId(0),
+					"validator_id": data.ValidatorIds[0],
 				},
 				Endpoint: srh.getValidator,
 			},
