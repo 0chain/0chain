@@ -1359,15 +1359,6 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
 		}
 
-		// Updating responded
-		sc := &StorageChallenge{
-			ID:           oc.ID,
-			AllocationID: sa.ID,
-			BlobberID:    oc.BlobberID,
-		}
-
-		emitUpdateChallengeResponded(sc, balances, false)
-
 		if !isChallengeExpired(now, oc.CreatedAt, cct) {
 			nonExpiredChallenges = append(nonExpiredChallenges, oc)
 			continue
@@ -1382,6 +1373,15 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 			ba.Stats.OpenChallenges--
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
+
+			emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: sa.ID,
+				BlobberID:    oc.BlobberID,
+			}, false, balances, sa.Stats, ba.Stats)
+
+		} else {
+			logging.Logger.Debug("jayash possible, We can reach here too? ", zap.Any("oc", oc), zap.Any("sa", sa))
 		}
 	}
 
