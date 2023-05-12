@@ -1,9 +1,9 @@
 name: CONDUCTOR BLOBBER-01 TESTS
 
 on:
-  # schedule:
+  schedule:
   #   # Runs everyday at 02:00 am
-  #   - cron: '0 2 * * * '
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 jobs:
