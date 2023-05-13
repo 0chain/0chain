@@ -1374,11 +1374,11 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
 
-			//emitUpdateChallenge(&StorageChallenge{
-			//	ID:           oc.ID,
-			//	AllocationID: sa.ID,
-			//	BlobberID:    oc.BlobberID,
-			//}, false, balances, sa.Stats, ba.Stats)
+			emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: sa.ID,
+				BlobberID:    oc.BlobberID,
+			}, false, balances, sa.Stats, ba.Stats)
 
 		} else {
 			logging.Logger.Debug("jayash possible, We can reach here too? ", zap.Any("oc", oc), zap.Any("sa", sa))
