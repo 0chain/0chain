@@ -59,44 +59,21 @@ func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Requ
 
 func minerHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	m := map[string]func(http.ResponseWriter, *http.Request){
-		"/": common.WithCORS(common.UserRateLimit(
-			HomePageAndNotFoundHandler,
-		)),
-		"/_diagnostics": common.UserRateLimit(
-			DiagnosticsHomepageHandler,
-		),
-		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
-			DiagnosticsNodesHandler,
-		),
-		"/_diagnostics/dkg_process": common.UserRateLimit(
-			DiagnosticsDKGHandler,
-		),
-		"/_diagnostics/round_info": common.UserRateLimit(
-			RoundInfoHandler(c),
-		),
-		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
-			datastore.ToJSONEntityReqResponse(
-				datastore.DoAsyncEntityJSONHandler(
-					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
-					transaction.TransactionEntityChannel,
-				),
-				transactionEntityMetadata,
+	m := handlersMap(c)
+	m["/v1/transaction/put"] = common.WithCORS(common.UserRateLimit(
+		datastore.ToJSONEntityReqResponse(
+			datastore.DoAsyncEntityJSONHandler(
+				memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+				transaction.TransactionEntityChannel,
 			),
-		)),
-	}
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[GetBlockV1Pattern] = common.UserRateLimit(
-			common.ToJSONResponse(
-				GetBlockHandler,
-			),
-		)
-	}
-
+			transactionEntityMetadata,
+		),
+	))
+	m[GetBlockV1Pattern] = common.UserRateLimit(common.ToJSONResponse(GetBlockHandler))
 	return m
 }
 
-func sharderHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
@@ -157,7 +134,6 @@ func sharderHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Re
 			),
 		),
 	}
-
 	return m
 }
 
@@ -1953,7 +1929,7 @@ func SetupMinerHandlers(c Chainer) {
 
 // SetupHandlers sets up the necessary API end points for sharders
 func SetupSharderHandlers(c Chainer) {
-	setupHandlers(sharderHandlersMap(c))
+	setupHandlers(handlersMap(c))
 }
 
 func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {

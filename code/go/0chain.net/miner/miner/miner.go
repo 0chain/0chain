@@ -455,18 +455,21 @@ func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost
 }
 
 func initHandlers(c chain.Chainer) {
-	SetupHandlers()
-	node.SetupHandlers()
-	chain.SetupMinerHandlers(c)
-	client.SetupHandlers()
-	transaction.SetupHandlers()
-	block.SetupHandlers()
-	miner.SetupHandlers()
-	diagnostics.SetupHandlers()
 	if config.Development() {
 		config.SetupHandlers()
 		chain.SetupStateHandlers()
 	}
+
+	node.SetupHandlers()
+	chain.SetupMinerHandlers(c)
+	block.SetupHandlers()
+	diagnostics.SetupHandlers()
+
+	SetupHandlers()
+	client.SetupHandlers()
+	transaction.SetupHandlers()
+	miner.SetupHandlers()
+	chain.GetServerChain().SetupMinerNodeHandlers()
 }
 
 func initN2NHandlers(c *miner.Chain) {

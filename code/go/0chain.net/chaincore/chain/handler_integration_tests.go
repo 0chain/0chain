@@ -62,7 +62,7 @@ func SetupHandlers(c Chainer) {
 			},
 		)
 	} else {
-		hMap := sharderHandlersMap(c)
+		hMap := handlersMap(c)
 	}
 
 	setupHandlers(hMap)

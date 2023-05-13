@@ -382,16 +382,17 @@ func initHandlers(c chain.Chainer) {
 		chain.SetupStateHandlers()
 		config.SetupHandlers()
 	}
+
+	// common between
 	node.SetupHandlers()
 	chain.SetupSharderHandlers(c)
 	block.SetupHandlers()
-	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()
+
+	sharder.SetupHandlers()
+	chain.GetServerChain().SetupSharderNodeHandlers()
 	chain.SetupScRestApiHandlers()
 	chain.SetupSharderStateHandlers()
-
-	serverChain := chain.GetServerChain()
-	serverChain.SetupNodeHandlers()
 }
 
 func initEntities(workdir string) {
