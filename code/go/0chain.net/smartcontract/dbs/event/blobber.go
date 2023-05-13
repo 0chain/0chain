@@ -399,27 +399,27 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 //	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
 //}
 
-func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
-	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobbers)).Scan(&Blobber{}).Error
+func (edb *EventDb) updateOpenBlobberChallenges(blobber Blobber) error {
+	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobber)).Scan(&Blobber{}).Error
 }
 
-func sqlUpdateOpenChallenges(blobbers []Blobber) string {
-	if len(blobbers) == 0 {
-		return ""
-	}
+func sqlUpdateOpenChallenges(blobber Blobber) string {
+	//if len(blobbers) == 0 {
+	//	return ""
+	//}
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
 	sql += "  open_challenges = v.open\n"
 	sql += "FROM ( VALUES"
-	first := true
-	for _, blobber := range blobbers {
-		if first {
-			first = false
-		} else {
-			sql += ","
-		}
-		sql += fmt.Sprintf("('%s', %d)", blobber.ID, blobber.OpenChallenges)
-	}
+	//first := true
+	//for _, blobber := range blobbers {
+	//	if first {
+	//		first = false
+	//	} else {
+	//		sql += ","
+	//	}
+	sql += fmt.Sprintf("('%s', %d)", blobber.ID, blobber.OpenChallenges)
+	//}
 	sql += "  )\n"
 	sql += "AS v (id, open)\n"
 	sql += "WHERE\n"
