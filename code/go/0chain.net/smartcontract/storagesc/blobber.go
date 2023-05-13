@@ -452,8 +452,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}
-	if rp == nil {
-		rp = &readPool{}
+	if err == util.ErrValueNotPresent || rp == nil {
+		rp = new(readPool)
+		if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {
+			return "", common.NewError("new_read_pool_failed", err.Error())
+		}
 	}
 
 	var sp *stakePool

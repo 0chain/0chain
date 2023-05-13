@@ -253,7 +253,7 @@ jobs:
           network: ${{ env.NETWORK_URL }}
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
-          svc_account_secret: ${{ github.token }}
+          svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           deploy_report_page: false
           archive_results: true
           run_flaky_tests: false
@@ -261,6 +261,8 @@ jobs:
           retry_failures: true
           TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
