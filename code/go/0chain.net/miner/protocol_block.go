@@ -1131,8 +1131,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				zap.Int32("iteration_count", iterInfo.count),
 				zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns,
-				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)",
-					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), 0))
+				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v, future %v, reused %v)",
+					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), len(iterInfo.futureTxns), 0))
 		}
 		b.Txns = b.Txns[:blockSize]
 		iterInfo.eTxns = iterInfo.eTxns[:blockSize]
