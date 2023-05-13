@@ -31,9 +31,13 @@ import (
 
 // SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
 var SmartContractExecutionTimer metrics.Timer
+var StateComputationTimer metrics.Histogram
+var EventsComputationTimer metrics.Histogram
 
 func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
+	StateComputationTimer = metrics.NewHistogram(metrics.NewUniformSample(1024))
+	EventsComputationTimer = metrics.NewHistogram(metrics.NewUniformSample(1024))
 }
 
 var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid")
@@ -76,7 +80,10 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) error {
-	return b.ComputeState(ctx, c, waitC...)
+	timer := time.Now()
+	err := b.ComputeState(ctx, c, waitC...)
+	StateComputationTimer.Update(time.Since(timer).Microseconds())
+	return err
 }
 
 // SaveChanges - persist the state changes
@@ -192,11 +199,9 @@ func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
 }
 
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
-	b *block.Block,
-	bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
+	b *block.Block, txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
 	var (
-		clientState = CreateTxnMPT(bState) // begin transaction
+		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
 
@@ -261,15 +266,15 @@ func (c *Chain) EstimateTransactionFeeLFB(ctx context.Context,
 	}
 	lfb = lfb.Clone()
 
-	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb.ClientState, txn, opts...)
+	_, fee, err := c.EstimateTransactionCostFee(ctx, lfb, txn, opts...)
 	return fee, err
 }
 
 func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
-	mpt util.MerklePatriciaTrieI,
+	b *block.Block,
 	txn *transaction.Transaction,
 	opts ...SyncNodesOption) (int, currency.Coin, error) {
-	cost, err := c.EstimateTransactionCost(ctx, nil, mpt, txn, opts...)
+	cost, err := c.EstimateTransactionCost(ctx, b, txn, opts...)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -291,11 +296,62 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		zap.String("txn", txn.TransactionData))
 
 	maxFee := c.ChainConfig.MaxTxnFee()
-	if maxFee > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > maxFee {
+
+	zcn := float64(cost) / float64(c.ChainConfig.TxnCostFeeCoeff())
+	parseZCN, err := currency.ParseZCN(zcn)
+	if err != nil {
 		return cost, maxFee, nil
 	}
 
-	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
+	if maxFee > 0 && parseZCN > maxFee {
+		return cost, maxFee, nil
+	}
+
+	return cost, parseZCN, nil
+}
+
+func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
+	b *block.Block,
+	opts ...SyncNodesOption) map[string]map[string]int64 {
+
+	var (
+		clientState = CreateTxnMPT(b.ClientState) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, nil)
+	)
+
+	table := smartcontract.GetTransactionCostTable(sctx)
+
+	table["transfer"] = map[string]int{"transfer": c.ChainConfig.TxnTransferCost()}
+
+	for _, t := range table {
+		for name := range c.ChainConfig.TxnExempt() {
+			if _, ok := t[name]; ok {
+				t[name] = 0
+			}
+		}
+	}
+
+	fees := make(map[string]map[string]int64)
+	for sc, t := range table {
+		fees[sc] = make(map[string]int64, len(t))
+		for f, cost := range t {
+			zcn := float64(cost) / float64(c.ChainConfig.TxnCostFeeCoeff())
+			parseZCN, err := currency.ParseZCN(zcn)
+			if err != nil {
+				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
+				continue
+			}
+
+			if c.ChainConfig.MaxTxnFee() > 0 && parseZCN > c.ChainConfig.MaxTxnFee() {
+				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
+			} else {
+				fees[sc][f] = int64(parseZCN)
+			}
+
+		}
+	}
+
+	return fees
 }
 
 // NewStateContext creation helper.
@@ -809,7 +865,7 @@ func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	return tmpt
 }
 
-func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
+func GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
 		return nil, common.NewError("GetStateById", "client state does not exist")
 	}

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/config"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,7 +51,7 @@ func SetupRestHandler(rh rest.RestHandlerI) {
 func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	srh := NewStorageRestHandler(rh)
 	storage := "/v1/screst/" + ADDRESS
-	return []rest.Endpoint{
+	restEndpoints := []rest.Endpoint{
 		rest.MakeEndpoint(storage+"/getBlobber", common.UserRateLimit(srh.getBlobber)),
 		rest.MakeEndpoint(storage+"/getblobbers", common.UserRateLimit(srh.getBlobbers)),
 		rest.MakeEndpoint(storage+"/blobbers-by-rank", common.UserRateLimit(srh.getBlobbersByRank)),
@@ -95,6 +96,17 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
 	}
+
+	if config.Development() {
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/block-rewards", srh.getBlockRewards))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/read-rewards", srh.getReadRewards))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/challenge-rewards", srh.getChallengeRewards))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/total-challenge-rewards", srh.getTotalChallengeRewards))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
+	}
+
+	return restEndpoints
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids blobber_ids
@@ -1130,6 +1142,7 @@ type StorageChallengeResponse struct {
 	Validators        []*ValidationNode `json:"validators"`
 	Seed              int64             `json:"seed"`
 	AllocationRoot    string            `json:"allocation_root"`
+	Timestamp         common.Timestamp  `json:"timestamp"`
 }
 
 // swagger:model ChallengesResponse

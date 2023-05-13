@@ -22,10 +22,10 @@
 
 ---
 enable:
-  - "Contribute" # txn
-  - "Share: share"
-  - "Share: signature"
-  - "Publish" # txn
+  # - "Contribute" # txn
+  # - "Share: share"
+  # - "Share: signature"
+  # - "Publish" # txn
 
 sets:
   - name: "Contribute"
