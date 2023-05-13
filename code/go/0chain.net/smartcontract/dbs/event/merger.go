@@ -144,3 +144,7 @@ func withEventMerge[T any](mergeFunc mergeEventsFunc[T]) eventMergeMiddleware {
 func mergeAddProviderEvents[T any](tag EventTag, middlewares ...eventMergeMiddleware) eventsMerger {
 	return newEventsMerger[T](tag, middlewares...)
 }
+
+func mergeChallengeEvents[T any](tag EventTag, middlewares ...eventMergeMiddleware) eventsMerger {
+	return newEventsMerger[T](tag, middlewares...)
+}

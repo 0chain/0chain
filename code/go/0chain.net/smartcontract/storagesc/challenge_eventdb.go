@@ -67,6 +67,8 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]i
 		SuccessfulChallenges: allocStats.SuccessChallenges,
 		FailedChallenges:     allocStats.FailedChallenges,
 	})
+
+	logging.Logger.Debug("jayash expiredCountMap", zap.Any("expiredCountMap", expiredCountMap), zap.Any("ch.BlobberID", ch.BlobberID), zap.Any("blobberStats", blobberStats))
 	//
 	//chBlobberOpenDelta := 1
 	//if exp, ok := expiredCountMap[ch.BlobberID]; ok {
@@ -103,9 +105,9 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 		Passed:         passed,
 	}
 	if passed {
-		clg.Responded = 2 // Failed challenge
+		clg.Responded = 1 // Passed challenge
 	} else {
-		clg.Responded = 1 // Successful challenge
+		clg.Responded = 2 // Failed challenge
 	}
 
 	a := event.Allocation{
@@ -125,7 +127,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	}
 
 	logging.Logger.Debug("jayash A ", zap.Any(
-		"a", a), zap.Any("b", b), zap.Any("clg", clg))
+		"a", a), zap.Any("b", b), zap.Any("clg", clg), zap.Any("Round", balances.GetBlock().Round))
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)

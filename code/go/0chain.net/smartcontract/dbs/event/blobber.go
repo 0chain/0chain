@@ -382,9 +382,9 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 //		CompletedDelta int64  `json:"completed_delta"`
 //		OpenDelta      int64  `json:"open_delta"`
 //	}
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
-}
+//func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
+//	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
+//}
 
 //func withBlobberChallengesMerged() eventMergeMiddleware {
 //	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
@@ -395,9 +395,9 @@ func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
 //	})
 //}
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
-}
+//func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
+//	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
+//}
 
 func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
 	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobbers)).Scan(&Blobber{}).Error
