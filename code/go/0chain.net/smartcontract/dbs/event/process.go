@@ -732,6 +732,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.addChallenges(*challenges)
 	case TagAddChallengeToAllocation:
+		logging.Logger.Debug("TagAddChallengeToAllocation", zap.Any("event", event), zap.Any("data", event.Data))
 		as, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
@@ -739,6 +740,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 
 		return edb.addChallengesToAllocations(*as)
 	case TagUpdateBlobberOpenChallenges:
+		logging.Logger.Debug("TagUpdateBlobberOpenChallenges", zap.Any("event", event), zap.Any("data", event.Data))
 		updates, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
@@ -752,6 +754,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
+		logging.Logger.Debug("TagUpdateBlobberChallenge", zap.Any("event", event), zap.Any("data", event.Data))
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
@@ -760,6 +763,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.updateBlobberChallenges(*bs)
 
 	case TagUpdateAllocationChallenge:
+		logging.Logger.Debug("TagUpdateAllocationChallenge", zap.Any("event", event), zap.Any("data", event.Data))
 		as, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {
 			return ErrInvalidEventData
