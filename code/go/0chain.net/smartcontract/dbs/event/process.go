@@ -741,7 +741,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addChallengesToAllocations(*as)
 	case TagUpdateBlobberOpenChallenges:
 		logging.Logger.Debug("TagUpdateBlobberOpenChallenges", zap.Any("event", event), zap.Any("data", event.Data))
-		updates, ok := fromEvent[Blobber](event.Data)
+		updates, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
