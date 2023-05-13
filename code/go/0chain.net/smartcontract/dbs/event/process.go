@@ -89,9 +89,9 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddProviderEvents[dbs.ProviderID](TagShutdownProvider, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[dbs.ProviderID](TagKillProvider, withUniqueEventOverwrite()),
 
-			mergeChallengeEvents[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite()),
-			mergeChallengeEvents[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite()),
-			mergeChallengeEvents[Allocation](TagUpdateAllocationChallenge, withUniqueEventOverwrite()),
+			//mergeChallengeEvents[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite()),
+			//mergeChallengeEvents[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite()),
+			//mergeChallengeEvents[Allocation](TagUpdateAllocationChallenge, withUniqueEventOverwrite()),
 
 			mergeAddAllocationEvents(),
 			mergeUpdateAllocEvents(),
