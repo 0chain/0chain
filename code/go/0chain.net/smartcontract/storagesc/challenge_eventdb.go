@@ -68,13 +68,6 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]i
 		FailedChallenges:     allocStats.FailedChallenges,
 	})
 
-	logging.Logger.Debug("jayash expiredCountMap", zap.Any("expiredCountMap", expiredCountMap), zap.Any("ch.BlobberID", ch.BlobberID), zap.Any("blobberStats", blobberStats))
-	//
-	//chBlobberOpenDelta := 1
-	//if exp, ok := expiredCountMap[ch.BlobberID]; ok {
-	//	chBlobberOpenDelta -= exp
-	//}
-
 	// Update open challenges count of challenge blobber
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.Blobber{
 		Provider:            event.Provider{ID: ch.BlobberID},
@@ -83,16 +76,6 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]i
 		ChallengesPassed:    uint64(blobberStats.SuccessChallenges),
 	})
 
-	// Remove expired challenge count of the other blobbers
-	//for bid, expiredCount := range expiredCountMap {
-	//	if bid != ch.BlobberID {
-	//		// Emit event per blobber and the merger will be able to merge them for each blobber
-	//		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, bid, event.ChallengeStatsDeltas{
-	//			Id:        bid,
-	//			OpenDelta: int64(-expiredCount),
-	//		})
-	//	}
-	//}
 	logging.Logger.Debug("emitted add_challenge")
 }
 

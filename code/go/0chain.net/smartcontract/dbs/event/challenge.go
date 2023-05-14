@@ -1,11 +1,8 @@
 package event
 
 import (
-	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	common2 "0chain.net/smartcontract/common"
+	"fmt"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -74,7 +71,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	})
 
 	result := query.Find(&chs)
-	logging.Logger.Info("jayash GetOpenChallengesForBlobber", zap.Any("query", query.Statement), zap.Any("result", result), zap.Any("chs", chs), zap.Any("err", result.Error))
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)

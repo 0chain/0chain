@@ -376,24 +376,9 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	})
 }
 
-//	type ChallengeStatsDeltas struct {
-//		Id             string `json:"id"`
-//		PassedDelta    int64  `json:"passed_delta"`
-//		CompletedDelta int64  `json:"completed_delta"`
-//		OpenDelta      int64  `json:"open_delta"`
-//	}
 func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
 }
-
-//func withBlobberChallengesMerged() eventMergeMiddleware {
-//	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
-//		a.CompletedDelta += b.CompletedDelta
-//		a.PassedDelta += b.PassedDelta
-//		a.OpenDelta += b.OpenDelta
-//		return a, nil
-//	})
-//}
 
 func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
@@ -411,31 +396,6 @@ func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
 
 	return CreateBuilder("blobbers", "id", blobberIdList).
 		AddUpdate("open_challenges", openChallengesList).Exec(edb).Error
-}
-
-func sqlUpdateOpenChallenges(blobbers []Blobber) string {
-	if len(blobbers) == 0 {
-		return ""
-	}
-	sql := "UPDATE blobbers \n"
-	sql += "SET "
-	sql += "  open_challenges = v.open\n"
-	sql += "FROM ( VALUES"
-	first := true
-	for _, blobber := range blobbers {
-		if first {
-			first = false
-		} else {
-			sql += ","
-		}
-		sql += fmt.Sprintf("('%s', %d)", blobber.ID, blobber.OpenChallenges)
-	}
-	sql += "  )\n"
-	sql += "AS v (id, open)\n"
-	sql += "WHERE\n"
-	sql += "  blobbers.id = v.id"
-
-	return sql
 }
 
 func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
@@ -504,31 +464,6 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		AddUpdate("total_read_income", totalReadIncome, "blobbers.total_read_income + t.total_read_income").
 		AddUpdate("total_slashed_stake", totalSlashedStake, "blobbers.total_slashed_stake + t.total_slashed_stake").
 		Exec(edb).Debug().Error
-}
-
-// ref https://www.postgresql.org/docs/9.1/sql-values.html
-func sqlUpdateBlobberChallenges(blobbers []Blobber) string {
-	sql := "UPDATE blobbers \n"
-	sql += "SET "
-	sql += "  challenges_completed = v.completed,\n"
-	sql += "  challenges_passed = v.passed\n"
-	//sql += ",  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n" todo
-	sql += "FROM ( VALUES "
-	first := true
-	for _, blobber := range blobbers {
-		if first {
-			first = false
-		} else {
-			sql += ",\n"
-		}
-		sql += fmt.Sprintf("('%s', %d, %d)", blobber.ID, blobber.ChallengesPassed, blobber.ChallengesCompleted)
-	}
-	sql += ")\n"
-	sql += "AS v (id, passed, completed)\n"
-	sql += "WHERE\n"
-	sql += "blobbers.id = v.id"
-
-	return sql
 }
 
 func mergeBlobberHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {

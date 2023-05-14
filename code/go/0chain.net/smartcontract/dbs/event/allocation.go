@@ -323,21 +323,7 @@ func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withUniqueEventOverwrite())
 }
 
-//
-//func withAllocChallengesMerged() eventMergeMiddleware {
-//	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
-//		a.OpenChallenges += b.OpenChallenges
-//		a.LatestClosedChallengeTxn = b.LatestClosedChallengeTxn
-//		a.SuccessfulChallenges += b.SuccessfulChallenges
-//		a.FailedChallenges += b.FailedChallenges
-//
-//		return a, nil
-//	})
-//}
-
 func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
-
-	logging.Logger.Debug("jayash updateAllocationChallenges", zap.Any("allocs", allocs))
 
 	var (
 		allocationIdList             []string
@@ -348,22 +334,12 @@ func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 	)
 
 	for _, alloc := range allocs {
-		logging.Logger.Debug("updateAllocationChallenges", zap.Any("alloc", alloc))
-
 		allocationIdList = append(allocationIdList, alloc.AllocationID)
 		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
 		latestClosedChallengeTxnList = append(latestClosedChallengeTxnList, alloc.LatestClosedChallengeTxn)
 		successfulChallengesList = append(successfulChallengesList, alloc.SuccessfulChallenges)
 		failedChallengeList = append(failedChallengeList, alloc.FailedChallenges)
 	}
-	logging.Logger.Debug("updateAllocationChallenges",
-		zap.Any("allocationIdList", allocationIdList),
-		zap.Any("openChallengesList", openChallengesList),
-		zap.Any("latestClosedChallengeTxnList", latestClosedChallengeTxnList),
-		zap.Any("successfulChallengesList", successfulChallengesList),
-		zap.Any("failedChallengeList", failedChallengeList))
-
-	//}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
 		AddUpdate("open_challenges", openChallengesList).

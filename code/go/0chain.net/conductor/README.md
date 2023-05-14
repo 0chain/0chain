@@ -1,19 +1,24 @@
 # Conductor
 
-Conductor is an RPC server used for integrations tests.
+Conductor is a program used for orchestrate a 0chain network and running integrations tests agains it.
 It can control nodes to make them behave badly in the network as required.
-As an RPC server, it also receives events from the nodes to reliably manage the test progressions.
 
-The conductor is automated as much as it can be.
+A RPC server is exposed, so the communication between the conductor and the network nodes is possible. Through this channel of the communication the conductor receives information about the nodes state and events that happen in the blockchain in order to proceed in the tests. The client queries the conductor to know if it should behave in a malicious way.
+
+Currently, the conductor tests cover miners, sharders, blobbers and authorizers. They also allow to test client tools like `zboxcli` and `zwalletcli`.
 
 ## How it works
 
+The conductor tests are present in `yaml` configuration files located in `docker.local/config`. The conductor server searches in this location for a file with the name used as argument in the start conductor command.
+
 The conductor requires the nodes to be built on a certain way in order to control them during the tests.
-Particularly, when miners and sharders are built, it uses a tag `integration_tests`.
+Particularly, when miners, sharders, blobbers and authorizers are built, it uses a tag `integration_tests`.
 The `go build` will use the go files ending with `_integration_tests.go` instead of `_main.go` files.
 The `_integration_tests.go` copy communicates with the conductor through RPC.
 
 During run time, the conductor loads a yaml file for its config and uses a test suite which defines the tests.
+
+The test runs successfully if the conductor is able to run all the steps without issues. A timeout is associated with most of the steps that when reached make the test fail.
 
 ### Conductor config
 
@@ -23,6 +28,7 @@ The important details in the config file are the following.
 
 - details of all nodes used
 - custom commands used in tests
+- `stuck_warning_threshold` setting to show additional output when the chain is stuck for more than specified duration
 
 ### Conductor test suite
 
@@ -88,13 +94,18 @@ The conductor test suites are configured on yaml files. These test suites can be
 1. `standard tests` - confirms chain continue to function properly despite bad miner and sharder participants
 - [conductor.miners.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.miners.yaml)
 - [conductor.sharders.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.sharders.yaml)
-2. `view-change tests` - confirms view change (addition and removal of nodes) is working
+2. `complex scenarios` - confirms chain continues to function properly despite byzantine attacks and faults
+- [conductor.no-view-change.byzantine.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.no-view-change.byzantine.yaml)
 - [conductor.no-view-change.fault-tolerance.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.no-view-change.fault-tolerance.yaml)
 - [conductor.view-change.byzantine.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.view-change.byzantine.yaml)
-- [conductor.view-change.fault-tolerance.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.view-change.fault-tolerance.yaml)
+- conductor.view-change.fault-tolerance*.yaml
 3. `blobber tests` - confirms storage functions continue to work despite bad or lost blobber, and confirms expected storage function failures
 - [conductor.blobber-1.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-1.yaml)
 - [conductor.blobber-2.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-2.yaml)
+- [conductor.blobber-3.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-3.yaml)
+- [conductor.validator-1.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.validator-1.yaml)
+4. `authorizer tests` - confirms burns and mints continue to work despite authorizers bad behaviours
+- [conductor.authorizer.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.authorizer.yaml)
 
 ## Test cases covered
 
@@ -104,26 +115,48 @@ To know about the specific test cases covered by the conductor tests, navigate t
 
 Below are the basic setup required to run the test suites.
 
-1. Git clone [0chain](https://github.com/0chain/0chain)
-2. Build miner docker image for integration test
-
+### 1. Clone the repo
 ```sh
-(cd 0chain && ./docker.local/bin/build.miners-integration-tests.sh)
+git clone git@github.com:0chain/0chain.git && cd 0chain
 ```
 
-2. Build sharder docker image for integration test
-
+### 2. Init Setup
 ```sh
-(cd 0chain && ./docker.local/bin/build.sharders-integration-tests.sh)
+./docker.local/bin/init.setup.sh
+```
+this will create folder called sharder* and miner* inside `./docker.local/` folder.
+
+### 3. Setup the network
+```sh
+./docker.local/bin/setup.network.sh
 ```
 
-NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images.
-
+### 4. Build the base image
 ```sh
-(cd 0chain && ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
+./docker.local/bin/build.base.sh
 ```
 
-3. Confirm that view change rounds are set to 50 on `0chain/docker.local/config.yaml`
+### 5. Build miner and sharder docker images for integration test
+
+#### a. Build miner docker image for integration test
+
+```sh
+./docker.local/bin/build.miners-integration-tests.sh
+```
+
+#### b. Build sharder docker image for integration test
+
+```sh
+./docker.local/bin/build.sharders-integration-tests.sh
+```
+
+NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images by running the folowing:
+
+```sh
+./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh
+```
+
+### 6. Confirm that view change rounds are set to 50 on `0chain/docker.local/config/sc.yaml`
 
 ```yaml
 start_rounds: 50
@@ -149,7 +182,7 @@ wait_rounds: 50
 
 ## Running view-change tests
 
-1. Set `view_change: true` on `0chain/docker.local/config.yaml`
+1. Set `view_change: true` on `0chain/docker.local/config/0chain.yaml`
 2. Run view-change tests
 
 ```sh
@@ -158,7 +191,7 @@ wait_rounds: 50
 (cd 0chain && ./docker.local/bin/start.conductor.sh view-change-3)
 ```
 
-## Running blobber tests
+## <a name="blobber"></a>Running blobber tests
 
 Blobber tests require more setup.
 
@@ -188,21 +221,25 @@ zwalletcli/
 (cd zwalletcli && make install)
 ```
 
-8. Patch 0dns
+8. Build 0dns
 
 ```sh
-(cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
-(cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch)
+(cd 0dns && ./docker.local/bin/init.sh)
+(cd 0dns && ./docker.local/bin/build.sh)
 ```
 
-9. Patch blobbers
+9. Init setup for blobbers
 
 ```sh
-(cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch)
-(cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
+(cd blobber && ./docker.local/bin/blobber.init.setup.sh)
 ```
 
-10. Add `~/.zcn/config.yaml` as follows
+10. Build blobber base
+```sh
+(cd blobber && ./docker.local/bin/build.base.sh)
+```
+
+11. Add `~/.zcn/config.yaml` as follows
 
 ```yaml
 block_worker: http://127.0.0.1:9091
@@ -214,7 +251,7 @@ max_txn_query: 5
 query_sleep_time: 5
 ```
 
-11. Apply if on Ubuntu 18.04
+12. Apply if on Ubuntu 18.04
 
 https://github.com/docker/for-linux/issues/563#issuecomment-547962928
 
@@ -223,12 +260,98 @@ package required by docker-compose and used by docker. A docker process
 (a build, for example) can sometimes fail due to the bug. Some tests have
 internal docker builds and can fail due to this bug.
 
-12. Run blobber tests
+13. Run blobber tests
 
 ```sh
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2) (edited)
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2)
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-3)
+(cd 0chain && ./docker.local/bin/start.conductor.sh validator-1)
 ```
+
+## <a name="authorizer"></a>Running authorizer tests
+
+Blobber tests require more setup.
+
+1. Git clone [authorizer](https://github.com/0chain/token_bridge_authserver)
+2. Git clone [zboxcli](https://github.com/0chain/zboxcli)
+3. Git clone [zwalletcli](https://github.com/0chain/blobber)
+4. Git clone [0dns](https://github.com/0chain/0dns)
+5. Confirm directories
+
+```
+0chain/
+token_bridge_authserver/
+zboxcli/
+zwalletcli/
+0dns/
+```
+
+6. Install zboxcli
+
+```sh
+(cd zboxcli && make install)
+```
+
+7. Install zwalletcli
+
+```sh
+(cd zwalletcli && make install)
+```
+
+8. Build 0dns
+
+```sh
+(cd 0dns && ./docker.local/bin/init.sh)
+(cd 0dns && ./docker.local/bin/build.sh)
+```
+
+9. Init setup for authorizer
+
+```sh
+(cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh)
+```
+
+10. Build authorizer integration image
+```sh
+(cd blobber && ./docker.local/bin/build.authorizer-integration-tests.sh)
+```
+
+11. Add `~/.zcn/config.yaml` as follows
+
+```yaml
+block_worker: http://127.0.0.1:9091
+signature_scheme: bls0chain
+min_submit: 50
+min_confirmation: 50
+confirmation_chain_length: 3
+max_txn_query: 5
+query_sleep_time: 5
+```
+
+12. Apply if on Ubuntu 18.04
+
+https://github.com/docker/for-linux/issues/563#issuecomment-547962928
+
+The bug in Ubuntu 18.04 related. It relates to docker-credential-secretservice
+package required by docker-compose and used by docker. A docker process
+(a build, for example) can sometimes fail due to the bug. Some tests have
+internal docker builds and can fail due to this bug.
+
+13. Run authorizer tests
+
+```sh
+(cd 0chain && ./docker.local/bin/start.conductor.sh authorizer)
+```
+
+## Code structure
+
+The conductor code is located in `code/go/0chain.net/conductor`. Next directories importance is highlighted.
+
+* `cases` - has all test cases that should be linked to directives in `config`. These test cases are executed on directive `make_test_case_check`.
+* `conductor` - has all features related to reading test file and the directives instructions.
+* `conductrpc` - has rpc server and rpc client code to allow communication between conductor and nodes.
+* `config` - registry of the directives and instructions to read the test configuration file.
 
 ## Updating conductor tests
 
@@ -252,6 +375,24 @@ enable:
 #  - "All nodes down/up"
 ```
 
+### Directives
+
+The directives are test steps executed by the conductor. Each directive has a set of instructions programmed in the conductor. There are different purposes for creating a new different directive. We may need to inject a new behaviour in some node, waiting for a new event or creating a new test case.
+
+The directives may be used for example for:
+1. Starting nodes;
+2. Changing conductor nodes state what allows the injection of a new behaviour when the node is accordingly programmed;
+3. Waiting for events to happen like reaching a specific round, waiting for a view change, etc;
+4. Run commands (bash scripts);
+5. Execute verifications (test cases configured).
+
+To insert a new directive that will change some node behaviour you should:
+1. Declare directive in `code/go/0chain.net/conductor/config/registry.go`;
+2. Create the structures inside `code/go/0chain.net/conductor/config` that will allow to read the configuration defined in the test file;
+3. Update the conductor state, so it can be read by the nodes;
+4. Use a `_integration_tests.go` to read the conductor state and program the behaviour you want.
+
+
 ### Common directive properties
 
 - `timeout` - All commands support a timeout out of the box. Valid values in time duration format (eg. `1s` for 1 second, `10m` for 10 minutes). The default is 2 minutes.
@@ -265,6 +406,7 @@ enable:
 
 - `set_monitor` - initiate the node from where blockchain events will be accepted
 - `cleanup_bc` - stop all nodes, reset rounds, and clean up data using `cleanup_command` defined on `conductor.config.yaml`
+- `env` - set environment variables that might affect commands to start/stop nodes. e.g. `CLI_ARGS` will effectively add arguments to command in `b0docker-compose.yml`
 
 2. **common nodes control**
 
@@ -358,8 +500,9 @@ enable:
 4. **control nodes behavior / misbehavior**
 
 - `set_revealed` - reveal the list of nodes. A revealed node sends it share.
-- `unset_revealed` - hid the list of nodes. A hidden node does not sends it share.
+- `unset_revealed` - hide the list of nodes. A hidden node does not sends it share.
   - This is currently UNUSED
+- `generators_failure` - prevents generators selected at start of the specified round (as in some setups they aren't known beforehand) from generating blocks for the duration of the whole round including all restarts.
 
 5. **Byzantine blockchain**
 
@@ -517,7 +660,7 @@ enable:
 
 #### Custom commands
 
-The list is available on [conductor.config.yaml](https://github.com/0chain/0chain/blob/c93e6022bee40e76eb35c408d8117dfb41b30bf7/docker.local/config/conductor.config.yaml#L117).
+The list is available on [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml#L146).
 
 ### Adding new command
 
@@ -540,3 +683,27 @@ To use, simply provide the `command` directive and the custom command name on te
     - command:
         name: "your_command_name"
 ```
+
+## Debugging
+
+The output of start conductor command shows the tests that being executed, the tests result and the error description if the test fails.
+
+It is generated the next logs for each node that runs in the conductor test.
+* `0chain/conductor/logs` shows logs about the building of the docker images and the docker containers initialization. Normally, you can see here errors if the test is stuck on starting nodes.
+* `0chain/docker.local/miner*` shows miners application logs.
+* `0chain/docker.local/sharder*` shows sharders application logs.
+* `blobber/docker.local/blobber*` shows miners application logs.
+* `token_bridge_authserver/docker.local/authorizer*` shows bridges application logs.
+
+The test cases are highly dependent on the configuration used in the network. The files are located in:
+* `0chain/docker.local/0chain.yaml`
+* `0chain/docker.local/sc.yaml`
+* `blobber/docker.local/conductor-config/0chain_blobber.yaml`
+* `blobber/docker.local/conductor-config/0chain_validator.yaml`
+* `token_bridge_authserver/config/config.yaml`
+* `token_bridge_authserver/config/authorizer.yaml`
+
+Some tests also requires the magic block to have only the nodes in use.
+
+
+
