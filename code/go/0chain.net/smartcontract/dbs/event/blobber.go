@@ -400,7 +400,17 @@ func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
 }
 
 func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
-	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(blobbers)).Scan(&Blobber{}).Error
+
+	blobberIdList := make([]string, 0, len(blobbers))
+	openChallengesList := make([]uint64, 0, len(blobbers))
+
+	for _, blobber := range blobbers {
+		blobberIdList = append(blobberIdList, blobber.ID)
+		openChallengesList = append(openChallengesList, blobber.OpenChallenges)
+	}
+
+	return CreateBuilder("blobbers", "id", blobberIdList).
+		AddUpdate("open_challenges", openChallengesList).Exec(edb).Error
 }
 
 func sqlUpdateOpenChallenges(blobbers []Blobber) string {
@@ -429,7 +439,19 @@ func sqlUpdateOpenChallenges(blobbers []Blobber) string {
 }
 
 func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
-	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(blobbers)).Scan(&Blobber{}).Error
+	blobberIdList := make([]string, 0, len(blobbers))
+	challengesPassedList := make([]uint64, 0, len(blobbers))
+	challengesCompletedList := make([]uint64, 0, len(blobbers))
+
+	for _, blobber := range blobbers {
+		blobberIdList = append(blobberIdList, blobber.ID)
+		challengesPassedList = append(challengesPassedList, blobber.ChallengesPassed)
+		challengesCompletedList = append(challengesCompletedList, blobber.ChallengesCompleted)
+	}
+
+	return CreateBuilder("blobbers", "id", blobberIdList).
+		AddUpdate("challenges_passed", challengesPassedList).
+		AddUpdate("challenges_completed", challengesCompletedList).Exec(edb).Error
 }
 
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
