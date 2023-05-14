@@ -924,7 +924,7 @@ func txnIterHandlerFunc(
 
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
-			logging.Logger.Debug("Bad transaction cost fee",
+			logging.Logger.Debug("generate block - bad transaction cost fee",
 				zap.Error(err),
 				zap.String("txn_hash", txn.Hash))
 
@@ -944,7 +944,7 @@ func txnIterHandlerFunc(
 			}
 
 			if err := txn.ValidateFee(mc.ChainConfig.TxnExempt(), fee); err != nil {
-				logging.Logger.Error("invalid transaction fee",
+				logging.Logger.Error("generate block - invalid transaction fee",
 					zap.Any("txn", txn),
 					zap.Any("estimated fee", fee),
 					zap.Error(err))
@@ -960,11 +960,20 @@ func txnIterHandlerFunc(
 
 		success, err := txnProcessor(ctx, bState, txn, tii, waitC)
 		if err != nil {
+			logging.Logger.Debug("generate block txn processor failed",
+				zap.Error(err),
+				zap.Int64("round", b.Round),
+				zap.Int32("iterate count", tii.count),
+				zap.Int("current block size", len(b.Txns)))
 			return false, err
 		}
 
 		if !success {
 			// skipping and continue to check the next transaction
+			logging.Logger.Debug("generate block txn processor failed",
+				zap.Int64("round", b.Round),
+				zap.Int32("iterate count", tii.count),
+				zap.Int("current block size", len(b.Txns)))
 			return true, nil
 		}
 
