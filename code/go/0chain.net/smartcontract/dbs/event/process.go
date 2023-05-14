@@ -200,12 +200,13 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
+	p := int64(-1)
 	edb.managePartitions(0)
 
 	for {
 		es := <-edb.eventsChannel
-    
-		s, err := edb.work(ctx, gs, es)
+
+		s, err := edb.work(ctx, gs, es, &p)
 		if err != nil {
 			if config.Development() { //panic in case of development
 				log.Panic(err)
@@ -217,13 +218,14 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) (*Snapshot, error) {
+func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
 	defer func() {
 		es.doneC <- struct{}{}
 	}()
 
-	if es.round%edb.settings.PartitionChangePeriod == 0 {
+	if *currentPartition < es.round/edb.settings.PartitionChangePeriod {
 		edb.managePartitions(es.round)
+		*currentPartition = es.round / edb.settings.PartitionChangePeriod
 	}
 
 	tx, err := edb.Begin()
