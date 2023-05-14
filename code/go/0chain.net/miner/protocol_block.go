@@ -729,6 +729,9 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		waitC chan struct{}) (bool, error) {
 
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
+			logging.Logger.Debug("generate block error, transaction already processed",
+				zap.Int64("round", b.Round),
+				zap.String("txn", txn.Hash))
 			return false, nil
 		}
 		var debugTxn = txn.DebugTxn()
@@ -737,11 +740,13 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		switch err {
 		case PastTransaction:
 			tii.pastTxns = append(tii.pastTxns, txn)
-			if debugTxn {
-				logging.Logger.Info("generate block (debug transaction) error, transaction hash old nonce",
-					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
-					zap.Any("now", common.Now()), zap.Int64("nonce", txn.Nonce))
-			}
+			//if debugTxn {
+			logging.Logger.Debug("generate block (debug transaction) error, transaction hash old nonce",
+				zap.String("txn", txn.Hash),
+				zap.Int32("iterate count", tii.count),
+				zap.Any("now", common.Now()),
+				zap.Int64("nonce", txn.Nonce))
+			//}
 			return false, nil
 		case FutureTransaction:
 			list := tii.futureTxns[txn.ClientID]
@@ -754,6 +759,10 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				return list[i].Nonce < list[j].Nonce
 			})
 			tii.futureTxns[txn.ClientID] = list
+			logging.Logger.Debug("generate block - future transaction",
+				zap.String("txn", txn.Hash),
+				zap.Int64("round", b.Round),
+				zap.Int32("iterate count", tii.count))
 			return false, nil
 		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
@@ -778,12 +787,12 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 
 		events, err := mc.UpdateState(ctx, b, bState, txn, waitC)
 		if err != nil {
-			if debugTxn {
-				logging.Logger.Error("generate block (debug transaction) update state",
-					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
-					zap.String("txn_object", datastore.ToJSON(txn).String()),
-					zap.Error(err))
-			}
+			//if debugTxn {
+			logging.Logger.Error("generate block (debug transaction) update state",
+				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
+				zap.String("txn_object", datastore.ToJSON(txn).String()),
+				zap.Error(err))
+			//}
 			tii.failedStateCount++
 			if cstate.ErrInvalidState(err) {
 				return false, err // return err to break the txns pool iteration
