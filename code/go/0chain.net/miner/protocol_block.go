@@ -1283,8 +1283,10 @@ l:
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 
 	// update future txns score to lower the priority
+	var totalFuture int
 	for _, txns := range iterInfo.futureTxns {
 		for _, txn := range txns {
+			totalFuture++
 			_, err := transaction.PutTransaction(ctx, txn)
 			if err != nil {
 				logging.Logger.Warn("generate block - update future transaction score failed",
@@ -1293,6 +1295,9 @@ l:
 			}
 		}
 	}
+	logging.Logger.Debug("generate block (update future txns score)",
+		zap.Int("count", totalFuture),
+		zap.Int64("round", b.Round))
 	return nil
 }
 
