@@ -126,7 +126,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 		OpenChallenges:      uint64(blobberStats.OpenChallenges),
 	}
 
-	logging.Logger.Debug("jayash A ", zap.Any(
+	logging.Logger.Info("jayash A ", zap.Any(
 		"a", a), zap.Any("b", b), zap.Any("clg", clg), zap.Any("Round", balances.GetBlock().Round))
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
