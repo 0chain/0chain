@@ -727,6 +727,9 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		txn *transaction.Transaction,
 		tii *TxnIterInfo,
 		waitC chan struct{}) (bool, error) {
+		logging.Logger.Debug("generate block - txn process start",
+			zap.String("txn", txn.Hash),
+			zap.Int64("round", b.Round))
 
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
 			logging.Logger.Debug("generate block error, transaction already processed",
@@ -774,6 +777,9 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			//}
 			return false, nil
 		default:
+			logging.Logger.Error("generate block failed",
+				zap.String("txn", txn.Hash),
+				zap.Error(err))
 			if err != nil && cstate.ErrInvalidState(err) {
 				return false, err // return err to break the txns pool iteration
 			}
@@ -1275,6 +1281,18 @@ l:
 	b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
+
+	// update future txns score to lower the priority
+	for _, txns := range iterInfo.futureTxns {
+		for _, txn := range txns {
+			_, err := transaction.PutTransaction(ctx, txn)
+			if err != nil {
+				logging.Logger.Warn("generate block - update future transaction score failed",
+					zap.Error(err),
+					zap.String("txn", txn.Hash))
+			}
+		}
+	}
 	return nil
 }
 
