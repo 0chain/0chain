@@ -1,6 +1,6 @@
 module 0chain.net
 
-go 1.18
+go 1.20
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
