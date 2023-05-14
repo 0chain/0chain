@@ -920,7 +920,9 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
-		logging.Logger.Debug("generate block - iteration process txn...", zap.String("txn_hash", txn.Hash))
+		logging.Logger.Debug("generate block - iteration process txn...",
+			zap.String("txn_hash", txn.Hash),
+			zap.Int64("round", b.Round))
 
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, lfb.ClientState, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
@@ -976,6 +978,10 @@ func txnIterHandlerFunc(
 				zap.Int("current block size", len(b.Txns)))
 			return true, nil
 		}
+
+		logging.Logger.Debug("generate block - process txn success",
+			zap.Int64("round", b.Round),
+			zap.String("txn", txn.Hash))
 
 		tii.cost += cost
 		if tii.byteSize >= mc.MaxByteSize() {
@@ -1083,9 +1089,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	switch err {
 	case context.DeadlineExceeded:
-		logging.Logger.Debug("Slow block generation, stopping transaction collection and finishing the block")
+		logging.Logger.Debug("generate block - slow block generation, stopping transaction collection and finishing the block")
 	case context.Canceled:
-		logging.Logger.Debug("Context cancelled, rejecting current block")
+		logging.Logger.Debug("generate block - context cancelled, rejecting current block")
 		return err
 	default:
 		if err != nil {
