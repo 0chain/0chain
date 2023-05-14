@@ -68,13 +68,13 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 
 	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			from, blobberID, 0).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+			from, blobberID, 0).Limit(limit.Limit).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "created_at"},
 		Desc:   limit.IsDescending,
 	})
 
 	result := query.Find(&chs)
-	logging.Logger.Debug("GetOpenChallengesForBlobber", zap.Any("query", query.Statement), zap.Any("result", result), zap.Any("chs", chs), zap.Any("err", result.Error))
+	logging.Logger.Info("jayash GetOpenChallengesForBlobber", zap.Any("query", query.Statement), zap.Any("result", result), zap.Any("chs", chs), zap.Any("err", result.Error))
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
