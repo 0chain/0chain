@@ -822,8 +822,13 @@ func BenchmarkTests(
 				balances cstate.StateContextI,
 			) (string, error) {
 				challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
+				input := &GenerateChallengeInput{Round: balances.GetBlock().Round}
+				marshal, err2 := json.Marshal(input)
+				if err2 != nil {
+					return "", err2
+				}
 				if challengesEnabled {
-					err := ssc.generateChallenge(txn, balances.GetBlock(), nil, balances)
+					err := ssc.generateChallenge(txn, balances.GetBlock(), marshal, balances)
 					if err != nil {
 						return "", nil
 					}
