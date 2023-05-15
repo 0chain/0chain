@@ -1075,6 +1075,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 			if err := mc.deleteTxns(orphanFutureTxns); err != nil {
 				logging.Logger.Warn("generate block - remove future txns failed", zap.Error(err))
+			} else {
+				logging.Logger.Debug("remove future txns",
+					zap.Int("count", len(txnHashes)),
+					zap.Strings("txns", txnHashes))
 			}
 		}
 	}()
