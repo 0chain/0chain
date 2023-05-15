@@ -379,17 +379,19 @@ func initHandlers(c chain.Chainer) {
 	if config.Development() {
 		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
 		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
-		chain.SetupStateHandlers()
+		chain.SetupDebugStateHandlers()
 		config.SetupHandlers()
 	}
 
-	// common between
+	// common
 	node.SetupHandlers()
-	chain.SetupSharderHandlers(c)
+	sharder.SetupHandlers()
 	block.SetupHandlers()
 	diagnostics.SetupHandlers()
+	chain.SetupStateHandlers()
 
-	sharder.SetupHandlers()
+	// sharder only
+	chain.SetupSharderHandlers(c)
 	chain.GetServerChain().SetupSharderNodeHandlers()
 	chain.SetupScRestApiHandlers()
 	chain.SetupSharderStateHandlers()
