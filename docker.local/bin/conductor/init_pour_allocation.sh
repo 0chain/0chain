@@ -37,7 +37,7 @@ BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation \
     --read_price 0.001-10 --write_price 0.01-10 --size 104857600 \
-    --lock 0.01953125 --data 1 --parity 1 --expire 48h
+    --lock 0.01953125 --data 1 --parity 1 --expire 721h
 
 # create random file
 head -c 52428800 < /dev/urandom > random.bin
@@ -53,17 +53,3 @@ head -c 52428800 < /dev/urandom > random.bin
     --allocation "$(cat ~/.zcn/allocation.txt)" \
     --remotepath=/remote/random.bin
 
-# client id (doesn't work)
-#
-# "$(grep -Po '"client_id":.*?[^\\]"' ~/.zcn/testing-auth.json | awk -F':' '{print $2}')"
-
-# get auth ticket
-#
-# "$(./zboxcli/zbox --wallet testing.json share --allocation "$(cat ~/.zcn/allocation.txt)" --remotepath=/remote/remote.bin --clientid "$(grep -Po '"client_id":.*?[^\\]"' ~/.zcn/testing-auth.json | awk -F':' '{print $2}')" | cut -c13-)"
-
-# 10% of 104857600 is
-#
-#             1G             104857600
-#    -------------------  = -----------
-#     0.1 (write price)         x
-#
