@@ -1058,29 +1058,41 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	iterInfo.cost += cost
 
 	defer func() {
+		var (
+			deleteTxns = make([]datastore.Entity, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
+			txnHashes  = make([]string, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
+			lfbTS      = lfb.CreationDate
+			expiredTM  = common.Timestamp(3 * 60) // 3 minutes
+		)
 		// remove orphan future txns
 		if len(iterInfo.futureTxns) > 0 {
-			//go func() {
-			lfbTS := lfb.CreationDate
-			orphanFutureTxns := make([]datastore.Entity, 0, len(iterInfo.futureTxns))
-			txnHashes := make([]string, 0, len(iterInfo.futureTxns))
 			for _, txns := range iterInfo.futureTxns {
 				for _, ft := range txns {
-					if ft.CreationDate+3*60 < lfbTS { // future txns didn't get processed in 3 minutes
-						orphanFutureTxns = append(orphanFutureTxns, ft)
+					if ft.CreationDate+expiredTM < lfbTS { // future txns didn't get processed in 3 minutes
+						deleteTxns = append(deleteTxns, ft)
 						txnHashes = append(txnHashes, ft.Hash)
 					}
 				}
 			}
+		}
 
-			if len(orphanFutureTxns) > 0 {
-				if err := mc.deleteTxns(orphanFutureTxns); err != nil {
-					logging.Logger.Warn("generate block - remove future txns failed", zap.Error(err))
-				} else {
-					logging.Logger.Debug("remove future txns",
-						zap.Int("count", len(txnHashes)),
-						zap.Strings("txns", txnHashes))
+		if len(iterInfo.pastTxns) > 0 {
+			for _, pte := range iterInfo.pastTxns {
+				pt := pte.(*transaction.Transaction)
+				if pt.CreationDate+expiredTM < lfbTS {
+					deleteTxns = append(deleteTxns, pt)
+					txnHashes = append(txnHashes, pt.Hash)
 				}
+			}
+		}
+
+		if len(deleteTxns) > 0 {
+			if err := mc.deleteTxns(deleteTxns); err != nil {
+				logging.Logger.Warn("generate block - remove future txns failed", zap.Error(err))
+			} else {
+				logging.Logger.Debug("remove past and future txns",
+					zap.Int("count", len(txnHashes)),
+					zap.Strings("txns", txnHashes))
 			}
 		}
 	}()
