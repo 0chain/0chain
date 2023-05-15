@@ -1156,10 +1156,18 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	if iterInfo.byteSize < mc.MaxByteSize() {
 		if !waitOver && blockSize < mc.MinBlockSize() {
 			b.Txns = nil
+			var futureTxnsCount int
+			for _, ftxns := range iterInfo.futureTxns {
+				futureTxnsCount += len(ftxns)
+			}
 			logging.Logger.Debug("generate block (insufficient txns)",
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", iterInfo.count),
-				zap.Int32("block_size", blockSize))
+				zap.Int32("block_size", blockSize),
+				zap.Int32("state failure", iterInfo.failedStateCount),
+				zap.Int("invalid txns", len(iterInfo.invalidTxns)),
+				zap.Int("future txns", futureTxnsCount))
+
 			return common.NewError(InsufficientTxns,
 				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v, future %v, reused %v)",
 					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), len(iterInfo.futureTxns), 0))
@@ -1283,21 +1291,40 @@ l:
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 
 	// update future txns score to lower the priority
-	var totalFuture int
-	for _, txns := range iterInfo.futureTxns {
-		for _, txn := range txns {
-			totalFuture++
-			_, err := transaction.PutTransaction(ctx, txn)
-			if err != nil {
-				logging.Logger.Warn("generate block - update future transaction score failed",
-					zap.Error(err),
-					zap.String("txn", txn.Hash))
+	//var totalFuture int
+	//for _, txns := range iterInfo.futureTxns {
+	//	for _, txn := range txns {
+	//		totalFuture++
+	//		_, err := transaction.PutTransaction(ctx, txn)
+	//		if err != nil {
+	//			logging.Logger.Warn("generate block - update future transaction score failed",
+	//				zap.Error(err),
+	//				zap.String("txn", txn.Hash))
+	//		}
+	//	}
+	//}
+	//logging.Logger.Debug("generate block (update future txns score)",
+	//	zap.Int("count", totalFuture),
+	//	zap.Int64("round", b.Round))
+
+	// remove orphan future txns
+	go func() {
+		lfbTS := lfb.CreationDate
+		orphanFutureTxns := make([]datastore.Entity, 0, len(iterInfo.futureTxns))
+		txnHashes := make([]string, 0, len(iterInfo.futureTxns))
+		for _, txns := range iterInfo.futureTxns {
+			for _, ft := range txns {
+				if ft.CreationDate+3*60 < lfbTS { // future txns didn't get processed in 3 minutes
+					orphanFutureTxns = append(orphanFutureTxns, ft)
+					txnHashes = append(txnHashes, ft.Hash)
+				}
 			}
 		}
-	}
-	logging.Logger.Debug("generate block (update future txns score)",
-		zap.Int("count", totalFuture),
-		zap.Int64("round", b.Round))
+
+		transaction.RemoveFromPool(ctx, orphanFutureTxns)
+		logging.Logger.Debug("remove future txns", zap.Strings("txns", txnHashes))
+
+	}()
 	return nil
 }
 
