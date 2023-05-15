@@ -1780,7 +1780,7 @@ func (z *StorageChallenge) Msgsize() (s int) {
 	for za0001 := range z.ValidatorIDs {
 		s += msgp.StringPrefixSize + len(z.ValidatorIDs[za0001])
 	}
-	s += 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.BoolSize
+	s += 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.Int64Size
 	return
 }
 
