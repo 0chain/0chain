@@ -1057,6 +1057,28 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	iterInfo.cost += cost
 
+	defer func() {
+		// remove orphan future txns
+		if len(iterInfo.futureTxns) > 0 {
+			go func() {
+				lfbTS := lfb.CreationDate
+				orphanFutureTxns := make([]datastore.Entity, 0, len(iterInfo.futureTxns))
+				txnHashes := make([]string, 0, len(iterInfo.futureTxns))
+				for _, txns := range iterInfo.futureTxns {
+					for _, ft := range txns {
+						if ft.CreationDate+3*60 < lfbTS { // future txns didn't get processed in 3 minutes
+							orphanFutureTxns = append(orphanFutureTxns, ft)
+							txnHashes = append(txnHashes, ft.Hash)
+						}
+					}
+				}
+
+				transaction.RemoveFromPool(ctx, orphanFutureTxns)
+				logging.Logger.Debug("remove future txns", zap.Strings("txns", txnHashes))
+			}()
+		}
+	}()
+
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
@@ -1307,24 +1329,6 @@ l:
 	//	zap.Int("count", totalFuture),
 	//	zap.Int64("round", b.Round))
 
-	// remove orphan future txns
-	go func() {
-		lfbTS := lfb.CreationDate
-		orphanFutureTxns := make([]datastore.Entity, 0, len(iterInfo.futureTxns))
-		txnHashes := make([]string, 0, len(iterInfo.futureTxns))
-		for _, txns := range iterInfo.futureTxns {
-			for _, ft := range txns {
-				if ft.CreationDate+3*60 < lfbTS { // future txns didn't get processed in 3 minutes
-					orphanFutureTxns = append(orphanFutureTxns, ft)
-					txnHashes = append(txnHashes, ft.Hash)
-				}
-			}
-		}
-
-		transaction.RemoveFromPool(ctx, orphanFutureTxns)
-		logging.Logger.Debug("remove future txns", zap.Strings("txns", txnHashes))
-
-	}()
 	return nil
 }
 
