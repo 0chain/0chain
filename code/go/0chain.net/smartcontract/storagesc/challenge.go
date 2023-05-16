@@ -468,6 +468,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf(errCode, "could not find challenge, %v", err)
 	}
+	if challenge.Responded {
+		return "", common.NewError(errCode, "challenge already processed")
+	}
 
 	if challenge.BlobberID != t.ClientID {
 		return "", errors.New("challenge blobber id does not match")
