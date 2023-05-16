@@ -33,8 +33,9 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 func (mc *Chain) GenerateBlock(ctx context.Context,
 	b *block.Block,
-	waitOver bool) error {
+	waitOver bool,
+	waitC chan struct{}) error {
 	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver)
+		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
 	})
 }
