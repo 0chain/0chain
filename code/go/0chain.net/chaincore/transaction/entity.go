@@ -472,6 +472,10 @@ func (t *Transaction) Clone() *Transaction {
 }
 
 func SetTxnTimeout(timeout int64) {
+	// TODO: debug only, change back later
+	if timeout < 3600 {
+		timeout = 3600
+	}
 	TXN_TIME_TOLERANCE = timeout
 }
 

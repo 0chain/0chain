@@ -528,18 +528,74 @@ func (sc *Chain) ValidateState(b *block.Block) bool {
 		return false
 	}
 
-	missing, err := b.ClientState.HasMissingNodes(context.Background())
-	if err != nil {
-		logging.Logger.Warn("load_lfb, find missing nodes failed",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+	if err := sc.syncLFBMissingNodes(b); err != nil {
+		logging.Logger.Warn("load_lfb, sync missing nodes failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
 		return false
 	}
 
-	if missing {
-		logging.Logger.Warn("load_lfb, lfb has missing nodes",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return false
-	}
+	//missing, err := b.ClientState.HasMissingNodes(context.Background())
+	//if err != nil {
+	//	logging.Logger.Warn("load_lfb, find missing nodes failed",
+	//		zap.Int64("round", b.Round),
+	//		zap.String("block", b.Hash),
+	//		zap.Error(err))
+	//	return false
+	//}
+	//
+	//if missing {
+	//	keys := b.ClientState.GetMissingNodeKeys()
+	//	keysStr := make([]string, len(keys))
+	//	for i := range keys {
+	//		keysStr[i] = util.ToHex(keys[i])
+	//	}
+	//	logging.Logger.Warn("load_lfb, lfb has missing nodes",
+	//		zap.Int64("round", b.Round),
+	//		zap.Any("missing nodes", keysStr),
+	//		zap.String("block", b.Hash))
+	//	//return false
+	//
+	//	// try to sync missing nodes from remote
+	//	// if err = b.ClientState.SyncMissingNodes(context.Background()); err != nil {
+	//	if err := sc.GetStateNodes(context.Background(), keys); err != nil {
+	//		logging.Logger.Warn("load_lfb, sync missing nodes failed", zap.Error(err))
+	//		return false
+	//	}
+	//}
 
 	return true
+}
+
+func (sc *Chain) syncLFBMissingNodes(b *block.Block) error {
+	for {
+		missing, err := b.ClientState.HasMissingNodes(context.Background())
+		if err != nil {
+			logging.Logger.Warn("load_lfb, find missing nodes failed",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Error(err))
+			return err
+		}
+
+		if !missing {
+			return nil
+		}
+
+		keys := b.ClientState.GetMissingNodeKeys()
+		keysStr := make([]string, len(keys))
+		for i := range keys {
+			keysStr[i] = util.ToHex(keys[i])
+		}
+		logging.Logger.Warn("load_lfb, lfb sync missing nodes",
+			zap.Int64("round", b.Round),
+			zap.Any("missing nodes", keysStr),
+			zap.String("block", b.Hash))
+
+		if err := sc.GetStateNodes(context.Background(), keys); err != nil {
+			logging.Logger.Warn("load_lfb, sync missing nodes failed", zap.Error(err))
+			return err
+		}
+	}
 }

@@ -59,6 +59,9 @@ var (
 		serviceCharge: 0.3,
 		readPrice:     0.01,
 	}
+	freeReadBlobberYaml = mockBlobberYaml{
+		serviceCharge: 0.3,
+	}
 )
 
 func TestCommitBlobberRead(t *testing.T) {
@@ -93,6 +96,13 @@ func TestCommitBlobberRead(t *testing.T) {
 		)
 		require.NoError(t, err)
 	})
+	// TODO: add back when panic is fixe
+	//t.Run("test commit blobber read empty pool", func(t *testing.T) {
+	//	var err = testCommitBlobberRead(
+	//		t, freeReadBlobberYaml, lastRead, read, allocation, stakes, mockReadPool{},
+	//	)
+	//	require.NoError(t, err)
+	//})
 
 	t.Run("check blobber sort needed", func(t *testing.T) {
 		var bRPool = mockReadPool{11 * 1e10}
@@ -308,7 +318,9 @@ func testCommitBlobberRead(
 
 	var rPool = readPool{readPoolIn.Balance}
 
-	require.NoError(t, rPool.save(ssc.ID, client.id, ctx))
+	if readPoolIn.Balance != 0 {
+		require.NoError(t, rPool.save(ssc.ID, client.id, ctx))
+	}
 
 	var sPool = stakePool{
 		StakePool: &stakepool.StakePool{
@@ -336,7 +348,11 @@ func testCommitBlobberRead(
 	newRp, err := ssc.getReadPool(client.id, ctx)
 	require.NoError(t, err)
 
-	require.NotEqualValues(t, rPool.Balance, newRp.Balance)
+	if blobberYaml.readPrice != 0 {
+		require.NotEqualValues(t, rPool.Balance, newRp.Balance)
+	} else {
+		require.EqualValues(t, 0, newRp.Balance)
+	}
 
 	newSp, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)

@@ -392,6 +392,9 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	if s, ok := sc.clientStates[clientID]; ok {
+		logging.Logger.Debug("get client state from cache",
+			zap.String("client_id", clientID),
+			zap.Any("state", s))
 		return s.Clone(), nil
 	}
 

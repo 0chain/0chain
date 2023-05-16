@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/model"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -13,9 +14,10 @@ import (
 
 type BurnTicket struct {
 	model.UpdatableModel
-	EthereumAddress string `json:"ethereum_address" gorm:"not null"`
-	Hash            string `json:"hash" gorm:"unique"`
-	Nonce           int64  `json:"nonce" gorm:"not null"`
+	EthereumAddress string        `json:"ethereum_address" gorm:"not null"`
+	Hash            string        `json:"hash" gorm:"unique"`
+	Amount          currency.Coin `json:"amount" gorm:"not null"`
+	Nonce           int64         `json:"nonce" gorm:"not null"`
 }
 
 func (edb *EventDb) GetBurnTickets(ethereumAddress string) ([]BurnTicket, error) {
