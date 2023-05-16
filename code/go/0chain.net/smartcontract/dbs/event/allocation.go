@@ -348,7 +348,6 @@ func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 		AddUpdate("failed_challenges", failedChallengeList).Exec(edb).Error
 }
 
-// TODO : modify this function to sync data directly from MPT
 func (edb *EventDb) addChallengesToAllocations(allocs []Allocation) error {
 	var (
 		allocationIdList     []string

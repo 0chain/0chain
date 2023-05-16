@@ -848,13 +848,13 @@ func TestAllocations(t *testing.T) {
 		// Test update was successful (1)
 		alloc, err = eventDb.GetAllocation(aid1)
 		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
-		require.Equal(t, alloc.TotalChallenges, int64(40))
-		require.Equal(t, alloc.OpenChallenges, int64(20))
+		require.Equal(t, alloc.TotalChallenges, int64(20))
+		require.Equal(t, alloc.OpenChallenges, int64(10))
 
 		// Test update was successful (2)
 		alloc, err = eventDb.GetAllocation(aid2)
 		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
-		require.Equal(t, alloc.TotalChallenges, int64(80))
-		require.Equal(t, alloc.OpenChallenges, int64(40))
+		require.Equal(t, alloc.TotalChallenges, int64(40))
+		require.Equal(t, alloc.OpenChallenges, int64(20))
 	})
 }

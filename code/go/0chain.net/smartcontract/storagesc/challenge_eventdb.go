@@ -88,9 +88,9 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 		Passed:         passed,
 	}
 	if passed {
-		clg.Responded = 1 // Passed challenge
+		clg.Responded = int64(1) // Passed challenge
 	} else {
-		clg.Responded = 2 // Failed challenge
+		clg.Responded = int64(2) // Failed challenge
 	}
 
 	a := event.Allocation{

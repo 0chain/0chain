@@ -20,7 +20,7 @@ func TestChallengeEvent(t *testing.T) {
 			ValidatorsID:   "validator_id1,validator_id2",
 			Seed:           0,
 			AllocationRoot: "allocation_root",
-			Responded:      0,
+			Responded:      int64(0),
 		}
 
 		err := eventDb.addChallenges([]Challenge{c})
@@ -45,7 +45,7 @@ func TestChallengeEvent(t *testing.T) {
 				ValidatorsID:   "validator_id1,validator_id2",
 				Seed:           0,
 				AllocationRoot: "allocation_root",
-				Responded:      0,
+				Responded:      int64(0),
 				Passed:         false,
 			},
 			{
@@ -56,7 +56,7 @@ func TestChallengeEvent(t *testing.T) {
 				ValidatorsID:   "validator_id1,validator_id2",
 				Seed:           0,
 				AllocationRoot: "allocation_root",
-				Responded:      0,
+				Responded:      int64(0),
 				Passed:         false,
 			},
 		})
@@ -65,12 +65,12 @@ func TestChallengeEvent(t *testing.T) {
 		err = eventDb.updateChallenges([]Challenge{
 			{
 				ChallengeID: cid1,
-				Responded:   1,
+				Responded:   int64(1),
 				Passed:      true,
 			},
 			{
 				ChallengeID: cid2,
-				Responded:   1,
+				Responded:   int64(1),
 				Passed:      true,
 			},
 		})
@@ -83,7 +83,7 @@ func TestChallengeEvent(t *testing.T) {
 
 		challenge, err = eventDb.GetChallenge(cid2)
 		require.NoError(t, err)
-		require.Equal(t, 1, challenge.Responded)
+		require.Equal(t, int64(1), challenge.Responded)
 		require.True(t, challenge.Passed)
 	})
 }
