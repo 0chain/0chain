@@ -1058,17 +1058,17 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		var (
 			deleteTxns = make([]datastore.Entity, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
 			txnHashes  = make([]string, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
-			//lfbTS      = lfb.CreationDate
-			//expiredTM  = common.Timestamp(3 * 60) // 3 minutes
+			lfbTS      = lfb.CreationDate
+			expiredTM  = common.Timestamp(3 * 60) // 3 minutes
 		)
 		// remove orphan future txns
 		if len(iterInfo.futureTxns) > 0 {
 			for _, txns := range iterInfo.futureTxns {
 				for _, ft := range txns {
-					//if ft.CreationDate+expiredTM < lfbTS { // future txns didn't get processed in 3 minutes
-					deleteTxns = append(deleteTxns, ft)
-					txnHashes = append(txnHashes, ft.Hash)
-					//}
+					if ft.CreationDate+expiredTM < lfbTS { // future txns didn't get processed in 3 minutes
+						deleteTxns = append(deleteTxns, ft)
+						txnHashes = append(txnHashes, ft.Hash)
+					}
 				}
 			}
 		}
@@ -1076,10 +1076,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		if len(iterInfo.pastTxns) > 0 {
 			for _, pte := range iterInfo.pastTxns {
 				pt := pte.(*transaction.Transaction)
-				//if pt.CreationDate+expiredTM < lfbTS {
-				deleteTxns = append(deleteTxns, pt)
-				txnHashes = append(txnHashes, pt.Hash)
-				//}
+				if pt.CreationDate+expiredTM < lfbTS {
+					deleteTxns = append(deleteTxns, pt)
+					txnHashes = append(txnHashes, pt.Hash)
+				}
 			}
 		}
 
