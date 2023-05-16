@@ -468,7 +468,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf(errCode, "could not find challenge, %v", err)
 	}
-	if challenge.Responded {
+	if challenge.Responded != 0 {
 		return "", common.NewError(errCode, "challenge already processed")
 	}
 
