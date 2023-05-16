@@ -15,7 +15,6 @@ type ValidatorAggregate struct {
 	Round       int64  `json:"round" gorm:"index:idx_validator_aggregate,unique"`
 	BucketID    int64  `json:"bucket_id"`
 
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
@@ -23,10 +22,6 @@ type ValidatorAggregate struct {
 
 func (v *ValidatorAggregate) GetTotalStake() currency.Coin {
 	return v.TotalStake
-}
-
-func (v *ValidatorAggregate) GetUnstakeTotal() currency.Coin {
-	return v.UnstakeTotal
 }
 
 func (v *ValidatorAggregate) GetServiceCharge() float64 {
@@ -39,10 +34,6 @@ func (v *ValidatorAggregate) GetTotalRewards() currency.Coin {
 
 func (v *ValidatorAggregate) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
-}
-
-func (v *ValidatorAggregate) SetUnstakeTotal(value currency.Coin) {
-	v.UnstakeTotal = value
 }
 
 func (v *ValidatorAggregate) SetServiceCharge(value float64) {
@@ -71,7 +62,6 @@ func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *Snapsh
 		logging.Logger.Error("error creating old temp table", zap.Error(exec.Error))
 		return
 	}
-
 
 	var count int64
 	r := edb.Store.Get().Raw("SELECT count(*) FROM validator_temp_ids").Scan(&count)
@@ -119,10 +109,10 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 
 	var (
 		oldValidatorsProcessingMap = MakeProcessingMap(oldValidators)
-		aggregates []ValidatorAggregate
-		gsDiff     Snapshot
-		old ValidatorSnapshot
-		ok bool
+		aggregates                 []ValidatorAggregate
+		gsDiff                     Snapshot
+		old                        ValidatorSnapshot
+		ok                         bool
 	)
 	for _, current := range currentValidators {
 		processingEntity, found := oldValidatorsProcessingMap[current.ID]
@@ -138,15 +128,15 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 		}
 
 		// Case: validator becomes killed/shutdown
-		if (current.IsOffline() && !old.IsOffline()) {
+		if current.IsOffline() && !old.IsOffline() {
 			handleOfflineValidator(&gsDiff, old)
 			continue
 		}
-		
+
 		aggregate := ValidatorAggregate{
-			Round:        round,
-			ValidatorID:      current.ID,
-			BucketID:     current.BucketId,
+			Round:       round,
+			ValidatorID: current.ID,
+			BucketID:    current.BucketId,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)

@@ -245,7 +245,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"num_delegates",
 		"service_charge",
 		"last_health_check",
-		"unstake_total",
 		"total_stake",
 	}
 	columns, err := Columnize(blobbers)
@@ -292,15 +291,6 @@ func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 	}
 }
 
-func NewUpdateBlobberTotalUnStakeEvent(ID string, totalUnStake currency.Coin) (tag EventTag, data interface{}) {
-	return TagUpdateBlobberTotalUnStake, Blobber{
-		Provider: Provider{
-			ID:           ID,
-			UnstakeTotal: totalUnStake,
-		},
-	}
-}
-
 func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateBlobberTotalOffers, Blobber{
 		Provider:    Provider{ID: ID},
@@ -316,19 +306,8 @@ func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
 	return edb.updateProviderTotalStakes(provs, "blobbers")
 }
 
-func (edb *EventDb) updateBlobbersTotalUnStakes(blobbers []Blobber) error {
-	var provs []Provider
-	for _, b := range blobbers {
-		provs = append(provs, b.Provider)
-	}
-	return edb.updateProvidersTotalUnStakes(provs, "blobbers")
-}
-
 func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withUniqueEventOverwrite())
-}
-func mergeUpdateBlobberTotalUnStakesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberTotalUnStake, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {

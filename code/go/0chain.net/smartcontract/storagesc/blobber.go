@@ -871,9 +871,9 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if err != nil {
 		return fmt.Errorf("unable to fetch blobbers stake pool: %v", err)
 	}
-	stakedAmount, err := sp.cleanStake()
+	stakedAmount, err := sp.stake()
 	if err != nil {
-		return fmt.Errorf("unable to clean stake pool: %v", err)
+		return fmt.Errorf("unable to total stake pool: %v", err)
 	}
 	weight := uint64(stakedAmount) * blobUsedCapacity
 	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {
