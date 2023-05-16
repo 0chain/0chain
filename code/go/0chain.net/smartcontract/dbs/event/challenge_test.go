@@ -78,7 +78,7 @@ func TestChallengeEvent(t *testing.T) {
 
 		challenge, err := eventDb.GetChallenge(cid1)
 		require.NoError(t, err)
-		require.Equal(t, 1, challenge.Responded)
+		require.Equal(t, int64(1), challenge.Responded)
 		require.True(t, challenge.Passed)
 
 		challenge, err = eventDb.GetChallenge(cid2)
