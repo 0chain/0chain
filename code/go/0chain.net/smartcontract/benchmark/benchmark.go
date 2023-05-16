@@ -360,12 +360,15 @@ func (bd *BenchData) Decode(input []byte) error {
 
 var MockBenchData = BenchData{
 	BenchDataMpt: BenchDataMpt{
-		Clients:     make([]string, 100),
-		PublicKeys:  make([]string, 100),
-		PrivateKeys: make([]string, 100),
-		Miners:      make([]string, 100),
-		Sharders:    make([]string, 100),
-		SharderKeys: make([]string, 100),
-		Now:         common.Now(),
+		Clients:              make([]string, 100),
+		PublicKeys:           make([]string, 100),
+		PrivateKeys:          make([]string, 100),
+		Miners:               make([]string, 100),
+		Sharders:             make([]string, 100),
+		SharderKeys:          make([]string, 100),
+		ValidatorIds:         make([]string, 100),
+		ValidatorPrivateKeys: make([]string, 100),
+		ValidatorPublicKeys:  make([]string, 100),
+		Now:                  common.Now(),
 	},
 }

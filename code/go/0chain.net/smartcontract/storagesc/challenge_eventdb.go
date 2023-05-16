@@ -29,6 +29,7 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int
 		AllocationRoot: ch.AllocationRoot,
 		Responded:      ch.Responded,
 		ExpiredN:       expiredN,
+		Timestamp:      ch.Timestamp,
 	}
 }
 
@@ -53,6 +54,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
 		Validators:     validators,
+		Timestamp:      ch.Timestamp,
 	}, nil
 }
 

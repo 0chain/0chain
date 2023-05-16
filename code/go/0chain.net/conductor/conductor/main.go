@@ -152,8 +152,9 @@ type reportTestCase struct {
 }
 
 type reportFlowDirective struct {
-	success bool
-	err     error
+	success   bool
+	err       error
+	directive string
 }
 
 type Runner struct {
@@ -837,11 +838,13 @@ func (r *Runner) processReport() (success bool) {
 		var caseSuccess bool = true
 		totalDuration += testCase.e.Sub(testCase.s)
 
-		for _, flowDirective := range testCase.directives {
+		for i, flowDirective := range testCase.directives {
 			caseSuccess = caseSuccess && flowDirective.success
 
 			if flowDirective.err != nil {
 				caseError = flowDirective.err
+				fmt.Printf("Failed on index %d directive. Directive name: %s\n",
+					i, flowDirective.directive)
 				break
 			}
 		}
@@ -926,8 +929,9 @@ func (r *Runner) Run() (err error, success bool) {
 				if err != nil {
 					// this is a failure, but might be an expected one
 					report.directives = append(report.directives, reportFlowDirective{
-						success: mustFail,
-						err:     err,
+						success:   mustFail,
+						err:       err,
+						directive: d.GetName(),
 					})
 
 					report.e = time.Now()

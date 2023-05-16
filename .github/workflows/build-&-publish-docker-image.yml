@@ -243,6 +243,8 @@ jobs:
           custom_go_sdk_version: staging
           SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
           TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
+          graphnode_network: ${{ secrets.GRAPHNODE_NETWORK }}
+          graphnode_ethereum_node_url: https://rpc.tenderly.co/fork/${{ secrets.TENDERLY_FORK_ID }}
 
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
@@ -251,13 +253,16 @@ jobs:
           network: ${{ env.NETWORK_URL }}
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
-          svc_account_secret: ${{ github.token }}
+          svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           deploy_report_page: false
           archive_results: true
           run_flaky_tests: false
+          run_smoke_tests: ${{ github.ref != 'refs/heads/staging' && github.base_ref != 'staging' && github.ref != 'refs/heads/master' && github.base_ref != 'master' }}
           retry_failures: true
           TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}

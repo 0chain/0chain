@@ -14,15 +14,16 @@ import (
 // but its existing commitments will still be upheld.
 func (_ *StorageSmartContract) shutdownBlobber(
 	tx *transaction.Transaction,
-	_ []byte,
+	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
 	var blobber = newBlobber("")
 	err := provider.ShutDown(
+		input,
 		tx.ClientID,
-		func() (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
+		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
-			if blobber, err = getBlobber(tx.ClientID, balances); err != nil {
+			if blobber, err = getBlobber(req.ID, balances); err != nil {
 				return nil, nil, common.NewError("shutdown_blobber_failed",
 					"can't get the blobber "+tx.ClientID+": "+err.Error())
 			}
@@ -55,15 +56,16 @@ func (_ *StorageSmartContract) shutdownBlobber(
 // but its existing commitments will still be upheld.
 func (_ *StorageSmartContract) shutdownValidator(
 	tx *transaction.Transaction,
-	_ []byte,
+	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
 	var validator = newValidator("")
 	err := provider.ShutDown(
+		input,
 		tx.ClientID,
-		func() (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
+		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
-			if err = balances.GetTrieNode(provider.GetKey(tx.ClientID), validator); err != nil {
+			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
 				return nil, nil, common.NewError("shutdown_validator_failed",
 					"can't get the blobber "+tx.ClientID+": "+err.Error())
 			}

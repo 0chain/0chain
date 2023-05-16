@@ -29,6 +29,12 @@ type BlobberSnapshot struct {
 	OpenChallenges      uint64        `json:"open_challenges"`
 	CreationRound       int64         `json:"creation_round" gorm:"index"`
 	RankMetric          float64       `json:"rank_metric"`
+	IsKilled			bool		  `json:"is_killed"`
+	IsShutdown			bool		  `json:"is_shutdown"`
+}
+
+func (bs *BlobberSnapshot) IsOffline() bool {
+	return bs.IsKilled || bs.IsShutdown
 }
 
 func (edb *EventDb) getBlobberSnapshots(limit, offset int64) (map[string]BlobberSnapshot, error) {
@@ -78,6 +84,8 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 			OpenChallenges:      blobber.OpenChallenges,
 			CreationRound:       blobber.CreationRound,
 			RankMetric:          blobber.RankMetric,
+			IsKilled:			 blobber.IsKilled,
+			IsShutdown:			 blobber.IsShutdown,
 		})
 	}
 
