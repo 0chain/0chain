@@ -1065,38 +1065,49 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		var (
 			deleteTxns = make([]datastore.Entity, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
 			txnHashes  = make([]string, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
-			//lfbTS      = lfb.CreationDate
-			//expiredTM  = common.Timestamp(30) // 3 minutes
+			lfbTS      = lfb.CreationDate
+			expiredTM  = common.Timestamp(30) // 3 minutes
 		)
 		// remove orphan future txns
 		if len(iterInfo.futureTxns) > 0 {
-			for _, txns := range iterInfo.futureTxns {
-				for _, ft := range txns {
-					//if ft.CreationDate+expiredTM < lfbTS { // future txns didn't get processed in 3 minutes
-					deleteTxns = append(deleteTxns, ft)
-					txnHashes = append(txnHashes, ft.Hash)
-					//}
+			for clientID, txns := range iterInfo.futureTxns {
+				c, err := mc.GetStateById(blockState, clientID)
+				if err != nil {
+					return
+				}
+
+				if len(txns) > 0 {
+					if txns[0].Nonce-c.Nonce > 100 || txns[0].CreationDate+expiredTM < lfbTS {
+						// remove all following future txns
+						for _, ft := range txns {
+							deleteTxns = append(deleteTxns, ft)
+							txnHashes = append(txnHashes, ft.Hash)
+						}
+
+						logging.Logger.Debug("remove future txns",
+							zap.Int("count", len(deleteTxns)),
+							zap.Strings("txns", txnHashes))
+					}
 				}
 			}
 		}
 
 		if len(iterInfo.pastTxns) > 0 {
+			fc := len(deleteTxns)
 			for _, pte := range iterInfo.pastTxns {
 				pt := pte.(*transaction.Transaction)
-				//if pt.CreationDate+expiredTM < lfbTS {
 				deleteTxns = append(deleteTxns, pt)
 				txnHashes = append(txnHashes, pt.Hash)
-				//}
 			}
+
+			logging.Logger.Debug("remove past txns",
+				zap.Int("count", len(iterInfo.pastTxns)),
+				zap.Strings("txns", txnHashes[fc:]))
 		}
 
 		if len(deleteTxns) > 0 {
 			if err := mc.deleteTxns(deleteTxns); err != nil {
 				logging.Logger.Warn("generate block - remove future txns failed", zap.Error(err))
-			} else {
-				logging.Logger.Debug("remove past and future txns",
-					zap.Int("count", len(txnHashes)),
-					zap.Strings("txns", txnHashes))
 			}
 		}
 	}()
