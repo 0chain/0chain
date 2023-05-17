@@ -882,6 +882,13 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 
 	if i > -1 {
 		tii.futureTxns[txn.ClientID] = futures[i:]
+		futureNonces := make([]int64, len(futures[i:]))
+		for j, t := range futures[i:] {
+			futureNonces[j] = t.Nonce
+		}
+		logging.Logger.Debug("generate block - debug future transactions",
+			zap.Int64("current nonce", currentNonce),
+			zap.Int64s("future nonces", futureNonces))
 	}
 }
 
