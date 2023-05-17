@@ -647,7 +647,7 @@ func BenchmarkTests(
 				if err2 != nil {
 					return "", err2
 				}
-				_, err := ssc.blobberBlockRewards(txn, marshal, balances)
+				err := ssc.blobberBlockRewards(txn, marshal, balances)
 				if err != nil {
 					return "", err
 				} else {

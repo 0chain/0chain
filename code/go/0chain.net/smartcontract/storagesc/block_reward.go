@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -26,7 +25,7 @@ type BlobberBlockRewardsInput struct {
 	Round int64 `json:"round,omitempty"`
 }
 
-func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction, input []byte, balances cstate.StateContextI) error {
 	logging.Logger.Info("blobberBlockRewards started",
 		zap.Int64("round", balances.GetBlock().Round),
 		zap.String("block_hash", balances.GetBlock().Hash))
@@ -39,33 +38,24 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 	conf, err := ssc.getConfig(balances, true)
 	if err != nil {
-		return "", common.NewError("blobber_block_rewards_failed",
+		return common.NewError("blobber_block_rewards_failed",
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
-	inputRound := BlobberBlockRewardsInput{}
-	if err := json.Unmarshal(input, &inputRound); err != nil {
-		return "", err
-	}
-
-	if inputRound.Round != balances.GetBlock().Round {
-		return "", fmt.Errorf("bad round, block %v but input %v", balances.GetBlock().Round, inputRound.Round)
-	}
-
 	if conf.BlockReward.BlockReward == 0 {
-		return "", nil
+		return nil
 	}
 
 	bbr, err := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
 		conf.BlockReward.BlockRewardChangePeriod, conf.BlockReward.BlockRewardChangeRatio)
 	if err != nil {
-		return "", common.NewError("blobber_block_rewards_failed",
+		return common.NewError("blobber_block_rewards_failed",
 			"cannot get block rewards: "+err.Error())
 	}
 
 	activePassedBlobberRewardPart, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {
-		return "", common.NewError("blobber_block_rewards_failed",
+		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
 	}
 
@@ -73,7 +63,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 	var randomSeed int64
 	randomSeed, err = strconv.ParseInt(hashString[0:15], 16, 64)
 	if err != nil {
-		return "", common.NewError("blobber_block_rewards_failed",
+		return common.NewError("blobber_block_rewards_failed",
 			"error in creating seed"+err.Error())
 	}
 	r := rand.New(rand.NewSource(randomSeed))
@@ -83,9 +73,9 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		logging.Logger.Info("blobber_block_rewards_failed",
 			zap.String("getting random partition", err.Error()))
 		if err != util.ErrValueNotPresent {
-			return "", err
+			return err
 		}
-		return "", nil
+		return nil
 	}
 
 	type spResp struct {
@@ -115,7 +105,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 	select {
 	case err := <-errC:
-		return "", err
+		return err
 	default:
 	}
 
@@ -125,7 +115,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		stakePools[resp.index] = resp.sp
 		stake, err := resp.sp.stake()
 		if err != nil {
-			return "", err
+			return err
 		}
 		before[resp.index] = stake
 	}
@@ -137,7 +127,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 		staked, err := sp.stake()
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		stake := float64(staked)
@@ -178,11 +168,11 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		if weightRatio > 0 && weightRatio <= 1 {
 			fBBR, err := bbr.Float64()
 			if err != nil {
-				return "", err
+				return err
 			}
 			reward, err := currency.Float64ToCoin(fBBR * weightRatio)
 			if err != nil {
-				return "", err
+				return err
 			}
 			if reward > rewardBal {
 				reward = rewardBal
@@ -198,26 +188,26 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 			if err := qsp.DistributeRewards(
 				reward, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
-				return "", common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+				return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 			}
 
 		} else {
 			logging.Logger.Error("blobber_bloc_rewards - error in weight ratio",
 				zap.Any("stake pool", qsp))
-			return "", common.NewError("blobber_block_rewards_failed", "weight ratio out of bound")
+			return common.NewError("blobber_block_rewards_failed", "weight ratio out of bound")
 		}
 	}
 
 	if rewardBal > 0 {
 		rShare, rl, err := currency.DistributeCoin(rewardBal, int64(len(stakePools)))
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		if rShare > 0 {
 			for i := range stakePools {
 				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
-					return "", common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}
 		}
@@ -225,7 +215,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		if rl > 0 {
 			for i := 0; i < int(rl); i++ {
 				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
-					return "", common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
+					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}
 		}
@@ -234,12 +224,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 	for i, qsp := range stakePools {
 		if err = qsp.Save(spenum.Blobber, qualifyingBlobberIds[i], balances); err != nil {
-			return "", common.NewError("blobber_block_rewards_failed",
+			return common.NewError("blobber_block_rewards_failed",
 				"saving stake pool: "+err.Error())
 		}
 		staked, err := qsp.stake()
 		if err != nil {
-			return "", common.NewError("blobber_block_rewards_failed",
+			return common.NewError("blobber_block_rewards_failed",
 				"getting stake pool stake: "+err.Error())
 		}
 
@@ -249,7 +239,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		if blobberRewards[i].WritePrice > 0 {
 			stake, err := qsp.stake()
 			if err != nil {
-				return "", err
+				return err
 			}
 			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, qualifyingBlobberIds[i], event.AllocationBlobberValueChanged{
 				FieldType:    event.Staked,
@@ -260,7 +250,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		}
 	}
 
-	return "", nil
+	return nil
 }
 
 func getBlockReward(
