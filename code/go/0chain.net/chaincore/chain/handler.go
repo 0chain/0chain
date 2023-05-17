@@ -1395,8 +1395,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return txnRsp, nil
 	}
 
-	var valueNotPresent = err == util.ErrValueNotPresent
-
 	var nonce int64
 	if s != nil {
 		nonce = s.Nonce
@@ -1439,7 +1437,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.String("func", txn.FunctionName),
 				zap.Any("txn fee", txn.Fee),
 				zap.Any("minFee", minFee),
-				zap.Bool("client value not present", valueNotPresent),
 				zap.Int64("lfb round", lfb.Round),
 				zap.String("lfb", lfb.Hash),
 				zap.Error(err))
@@ -1452,7 +1449,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.String("client_id", txn.ClientID),
 				zap.String("func", txn.FunctionName),
 				zap.Any("balance", s.Balance),
-				zap.Bool("client value not present", valueNotPresent),
 				zap.Any("fee", txn.Fee),
 				zap.Int64("lfb round", lfb.Round),
 				zap.String("lfb", lfb.Hash))

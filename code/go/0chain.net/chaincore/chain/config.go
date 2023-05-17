@@ -487,18 +487,17 @@ func (c *ConfigImpl) FromViper() error {
 	if err != nil {
 		return err
 	}
-	//conf.MaxTxnFee, err = currency.ParseZCN(viper.GetFloat64("server_chain.transaction.max_fee"))
-	//if err != nil {
-	//	return err
-	//}
-	//if conf.MaxTxnFee == 0 {
-	conf.MaxTxnFee = DefaultMaxTxnFee
-	//}
+	conf.MaxTxnFee, err = currency.ParseZCN(viper.GetFloat64("server_chain.transaction.max_fee"))
+	if err != nil {
+		return err
+	}
+	if conf.MaxTxnFee == 0 {
+		conf.MaxTxnFee = DefaultMaxTxnFee
+	}
 
 	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
-	// DEBUG: change back later
-	//conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
-	conf.TxnCostFeeCoeff = 100000
+	conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
+	//conf.TxnCostFeeCoeff = 100000
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {
@@ -731,22 +730,22 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	}
 	conf.MinTxnFee = minTxnFee
 
-	// DEBUG: change back
 	// get max txn fee from cf and parse it to currency.Coin
-	//maxTxnFeeF, err := cf.GetFloat64(enums.TransactionMaxFee)
-	//if err != nil {
-	//	return err
-	//}
+	maxTxnFeeF, err := cf.GetFloat64(enums.TransactionMaxFee)
+	if err != nil {
+		return err
+	}
 
-	//maxTxnFee, err := currency.ParseZCN(maxTxnFeeF)
-	//if err != nil {
-	//	return err
-	//}
+	maxTxnFee, err := currency.ParseZCN(maxTxnFeeF)
+	if err != nil {
+		return err
+	}
 
-	////conf.MaxTxnFee = maxTxnFee
-	////if maxTxnFee == 0 {
-	conf.MaxTxnFee = DefaultMaxTxnFee
-	//}
+	if maxTxnFee == 0 {
+		maxTxnFeeF = DefaultMaxTxnFee
+	}
+
+	conf.MaxTxnFee = maxTxnFee
 
 	conf.ClientSignatureScheme, err = cf.GetString(enums.ClientSignatureScheme)
 	if err != nil {

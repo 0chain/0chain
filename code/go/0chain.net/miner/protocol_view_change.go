@@ -672,7 +672,6 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 			if err := share.SetHexString(myShare.Share); err != nil {
 				return nil, err
 			}
-			// TODO: rename returned mpks
 			lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
 			if err != nil {
 				return nil, err

@@ -8,7 +8,6 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/smartcontract/partitions"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -435,7 +434,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return nil, err
 		default:
 			if err != nil {
-				if bcstate.ErrInvalidState(err) || partitions.ErrLoadPartition(err) {
+				if bcstate.ErrInvalidState(err) {
 					logging.Logger.Error("Error executing the SC, internal error",
 						zap.Error(err),
 						zap.String("scname", txn.FunctionName),
@@ -531,12 +530,6 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("amount", transfer.Amount),
 				zap.Error(err))
 			return nil, err
-		} else {
-			logging.Logger.Debug("transfer amount",
-				zap.String("from", transfer.ClientID),
-				zap.String("to", transfer.ToClientID),
-				zap.Any("amount", transfer.Amount),
-				zap.Any("txn", txn))
 		}
 		for _, e := range tEvents {
 			ue[e.UserID] = e

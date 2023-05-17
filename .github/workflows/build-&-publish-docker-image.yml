@@ -160,8 +160,8 @@ jobs:
         docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
         docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
 
-#    - name: generate swagger
-#      run: docker.local/bin/test.swagger.sh
+    - name: generate swagger
+      run: docker.local/bin/test.swagger.sh
 
     - name: Build & Push
       run: |

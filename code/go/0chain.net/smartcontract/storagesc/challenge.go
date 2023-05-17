@@ -921,7 +921,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
-	var findValidAllocRetries = 1 // avoid retry for debugging
+	var findValidAllocRetries = 5 // avoid retry for debugging
 	var (
 		alloc                       *StorageAllocation
 		blobberAllocPartitionLength = len(randBlobberAllocs)

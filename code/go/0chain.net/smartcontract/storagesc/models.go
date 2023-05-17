@@ -36,7 +36,7 @@ import (
 
 const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
 
-//msgp:ignore StorageAllocation AllocationChallenges challengeBlobberID
+//msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
