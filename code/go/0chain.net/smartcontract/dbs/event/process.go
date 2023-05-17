@@ -199,7 +199,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 	for {
 		es := <-edb.eventsChannel
-    
+
 		s, err := edb.work(ctx, gs, es)
 		if err != nil {
 			if config.Development() { //panic in case of development
@@ -574,7 +574,14 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addTransactions(*txns)
+		err := edb.addTransactions(*txns)
+		if err != nil {
+			logging.Logger.Error("transaction processing error", zap.Error(err))
+			for _, t := range *txns {
+				logging.Logger.Info("txs", zap.Any("tx", t))
+			}
+		}
+		return err
 	case TagAddBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {
