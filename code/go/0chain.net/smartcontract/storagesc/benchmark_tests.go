@@ -717,6 +717,9 @@ func BenchmarkTests(
 		{
 			name:     "storage.shutdown_blobber",
 			endpoint: ssc.shutdownBlobber,
+			input: (&provider.ProviderRequest{
+				ID: getMockBlobberId(0),
+			}).Encode(),
 			txn: &transaction.Transaction{
 				ClientID: getMockBlobberId(0),
 			},
@@ -724,6 +727,9 @@ func BenchmarkTests(
 		{
 			name:     "storage.shutdown_validator",
 			endpoint: ssc.shutdownValidator,
+			input: (&provider.ProviderRequest{
+				ID: data.ValidatorIds[0],
+			}).Encode(),
 			txn: &transaction.Transaction{
 				ClientID: data.ValidatorIds[0],
 			},
