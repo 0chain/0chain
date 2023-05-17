@@ -33,12 +33,12 @@ BLOBBER4=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
 
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation \
-    --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 4 \
-    --data 2 --parity 2 --expire 48h
+    --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 \
+    --data 2 --parity 2 --expire 721h
 
 # add to read pools
 ./zboxcli/zbox --wallet testing.json rp-lock \
-    --tokens 6.0
+    --tokens 4.0
 
 # create random file
 head -c 5M < /dev/urandom > random.bin

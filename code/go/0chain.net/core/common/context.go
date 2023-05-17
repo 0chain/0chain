@@ -55,7 +55,7 @@ func HandleShutdown(server *http.Server, closers []func()) chan struct{} {
 			case syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM:
 				Done()
 				ctx, cancelf := context.WithTimeout(context.Background(), 3*time.Second)
-				Logger.Info("Shutting down http server")
+				Logger.Info("Shutting down http server", zap.Any("kill signal", sig))
 				_ = server.Shutdown(ctx)
 				Logger.Info("Http server shut down")
 
