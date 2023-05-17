@@ -54,7 +54,7 @@ func SetupHandlers(c Chainer) {
 	var hMap map[string]func(http.ResponseWriter, *http.Request)
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		hMap := minerHandlersMap(c)
+		hMap = minerHandlersMap(c)
 		hMap[GetBlockV1Pattern] = BlockStats(
 			hMap[GetBlockV1Pattern],
 			BlockStatsConfigurator{
@@ -62,7 +62,7 @@ func SetupHandlers(c Chainer) {
 			},
 		)
 	} else {
-		hMap := handlersMap(c)
+		hMap = handlersMap(c)
 	}
 
 	setupHandlers(hMap)
