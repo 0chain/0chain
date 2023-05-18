@@ -638,11 +638,16 @@ func BenchmarkTests(
 		{
 			name: "storage.blobber_block_rewards",
 			endpoint: func(
-				_ *transaction.Transaction,
+				txn *transaction.Transaction,
 				_ []byte,
 				balances cstate.StateContextI,
 			) (string, error) {
-				err := ssc.blobberBlockRewards(balances)
+				inp := BlobberBlockRewardsInput{Round: balances.GetBlock().Round}
+				marshal, err2 := json.Marshal(inp)
+				if err2 != nil {
+					return "", err2
+				}
+				err := ssc.blobberBlockRewards(txn, marshal, balances)
 				if err != nil {
 					return "", err
 				} else {
@@ -817,8 +822,13 @@ func BenchmarkTests(
 				balances cstate.StateContextI,
 			) (string, error) {
 				challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
+				input := &GenerateChallengeInput{Round: balances.GetBlock().Round}
+				marshal, err2 := json.Marshal(input)
+				if err2 != nil {
+					return "", err2
+				}
 				if challengesEnabled {
-					err := ssc.generateChallenge(txn, balances.GetBlock(), nil, balances)
+					err := ssc.generateChallenge(txn, balances.GetBlock(), marshal, balances)
 					if err != nil {
 						return "", nil
 					}

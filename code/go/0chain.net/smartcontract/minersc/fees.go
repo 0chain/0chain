@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 
@@ -237,8 +238,12 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	return
 }
 
+type PayFeesInput struct {
+	Round int64 `json:"round,omitempty"`
+}
+
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
-	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	configuration := config.Configuration()
@@ -273,8 +278,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", common.NewError("pay_fees", "not block generator")
 	}
 
-	if b.Round <= gn.LastRound {
-		return "", common.NewError("pay_fees", "jumped back in time?")
+	inputRound := PayFeesInput{}
+	if err := json.Unmarshal(input, &inputRound); err != nil {
+		return "", err
+	}
+
+	if inputRound.Round != b.Round {
+		return "", common.NewError("pay_fees", fmt.Sprintf("bad round, block %v but input %v", b.Round, inputRound.Round))
 	}
 
 	fees, err := msc.sumFee(b, true)
