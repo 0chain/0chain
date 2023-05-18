@@ -1167,19 +1167,8 @@ func (mc *Chain) AddNotarizedBlock(r *Round, b *block.Block) bool {
 				zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return false
 		}
-
-		//if err := mc.ComputeOrSyncState(ctx, b); err != nil {
-		//	logging.Logger.Info("can't compute state for notarized block", zap.Error(err),
-		//		zap.Int64("block_round", b.Round),
-		//		zap.Int64("round", r.GetRoundNumber()),
-		//		zap.String("block", b.Hash))
-		//}
 	}
 
-	//if !r.IsVerificationComplete() {
-	//	logging.Logger.Debug("AddNotarizedBlock - cancel round verification")
-	//	mc.CancelRoundVerification(ctx, r)
-	//}
 	b.SetBlockState(block.StateNotarized)
 	return true
 }

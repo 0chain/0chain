@@ -17,10 +17,6 @@ func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int
 	kid := p.getLocKey(id)
 	loc, ok := p.locations[kid]
 	if ok {
-		logging.Logger.Debug("get item part from location cache",
-			zap.String("kid", kid),
-			zap.String("id", id),
-			zap.String("partition", p.Name))
 		return loc, true, nil
 	}
 
@@ -32,10 +28,6 @@ func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int
 		return -1, false, err
 	}
 
-	logging.Logger.Debug("get item part from location state",
-		zap.String("kid", kid),
-		zap.String("id", id),
-		zap.String("partition", p.Name))
 	return pl.Location, true, nil
 }
 
@@ -44,9 +36,6 @@ func (p *Partitions) getLocKey(id string) datastore.Key {
 }
 
 func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex int) error {
-	logging.Logger.Debug("save item location",
-		zap.String("kid", p.getLocKey(id)),
-		zap.String("id", id))
 	_, err := state.InsertTrieNode(p.getLocKey(id), &location{Location: partIndex})
 	if err != nil {
 		return fmt.Errorf("save item location failed: %v", err)
@@ -61,13 +50,6 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
 	kid := p.getLocKey(id)
 	root := util.ToHex(state.GetState().GetRoot())
-	logging.Logger.Debug("remove item location",
-		zap.String("kid", kid),
-		zap.String("id", id),
-		zap.String("state root", root),
-		zap.Int64("round", state.GetBlock().Round),
-		zap.String("block", state.GetBlock().Hash),
-	)
 	_, err := state.DeleteTrieNode(kid)
 	if err != nil {
 		logging.Logger.Error("remove item location failed",
@@ -81,7 +63,6 @@ func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
 		return fmt.Errorf("remove item location failed: %v", err)
 	}
 	if len(p.locations) > 0 {
-		logging.Logger.Debug("remove item from partition cache", zap.String("kid", kid))
 		delete(p.locations, kid)
 	}
 	return nil

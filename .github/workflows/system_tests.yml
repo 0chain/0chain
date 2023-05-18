@@ -35,9 +35,9 @@ on:
         description: '0box branch to deploy'
         default: 'staging'
         required: true
-       test_file_filter:
-        description: 'Comma separated list of test files to run (eg. zwalletcli_register_wallet_test.go, zwalletcli_send_and_balance_test.go). If supplied, the PR will NOT be notified of the test result'
-        default: ''
+       run_smoke_tests:
+        description: 'Run subset of system tests (smoke tests) for faster feedback (NOT FOR PRS POINTED TO STAGING)'
+        default: 'false'
         required: false
        skip_tests:
         description: '(LAST RESORT ONLY) Skip system tests. This will allow a PR to merge without requiring a green test run.  *By using you certify that the code being merged is not causing system tests to fail*'
@@ -56,10 +56,10 @@ jobs:
       validator_branch: ${{ github.event.inputs.blobber_branch }}
       zbox_branch: ${{ github.event.inputs.zbox_branch }}
       authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
-      test_file_filter: ${{ github.event.inputs.test_file_filter }}
       zs3server_branch: ${{ github.event.inputs.zs3server_branch }}
       gosdk_branch: ${{ github.event.inputs.gosdk_branch }}
       skip_tests: ${{ github.event.inputs.skip_tests }}
+      run_smoke_tests: ${{ github.event.inputs.run_smoke_tests }}
     secrets:
       SVC_ACCOUNT_SECRET: ${{ secrets.SVC_ACCOUNT_SECRET }}
       DEV1KC: ${{ secrets.DEV1KC }}
@@ -74,3 +74,7 @@ jobs:
       SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
       TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
       DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+      GRAPHNODE_NETWORK: ${{ secrets.GRAPHNODE_NETWORK }}
+      GRAPHNODE_ETHEREUM_NODE_URL: https://rpc.tenderly.co/fork/${{ secrets.TENDERLY_FORK_ID }}
+      S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+      S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}

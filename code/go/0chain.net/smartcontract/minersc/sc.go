@@ -2,9 +2,7 @@ package minersc
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math"
 	"net/url"
 	"sync"
 
@@ -79,19 +77,15 @@ func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 	return msc.SmartContractExecutionStats
 }
 
-func (msc *MinerSmartContract) GetCost(t *transaction.Transaction, funcName string, balances cstate.StateContextI) (int, error) {
-	n, err := getGlobalNode(balances)
+func (msc *MinerSmartContract) GetCostTable(balances cstate.StateContextI) (map[string]int, error) {
+	node, err := getGlobalNode(balances)
 	if err != nil {
-		return math.MaxInt32, err
+		return map[string]int{}, err
 	}
-	if n.Cost == nil {
-		return math.MaxInt32, errors.New("can't get cost")
+	if node.Cost == nil {
+		return map[string]int{}, err
 	}
-	cost, ok := n.Cost[funcName]
-	if !ok {
-		return math.MaxInt32, errors.New("no cost given for " + funcName)
-	}
-	return cost, nil
+	return node.Cost, nil
 }
 
 // setSC setting up smartcontract. implementing the interface

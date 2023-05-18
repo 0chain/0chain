@@ -378,13 +378,14 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				logging.Logger.Error("emit update block event error", zap.Error(err))
 			}
 			fb.Events = append(fb.Events, ev)
-
+			ts := time.Now()
 			if err := c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns)); err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
 			}
+			EventsComputationTimer.Update(time.Since(ts).Microseconds())
 			fb.Events = nil
 		})
 	}

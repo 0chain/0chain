@@ -280,10 +280,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", err
 	}
 
-	logging.Logger.Debug("new_allocation_request_debug",
-		zap.String("after setup allocation", util.ToHex(balances.GetState().GetRoot())),
-		zap.String("txn", txn.Hash))
-
 	for _, b := range blobberNodes {
 		_, err = balances.InsertTrieNode(b.GetKey(), b)
 		if err != nil {
@@ -293,10 +289,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 				zap.Error(err))
 			return "", fmt.Errorf("can't Save blobber: %v", err)
 		}
-		logging.Logger.Debug("new_allocation_request_debug - after insert blobber",
-			zap.String("blobber id", b.ID),
-			zap.String("txn", txn.Hash),
-			zap.String("root", util.ToHex(balances.GetState().GetRoot())))
 
 		if err := spMap[b.ID].addOffer(sa.BlobberAllocsMap[b.ID].Offer()); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
@@ -314,11 +306,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
 
-		logging.Logger.Debug("new_allocation_request_debug - after save stake pool",
-			zap.String("blobber id", b.ID),
-			zap.String("txn", txn.Hash),
-			zap.String("root", util.ToHex(balances.GetState().GetRoot())))
-
 		if _, err := partitionsBlobberAllocationsAdd(balances, b.ID, sa.ID); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error adding allocation to blobber",
 				zap.String("txn", txn.Hash),
@@ -328,22 +315,14 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("could not bind allocation to blobber: %v", err)
 		}
 
-		logging.Logger.Debug("new_allocation_request_debug - after save partition",
-			zap.String("blobber id", b.ID),
-			zap.String("txn", txn.Hash),
-			zap.String("root", util.ToHex(balances.GetState().GetRoot())))
 		balances.EmitEvent(event.TypeStats, event.TagAllocValueChange, b.ID, event.AllocationValueChanged{
 			FieldType:    event.Allocated,
 			AllocationId: sa.ID,
 			Delta:        bSize(request.Size, request.DataShards),
 		})
 
-		emitUpdateBlobberAllocatedHealth(b, balances)
+		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
-
-	logging.Logger.Debug("new_allocation_request_debug",
-		zap.String("after update blobbers", util.ToHex(balances.GetState().GetRoot())),
-		zap.String("txn", txn.Hash))
 
 	var options []WithOption
 	if mintNewTokens > 0 {
@@ -691,7 +670,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
-		emitUpdateBlobberAllocatedHealth(b, balances)
+		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 	// Save allocation
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
@@ -1048,7 +1027,7 @@ func (sc *StorageSmartContract) reduceAllocation(
 				return fmt.Errorf("can't Save stake pool of %s: %v", ba.BlobberID,
 					err)
 			}
-			emitUpdateBlobberAllocatedHealth(b, balances)
+			emitUpdateBlobberAllocatedSavedHealth(b, balances)
 		}
 	}
 
@@ -1587,6 +1566,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	conf *Config,
 ) (err error) {
 	before := make([]currency.Coin, len(sps))
+	deductionFromWritePool := currency.Coin(0)
 
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
@@ -1603,6 +1583,10 @@ func (sc *StorageSmartContract) finishAllocation(
 					"ammount was short by %v", d.BlobberID, delta)
 			}
 			alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, delta)
+			if err != nil {
+				return err
+			}
+			deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, delta)
 			if err != nil {
 				return err
 			}
@@ -1692,7 +1676,14 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
 	}
 	// This event just decreases the cancelation charge from the write pool's reflection in global snapshot's total client locked tokens
-	i, _ := cancellationCharge.Int64()
+	deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, cancellationCharge)
+	if err != nil {
+		return fmt.Errorf("failed to add cancellation charge to deduction from write pool: %v", err)
+	}
+	i, err := deductionFromWritePool.Int64()
+	if err != nil {
+		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
+	}
 	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
 		Client:       t.ClientID,
 		AllocationId: alloc.ID,
@@ -1730,6 +1721,22 @@ func (sc *StorageSmartContract) finishAllocation(
 					Delta:        int64((staked - before[i]) / ba.Terms.WritePrice),
 				})
 		}
+
+		blobber, err := sc.getBlobber(ba.BlobberID, balances)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't get blobber "+ba.BlobberID+": "+err.Error())
+		}
+		blobber.SavedData += (-ba.Stats.UsedSize)
+		blobber.Allocated += (-ba.Size)
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"saving blobber "+ba.BlobberID+": "+err.Error())
+		}
+
+		// Update saved data on events_db
+		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {

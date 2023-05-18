@@ -3,7 +3,6 @@ package faucetsc
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/url"
 	"time"
 
@@ -56,19 +55,15 @@ func (fc *FaucetSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
-	node, err := fc.getGlobalVariables(t, balances)
+func (fc *FaucetSmartContract) GetCostTable(balances c_state.StateContextI) (map[string]int, error) {
+	node, err := fc.getGlobalVariables(balances.GetTransaction(), balances)
 	if err != nil {
-		return math.MaxInt32, err
+		return map[string]int{}, err
 	}
 	if node.Cost == nil {
-		return math.MaxInt32, err
+		return map[string]int{}, err
 	}
-	cost, ok := node.Cost[funcName]
-	if !ok {
-		return math.MaxInt32, err
-	}
-	return cost, nil
+	return node.Cost, nil
 }
 
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {

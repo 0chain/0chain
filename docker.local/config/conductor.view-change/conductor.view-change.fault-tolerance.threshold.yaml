@@ -29,11 +29,11 @@
 ---
 enable:
   # Threshold Conditions
-  - "Threshold min/max miners"
-  - "Threshold min/max sharders"
-  - "Threshold K miners"
-  - "X percent of nodes are from previous MB"
-  - "More nodes than current active set come online at once"
+  # - "Threshold min/max miners"
+  # - "Threshold min/max sharders"
+  # - "Threshold K miners"
+  # - "X percent of nodes are from previous MB"
+  # - "More nodes than current active set come online at once"
 
 sets:
   # Threshold

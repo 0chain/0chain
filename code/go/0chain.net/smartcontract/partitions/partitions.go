@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -21,7 +20,6 @@ import (
 
 const (
 	ErrItemNotFoundCode = "item not found"
-	errLoadPrevPart     = "could not get previous partition"
 	errItemExistCode    = "item already exist"
 )
 
@@ -96,11 +94,6 @@ func ErrItemExist(err error) bool {
 	}
 
 	return cErr.Code == errItemExistCode
-}
-
-// ErrLoadPartition check whether it failed to load partition or last partition
-func ErrLoadPartition(err error) bool {
-	return strings.Contains(err.Error(), errLoadPrevPart)
 }
 
 func newPartitions(name string, size int) (*Partitions, error) {
@@ -358,13 +351,6 @@ func (p *Partitions) loadLastFromPrev(state state.StateContextI) error {
 			zap.Error(err))
 		return fmt.Errorf("could not get previous partition: %d, %v", p.Last.Loc-1, err)
 	}
-	logging.Logger.Debug("get previous partition",
-		zap.String("name", p.Name),
-		zap.Int("loc", p.Last.Loc-1),
-		zap.Int64("round", b.Round),
-		zap.String("block", b.Hash),
-		zap.String("state root", util.ToHex(state.GetState().GetRoot())),
-		zap.String("txn", state.GetTransaction().Hash))
 	p.Last = prev
 
 	// remove all prev locations
@@ -484,15 +470,6 @@ func (p *Partitions) Save(state state.StateContextI) error {
 		}
 	}
 
-	//for _, part := range p.Partitions {
-	//	if part != nil && part.changed() {
-	//		err := part.save(state)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
-
 	_, err := state.InsertTrieNode(p.Name, p)
 	if err != nil {
 		return err
@@ -503,33 +480,6 @@ func (p *Partitions) Save(state state.StateContextI) error {
 		zap.Int("items", len(p.Last.Items)))
 	return nil
 }
-
-//func (p *Partitions) foreach(state state.StateContextI, f func(string, []byte, int) ([]byte, bool, error)) error {
-//	for i := 0; i < p.partitionsNum(); i++ {
-//		part, err := p.getPartition(state, i)
-//		if err != nil {
-//			return fmt.Errorf("could not get partition: name:%s, index: %d", p.Name, i)
-//		}
-//
-//		for i, v := range part.Items {
-//			ret, bk, err := f(v.ID, v.Data, i)
-//			if err != nil {
-//				return err
-//			}
-//			if !bytes.Equal(ret, v.Data) {
-//				v.Data = ret
-//				part.Items[i] = v
-//				part.Changed = true
-//			}
-//
-//			if bk {
-//				return nil
-//			}
-//		}
-//	}
-//
-//	return nil
-//}
 
 func setPartitionItems(rtv []item, vs interface{}) error {
 	// slice type
@@ -570,46 +520,6 @@ func setPartitionItems(rtv []item, vs interface{}) error {
 	reflect.ValueOf(vs).Elem().Set(rv)
 	return nil
 }
-
-//func (p *Partitions) addPartition() *partition {
-//	newPartition := &partition{
-//		Key: p.partitionKey(p.PrevLoc + 1),
-//	}
-//
-//	p.Partitions = append(p.Partitions, newPartition)
-//	p.NumPartitions++
-//	return newPartition
-//}
-
-//func (p *Partitions) deleteTail(balances state.StateContextI) error {
-//	k := p.partitionKey(p.partitionsNum() - 1)
-//	_, err := balances.DeleteTrieNode(k)
-//	if err != nil {
-//		logging.Logger.Debug("partition delete tail failed",
-//			zap.Error(err),
-//			zap.Int("partition num", p.partitionsNum()))
-//		return fmt.Errorf("delete tail partition failed: %v", err)
-//	}
-//	p.Partitions = p.Partitions[:p.partitionsNum()-1]
-//	p.NumPartitions--
-//
-//	b := balances.GetBlock()
-//	txn := balances.GetTransaction()
-//	logging.Logger.Debug("delete tail partition",
-//		zap.String("partition", p.Name),
-//		zap.String("partition key", k),
-//		zap.Int("new partition num", p.partitionsNum()),
-//		zap.String("txn", txn.Hash),
-//		zap.Int64("round", b.Round),
-//		zap.String("block", b.Hash))
-//
-//	// DEBUG: save partitions number changes immediately
-//	if err := p.update(balances); err != nil {
-//		return fmt.Errorf("update partitions after deleting tail failed: %v", err)
-//	}
-//
-//	return nil
-//}
 
 func (p *Partitions) getPartition(state state.StateContextI, i int) (*partition, error) {
 	if i > p.Last.Loc {

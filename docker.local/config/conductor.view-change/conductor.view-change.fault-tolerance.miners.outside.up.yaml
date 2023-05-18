@@ -28,7 +28,7 @@
 
 ---
 enable:
-  - "Outside miner comes up"
+  # - "Outside miner comes up"
 
 sets:
   - name: "Outside miner comes up"

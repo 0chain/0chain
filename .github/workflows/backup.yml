@@ -22,6 +22,12 @@ jobs:
           echo $GIT_COMMIT_DATE
           echo $YESTERDAY_DATE
           
+      - name: Install AWS
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          
       - name: Create backup
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
         run: |
@@ -44,4 +50,4 @@ jobs:
       - name: Backup to s3
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
         run: |
-          sudo aws s3 cp 0chain.zip s3://${{ secrets.MIRROR_TARGET }}/0chain.zip
+          aws s3 cp 0chain.zip s3://${{ secrets.MIRROR_TARGET }}/0chain.zip

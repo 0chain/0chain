@@ -7,28 +7,22 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"reflect"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
-
-	"0chain.net/chaincore/block"
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/rest"
-	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zcnsc"
-	"go.uber.org/zap"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/rest"
+	"0chain.net/smartcontract/storagesc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"github.com/go-openapi/runtime/middleware"
@@ -70,7 +64,6 @@ func SetupStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
 	http.HandleFunc("/v1/scstate/get", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState))))
-	http.HandleFunc("/v1/state_changes", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetStateChangesDebug))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
 	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
 	http.HandleFunc("/_smart_contract_stats", common.WithCORS(common.UserRateLimit(c.SCStats)))
@@ -178,122 +171,6 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 		return nil, err
 	}
 	return retObj, nil
-}
-
-func (c *Chain) GetStateChangesDebug(ctx context.Context, r *http.Request) (interface{}, error) {
-	hash := r.FormValue("block")
-	roundS := r.FormValue("round")
-	rd, err := strconv.Atoi(roundS)
-	if err != nil {
-		return errors.New("invalid round"), nil
-	}
-	nodeID := r.FormValue("node_id")
-	bsc, err := c.getBlockStateChangeDebug(hash, int64(rd), nodeID)
-	if err != nil {
-		return nil, err
-	}
-
-	mpt := util.NewMerklePatriciaTrie(bsc.GetNodeDB(), 2023, bsc.GetRoot().GetHashBytes())
-	buf := bytes.NewBuffer(nil)
-	if err := mpt.PrettyPrint(buf); err != nil {
-		return nil, err
-	}
-
-	ret := struct {
-		Mpt string `json:"mpt"`
-	}{
-		Mpt: buf.String(),
-	}
-	return ret, nil
-}
-
-func (c *Chain) getBlockStateChangeDebug(blockHash string, round int64, nodeID string) (*block.StateChange, error) {
-	cctx, cancel := context.WithCancel(common.GetRootContext())
-	defer cancel()
-	params := &url.Values{}
-	params.Add("block", blockHash)
-	mb := c.GetLatestFinalizedMagicBlock(cctx)
-	if mb == nil {
-		return nil, errors.New("can't get mb")
-	}
-	stateChangesC := make(chan *block.StateChange, mb.Miners.Size())
-
-	var handler = func(_ context.Context, entity datastore.Entity) (
-		resp interface{}, err error) {
-
-		var rsc, ok = entity.(*block.StateChange)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		//if len(rsc.Nodes) != b.StateChangesCount {
-		//	logging.Logger.Error("get_block_state_change",
-		//		zap.Error(state.ErrPartialStateRootMismatch),
-		//		zap.Int64("round", b.Round),
-		//		zap.String("block", b.Hash))
-		//	return nil, state.ErrMalformedPartialState
-		//}
-
-		//if rsc.Block != b.Hash {
-		//	logging.Logger.Error("get_block_state_change",
-		//		zap.Error(errors.New("block hash mismatch")),
-		//		zap.Int64("round", b.Round),
-		//		zap.String("block", b.Hash))
-		//	return nil, block.ErrBlockHashMismatch
-		//}
-
-		//if !bytes.Equal(b.ClientStateHash, rsc.Hash) {
-		//	logging.Logger.Error("get_block_state_change",
-		//		zap.Error(errors.New("state hash mismatch")),
-		//		zap.Int64("round", b.Round),
-		//		zap.String("block", b.Hash))
-		//	return nil, block.ErrBlockStateHashMismatch
-		//}
-
-		var root = rsc.GetRoot()
-		if root == nil {
-			logging.Logger.Error("get_block_state_change",
-				zap.Error(errors.New("state root error")),
-				//zap.Int64("round", b.Round),
-				//zap.String("block", b.Hash),
-				zap.Int("state_nodes", len(rsc.Nodes)))
-			return nil, common.NewError("state_root_error",
-				"block state root calculation error")
-		}
-
-		cancel()
-		select {
-		case stateChangesC <- rsc:
-		default:
-		}
-		return rsc, nil
-	}
-
-	if nd := mb.Miners.GetNode(nodeID); nd != nil {
-		nd.RequestEntityFromNode(cctx, BlockStateChangeRequestor, params, handler)
-	} else if nd := mb.Sharders.GetNode(nodeID); nd != nil {
-		nd.RequestEntityFromNode(cctx, BlockStateChangeRequestor, params, handler)
-	}
-
-	//c.RequestEntityFromMiners(cctx, BlockStateChangeRequestor, params, handler)
-	var bsc *block.StateChange
-	select {
-	case bsc = <-stateChangesC:
-	default:
-	}
-	if bsc == nil {
-		c.RequestEntityFromSharders(cctx, BlockStateChangeRequestor, params, handler)
-		select {
-		case bsc = <-stateChangesC:
-		default:
-		}
-		if bsc == nil {
-			return nil, common.NewError("block_state_change_error",
-				"error getting the block state change")
-		}
-	}
-
-	return bsc, nil
 }
 
 // GetBalanceHandler - get the balance of a client

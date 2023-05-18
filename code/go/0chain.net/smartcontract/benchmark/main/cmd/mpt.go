@@ -62,7 +62,7 @@ func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatrici
 func getBalances(
 	txn *transaction.Transaction,
 	mpt *util.MerklePatriciaTrie,
-	data benchmark.BenchData,
+	data *benchmark.BenchData,
 ) (*util.MerklePatriciaTrie, cstate.StateContextI) {
 	bk := &block.Block{
 		MagicBlock: &block.MagicBlock{
@@ -70,40 +70,43 @@ func getBalances(
 		},
 		PrevBlock: &block.Block{},
 	}
-	bk.Round = 2
+	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	bk.CreationDate = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-	bk.MinerID = data.Miners[0]
-	node.Self.Underlying().SetKey(data.Miners[0])
 	magicBlock := &block.MagicBlock{
 		Miners:   node.NewPool(node.NodeTypeMiner),
 		Sharders: node.NewPool(node.NodeTypeSharder),
-	}
-
-	for i := range data.Sharders {
-		var n = node.Provider()
-		if err := n.SetID(data.Sharders[i]); err != nil {
-			log.Fatal(err)
-		}
-		n.PublicKey = data.SharderKeys[i]
-		n.Type = node.NodeTypeSharder
-		n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
-		if err := magicBlock.Sharders.AddNode(n); err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	// add miner and sharder that is in magic block but not active for add sharder and add miner
 	magicBlock.Miners.NodesMap = make(map[string]*node.Node)
 	magicBlock.Miners.NodesMap[encryption.Hash("magic_block_miner_1")] = &node.Node{}
 	magicBlockSharder := node.Node{}
-	magicBlockSharder.ID = data.InactiveSharder
-	magicBlockSharder.PublicKey = data.InactiveSharderPK
 	magicBlockSharder.Type = magicBlock.Sharders.Type
-	if err := magicBlock.Sharders.AddNode(&magicBlockSharder); err != nil {
-		log.Fatal(err)
+
+	var edb *event.EventDb
+	if data != nil {
+		bk.MinerID = data.Miners[0]
+		node.Self.Underlying().SetKey(data.Miners[0])
+		for i := range data.Sharders {
+			var n = node.Provider()
+			if err := n.SetID(data.Sharders[i]); err != nil {
+				log.Fatal(err)
+			}
+			n.PublicKey = data.SharderKeys[i]
+			n.Type = node.NodeTypeSharder
+			n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
+			if err := magicBlock.Sharders.AddNode(n); err != nil {
+				log.Fatal(err)
+			}
+		}
+		magicBlockSharder.ID = data.InactiveSharder
+		magicBlockSharder.PublicKey = data.InactiveSharderPK
+		if err := magicBlock.Sharders.AddNode(&magicBlockSharder); err != nil {
+			log.Fatal(err)
+		}
+		edb = data.EventDb
 	}
 
-	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
@@ -111,13 +114,13 @@ func getBalances(
 		func(int64) *block.MagicBlock { return magicBlock },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
-		func() encryption.SignatureScheme { return signatureScheme },
+		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 		func() *block.Block { return bk },
-		data.EventDb,
+		edb,
 	)
 }
 
-func getMpt(loadPath, configPath string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in getMpt", r)
@@ -142,13 +145,15 @@ func getMpt(loadPath, configPath string, exec *common.WithContextFunc) (*util.Me
 	}
 
 	if len(loadPath) == 0 {
+		log.Println("no database to load, build new one in", mptDir)
 		return setUpMpt(mptDir)
 	}
 
+	log.Println("loading saved database", mptDir)
 	return openMpt(mptDir)
 }
 
-func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	pNode, err := util.NewPNodeDB(
 		loadPath,
 		loadPath+"log",
@@ -169,15 +174,16 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 	}
 
 	creationDate := common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-	benchData := benchmark.BenchData{EventDb: eventDb}
+
 	_, balances := getBalances(
 		&transaction.Transaction{CreationDate: creationDate},
 		extractMpt(pMpt, rootBytes),
-		benchData,
+		nil,
 	)
+	benchData := &benchmark.BenchData{EventDb: eventDb}
 	benchData.Now = creationDate
 
-	err = balances.GetTrieNode(BenchDataKey, &benchData)
+	err = balances.GetTrieNode(BenchDataKey, benchData)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,7 +193,7 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, benchmark.Ben
 
 func setUpMpt(
 	dbPath string,
-) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in setUpMpt", r)
@@ -248,8 +254,8 @@ func setUpMpt(
 
 	var wg sync.WaitGroup
 	var (
-		blobbers                      []*storagesc.StorageNode
-		miners, sharders, sharderKeys []string
+		blobbers                                                                             []*storagesc.StorageNode
+		miners, sharders, sharderKeys, validators, validatorPublicKeys, ValidatorPrivateKeys []string
 	)
 
 	wg.Add(1)
@@ -281,7 +287,8 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		_ = storagesc.AddMockValidators(publicKeys, eventDb, balances)
+		validators, validatorPublicKeys, ValidatorPrivateKeys = createKeys(viper.GetInt(benchmark.NumValidators))
+		_ = storagesc.AddMockValidators(validators, validatorPublicKeys, eventDb, balances)
 		log.Println("added validators\t", time.Since(timer))
 	}()
 
@@ -339,7 +346,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.GetMockValidatorStakePools(clients, balances)
+		storagesc.GetMockValidatorStakePools(validators, balances)
 		log.Println("added validator stake pools\t", time.Since(timer))
 	}()
 
@@ -363,7 +370,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockChallenges(blobbers, eventDb, balances)
+		storagesc.AddMockChallenges(validators, blobbers, eventDb, balances)
 		log.Println("added challenges\t", time.Since(timer))
 	}()
 	wg.Add(1)
@@ -527,6 +534,22 @@ func setUpMpt(
 		} else {
 			benchData.SharderKeys = sharderKeys[:listLength]
 		}
+		if len(validators) < listLength {
+			benchData.ValidatorIds = validators
+		} else {
+			benchData.ValidatorIds = validators[:listLength]
+		}
+		if len(validatorPublicKeys) < listLength {
+			benchData.ValidatorPublicKeys = validatorPublicKeys
+		} else {
+			benchData.ValidatorPublicKeys = validatorPublicKeys[:listLength]
+		}
+		if len(ValidatorPrivateKeys) < listLength {
+			benchData.ValidatorPrivateKeys = ValidatorPrivateKeys
+		} else {
+			benchData.ValidatorPrivateKeys = ValidatorPrivateKeys[:listLength]
+		}
+
 		benchData.InactiveSharder, benchData.InactiveSharderPK, err = getMockIdKeyPair()
 		if err != nil {
 			log.Fatal(err)
@@ -549,20 +572,12 @@ func setUpMpt(
 	log.Println("saved simulation parameters\t", time.Since(timer))
 	log.Println("mpt generation took:", time.Since(mptGenTime))
 
-	return pMpt, balances.GetState().GetRoot(), benchData
+	return pMpt, balances.GetState().GetRoot(), &benchData
 }
 
 func getMockIdKeyPair() (string, string, error) {
-	blsScheme := BLS0ChainScheme{}
-	if err := blsScheme.GenerateKeys(); err != nil {
-		return "", "", err
-	}
-	pk := blsScheme.GetPublicKey()
-	b, err := hex.DecodeString(pk)
-	if err != nil {
-		return "", "", err
-	}
-	return encryption.Hash(b), pk, nil
+	id, pbk, _, err := createKey()
+	return id, pbk, err
 }
 
 func openEventsDb() *event.EventDb {
@@ -636,6 +651,32 @@ func newEventsDb() *event.EventDb {
 	return eventDb
 }
 
+func createKeys(number int) ([]string, []string, []string) {
+	var ids, publicKeys, privateKeys []string
+	for i := 0; i < number; i++ {
+		id, public, private, err := createKey()
+		if err != nil {
+			log.Fatal("error creating key" + err.Error())
+		}
+		ids = append(ids, id)
+		publicKeys = append(publicKeys, public)
+		privateKeys = append(privateKeys, private)
+	}
+	return ids, publicKeys, privateKeys
+}
+
+func createKey() (id string, public string, private string, err error) {
+	blsScheme := BLS0ChainScheme{}
+	if err := blsScheme.GenerateKeys(); err != nil {
+		return "", "", "", err
+	}
+	publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
+	if err != nil {
+		return "", "", "", err
+	}
+	return encryption.Hash(publicKeyBytes), blsScheme.GetPublicKey(), blsScheme.GetPrivateKey(), nil
+}
+
 func addMockClients(ctx context.Context,
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
@@ -644,21 +685,15 @@ func addMockClients(ctx context.Context,
 	for i := 0; i < viper.GetInt(benchmark.NumClients); i++ {
 		err := executor.Run(ctx, func(i int) func() error {
 			return func() error {
-				blsScheme := BLS0ChainScheme{}
-				err := blsScheme.GenerateKeys()
+				clientID, publicKey, privateKey, err := createKey()
 				if err != nil {
 					return err
 				}
-				publicKeyBytes, err := hex.DecodeString(blsScheme.GetPublicKey())
-				if err != nil {
-					return err
-				}
-				clientID := encryption.Hash(publicKeyBytes)
 
 				if i < activeClients {
 					clientIds = append(clientIds, clientID)
-					publicKeys = append(publicKeys, blsScheme.GetPublicKey())
-					privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
+					publicKeys = append(publicKeys, publicKey)
+					privateKeys = append(privateKeys, privateKey)
 				}
 				is := &state.State{}
 				_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")

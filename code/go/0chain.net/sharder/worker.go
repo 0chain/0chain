@@ -42,14 +42,18 @@ func SetupWorkers(ctx context.Context) {
 	go sc.UpdateMagicBlockWorker(ctx)
 	go sc.RegisterSharderKeepWorker(ctx)
 	go sc.SharderHealthCheck(ctx)
+
+	go sc.TrackTransactionErrors(ctx)
 }
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	const stuckDuration = 3 * time.Second
 	var (
-		endRound int64
-		syncing  bool
+		endRound   int64
+		syncing    bool
+		syncTimer  time.Time
+		timingSync bool
 
 		syncBlocksTimer  = time.NewTimer(7 * time.Second)
 		aheadN           = int64(config.GetLFBTicketAhead())
@@ -103,6 +107,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			endRound = lfbTk.Round + aheadN
 
 			if endRound <= cr || lfb.Round >= lfbTk.Round {
+				if timingSync {
+					syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
+					timingSync = false
+				}
+
 				logging.Logger.Debug("process block, synced already, continue...")
 				continue
 			}
@@ -121,6 +130,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 			endRound = cr + reqNum
 			syncing = true
+			if !timingSync {
+				timingSync = true
+				syncTimer = time.Now()
+			}
 
 			logging.Logger.Debug("process block, sync blocks",
 				zap.Int64("start round", cr+1),
@@ -401,5 +414,29 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)
+	}
+}
+
+func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
+
+	var (
+		timer = time.NewTimer(10 * time.Minute)
+	)
+
+	edb := sc.GetQueryStateContext().GetEventDB()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+
+			err := edb.UpdateTransactionErrors()
+			if err != nil {
+				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
+			}
+
+			timer = time.NewTimer(10 * time.Minute)
+		}
 	}
 }

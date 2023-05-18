@@ -1,9 +1,9 @@
 name: CONDUCTOR BLOBBER-02 TESTS
 
 on:
-  # schedule:
-  #   # Runs everyday at 02:00 am
-  #   - cron: '0 3 * * * '
+  schedule:
+    # Runs everyday at 02:00 am
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -16,10 +16,18 @@ jobs:
       run: |
         rm -rf *
     
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.18'
+    - name: "Setup Go"
+      shell: 'script --return --quiet --command "bash {0}"'
+      run: |
+        [ -f ./https://go.dev/dl/go1.18.10.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.10.linux-amd64.tar.gz
+        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
+        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
+        tar -C /usr/local -xzf ./go1.18.10.linux-amd64.tar.gz
+
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        which go
+        go env
       
     - name: Docker Compose Setup.
       run: |
@@ -47,6 +55,7 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
+        export HOME="/root"
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
@@ -104,10 +113,12 @@ jobs:
 
     - name: Install zboxcli
       run: |
+        export HOME="/root"
         cd zboxcli && make install
 
     - name: Install zwalletcli
       run: |
+        export HOME="/root"
         cd zwalletcli && make install
 
     - name: 0dns Patching
@@ -163,6 +174,7 @@ jobs:
 
     - name: Starting blobber Tests.
       run: |
+        export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh blobber-2
 
@@ -174,26 +186,6 @@ jobs:
           0chain/conductor/logs/
           0chain/docker.local/
           blobber/docker.local/
-    
-    # - name: Creating Artifact con-tests-logs.tar.gz file.
-    #   run: |
-    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-    # - name: Uploading artifact con-tests-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-logs.tar.gz
-
-    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-    #   run: |
-    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-backup-logs.tar.gz
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]

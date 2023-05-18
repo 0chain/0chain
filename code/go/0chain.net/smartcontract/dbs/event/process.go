@@ -3,9 +3,11 @@ package event
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/state"
@@ -193,78 +195,103 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
+	p := int64(-1)
 	edb.managePartitions(0)
 
 	for {
 		es := <-edb.eventsChannel
 
-		if es.round%edb.settings.PartitionChangePeriod == 0 {
-			edb.managePartitions(es.round)
-		}
-
-		tx, err := edb.Begin()
+		s, err := edb.work(ctx, gs, es, &p)
 		if err != nil {
-			logging.Logger.Error("error starting transaction", zap.Error(err))
+			if config.Development() { //panic in case of development
+				log.Panic(err)
+			}
 		}
+		if s != nil {
+			gs = s
+		}
+	}
+}
 
-		if err = tx.addEvents(ctx, es); err != nil {
-			logging.Logger.Error("error saving events",
-				zap.Int64("round", es.round),
+func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
+	defer func() {
+		es.doneC <- struct{}{}
+	}()
+
+	if *currentPartition < es.round/edb.settings.PartitionChangePeriod {
+		edb.managePartitions(es.round)
+		*currentPartition = es.round / edb.settings.PartitionChangePeriod
+	}
+
+	tx, err := edb.Begin()
+	if err != nil {
+		logging.Logger.Error("error starting transaction", zap.Error(err))
+		return nil, err
+	}
+
+	if err = tx.addEvents(ctx, es); err != nil {
+		logging.Logger.Error("error saving events",
+			zap.Int64("round", es.round),
+			zap.Error(err))
+		if err := tx.Rollback(); err != nil {
+			return nil, err
+		}
+		return nil, err
+	}
+
+	tse := time.Now()
+	tags := make([]string, 0, len(es.events))
+	for _, event := range es.events {
+		tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
+		if err != nil {
+			logging.Logger.Error("error processing event",
+				zap.Int64("round", event.BlockNumber),
+				zap.Any("tag", event.Tag),
 				zap.Error(err))
-		}
-
-		tse := time.Now()
-		tags := make([]string, 0, len(es.events))
-		for _, event := range es.events {
-			tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
-			if err != nil {
-				logging.Logger.Error("error processing event",
-					zap.Int64("round", event.BlockNumber),
-					zap.Any("tag", event.Tag),
-					zap.Error(err))
-				//logging.Logger.Panic(fmt.Sprintf("error processing event %v, %v, %v",
-				//	event.BlockNumber, event.Tag, err))
+			if err := tx.Rollback(); err != nil {
+				return nil, err
 			}
+			return nil, err
 		}
+	}
 
-		// process snapshot for none adding block events only
-		if isNotAddBlockEvent(es) {
-			gs, err = updateSnapshots(gs, es, tx)
-			if err != nil {
-				logging.Logger.Error("snapshot could not be processed",
-					zap.Int64("round", es.round),
-					zap.String("block", es.block),
-					zap.Int("block size", es.blockSize),
-					zap.Error(err),
-				)
-			}
-			err = tx.updateUserAggregates(&es)
-			if err != nil {
-				logging.Logger.Error("user aggregate could not be processed",
-					zap.Error(err),
-				)
-			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			logging.Logger.Error("error committing block events",
-				zap.Int64("block", es.round),
+	// process snapshot for none adding block events only
+	if isNotAddBlockEvent(es) {
+		gs, err = updateSnapshots(gs, es, tx)
+		if err != nil {
+			logging.Logger.Error("snapshot could not be processed",
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize),
 				zap.Error(err),
 			)
 		}
-
-		due := time.Since(tse)
-		if due.Milliseconds() > 200 {
-			logging.Logger.Warn("event db work slow",
-				zap.Duration("duration", due),
-				zap.Int("events number", len(es.events)),
-				zap.Strings("tags", tags),
-				zap.Int64("round", es.round),
-				zap.String("block", es.block),
-				zap.Int("block size", es.blockSize))
+		err = tx.updateUserAggregates(&es)
+		if err != nil {
+			logging.Logger.Error("user aggregate could not be processed",
+				zap.Error(err),
+			)
 		}
-		es.doneC <- struct{}{}
 	}
+
+	if err := tx.Commit(); err != nil {
+		logging.Logger.Error("error committing block events",
+			zap.Int64("block", es.round),
+			zap.Error(err))
+		return nil, err
+	}
+
+	due := time.Since(tse)
+	if due.Milliseconds() > 200 {
+		logging.Logger.Warn("event db work slow",
+			zap.Duration("duration", due),
+			zap.Int("events number", len(es.events)),
+			zap.Strings("tags", tags),
+			zap.Int64("round", es.round),
+			zap.String("block", es.block),
+			zap.Int("block size", es.blockSize))
+	}
+	return gs, nil
 }
 
 func (edb *EventDb) managePartitions(round int64) {
@@ -454,12 +481,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateBlobber(*blobbers)
-	case TagUpdateBlobberAllocatedHealth:
+	case TagUpdateBlobberAllocatedSavedHealth:
 		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobbersAllocatedAndHealth(*blobbers)
+		return edb.updateBlobbersAllocatedSavedAndHealth(*blobbers)
 	case TagUpdateBlobberTotalStake:
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
@@ -842,12 +869,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		bms, ok := fromEvent[[]BridgeMint](event.Data)
 		if !ok {
 			return ErrInvalidEventData
-		}		
+		}
 		users := make([]User, 0, len(*bms))
 		authMint := make(map[string]currency.Coin)
 		for _, bm := range *bms {
 			users = append(users, User{
-				UserID:       bm.UserID,
+				UserID:    bm.UserID,
 				MintNonce: bm.MintNonce,
 			})
 
