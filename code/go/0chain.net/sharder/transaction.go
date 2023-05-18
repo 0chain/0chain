@@ -161,9 +161,14 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 
 func (sc *Chain) storeTransactions(sTxns []datastore.Entity) error {
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
-	defer persistencestore.Close(tctx)
-	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
+	tctx := ememorystore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
+	defer ememorystore.Close(tctx)
+	err := txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
+	if err != nil {
+		return err
+	}
+	con := ememorystore.GetEntityCon(tctx, txnSummaryMetadata)
+	return con.Commit()
 }
 
 var txnSummaryMV = false
