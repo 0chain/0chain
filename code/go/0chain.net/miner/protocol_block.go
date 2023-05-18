@@ -1054,29 +1054,29 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		var (
 			deleteTxns = make([]datastore.Entity, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
 			txnHashes  = make([]string, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
-			lfbTS      = lfb.CreationDate
-			expiredTM  = common.Timestamp(30) // 3 minutes
+			//lfbTS      = lfb.CreationDate
+			//expiredTM  = common.Timestamp(30) // 3 minutes
 		)
 		// remove orphan future txns
 		if len(iterInfo.futureTxns) > 0 {
-			for clientID, txns := range iterInfo.futureTxns {
-				c, err := chain.GetStateById(blockState, clientID)
-				if err != nil {
-					return
-				}
+			for _, txns := range iterInfo.futureTxns {
+				//c, err := chain.GetStateById(blockState, clientID)
+				//if err != nil {
+				//	return
+				//}
 
 				if len(txns) > 0 {
-					if txns[0].Nonce-c.Nonce > 100 || txns[0].CreationDate+expiredTM < lfbTS {
-						// remove all following future txns
-						for _, ft := range txns {
-							deleteTxns = append(deleteTxns, ft)
-							txnHashes = append(txnHashes, ft.Hash)
-						}
-
-						logging.Logger.Debug("remove future txns",
-							zap.Int("count", len(deleteTxns)),
-							zap.Strings("txns", txnHashes))
+					//if txns[0].Nonce-c.Nonce > 100 || txns[0].CreationDate+expiredTM < lfbTS {
+					// remove all following future txns
+					for _, ft := range txns {
+						deleteTxns = append(deleteTxns, ft)
+						txnHashes = append(txnHashes, ft.Hash)
 					}
+
+					logging.Logger.Debug("remove future txns",
+						zap.Int("count", len(deleteTxns)),
+						zap.Strings("txns", txnHashes))
+					//}
 				}
 			}
 		}

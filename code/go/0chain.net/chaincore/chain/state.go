@@ -298,10 +298,6 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	maxFee := c.ChainConfig.MaxTxnFee()
 
 	zcn := float64(cost) / float64(c.ChainConfig.TxnCostFeeCoeff())
-	logging.Logger.Debug("debug txn fee estimate",
-		zap.Int64("zcn", zcn),
-		zap.Int64("cost", cost),
-		zap.Int("coeff", c.ChainConfig.TxnCostFeeCoeff()))
 	parseZCN, err := currency.ParseZCN(zcn)
 	if err != nil {
 		return cost, maxFee, nil
