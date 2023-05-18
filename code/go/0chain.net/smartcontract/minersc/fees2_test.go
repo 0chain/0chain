@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -66,6 +67,7 @@ type mock0ChainYaml struct {
 type runtimeValues struct {
 	lastRound      int64
 	blockRound     int64
+	runRound       int64
 	phase          Phase
 	phaseRound     int64
 	nextViewChange int64
@@ -102,6 +104,7 @@ var (
 	runValues = runtimeValues{
 		lastRound:      50,
 		blockRound:     53,
+		runRound:       53,
 		phase:          4,
 		phaseRound:     35,
 		nextViewChange: 100,
@@ -140,6 +143,7 @@ func TestPayFees(t *testing.T) {
 		var minerStakes = MinerDelegates{0.2}
 		var sharderStakes = SharderDelegates{[]float64{0.3}}
 		runValues.blockRound = scYaml.rewardRoundPeriod
+		runValues.runRound = scYaml.rewardRoundPeriod
 		runValues.lastRound = scYaml.rewardRoundPeriod - 2
 		zChainYaml.viewChange = true
 		err := testPayFees(t, minerStakes, sharderStakes, runValues)
@@ -162,6 +166,7 @@ func TestPayFees(t *testing.T) {
 		var minerStakes = MinerDelegates{}
 		var sharderStakes = SharderDelegates{[]float64{}}
 		runValues.blockRound = 2 * scYaml.rewardRoundPeriod
+		runValues.runRound = 2 * scYaml.rewardRoundPeriod
 		runValues.lastRound = 2*scYaml.rewardRoundPeriod - 1
 		zChainYaml.viewChange = true
 		err := testPayFees(t, minerStakes, sharderStakes, runValues)
@@ -176,6 +181,7 @@ func TestPayFees(t *testing.T) {
 			[]float64{0.2, 0.12},
 			[]float64{0.6, 1.777, 0.19, 0.1123}}
 		runValues.blockRound = 3 * scYaml.rewardRoundPeriod
+		runValues.runRound = 3 * scYaml.rewardRoundPeriod
 		runValues.lastRound = 3*scYaml.rewardRoundPeriod - 1
 		zChainYaml.viewChange = false
 		err := testPayFees(t, minerStakes, sharderStakes, runValues)
@@ -190,6 +196,7 @@ func TestPayFees(t *testing.T) {
 			[]float64{0.2, 0.12},
 			[]float64{0.6, 1.777, 0.19, 0.1123}}
 		runValues.blockRound = 3 * scYaml.epoch
+		runValues.runRound = 3 * scYaml.epoch
 		runValues.lastRound = 3*scYaml.epoch - 1
 		zChainYaml.viewChange = true
 		err := testPayFees(t, minerStakes, sharderStakes, runValues)
@@ -199,11 +206,10 @@ func TestPayFees(t *testing.T) {
 	t.Run("errJumpedBackInTime", func(t *testing.T) {
 		var minerStakes = MinerDelegates{}
 		var sharderStakes = SharderDelegates{[]float64{}}
-		runValues.lastRound = runValues.blockRound + 1
+		runValues.runRound -= 1
 		err := testPayFees(t, minerStakes, sharderStakes, runValues)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errPayFee))
-		require.True(t, strings.Contains(err.Error(), errJumpedBackInTime))
 	})
 }
 
@@ -380,7 +386,12 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		err = updateAllShardersList(ctx, allMinersList)
 	}
 
-	_, err = msc.payFees(txn, nil, globalNode, ctx)
+	inp := &PayFeesInput{Round: runValues.runRound}
+	marshal, err := json.Marshal(inp)
+	if err != nil {
+		return err
+	}
+	_, err = msc.payFees(txn, marshal, globalNode, ctx)
 	if err != nil {
 		return err
 	}
