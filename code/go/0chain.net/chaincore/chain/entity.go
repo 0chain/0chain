@@ -595,15 +595,6 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		panic(err)
 	}
 
-	eventDB := c.GetEventDb()
-	if eventDB != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1); err != nil {
-			panic(err)
-		}
-	}
-
 	err := faucetsc.InitConfig(stateCtx)
 	if err != nil {
 		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
@@ -648,6 +639,16 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		if err := stateDB.PutNode(gbInitedKey, util.NewValueNode()); err != nil {
 			logging.Logger.Panic("set gb initialized failed", zap.Error(err))
 		}
+
+		eventDB := c.GetEventDb()
+		if eventDB != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1); err != nil {
+				panic(err)
+			}
+		}
+
 	default:
 		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
 	}
