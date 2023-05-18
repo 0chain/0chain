@@ -3,9 +3,11 @@ package block
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strconv"
 
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 )
 
 /*MagicBlockSummary - the summary of the transaction */
@@ -117,4 +119,15 @@ func SetupMagicBlockMapEntity(store datastore.Store) {
 	magicBlockMapEntityMetadata.Store = store
 	magicBlockMapEntityMetadata.IDColumnName = "id"
 	datastore.RegisterEntityMetadata("magic_block_map", magicBlockMapEntityMetadata)
+}
+
+// SetupMagicBlockMapDB - setup magic block map in rocksdb
+func SetupMagicBlockMapDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/magicblockmap")
+
+	db, err := ememorystore.CreateDB(datadir)
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("magicblockmapdb", db)
 }

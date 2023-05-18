@@ -2,8 +2,10 @@ package transaction
 
 import (
 	"context"
+	"path/filepath"
 
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 	"github.com/0chain/common/core/util"
 )
 
@@ -95,4 +97,15 @@ func SetupTxnConfirmationEntity(store datastore.Store) {
 	transactionConfirmationEntityMetadata.Provider = TransactionConfirmationProvider
 	transactionConfirmationEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("txn_confirmation", transactionConfirmationEntityMetadata)
+}
+
+// SetupTxnConfirmationDB - setup txn confirmation on rocksdb
+func SetupTxnConfirmationDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/txnconfirmation")
+
+	db, err := ememorystore.CreateDB(datadir)
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("txnconfirmationdb", db)
 }

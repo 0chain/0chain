@@ -2,8 +2,10 @@ package transaction
 
 import (
 	"context"
+	"path/filepath"
 
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 )
 
 /*TransactionSummary - the summary of the transaction */
@@ -63,4 +65,15 @@ func SetupTxnSummaryEntity(store datastore.Store) {
 	transactionSummaryEntityMetadata.Store = store
 	transactionSummaryEntityMetadata.IDColumnName = "hash"
 	datastore.RegisterEntityMetadata("txn_summary", transactionSummaryEntityMetadata)
+}
+
+// SetupRoundSummaryDB - setup the round summary db
+func SetupTxnSummaryDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/txnsummary")
+
+	db, err := ememorystore.CreateDB(datadir)
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("txnsummarydb", db)
 }
