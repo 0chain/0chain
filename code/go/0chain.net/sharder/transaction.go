@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
@@ -15,7 +16,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/persistencestore"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -171,38 +171,52 @@ func (sc *Chain) storeTransactions(sTxns []datastore.Entity) error {
 	return con.Commit()
 }
 
-var txnSummaryMV = false
-var roundToHashMVTable = "round_to_hash"
+// var txnSummaryMV = false
+// var roundToHashMVTable = "round_to_hash"
 
-func txnSummaryCreateMV(targetTable string, srcTable string) string {
-	return fmt.Sprintf(
-		"CREATE MATERIALIZED VIEW IF NOT EXISTS %v AS SELECT ROUND, HASH FROM %v WHERE ROUND IS NOT NULL PRIMARY KEY (ROUND, HASH)",
-		targetTable, srcTable)
-}
+// func txnSummaryCreateMV(targetTable string, srcTable string) string {
+// 	return fmt.Sprintf(
+// 		"CREATE MATERIALIZED VIEW IF NOT EXISTS %v AS SELECT ROUND, HASH FROM %v WHERE ROUND IS NOT NULL PRIMARY KEY (ROUND, HASH)",
+// 		targetTable, srcTable)
+// }
 
-func getSelectCountTxn(table string, column string) string {
-	return fmt.Sprintf("SELECT COUNT(*) FROM %v where %v=?", table, column)
-}
+// func getSelectCountTxn(table string, column string) string {
+// 	return fmt.Sprintf("SELECT COUNT(*) FROM %v where %v=?", table, column)
+// }
+
+// func (sc *Chain) getTxnCountForRoundOld(ctx context.Context, r int64) (int, error) {
+// 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
+// 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
+// 	defer persistencestore.Close(tctx)
+// 	c := persistencestore.GetCon(tctx)
+// 	if !txnSummaryMV {
+// 		err := c.Query(txnSummaryCreateMV(roundToHashMVTable, txnSummaryEntityMetadata.GetName())).Exec()
+// 		if err == nil {
+// 			txnSummaryMV = true
+// 		} else {
+// 			logging.Logger.Error("create mv", zap.Error(err))
+// 			txnSummaryMV = true
+// 			return 0, err
+// 		}
+// 	}
+// 	// Get the query to get the select count transactions.
+// 	var count int
+// 	if err := c.Query(getSelectCountTxn(roundToHashMVTable, "round"), r).Scan(&count); err != nil {
+// 		return 0, common.NewError("txns_count_failed", fmt.Sprintf("round: %v, err: %v", r, err))
+// 	}
+// 	return count, nil
+// }
+
 
 func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) {
-	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
-	defer persistencestore.Close(tctx)
-	c := persistencestore.GetCon(tctx)
-	if !txnSummaryMV {
-		err := c.Query(txnSummaryCreateMV(roundToHashMVTable, txnSummaryEntityMetadata.GetName())).Exec()
-		if err == nil {
-			txnSummaryMV = true
-		} else {
-			logging.Logger.Error("create mv", zap.Error(err))
-			txnSummaryMV = true
-			return 0, err
-		}
-	}
-	// Get the query to get the select count transactions.
-	var count int
-	if err := c.Query(getSelectCountTxn(roundToHashMVTable, "round"), r).Scan(&count); err != nil {
+	roundEntityMetadata := datastore.GetEntityMetadata("round")
+	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
+	defer ememorystore.Close(rctx)
+	round := roundEntityMetadata.Instance().(*round.Round)
+	round.Number = r
+	err := roundEntityMetadata.GetStore().Read(rctx, round.GetKey(), round)
+	if err != nil {
 		return 0, common.NewError("txns_count_failed", fmt.Sprintf("round: %v, err: %v", r, err))
 	}
-	return count, nil
+	return len(round.Block.Txns), nil
 }
