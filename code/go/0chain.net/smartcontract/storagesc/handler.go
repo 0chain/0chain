@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/config"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"0chain.net/chaincore/config"
 
 	"0chain.net/smartcontract/provider"
 
@@ -2463,7 +2464,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term alloc-blobber-term
 // Gets statistic for all locked tokens of a stake pool
 //
 // parameters:

@@ -389,6 +389,55 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.getAllocBlobberTerms,
 			},
+			{
+				FuncName: "getUserLockedTotal",
+				Params: map[string]string{
+					"client_id": data.Clients[0],
+				},
+				Endpoint: srh.getUserLockedTotal,
+			},
+			{
+				FuncName: "replicate-snapshots",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateSnapshots,
+			},
+			{
+				FuncName: "replicate-blobber-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateBlobberAggregates,
+			},
+			{
+				FuncName: "replicate-miner-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateMinerAggregates,
+			},
+			{
+				FuncName: "replicate-authorizer-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateAuthorizerAggregates,
+			},
+			{
+				FuncName: "replicate-validator-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateValidatorAggregates,
+			},
+			{
+				FuncName: "replicate-user-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateUserAggregates,
+			},
 		},
 		ADDRESS,
 		srh,
