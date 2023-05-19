@@ -126,7 +126,6 @@ func AddMockNodes(
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			if nodeType == spenum.Miner {
 				minerDb := event.Miner{
-
 					PublicKey: newNode.PublicKey,
 					Provider: event.Provider{
 						ID:            newNode.ID,

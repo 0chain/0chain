@@ -418,6 +418,13 @@ func BenchmarkRestTests(
 				Endpoint: srh.replicateMinerAggregates,
 			},
 			{
+				FuncName: "replicate-sharder-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateSharderAggregates,
+			},
+			{
 				FuncName: "replicate-authorizer-aggregate",
 				Params: map[string]string{
 					"round": "5",
