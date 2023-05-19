@@ -63,7 +63,9 @@ tests:
       - command:
           name: 'delete'
       - command:
-          name: "sleep_20s
+          name: "sleep_20s"
+      - command:
+          name: "sleep_20s"
       - command:
           name: 'upload'
       - cleanup_bc: {}
