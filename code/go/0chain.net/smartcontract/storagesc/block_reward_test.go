@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -459,9 +461,14 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			balances := newTestBalances(t, true)
+			in := BlobberBlockRewardsInput{Round: balances.block.Round}
+			marshal, err2 := json.Marshal(in)
+			if err2 != nil {
+				t.Error(err2)
+			}
 			ssc := newTestStorageSC()
 			setupRewards(t, tt.params, balances, ssc)
-			err := ssc.blobberBlockRewards(balances)
+			err := ssc.blobberBlockRewards(&transaction.Transaction{}, marshal, balances)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
 		})

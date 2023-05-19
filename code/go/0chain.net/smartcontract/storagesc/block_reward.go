@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 
+	"0chain.net/chaincore/transaction"
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -20,9 +21,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func (ssc *StorageSmartContract) blobberBlockRewards(
-	balances cstate.StateContextI,
-) (err error) {
+type BlobberBlockRewardsInput struct {
+	Round int64 `json:"round,omitempty"`
+}
+
+func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction, input []byte, balances cstate.StateContextI) error {
 	logging.Logger.Info("blobberBlockRewards started",
 		zap.Int64("round", balances.GetBlock().Round),
 		zap.String("block_hash", balances.GetBlock().Hash))

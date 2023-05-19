@@ -1114,8 +1114,21 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}, nil
 }
 
+type GenerateChallengeInput struct {
+	Round int64 `json:"round,omitempty"`
+}
+
 func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
-	b *block.Block, _ []byte, balances cstate.StateContextI) (err error) {
+	b *block.Block, input []byte, balances cstate.StateContextI) (err error) {
+
+	inputRound := GenerateChallengeInput{}
+	if err := json.Unmarshal(input, &inputRound); err != nil {
+		return err
+	}
+
+	if inputRound.Round != b.Round {
+		return fmt.Errorf("bad round, block %v but input %v", b.Round, inputRound.Round)
+	}
 
 	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
