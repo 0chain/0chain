@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"errors"
-	"go.uber.org/zap"
 	"strings"
 	"time"
 
