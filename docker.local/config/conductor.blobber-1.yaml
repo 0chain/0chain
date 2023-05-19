@@ -59,7 +59,11 @@ tests:
       - command:
           name: 'download'
       - command:
+          name: "sleep_20s"
+      - command:
           name: 'delete'
+      - command:
+          name: "sleep_20s
       - command:
           name: 'upload'
       - cleanup_bc: {}
@@ -67,40 +71,3 @@ tests:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
-
-  ## DISABLED: Test does not match description
-#  - name: "Sharder sends wrong transaction verification"
-#    flow:
-#      - set_monitor: "sharder-1"
-#      - cleanup_bc: {}
-#      - command:
-#          name: "cleanup_0dns"
-#      - start: ['sharder-1']
-#      - start: ["sharder-2"]
-#      - start: ['miner-1', 'miner-2', 'miner-3']
-#      # Temporarily use `wait_round` as `wait_sharder_keep` and `wait_view_change`
-#      # require view_change config to be enabled
-#      - wait_round:
-#          round: 100
-#          timeout: '5m'
-##      - wait_sharder_keep:
-##          timeout: '5m'
-##          sharders: ['sharder-2']
-##      - wait_view_change:
-##          expect_magic_block:
-##            miners: ['miner-1', 'miner-2', 'miner-3']
-##            sharders: ['sharder-1', 'sharder-2']
-#      - verify_transaction:
-#          by: ['sharder-2']
-#      - start: ['0dns']
-#      - command:
-#          name: "sleep_20s" # wait the 0dns starts
-#      # double and triple sleep may help for a big network latency
-#      - command:
-#          name: "sleep_20s" # wait the 0dns starts
-#      - command:
-#          name: "sleep_20s" # wait the 0dns starts
-#      - command:
-#          name: 'unverified_transaction'
-
-...
