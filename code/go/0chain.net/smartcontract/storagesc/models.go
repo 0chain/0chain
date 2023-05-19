@@ -1380,8 +1380,6 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 				BlobberID:    oc.BlobberID,
 			}, false, balances, sa.Stats, ba.Stats)
 
-		} else {
-			logging.Logger.Debug("jayash possible, We can reach here too? ", zap.Any("oc", oc), zap.Any("sa", sa))
 		}
 	}
 
