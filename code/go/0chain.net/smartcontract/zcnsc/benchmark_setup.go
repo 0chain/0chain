@@ -66,6 +66,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 }
 
 func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ctx cstate.StateContextI) {
+	authorizers := make([]event.Authorizer, 0, viper.GetInt(benchmark.NumAuthorizers))
 	for i := 0; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
@@ -91,8 +92,41 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 					LastHealthCheck: common.Now(),
 				},
 			}
-			_ = eventDb.Store.Get().Create(&authorizer)
+			authorizers = append(authorizers, authorizer)
 		}
+	}
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		addMockAuthorizersSnapshots(authorizers, eventDb)
+		if err := eventDb.Store.Get().Create(&authorizers).Error; err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func addMockAuthorizersSnapshots(authorizers []event.Authorizer, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
+	aggregates := make([]event.AuthorizerSnapshot, 0, len(authorizers))
+	for _, authorizer := range authorizers {
+		for i := 1; i <= viper.GetInt(benchmark.NumBlocks); i += viper.GetInt(benchmark.EventDbAggregatePeriod) {
+			aggregate := event.AuthorizerSnapshot{
+				AuthorizerID:  authorizer.ID,
+				Round:         int64(i),
+				Fee:           authorizer.Fee,
+				TotalStake:    authorizer.TotalStake,
+				TotalRewards:  authorizer.GetTotalRewards(),
+				TotalMint:     authorizer.TotalMint,
+				TotalBurn:     authorizer.TotalBurn,
+				ServiceCharge: authorizer.GetServiceCharge(),
+			}
+			aggregates = append(aggregates, aggregate)
+		}
+	}
+
+	res := edb.Store.Get().Create(&aggregates)
+	if res.Error != nil {
+		log.Fatal(res.Error)
 	}
 }
 
