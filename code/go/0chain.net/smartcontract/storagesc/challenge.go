@@ -645,10 +645,19 @@ func (sc *StorageSmartContract) challengePassed(
 			"can't get blobber"+err.Error())
 	}
 
+	logging.Logger.Info("jayash challenge passed", zap.Any("round", balances.GetBlock().Round))
+
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, triggerPeriod)
 	// this expiry of blobber needs to be corrected once logic is finalized
 	if blobber.RewardRound.StartRound != rewardRound ||
 		balances.GetBlock().Round == 0 {
+
+		logging.Logger.Info("jayash reward round",
+			zap.Any("blobber.RewardRound.StartRound", blobber.RewardRound.StartRound),
+			zap.Any("rewardRound", rewardRound),
+			zap.Any("balances.GetBlock().Round", balances.GetBlock().Round),
+			zap.Any("triggerPeriod", triggerPeriod),
+			zap.Any("blobberID", blobber.ID))
 
 		var dataRead float64 = 0
 		if blobber.LastRewardDataReadRound >= rewardRound {
