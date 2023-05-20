@@ -18,8 +18,11 @@ import (
 )
 
 /*SetupNodeHandlers - setup the handlers for the chain */
-func (c *Chain) SetupNodeHandlers() {
+func (c *Chain) SetupMinerNodeHandlers() {
 	http.HandleFunc("/_nh/list/m", common.Recover(c.GetMinersHandler))
+}
+
+func (c *Chain) SetupSharderNodeHandlers() {
 	http.HandleFunc("/_nh/list/s", common.Recover(c.GetShardersHandler))
 }
 
