@@ -718,12 +718,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	if commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitConnection.WriteMarker.Size == 0 && blobAlloc.LastWriteMarker != nil {
-
-		if blobAlloc.LastWriteMarker.PreviousAllocationRoot != commitConnection.AllocationRoot {
-			return "", common.NewError("commit_connection_failed",
-				"Allocation root does not match the last writemarker previous allocation root")
-		}
+	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize := blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
@@ -963,4 +958,8 @@ func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
+}
+
+func isRollback(commitConnection BlobberCloseConnection, lastWM *WriteMarker) bool {
+	return commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitConnection.WriteMarker.Size == 0 && lastWM != nil && commitConnection.WriteMarker.Timestamp == lastWM.Timestamp && commitConnection.AllocationRoot == lastWM.PreviousAllocationRoot
 }
