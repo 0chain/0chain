@@ -1685,7 +1685,7 @@ func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendString(o, z.BlobberID)
 	// string "Responded"
 	o = append(o, 0xa9, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64, 0x65, 0x64)
-	o = msgp.AppendBool(o, z.Responded)
+	o = msgp.AppendInt64(o, z.Responded)
 	return
 }
 
@@ -1757,7 +1757,7 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "Responded":
-			z.Responded, bts, err = msgp.ReadBoolBytes(bts)
+			z.Responded, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Responded")
 				return
@@ -1780,7 +1780,7 @@ func (z *StorageChallenge) Msgsize() (s int) {
 	for za0001 := range z.ValidatorIDs {
 		s += msgp.StringPrefixSize + len(z.ValidatorIDs[za0001])
 	}
-	s += 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.BoolSize
+	s += 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.Int64Size
 	return
 }
 

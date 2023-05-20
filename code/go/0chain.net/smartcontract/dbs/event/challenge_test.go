@@ -20,11 +20,11 @@ func TestChallengeEvent(t *testing.T) {
 			ValidatorsID:   "validator_id1,validator_id2",
 			Seed:           0,
 			AllocationRoot: "allocation_root",
-			Responded:      false,
+			Responded:      int64(0),
 		}
-	
+
 		err := eventDb.addChallenges([]Challenge{c})
-		require.NoError(t, err, "Error while inserting Challenge to event Database")	
+		require.NoError(t, err, "Error while inserting Challenge to event Database")
 
 		challenge, err := eventDb.GetChallenge(c.ChallengeID)
 		require.NoError(t, err)
@@ -36,7 +36,6 @@ func TestChallengeEvent(t *testing.T) {
 		defer clear()
 		cid1, cid2 := "challenge_id_1", "challenge_id_2"
 
-	
 		err := eventDb.addChallenges([]Challenge{
 			{
 				ChallengeID:    cid1,
@@ -46,7 +45,7 @@ func TestChallengeEvent(t *testing.T) {
 				ValidatorsID:   "validator_id1,validator_id2",
 				Seed:           0,
 				AllocationRoot: "allocation_root",
-				Responded:      false,
+				Responded:      int64(0),
 				Passed:         false,
 			},
 			{
@@ -57,34 +56,34 @@ func TestChallengeEvent(t *testing.T) {
 				ValidatorsID:   "validator_id1,validator_id2",
 				Seed:           0,
 				AllocationRoot: "allocation_root",
-				Responded:      false,
+				Responded:      int64(0),
 				Passed:         false,
 			},
 		})
-		require.NoError(t, err, "Error while inserting Challenge to event Database")	
-		
+		require.NoError(t, err, "Error while inserting Challenge to event Database")
+
 		err = eventDb.updateChallenges([]Challenge{
 			{
-				ChallengeID:    cid1,
-				Responded:      true,
-				Passed:         true,
+				ChallengeID: cid1,
+				Responded:   int64(1),
+				Passed:      true,
 			},
 			{
-				ChallengeID:    cid2,
-				Responded:      true,
-				Passed:         true,
+				ChallengeID: cid2,
+				Responded:   int64(1),
+				Passed:      true,
 			},
 		})
 		require.NoError(t, err, "Error while updating Challenge to event Database")
-		
+
 		challenge, err := eventDb.GetChallenge(cid1)
 		require.NoError(t, err)
-		require.True(t, challenge.Responded)
+		require.Equal(t, int64(1), challenge.Responded)
 		require.True(t, challenge.Passed)
 
 		challenge, err = eventDb.GetChallenge(cid2)
 		require.NoError(t, err)
-		require.True(t, challenge.Responded)
+		require.Equal(t, int64(1), challenge.Responded)
 		require.True(t, challenge.Passed)
 	})
 }
