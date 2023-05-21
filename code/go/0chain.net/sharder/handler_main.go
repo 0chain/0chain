@@ -27,8 +27,8 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 	if content == "" {
 		content = "confirmation"
 	}
-	transactionConfirmationEntityMetadata := datastore.GetEntityMetadata("txn_confirmation")
-	ctx = ememorystore.WithEntityConnection(ctx, transactionConfirmationEntityMetadata)
+	transactionSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
+	ctx = ememorystore.WithEntityConnection(ctx, transactionSummaryEntityMetadata)
 	defer ememorystore.Close(ctx)
 	sc := GetSharderChain()
 	confirmation, err := sc.GetTransactionConfirmation(ctx, hash)

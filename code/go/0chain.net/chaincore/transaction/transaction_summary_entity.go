@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"0chain.net/core/datastore"
@@ -10,9 +11,11 @@ import (
 
 /*TransactionSummary - the summary of the transaction */
 type TransactionSummary struct {
-	datastore.HashIDField
+	datastore.HashIDField // Keyspaced transaction hash - used as key
 	Round int64 `json:"round"`
 }
+
+const TransactionKeyspace = "TRANSACTION"
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl
 
@@ -25,6 +28,17 @@ func TransactionSummaryProvider() datastore.Entity {
 //GetEntityMetadata - implement interface
 func (t *TransactionSummary) GetEntityMetadata() datastore.EntityMetadata {
 	return transactionSummaryEntityMetadata
+}
+
+// SetTransactionKey - set the entity hash to the keyspaced hash of the transaction hash
+func BuildSummaryTransactionKey(hash string) datastore.Key {
+	return datastore.ToKey(
+		fmt.Sprintf(
+			"%s:%s",
+			TransactionKeyspace,
+			hash,
+		),
+	)
 }
 
 //GetKey - implement interface
@@ -68,6 +82,9 @@ func SetupTxnSummaryEntity(store datastore.Store) {
 }
 
 // SetupRoundSummaryDB - setup the round summary db
+// SummaryDB has 2 keyspaces, TRANSACTION and ROUND specified by the prefix of the key (Hash):
+// 1. Maps transaction hash to round number
+// 2. Maps round number (hashed) to number of transactions in that round
 func SetupTxnSummaryDB(workdir string) {
 	datadir := filepath.Join(workdir, "data/rocksdb/txnsummary")
 

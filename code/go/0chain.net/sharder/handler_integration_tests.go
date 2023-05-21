@@ -44,10 +44,8 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 		content = "confirmation"
 	}
 
-	var transactionConfirmationEntityMetadata = datastore.GetEntityMetadata(
-		"txn_confirmation")
-	ctx = ememorystore.WithEntityConnection(ctx,
-		transactionConfirmationEntityMetadata)
+	var transactionSummaryEntity = datastore.GetEntityMetadata("txn_summary")
+	ctx = ememorystore.WithEntityConnection(ctx, transactionSummaryEntity)
 	defer ememorystore.Close(ctx)
 
 	var (
