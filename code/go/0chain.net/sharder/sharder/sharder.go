@@ -378,18 +378,22 @@ func initHandlers(c chain.Chainer) {
 	if config.Development() {
 		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
 		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
+		chain.SetupDebugStateHandlers()
+		config.SetupHandlers()
 	}
-	config.SetupHandlers()
+
+	// common
 	node.SetupHandlers()
-	chain.SetupSharderHandlers(c)
-	block.SetupHandlers()
 	sharder.SetupHandlers()
+	block.SetupHandlers()
 	diagnostics.SetupHandlers()
-	chain.SetupScRestApiHandlers()
 	chain.SetupStateHandlers()
 
-	serverChain := chain.GetServerChain()
-	serverChain.SetupNodeHandlers()
+	// sharder only
+	chain.SetupSharderHandlers(c)
+	chain.GetServerChain().SetupSharderNodeHandlers()
+	chain.SetupScRestApiHandlers()
+	chain.SetupSharderStateHandlers()
 }
 
 func initEntities(workdir string) {
