@@ -9,28 +9,27 @@ import (
 // swagger:model BlobberSnapshot
 type BlobberSnapshot struct {
 	BlobberID           string        `json:"id" gorm:"index"`
-	BucketId			int64         `json:"bucket_id"`
+	BucketId            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
 	Allocated           int64         `json:"allocated"` // allocated capacity
 	SavedData           int64         `json:"saved_data"`
 	ReadData            int64         `json:"read_data"`
 	OffersTotal         currency.Coin `json:"offers_total"`
-	UnstakeTotal        currency.Coin `json:"unstake_total"`
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
-	TotalRewards		currency.Coin `json:"total_rewards"`
+	TotalRewards        currency.Coin `json:"total_rewards"`
 	TotalStake          currency.Coin `json:"total_stake"`
-	TotalBlockRewards	currency.Coin `json:"total_block_rewards"`
+	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
 	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
-	TotalReadIncome		currency.Coin `json:"total_read_income"`
-	TotalSlashedStake	currency.Coin `json:"total_slashed_stake"`
+	TotalReadIncome     currency.Coin `json:"total_read_income"`
+	TotalSlashedStake   currency.Coin `json:"total_slashed_stake"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	CreationRound       int64         `json:"creation_round" gorm:"index"`
 	RankMetric          float64       `json:"rank_metric"`
-	IsKilled			bool		  `json:"is_killed"`
-	IsShutdown			bool		  `json:"is_shutdown"`
+	IsKilled            bool          `json:"is_killed"`
+	IsShutdown          bool          `json:"is_shutdown"`
 }
 
 func (bs *BlobberSnapshot) IsOffline() bool {
@@ -63,20 +62,19 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 	var snapshots []BlobberSnapshot
 	for _, blobber := range blobbers {
 		snapshots = append(snapshots, BlobberSnapshot{
-			BlobberID:    blobber.ID,
-			BucketId: 	  blobber.BucketId,
-			WritePrice:   blobber.WritePrice,
-			Capacity:     blobber.Capacity,
-			Allocated:    blobber.Allocated,
-			SavedData:    blobber.SavedData,
-			ReadData:     blobber.ReadData,
-			OffersTotal:  blobber.OffersTotal,
-			UnstakeTotal: blobber.UnstakeTotal,
-			TotalRewards: blobber.Rewards.TotalRewards,
-			TotalBlockRewards: blobber.TotalBlockRewards,
+			BlobberID:          blobber.ID,
+			BucketId:           blobber.BucketId,
+			WritePrice:         blobber.WritePrice,
+			Capacity:           blobber.Capacity,
+			Allocated:          blobber.Allocated,
+			SavedData:          blobber.SavedData,
+			ReadData:           blobber.ReadData,
+			OffersTotal:        blobber.OffersTotal,
+			TotalRewards:       blobber.Rewards.TotalRewards,
+			TotalBlockRewards:  blobber.TotalBlockRewards,
 			TotalStorageIncome: blobber.TotalStorageIncome,
-			TotalReadIncome: blobber.TotalReadIncome,
-			TotalSlashedStake: blobber.TotalSlashedStake,
+			TotalReadIncome:    blobber.TotalReadIncome,
+			TotalSlashedStake:  blobber.TotalSlashedStake,
 			//TotalServiceCharge:  blobber.TotalServiceCharge,
 			TotalStake:          blobber.TotalStake,
 			ChallengesPassed:    blobber.ChallengesPassed,
@@ -84,8 +82,8 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
 			OpenChallenges:      blobber.OpenChallenges,
 			CreationRound:       blobber.CreationRound,
 			RankMetric:          blobber.RankMetric,
-			IsKilled:			 blobber.IsKilled,
-			IsShutdown:			 blobber.IsShutdown,
+			IsKilled:            blobber.IsKilled,
+			IsShutdown:          blobber.IsShutdown,
 		})
 	}
 

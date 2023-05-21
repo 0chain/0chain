@@ -27,15 +27,15 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 		})
 
 		var (
-			expectedBucketId	int64
-			initialSnapshot		= Snapshot{ Round: 5 }
-			sharderIds		= createMockSharders(t, eventDb, 5, expectedBucketId)
-			shardersBefore	[]Sharder
-			shardersAfter	[]Sharder
-			sharderSnapshots	[]SharderSnapshot
-			expectedAggregates	[]SharderAggregate
-			expectedSnapshots	[]SharderSnapshot
-			err                 error
+			expectedBucketId   int64
+			initialSnapshot    = Snapshot{Round: 5}
+			sharderIds         = createMockSharders(t, eventDb, 5, expectedBucketId)
+			shardersBefore     []Sharder
+			shardersAfter      []Sharder
+			sharderSnapshots   []SharderSnapshot
+			expectedAggregates []SharderAggregate
+			expectedSnapshots  []SharderSnapshot
+			err                error
 		)
 		expectedBucketId = 5 % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 		err = eventDb.Store.Get().Model(&Snapshot{}).Create(&initialSnapshot).Error
@@ -44,10 +44,10 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 		// Initial sharders table image + force bucket_id for sharders in bucket
 		err = eventDb.Get().Model(&Sharder{}).Where("id IN ?", sharderIds).Find(&shardersBefore).Error
 		require.NoError(t, err)
-		shardersInBucket := []string{ shardersBefore[0].ID, shardersBefore[1].ID, shardersBefore[2].ID }
+		shardersInBucket := []string{shardersBefore[0].ID, shardersBefore[1].ID, shardersBefore[2].ID}
 		err = eventDb.Store.Get().Model(&Sharder{}).Where("id IN ?", shardersInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
-		err = eventDb.Store.Get().Model(&Blobber{}).Where("id NOT IN ?", shardersInBucket).Update("bucket_id", expectedBucketId + 1).Error
+		err = eventDb.Store.Get().Model(&Blobber{}).Where("id NOT IN ?", shardersInBucket).Update("bucket_id", expectedBucketId+1).Error
 		require.NoError(t, err)
 		err = eventDb.Get().Model(&Sharder{}).Where("id IN ?", sharderIds).Find(&shardersBefore).Error
 		require.NoError(t, err)
@@ -66,18 +66,17 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 		// Add a new sharder
 		expectedBucketId = updateRound % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 		newSharder := Sharder{
-			Provider:  Provider{
-				ID:        "new-sharder",
-				BucketId:  expectedBucketId,
+			Provider: Provider{
+				ID:         "new-sharder",
+				BucketId:   expectedBucketId,
 				TotalStake: 100,
-				UnstakeTotal: 100,
-				Downtime: 100,
-				IsKilled: false,
+				Downtime:   100,
+				IsKilled:   false,
 				IsShutdown: false,
 			},
-			Fees: 100,
-			Latitude: 0,
-			Longitude: 0,
+			Fees:          100,
+			Latitude:      0,
+			Longitude:     0,
 			CreationRound: updateRound,
 		}
 		err = eventDb.Store.Get().Omit(clause.Associations).Create(&newSharder).Error
@@ -87,10 +86,9 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 
 		// Update an existing sharder
 		updates := map[string]interface{}{
-			"total_stake":          gorm.Expr("total_stake * ?", 2),
-			"unstake_total":        gorm.Expr("unstake_total * ?", 2),
-			"downtime":             gorm.Expr("downtime * ?", 2),
-			"fees":          		gorm.Expr("fees * ?", 2),
+			"total_stake": gorm.Expr("total_stake * ?", 2),
+			"downtime":    gorm.Expr("downtime * ?", 2),
+			"fees":        gorm.Expr("fees * ?", 2),
 		}
 		err = eventDb.Store.Get().Model(&Sharder{}).Where("id", shardersInBucket[0]).Updates(updates).Error
 		require.NoError(t, err)
@@ -104,7 +102,7 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 		require.NoError(t, err)
 		err = eventDb.Store.Get().Model(&Sharder{}).Where("id = ?", shardersInBucket[2]).Update("is_shutdown", true).Error
 		require.NoError(t, err)
-		
+
 		// Get sharders and snapshot after update
 		err = eventDb.Get().Model(&Sharder{}).Find(&shardersAfter).Error
 		require.NoError(t, err)
@@ -135,7 +133,6 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 		oldSharder := shardersBeforeMap[shardersInBucket[0]]
 		curSharder := shardersAfterMap[shardersInBucket[0]]
 		require.Equal(t, oldSharder.TotalStake*2, curSharder.TotalStake)
-		require.Equal(t, oldSharder.UnstakeTotal*2, curSharder.UnstakeTotal)
 		require.Equal(t, oldSharder.Downtime*2, curSharder.Downtime)
 		require.Equal(t, oldSharder.Rewards.TotalRewards*2, curSharder.Rewards.TotalRewards)
 
@@ -204,17 +201,16 @@ func snapshotCurrentSharders(t *testing.T, edb *EventDb, round int64) {
 
 func sharderToSnapshot(sharder *Sharder, round int64) SharderSnapshot {
 	snapshot := SharderSnapshot{
-		SharderID:       sharder.ID,
-		BucketId: 	  sharder.BucketId,
-		Round: 			 	round,
-		Fees: 			   	sharder.Fees,
-		UnstakeTotal:       sharder.UnstakeTotal,
-		TotalRewards:       sharder.Rewards.TotalRewards,
-		TotalStake:         sharder.TotalStake,
-		CreationRound:      sharder.CreationRound,
-		ServiceCharge: 	 	sharder.ServiceCharge,
-		IsKilled: 		 	sharder.IsKilled,
-		IsShutdown: 	 	sharder.IsShutdown,
+		SharderID:     sharder.ID,
+		BucketId:      sharder.BucketId,
+		Round:         round,
+		Fees:          sharder.Fees,
+		TotalRewards:  sharder.Rewards.TotalRewards,
+		TotalStake:    sharder.TotalStake,
+		CreationRound: sharder.CreationRound,
+		ServiceCharge: sharder.ServiceCharge,
+		IsKilled:      sharder.IsKilled,
+		IsShutdown:    sharder.IsShutdown,
 	}
 	return snapshot
 }
@@ -259,7 +255,6 @@ func calculateSharderAggregate(round int64, current *Sharder, old *SharderSnapsh
 	}
 	aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 	aggregate.TotalRewards = (old.TotalRewards + current.Rewards.TotalRewards) / 2
-	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
 	aggregate.Fees = (old.Fees + current.Fees) / 2
 	return aggregate
@@ -309,7 +304,6 @@ func assertSharderAggregate(t *testing.T, expected, actual *SharderAggregate) {
 	require.Equal(t, expected.BucketID, actual.BucketID)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
-	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
 	require.Equal(t, expected.Fees, actual.Fees)
 }
@@ -320,7 +314,6 @@ func assertSharderSnapshot(t *testing.T, expected, actual *SharderSnapshot) {
 	require.Equal(t, expected.Round, actual.Round)
 	require.Equal(t, expected.Fees, actual.Fees)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
-	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.CreationRound, actual.CreationRound)
@@ -329,7 +322,7 @@ func assertSharderSnapshot(t *testing.T, expected, actual *SharderSnapshot) {
 }
 
 func assertSharderGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualSharders []Sharder, actualSnapshot *Snapshot) {
-	expectedGlobal := Snapshot{ Round: round }
+	expectedGlobal := Snapshot{Round: round}
 	for _, sharder := range actualSharders {
 		if sharder.BucketId != expectedBucketId || sharder.IsOffline() {
 			continue

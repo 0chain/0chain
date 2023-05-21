@@ -249,7 +249,7 @@ jobs:
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
         with:
-          system_tests_branch: fix/responded_type
+          system_tests_branch: master
           network: ${{ env.NETWORK_URL }}
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
