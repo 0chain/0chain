@@ -10,9 +10,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *stakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 2
 	// string "StakePool"
-	o = append(o, 0x83, 0xa9, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
+	o = append(o, 0x82, 0xa9, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
 	if z.StakePool == nil {
 		o = msgp.AppendNil(o)
 	} else {
@@ -27,13 +27,6 @@ func (z *stakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.TotalOffers.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "TotalOffers")
-		return
-	}
-	// string "TotalUnStake"
-	o = append(o, 0xac, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x55, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
-	o, err = z.TotalUnStake.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TotalUnStake")
 		return
 	}
 	return
@@ -80,12 +73,6 @@ func (z *stakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "TotalOffers")
 				return
 			}
-		case "TotalUnStake":
-			bts, err = z.TotalUnStake.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "TotalUnStake")
-				return
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -106,6 +93,6 @@ func (z *stakePool) Msgsize() (s int) {
 	} else {
 		s += z.StakePool.Msgsize()
 	}
-	s += 12 + z.TotalOffers.Msgsize() + 13 + z.TotalUnStake.Msgsize()
+	s += 12 + z.TotalOffers.Msgsize()
 	return
 }

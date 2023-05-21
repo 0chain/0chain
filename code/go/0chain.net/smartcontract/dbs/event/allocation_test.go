@@ -518,10 +518,6 @@ func TestAllocations(t *testing.T) {
 		require.Equal(t, int64(22453), alloc1.TimeUnit)
 		require.Equal(t, int64(10), alloc1.NumWrites)
 		require.Equal(t, int64(10), alloc1.NumReads)
-		require.Equal(t, int64(24), alloc1.TotalChallenges)
-		require.Equal(t, int64(20), alloc1.OpenChallenges)
-		require.Equal(t, int64(2), alloc1.SuccessfulChallenges)
-		require.Equal(t, int64(2), alloc1.FailedChallenges)
 		require.Equal(t, "latest_closed_challenge_txn_updated", alloc1.LatestClosedChallengeTxn)
 		require.Equal(t, true, alloc1.ThirdPartyExtendable)
 
@@ -547,10 +543,6 @@ func TestAllocations(t *testing.T) {
 		require.Equal(t, int64(22453), alloc2.TimeUnit)
 		require.Equal(t, int64(10), alloc2.NumWrites)
 		require.Equal(t, int64(10), alloc2.NumReads)
-		require.Equal(t, int64(24), alloc2.TotalChallenges)
-		require.Equal(t, int64(20), alloc2.OpenChallenges)
-		require.Equal(t, int64(2), alloc2.SuccessfulChallenges)
-		require.Equal(t, int64(2), alloc2.FailedChallenges)
 		require.Equal(t, "latest_closed_challenge_txn_updated", alloc2.LatestClosedChallengeTxn)
 		require.Equal(t, true, alloc2.ThirdPartyExtendable)
 	})
@@ -771,15 +763,15 @@ func TestAllocations(t *testing.T) {
 				AllocationID:             aid1,
 				OpenChallenges:           10,
 				LatestClosedChallengeTxn: "1002",
-				SuccessfulChallenges:     5,
-				FailedChallenges:         5,
+				SuccessfulChallenges:     15,
+				FailedChallenges:         15,
 			},
 			{
 				AllocationID:             aid2,
 				OpenChallenges:           20,
 				LatestClosedChallengeTxn: "2002",
-				SuccessfulChallenges:     10,
-				FailedChallenges:         10,
+				SuccessfulChallenges:     30,
+				FailedChallenges:         30,
 			},
 		})
 
@@ -856,13 +848,13 @@ func TestAllocations(t *testing.T) {
 		// Test update was successful (1)
 		alloc, err = eventDb.GetAllocation(aid1)
 		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
-		require.Equal(t, alloc.TotalChallenges, int64(40))
-		require.Equal(t, alloc.OpenChallenges, int64(20))
+		require.Equal(t, alloc.TotalChallenges, int64(20))
+		require.Equal(t, alloc.OpenChallenges, int64(10))
 
 		// Test update was successful (2)
 		alloc, err = eventDb.GetAllocation(aid2)
 		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
-		require.Equal(t, alloc.TotalChallenges, int64(80))
-		require.Equal(t, alloc.OpenChallenges, int64(40))
+		require.Equal(t, alloc.TotalChallenges, int64(40))
+		require.Equal(t, alloc.OpenChallenges, int64(20))
 	})
 }

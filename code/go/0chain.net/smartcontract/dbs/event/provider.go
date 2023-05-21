@@ -26,7 +26,6 @@ type Provider struct {
 	DelegateWallet  string           `json:"delegate_wallet"`
 	NumDelegates    int              `json:"num_delegates"`
 	ServiceCharge   float64          `json:"service_charge"`
-	UnstakeTotal    currency.Coin    `json:"unstake_total"`
 	TotalStake      currency.Coin    `json:"total_stake"`
 	Rewards         ProviderRewards  `json:"rewards" gorm:"foreignKey:ProviderID"`
 	Downtime        uint64           `json:"downtime"`
@@ -37,18 +36,15 @@ type Provider struct {
 
 type ProviderAggregate interface {
 	GetTotalStake() currency.Coin
-	GetUnstakeTotal() currency.Coin
 	GetServiceCharge() float64
 	GetTotalRewards() currency.Coin
 	SetTotalStake(value currency.Coin)
-	SetUnstakeTotal(value currency.Coin)
 	SetServiceCharge(value float64)
 	SetTotalRewards(value currency.Coin)
 }
 
 func recalculateProviderFields(prev, curr, result ProviderAggregate) {
 	result.SetTotalStake((curr.GetTotalStake() + prev.GetTotalStake()) / 2)
-	result.SetUnstakeTotal((curr.GetUnstakeTotal() + prev.GetUnstakeTotal()) / 2)
 	result.SetServiceCharge((curr.GetServiceCharge() + prev.GetServiceCharge()) / 2)
 	result.SetTotalRewards((curr.GetTotalRewards() + prev.GetTotalRewards()) / 2)
 }
@@ -83,22 +79,6 @@ func (edb *EventDb) updateProviderTotalStakes(providers []Provider, tablename st
 
 	return CreateBuilder(tablename, "id", ids).
 		AddUpdate("total_stake", stakes).Exec(edb).Error
-}
-
-func (edb *EventDb) updateProvidersTotalUnStakes(providers []Provider, tablename string) error {
-	var ids []string
-	var unstakes []int64
-	for _, m := range providers {
-		ids = append(ids, m.ID)
-		i, err := m.UnstakeTotal.Int64()
-		if err != nil {
-			return err
-		}
-		unstakes = append(unstakes, i)
-	}
-
-	return CreateBuilder(tablename, "id", ids).
-		AddUpdate("unstake_total", unstakes).Exec(edb).Error
 }
 
 func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tableName ProviderTable) error {
