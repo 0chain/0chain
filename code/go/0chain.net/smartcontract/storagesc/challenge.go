@@ -471,6 +471,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf(errCode, "could not find challenge, %v", err)
 	}
+	if challenge.Responded != 0 {
+		return "", common.NewError(errCode, "challenge already processed")
+	}
 
 	if challenge.BlobberID != t.ClientID {
 		return "", errors.New("challenge blobber id does not match")
@@ -513,7 +516,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		// TODO: remove this challenge already redeemed response. This response will be returned only when the
 		// challenge is the last completed challenge, which means if we have more challenges completed after it, we
 		// will see different result, even the challenge's state is the same as 'it has been redeemed'.
-		if lcc != nil && challResp.ID == lcc.ID && lcc.Responded {
+		if lcc != nil && challResp.ID == lcc.ID && lcc.Responded == 1 {
 			return "challenge already redeemed", nil
 		}
 
@@ -528,7 +531,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		latestCompletedChallTime = lcc.Created
 	}
 
-	challenge.Responded = true
+	challenge.Responded = 1
 	cab := &challengeAllocBlobberPassResult{
 		verifyTicketsResult:      result,
 		alloc:                    alloc,
@@ -707,7 +710,7 @@ func (sc *StorageSmartContract) challengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	emitUpdateChallenge(cab.challenge, true, balances)
+	emitUpdateChallenge(cab.challenge, true, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 
 	err = ongoingParts.UpdateItem(balances, &brStats)
 	if err != nil {
@@ -764,7 +767,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	emitUpdateChallenge(cab.challenge, false, balances)
+	emitUpdateChallenge(cab.challenge, false, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 
 	if err := cab.allocChallenges.Save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
@@ -1111,8 +1114,21 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}, nil
 }
 
+type GenerateChallengeInput struct {
+	Round int64 `json:"round,omitempty"`
+}
+
 func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
-	b *block.Block, _ []byte, balances cstate.StateContextI) (err error) {
+	b *block.Block, input []byte, balances cstate.StateContextI) (err error) {
+
+	inputRound := GenerateChallengeInput{}
+	if err := json.Unmarshal(input, &inputRound); err != nil {
+		return err
+	}
+
+	if inputRound.Round != b.Round {
+		return fmt.Errorf("bad round, block %v but input %v", b.Round, inputRound.Round)
+	}
 
 	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
@@ -1220,7 +1236,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created)
+	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created, balances)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
@@ -1279,7 +1295,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	beforeEmitAddChallenge(challInfo)
 
-	emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances)
+	emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances, alloc.Stats, blobAlloc.Stats)
 	return nil
 }
 

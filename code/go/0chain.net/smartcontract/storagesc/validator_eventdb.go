@@ -53,7 +53,6 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 		Provider: event.Provider{
 			ID:              vn.ID,
 			TotalStake:      staked,
-			UnstakeTotal:    sp.TotalUnStake,
 			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
 			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
@@ -77,7 +76,6 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 		Provider: event.Provider{
 			ID:              vn.ID,
 			TotalStake:      staked,
-			UnstakeTotal:    sp.TotalUnStake,
 			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
 			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,

@@ -175,7 +175,7 @@ type StorageChallenge struct {
 	ValidatorIDMap  map[string]struct{} `json:"-" msg:"-"`
 	AllocationID    string              `json:"allocation_id"`
 	BlobberID       string              `json:"blobber_id"`
-	Responded       bool                `json:"responded"`
+	Responded       int64               `json:"responded"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
@@ -1343,7 +1343,7 @@ func getMaxChallengeCompletionTime() time.Duration {
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp) (map[string]string, error) {
+	now common.Timestamp, balances cstate.StateContextI) (map[string]string, error) {
 	var expiredChallengeBlobberMap = make(map[string]string)
 
 	cct := getMaxChallengeCompletionTime()
@@ -1373,6 +1373,13 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 			ba.Stats.OpenChallenges--
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
+
+			emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: sa.ID,
+				BlobberID:    oc.BlobberID,
+			}, false, balances, sa.Stats, ba.Stats)
+
 		}
 	}
 

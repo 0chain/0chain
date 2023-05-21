@@ -37,13 +37,12 @@ type AbstractStakePool interface {
 	HasStakePool(user string) bool
 	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) (string, error)
 	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
-	EmitUnStakeEvent(providerType spenum.Provider, providerID string, amount currency.Coin, balances cstate.StateContextI) error
 	Save(providerType spenum.Provider, providerID string,
 		balances cstate.StateContextI) error
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
-	DeletePool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (error)
+	DeletePool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) error
 	Kill(float64, string, spenum.Provider, cstate.StateContextI) error
 	IsDead() bool
 	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
@@ -75,14 +74,13 @@ type DelegatePool struct {
 
 // swagger:model stakePoolStat
 type StakePoolStat struct {
-	ID           string             `json:"pool_id"` // pool ID
-	Balance      currency.Coin      `json:"balance"` // total balance
-	StakeTotal   currency.Coin      `json:"stake_total"`
-	UnstakeTotal currency.Coin      `json:"unstake_total"`
-	Delegate     []DelegatePoolStat `json:"delegate"` // delegate pools
-	Penalty      currency.Coin      `json:"penalty"`  // total for all
-	Rewards      currency.Coin      `json:"rewards"`  // rewards
-	Settings     Settings           `json:"settings"` // Settings of the stake pool
+	ID         string             `json:"pool_id"` // pool ID
+	Balance    currency.Coin      `json:"balance"` // total balance
+	StakeTotal currency.Coin      `json:"stake_total"`
+	Delegate   []DelegatePoolStat `json:"delegate"` // delegate pools
+	Penalty    currency.Coin      `json:"penalty"`  // total for all
+	Rewards    currency.Coin      `json:"rewards"`  // rewards
+	Settings   Settings           `json:"settings"` // Settings of the stake pool
 }
 
 type DelegatePoolStat struct {
@@ -110,7 +108,6 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	spStat := new(StakePoolStat)
 	spStat.ID = provider.ID
 	spStat.StakeTotal = provider.TotalStake
-	spStat.UnstakeTotal = provider.UnstakeTotal
 	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
 	spStat.Settings = Settings{
 		DelegateWallet:     provider.DelegateWallet,
@@ -830,7 +827,7 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}
-	
+
 	err = sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
