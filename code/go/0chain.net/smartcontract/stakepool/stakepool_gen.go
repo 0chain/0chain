@@ -637,9 +637,9 @@ func (z *StakePoolRequest) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StakePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 8
+	// map header, size 7
 	// string "ID"
-	o = append(o, 0x88, 0xa2, 0x49, 0x44)
+	o = append(o, 0x87, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Balance"
 	o = append(o, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
@@ -653,13 +653,6 @@ func (z *StakePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.StakeTotal.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "StakeTotal")
-		return
-	}
-	// string "UnstakeTotal"
-	o = append(o, 0xac, 0x55, 0x6e, 0x73, 0x74, 0x61, 0x6b, 0x65, 0x54, 0x6f, 0x74, 0x61, 0x6c)
-	o, err = z.UnstakeTotal.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "UnstakeTotal")
 		return
 	}
 	// string "Delegate"
@@ -735,12 +728,6 @@ func (z *StakePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			bts, err = z.StakeTotal.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "StakeTotal")
-				return
-			}
-		case "UnstakeTotal":
-			bts, err = z.UnstakeTotal.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "UnstakeTotal")
 				return
 			}
 		case "Delegate":
@@ -829,7 +816,7 @@ func (z *StakePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StakePoolStat) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + z.StakeTotal.Msgsize() + 13 + z.UnstakeTotal.Msgsize() + 9 + msgp.ArrayHeaderSize
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 8 + z.Balance.Msgsize() + 11 + z.StakeTotal.Msgsize() + 9 + msgp.ArrayHeaderSize
 	for za0001 := range z.Delegate {
 		s += z.Delegate[za0001].Msgsize()
 	}
