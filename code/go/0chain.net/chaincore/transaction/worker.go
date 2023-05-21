@@ -70,7 +70,7 @@ func CleanupWorker(ctx context.Context) {
 				logging.Logger.Info("transactions cleanup",
 					zap.String("collection", collectionName),
 					zap.Int("invalid_count", len(invalidTxns)),
-					zap.Any("txns", invalidTxnHashes),
+					zap.Strings("txns", invalidTxnHashes),
 					zap.Int64("collection_size", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName)))
 				err = transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
 				if err != nil {
@@ -87,7 +87,7 @@ func CleanupWorker(ctx context.Context) {
 				logging.Logger.Info("missing transactions cleanup",
 					zap.String("collection", collectionName),
 					zap.Int("missing_count", len(invalidHashes)),
-					zap.Any("txns", txnHashes))
+					zap.Strings("txns", txnHashes))
 				err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, invalidHashes)
 				if err != nil {
 					logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))

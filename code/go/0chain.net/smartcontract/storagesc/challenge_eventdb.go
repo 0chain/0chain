@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"errors"
-	"sort"
 	"strings"
 	"time"
 
