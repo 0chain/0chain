@@ -406,7 +406,6 @@ func initEntities(workdir string) {
 	block.SetupBlockSummaryDB(workdir)
 	block.SetupMagicBlockMapDB(workdir)
 	transaction.SetupTxnSummaryDB(workdir)
-	transaction.SetupTxnConfirmationDB(workdir)
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
@@ -417,7 +416,6 @@ func initEntities(workdir string) {
 	transaction.SetupEntity(memoryStorage)
 	
 	transaction.SetupTxnSummaryEntity(ememoryStorage)
-	transaction.SetupTxnConfirmationEntity(ememoryStorage)
 	block.SetupMagicBlockMapEntity(ememoryStorage)
 
 	sharder.SetupBlockSummaries()
