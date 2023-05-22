@@ -745,12 +745,16 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			//}
 			return false, nil
 		case FutureTransaction:
-			list := tii.futureTxns[txn.ClientID]
+			list, ok := tii.futureTxns[txn.ClientID]
+			if !ok {
+				list = &clientNonceTxns{}
+			}
+
 			if list.nonce < nonce {
 				list.nonce = nonce
 			}
 			list.txns = append(list.txns, txn)
-			sort.SliceStable(list, func(i, j int) bool {
+			sort.SliceStable(list.txns, func(i, j int) bool {
 				if list.txns[i].Nonce == list.txns[j].Nonce {
 					//if the same nonce order by fee
 					return list.txns[i].Fee > list.txns[j].Fee
@@ -857,7 +861,11 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 		return
 	}
 	//check whether we can execute future transactions
-	futures := tii.futureTxns[txn.ClientID].txns
+	nonceTxns, ok := tii.futureTxns[txn.ClientID]
+	if !ok {
+		return
+	}
+	futures := nonceTxns.txns
 	if len(futures) == 0 {
 		return
 	}
