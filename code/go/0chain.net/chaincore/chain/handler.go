@@ -1401,6 +1401,13 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, errors.New("invalid transaction nonce")
 	}
 
+	if nonce+10 < txn.Nonce {
+		logging.Logger.Error("invalid transaction nonce (too far)",
+			zap.Int64("txn_nonce", txn.Nonce),
+			zap.Int64("nonce", nonce))
+		return nil, errors.New("invalid future transaction")
+	}
+
 	if nonce+1 == txn.Nonce && txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
 		return nil, errors.New("insufficient balance to send")
 	}
