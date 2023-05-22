@@ -35,9 +35,8 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
 	}
-	//if debugTxn {
-	logging.Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
-	//}
+
+	logging.Logger.Info("put transaction", zap.String("txn", txn.Hash))
 
 	if datastore.DoAsync(ctx, txn) {
 		IncTransactionCount()

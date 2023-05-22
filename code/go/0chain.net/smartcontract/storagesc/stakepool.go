@@ -46,7 +46,6 @@ type stakePool struct {
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	TotalOffers    currency.Coin `json:"total_offers"`
 	isOfferChanged bool          `json:"-" msg:"-"`
-	TotalUnStake   currency.Coin `json:"total_un_stake"` // Total amount to be un staked
 }
 
 func newStakePool() *stakePool {
@@ -97,16 +96,6 @@ func (sp *stakePool) Save(providerType spenum.Provider, providerID string,
 	return nil
 }
 
-// The cleanStake() is stake amount without delegate pools want to unstake.
-func (sp *stakePool) cleanStake() (stake currency.Coin, err error) {
-	staked, err := sp.stake()
-	if err != nil {
-		return 0, err
-	}
-
-	return staked - sp.TotalUnStake, nil
-}
-
 // The stake() returns total stake size including delegate pools want to unstake.
 func (sp *stakePool) stake() (stake currency.Coin, err error) {
 	var newStake currency.Coin
@@ -136,10 +125,6 @@ func (sp *stakePool) Empty(
 		return errors.New("trying to unlock not by delegate pool owner")
 	}
 
-	// If insufficient funds in stake pool left after unlock,
-	// we can't do an immediate unlock.
-	// Instead we mark as unstake to prevent being used for further allocations.
-
 	requiredBalance, err := currency.AddCoin(sp.TotalOffers, dp.Balance)
 	if err != nil {
 		return err
@@ -149,31 +134,10 @@ func (sp *stakePool) Empty(
 	if err != nil {
 		return err
 	}
+
 	if staked < requiredBalance {
-		if dp.Status != spenum.Unstaking {
-			totalUnStake, err := currency.AddCoin(sp.TotalUnStake, dp.Balance)
-			if err != nil {
-				return err
-			}
-			//we are locking current pool and hold the tokens, they won't be counted in clean stake after that
-			sp.TotalUnStake = totalUnStake
-
-			dp.Status = spenum.Unstaking
-		}
-		return nil
-	}
-
-	//clean up unstaking lock
-	if dp.Status == spenum.Unstaking {
-		totalUnstake := currency.Coin(0)
-		if sp.TotalUnStake > dp.Balance {
-			totalUnstake, err = currency.MinusCoin(sp.TotalUnStake, dp.Balance)
-			if err != nil {
-				return err
-			}
-		}
-		//we can release these tokens now so UnStake hold can now be released
-		sp.TotalUnStake = totalUnstake
+		return fmt.Errorf("insufficent stake to cover offers: existing stake %d, unlock balance %d, offers %d",
+			staked, dp.Balance, sp.TotalOffers)
 	}
 
 	transfer := state.NewTransfer(sscID, clientID, dp.Balance)
@@ -273,13 +237,12 @@ func unallocatedCapacity(writePrice, total, offers currency.Coin) (free int64, e
 }
 
 func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
-
-	cleanStake, err := sp.cleanStake()
+	stake, err := sp.stake()
 	if err != nil {
 		return 0, err
 	}
 
-	fcleanStake, err := cleanStake.Float64()
+	fStake, err := stake.Float64()
 	if err != nil {
 		return 0, err
 	}
@@ -289,7 +252,7 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 		return 0, err
 	}
 
-	return int64((fcleanStake / fWritePrice) * GB), nil
+	return int64((fStake / fWritePrice) * GB), nil
 }
 
 //

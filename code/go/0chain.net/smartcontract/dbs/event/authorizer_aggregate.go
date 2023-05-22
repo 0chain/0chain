@@ -16,7 +16,6 @@ type AuthorizerAggregate struct {
 	BucketID     int64  `json:"bucket_id"`
 
 	Fee           currency.Coin `json:"fee"`
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	TotalMint     currency.Coin `json:"total_mint"`
@@ -26,10 +25,6 @@ type AuthorizerAggregate struct {
 
 func (a *AuthorizerAggregate) GetTotalStake() currency.Coin {
 	return a.TotalStake
-}
-
-func (a *AuthorizerAggregate) GetUnstakeTotal() currency.Coin {
-	return a.UnstakeTotal
 }
 
 func (a *AuthorizerAggregate) GetServiceCharge() float64 {
@@ -42,10 +37,6 @@ func (a *AuthorizerAggregate) GetTotalRewards() currency.Coin {
 
 func (a *AuthorizerAggregate) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
-}
-
-func (a *AuthorizerAggregate) SetUnstakeTotal(value currency.Coin) {
-	a.UnstakeTotal = value
 }
 
 func (a *AuthorizerAggregate) SetServiceCharge(value float64) {
@@ -120,10 +111,10 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 
 	var (
 		oldAuthorizersProcessingMap = MakeProcessingMap(oldAuthorizers)
-		aggregates []AuthorizerAggregate
-		gsDiff     Snapshot
-		old AuthorizerSnapshot
-		ok bool
+		aggregates                  []AuthorizerAggregate
+		gsDiff                      Snapshot
+		old                         AuthorizerSnapshot
+		ok                          bool
 	)
 
 	for _, current := range currentAuthorizers {
@@ -140,7 +131,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 		}
 
 		// Case: authorizer becomes killed/shutdown
-		if (current.IsOffline() && !old.IsOffline()) {
+		if current.IsOffline() && !old.IsOffline() {
 			handleOfflineAuthorizer(&gsDiff, old)
 			continue
 		}

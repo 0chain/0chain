@@ -56,7 +56,10 @@ func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
 	switch err {
 	case nil, util.ErrValueNotPresent:
 		if node.ZCNSConfig == nil {
-			node.ZCNSConfig = getConfig()
+			node.ZCNSConfig, err = getConfig()
+			if err != nil {
+				return nil, err
+			}
 		}
 		if node.WZCNNonceMinted == nil {
 			node.WZCNNonceMinted = make(map[int64]bool)

@@ -43,7 +43,6 @@ const (
 	TagUpdateBlobber
 	TagUpdateBlobberAllocatedSavedHealth
 	TagUpdateBlobberTotalStake
-	TagUpdateBlobberTotalUnStake
 	TagUpdateBlobberTotalOffers
 	TagDeleteBlobber
 	TagAddAuthorizer
@@ -97,13 +96,9 @@ const (
 	TagAllocBlobberValueChange
 	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
-	TagUpdateValidatorUnStakeTotal
 	TagUpdateMinerTotalStake
-	TagUpdateMinerTotalUnStake
 	TagUpdateSharderTotalStake
-	TagUpdateSharderTotalUnStake
 	TagUpdateAuthorizerTotalStake
-	TagUpdateAuthorizerTotalUnStake
 	TagUniqueAddress
 	TagMinerHealthCheck
 	TagSharderHealthCheck
@@ -146,7 +141,6 @@ func initTagString() {
 	TagString[TagUpdateBlobber] = "TagUpdateBlobber"
 	TagString[TagUpdateBlobberAllocatedSavedHealth] = "TagUpdateBlobberAllocatedSavedHealth"
 	TagString[TagUpdateBlobberTotalStake] = "TagUpdateBlobberTotalStake"
-	TagString[TagUpdateBlobberTotalUnStake] = "TagUpdateBlobberTotalUnStake"
 	TagString[TagUpdateBlobberTotalOffers] = "TagUpdateBlobberTotalOffers"
 	TagString[TagDeleteBlobber] = "TagDeleteBlobber"
 	TagString[TagAddAuthorizer] = "TagAddAuthorizer"
@@ -200,10 +194,6 @@ func initTagString() {
 	TagString[TagAllocBlobberValueChange] = "TagAllocBlobberValueChange"
 	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
-	TagString[TagUpdateValidatorUnStakeTotal] = "TagUpdateValidatorUnStakeTotal"
-	TagString[TagUpdateMinerTotalUnStake] = "TagUpdateMinerTotalUnStake"
-	TagString[TagUpdateSharderTotalUnStake] = "TagUpdateSharderTotalUnStake"
-	TagString[TagUpdateAuthorizerTotalUnStake] = "TagUpdateAuthorizerTotalUnStake"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
 	TagString[TagMinerHealthCheck] = "TagMinerHealthCheck"
 	TagString[TagSharderHealthCheck] = "TagSharderHealthCheck"

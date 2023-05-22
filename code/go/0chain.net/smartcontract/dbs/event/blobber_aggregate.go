@@ -21,14 +21,13 @@ type BlobberAggregate struct {
 	SavedData           int64         `json:"saved_data"`
 	ReadData            int64         `json:"read_data"`
 	OffersTotal         currency.Coin `json:"offers_total"`
-	UnstakeTotal        currency.Coin `json:"unstake_total"`
 	TotalStake          currency.Coin `json:"total_stake"`
 	TotalServiceCharge  currency.Coin `json:"total_service_charge"`
 	TotalRewards        currency.Coin `json:"total_rewards"`
-	TotalBlockRewards	currency.Coin `json:"total_block_rewards"`
+	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
 	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
-	TotalReadIncome	 	currency.Coin `json:"total_read_income"`
-	TotalSlashedStake	currency.Coin `json:"total_slashed_stake"`
+	TotalReadIncome     currency.Coin `json:"total_read_income"`
+	TotalSlashedStake   currency.Coin `json:"total_slashed_stake"`
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
@@ -116,13 +115,13 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		logging.Logger.Error("getting blobber snapshots", zap.Error(err))
 		return
 	}
-	
+
 	var (
-		oldBlobbersProcessingMap = MakeProcessingMap(oldBlobbers) 
-		aggregates []BlobberAggregate
-		gsDiff	   Snapshot
-		old BlobberSnapshot
-		ok bool
+		oldBlobbersProcessingMap = MakeProcessingMap(oldBlobbers)
+		aggregates               []BlobberAggregate
+		gsDiff                   Snapshot
+		old                      BlobberSnapshot
+		ok                       bool
 	)
 
 	for _, current := range currentBlobbers {
@@ -138,7 +137,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		}
 
 		// Case: blobber becomes killed/shutdown
-		if (current.IsOffline() && !old.IsOffline()) {
+		if current.IsOffline() && !old.IsOffline() {
 			handleOfflineBlobber(&gsDiff, old)
 			continue
 		}
@@ -156,17 +155,16 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 		aggregate.TotalRewards = (old.TotalRewards + current.Rewards.TotalRewards) / 2
 		aggregate.OffersTotal = (old.OffersTotal + current.OffersTotal) / 2
-		aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 		aggregate.OpenChallenges = (old.OpenChallenges + current.OpenChallenges) / 2
 		aggregate.TotalBlockRewards = (old.TotalBlockRewards + current.TotalBlockRewards) / 2
 		aggregate.TotalStorageIncome = (old.TotalStorageIncome + current.TotalStorageIncome) / 2
 		aggregate.TotalReadIncome = (old.TotalReadIncome + current.TotalReadIncome) / 2
 		aggregate.TotalSlashedStake = (old.TotalSlashedStake + current.TotalSlashedStake) / 2
 		aggregate.Downtime = current.Downtime
-		
+
 		aggregate.ChallengesPassed = current.ChallengesPassed
 		aggregate.ChallengesCompleted = current.ChallengesCompleted
-		
+
 		if current.ChallengesCompleted == 0 {
 			aggregate.RankMetric = 0
 		} else {
@@ -195,7 +193,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		}
 		gsDiff.StakedStorage += (newSS - oldSS)
 	}
-	
+
 	gs.ApplyDiff(&gsDiff)
 
 	if len(aggregates) > 0 {

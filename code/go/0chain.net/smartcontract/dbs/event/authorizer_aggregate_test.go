@@ -27,14 +27,14 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		})
 
 		var (
-			expectedBucketId	int64
-			initialSnapshot		= Snapshot{ Round: 5 }
-			authorizerIds		= createAuthorizers(t, eventDb, 5, expectedBucketId)
-			authorizersBefore	[]Authorizer
-			authorizersAfter	[]Authorizer
-			authorizerSnapshots	[]AuthorizerSnapshot
-			expectedAggregates	[]AuthorizerAggregate
-			expectedSnapshots	[]AuthorizerSnapshot
+			expectedBucketId    int64
+			initialSnapshot     = Snapshot{Round: 5}
+			authorizerIds       = createAuthorizers(t, eventDb, 5, expectedBucketId)
+			authorizersBefore   []Authorizer
+			authorizersAfter    []Authorizer
+			authorizerSnapshots []AuthorizerSnapshot
+			expectedAggregates  []AuthorizerAggregate
+			expectedSnapshots   []AuthorizerSnapshot
 			err                 error
 		)
 		expectedBucketId = 5 % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
@@ -44,10 +44,10 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		// Initial authorizers table image + force bucket_id for authorizers in bucket
 		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersBefore).Error
 		require.NoError(t, err)
-		authorizersInBucket := []string{ authorizersBefore[0].ID, authorizersBefore[1].ID, authorizersBefore[2].ID }
+		authorizersInBucket := []string{authorizersBefore[0].ID, authorizersBefore[1].ID, authorizersBefore[2].ID}
 		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id IN ?", authorizersInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
-		err = eventDb.Store.Get().Model(&Blobber{}).Where("id NOT IN ?", authorizersInBucket).Update("bucket_id", expectedBucketId + 1).Error
+		err = eventDb.Store.Get().Model(&Blobber{}).Where("id NOT IN ?", authorizersInBucket).Update("bucket_id", expectedBucketId+1).Error
 		require.NoError(t, err)
 		err = eventDb.Get().Model(&Authorizer{}).Where("id IN ?", authorizerIds).Find(&authorizersBefore).Error
 		require.NoError(t, err)
@@ -66,16 +66,15 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		// Add a new authorizer
 		expectedBucketId = updateRound % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 		newAuthorizer := Authorizer{
-			Provider:  Provider{
-				ID:        "new-authorizer",
-				BucketId:  expectedBucketId,
+			Provider: Provider{
+				ID:         "new-authorizer",
+				BucketId:   expectedBucketId,
 				TotalStake: 100,
-				UnstakeTotal: 100,
-				Downtime: 100,
+				Downtime:   100,
 			},
-			Fee: 100,
-			Latitude: 0,
-			Longitude: 0,
+			Fee:           100,
+			Latitude:      0,
+			Longitude:     0,
 			CreationRound: updateRound,
 		}
 		err = eventDb.Store.Get().Omit(clause.Associations).Create(&newAuthorizer).Error
@@ -85,12 +84,11 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 
 		// Update an existing authorizer
 		updates := map[string]interface{}{
-			"total_stake":          gorm.Expr("total_stake * ?", 2),
-			"unstake_total":        gorm.Expr("unstake_total * ?", 2),
-			"downtime":             gorm.Expr("downtime * ?", 2),
-			"fee":          		gorm.Expr("fee * ?", 2),
-			"total_mint":		   gorm.Expr("total_mint * ?", 2),
-			"total_burn":		   gorm.Expr("total_burn * ?", 2),
+			"total_stake": gorm.Expr("total_stake * ?", 2),
+			"downtime":    gorm.Expr("downtime * ?", 2),
+			"fee":         gorm.Expr("fee * ?", 2),
+			"total_mint":  gorm.Expr("total_mint * ?", 2),
+			"total_burn":  gorm.Expr("total_burn * ?", 2),
 		}
 		err = eventDb.Store.Get().Model(&Authorizer{}).Where("id", authorizersInBucket[0]).Updates(updates).Error
 		require.NoError(t, err)
@@ -131,7 +129,6 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		oldAuthorizer := authorizerBeforeMap[authorizersInBucket[0]]
 		curAuthorizer := authorizerAfterMap[authorizersInBucket[0]]
 		require.Equal(t, oldAuthorizer.TotalStake*2, curAuthorizer.TotalStake)
-		require.Equal(t, oldAuthorizer.UnstakeTotal*2, curAuthorizer.UnstakeTotal)
 		require.Equal(t, oldAuthorizer.Downtime*2, curAuthorizer.Downtime)
 		require.Equal(t, oldAuthorizer.Rewards.TotalRewards*2, curAuthorizer.Rewards.TotalRewards)
 		require.Equal(t, oldAuthorizer.TotalMint*2, curAuthorizer.TotalMint)
@@ -148,7 +145,7 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 		expectedAggregates, expectedSnapshots = calculateAuthorizerAggregatesAndSnapshots(updateRound, expectedBucketId, authorizersAfter, authorizerSnapshots)
 		eventDb.updateAuthorizerAggregate(updateRound, 10, &initialSnapshot)
 		assertAuthorizerAggregateAndSnapshots(t, eventDb, updateRound, expectedAggregates, expectedSnapshots)
-		require.Equal(t, totalMintedBefore + int64(oldAuthorizer.TotalMint), initialSnapshot.TotalMint)
+		require.Equal(t, totalMintedBefore+int64(oldAuthorizer.TotalMint), initialSnapshot.TotalMint)
 
 		// Check global snapshot changes
 		assertAuthorizerGlobalSnapshot(t, eventDb, updateRound, expectedBucketId, authorizersAfter, &initialSnapshot)
@@ -157,11 +154,11 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 
 func createAuthorizers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Authorizer) []string {
 	var (
-		ids        []string
+		ids           []string
 		curAuthorizer Authorizer
-		err        error
+		err           error
 		authorizers   []Authorizer
-		i          = 0
+		i             = 0
 	)
 
 	for ; i < len(seed) && i < n; i++ {
@@ -204,19 +201,18 @@ func snapshotCurrentAuthorizers(t *testing.T, edb *EventDb, round int64) {
 
 func authorizerToSnapshot(authorizer *Authorizer, round int64) AuthorizerSnapshot {
 	snapshot := AuthorizerSnapshot{
-		AuthorizerID:       authorizer.ID,
-		BucketId: 		 	authorizer.BucketId,
-		Round: 			 	round,
-		Fee: 			   	authorizer.Fee,
-		UnstakeTotal:       authorizer.UnstakeTotal,
-		TotalRewards:       authorizer.Rewards.TotalRewards,
-		TotalStake:         authorizer.TotalStake,
-		TotalMint:          authorizer.TotalMint,
-		TotalBurn:          authorizer.TotalBurn,
-		CreationRound:      authorizer.CreationRound,
-		ServiceCharge: 	 	authorizer.ServiceCharge,
-		IsKilled: 		 	authorizer.IsKilled,
-		IsShutdown: 	 	authorizer.IsShutdown,
+		AuthorizerID:  authorizer.ID,
+		BucketId:      authorizer.BucketId,
+		Round:         round,
+		Fee:           authorizer.Fee,
+		TotalRewards:  authorizer.Rewards.TotalRewards,
+		TotalStake:    authorizer.TotalStake,
+		TotalMint:     authorizer.TotalMint,
+		TotalBurn:     authorizer.TotalBurn,
+		CreationRound: authorizer.CreationRound,
+		ServiceCharge: authorizer.ServiceCharge,
+		IsKilled:      authorizer.IsKilled,
+		IsShutdown:    authorizer.IsShutdown,
 	}
 	return snapshot
 }
@@ -255,13 +251,12 @@ func calculateAuthorizerAggregatesAndSnapshots(round, expectedBucketId int64, cu
 
 func calculateAuthorizerAggregate(round int64, current *Authorizer, old *AuthorizerSnapshot) AuthorizerAggregate {
 	aggregate := AuthorizerAggregate{
-		Round:     round,
+		Round:        round,
 		AuthorizerID: current.ID,
-		BucketID:  current.BucketId,
+		BucketID:     current.BucketId,
 	}
 	aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 	aggregate.TotalRewards = (old.TotalRewards + current.Rewards.TotalRewards) / 2
-	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
 	aggregate.TotalMint = (old.TotalMint + current.TotalMint) / 2
 	aggregate.TotalBurn = (old.TotalBurn + current.TotalBurn) / 2
@@ -307,7 +302,6 @@ func assertAuthorizerAggregate(t *testing.T, expected, actual *AuthorizerAggrega
 	require.Equal(t, expected.BucketID, actual.BucketID)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
-	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
 	require.Equal(t, expected.TotalMint, actual.TotalMint)
 	require.Equal(t, expected.TotalBurn, actual.TotalBurn)
@@ -320,7 +314,6 @@ func assertAuthorizerSnapshot(t *testing.T, expected, actual *AuthorizerSnapshot
 	require.Equal(t, expected.Round, actual.Round)
 	require.Equal(t, expected.Fee, actual.Fee)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
-	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
 	require.Equal(t, expected.TotalMint, actual.TotalMint)
 	require.Equal(t, expected.TotalBurn, actual.TotalBurn)
@@ -331,7 +324,7 @@ func assertAuthorizerSnapshot(t *testing.T, expected, actual *AuthorizerSnapshot
 }
 
 func assertAuthorizerGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualAuthorizers []Authorizer, actualSnapshot *Snapshot) {
-	expectedGlobal := Snapshot{ Round: round }
+	expectedGlobal := Snapshot{Round: round}
 	for _, authorizer := range actualAuthorizers {
 		if authorizer.BucketId != expectedBucketId || authorizer.IsOffline() {
 			continue
