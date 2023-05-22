@@ -171,6 +171,6 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 
 func (edb *EventDb) GetTransactionErrors() ([]TransactionErrors, error) {
 	var transactions []TransactionErrors
-	err := edb.Get().Model(&TransactionErrors{}).Find(&transactions)
+	err := edb.Get().Model(&TransactionErrors{}).Find(&transactions).Order("count desc")
 	return transactions, err.Error
 }
