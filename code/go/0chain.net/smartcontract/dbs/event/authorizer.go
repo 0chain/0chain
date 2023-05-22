@@ -35,10 +35,6 @@ func (a *Authorizer) GetTotalStake() currency.Coin {
 	return a.TotalStake
 }
 
-func (a *Authorizer) GetUnstakeTotal() currency.Coin {
-	return a.UnstakeTotal
-}
-
 func (a *Authorizer) GetServiceCharge() float64 {
 	return a.ServiceCharge
 }
@@ -49,10 +45,6 @@ func (a *Authorizer) GetTotalRewards() currency.Coin {
 
 func (a *Authorizer) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
-}
-
-func (a *Authorizer) SetUnstakeTotal(value currency.Coin) {
-	a.UnstakeTotal = value
 }
 
 func (a *Authorizer) SetServiceCharge(value float64) {
@@ -155,15 +147,6 @@ func NewUpdateAuthorizerTotalStakeEvent(ID string, totalStake currency.Coin) (ta
 	}
 }
 
-func NewUpdateAuthorizerTotalUnStakeEvent(ID string, totalUnstake currency.Coin) (tag EventTag, data interface{}) {
-	return TagUpdateAuthorizerTotalStake, Authorizer{
-		Provider: Provider{
-			ID:         ID,
-			UnstakeTotal: totalUnstake,
-		},
-	}
-}
-
 func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error {
 	var provs []Provider
 	for _, a := range authorizer {
@@ -174,7 +157,7 @@ func (edb *EventDb) updateAuthorizersTotalStakes(authorizer []Authorizer) error 
 
 func (edb *EventDb) updateAuthorizersTotalMint(mints []state.Mint) error {
 	var (
-		ids []string
+		ids       []string
 		totalMint []int64
 	)
 	for _, m := range mints {
@@ -193,7 +176,7 @@ func (edb *EventDb) updateAuthorizersTotalMint(mints []state.Mint) error {
 
 func (edb *EventDb) updateAuthorizersTotalBurn(burns []state.Burn) error {
 	var (
-		ids []string
+		ids        []string
 		totalBurns []int64
 	)
 	for _, m := range burns {
@@ -210,20 +193,8 @@ func (edb *EventDb) updateAuthorizersTotalBurn(burns []state.Burn) error {
 		Exec(edb).Debug().Error
 }
 
-func (edb *EventDb) updateAuthorizersTotalUnStakes(authorizer []Authorizer) error {
-	var provs []Provider
-	for _, a := range authorizer {
-		provs = append(provs, a.Provider)
-	}
-	return edb.updateProvidersTotalUnStakes(provs, "authorizers")
-}
-
 func mergeUpdateAuthorizerTotalStakesEvents() *eventsMergerImpl[Authorizer] {
 	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalStake, withUniqueEventOverwrite())
-}
-
-func mergeUpdateAuthorizerTotalUnStakesEvents() *eventsMergerImpl[Authorizer] {
-	return newEventsMerger[Authorizer](TagUpdateAuthorizerTotalUnStake, withUniqueEventOverwrite())
 }
 
 func mergeAuthorizerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {

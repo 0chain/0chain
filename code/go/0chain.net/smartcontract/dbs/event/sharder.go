@@ -35,10 +35,6 @@ func (s *Sharder) GetTotalStake() currency.Coin {
 	return s.TotalStake
 }
 
-func (s *Sharder) GetUnstakeTotal() currency.Coin {
-	return s.UnstakeTotal
-}
-
 func (s *Sharder) GetServiceCharge() float64 {
 	return s.ServiceCharge
 }
@@ -49,10 +45,6 @@ func (s *Sharder) GetTotalRewards() currency.Coin {
 
 func (s *Sharder) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
-}
-
-func (s *Sharder) SetUnstakeTotal(value currency.Coin) {
-	s.UnstakeTotal = value
 }
 
 func (s *Sharder) SetServiceCharge(value float64) {
@@ -260,14 +252,6 @@ func NewUpdateSharderTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 		},
 	}
 }
-func NewUpdateSharderTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
-	return TagUpdateSharderTotalUnStake, Sharder{
-		Provider: Provider{
-			ID:           ID,
-			UnstakeTotal: unstakeTotal,
-		},
-	}
-}
 
 func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
 	var provs []Provider
@@ -277,19 +261,8 @@ func (edb *EventDb) updateShardersTotalStakes(sharders []Sharder) error {
 	return edb.updateProviderTotalStakes(provs, "sharders")
 }
 
-func (edb *EventDb) updateShardersTotalUnStakes(sharders []Sharder) error {
-	var provs []Provider
-	for _, s := range sharders {
-		provs = append(provs, s.Provider)
-	}
-	return edb.updateProvidersTotalUnStakes(provs, "sharders")
-}
-
 func mergeUpdateSharderTotalStakesEvents() *eventsMergerImpl[Sharder] {
 	return newEventsMerger[Sharder](TagUpdateSharderTotalStake, withUniqueEventOverwrite())
-}
-func mergeUpdateSharderTotalUnStakesEvents() *eventsMergerImpl[Sharder] {
-	return newEventsMerger[Sharder](TagUpdateSharderTotalUnStake, withUniqueEventOverwrite())
 }
 
 func mergeSharderHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {
