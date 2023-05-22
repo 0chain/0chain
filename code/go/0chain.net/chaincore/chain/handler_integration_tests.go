@@ -51,15 +51,18 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers(c Chainer) {
-	hMap := handlersMap(c)
+	var hMap map[string]func(http.ResponseWriter, *http.Request)
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		hMap = minerHandlersMap(c)
 		hMap[GetBlockV1Pattern] = BlockStats(
 			hMap[GetBlockV1Pattern],
 			BlockStatsConfigurator{
 				HashKey: "block",
 			},
 		)
+	} else {
+		hMap = handlersMap(c)
 	}
 
 	setupHandlers(hMap)

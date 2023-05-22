@@ -48,7 +48,10 @@ func InitConfig(ctx state.StateContextI) error {
 	node := &GlobalNode{ID: ADDRESS}
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	if err == util.ErrValueNotPresent {
-		node.ZCNSConfig = getConfig()
+		node.ZCNSConfig, err = getConfig()
+		if err != nil {
+			return err
+		}
 		_, err := ctx.InsertTrieNode(node.GetKey(), node)
 		return err
 	}
@@ -126,20 +129,35 @@ func postfix(section string) string {
 	return fmt.Sprintf("%s.%s.%s", SmartContract, ZcnSc, section)
 }
 
-func getConfig() (conf *ZCNSConfig) {
+func getConfig() (conf *ZCNSConfig, err error) {
 	conf = new(ZCNSConfig)
-	conf.MinMintAmount = currency.Coin(cfg.GetInt(postfix(MinMintAmount)))
-	conf.MinBurnAmount = currency.Coin(cfg.GetInt64(postfix(MinBurnAmount)))
-	conf.MinStakeAmount = currency.Coin(cfg.GetInt64(postfix(MinStakeAmount)))
-	conf.MaxStakeAmount = currency.Coin(cfg.GetInt64(postfix(MaxStakeAmount)))
+	conf.MinMintAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinMintAmount)))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinBurnAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinBurnAmount)))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinStakeAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinStakeAmount)))
+	if err != nil {
+		return nil, err
+	}
+	conf.MaxStakeAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MaxStakeAmount)))
+	if err != nil {
+		return nil, err
+	}
 	conf.PercentAuthorizers = cfg.GetFloat64(postfix(PercentAuthorizers))
 	conf.MinAuthorizers = cfg.GetInt64(postfix(MinAuthorizers))
-	conf.MinLockAmount = currency.Coin(cfg.GetUint64(postfix(MinLockAmount)))
-	conf.MaxFee = currency.Coin(cfg.GetInt64(postfix(MaxFee)))
+	conf.MinLockAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinLockAmount)))
+	if err != nil {
+		return nil, err
+	}
+	conf.MaxFee = currency.Coin(cfg.GetFloat64(postfix(MaxFee)))
 	conf.BurnAddress = cfg.GetString(postfix(BurnAddress))
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
 	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
 
-	return conf
+	return conf, nil
 }

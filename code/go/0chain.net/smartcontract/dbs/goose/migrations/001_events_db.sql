@@ -407,7 +407,7 @@ CREATE TABLE public.challenges (
                                    validators_id text,
                                    seed bigint,
                                    allocation_root text,
-                                   responded boolean,
+                                   responded bigint,
                                    passed boolean,
                                    round_responded bigint
 );
