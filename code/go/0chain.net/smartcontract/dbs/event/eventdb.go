@@ -111,11 +111,11 @@ func (edb *EventDb) Debug() bool {
 }
 
 type blockEvents struct {
-	block     string
-	blockSize int
-	round     int64
-	events    []Event
-	doneC     chan struct{}
+	block             string
+	blockSize         int
+	round             int64
+	events            []Event
+	doneWithRollbackC chan func() // rollback function
 }
 
 func (edb *EventDb) AutoMigrate() error {

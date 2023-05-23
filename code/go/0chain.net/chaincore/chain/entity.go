@@ -581,7 +581,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
-  
+
 	for _, v := range initStates.States {
 		s := mustInitialState(v.Tokens)
 		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
@@ -646,7 +646,8 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		if eventDB != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1); err != nil {
+			_, err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1)
+			if err != nil {
 				panic(err)
 			}
 		}

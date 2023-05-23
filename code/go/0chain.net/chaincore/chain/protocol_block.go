@@ -14,6 +14,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -290,7 +291,7 @@ func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.Verificati
 	}
 }
 
-func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) error {
+func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) (err error) {
 	logging.Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
@@ -361,7 +362,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	)
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() {
-		err := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
+		err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
 			logging.Logger.Error("finalize block - record dead nodes failed",
 				zap.Int64("round", fb.Round),
@@ -371,15 +372,24 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	})
 
+	var rollbackEvents func()
+	defer func() {
+		if err != nil && rollbackEvents != nil {
+			rollbackEvents()
+		}
+	}()
+
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
-			err, ev := block.CreateFinalizeBlockEvent(fb)
+			var ev event.Event
+			err, ev = block.CreateFinalizeBlockEvent(fb)
 			if err != nil {
 				logging.Logger.Error("emit update block event error", zap.Error(err))
 			}
 			fb.Events = append(fb.Events, ev)
 			ts := time.Now()
-			if err := c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns)); err != nil {
+			rollbackEvents, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
+			if err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
@@ -391,7 +401,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	if fb.MagicBlock != nil {
-		if err := c.UpdateMagicBlock(fb.MagicBlock); err != nil {
+		if err = c.UpdateMagicBlock(fb.MagicBlock); err != nil {
 			logging.Logger.Error("finalize block - update magic block failed",
 				zap.Int64("round", fb.Round),
 				zap.Int64("mb_starting_round", fb.StartingRound),
