@@ -103,7 +103,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
 
-			if err := serverChain.GetEventDb().ProcessEvents(
+			if _, err := serverChain.GetEventDb().ProcessEvents(
 				ctx,
 				[]event.Event{ev},
 				b.Round,

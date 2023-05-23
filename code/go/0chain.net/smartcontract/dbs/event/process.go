@@ -21,27 +21,29 @@ import (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
+// ProcessEvents - process events and return rollback function or error if any
+// The rollback function can be called to rollback the events when needed
 func (edb *EventDb) ProcessEvents(
 	ctx context.Context,
 	events []Event,
 	round int64,
 	block string,
 	blockSize int,
-) error {
+) (func(), error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pdu := time.Since(ts)
 
 	event := blockEvents{
-		events:    es,
-		round:     round,
-		block:     block,
-		blockSize: blockSize,
-		doneC:     make(chan struct{}, 1),
+		events:            es,
+		round:             round,
+		block:             block,
+		blockSize:         blockSize,
+		doneWithRollbackC: make(chan func(), 1),
 	}
 
 	select {
@@ -52,11 +54,11 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
-		return fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
 	select {
-	case <-event.doneC:
+	case rollback := <-event.doneWithRollbackC:
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
@@ -66,6 +68,7 @@ func (edb *EventDb) ProcessEvents(
 				zap.String("block", block),
 				zap.Int("block size", blockSize))
 		}
+		return rollback, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -74,9 +77,8 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
+		return nil, ctx.Err()
 	}
-
-	return nil
 }
 
 func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
@@ -210,19 +212,25 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 }
 
 func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
-	defer func() {
-		es.doneC <- struct{}{}
-	}()
-
-	if *currentPartition < es.round/edb.settings.PartitionChangePeriod {
-		edb.managePartitions(es.round)
-		*currentPartition = es.round / edb.settings.PartitionChangePeriod
-	}
-
 	tx, err := edb.Begin()
 	if err != nil {
 		logging.Logger.Error("error starting transaction", zap.Error(err))
 		return nil, err
+	}
+
+	var rollbacked bool
+
+	defer func() {
+		es.doneWithRollbackC <- func() {
+			if !rollbacked {
+				tx.Rollback()
+			}
+		}
+	}()
+
+	if *currentPartition < es.round/edb.settings.PartitionChangePeriod {
+		tx.managePartitions(es.round)
+		*currentPartition = es.round / edb.settings.PartitionChangePeriod
 	}
 
 	if err = tx.addEvents(ctx, es); err != nil {
@@ -232,6 +240,7 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, curr
 		if err := tx.Rollback(); err != nil {
 			return nil, err
 		}
+		rollbacked = true
 		return nil, err
 	}
 
@@ -247,6 +256,7 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, curr
 			if err := tx.Rollback(); err != nil {
 				return nil, err
 			}
+			rollbacked = true
 			return nil, err
 		}
 	}
