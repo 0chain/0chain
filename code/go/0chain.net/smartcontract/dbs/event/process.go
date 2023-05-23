@@ -224,6 +224,7 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, curr
 		es.doneWithRollbackC <- func() {
 			if !rollbacked {
 				tx.Rollback()
+				logging.Logger.Debug("rollback event db transaction")
 			}
 		}
 	}()
