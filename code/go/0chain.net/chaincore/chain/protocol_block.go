@@ -373,12 +373,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	})
 
 	var rollbackEvents func()
-	defer func() {
-		if err != nil && rollbackEvents != nil {
-			rollbackEvents()
-		}
-	}()
-
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
 			var ev event.Event
@@ -413,10 +407,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	wg.Run("finalize block - update finalized block", fb.Round, func() {
 		bsh.UpdateFinalizedBlock(ctx, fb) //
-		if fb.Round == 200 && c.GetEventDb() != nil {
-			time.Sleep(2 * time.Second) // wait enough time for event to be processed
-			panic("mock panic on finalizing block")
-		}
 	})
 
 	wg.Run("finalize block - delete dead blocks", fb.Round, func() {
@@ -440,6 +430,19 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	})
 
 	wg.Wait()
+	select {
+	case err := <-wg.panicErrC:
+		// rollback and continue to panic
+		if rollbackEvents != nil {
+			rollbackEvents()
+		}
+		logging.Logger.Error("finalize block - error",
+			zap.Any("error", err),
+			zap.Int64("round", fb.Round),
+			zap.String("hash", fb.Hash))
+		panic(err)
+	default:
+	}
 
 	c.rebaseState(fb)
 	fr.Finalize(fb)
@@ -479,12 +482,14 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 }
 
 type waitGroupSync struct {
-	wg *sync.WaitGroup
+	wg        *sync.WaitGroup
+	panicErrC chan interface{}
 }
 
 func newWaitGroupSync() *waitGroupSync {
 	return &waitGroupSync{
-		wg: &sync.WaitGroup{},
+		wg:        &sync.WaitGroup{},
+		panicErrC: make(chan interface{}, 1),
 	}
 }
 
@@ -492,7 +497,12 @@ func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
 	wgs.wg.Add(1)
 	ts := time.Now()
 	go func() {
-		defer wgs.wg.Done()
+		defer func() {
+			wgs.wg.Done()
+			if r := recover(); r != nil {
+				wgs.panicErrC <- r
+			}
+		}()
 		f()
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
