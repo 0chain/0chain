@@ -103,24 +103,21 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 			mergeUpdateChallengesEvents(),
 			mergeAddChallengePoolsEvents(),
+
 			mergeUpdateBlobberChallengesEvents(),
 			mergeAddChallengesToBlobberEvents(),
 			mergeUpdateAllocChallengesEvents(),
 
 			mergeUpdateBlobbersEvents(),
 			mergeUpdateBlobberTotalStakesEvents(),
-			mergeUpdateBlobberTotalUnStakesEvents(),
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
 			mergeStakePoolPenaltyEvents(),
 			mergeAddDelegatePoolsEvents(),
 
 			mergeUpdateMinerTotalStakesEvents(),
-			mergeUpdateMinerTotalUnStakesEvents(),
 			mergeUpdateSharderTotalStakesEvents(),
-			mergeUpdateSharderTotalUnStakesEvents(),
 			mergeUpdateAuthorizerTotalStakesEvents(),
-			mergeUpdateAuthorizerTotalUnStakesEvents(),
 
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
@@ -129,7 +126,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberStatsEvents(),
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
-			mergeUpdateValidatorUnStakesEvents(),
 
 			mergeMinerHealthCheckEvents(),
 			mergeSharderHealthCheckEvents(),
@@ -195,12 +191,13 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
+	p := int64(-1)
 	edb.managePartitions(0)
 
 	for {
 		es := <-edb.eventsChannel
-    
-		s, err := edb.work(ctx, gs, es)
+
+		s, err := edb.work(ctx, gs, es, &p)
 		if err != nil {
 			if config.Development() { //panic in case of development
 				log.Panic(err)
@@ -212,13 +209,14 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents) (*Snapshot, error) {
+func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
 	defer func() {
 		es.doneC <- struct{}{}
 	}()
 
-	if es.round%edb.settings.PartitionChangePeriod == 0 {
+	if *currentPartition < es.round/edb.settings.PartitionChangePeriod {
 		edb.managePartitions(es.round)
+		*currentPartition = es.round / edb.settings.PartitionChangePeriod
 	}
 
 	tx, err := edb.Begin()
@@ -492,12 +490,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateBlobbersTotalStakes(*bs)
-	case TagUpdateBlobberTotalUnStake:
-		bs, ok := fromEvent[[]Blobber](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateBlobbersTotalUnStakes(*bs)
 	case TagUpdateBlobberTotalOffers:
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
@@ -533,12 +525,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateAuthorizersTotalStakes(*as)
-	case TagUpdateAuthorizerTotalUnStake:
-		as, ok := fromEvent[[]Authorizer](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateAuthorizersTotalUnStakes(*as)
 	case TagAddWriteMarker:
 		wms, ok := fromEvent[[]WriteMarker](event.Data)
 		if !ok {
@@ -605,12 +591,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidatorTotalStakes(*updates)
-	case TagUpdateValidatorUnStakeTotal:
-		updates, ok := fromEvent[[]Validator](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateValidatorTotalUnStakes(*updates)
 	case TagAddMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
@@ -642,12 +622,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateMinersTotalStakes(*m)
-	case TagUpdateMinerTotalUnStake:
-		m, ok := fromEvent[[]Miner](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateMinersTotalUnStakes(*m)
 	case TagUpdateSharder:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -667,13 +641,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateShardersTotalStakes(*s)
-	case TagUpdateSharderTotalUnStake:
-		s, ok := fromEvent[[]Sharder](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateShardersTotalUnStakes(*s)
-
 	//stake pool
 	case TagAddDelegatePool:
 		dps, ok := fromEvent[[]DelegatePool](event.Data)
@@ -751,7 +718,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 
 		return edb.addChallengesToAllocations(*as)
 	case TagUpdateBlobberOpenChallenges:
-		updates, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
+		updates, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
@@ -764,7 +731,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		bs, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
+		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}

@@ -686,6 +686,9 @@ func addMockClients(ctx context.Context,
 		err := executor.Run(ctx, func(i int) func() error {
 			return func() error {
 				clientID, publicKey, privateKey, err := createKey()
+				if err != nil {
+					return err
+				}
 
 				if i < activeClients {
 					clientIds = append(clientIds, clientID)

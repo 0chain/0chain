@@ -12,11 +12,17 @@ import (
 )
 
 func ShutDown(
-	id string,
-	providerSpecific func() (AbstractProvider, stakepool.AbstractStakePool, error),
+	input []byte,
+	clientId string,
+	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
-	p, sp, err := providerSpecific()
+	var req ProviderRequest
+	if err := req.Decode(input); err != nil {
+		return err
+	}
+
+	p, sp, err := providerSpecific(req)
 	if err != nil {
 		return err
 	}
@@ -30,8 +36,12 @@ func ShutDown(
 
 	p.ShutDown()
 
-	if err = sp.Save(p.Type(), id, balances); err != nil {
+	if err = sp.Save(p.Type(), clientId, balances); err != nil {
 		return err
+	}
+
+	if clientId != sp.GetSettings().DelegateWallet {
+		return fmt.Errorf("access denied, allowed for delegate_wallet owner only")
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagShutdownProvider, p.Id(), dbs.ProviderID{

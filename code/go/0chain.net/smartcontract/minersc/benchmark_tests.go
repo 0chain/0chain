@@ -173,14 +173,22 @@ func BenchmarkTests(
 			input: nil,
 		},
 		{
-			name:     "miner.payFees",
-			endpoint: msc.payFees,
+			name: "miner.payFees",
+			endpoint: func(t *transaction.Transaction,
+				input []byte, gn *GlobalNode, balances cstate.StateContextI) (
+				resp string, err error) {
+				p := &PayFeesInput{Round: balances.GetBlock().Round}
+				marshal, err := json.Marshal(p)
+				if err != nil {
+					return "", err
+				}
+				return msc.payFees(t, marshal, gn, balances)
+			},
 			txn: &transaction.Transaction{
 				ClientID:     data.Miners[0],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},
-			input: nil,
 		},
 		{
 			name: "storage.kill_miner",

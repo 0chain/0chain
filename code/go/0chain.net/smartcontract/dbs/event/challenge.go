@@ -1,9 +1,8 @@
 package event
 
 import (
-	"fmt"
-
 	common2 "0chain.net/smartcontract/common"
+	"fmt"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -22,7 +21,7 @@ type Challenge struct {
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
+	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded" gorm:"index"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
@@ -66,7 +65,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 
 	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			from, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
+			from, blobberID, 0).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
 		Column: clause.Column{Name: "created_at"},
 		Desc:   limit.IsDescending,
 	})
@@ -87,7 +86,7 @@ func (edb *EventDb) addChallenges(chlgs []Challenge) error {
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	var (
 		challengeIdList []string
-		respondedList   []bool
+		respondedList   []int64
 		passedList      []bool
 	)
 

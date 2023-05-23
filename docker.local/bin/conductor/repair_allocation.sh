@@ -5,7 +5,7 @@ set -e
 rm -rf ~/.zcn/testing.json
 rm -rf ~/.zcn/allocation.txt
 
-for run in $(seq 1 14)
+for run in $(seq 1 16)
 do
   ./zwalletcli/zwallet --wallet testing.json faucet \
       --methodName pour --input "{Pay day}"
@@ -31,7 +31,7 @@ BLOBBER4=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation \
     --read_price 0.001-10 --write_price 0.01-10 --size 104857600 \
-    --lock 2 --data 2 --parity 2 --expire 48h
+    --lock 2 --data 2 --parity 2 --expire 721h
 
 # for test logs
 ./zboxcli/zbox --wallet testing.json ls-blobbers

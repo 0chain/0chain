@@ -1,13 +1,13 @@
 module 0chain.net
 
-go 1.18
+go 1.20
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
 	github.com/alicebob/miniredis/v2 v2.30.2
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.26.0
-	github.com/go-playground/validator/v10 v10.13.0
+	github.com/go-playground/validator/v10 v10.14.0
 	github.com/gocql/gocql v1.4.0
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
@@ -21,11 +21,11 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/selvatico/go-mocket v1.0.7
 	github.com/shopspring/decimal v1.3.1 // indirect
-	github.com/spf13/cast v1.5.0
+	github.com/spf13/cast v1.5.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tinylib/msgp v1.1.6
 	github.com/valyala/gozstd v1.20.1
@@ -36,7 +36,7 @@ require (
 	golang.org/x/net v0.10.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	gorm.io/driver/postgres v1.5.0
+	gorm.io/driver/postgres v1.5.2
 	gorm.io/gorm v1.25.1
 )
 
@@ -66,6 +66,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/errors v0.20.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
@@ -88,8 +89,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
-	github.com/leodido/go-urn v1.2.3 // indirect
+	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-sqlite3 v1.14.15 // indirect

@@ -46,11 +46,10 @@ type PoolStatus int
 const (
 	Active PoolStatus = iota
 	Pending
-	Unstaking
 	Deleted
 )
 
-var poolString = []string{"active", "pending", "inactive", "unstaking", "deleting", "deleted"}
+var poolString = []string{"active", "pending", "deleted"}
 
 func (p PoolStatus) String() string {
 	if int(p) < len(poolString) && int(p) >= 0 {
