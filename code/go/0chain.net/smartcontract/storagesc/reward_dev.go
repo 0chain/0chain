@@ -236,3 +236,127 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 
 	common.Respond(w, r, result, nil)
 }
+
+func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWriter, r *http.Request) {
+	// read all data from challenge_rewards table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	allocationID := r.URL.Query().Get("allocation_id")
+
+	challenges, err := edb.GetAllChallengesByAllocationID(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while getting challenges"))
+		return
+	}
+
+	var blobberChallengeRewardsMap map[string]BlobberChallengeRewards
+	blobberChallengeRewardsMap = make(map[string]BlobberChallengeRewards)
+
+	var validatorChallengeRewardsMap map[string]ValidatorChallengeRewards
+	validatorChallengeRewardsMap = make(map[string]ValidatorChallengeRewards)
+
+	for _, challenge := range challenges {
+		blobberRewards, validatorRewards, err := edb.GetChallengeRewardsToProviders(challenge.ChallengeID)
+
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+			return
+		}
+
+		for _, reward := range blobberRewards {
+			var blobberReward BlobberChallengeRewards
+			blobberReward.BlobberID = reward.ProviderId
+			blobberReward.Amount, _ = reward.Amount.Int64()
+			blobberReward.Total += blobberReward.Amount
+
+			blobberChallengeRewardsMap[reward.ProviderId] = blobberReward
+		}
+
+		for _, reward := range validatorRewards {
+			var validatorReward ValidatorChallengeRewards
+			validatorReward.ValidatorID = reward.ProviderId
+			validatorReward.Amount, _ = reward.Amount.Int64()
+			validatorReward.Total += validatorReward.Amount
+
+			validatorChallengeRewardsMap[reward.ProviderId] = validatorReward
+		}
+
+		blobberDelegateRewards, validatorDelegateRewards, err := edb.GetChallengeRewardsToDelegates(challenge.ChallengeID)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+			return
+		}
+
+		for _, reward := range blobberDelegateRewards {
+			rewardAmount, _ := reward.Amount.Int64()
+
+			blobberReward := blobberChallengeRewardsMap[reward.ProviderID]
+
+			curBlobberDelegateReward := int64(0)
+			if _, ok := blobberReward.DelegateRewards[reward.PoolID]; ok {
+				curBlobberDelegateReward = blobberReward.DelegateRewards[reward.PoolID]
+			}
+
+			blobberReward.DelegateRewards[reward.PoolID] = curBlobberDelegateReward + rewardAmount
+			blobberReward.Total += rewardAmount
+
+			blobberChallengeRewardsMap[reward.ProviderID] = blobberReward
+		}
+
+		for _, reward := range validatorDelegateRewards {
+			rewardAmount, _ := reward.Amount.Int64()
+
+			validatorReward := validatorChallengeRewardsMap[reward.ProviderID]
+
+			curValidatorDelegateReward := int64(0)
+			if _, ok := validatorReward.DelegateRewards[reward.PoolID]; ok {
+				curValidatorDelegateReward = validatorReward.DelegateRewards[reward.PoolID]
+			}
+
+			validatorReward.DelegateRewards[reward.PoolID] = curValidatorDelegateReward + rewardAmount
+			validatorReward.Total += rewardAmount
+
+			validatorChallengeRewardsMap[reward.ProviderID] = validatorReward
+		}
+	}
+
+	var blobberChallengeRewards []BlobberChallengeRewards
+	for _, reward := range blobberChallengeRewardsMap {
+		blobberChallengeRewards = append(blobberChallengeRewards, reward)
+	}
+
+	var validatorChallengeRewards []ValidatorChallengeRewards
+	for _, reward := range validatorChallengeRewardsMap {
+		validatorChallengeRewards = append(validatorChallengeRewards, reward)
+	}
+
+	result := ChallengeRewards{
+		BlobberRewards:   blobberChallengeRewards,
+		ValidatorRewards: validatorChallengeRewards,
+	}
+
+	common.Respond(w, r, result, nil)
+}
+
+type ChallengeRewards struct {
+	BlobberRewards   []BlobberChallengeRewards
+	ValidatorRewards []ValidatorChallengeRewards
+}
+
+type BlobberChallengeRewards struct {
+	BlobberID       string
+	DelegateRewards map[string]int64
+	Amount          int64
+	Total           int64
+}
+
+type ValidatorChallengeRewards struct {
+	ValidatorID     string
+	DelegateRewards map[string]int64
+	Amount          int64
+	Total           int64
+}

@@ -105,6 +105,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/challenge-rewards", srh.getChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/total-challenge-rewards", srh.getTotalChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/allocation-challenge-rewards", srh.getAllocationChallengeRewards))
 	}
 
 	return restEndpoints
