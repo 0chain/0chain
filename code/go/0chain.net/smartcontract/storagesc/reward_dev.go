@@ -4,6 +4,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -239,6 +241,7 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 }
 
 func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWriter, r *http.Request) {
+	logging.Logger.Info("getAllocationChallengeRewards 1")
 	// read all data from challenge_rewards table and return
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -246,7 +249,11 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 		return
 	}
 
+	logging.Logger.Info("getAllocationChallengeRewards")
+
 	allocationID := r.URL.Query().Get("allocation_id")
+
+	logging.Logger.Info("getAllocationChallengeRewards 2", zap.Any("allocationID", allocationID))
 
 	result, err := edb.GetAllocationChallengeRewards(allocationID)
 	if err != nil {
@@ -254,11 +261,15 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 		return
 	}
 
+	logging.Logger.Info("getAllocationChallengeRewards 3", zap.Any("result", result))
+
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("error while unmarshalling challenge rewards"))
 		return
 	}
+
+	logging.Logger.Info("getAllocationChallengeRewards 4", zap.Any("resultJSON", resultJSON))
 
 	common.Respond(w, r, resultJSON, err)
 }

@@ -51,6 +51,7 @@ func (edb *EventDb) GetAllocationCancellationRewardsToProviders(startBlock, endB
 
 func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[string]ProviderChallengeRewards, error) {
 	var result map[string]ProviderChallengeRewards
+	result = make(map[string]ProviderChallengeRewards)
 
 	var rps []RewardProvider
 
