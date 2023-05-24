@@ -2,7 +2,9 @@ package event
 
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
@@ -50,6 +52,8 @@ func (edb *EventDb) GetAllocationCancellationRewardsToProviders(startBlock, endB
 }
 
 func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[string]ProviderAllocationRewards, error) {
+	logging.Logger.Info("GetAllocationChallengeRewards", zap.String("allocationID", allocationID))
+
 	var result map[string]ProviderAllocationRewards
 	result = make(map[string]ProviderAllocationRewards)
 
@@ -60,11 +64,15 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 		return nil, err
 	}
 
+	logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("rps", rps))
+
 	for _, rp := range rps {
 		amount, _ := rp.Amount.Int64()
 
 		var deleagateRewards []DelegateAllocationReward
 		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type IN (?, ?)", rp.ProviderId, rp.AllocationID, spenum.ValidationReward, spenum.ChallengePassReward).Group("pool_id").Scan(&deleagateRewards).Error
+
+		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("deleagateRewards", deleagateRewards))
 
 		if err != nil {
 			return nil, err
@@ -76,6 +84,8 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 			ProviderType: rp.RewardType.Int(),
 		}
 
+		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("result", result))
+
 		totalProviderReward := amount
 
 		var providerDelegateRewards map[string]int64
@@ -85,11 +95,17 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 			totalProviderReward += dr.Amount
 		}
 
+		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("providerDelegateRewards", providerDelegateRewards))
+
 		providerReward := result[rp.ProviderId]
 		providerReward.Total = totalProviderReward
 		providerReward.DelegateRewards = providerDelegateRewards
 		result[rp.ProviderId] = providerReward
+
+		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("result", result))
 	}
+
+	logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("result", result))
 
 	return result, nil
 }
