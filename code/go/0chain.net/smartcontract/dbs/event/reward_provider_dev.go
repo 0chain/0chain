@@ -59,7 +59,7 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 
 	var rps []RewardProvider
 
-	err := edb.Get().Where("allocation_id = ? AND reward_type IN (?, ?)", allocationID, spenum.ValidationReward, spenum.ChallengePassReward).Find(&rps).Error
+	err := edb.Get().Select("provider_id, sum(amount) as amount").Where("allocation_id = ? AND reward_type IN (?, ?)", allocationID, spenum.ValidationReward, spenum.ChallengePassReward).Group("provider_id").Scan(&rps).Error
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 
 	var rps []RewardProvider
 
-	err := edb.Get().Where("allocation_id = ? AND reward_type = ?", allocationID, spenum.FileDownloadReward).Find(&rps).Error
+	err := edb.Get().Select("provider_id, sum(amount) as amount").Where("allocation_id = ? AND reward_type = ?", allocationID, spenum.FileDownloadReward).Scan(&rps).Error
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 
 	var rps []RewardProvider
 
-	err := edb.Get().Where("allocation_id = ? AND reward_type = ?", allocationID, spenum.CancellationChargeReward).Find(&rps).Error
+	err := edb.Get().Select("provider_id, sum(amount) as amount").Where("allocation_id = ? AND reward_type = ?", allocationID, spenum.CancellationChargeReward).Scan(&rps).Error
 	if err != nil {
 		return nil, err
 	}
