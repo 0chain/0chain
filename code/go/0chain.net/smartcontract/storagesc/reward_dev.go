@@ -3,6 +3,8 @@ package storagesc
 import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -339,24 +341,26 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 		ValidatorRewards: validatorChallengeRewards,
 	}
 
+	logging.Logger.Info("jayash Challenge Rewards", zap.Any("result", result))
+
 	common.Respond(w, r, result, nil)
 }
 
 type ChallengeRewards struct {
-	BlobberRewards   []BlobberChallengeRewards
-	ValidatorRewards []ValidatorChallengeRewards
+	BlobberRewards   []BlobberChallengeRewards   `json:"blobber_rewards"`
+	ValidatorRewards []ValidatorChallengeRewards `json:"validator_rewards"`
 }
 
 type BlobberChallengeRewards struct {
-	BlobberID       string
-	DelegateRewards map[string]int64
-	Amount          int64
-	Total           int64
+	BlobberID       string           `json:"blobber_id"`
+	DelegateRewards map[string]int64 `json:"delegate_rewards"`
+	Amount          int64            `json:"amount"`
+	Total           int64            `json:"total"`
 }
 
 type ValidatorChallengeRewards struct {
-	ValidatorID     string
-	DelegateRewards map[string]int64
-	Amount          int64
-	Total           int64
+	ValidatorID     string           `json:"validator_id"`
+	DelegateRewards map[string]int64 `json:"delegate_rewards"`
+	Amount          int64            `json:"amount"`
+	Total           int64            `json:"total"`
 }
