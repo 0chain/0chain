@@ -59,13 +59,6 @@ func (edb *EventDb) GetDelegatePool(poolID, pID string) (*DelegatePool, error) {
 	return &dp, nil
 }
 
-func (edb *EventDb) GetUserTotalLocked(id string) (int64, error) {
-	res := int64(0)
-	err := edb.Store.Get().Table("delegate_pools").Select("coalesce(sum(balance),0)").
-		Where("delegate_id = ? AND status in (?, ?)", id, spenum.Active, spenum.Pending).Row().Scan(&res)
-	return res, err
-}
-
 func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider, pagination common2.Pagination) ([]DelegatePool, error) {
 	var dps []DelegatePool
 	result := edb.Store.Get().
