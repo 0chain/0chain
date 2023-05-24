@@ -36,25 +36,13 @@ func (srh *StorageRestHandler) getBlockRewards(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	blockNumber := r.URL.Query().Get("block_number")
 	startBlockNumber := r.URL.Query().Get("start_block_number")
 	endBlockNumber := r.URL.Query().Get("end_block_number")
 
-	providerRewards, err := edb.GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber, spenum.BlockRewardBlobber.Int())
+	result, err := edb.GetBlockRewards(startBlockNumber, endBlockNumber)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
-	}
-
-	delegateRewards, err := edb.GetRewardsToDelegates(blockNumber, startBlockNumber, endBlockNumber, spenum.BlockRewardBlobber.Int())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	result := map[string]interface{}{
-		"provider_rewards": providerRewards,
-		"delegate_rewards": delegateRewards,
 	}
 
 	common.Respond(w, r, result, nil)
@@ -151,16 +139,25 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 }
 
 func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWriter, r *http.Request) {
-	// read all data from challenge_rewards table and return
+
+	logging.Logger.Info("getAllocationChallengeRewards 1")
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
+	logging.Logger.Info("getAllocationChallengeRewards 2")
+
 	allocationID := r.URL.Query().Get("allocation_id")
 
+	logging.Logger.Info("getAllocationChallengeRewards 2.1", zap.Any("allocationID", allocationID))
+
 	result, err := edb.GetAllocationChallengeRewards(allocationID)
+
+	logging.Logger.Info("getAllocationChallengeRewards 2.2", zap.Any("result", result))
+
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return

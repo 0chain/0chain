@@ -88,7 +88,10 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 
 		totalProviderReward := amount
 
+		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("totalProviderReward", totalProviderReward))
+
 		var providerDelegateRewards map[string]int64
+		providerDelegateRewards = make(map[string]int64)
 
 		for _, dr := range deleagateRewards {
 			providerDelegateRewards[dr.DelegateID] = dr.Amount
@@ -140,6 +143,7 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 		totalProviderReward := amount
 
 		var providerDelegateRewards map[string]int64
+		providerDelegateRewards = make(map[string]int64)
 
 		for _, dr := range deleagateRewards {
 			providerDelegateRewards[dr.DelegateID] = dr.Amount
@@ -155,6 +159,39 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 	return result, nil
 }
 
+func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error) {
+
+	var result []int64
+	var totals []int64
+
+	var blockRewards []BlockReward
+
+	err := edb.Get().Table("reward_providers").Select("provider_id, sum(amount) as amount").Where("block_number >= ? AND block_number <= ?", startBlock, endBlock).Group("provider_id").Scan(&blockRewards).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, br := range blockRewards {
+		result = append(result, br.Amount)
+
+		var delegateRewards BlockReward
+		err = edb.Get().Table("reward_delegates").Select("provider_id, sum(amount) as amount").Where("block_number >= ? AND block_number <= ?", startBlock, endBlock).Group("provider_id").Scan(&delegateRewards).Error
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, delegateRewards.Amount)
+
+		totals = append(totals, br.Amount+delegateRewards.Amount)
+	}
+
+	for _, total := range totals {
+		result = append(result, total)
+	}
+
+	return result, err
+}
+
 type ProviderAllocationRewards struct {
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 	Amount          int64            `json:"amount"`
@@ -164,5 +201,10 @@ type ProviderAllocationRewards struct {
 
 type DelegateAllocationReward struct {
 	DelegateID string `json:"delegate_id"`
+	Amount     int64  `json:"amount"`
+}
+
+type BlockReward struct {
+	ProviderID string `json:"provider_id"`
 	Amount     int64  `json:"amount"`
 }
