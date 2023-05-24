@@ -743,7 +743,7 @@ CREATE TABLE public.reward_delegates (
                                          block_number bigint,
                                          pool_id text,
                                          reward_type bigint,
-                                         challenge_id text
+                                         allocation_id text
 );
 
 
@@ -822,7 +822,7 @@ CREATE TABLE public.reward_providers (
                                          block_number bigint,
                                          provider_id text,
                                          reward_type bigint,
-                                         challenge_id text
+                                         allocation_id text
 );
 
 
