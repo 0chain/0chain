@@ -3,6 +3,7 @@ package storagesc
 import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
 	"net/http"
 )
 
@@ -248,5 +249,16 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 	allocationID := r.URL.Query().Get("allocation_id")
 
 	result, err := edb.GetAllocationChallengeRewards(allocationID)
-	common.Respond(w, r, result, err)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+		return
+	}
+
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("error while unmarshalling challenge rewards"))
+		return
+	}
+
+	common.Respond(w, r, resultJSON, err)
 }
