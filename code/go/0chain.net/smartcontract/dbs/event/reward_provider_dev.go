@@ -2,9 +2,7 @@ package event
 
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
@@ -52,27 +50,22 @@ func (edb *EventDb) GetAllocationCancellationRewardsToProviders(startBlock, endB
 }
 
 func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[string]ProviderAllocationRewards, error) {
-	logging.Logger.Info("GetAllocationChallengeRewards", zap.String("allocationID", allocationID))
 
 	var result map[string]ProviderAllocationRewards
 	result = make(map[string]ProviderAllocationRewards)
 
-	var rps []RewardProvider
+	var rps []ProviderAllocationReward
 
 	err := edb.Get().Select("provider_id, sum(amount) as amount").Where("allocation_id = ? AND reward_type IN (?, ?)", allocationID, spenum.ValidationReward, spenum.ChallengePassReward).Group("provider_id").Scan(&rps).Error
 	if err != nil {
 		return nil, err
 	}
 
-	logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("rps", rps))
-
 	for _, rp := range rps {
-		amount, _ := rp.Amount.Int64()
+		amount := rp.Amount
 
 		var deleagateRewards []DelegateAllocationReward
-		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type IN (?, ?)", rp.ProviderId, rp.AllocationID, spenum.ValidationReward, spenum.ChallengePassReward).Group("pool_id").Scan(&deleagateRewards).Error
-
-		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("deleagateRewards", deleagateRewards))
+		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type IN (?, ?)", rp.ProviderId, allocationID, spenum.ValidationReward, spenum.ChallengePassReward).Group("pool_id").Scan(&deleagateRewards).Error
 
 		if err != nil {
 			return nil, err
@@ -81,14 +74,10 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 		result[rp.ProviderId] = ProviderAllocationRewards{
 			Amount:       amount,
 			Total:        0,
-			ProviderType: rp.RewardType.Int(),
+			ProviderType: rp.RewardType,
 		}
 
-		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("result", result))
-
 		totalProviderReward := amount
-
-		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("totalProviderReward", totalProviderReward))
 
 		var providerDelegateRewards map[string]int64
 		providerDelegateRewards = make(map[string]int64)
@@ -98,17 +87,11 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 			totalProviderReward += dr.Amount
 		}
 
-		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("providerDelegateRewards", providerDelegateRewards))
-
 		providerReward := result[rp.ProviderId]
 		providerReward.Total = totalProviderReward
 		providerReward.DelegateRewards = providerDelegateRewards
 		result[rp.ProviderId] = providerReward
-
-		logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("result", result))
 	}
-
-	logging.Logger.Info("GetAllocationChallengeRewards", zap.Any("result", result))
 
 	return result, nil
 }
@@ -117,7 +100,7 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 	var result map[string]ProviderAllocationRewards
 	result = make(map[string]ProviderAllocationRewards)
 
-	var rps []RewardProvider
+	var rps []ProviderAllocationReward
 
 	err := edb.Get().Select("provider_id, sum(amount) as amount").Where("allocation_id = ? AND reward_type = ?", allocationID, spenum.FileDownloadReward).Scan(&rps).Error
 	if err != nil {
@@ -125,10 +108,10 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 	}
 
 	for _, rp := range rps {
-		amount, _ := rp.Amount.Int64()
+		amount := rp.Amount
 
 		var deleagateRewards []DelegateAllocationReward
-		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type = ?", rp.ProviderId, rp.AllocationID, spenum.FileDownloadReward).Group("pool_id").Scan(&deleagateRewards).Error
+		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type = ?", rp.ProviderId, allocationID, spenum.FileDownloadReward).Group("pool_id").Scan(&deleagateRewards).Error
 
 		if err != nil {
 			return nil, err
@@ -137,7 +120,7 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 		result[rp.ProviderId] = ProviderAllocationRewards{
 			Amount:       amount,
 			Total:        0,
-			ProviderType: rp.RewardType.Int(),
+			ProviderType: rp.RewardType,
 		}
 
 		totalProviderReward := amount
@@ -163,7 +146,7 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 	var result map[string]ProviderAllocationRewards
 	result = make(map[string]ProviderAllocationRewards)
 
-	var rps []RewardProvider
+	var rps []ProviderAllocationReward
 
 	err := edb.Get().Select("provider_id, sum(amount) as amount").Where("allocation_id = ? AND reward_type = ?", allocationID, spenum.CancellationChargeReward).Scan(&rps).Error
 	if err != nil {
@@ -171,10 +154,10 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 	}
 
 	for _, rp := range rps {
-		amount, _ := rp.Amount.Int64()
+		amount := rp.Amount
 
 		var deleagateRewards []DelegateAllocationReward
-		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type = ?", rp.ProviderId, rp.AllocationID, spenum.CancellationChargeReward).Group("pool_id").Scan(&deleagateRewards).Error
+		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type = ?", rp.ProviderId, allocationID, spenum.CancellationChargeReward).Group("pool_id").Scan(&deleagateRewards).Error
 
 		if err != nil {
 			return nil, err
@@ -183,7 +166,7 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 		result[rp.ProviderId] = ProviderAllocationRewards{
 			Amount:       amount,
 			Total:        0,
-			ProviderType: rp.RewardType.Int(),
+			ProviderType: rp.RewardType,
 		}
 
 		totalProviderReward := amount
@@ -242,7 +225,7 @@ type ProviderAllocationRewards struct {
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 	Amount          int64            `json:"amount"`
 	Total           int64            `json:"total"`
-	ProviderType    int              `json:"provider_type"`
+	ProviderType    int64            `json:"provider_type"`
 }
 
 type DelegateAllocationReward struct {
@@ -253,4 +236,10 @@ type DelegateAllocationReward struct {
 type BlockReward struct {
 	ProviderID string `json:"provider_id"`
 	Amount     int64  `json:"amount"`
+}
+
+type ProviderAllocationReward struct {
+	ProviderId string `json:"provider_id"`
+	Amount     int64  `json:"amount"`
+	RewardType int64  `json:"reward_type"`
 }
