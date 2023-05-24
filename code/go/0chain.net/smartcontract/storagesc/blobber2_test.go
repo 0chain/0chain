@@ -334,6 +334,7 @@ func testCommitBlobberRead(
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
 		sPool.Pools["pool"+id] = &stakepool.DelegatePool{
+			DelegateID:   encryption.Hash("delegate_pool_" + id),
 			Balance:      zcnToBalance(stake.zcnAmount),
 			RoundCreated: stake.MintAt,
 		}

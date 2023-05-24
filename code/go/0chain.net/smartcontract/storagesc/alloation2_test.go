@@ -24,6 +24,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
@@ -548,7 +549,7 @@ func setupMocksFinishAllocation(
 			var jd = strconv.Itoa(j)
 			var delegatePool = &stakepool.DelegatePool{}
 			delegatePool.Balance = zcnToBalance(stake.zcnAmount)
-			//delegatePool.DelegateID = "delegate " + id + " " + jd
+			delegatePool.DelegateID = encryption.Hash("delegate " + id + " " + jd)
 			//delegatePool.MintAt = stake.MintAt
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 			sp.Pools["paula "+id+" "+jd] = delegatePool
