@@ -48,3 +48,51 @@ func (edb *EventDb) GetAllocationCancellationRewardsToProviders(startBlock, endB
 
 	return rps, err
 }
+
+func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[string]ProviderChallengeRewards, error) {
+	var result map[string]ProviderChallengeRewards
+
+	var rps []RewardProvider
+
+	err := edb.Get().Where("allocation_id = ? AND reward_type IN (?, ?)", allocationID, spenum.ValidationReward, spenum.ChallengePassReward).Find(&rps).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rp := range rps {
+		amount, _ := rp.Amount.Int64()
+
+		var deleagateRewards []DelegateChallengeReward
+		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type IN (?, ?)", rp.ProviderId, rp.AllocationID, spenum.ValidationReward, spenum.ChallengePassReward).Scan(&deleagateRewards).Error
+
+		result[rp.ProviderId] = ProviderChallengeRewards{
+			DelegateRewards: make(map[string]int64),
+			Amount:          amount,
+			Total:           0,
+		}
+
+		totalProviderReward := amount
+
+		for _, dr := range deleagateRewards {
+			result[rp.ProviderId].DelegateRewards[dr.DelegateID] = dr.Amount
+			totalProviderReward += dr.Amount
+		}
+
+		providerReward := result[rp.ProviderId]
+		providerReward.Total = totalProviderReward
+		result[rp.ProviderId] = providerReward
+	}
+
+	return result, nil
+}
+
+type ProviderChallengeRewards struct {
+	DelegateRewards map[string]int64 `json:"delegate_rewards"`
+	Amount          int64            `json:"amount"`
+	Total           int64            `json:"total"`
+}
+
+type DelegateChallengeReward struct {
+	DelegateID string `json:"delegate_id"`
+	Amount     int64  `json:"amount"`
+}

@@ -16,7 +16,7 @@ type RewardProvider struct {
 	BlockNumber  int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
 	ProviderId   string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
 	RewardType   spenum.Reward `json:"reward_type"`
-	AllocationID string        `json:"challenge_id"`
+	AllocationID string        `json:"allocation_id"`
 }
 
 func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {

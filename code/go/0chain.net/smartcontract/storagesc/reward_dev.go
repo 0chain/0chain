@@ -3,8 +3,6 @@ package storagesc
 import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -249,118 +247,6 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 
 	allocationID := r.URL.Query().Get("allocation_id")
 
-	challenges, err := edb.GetAllChallengesByAllocationID(allocationID)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("error while getting challenges"))
-		return
-	}
-
-	var blobberChallengeRewardsMap map[string]BlobberChallengeRewards
-	blobberChallengeRewardsMap = make(map[string]BlobberChallengeRewards)
-
-	var validatorChallengeRewardsMap map[string]ValidatorChallengeRewards
-	validatorChallengeRewardsMap = make(map[string]ValidatorChallengeRewards)
-
-	for _, challenge := range challenges {
-		blobberRewards, validatorRewards, err := edb.GetChallengeRewardsToProviders(challenge.ChallengeID)
-
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
-			return
-		}
-
-		for _, reward := range blobberRewards {
-			var blobberReward BlobberChallengeRewards
-			blobberReward.BlobberID = reward.ProviderId
-			blobberReward.Amount, _ = reward.Amount.Int64()
-			blobberReward.Total += blobberReward.Amount
-
-			blobberChallengeRewardsMap[reward.ProviderId] = blobberReward
-		}
-
-		for _, reward := range validatorRewards {
-			var validatorReward ValidatorChallengeRewards
-			validatorReward.ValidatorID = reward.ProviderId
-			validatorReward.Amount, _ = reward.Amount.Int64()
-			validatorReward.Total += validatorReward.Amount
-
-			validatorChallengeRewardsMap[reward.ProviderId] = validatorReward
-		}
-
-		blobberDelegateRewards, validatorDelegateRewards, err := edb.GetChallengeRewardsToDelegates(challenge.ChallengeID)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
-			return
-		}
-
-		for _, reward := range blobberDelegateRewards {
-			rewardAmount, _ := reward.Amount.Int64()
-
-			blobberReward := blobberChallengeRewardsMap[reward.ProviderID]
-
-			curBlobberDelegateReward := int64(0)
-			if _, ok := blobberReward.DelegateRewards[reward.PoolID]; ok {
-				curBlobberDelegateReward = blobberReward.DelegateRewards[reward.PoolID]
-			}
-
-			blobberReward.DelegateRewards[reward.PoolID] = curBlobberDelegateReward + rewardAmount
-			blobberReward.Total += rewardAmount
-
-			blobberChallengeRewardsMap[reward.ProviderID] = blobberReward
-		}
-
-		for _, reward := range validatorDelegateRewards {
-			rewardAmount, _ := reward.Amount.Int64()
-
-			validatorReward := validatorChallengeRewardsMap[reward.ProviderID]
-
-			curValidatorDelegateReward := int64(0)
-			if _, ok := validatorReward.DelegateRewards[reward.PoolID]; ok {
-				curValidatorDelegateReward = validatorReward.DelegateRewards[reward.PoolID]
-			}
-
-			validatorReward.DelegateRewards[reward.PoolID] = curValidatorDelegateReward + rewardAmount
-			validatorReward.Total += rewardAmount
-
-			validatorChallengeRewardsMap[reward.ProviderID] = validatorReward
-		}
-	}
-
-	var blobberChallengeRewards []BlobberChallengeRewards
-	for _, reward := range blobberChallengeRewardsMap {
-		blobberChallengeRewards = append(blobberChallengeRewards, reward)
-	}
-
-	var validatorChallengeRewards []ValidatorChallengeRewards
-	for _, reward := range validatorChallengeRewardsMap {
-		validatorChallengeRewards = append(validatorChallengeRewards, reward)
-	}
-
-	result := ChallengeRewards{
-		BlobberRewards:   blobberChallengeRewards,
-		ValidatorRewards: validatorChallengeRewards,
-	}
-
-	logging.Logger.Info("jayash Challenge Rewards", zap.Any("result", result))
-
-	common.Respond(w, r, result, nil)
-}
-
-type ChallengeRewards struct {
-	BlobberRewards   []BlobberChallengeRewards   `json:"blobber_rewards"`
-	ValidatorRewards []ValidatorChallengeRewards `json:"validator_rewards"`
-}
-
-type BlobberChallengeRewards struct {
-	BlobberID       string           `json:"blobber_id"`
-	DelegateRewards map[string]int64 `json:"delegate_rewards"`
-	Amount          int64            `json:"amount"`
-	Total           int64            `json:"total"`
-}
-
-type ValidatorChallengeRewards struct {
-	ValidatorID     string           `json:"validator_id"`
-	DelegateRewards map[string]int64 `json:"delegate_rewards"`
-	Amount          int64            `json:"amount"`
-	Total           int64            `json:"total"`
+	result, err := edb.GetAllocationChallengeRewards(allocationID)
+	common.Respond(w, r, result, err)
 }

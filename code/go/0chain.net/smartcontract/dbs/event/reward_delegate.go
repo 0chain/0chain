@@ -17,7 +17,7 @@ type RewardDelegate struct {
 	PoolID       string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
 	ProviderID   string        `json:"provider_id"`
 	RewardType   spenum.Reward `json:"reward_type"`
-	AllocationID string        `json:"challenge_id"`
+	AllocationID string        `json:"allocation_id"`
 }
 
 func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round int64) error {
