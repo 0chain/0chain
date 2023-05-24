@@ -181,6 +181,7 @@ func (sp *stakePool) slash(
 	blobID string,
 	offer, slash currency.Coin,
 	balances chainstate.StateContextI,
+	allocationID string,
 ) (move currency.Coin, err error) {
 	if offer == 0 || slash == 0 {
 		return // nothing to move
@@ -200,6 +201,7 @@ func (sp *stakePool) slash(
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
+	edbSlash.AllocationID = allocationID
 	orderedPoolIds := sp.OrderedPoolIds()
 	for _, id := range orderedPoolIds {
 		dp := sp.Pools[id]
