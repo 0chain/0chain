@@ -268,6 +268,10 @@ func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s 
 	fmt.Fprintf(w, txn.Hash)
 	fmt.Fprintf(w, "</td>")
 
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, txn.ClientID)
+	fmt.Fprintf(w, "</td>")
+
 	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", txn.Value)
 	fmt.Fprintf(w, "</td>")
@@ -1751,7 +1755,7 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	// Print table and heading
 	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<th align='center' colspan='7'>Transactions in pool</th>")
-	fmt.Fprintf(w, "<tr class='header'><td>Txn hash</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Txn hash</td><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
 
 	ctx := common.GetRootContext()
 
