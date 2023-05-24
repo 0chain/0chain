@@ -83,7 +83,7 @@ func (srh *StorageRestHandler) getTotalChallengeRewards(w http.ResponseWriter, r
 	}
 
 	for i, j := range challengeRewards {
-		if j.ProviderType == spenum.ChallengePassReward.Int() {
+		if int(j.ProviderType) == spenum.ChallengePassReward.Int() {
 			totalBlobberRewards[i] = j.Total
 		} else {
 			totalValidatorRewards[i] = j.Total
