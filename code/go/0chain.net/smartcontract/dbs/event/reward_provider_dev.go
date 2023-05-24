@@ -159,6 +159,52 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 	return result, nil
 }
 
+func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[string]ProviderAllocationRewards, error) {
+	var result map[string]ProviderAllocationRewards
+	result = make(map[string]ProviderAllocationRewards)
+
+	var rps []RewardProvider
+
+	err := edb.Get().Where("allocation_id = ? AND reward_type = ?", allocationID, spenum.CancellationChargeReward).Find(&rps).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rp := range rps {
+		amount, _ := rp.Amount.Int64()
+
+		var deleagateRewards []DelegateAllocationReward
+		err = edb.Get().Table("reward_delegates").Select("pool_id as delegate_id, sum(amount) as amount").Where("provider_id = ? AND allocation_id = ? AND reward_type = ?", rp.ProviderId, rp.AllocationID, spenum.CancellationChargeReward).Group("pool_id").Scan(&deleagateRewards).Error
+
+		if err != nil {
+			return nil, err
+		}
+
+		result[rp.ProviderId] = ProviderAllocationRewards{
+			Amount:       amount,
+			Total:        0,
+			ProviderType: rp.RewardType.Int(),
+		}
+
+		totalProviderReward := amount
+
+		var providerDelegateRewards map[string]int64
+		providerDelegateRewards = make(map[string]int64)
+
+		for _, dr := range deleagateRewards {
+			providerDelegateRewards[dr.DelegateID] = dr.Amount
+			totalProviderReward += dr.Amount
+		}
+
+		providerReward := result[rp.ProviderId]
+		providerReward.Total = totalProviderReward
+		providerReward.DelegateRewards = providerDelegateRewards
+		result[rp.ProviderId] = providerReward
+	}
+
+	return result, nil
+}
+
 func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error) {
 
 	var result []int64

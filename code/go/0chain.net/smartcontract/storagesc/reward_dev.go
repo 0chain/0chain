@@ -3,9 +3,6 @@ package storagesc
 import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -64,13 +61,7 @@ func (srh *StorageRestHandler) getReadRewards(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, resultJSON, nil)
+	common.Respond(w, r, result, nil)
 }
 
 func (srh *StorageRestHandler) getTotalChallengeRewards(w http.ResponseWriter, r *http.Request) {
@@ -115,8 +106,7 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 		return
 	}
 
-	startBlock := r.URL.Query().Get("start_block")
-	endBlock := r.URL.Query().Get("end_block")
+	allocationID := r.URL.Query().Get("allocation_id")
 
 	providerRewards, err := edb.GetAllocationCancellationRewardsToProviders(startBlock, endBlock)
 	if err != nil {
@@ -140,38 +130,19 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 
 func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWriter, r *http.Request) {
 
-	logging.Logger.Info("getAllocationChallengeRewards 1")
-
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
-	logging.Logger.Info("getAllocationChallengeRewards 2")
-
 	allocationID := r.URL.Query().Get("allocation_id")
 
-	logging.Logger.Info("getAllocationChallengeRewards 2.1", zap.Any("allocationID", allocationID))
-
 	result, err := edb.GetAllocationChallengeRewards(allocationID)
-
-	logging.Logger.Info("getAllocationChallengeRewards 2.2", zap.Any("result", result))
-
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
 
-	logging.Logger.Info("getAllocationChallengeRewards 3", zap.Any("result", result))
-
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	logging.Logger.Info("getAllocationChallengeRewards 4", zap.Any("resultJSON", resultJSON))
-
-	common.Respond(w, r, resultJSON, err)
+	common.Respond(w, r, result, err)
 }
