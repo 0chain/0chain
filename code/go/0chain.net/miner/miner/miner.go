@@ -344,14 +344,24 @@ func main() {
 		go TransactionGenerator(mc.Chain, workdir)
 	}
 
+	setupSCDoneC := make(chan struct{})
 	if mc.ChainConfig.IsFeeEnabled() {
-		go mc.SetupSC(ctx)
+		go func() {
+			mc.SetupSC(ctx)
+			setupSCDoneC <- struct{}{}
+		}()
 		if mc.ChainConfig.IsViewChangeEnabled() {
 			go mc.DKGProcess(ctx)
 		}
 	}
 
-	shutdown := common.HandleShutdown(server, []func(){shutdownIntegrationTests, done, chain.CloseStateDB})
+	shutdown := common.HandleShutdown(server, []func(){
+		shutdownIntegrationTests,
+		done,
+		func() {
+			<-setupSCDoneC
+		},
+		chain.CloseStateDB})
 	if profServer != nil {
 		shutdownProf := common.HandleShutdown(profServer, nil)
 		<-shutdownProf
