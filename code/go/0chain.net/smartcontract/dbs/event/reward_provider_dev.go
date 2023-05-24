@@ -71,20 +71,22 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 		}
 
 		result[rp.ProviderId] = ProviderChallengeRewards{
-			DelegateRewards: make(map[string]int64),
-			Amount:          amount,
-			Total:           0,
+			Amount: amount,
+			Total:  0,
 		}
 
 		totalProviderReward := amount
 
+		var providerDelegateRewards map[string]int64
+
 		for _, dr := range deleagateRewards {
-			result[rp.ProviderId].DelegateRewards[dr.DelegateID] = dr.Amount
+			providerDelegateRewards[dr.DelegateID] = dr.Amount
 			totalProviderReward += dr.Amount
 		}
 
 		providerReward := result[rp.ProviderId]
 		providerReward.Total = totalProviderReward
+		providerReward.DelegateRewards = providerDelegateRewards
 		result[rp.ProviderId] = providerReward
 	}
 

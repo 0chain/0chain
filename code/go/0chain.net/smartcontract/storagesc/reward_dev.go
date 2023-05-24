@@ -257,7 +257,7 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 
 	result, err := edb.GetAllocationChallengeRewards(allocationID)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("error while getting challenge rewards"))
+		common.Respond(w, r, nil, err)
 		return
 	}
 
@@ -265,7 +265,7 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("error while unmarshalling challenge rewards"))
+		common.Respond(w, r, nil, err)
 		return
 	}
 
