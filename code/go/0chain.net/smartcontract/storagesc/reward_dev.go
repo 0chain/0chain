@@ -151,7 +151,6 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 }
 
 func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWriter, r *http.Request) {
-	logging.Logger.Info("getAllocationChallengeRewards 1")
 	// read all data from challenge_rewards table and return
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
@@ -159,11 +158,7 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 		return
 	}
 
-	logging.Logger.Info("getAllocationChallengeRewards")
-
 	allocationID := r.URL.Query().Get("allocation_id")
-
-	logging.Logger.Info("getAllocationChallengeRewards 2", zap.Any("allocationID", allocationID))
 
 	result, err := edb.GetAllocationChallengeRewards(allocationID)
 	if err != nil {
