@@ -108,21 +108,10 @@ func (srh *StorageRestHandler) getAllocationCancellationReward(w http.ResponseWr
 
 	allocationID := r.URL.Query().Get("allocation_id")
 
-	providerRewards, err := edb.GetAllocationCancellationRewardsToProviders(startBlock, endBlock)
+	result, err := edb.GetAllocationCancellationRewards(allocationID)
 	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("error while getting allocation cancellation rewards"))
+		common.Respond(w, r, nil, err)
 		return
-	}
-
-	delegateRewards, err := edb.GetAllocationCancellationRewardsToDelegates(startBlock, endBlock)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal("error while getting allocation cancellation rewards"))
-		return
-	}
-
-	result := map[string]interface{}{
-		"provider_rewards": providerRewards,
-		"delegate_rewards": delegateRewards,
 	}
 
 	common.Respond(w, r, result, nil)
