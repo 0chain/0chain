@@ -25,6 +25,7 @@ type Snapshot struct {
 	ActiveAllocatedDelta int64 `json:"active_allocated_delta"` //496 SUM total amount of new allocation storage in a period (number of allocations active)
 	ZCNSupply            int64 `json:"zcn_supply"`             //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
+	TotalReadPoolLocked	 int64 `json:"total_read_pool_locked"` //487 SUM How many tokens are locked in all read pools
 	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
@@ -58,6 +59,7 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
 	s.ZCNSupply += diff.ZCNSupply
 	s.ClientLocks += diff.ClientLocks
+	s.TotalReadPoolLocked += diff.TotalReadPoolLocked
 	s.MinedTotal += diff.MinedTotal
 	s.TotalStaked += diff.TotalStaked
 	s.TotalRewards += diff.TotalRewards
@@ -199,6 +201,7 @@ func (gs *Snapshot) update(e []Event) {
 			}
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
+				gs.TotalReadPoolLocked += d.Amount
 			}
 		case TagUnlockReadPool:
 			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
@@ -209,6 +212,7 @@ func (gs *Snapshot) update(e []Event) {
 			}
 			for _, d := range *ds {
 				gs.ClientLocks -= d.Amount
+				gs.TotalReadPoolLocked -= d.Amount
 			}
 		case TagStakePoolReward:
 			spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
