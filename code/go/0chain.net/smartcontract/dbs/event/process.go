@@ -248,7 +248,6 @@ func (edb *EventDb) work(ctx context.Context,
 	defer func() {
 		es.doneWithTxCommitC <- func() error {
 			if commit {
-				logging.Logger.Debug("commit event db transaction")
 				return tx.Commit()
 			}
 			return nil
