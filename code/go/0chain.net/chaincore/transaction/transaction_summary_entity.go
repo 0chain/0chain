@@ -75,6 +75,7 @@ func (t *TransactionSummary) Delete(ctx context.Context) error {
 func SetupTxnSummaryEntity(store datastore.Store) {
 	transactionSummaryEntityMetadata = datastore.MetadataProvider()
 	transactionSummaryEntityMetadata.Name = "txn_summary"
+	transactionSummaryEntityMetadata.DB = "txnsummarydb"
 	transactionSummaryEntityMetadata.Provider = TransactionSummaryProvider
 	transactionSummaryEntityMetadata.Store = store
 	transactionSummaryEntityMetadata.IDColumnName = "hash"

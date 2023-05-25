@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -21,13 +22,13 @@ func BuildSummaryRoundKey(roundNumber int64) datastore.Key {
 		fmt.Sprintf(
 			"%s:%s",
 			RoundKeySpace,
-			encryption.Hash(roundNumber),
+			encryption.Hash(strconv.FormatInt(roundNumber, 10)),
 		),
 	)
 }
 
 func (r *RoundTxnsCount) GetEntityMetadata() datastore.EntityMetadata {
-	return nil
+	return transactionSummaryEntityMetadata
 }
 
 func (r *RoundTxnsCount) GetKey() datastore.Key {

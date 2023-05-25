@@ -115,6 +115,7 @@ func (mb *MagicBlockMap) Decode(input []byte) error {
 func SetupMagicBlockMapEntity(store datastore.Store) {
 	magicBlockMapEntityMetadata = datastore.MetadataProvider()
 	magicBlockMapEntityMetadata.Name = "magic_block_map"
+	magicBlockMapEntityMetadata.DB = "magicblockmapdb"
 	magicBlockMapEntityMetadata.Provider = MagicBlockMapProvider
 	magicBlockMapEntityMetadata.Store = store
 	magicBlockMapEntityMetadata.IDColumnName = "id"
