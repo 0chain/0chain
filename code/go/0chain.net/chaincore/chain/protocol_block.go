@@ -405,8 +405,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
+	var commitFinalizeBlock func() error
 	wg.Run("finalize block - update finalized block", fb.Round, func() {
-		bsh.UpdateFinalizedBlock(ctx, fb) //
+		commitFinalizeBlock = bsh.UpdateFinalizedBlock(ctx, fb) //
 		if c.GetEventDb() != nil && fb.Round == 200 {
 			time.Sleep(2 * time.Second)
 			panic("mock fb panic")
@@ -462,6 +463,19 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.Error(err))
 		} else {
 			logging.Logger.Debug("finalize block - commit events",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash))
+		}
+	}
+
+	if commitFinalizeBlock != nil {
+		if err := commitFinalizeBlock(); err != nil {
+			logging.Logger.Error("finalize block - commit finalize block failed",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash),
+				zap.Error(err))
+		} else {
+			logging.Logger.Debug("finalize block - commit fb",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash))
 		}

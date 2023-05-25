@@ -109,6 +109,20 @@ func (sc *Chain) StoreRound(r *round.Round) error {
 	return nil
 }
 
+func (sc *Chain) StoreRoundNoCommit(r *round.Round) (func() error, error) {
+	roundEntityMetadata := r.GetEntityMetadata()
+	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
+	defer ememorystore.Close(rctx)
+	err := r.Write(rctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return func() error {
+		return ememorystore.GetEntityCon(rctx, roundEntityMetadata).Commit()
+	}, nil
+}
+
 // ReadHealthyRound -
 func (sc *Chain) ReadHealthyRound(ctx context.Context) (*HealthyRound, error) {
 	hr := datastore.GetEntity("healthy_round").(*HealthyRound)
