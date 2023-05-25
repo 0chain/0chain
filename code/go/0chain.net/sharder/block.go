@@ -168,7 +168,7 @@ func (sc *Chain) GetMagicBlockMap(ctx context.Context, magicBlockNumber string) 
 }
 
 // GetHighestMagicBlockMap returns highest stored MB map. The highest means with
-// greatest MB number. It works with Cassandra only.
+// greatest MB number.
 func (sc *Chain) GetHighestMagicBlockMap(ctx context.Context) (
 	mbm *block.MagicBlockMap, err error) {
 
