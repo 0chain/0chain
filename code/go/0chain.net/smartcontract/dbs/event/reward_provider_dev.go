@@ -56,7 +56,7 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 
 	var rps []ProviderAllocationReward
 
-	err := edb.Get().Table("reward_providers").Select("provider_id, reward_type,  sum(amount) as amount").Where("allocation_id = ? AND reward_type IN (?, ?)", allocationID, spenum.ValidationReward, spenum.ChallengePassReward).Group("provider_id, reward ").Scan(&rps).Error
+	err := edb.Get().Table("reward_providers").Select("provider_id, reward_type,  sum(amount) as amount").Where("allocation_id = ? AND reward_type IN (?, ?)", allocationID, spenum.ValidationReward, spenum.ChallengePassReward).Group("provider_id, reward_type").Scan(&rps).Error
 	if err != nil {
 		return nil, err
 	}
