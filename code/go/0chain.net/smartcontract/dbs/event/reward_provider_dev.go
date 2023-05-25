@@ -202,6 +202,9 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 
 	for _, br := range blockRewards {
 		result = append(result, br.Amount)
+	}
+
+	for _, br := range blockRewards {
 
 		var delegateRewards BlockReward
 		err = edb.Get().Table("reward_delegates").Select("provider_id, sum(amount) as amount").Where("block_number >= ? AND block_number <= ?", startBlock, endBlock).Group("provider_id").Scan(&delegateRewards).Error
