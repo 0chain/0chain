@@ -14,8 +14,6 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/stakepool/spenum"
-
 	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/core/datastore"
@@ -304,7 +302,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		miners, _ = minersc.AddMockNodes(clients, spenum.Miner, eventDb, balances, getMockIdKeyPair)
+		miners, _ = minersc.AddMockMiners(clients, eventDb, balances, getMockIdKeyPair)
 		log.Println("added miners\t", time.Since(timer))
 	}()
 
@@ -312,7 +310,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		sharders, sharderKeys = minersc.AddMockNodes(clients, spenum.Sharder, eventDb, balances, getMockIdKeyPair)
+		sharders, sharderKeys = minersc.AddMockSharders(clients, eventDb, balances, getMockIdKeyPair)
 		log.Println("added sharders\t", time.Since(timer))
 	}()
 
