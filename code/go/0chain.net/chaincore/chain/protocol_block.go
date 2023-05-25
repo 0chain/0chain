@@ -372,7 +372,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	})
 
-	var rollbackEvents func()
+	var commitEvents func() error
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() {
 			var ev event.Event
@@ -382,7 +382,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			}
 			fb.Events = append(fb.Events, ev)
 			ts := time.Now()
-			rollbackEvents, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
+			commitEvents, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns), event.CommitNow())
 			if err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),
@@ -430,18 +430,14 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	})
 
 	wg.Wait()
-	select {
-	case err := <-wg.panicErrC:
-		// rollback and continue to panic
-		if rollbackEvents != nil {
-			rollbackEvents()
+
+	if commitEvents != nil {
+		if err := commitEvents(); err != nil {
+			logging.Logger.Error("finalize block - commit events failed",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash),
+				zap.Error(err))
 		}
-		logging.Logger.Error("finalize block - error",
-			zap.Any("error", err),
-			zap.Int64("round", fb.Round),
-			zap.String("hash", fb.Hash))
-		panic(err)
-	default:
 	}
 
 	c.rebaseState(fb)
@@ -482,14 +478,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 }
 
 type waitGroupSync struct {
-	wg        *sync.WaitGroup
-	panicErrC chan interface{}
+	wg *sync.WaitGroup
 }
 
 func newWaitGroupSync() *waitGroupSync {
 	return &waitGroupSync{
-		wg:        &sync.WaitGroup{},
-		panicErrC: make(chan interface{}, 1),
+		wg: &sync.WaitGroup{},
 	}
 }
 
@@ -497,12 +491,7 @@ func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
 	wgs.wg.Add(1)
 	ts := time.Now()
 	go func() {
-		defer func() {
-			wgs.wg.Done()
-			if r := recover(); r != nil {
-				wgs.panicErrC <- r
-			}
-		}()
+		defer wgs.wg.Done()
 		f()
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {

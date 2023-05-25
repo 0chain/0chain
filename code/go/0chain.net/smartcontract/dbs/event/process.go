@@ -21,15 +21,29 @@ import (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-// ProcessEvents - process events and return rollback function or error if any
-// The rollback function can be called to rollback the events when needed
+type (
+	ProcessEventsOptions struct {
+		CommitNow bool
+	}
+	ProcessEventsOptionsFunc func(peo *ProcessEventsOptions)
+)
+
+func CommitNow() ProcessEventsOptionsFunc {
+	return func(peo *ProcessEventsOptions) {
+		peo.CommitNow = true
+	}
+}
+
+// ProcessEvents - process events and return commit function or error if any
+// The commit function can be called to commit the events changes when needed
 func (edb *EventDb) ProcessEvents(
 	ctx context.Context,
 	events []Event,
 	round int64,
 	block string,
 	blockSize int,
-) (func(), error) {
+	opts ...ProcessEventsOptionsFunc,
+) (func() error, error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
@@ -43,7 +57,7 @@ func (edb *EventDb) ProcessEvents(
 		round:             round,
 		block:             block,
 		blockSize:         blockSize,
-		doneWithRollbackC: make(chan func(), 1),
+		doneWithTxCommitC: make(chan func() error, 1),
 	}
 
 	select {
@@ -58,7 +72,7 @@ func (edb *EventDb) ProcessEvents(
 	}
 
 	select {
-	case rollback := <-event.doneWithRollbackC:
+	case commitEdbTx := <-event.doneWithTxCommitC:
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
@@ -68,7 +82,18 @@ func (edb *EventDb) ProcessEvents(
 				zap.String("block", block),
 				zap.Int("block size", blockSize))
 		}
-		return rollback, nil
+		var opt ProcessEventsOptions
+		for _, f := range opts {
+			f(&opt)
+		}
+
+		if opt.CommitNow {
+			return func() error {
+				return nil
+			}, commitEdbTx()
+		}
+
+		return commitEdbTx, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -211,21 +236,22 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
+func (edb *EventDb) work(ctx context.Context,
+	gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
 	tx, err := edb.Begin()
 	if err != nil {
 		logging.Logger.Error("error starting transaction", zap.Error(err))
 		return nil, err
 	}
 
-	var rollbacked bool
-
+	var commit bool
 	defer func() {
-		es.doneWithRollbackC <- func() {
-			if !rollbacked {
-				tx.Rollback()
-				logging.Logger.Debug("rollback event db transaction")
+		es.doneWithTxCommitC <- func() error {
+			if commit {
+				logging.Logger.Debug("commit event db transaction")
+				return tx.Commit()
 			}
+			return nil
 		}
 	}()
 
@@ -238,10 +264,10 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, curr
 		logging.Logger.Error("error saving events",
 			zap.Int64("round", es.round),
 			zap.Error(err))
-		if err := tx.Rollback(); err != nil {
-			return nil, err
+
+		if rerr := tx.Rollback(); rerr != nil {
+			return nil, rerr
 		}
-		rollbacked = true
 		return nil, err
 	}
 
@@ -254,10 +280,12 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, curr
 				zap.Int64("round", event.BlockNumber),
 				zap.Any("tag", event.Tag),
 				zap.Error(err))
-			if err := tx.Rollback(); err != nil {
-				return nil, err
+
+			if rerr := tx.Rollback(); rerr != nil {
+				logging.Logger.Error("commit error", zap.Error(rerr))
+				return nil, rerr
 			}
-			rollbacked = true
+
 			return nil, err
 		}
 	}
@@ -281,12 +309,7 @@ func (edb *EventDb) work(ctx context.Context, gs *Snapshot, es blockEvents, curr
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		logging.Logger.Error("error committing block events",
-			zap.Int64("block", es.round),
-			zap.Error(err))
-		return nil, err
-	}
+	commit = true
 
 	due := time.Since(tse)
 	if due.Milliseconds() > 200 {

@@ -115,7 +115,7 @@ type blockEvents struct {
 	blockSize         int
 	round             int64
 	events            []Event
-	doneWithRollbackC chan func() // rollback function
+	doneWithTxCommitC chan func() error // commit function
 }
 
 func (edb *EventDb) AutoMigrate() error {

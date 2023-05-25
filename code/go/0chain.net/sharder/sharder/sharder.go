@@ -109,6 +109,7 @@ func main() {
 				b.Round,
 				b.Hash,
 				len(b.Txns),
+				event.CommitNow(),
 			); err != nil {
 				logging.Logger.Error("process block saving event failed",
 					zap.Error(err),
