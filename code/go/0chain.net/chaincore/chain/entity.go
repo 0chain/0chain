@@ -89,7 +89,7 @@ type BlockStateHandler interface {
 	// nil if it don't have this ability.
 	SaveMagicBlock() MagicBlockSaveFunc
 	UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity)
-	UpdateFinalizedBlock(ctx context.Context, b *block.Block) func() error
+	UpdateFinalizedBlock(ctx context.Context, b *block.Block)
 }
 
 type updateLFMBWithReply struct {

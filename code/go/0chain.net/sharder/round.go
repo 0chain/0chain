@@ -118,8 +118,9 @@ func (sc *Chain) StoreRoundNoCommit(r *round.Round) (func() error, error) {
 		return nil, err
 	}
 
+	con := ememorystore.GetEntityCon(rctx, roundEntityMetadata)
 	return func() error {
-		return ememorystore.GetEntityCon(rctx, roundEntityMetadata).Commit()
+		return con.Commit()
 	}, nil
 }
 

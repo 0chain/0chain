@@ -40,7 +40,7 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 }
 
 /*UpdateFinalizedBlock - updates the finalized block */
-func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) func() error {
+func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := sc.GetRoundClone(b.Round)
 	if fr == nil {
 		fr = round.NewRound(b.Round)
@@ -122,13 +122,12 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) func(
 		}()
 	}
 
-	var commitSaveRound func() error
 	if frImpl, ok := fr.(*round.Round); ok {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			var err error
-			commitSaveRound, err = sc.StoreRoundNoCommit(frImpl)
+			err = sc.StoreRound(frImpl)
 			if err != nil {
 				Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 			}
@@ -138,7 +137,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) func(
 	wg.Wait()
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
-	return commitSaveRound
 }
 
 func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error { //nolint: unused

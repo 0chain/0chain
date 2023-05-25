@@ -27,9 +27,8 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) func() error {
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	go mc.updateFinalizedBlock(ctx, b)
-	return func() error { return nil }
 }
 
 func (mc *Chain) GenerateBlock(ctx context.Context,

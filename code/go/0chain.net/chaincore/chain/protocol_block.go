@@ -405,9 +405,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
-	var commitFinalizeBlock func() error
 	wg.Run("finalize block - update finalized block", fb.Round, func() {
-		commitFinalizeBlock = bsh.UpdateFinalizedBlock(ctx, fb) //
+		bsh.UpdateFinalizedBlock(ctx, fb) //
+		fb.SetBlockFinalised()
 		if c.GetEventDb() != nil && fb.Round == 200 {
 			time.Sleep(2 * time.Second)
 			panic("mock fb panic")
@@ -441,7 +441,21 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	// which could lead to state or event db being updated mistakenly
 	select {
 	case pErr := <-wg.panicErrC:
-		// rollback and continue to panic
+		if fb.IsBlockFinalised() {
+			// commit event transaction
+			if commitEvents != nil {
+				if err := commitEvents(); err != nil {
+					logging.Logger.Error("finalize block - commit events failed",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash))
+				} else {
+					logging.Logger.Debug("finalize block - commit events",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash))
+				}
+			}
+		}
+		// continue panic up
 		logging.Logger.Error("finalize block - error",
 			zap.Any("error", pErr),
 			zap.Int64("round", fb.Round),
@@ -468,19 +482,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
-	if commitFinalizeBlock != nil {
-		if err := commitFinalizeBlock(); err != nil {
-			logging.Logger.Error("finalize block - commit finalize block failed",
-				zap.Int64("round", fb.Round),
-				zap.String("block", fb.Hash),
-				zap.Error(err))
-		} else {
-			logging.Logger.Debug("finalize block - commit fb",
-				zap.Int64("round", fb.Round),
-				zap.String("block", fb.Hash))
-		}
-	}
-
 	c.rebaseState(fb)
 	fr.Finalize(fb)
 	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {
@@ -501,7 +502,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
 
-	fb.SetBlockFinalised()
 	c.SetLatestOwnFinalizedBlockRound(fb.Round)
 	c.SetLatestFinalizedBlock(fb)
 
