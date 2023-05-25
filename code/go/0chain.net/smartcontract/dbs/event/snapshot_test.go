@@ -104,9 +104,24 @@ func TestGlobalSnapshotUpdateBasedOnEvents(t *testing.T) {
 					{ Fee: 2 },
 				},
 			},
+			{
+				Type: TypeStats,
+				Tag:  TagLockReadPool,
+				Data: []ReadPoolLock{
+					{ Amount: 3 },
+				},
+			},
+			{
+				Type: TypeStats,
+				Tag:  TagUnlockReadPool,
+				Data: []ReadPoolLock{
+					{ Amount: 2 },
+				},
+			},
 		})
 		require.Equal(t, txCountBefore + 2, s.TransactionsCount)
 		require.Equal(t, txTotalFeesBefore + 3, s.TotalTxnFee)
+		require.Equal(t, int64(1), s.TotalReadPoolLocked)
 	})
 }
 
