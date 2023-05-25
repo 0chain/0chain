@@ -153,13 +153,11 @@ func andMockUserSnapshots(users []event.User, edb *event.EventDb) {
 	}
 	var aggregates []event.UserAggregate
 	for _, user := range users {
-		//for i := 1; i <= viper.GetInt(benchmark.NumBlocks); i += viper.GetInt(benchmark.EventDbAggregatePeriod) {
 		aggregate := event.UserAggregate{
 			Round:  viper.GetInt64(benchmark.NumBlocks) - 1,
 			UserID: user.UserID,
 		}
 		aggregates = append(aggregates, aggregate)
-		//}
 	}
 
 	res := edb.Store.Get().Create(&aggregates)
