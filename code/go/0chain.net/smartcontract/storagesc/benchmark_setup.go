@@ -843,7 +843,7 @@ func SetMockConfig(
 ) (conf *Config) {
 	conf = newConfig()
 
-	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = viper.GetDuration(sc.TimeUnit)
 	conf.ChallengeEnabled = true
 	conf.MinAllocSize = viper.GetInt64(sc.StorageMinAllocSize)
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)
