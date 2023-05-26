@@ -1280,7 +1280,12 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 	var validators []event.Validator
 
 	if active == "true" {
-		validators, err = edb.GetActiveValidators(pagination)
+		conf, err2 := getConfig(srh.GetQueryStateContext())
+		if err2 != nil && err2 != util.ErrValueNotPresent {
+			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+			return
+		}
+		validators, err = edb.GetActiveValidators(pagination, conf.HealthCheckPeriod)
 	} else {
 		validators, err = edb.GetValidators(pagination)
 	}
