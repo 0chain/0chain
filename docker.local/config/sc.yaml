@@ -138,7 +138,7 @@ smart_contracts:
     # passed
     blobber_slash: 0.10
     # duration between health check after which a blobber or validator is considered inactive
-    health_check_period: 1h
+    health_check_period: 90m
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
