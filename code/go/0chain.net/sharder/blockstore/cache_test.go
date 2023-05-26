@@ -23,7 +23,7 @@ func init() {
 func TestInitCache(t *testing.T) {
 	config := `
 cache:
-    path: "/path/to/cache"
+    path: "/tmp/path/to/cache"
     total_blocks: "1000"
 `
 	viper.GetViper().SetConfigType("yaml")
