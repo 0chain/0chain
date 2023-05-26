@@ -757,8 +757,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
 			if debugTxn {
-				logging.Logger.Info("generate block (debug transaction) error - "+
-					"txn creation not within tolerance",
+				logging.Logger.Info("generate block (debug transaction) error - txn creation not within tolerance",
 					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 					zap.Any("now", common.Now()))
 			}
@@ -1128,13 +1127,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				zap.Int32("iteration_count", iterInfo.count),
 				zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns,
-				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)",
-					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), 0))
+				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v, future %v, reused %v)",
+					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), len(iterInfo.futureTxns), 0))
 		}
 		b.Txns = b.Txns[:blockSize]
 		iterInfo.eTxns = iterInfo.eTxns[:blockSize]
 	}
 
+l:
 	for _, biTxn := range buildInTxns {
 		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.Round, b.MinerID, blockState)
 		if err != nil {
@@ -1152,15 +1152,26 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		err = mc.processTxn(ctx, biTxn, b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Warn("generate block - process build-in txn failed",
+				zap.String("txn", txn.Hash),
 				zap.String("SC", txn.TransactionData),
 				zap.Int64("round", b.Round),
 				zap.Error(err))
+			if cstate.ErrInvalidState(err) {
+				return err
+			}
+
+			switch err {
+			case context.Canceled, context.DeadlineExceeded:
+				break l
+			}
 		}
 	}
 
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if iterInfo.byteSize > 10*mc.MaxByteSize() {
-		logging.Logger.Info("generate block (too much byte size)", zap.Int64("round", b.Round), zap.Int64("iteration byte size", iterInfo.byteSize))
+		logging.Logger.Info("generate block (too much byte size)",
+			zap.Int64("round", b.Round),
+			zap.Int64("iteration byte size", iterInfo.byteSize))
 	}
 
 	if err = client.GetClients(ctx, iterInfo.clients); err != nil {

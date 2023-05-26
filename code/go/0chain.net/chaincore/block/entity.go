@@ -827,6 +827,13 @@ func CreateStateWithPreviousBlock(prevBlock *Block, stateDB util.NodeDB, round i
 		pndb = stateDB
 	} else {
 		pndb = prevBlock.ClientState.GetNodeDB()
+		if !bytes.Equal(prevBlock.ClientStateHash, prevBlock.ClientState.GetRoot()) {
+			logging.Logger.Error("create state db - previous block state root does not match",
+				zap.String("state root", string(prevBlock.ClientState.GetRoot())),
+				zap.String("client state root", string(prevBlock.ClientStateHash)),
+				zap.String("prev block", prevBlock.Hash),
+				zap.Int64("prev round", prevBlock.Round))
+		}
 	}
 	rootHash = prevBlock.ClientStateHash
 
