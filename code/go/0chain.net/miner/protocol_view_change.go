@@ -672,12 +672,12 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 			if err := share.SetHexString(myShare.Share); err != nil {
 				return nil, err
 			}
-			mpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
+			lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
 			if err != nil {
 				return nil, err
 			}
 
-			var validShare = vcdkg.ValidateShare(mpks, share)
+			var validShare = vcdkg.ValidateShare(lmpks, share)
 			if !validShare {
 				continue
 			}

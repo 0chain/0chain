@@ -577,6 +577,7 @@ func mustInitialState(tokens currency.Coin) *state.State {
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
 	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
+
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)

@@ -1160,18 +1160,15 @@ func (mc *Chain) AddNotarizedBlock(r *Round, b *block.Block) bool {
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		if err := mc.ComputeOrSyncState(ctx, b); err != nil {
-			logging.Logger.Info("can't compute state for notarized block", zap.Error(err),
-				zap.Int64("block_round", b.Round),
-				zap.Int64("round", r.GetRoundNumber()),
-				zap.String("block", b.Hash))
+		if err := mc.syncAndRetry(ctx, b, "add notarized block", func(ctx context.Context, waitC chan struct{}) error {
+			return mc.ComputeState(ctx, b, waitC)
+		}); err != nil {
+			logging.Logger.Error("add notarized block failed", zap.Error(err),
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			return false
 		}
 	}
 
-	//if !r.IsVerificationComplete() {
-	//	logging.Logger.Debug("AddNotarizedBlock - cancel round verification")
-	//	mc.CancelRoundVerification(ctx, r)
-	//}
 	b.SetBlockState(block.StateNotarized)
 	return true
 }
@@ -1523,7 +1520,9 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		var mr = mc.GetMinerRound(s)
 		// send block to sharders again, if missing sharders side
 		if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() &&
-			(mr.Block.GetStateStatus() == block.StateSuccessful || mr.Block.GetStateStatus() == block.StateSynched) {
+			(mr.Block.GetStateStatus() == block.StateSuccessful ||
+				mr.Block.GetStateStatus() == block.StateSynched ||
+				mr.Block.GetBlockState() == block.StateNotarized) {
 
 			logging.Logger.Info("restartRound->kickSharders: kick sharder FB",
 				zap.Int64("round", mr.GetRoundNumber()))

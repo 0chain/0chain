@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
+
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 
@@ -131,12 +133,36 @@ func AddMockUsers(
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
+	var users []event.User
 	for _, client := range clients {
 		user := event.User{
 			UserID:  client,
 			Balance: 100,
 		}
-		_ = eventDb.Store.Get().Create(&user)
+		users = append(users, user)
+	}
+	if res := eventDb.Store.Get().Create(&users); res.Error != nil {
+		log.Fatal(res.Error)
+	}
+	andMockUserSnapshots(users, eventDb)
+}
+
+func andMockUserSnapshots(users []event.User, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
+	var aggregates []event.UserAggregate
+	for _, user := range users {
+		aggregate := event.UserAggregate{
+			Round:  viper.GetInt64(benchmark.NumBlocks) - 1,
+			UserID: user.UserID,
+		}
+		aggregates = append(aggregates, aggregate)
+	}
+
+	res := edb.Store.Get().Create(&aggregates)
+	if res.Error != nil {
+		log.Fatal(res.Error)
 	}
 }
 
