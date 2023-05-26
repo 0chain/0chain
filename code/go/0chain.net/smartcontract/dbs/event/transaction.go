@@ -34,7 +34,6 @@ type Transaction struct {
 
 type TransactionErrors struct {
 	TransactionOutput string `json:"transaction_output"`
-	OutputHash        string `json:"output_hash"`
 	Count             int    `json:"count"`
 }
 
@@ -159,8 +158,16 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 	}
 
 	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, output_hash, count) "+
-		"SELECT transaction_output, output_hash, count(*) as count FROM transactions WHERE status = ? and created_at > ? "+
-		"GROUP BY output_hash, transaction_output", 2, lastDayString); dbTxn.Error != nil {
+		"SELECT transaction_output, output_hash, count(*) as count FROM transactions WHERE status = ? and created_at > ? and transaction_output not like '%:%'"+
+		"GROUP BY transaction_output", 2, lastDayString); dbTxn.Error != nil {
+
+		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
+		return dbTxn.Error
+	}
+
+	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, count) "+
+		"SELECT substring(transaction_output, 1, position(':' in transaction_output) - 1) AS error_statement, count(*) as count FROM transactions WHERE status = ? and created_at > ? and transaction_output like '%:%'"+
+		"GROUP BY error_statement", 2, lastDayString); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
 		return dbTxn.Error
