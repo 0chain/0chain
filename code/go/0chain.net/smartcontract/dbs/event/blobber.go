@@ -90,7 +90,8 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "capacity"},
 			Desc:   limit.IsDescending,
-		}).Find(&blobbers)
+		}).
+		Order("total_stake desc").Find(&blobbers)
 
 	return blobbers, result.Error
 }
@@ -107,7 +108,8 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, erro
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "capacity"},
 			Desc:   limit.IsDescending,
-		}).Find(&blobbers)
+		}).
+		Order("total_stake desc").Find(&blobbers)
 	return blobbers, result.Error
 }
 
