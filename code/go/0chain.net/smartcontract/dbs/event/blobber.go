@@ -17,7 +17,7 @@ import (
 	"github.com/guregu/null"
 )
 
-const ActiveBlobbersTimeLimit = 5 * time.Minute // 5 Minutes
+const ActiveBlobbersTimeLimit = 60 * time.Minute // 1 hour
 
 type Blobber struct {
 	Provider
