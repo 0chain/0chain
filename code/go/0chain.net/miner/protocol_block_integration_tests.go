@@ -92,7 +92,7 @@ type ChallengeResponseTxData struct {
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) func() error {
 	mc.updateFinalizedBlock(ctx, b)
 
 	addResultIfAdversarialValidatorTest(b)
@@ -104,6 +104,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
 	}
+	return func() error { return nil }
 }
 
 func addResultIfAdversarialValidatorTest(b *block.Block) {
