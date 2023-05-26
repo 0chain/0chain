@@ -107,11 +107,8 @@ func BenchmarkTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
-	creationTimeRaw := viper.GetInt64(bk.MptCreationTime)
-	creationTime := common.Now()
-	if creationTimeRaw != 0 {
-		creationTime = common.Timestamp(creationTimeRaw)
-	}
+
+	creationTime := data.Now
 	timings := make(map[string]time.Duration)
 	newAllocationRequestF := func(
 		t *transaction.Transaction,
