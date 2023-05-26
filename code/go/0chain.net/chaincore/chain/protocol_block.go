@@ -405,9 +405,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
+	var fbPersisted bool
 	wg.Run("finalize block - update finalized block", fb.Round, func() {
 		bsh.UpdateFinalizedBlock(ctx, fb) //
-		fb.SetBlockFinalised()
+		fbPersisted = true
 		if c.GetEventDb() != nil && fb.Round == 200 {
 			time.Sleep(2 * time.Second)
 			panic("mock fb panic")
@@ -436,26 +437,24 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	wg.Wait()
 
-	// catch panic and throw panic again to avoid panic happens in another goroutine
-	// that the finalizing process continue before the panic exits the program completely,
-	// which could lead to state or event db being updated mistakenly
+	// catch panic so that when panic happens in another goroutine,
+	// the finalizing process would continue till the panic exits the program completely,
+	// which could lead to state or event db being saved mistakenly
 	select {
 	case pErr := <-wg.panicErrC:
-		if fb.IsBlockFinalised() {
-			// commit event transaction
-			if commitEvents != nil {
-				if err := commitEvents(); err != nil {
-					logging.Logger.Error("finalize block - commit events failed",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash))
-				} else {
-					logging.Logger.Debug("finalize block - commit events",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash))
-				}
+		// commit the event db as long as the state db is persisted successfully
+		if fbPersisted && commitEvents != nil {
+			if err := commitEvents(); err != nil {
+				logging.Logger.Error("finalize block - commit events failed",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash))
+			} else {
+				logging.Logger.Debug("finalize block - commit events",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash))
 			}
 		}
-		// continue panic up
+		// continue panic up in development mode
 		logging.Logger.Error("finalize block - error",
 			zap.Any("error", pErr),
 			zap.Int64("round", fb.Round),

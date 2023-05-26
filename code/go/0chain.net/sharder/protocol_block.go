@@ -122,19 +122,17 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}()
 	}
 
-	if frImpl, ok := fr.(*round.Round); ok {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			var err error
-			err = sc.StoreRound(frImpl)
-			if err != nil {
-				Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
-			}
-		}()
-	}
 	go sc.DeleteRoundsBelow(b.Round)
 	wg.Wait()
+
+	// Persist LFB, do this after all above succeed to make sure the LFB will not be set
+	// if panic happens. If we do it in goroutine the same as above, as long as round and block
+	// summary is saved successfully, even other process panic, restarting the sharder would
+	// consider this block as LFB, but those data didn't get saved previously will be lost.
+	if err := sc.StoreRound(fr.(*round.Round)); err != nil {
+		Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
+	}
+
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
 }
