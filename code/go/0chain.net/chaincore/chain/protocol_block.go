@@ -369,16 +369,16 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.String("block", fb.Hash),
 				zap.Error(err))
 		}
-		// do not return the err, we don't want to see the dead nodes removing failure stop the finalizing process
+		// do not return err, we don't want to see the dead nodes removing failure stop the finalizing process
 		return nil
 	})
 
-	var commitEvents func() error
+	var eventTx *event.EventDb
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() error {
 			fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
 			ts := time.Now()
-			commitEvents, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns), event.CommitNow())
+			eventTx, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
 			if err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),
@@ -440,34 +440,45 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			return err
 		}
 
-		// panic error
 		// commit the event db as long as the state db is persisted successfully
-		if fbPersisted && commitEvents != nil {
-			if err := commitEvents(); err != nil {
-				logging.Logger.Error("finalize block - commit events failed",
-					zap.Int64("round", fb.Round),
-					zap.String("block", fb.Hash))
+		if eventTx != nil {
+			if fbPersisted {
+				// commit the events changes
+				if cerr := eventTx.Commit(); cerr != nil {
+					logging.Logger.Error("finalize block - commit events failed",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Error(cerr))
+				} else {
+					logging.Logger.Debug("finalize block - commit events",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash))
+				}
 			} else {
-				logging.Logger.Debug("finalize block - commit events",
-					zap.Int64("round", fb.Round),
-					zap.String("block", fb.Hash))
+				if rerr := eventTx.Rollback(); rerr != nil {
+					logging.Logger.Error("finalize block - rollback events failed",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Error(rerr))
+				} else {
+					logging.Logger.Debug("finalize block - rollback events",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash))
+				}
 			}
 		}
+
 		// continue panic up in development mode
 		logging.Logger.Error("finalize block - error",
 			zap.Any("error", err),
 			zap.Int64("round", fb.Round),
 			zap.String("hash", fb.Hash))
-		if config.Development() {
-			// continue panic
-			panic(err)
-		}
-		// or return err in production mode
-		return err
+		// continue panic
+		panic(err)
 	}
 
-	if commitEvents != nil {
-		if err := commitEvents(); err != nil {
+	if eventTx != nil {
+		if err := eventTx.Commit(); err != nil {
 			logging.Logger.Error("finalize block - commit events failed",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),

@@ -34,6 +34,10 @@ func CommitNow() ProcessEventsOptionsFunc {
 	}
 }
 
+// CommitOrRollbackFunc represents the callback function to do commit
+// or rollback.
+type CommitOrRollbackFunc func(rollback bool) error
+
 // ProcessEvents - process events and return commit function or error if any
 // The commit function can be called to commit the events changes when needed
 func (edb *EventDb) ProcessEvents(
@@ -43,7 +47,7 @@ func (edb *EventDb) ProcessEvents(
 	block string,
 	blockSize int,
 	opts ...ProcessEventsOptionsFunc,
-) (func() error, error) {
+) (*EventDb, error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
@@ -53,11 +57,11 @@ func (edb *EventDb) ProcessEvents(
 	pdu := time.Since(ts)
 
 	event := blockEvents{
-		events:            es,
-		round:             round,
-		block:             block,
-		blockSize:         blockSize,
-		doneWithTxCommitC: make(chan func() error, 1),
+		events:    es,
+		round:     round,
+		block:     block,
+		blockSize: blockSize,
+		txC:       make(chan *EventDb, 1),
 	}
 
 	select {
@@ -72,7 +76,7 @@ func (edb *EventDb) ProcessEvents(
 	}
 
 	select {
-	case commitEdbTx := <-event.doneWithTxCommitC:
+	case eTx := <-event.txC:
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
@@ -88,12 +92,10 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if opt.CommitNow {
-			return func() error {
-				return nil
-			}, commitEdbTx()
+			return nil, eTx.Commit()
 		}
 
-		return commitEdbTx, nil
+		return eTx, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -246,11 +248,10 @@ func (edb *EventDb) work(ctx context.Context,
 
 	var commit bool
 	defer func() {
-		es.doneWithTxCommitC <- func() error {
-			if commit {
-				return tx.Commit()
-			}
-			return nil
+		if commit {
+			es.txC <- tx
+		} else {
+			es.txC <- nil
 		}
 	}()
 

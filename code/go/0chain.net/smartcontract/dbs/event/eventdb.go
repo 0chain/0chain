@@ -111,11 +111,11 @@ func (edb *EventDb) Debug() bool {
 }
 
 type blockEvents struct {
-	block             string
-	blockSize         int
-	round             int64
-	events            []Event
-	doneWithTxCommitC chan func() error // commit function
+	block     string
+	blockSize int
+	round     int64
+	events    []Event
+	txC       chan *EventDb
 }
 
 func (edb *EventDb) AutoMigrate() error {
