@@ -155,7 +155,11 @@ func toSeconds(dur time.Duration) common.Timestamp {
 }
 
 func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
-	user := fc.getUserVariables(t, gn, balances)
+	user, err := fc.getUserVariables(t, gn, balances)
+	if err != nil {
+		return "", err
+	}
+
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
 		var pourAmount = gn.PourAmount
@@ -229,9 +233,13 @@ func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances
 	return un, err
 }
 
-func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode, balances c_state.StateContextI) *UserNode {
+func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode, balances c_state.StateContextI) (*UserNode, error) {
 	un, err := fc.getUserNode(t.ClientID, gn.ID, balances)
 	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
@@ -240,7 +248,7 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
-	return un
+	return un, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {

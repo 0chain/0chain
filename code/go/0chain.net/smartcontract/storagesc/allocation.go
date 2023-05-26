@@ -342,7 +342,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	if sa.WritePool < cost {
 		return "", common.NewError("allocation_creation_failed",
-			fmt.Sprintf("not enough tokens to cover the allocatin cost"+" (%d < %d)", sa.WritePool, cost))
+			fmt.Sprintf("not enough tokens to cover the allocation cost"+" (%d < %d)", sa.WritePool, cost))
 	}
 
 	if err := sa.checkFunding(conf.CancellationCharge); err != nil {
