@@ -61,28 +61,28 @@ smart_contracts:
     num_sharder_delegates_rewarded: 5
     cooldown_period: 100
     cost:
-      add_miner: 100
-      add_sharder: 100
-      delete_miner: 100
-      delete_sharder: 100
-      miner_health_check: 100
-      sharder_health_check: 100
-      contributeMpk: 100
-      shareSignsOrShares: 100
-      wait: 100
-      update_globals: 100
-      update_settings: 100
-      update_miner_settings: 100
-      update_sharder_settings: 100
-      payFees: 0
-      feesPaid: 100
-      mintedTokens: 100
-      addToDelegatePool: 100
-      deleteFromDelegatePool: 100
-      sharder_keep: 100
-      collect_reward: 100
-      kill_miner: 100
-      kill_sharder: 100
+      add_miner: 318
+      add_sharder: 331
+      delete_miner: 435
+      delete_sharder: 308
+      miner_health_check: 137
+      sharder_health_check: 141
+      contributeMpk: 1347
+      shareSignsOrShares: 495
+      wait: 100 #todo
+      update_globals: 250
+      update_settings: 120s
+      update_miner_settings: 125
+      update_sharder_settings: 125
+      payFees: 1230
+      feesPaid: 100 #todo
+      mintedTokens: 100 #todo
+      addToDelegatePool: 175
+      deleteFromDelegatePool: 139
+      sharder_keep: 197
+      collect_reward: 208
+      kill_miner: 133
+      kill_sharder: 138
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     # the time_unit is a duration used as divider for a write price; a write
@@ -138,7 +138,7 @@ smart_contracts:
     # passed
     blobber_slash: 0.10
     # duration between health check after which a blobber or validator is considered inactive
-    health_check_period: 1h
+    health_check_period: 90m
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
@@ -173,39 +173,39 @@ smart_contracts:
         k: 0.9
         mu: 0.2
     cost:
-      update_settings: 100
-      read_redeem: 100
-      commit_connection: 100
+      update_settings: 135
+      read_redeem: 606
+      commit_connection: 670
       new_allocation_request: 3000
       update_allocation_request: 2500
-      finalize_allocation: 9500
+      finalize_allocation: 993
       cancel_allocation: 8400
-      add_free_storage_assigner: 100
-      free_allocation_request: 1500
+      add_free_storage_assigner: 115
+      free_allocation_request: 2417
       free_update_allocation: 2500
-      blobber_health_check: 100
-      validator_health_check: 100
-      update_blobber_settings: 100
-      update_validator_settings: 100
-      pay_blobber_block_rewards: 100
-      challenge_request: 100
-      challenge_response: 1600
-      add_validator: 100
-      add_blobber: 100
-      new_read_pool: 100
-      read_pool_lock: 100
-      read_pool_unlock: 100
-      write_pool_lock: 100
-      write_pool_unlock: 100
-      stake_pool_lock: 100
-      stake_pool_unlock: 100
-      stake_pool_pay_interests: 100
-      commit_settings_changes: 0
-      generate_challenge: 100
-      blobber_block_rewards: 0
-      collect_reward: 100
-      kill_blobber: 100
-      kill_validator: 100
+      blobber_health_check: 88
+      validator_health_check: 87
+      update_blobber_settings: 309
+      update_validator_settings: 214
+      pay_blobber_block_rewards: 807
+      challenge_request: 100 #todo
+      challenge_response: 684
+      add_validator: 443
+      add_blobber: 240
+      new_read_pool: 94
+      read_pool_lock: 154
+      read_pool_unlock: 93
+      write_pool_lock: 167
+      write_pool_unlock: 103
+      stake_pool_lock: 167
+      stake_pool_unlock: 103
+      stake_pool_pay_interests: 100 #todo
+      commit_settings_changes: 52
+      generate_challenge: 694
+      blobber_block_rewards: 806
+      collect_reward: 158
+      kill_blobber: 669
+      kill_validator: 350
       shutdown_blobber: 100
       shutdown_validator: 100
   vestingsc:
