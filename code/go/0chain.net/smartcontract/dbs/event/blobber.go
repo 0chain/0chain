@@ -87,11 +87,7 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 		Model(&Blobber{}).Offset(limit.Offset).
 		Where("is_killed = ? AND is_shutdown = ?", false, false).
 		Limit(limit.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "capacity"},
-			Desc:   limit.IsDescending,
-		}).
-		Order("total_stake desc").Find(&blobbers)
+		Order("capacity desc, total_stake desc").Find(&blobbers)
 
 	return blobbers, result.Error
 }
@@ -105,11 +101,7 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, erro
 		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
 			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
 		Limit(limit.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "capacity"},
-			Desc:   limit.IsDescending,
-		}).
-		Order("total_stake desc").Find(&blobbers)
+		Order("capacity desc, total_stake desc").Find(&blobbers)
 	return blobbers, result.Error
 }
 
