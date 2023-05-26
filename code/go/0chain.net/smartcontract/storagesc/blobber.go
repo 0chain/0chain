@@ -718,12 +718,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	if commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitConnection.WriteMarker.Size == 0 && blobAlloc.LastWriteMarker != nil {
-
-		if blobAlloc.LastWriteMarker.PreviousAllocationRoot != commitConnection.AllocationRoot {
-			return "", common.NewError("commit_connection_failed",
-				"Allocation root does not match the last writemarker previous allocation root")
-		}
+	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize := blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
@@ -871,9 +866,9 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if err != nil {
 		return fmt.Errorf("unable to fetch blobbers stake pool: %v", err)
 	}
-	stakedAmount, err := sp.cleanStake()
+	stakedAmount, err := sp.stake()
 	if err != nil {
-		return fmt.Errorf("unable to clean stake pool: %v", err)
+		return fmt.Errorf("unable to total stake pool: %v", err)
 	}
 	weight := uint64(stakedAmount) * blobUsedCapacity
 	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {
@@ -963,4 +958,8 @@ func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
+}
+
+func isRollback(commitConnection BlobberCloseConnection, lastWM *WriteMarker) bool {
+	return commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitConnection.WriteMarker.Size == 0 && lastWM != nil && commitConnection.WriteMarker.Timestamp == lastWM.Timestamp && commitConnection.AllocationRoot == lastWM.PreviousAllocationRoot
 }

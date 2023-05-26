@@ -577,9 +577,11 @@ func mustInitialState(tokens currency.Coin) *state.State {
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
 	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
+
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
+  
 	for _, v := range initStates.States {
 		s := mustInitialState(v.Tokens)
 		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
@@ -653,7 +655,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
 	}
 
-	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
+	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
 

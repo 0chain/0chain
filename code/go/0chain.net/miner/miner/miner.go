@@ -344,14 +344,24 @@ func main() {
 		go TransactionGenerator(mc.Chain, workdir)
 	}
 
+	setupSCDoneC := make(chan struct{})
 	if mc.ChainConfig.IsFeeEnabled() {
-		go mc.SetupSC(ctx)
+		go func() {
+			mc.SetupSC(ctx)
+			setupSCDoneC <- struct{}{}
+		}()
 		if mc.ChainConfig.IsViewChangeEnabled() {
 			go mc.DKGProcess(ctx)
 		}
 	}
 
-	shutdown := common.HandleShutdown(server, []func(){shutdownIntegrationTests, done, chain.CloseStateDB})
+	shutdown := common.HandleShutdown(server, []func(){
+		shutdownIntegrationTests,
+		done,
+		func() {
+			<-setupSCDoneC
+		},
+		chain.CloseStateDB})
 	if profServer != nil {
 		shutdownProf := common.HandleShutdown(profServer, nil)
 		<-shutdownProf
@@ -455,19 +465,24 @@ func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost
 }
 
 func initHandlers(c chain.Chainer) {
-	SetupHandlers()
-	config.SetupHandlers()
+	if config.Development() {
+		config.SetupHandlers()
+		chain.SetupDebugStateHandlers()
+	}
+
+	//common
 	node.SetupHandlers()
-	chain.SetupMinerHandlers(c)
-	client.SetupHandlers()
-	transaction.SetupHandlers()
 	block.SetupHandlers()
-	miner.SetupHandlers()
 	diagnostics.SetupHandlers()
+	client.SetupHandlers()
 	chain.SetupStateHandlers()
 
-	serverChain := chain.GetServerChain()
-	serverChain.SetupNodeHandlers()
+	//miner only
+	chain.SetupMinerHandlers(c)
+	SetupHandlers()
+	transaction.SetupHandlers()
+	miner.SetupHandlers()
+	chain.GetServerChain().SetupMinerNodeHandlers()
 }
 
 func initN2NHandlers(c *miner.Chain) {

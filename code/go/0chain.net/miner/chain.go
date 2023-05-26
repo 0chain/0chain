@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/transaction"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -251,6 +252,11 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), transactionMetadataProvider)
 	defer memorystore.Close(ctx)
+	txnHashes := make([]string, len(txns))
+	for i, txn := range txns {
+		txnHashes[i] = txn.(*transaction.Transaction).Hash
+	}
+	logging.Logger.Debug("delete txns", zap.Any("txns", txnHashes))
 	return transactionMetadataProvider.GetStore().MultiDelete(ctx, transactionMetadataProvider, txns)
 }
 

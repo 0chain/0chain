@@ -121,10 +121,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"write_pool",
 		"num_writes",
 		"num_reads",
-		"total_challenges",
-		"open_challenges",
-		"successful_challenges",
-		"failed_challenges",
 		"latest_closed_challenge_txn",
 		"third_party_extendable",
 		"file_options",
@@ -324,21 +320,11 @@ func withAllocBlobberTermsMerged() eventMergeMiddleware {
 }
 
 func mergeUpdateAllocChallengesEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withAllocChallengesMerged())
-}
-
-func withAllocChallengesMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
-		a.OpenChallenges += b.OpenChallenges
-		a.LatestClosedChallengeTxn = b.LatestClosedChallengeTxn
-		a.SuccessfulChallenges += b.SuccessfulChallenges
-		a.FailedChallenges += b.FailedChallenges
-
-		return a, nil
-	})
+	return newEventsMerger[Allocation](TagUpdateAllocationChallenge, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
+
 	var (
 		allocationIdList             []string
 		openChallengesList           []int64
@@ -356,28 +342,31 @@ func (edb *EventDb) updateAllocationChallenges(allocs []Allocation) error {
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
-		AddUpdate("open_challenges", openChallengesList, "allocations.open_challenges - t.open_challenges").
+		AddUpdate("open_challenges", openChallengesList).
 		AddUpdate("latest_closed_challenge_txn", latestClosedChallengeTxnList).
-		AddUpdate("successful_challenges", successfulChallengesList, "allocations.successful_challenges + t.successful_challenges").
-		AddUpdate("failed_challenges", failedChallengeList, "allocations.failed_challenges + t.failed_challenges").Exec(edb).Error
+		AddUpdate("successful_challenges", successfulChallengesList).
+		AddUpdate("failed_challenges", failedChallengeList).Exec(edb).Error
 }
 
 func (edb *EventDb) addChallengesToAllocations(allocs []Allocation) error {
 	var (
-		allocationIdList    []string
-		totalChallengesList []int64
-		openChallengesList  []int64
+		allocationIdList     []string
+		totalChallengesList  []int64
+		openChallengesList   []int64
+		failedChallengesList []int64
 	)
 
 	for _, alloc := range allocs {
 		allocationIdList = append(allocationIdList, alloc.AllocationID)
 		totalChallengesList = append(totalChallengesList, alloc.TotalChallenges)
 		openChallengesList = append(openChallengesList, alloc.OpenChallenges)
+		failedChallengesList = append(failedChallengesList, alloc.FailedChallenges)
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
-		AddUpdate("total_challenges", totalChallengesList, "allocations.total_challenges + t.total_challenges").
-		AddUpdate("open_challenges", openChallengesList, "allocations.open_challenges + t.open_challenges").Exec(edb).Error
+		AddUpdate("total_challenges", totalChallengesList).
+		AddUpdate("open_challenges", openChallengesList).
+		AddUpdate("failed_challenges", failedChallengesList).Exec(edb).Error
 }
 
 func mergeAddChallengesToAllocsEvents() *eventsMergerImpl[Allocation] {
