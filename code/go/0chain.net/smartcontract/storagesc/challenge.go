@@ -938,7 +938,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	for i := 0; i < findValidAllocRetries; i++ {
 		// get a random allocation
-		allocID := randBlobberAllocs[randPerm[i]].ID
+		allocID := randBlobberAllocs[randPerm[i%blobberAllocPartitionLength]].ID
 
 		// get the storage allocation from MPT
 		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
