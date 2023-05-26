@@ -69,6 +69,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 }
 
 func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ctx cstate.StateContextI) {
+	authorizers := make([]event.Authorizer, 0, viper.GetInt(benchmark.NumAuthorizers))
 	for i := 0; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
@@ -94,7 +95,12 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 					LastHealthCheck: common.Now(),
 				},
 			}
-			_ = eventDb.Store.Get().Create(&authorizer)
+			authorizers = append(authorizers, authorizer)
+		}
+	}
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		if err := eventDb.Store.Get().Create(&authorizers).Error; err != nil {
+			log.Fatal(err)
 		}
 	}
 }
