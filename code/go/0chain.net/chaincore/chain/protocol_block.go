@@ -409,10 +409,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	wg.Run("finalize block - update finalized block", fb.Round, func() {
 		bsh.UpdateFinalizedBlock(ctx, fb) //
 		fbPersisted = true
-		if c.GetEventDb() != nil && fb.Round == 200 {
-			time.Sleep(2 * time.Second)
-			panic("mock fb panic")
-		}
 	})
 
 	wg.Run("finalize block - delete dead blocks", fb.Round, func() {

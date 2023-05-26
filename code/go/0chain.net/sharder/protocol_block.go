@@ -86,6 +86,11 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		if b.Round == 200 {
+			time.Sleep(2 * time.Second)
+			panic("mock fb panic on saving summary block")
+		}
+
 		if err := sc.StoreBlockSummaryFromBlock(b); err != nil {
 			Logger.Panic(
 				fmt.Sprintf("db error (store block summary) round: %d, block: %s, error: %s", b.Round, b.Hash, err.Error()))
