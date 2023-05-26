@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -11,18 +12,17 @@ import (
 	"sort"
 	"strings"
 
+	"0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-
-	"0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontract"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"github.com/go-openapi/runtime/middleware"
@@ -117,6 +117,39 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
 	scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
+	block := r.FormValue("block")
+	if len(block) > 0 {
+		b, err := c.GetBlock(ctx, block)
+		if err != nil {
+			return nil, err
+		}
+
+		if b.ClientState == nil {
+			return nil, errors.New("block client state is nil")
+		}
+
+		d, err := b.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
+		if err != nil {
+			return nil, err
+		}
+		if len(d) == 0 {
+			return nil, common.NewError("key_not_found", "key was not found")
+		}
+
+		buf := &bytes.Buffer{}
+		_, err = msgp.UnmarshalAsJSON(buf, d)
+		if err != nil {
+			return nil, common.NewErrorf("decode error", "unmarshal as json failed: %v", err)
+		}
+
+		var retObj interface{}
+		err = json.NewDecoder(buf).Decode(&retObj)
+		if err != nil {
+			return nil, err
+		}
+		return retObj, nil
+	}
+
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
 		return nil, common.NewError("failed to get sc state", "finalized block doesn't exist")

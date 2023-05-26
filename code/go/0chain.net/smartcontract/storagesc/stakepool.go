@@ -99,9 +99,7 @@ func (sp *stakePool) Save(providerType spenum.Provider, providerID string,
 // The stake() returns total stake size including delegate pools want to unstake.
 func (sp *stakePool) stake() (stake currency.Coin, err error) {
 	var newStake currency.Coin
-	orderedPoolIds := sp.OrderedPoolIds()
-	for _, id := range orderedPoolIds {
-		dp := sp.Pools[id]
+	for _, dp := range sp.GetOrderedPools() {
 		newStake, err = currency.AddCoin(stake, dp.Balance)
 		if err != nil {
 			return
@@ -200,9 +198,7 @@ func (sp *stakePool) slash(
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
 	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
-	orderedPoolIds := sp.OrderedPoolIds()
-	for _, id := range orderedPoolIds {
-		dp := sp.Pools[id]
+	for _, dp := range sp.GetOrderedPools() {
 		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
 		if err != nil {
 			return 0, err
@@ -221,7 +217,7 @@ func (sp *stakePool) slash(
 		if err != nil {
 			return 0, err
 		}
-		edbSlash.DelegatePenalties[id] = dpSlash
+		edbSlash.DelegatePenalties[dp.DelegateID] = dpSlash
 	}
 	//Added New Tag for StakePoolPenalty
 	if err := edbSlash.Emit(event.TagStakePoolPenalty, balances); err != nil {

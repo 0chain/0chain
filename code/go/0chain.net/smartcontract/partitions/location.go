@@ -6,7 +6,9 @@ import (
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int, bool, error) {
@@ -38,13 +40,30 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 	if err != nil {
 		return fmt.Errorf("save item location failed: %v", err)
 	}
+	if p.locations == nil {
+		p.locations = make(map[string]int)
+	}
+	p.locations[p.getLocKey(id)] = partIndex
 	return nil
 }
 
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
-	_, err := state.DeleteTrieNode(p.getLocKey(id))
+	kid := p.getLocKey(id)
+	root := util.ToHex(state.GetState().GetRoot())
+	_, err := state.DeleteTrieNode(kid)
 	if err != nil {
+		logging.Logger.Error("remove item location failed",
+			zap.String("kid", kid),
+			zap.String("id", id),
+			zap.String("state root", root),
+			zap.Int64("round", state.GetBlock().Round),
+			zap.String("block", state.GetBlock().Hash),
+			zap.Error(err),
+		)
 		return fmt.Errorf("remove item location failed: %v", err)
+	}
+	if len(p.locations) > 0 {
+		delete(p.locations, kid)
 	}
 	return nil
 }
@@ -53,18 +72,19 @@ func (p *Partitions) loadLocations(idx int) {
 	if p.locations == nil {
 		p.locations = make(map[string]int)
 	}
-	if idx < 0 {
+	if idx <= 0 {
 		return
 	}
 
-	// could happen removing last item and it's the last one in a partition
-	if idx >= len(p.Partitions) {
+	part, ok := p.Partitions[idx]
+	if !ok {
 		return
 	}
 
-	part := p.Partitions[idx]
 	for _, it := range part.Items {
 		kid := p.getLocKey(it.ID)
 		p.locations[kid] = idx
 	}
+
+	logging.Logger.Debug("load cache locations", zap.Any("locations", p.locations))
 }
