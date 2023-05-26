@@ -6,12 +6,12 @@ import (
 	"math"
 	"net/url"
 	"strconv"
-	"sync"
 	"time"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
+	"0chain.net/core/util/waitgroup"
 	"github.com/0chain/common/core/util"
 	"github.com/rcrowley/go-metrics"
 
@@ -48,7 +48,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 	b = b.Clone()
 	fr.Finalize(b)
-	wg := sync.WaitGroup{}
+	wg := waitgroup.New()
 	Logger.Info("update finalized block",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
@@ -74,18 +74,14 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	bsHistogram.Update(int64(len(b.Txns)))
 	self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := sc.StoreTransactions(b)
-		if err != nil {
+	wg.Run("store transactions", b.Round, func() error {
+		if err := sc.StoreTransactions(b); err != nil {
 			Logger.Panic(fmt.Sprintf("db store transaction failed. Error: %v", err))
 		}
-	}()
+		return nil
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Run("store block summary", b.Round, func() error {
 		if b.Round == 200 {
 			time.Sleep(2 * time.Second)
 			panic("mock fb panic on saving summary block")
@@ -95,23 +91,22 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.Panic(
 				fmt.Sprintf("db error (store block summary) round: %d, block: %s, error: %s", b.Round, b.Hash, err.Error()))
 		}
-	}()
+
+		return nil
+	})
 
 	if b.MagicBlock != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Run("store magic block", b.Round, func() error {
 			bs := b.GetSummary()
 			if err := sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap()); err != nil {
 				Logger.DPanic("failed to store magic block map", zap.Error(err))
 			}
-		}()
+			return nil
+		})
 	}
 
 	if sc.IsBlockSharder(b, self.Underlying()) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Run("store block", b.Round, func() error {
 			sc.SharderStats.ShardedBlocksCount++
 			ts := time.Now()
 			if err := blockstore.GetStore().Write(b); err != nil {
@@ -124,11 +119,27 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
 				Logger.Warn("block save - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 			}
-		}()
+			return nil
+		})
 	}
 
 	go sc.DeleteRoundsBelow(b.Round)
-	wg.Wait()
+
+	// Wait for all group goroutines to exit and check error before continue. Otherwise, if panic
+	// happens in any of the goroutine, we will see wait() finish and the code will continue to persist the rounds
+	// rather than before the panic exit the program completely. While we don't want the round to be store actually.
+	if err := wg.Wait(); err != nil {
+		if waitgroup.ErrIsPanic(err) {
+			// continue throw panic up so that it behaviors the same as before.
+			panic(err)
+		}
+
+		Logger.Error("update finalized block failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+		return
+	}
 
 	// Persist LFB, do this after all above succeed to make sure the LFB will not be set
 	// if panic happens. If we do it in goroutine the same as above, as long as round and block

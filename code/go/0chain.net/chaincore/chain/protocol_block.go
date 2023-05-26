@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -14,6 +13,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
+	"0chain.net/core/util/waitgroup"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -357,30 +357,26 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	ssFTs = time.Now()
 
 	var (
-		wg          = newWaitGroupSync()
+		wg          = waitgroup.New()
 		deletedNode = fb.ClientState.GetDeletes()
 	)
 
-	wg.Run("finalize block - record dead nodes", fb.Round, func() {
+	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
 		err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
 			logging.Logger.Error("finalize block - record dead nodes failed",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
 				zap.Error(err))
-			return
 		}
+		// do not return the err, we don't want to see the dead nodes removing failure stop the finalizing process
+		return nil
 	})
 
 	var commitEvents func() error
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
-		wg.Run("finalize block - add events", fb.Round, func() {
-			var ev event.Event
-			err, ev = block.CreateFinalizeBlockEvent(fb)
-			if err != nil {
-				logging.Logger.Error("emit update block event error", zap.Error(err))
-			}
-			fb.Events = append(fb.Events, ev)
+		wg.Run("finalize block - add events", fb.Round, func() error {
+			fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
 			ts := time.Now()
 			commitEvents, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns), event.CommitNow())
 			if err != nil {
@@ -389,8 +385,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
 			}
+
 			EventsComputationTimer.Update(time.Since(ts).Microseconds())
 			fb.Events = nil
+
+			// failing of events process should stop the finalizing progress
+			return err
 		})
 	}
 
@@ -405,20 +405,23 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
+	// fbPersisted indicates whether the finalizing block is saved to state db, i.e
+	// restarting the sharder will start the LFB from it.
 	var fbPersisted bool
-	wg.Run("finalize block - update finalized block", fb.Round, func() {
+	wg.Run("finalize block - update finalized block", fb.Round, func() error {
 		bsh.UpdateFinalizedBlock(ctx, fb) //
 		fbPersisted = true
+		return nil
 	})
 
-	wg.Run("finalize block - delete dead blocks", fb.Round, func() {
+	wg.Run("finalize block - delete dead blocks", fb.Round, func() error {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 		pfb := fb
 		for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
 
 		}
 		if pfb == nil {
-			return
+			return nil
 		}
 		frb := c.GetRoundBlocks(pfb.Round)
 		var deadBlocks []*block.Block
@@ -429,15 +432,15 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 		// Prune all the dead blocks
 		c.DeleteBlocks(deadBlocks)
+		return nil
 	})
 
-	wg.Wait()
+	if err = wg.Wait(); err != nil {
+		if !waitgroup.ErrIsPanic(err) {
+			return err
+		}
 
-	// catch panic so that when panic happens in another goroutine,
-	// the finalizing process would continue till the panic exits the program completely,
-	// which could lead to state or event db being saved mistakenly
-	select {
-	case pErr := <-wg.panicErrC:
+		// panic error
 		// commit the event db as long as the state db is persisted successfully
 		if fbPersisted && commitEvents != nil {
 			if err := commitEvents(); err != nil {
@@ -452,16 +455,15 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 		// continue panic up in development mode
 		logging.Logger.Error("finalize block - error",
-			zap.Any("error", pErr),
+			zap.Any("error", err),
 			zap.Int64("round", fb.Round),
 			zap.String("hash", fb.Hash))
 		if config.Development() {
 			// continue panic
-			panic(pErr)
+			panic(err)
 		}
 		// or return err in production mode
-		return fmt.Errorf("%v", pErr)
-	default:
+		return err
 	}
 
 	if commitEvents != nil {
@@ -511,42 +513,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 		zap.Duration("duration", time.Since(ts)))
 	return nil
-}
-
-type waitGroupSync struct {
-	wg        *sync.WaitGroup
-	panicErrC chan interface{}
-}
-
-func newWaitGroupSync() *waitGroupSync {
-	return &waitGroupSync{
-		wg:        &sync.WaitGroup{},
-		panicErrC: make(chan interface{}),
-	}
-}
-
-func (wgs *waitGroupSync) Run(name string, round int64, f func()) {
-	wgs.wg.Add(1)
-	ts := time.Now()
-	go func() {
-		defer func() {
-			wgs.wg.Done()
-			if r := recover(); r != nil {
-				wgs.panicErrC <- r
-			}
-		}()
-		f()
-		du := time.Since(ts)
-		if du.Milliseconds() > 50 {
-			logging.Logger.Debug("Run slow on", zap.String("name", name),
-				zap.Int64("round", round),
-				zap.Duration("duration", du))
-		}
-	}()
-}
-
-func (wgs *waitGroupSync) Wait() {
-	wgs.wg.Wait()
 }
 
 // IsFinalizedDeterministically - checks if a block is finalized deterministically
