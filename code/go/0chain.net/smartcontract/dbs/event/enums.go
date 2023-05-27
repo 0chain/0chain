@@ -92,8 +92,6 @@ const (
 	TagFromChallengePool
 	TagAddMint
 	TagBurn
-	TagAllocValueChange
-	TagAllocBlobberValueChange
 	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
 	TagUpdateMinerTotalStake
@@ -190,8 +188,6 @@ func initTagString() {
 	TagString[TagFromChallengePool] = "TagFromChallengePool"
 	TagString[TagAddMint] = "TagAddMint"
 	TagString[TagBurn] = "TagBurn"
-	TagString[TagAllocValueChange] = "TagAllocValueChange"
-	TagString[TagAllocBlobberValueChange] = "TagAllocBlobberValueChange"
 	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
