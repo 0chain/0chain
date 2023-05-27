@@ -181,7 +181,7 @@ func (sc *Chain) GetHighestMagicBlockMap(ctx context.Context) (
 	con := ememorystore.GetEntityCon(mctx, mbmemd)
 	if con == nil {
 		return nil, common.NewErrorf("get_highest_mbm",
-			"getting rocksdb connection: %v", err)
+			"couldn't get connection for magic block map rocksdb")
 	}
 
 	iter := con.Conn.NewIterator(con.ReadOptions)

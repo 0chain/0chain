@@ -14,15 +14,17 @@ type RoundTxnsCount struct {
 	TxnsCount  int   `json:"txns_count"`
 }
 
-const RoundKeySpace = "ROUND"
+const roundKeySpace = "round_txn_count"
 
 // SetRoundKey - set the entity hash to the keyspaced hash of the round number
 func BuildSummaryRoundKey(roundNumber int64) datastore.Key {
 	return datastore.ToKey(
-		fmt.Sprintf(
-			"%s:%s",
-			RoundKeySpace,
-			encryption.Hash(strconv.FormatInt(roundNumber, 10)),
+		encryption.Hash(
+			fmt.Sprintf(
+				"%s:%d",
+				roundKeySpace,
+				roundNumber,
+			),
 		),
 	)
 }

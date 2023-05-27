@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
+	"0chain.net/core/encryption"
 )
 
 /*TransactionSummary - the summary of the transaction */
@@ -15,7 +16,7 @@ type TransactionSummary struct {
 	Round int64 `json:"round"`
 }
 
-const TransactionKeyspace = "TRANSACTION"
+const transactionKeyspace = "transaction_round"
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl
 
@@ -33,10 +34,12 @@ func (t *TransactionSummary) GetEntityMetadata() datastore.EntityMetadata {
 // SetTransactionKey - set the entity hash to the keyspaced hash of the transaction hash
 func BuildSummaryTransactionKey(hash string) datastore.Key {
 	return datastore.ToKey(
-		fmt.Sprintf(
-			"%s:%s",
-			TransactionKeyspace,
-			hash,
+		encryption.Hash(
+			fmt.Sprintf(
+				"%s:%s",
+				transactionKeyspace,
+				hash,
+			),
 		),
 	)
 }
