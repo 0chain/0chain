@@ -47,6 +47,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		ts = t.(*transaction.TransactionSummary)
 	}
 	confirmation := new(transaction.Confirmation)
+	confirmation.Version = "1.0"
 	confirmation.Hash = hash
 	bhash, err := sc.GetBlockHash(ctx, ts.Round)
 	if err != nil {
