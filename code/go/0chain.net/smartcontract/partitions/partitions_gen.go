@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z partitionsDecode) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *partitionsDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
 	// string "Name"
@@ -16,9 +16,17 @@ func (z partitionsDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "PartitionSize"
 	o = append(o, 0xad, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x69, 0x7a, 0x65)
 	o = msgp.AppendInt(o, z.PartitionSize)
-	// string "NumPartitions"
-	o = append(o, 0xad, 0x4e, 0x75, 0x6d, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x73)
-	o = msgp.AppendInt(o, z.NumPartitions)
+	// string "Last"
+	o = append(o, 0xa4, 0x4c, 0x61, 0x73, 0x74)
+	if z.Last == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.Last.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "Last")
+			return
+		}
+	}
 	return
 }
 
@@ -52,11 +60,22 @@ func (z *partitionsDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "PartitionSize")
 				return
 			}
-		case "NumPartitions":
-			z.NumPartitions, bts, err = msgp.ReadIntBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "NumPartitions")
-				return
+		case "Last":
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.Last = nil
+			} else {
+				if z.Last == nil {
+					z.Last = new(partition)
+				}
+				bts, err = z.Last.UnmarshalMsg(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Last")
+					return
+				}
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -71,7 +90,12 @@ func (z *partitionsDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z partitionsDecode) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 14 + msgp.IntSize + 14 + msgp.IntSize
+func (z *partitionsDecode) Msgsize() (s int) {
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 14 + msgp.IntSize + 5
+	if z.Last == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.Last.Msgsize()
+	}
 	return
 }
