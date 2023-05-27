@@ -7,6 +7,7 @@ import (
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
+	"strings"
 	"time"
 )
 
@@ -165,19 +166,36 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 		return dbTxn.Error
 	}
 
-	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT substring(transaction_output, 1, position(':' in transaction_output) - 1) AS error_statement, count(*) as count FROM transactions WHERE status = ? and created_at > ? and transaction_output like '%:%'"+
-		"GROUP BY error_statement", 2, lastDayString); dbTxn.Error != nil {
-
-		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
-		return dbTxn.Error
-	}
-
 	return nil
 }
 
-func (edb *EventDb) GetTransactionErrors() ([]TransactionErrors, error) {
-	var transactions []TransactionErrors
-	err := edb.Get().Model(&TransactionErrors{}).Find(&transactions).Order("count desc")
-	return transactions, err.Error
+func (edb *EventDb) GetTransactionErrors() (map[string][]TransactionErrors, error) {
+	var txnErrors []TransactionErrors
+
+	err := edb.Get().Model(&TransactionErrors{}).Find(&txnErrors).Order("count desc")
+
+	if err.Error != nil {
+		return nil, err.Error
+	}
+
+	return categorizeOnSubstring(txnErrors), nil
+}
+
+func categorizeOnSubstring(input []TransactionErrors) map[string][]TransactionErrors {
+	categorized := make(map[string][]TransactionErrors)
+
+	for _, err := range input {
+		// Find the index of the first colon in the transaction output
+		colonIndex := strings.Index(err.TransactionOutput, ":")
+
+		if colonIndex != -1 {
+			// Extract the substring before the first colon
+			category := err.TransactionOutput[:colonIndex]
+
+			// Append the error to the corresponding category in the map
+			categorized[category] = append(categorized[category], err)
+		}
+	}
+
+	return categorized
 }
