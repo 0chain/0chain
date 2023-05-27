@@ -331,7 +331,18 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit)
+	conf, err2 := getConfig(srh.GetQueryStateContext())
+	if err2 != nil && err2 != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+		return
+	}
+
+	healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+	if conf != nil {
+		healthCheckPeriod = conf.HealthCheckPeriod
+	}
+
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -1285,7 +1296,13 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
 			return
 		}
-		validators, err = edb.GetActiveValidators(pagination, conf.HealthCheckPeriod)
+
+		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+		if conf != nil {
+			healthCheckPeriod = conf.HealthCheckPeriod
+		}
+
+		validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
 	} else {
 		validators, err = edb.GetValidators(pagination)
 	}
@@ -2207,7 +2224,13 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
 			return
 		}
-		blobbers, err = edb.GetActiveBlobbers(limit, conf.HealthCheckPeriod)
+
+		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+		if conf != nil {
+			healthCheckPeriod = conf.HealthCheckPeriod
+		}
+
+		blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
 	} else {
 		blobbers, err = edb.GetBlobbers(limit)
 	}
