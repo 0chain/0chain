@@ -59,7 +59,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 	if err != nil {
 		bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 		bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
-		defer ememorystore.Close(bctx)
+		defer ememorystore.CloseEntityConnection(bctx, bSummaryEntityMetadata)
 		bs, err := sc.GetBlockSummary(bctx, bhash)
 		if err != nil {
 			return nil, err

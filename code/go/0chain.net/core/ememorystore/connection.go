@@ -180,7 +180,6 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 		cMap[dbpool.CtxKey] = GetTransaction(dbpool.Pool)
 	}
 	return ctx
-
 }
 
 /*GetEntityCon returns a connection stored in the context which got created via WithEntityConnection */
@@ -206,6 +205,41 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 		cMap[dbpool.CtxKey] = con
 	}
 	return con
+}
+
+/*CloseEntityConnection - Close takes care of maintaining the closing of a connection related to an entity stored in the context */
+func CloseEntityConnection(ctx context.Context, entity datastore.EntityMetadata) {
+	if ctx == nil {
+		return
+	}
+	dbpool := getdbpool(entity)
+	if dbpool.Pool == DefaultPool {
+		Close(ctx)
+		return
+	}
+	c := ctx.Value(CONNECTION)
+	if c == nil {
+		return
+	}
+	cMap, ok := c.(connections)
+	if !ok {
+		panicf("invalid setup, type of connection is %T", c)
+	}
+	con, ok := cMap[dbpool.CtxKey]
+	if !ok {
+		return
+	}
+	con.ReadOptions.Destroy()
+	con.WriteOptions.Destroy()
+	con.TransactionOptions.Destroy()
+	if con.shouldRollback {
+		if err := con.Conn.Rollback(); err != nil {
+			logging.Logger.Error("rollback failed", zap.Error(err))
+		} // commit is expected to be done by the caller of the get connection
+	}
+
+	con.Conn.Destroy()
+	delete(cMap, dbpool.CtxKey)
 }
 
 /*Close - Close takes care of maintaining the closing of connection(s) stored in the context */
