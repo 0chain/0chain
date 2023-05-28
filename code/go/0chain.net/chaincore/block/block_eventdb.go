@@ -47,8 +47,8 @@ func CreateBlockEvent(block *Block) (error, event.Event) {
 	}
 }
 
-func CreateFinalizeBlockEvent(block *Block) (error, event.Event) {
-	return nil, event.Event{
+func CreateFinalizeBlockEvent(block *Block) event.Event {
+	return event.Event{
 		BlockNumber: block.Round,
 		TxHash:      "",
 		Type:        event.TypeChain,
