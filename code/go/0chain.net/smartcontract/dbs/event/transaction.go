@@ -166,8 +166,6 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 		return dbTxn.Error
 	}
 
-	logging.Logger.Info("jayash Transaction errors updated")
-
 	return nil
 }
 
@@ -181,8 +179,6 @@ func (edb *EventDb) GetTransactionErrors() (map[string][]TransactionErrors, erro
 	}
 
 	transactionErrors := categorizeOnSubstring(txnErrors)
-
-	logging.Logger.Info("jayash Transaction errors", zap.Any("transaction_errors", transactionErrors))
 
 	return transactionErrors, nil
 }
@@ -200,6 +196,8 @@ func categorizeOnSubstring(input []TransactionErrors) map[string][]TransactionEr
 
 			// Append the error to the corresponding category in the map
 			categorized[category] = append(categorized[category], err)
+		} else {
+			categorized[err.TransactionOutput] = append(categorized[err.TransactionOutput], err)
 		}
 	}
 
