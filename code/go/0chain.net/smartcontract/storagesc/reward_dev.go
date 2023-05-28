@@ -135,3 +135,22 @@ func (srh *StorageRestHandler) getAllocationChallengeRewards(w http.ResponseWrit
 
 	common.Respond(w, r, result, err)
 }
+
+func (srh *StorageRestHandler) getPassedChallengesForBlobberAllocation(w http.ResponseWriter, r *http.Request) {
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	allocationID := r.URL.Query().Get("allocation_id")
+
+	result, err := edb.GetPassedChallengesForBlobberAllocation(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, err)
+}

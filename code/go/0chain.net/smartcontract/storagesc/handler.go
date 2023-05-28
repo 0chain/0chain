@@ -99,6 +99,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 
 	if config.Development() {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/passed-challenges", srh.getPassedChallengesForBlobberAllocation))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/block-rewards", srh.getBlockRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/read-rewards", srh.getReadRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/total-challenge-rewards", srh.getTotalChallengeRewards))

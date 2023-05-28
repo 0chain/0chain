@@ -34,6 +34,18 @@ func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challen
 	return chs, result.Error
 }
 
+func (edb *EventDb) GetPassedChallengesForBlobberAllocation(allocationID string) (map[string]int, error) {
+	var result map[string]int
+
+	edb.Store.Get().Table("challenges").
+		Select("blobber_id, count(*) as count").
+		Where("allocation_id = ? AND passed = ?", allocationID, true).
+		Group("blobber_id").
+		Scan(&result)
+
+	return result, nil
+}
+
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
 	var ch Challenge
 
