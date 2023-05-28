@@ -159,7 +159,7 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 	}
 
 	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT transaction_output, count(*) as count FROM transactions WHERE status = ? and created_at > ? and transaction_output not like '%:%'"+
+		"SELECT transaction_output, count(*) as count FROM transactions WHERE status = ? and created_at > ?"+
 		"GROUP BY transaction_output", 2, lastDayString); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
