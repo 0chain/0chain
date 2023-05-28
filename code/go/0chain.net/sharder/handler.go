@@ -307,12 +307,11 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "<tr><td class='tname'><a href='#' onclick='toggleDetails(this)'>%s</a></td><td>%d</td></tr>", transactionError, count)
 
-		for _, detail := range errorDetails {
-			fmt.Fprintf(w, "<tr class='details-row' style='display:none;'><td colspan='2' id='details-%d'>%s</td></tr>", detail.Count, detail.TransactionOutput)
+		for i, detail := range errorDetails {
+			fmt.Fprintf(w, "<tr class='details-row' style='display:none;'><td colspan='2' id='details-%d'>%s : %d</td></tr>", i, detail.TransactionOutput, detail.Count)
 		}
 	}
 
-	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "</table>")
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
