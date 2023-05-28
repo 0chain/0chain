@@ -4,11 +4,15 @@
 package event
 
 import (
+	"fmt"
+
 	"0chain.net/chaincore/node"
 	"0chain.net/conductor/conductrpc"
+	"github.com/0chain/common/core/logging"
 )
 
 func (edb *EventDb) addStat(event Event) (err error) {
+	logging.Info("Adding stat: ", event)
 	err = edb.addStatMain(event)
 	if err != nil {
 		return
@@ -17,9 +21,11 @@ func (edb *EventDb) addStat(event Event) (err error) {
 	var (
 		client = conductrpc.Client()
 		state  = client.State()
+		sender = state.Name(conductrpc.NodeID(node.Self.Underlying().GetKey()))
 	)
 
 	if !state.IsMonitor {
+		logging.Info(fmt.Sprintf("skipping as %s is not monitor", sender))
 		return
 	}
 
@@ -32,13 +38,14 @@ func (edb *EventDb) addStat(event Event) (err error) {
 
 		for _, miner := range *miners {
 			ame := conductrpc.AddMinerEvent{
-				Sender: state.Name(conductrpc.NodeID(node.Self.Underlying().GetKey())),
+				Sender: sender,
 				Miner:  state.Name(conductrpc.NodeID(miner.ID)),
 			}
 
 			if ame.Miner == conductrpc.NodeName("") {
 				continue
 			}
+			logging.Info(fmt.Sprintf("Sending %s to conductor server", ame.Miner))
 			if err := client.AddMiner(&ame); err != nil {
 				panic(err)
 			}
