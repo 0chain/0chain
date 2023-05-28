@@ -12,7 +12,7 @@ import (
 )
 
 func (edb *EventDb) addStat(event Event) (err error) {
-	logging.Info("Adding stat: ", event)
+	logging.Logger.Info(fmt.Sprintf("Adding stat: %v", event))
 	err = edb.addStatMain(event)
 	if err != nil {
 		return
@@ -25,7 +25,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 	)
 
 	if !state.IsMonitor {
-		logging.Info(fmt.Sprintf("skipping as %s is not monitor", sender))
+		logging.Logger.Info(fmt.Sprintf("skipping as %s is not monitor", sender))
 		return
 	}
 
@@ -45,7 +45,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			if ame.Miner == conductrpc.NodeName("") {
 				continue
 			}
-			logging.Info(fmt.Sprintf("Sending %s to conductor server", ame.Miner))
+			logging.Logger.Info(fmt.Sprintf("Sending %s to conductor server", ame.Miner))
 			if err := client.AddMiner(&ame); err != nil {
 				panic(err)
 			}
