@@ -22,7 +22,7 @@ sets:
       - "Less than consensus miners go down and come up"
       - "More than consensus miners go down and come up"
       - "All miners go down and come up"
-    #   - "Miner goes down for 3 minutes simultaneously with coming up of the previous one"
+      - "Miner goes down for 3 minutes simultaneously with coming up of the previous one"
 
   - name: "SHARDERS GO DOWN"
     tests:
