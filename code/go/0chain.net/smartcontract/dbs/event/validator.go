@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"time"
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
@@ -99,14 +100,14 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	return validators, result.Error
 }
 
-func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, error) {
+func (edb *EventDb) GetActiveValidators(pg common2.Pagination, healthcheckPeriod time.Duration) ([]Validator, error) {
 	now := common.Now()
 	var validators []Validator
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Validator{}).
 		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
-			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
+			common.ToTime(now).Add(-healthcheckPeriod).Unix(), false, false).
 		Limit(pg.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},

@@ -19,8 +19,14 @@ func (edb *EventDb) addError(err Error) error {
 
 func (edb *EventDb) GetErrorByTransactionHash(transactionID string, limit common.Pagination) ([]Error, error) {
 	var transactionErrors []Error
-	return transactionErrors, edb.Store.Get().Model(&Error{}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   limit.IsDescending,
-	}).Where(Error{TransactionID: transactionID}).Find(&transactionErrors).Error
+	return transactionErrors, edb.Store.Get().
+		Model(&Error{}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Where(Error{TransactionID: transactionID}).
+		Find(&transactionErrors).Error
 }
