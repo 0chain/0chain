@@ -2210,6 +2210,12 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 			common.Respond(w, r, nil, errors.New("blobber ids list is empty"))
 			return
 		}
+
+		if len(blobber_ids) > common2.MaxQueryLimit {
+			common.Respond(w, r, nil, errors.New(fmt.Sprintf("too many ids, cannot exceed %d", common2.MaxQueryLimit)))
+			return
+		}
+
 		blobbers, err = edb.GetBlobbersFromIDs(blobber_ids)
 	} else {
 		blobbers, err = edb.GetBlobbers(limit)
