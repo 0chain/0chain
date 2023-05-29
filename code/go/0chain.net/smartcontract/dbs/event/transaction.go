@@ -67,7 +67,11 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagin
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+			Column: clause.Column{Name: "round"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&tr)
@@ -84,9 +88,14 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
-		}).Scan(&tr)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&tr)
 	return tr, res.Error
 }
 
@@ -111,9 +120,14 @@ func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, err
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
-		}).Find(&tr)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&tr)
 
 	return tr, res.Error
 }
@@ -130,6 +144,10 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
 		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
 		Find(&tr)
 	return tr, res.Error
 }
@@ -140,6 +158,7 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 		Model(&Transaction{}).
 		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Order("round asc").
+		Order("hash desc").
 		Find(&tr)
 	return tr, res.Error
 }
