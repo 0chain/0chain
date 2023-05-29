@@ -51,8 +51,7 @@ func (edb *EventDb) GetAllocationCancellationRewardsToProviders(startBlock, endB
 
 func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[string]ProviderAllocationRewards, error) {
 
-	var result map[string]ProviderAllocationRewards
-	result = make(map[string]ProviderAllocationRewards)
+	var result = make(map[string]ProviderAllocationRewards)
 
 	var rps []ProviderAllocationReward
 
@@ -79,8 +78,7 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 
 		totalProviderReward := amount
 
-		var providerDelegateRewards map[string]int64
-		providerDelegateRewards = make(map[string]int64)
+		var providerDelegateRewards = make(map[string]int64)
 
 		for _, dr := range deleagateRewards {
 			providerDelegateRewards[dr.DelegateID] = dr.Amount
@@ -97,8 +95,7 @@ func (edb *EventDb) GetAllocationChallengeRewards(allocationID string) (map[stri
 }
 
 func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]ProviderAllocationRewards, error) {
-	var result map[string]ProviderAllocationRewards
-	result = make(map[string]ProviderAllocationRewards)
+	var result = make(map[string]ProviderAllocationRewards)
 
 	var rps []ProviderAllocationReward
 
@@ -217,9 +214,7 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 		totals = append(totals, br.Amount+delegateRewards.Amount)
 	}
 
-	for _, total := range totals {
-		result = append(result, total)
-	}
+	result = append(result, totals...)
 
 	return result, err
 }
