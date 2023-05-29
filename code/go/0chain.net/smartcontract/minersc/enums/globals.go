@@ -311,6 +311,7 @@ func initGlobalSettings() {
 		GlobalSettingName[TransactionMaxFee]:         {smartcontract.Int64, false},
 		GlobalSettingName[TransactionExempt]:         {smartcontract.Strings, true},
 		GlobalSettingName[TransactionCostFeeCoeff]:   {smartcontract.Int, true},
+		GlobalSettingName[TransactionFutureNonce]:    {smartcontract.Int, true},
 
 		GlobalSettingName[ClientSignatureScheme]: {smartcontract.String, true},
 		GlobalSettingName[ClientDiscover]:        {smartcontract.Boolean, false},
