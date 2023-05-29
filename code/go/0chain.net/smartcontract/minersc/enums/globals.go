@@ -51,6 +51,7 @@ const (
 	TransactionMaxFee
 	TransactionExempt
 	TransactionCostFeeCoeff
+	TransactionFutureNonce
 
 	ClientSignatureScheme
 	ClientDiscover // todo from chain
@@ -185,6 +186,7 @@ func initGlobalSettingNames() {
 	GlobalSettingName[TransactionMaxFee] = "server_chain.transaction.max_fee"
 	GlobalSettingName[TransactionExempt] = "server_chain.transaction.exempt"
 	GlobalSettingName[TransactionCostFeeCoeff] = "server_chain.transaction.cost_fee_coeff"
+	GlobalSettingName[TransactionFutureNonce] = "server_chain.transaction.future_nonce"
 
 	GlobalSettingName[ClientSignatureScheme] = "server_chain.client.signature_scheme"
 	GlobalSettingName[ClientDiscover] = "server_chain.client.discover"
