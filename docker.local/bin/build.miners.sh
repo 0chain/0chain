@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e -x
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
 echo "$GIT_COMMIT"
@@ -31,7 +31,7 @@ else
 
     cd "$ROOT"
 
-    docker $cmd --build-arg GIT_COMMIT="$GIT_COMMIT" \
+    docker $cmd --no-cache --progress=plain --build-arg GIT_COMMIT="$GIT_COMMIT" \
         -f "$DOCKER_FILE" . -t miner --build-arg DEV=no
 fi
 
