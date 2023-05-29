@@ -122,8 +122,7 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 
 		totalProviderReward := amount
 
-		var providerDelegateRewards map[string]int64
-		providerDelegateRewards = make(map[string]int64)
+		var providerDelegateRewards = make(map[string]int64)
 
 		for _, dr := range deleagateRewards {
 			providerDelegateRewards[dr.DelegateID] = dr.Amount
@@ -140,8 +139,7 @@ func (edb *EventDb) GetAllocationReadRewards(allocationID string) (map[string]Pr
 }
 
 func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[string]ProviderAllocationRewards, error) {
-	var result map[string]ProviderAllocationRewards
-	result = make(map[string]ProviderAllocationRewards)
+	var result = make(map[string]ProviderAllocationRewards)
 
 	var rps []ProviderAllocationReward
 
@@ -168,8 +166,7 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 
 		totalProviderReward := amount
 
-		var providerDelegateRewards map[string]int64
-		providerDelegateRewards = make(map[string]int64)
+		var providerDelegateRewards = make(map[string]int64)
 
 		for _, dr := range deleagateRewards {
 			providerDelegateRewards[dr.DelegateID] = dr.Amount
