@@ -357,7 +357,7 @@ func TestGetSharderLocations(t *testing.T) {
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 12, len(locations), "all sharders should be returned")
 		for _, location := range locations {
-			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			id, err := strconv.ParseInt(location.ID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
 			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
 			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
@@ -368,7 +368,7 @@ func TestGetSharderLocations(t *testing.T) {
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
-			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			id, err := strconv.ParseInt(location.ID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
 			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
 			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
@@ -379,7 +379,7 @@ func TestGetSharderLocations(t *testing.T) {
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
-			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			id, err := strconv.ParseInt(location.ID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
 			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
 			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")

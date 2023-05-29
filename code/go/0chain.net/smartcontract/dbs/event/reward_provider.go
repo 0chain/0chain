@@ -59,5 +59,10 @@ func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
-		}).Scan(&rps).Error
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&rps).Error
 }
