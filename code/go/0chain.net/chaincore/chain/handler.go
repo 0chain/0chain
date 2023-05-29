@@ -1384,15 +1384,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	s, err := GetStateById(lfb.ClientState, txn.ClientID)
 	if cstate.ErrInvalidState(err) {
-		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
-		// of the 'error' of the miner itself.
-		//txnRsp, err := transaction.PutTransaction(ctx, txn)
-		//if err != nil {
-		//	logging.Logger.Error("failed to save transaction",
-		//		zap.Error(err),
-		//		zap.Any("txn", txn))
-		//	return nil, common.NewErrInternal("failed to save transaction")
-		//}
 		return nil, common.NewErrInternal("miner state not ready")
 	}
 

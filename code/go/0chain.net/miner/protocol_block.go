@@ -1070,10 +1070,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		var (
 			deleteTxns = make([]datastore.Entity, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
 			txnHashes  = make([]string, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
-			//lfbTS      = lfb.CreationDate
-			//expiredTM  = common.Timestamp(30) // 3 minutes
 		)
-		// remove orphan future txns
+
+		// removes future transactions with nonce is too far away
 		if len(iterInfo.futureTxns) > 0 {
 			for _, nonceTxns := range iterInfo.futureTxns {
 				txns := nonceTxns.txns
@@ -1084,13 +1083,13 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 							deleteTxns = append(deleteTxns, ft)
 							txnHashes = append(txnHashes, ft.Hash)
 						}
-
-						logging.Logger.Debug("remove future txns",
-							zap.Int("count", len(deleteTxns)),
-							zap.Strings("txns", txnHashes))
 					}
 				}
 			}
+
+			logging.Logger.Debug("remove future txns",
+				zap.Int("count", len(deleteTxns)),
+				zap.Strings("txns", txnHashes))
 		}
 
 		if len(iterInfo.pastTxns) > 0 {
