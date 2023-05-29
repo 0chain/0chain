@@ -496,7 +496,7 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	return s, nil
 }
 
-func (edb *EventDb) addStatMain(event Event) (err error) {
+func (edb *EventDb) addStat(event Event) (err error) {
 	switch event.Tag {
 	// blobber
 	case TagAddBlobber:
