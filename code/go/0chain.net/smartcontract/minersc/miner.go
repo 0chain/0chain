@@ -200,7 +200,7 @@ func (msc *MinerSmartContract) deleteNode(
 		case spenum.Active:
 			pool.Status = spenum.Deleted
 			_, err := deleteNode.UnlockPool(
-				pool.DelegateID, nodeType, key, balances)
+				pool.DelegateID, nodeType, pool.DelegateID, balances)
 			if err != nil {
 				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 			}

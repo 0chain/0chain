@@ -1105,6 +1105,7 @@ func setupChallengeMocks(
 			var pool = &stakepool.DelegatePool{}
 			pool.Balance = currency.Coin(stake)
 			var id = validator + " delegate " + strconv.Itoa(j)
+			pool.DelegateID = id
 			sPool.Pools[id] = pool
 		}
 		sPool.Settings.DelegateWallet = validator + " wallet"
