@@ -1117,7 +1117,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		// an allocation can't be shorter than configured in SC
 		// (prevent allocation shortening for entire period)
-		if newExpiration-t.CreationDate < toSeconds(conf.TimeUnit) {
+		if request.Expiration > 0 {
+			if newExpiration-t.CreationDate < toSeconds(conf.TimeUnit) {
 			return "", common.NewError("allocation_updating_failed",
 				"allocation duration becomes too short")
 		}
