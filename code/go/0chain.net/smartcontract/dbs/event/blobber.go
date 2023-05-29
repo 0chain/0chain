@@ -90,7 +90,12 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "capacity"},
 			Desc:   limit.IsDescending,
-		}).Find(&blobbers)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&blobbers)
 
 	return blobbers, result.Error
 }
@@ -107,7 +112,12 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, erro
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "capacity"},
 			Desc:   limit.IsDescending,
-		}).Find(&blobbers)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -122,7 +132,12 @@ func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "rank_metric"},
 			Desc:   true,
-		}).Find(&blobberIDs)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   true,
+		}).
+		Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -135,10 +150,18 @@ func (edb *EventDb) GeBlobberByLatLong(
 		Model(&Blobber{}).
 		Select("id").
 		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"},
-		Desc:   true,
-	}).Find(&blobberIDs)
+			maxLatitude, minLatitude, maxLongitude, minLongitude).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   true,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   true,
+		}).
+		Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -146,7 +169,10 @@ func (edb *EventDb) GeBlobberByLatLong(
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().Preload("Rewards").
-		Model(&Blobber{}).Order("id").Where("id IN ?", ids).Find(&blobbers)
+		Model(&Blobber{}).
+		Order("id").
+		Where("id IN ?", ids).
+		Find(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -195,10 +221,13 @@ type AllocationQuery struct {
 
 func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("base_url IN ?", urls).Limit(data.Limit).Offset(data.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   data.IsDescending,
-	})
+	dbStore = dbStore.Where("base_url IN ?", urls).
+		Limit(data.Limit).
+		Offset(data.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   data.IsDescending,
+		})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
 }
@@ -213,10 +242,16 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
 	dbStore = dbStore.Where("is_available = true")
-	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "write_price"},
-		Desc:   limit.IsDescending,
-	})
+	dbStore = dbStore.Limit(limit.Limit).
+		Offset(limit.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "write_price"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
 }

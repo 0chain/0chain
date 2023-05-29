@@ -25,12 +25,20 @@ func (edb *EventDb) GetAllocationBlobberTerm(allocationID string, blobberID stri
 
 func (edb *EventDb) GetAllocationBlobberTerms(allocationID string, limit common2.Pagination) ([]AllocationBlobberTerm, error) {
 	var terms []AllocationBlobberTerm
-	return terms, edb.Store.Get().Model(&AllocationBlobberTerm{}).
+	return terms, edb.Store.Get().
+		Model(&AllocationBlobberTerm{}).
 		Where(AllocationBlobberTerm{AllocationID: allocationID}).
-		Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   limit.IsDescending,
-	}).Find(&terms).Error
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "allocation_id"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "blobber_id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&terms).Error
 }
 
 func deleteAllocationBlobberTerms(edb *EventDb, allocBlobbers map[string][]string) error {
