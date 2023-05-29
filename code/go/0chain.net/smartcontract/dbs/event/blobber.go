@@ -17,8 +17,6 @@ import (
 	"github.com/guregu/null"
 )
 
-const ActiveBlobbersTimeLimit = 5 * time.Minute // 5 Minutes
-
 type Blobber struct {
 	Provider
 	BaseURL string `json:"url" gorm:"uniqueIndex"`
@@ -100,14 +98,14 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 	return blobbers, result.Error
 }
 
-func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, error) {
+func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination, healthCheckTimeLimit time.Duration) ([]Blobber, error) {
 	now := common.Now()
 	var blobbers []Blobber
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Blobber{}).Offset(limit.Offset).
 		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
-			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
+			common.ToTime(now).Add(-healthCheckTimeLimit).Unix(), false, false).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "capacity"},
@@ -232,12 +230,12 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination
 	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp) ([]string, error) {
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp, healthCheckPeriod time.Duration) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
-	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix())
+	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-healthCheckPeriod).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
