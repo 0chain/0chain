@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e -x
+set -e
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
 echo "$GIT_COMMIT"
