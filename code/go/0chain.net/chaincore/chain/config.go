@@ -506,7 +506,6 @@ func (c *ConfigImpl) FromViper() error {
 	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
 	conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
 	conf.TxnFutureNonce = viper.GetInt("server_chain.transaction.future_nonce")
-	//conf.TxnCostFeeCoeff = 100000
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {

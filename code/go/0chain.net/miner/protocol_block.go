@@ -1065,6 +1065,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	iterInfo.cost += cost
+	futureNonceAllowed := int64(mc.ChainConfig.TxnFutureNonce())
 
 	defer func() {
 		var (
@@ -1077,7 +1078,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			for _, nonceTxns := range iterInfo.futureTxns {
 				txns := nonceTxns.txns
 				if len(txns) > 0 {
-					if txns[0].Nonce-nonceTxns.nonce > 10 {
+					if txns[0].Nonce-nonceTxns.nonce > futureNonceAllowed {
 						// remove all following future txns
 						for _, ft := range txns {
 							deleteTxns = append(deleteTxns, ft)
@@ -1089,7 +1090,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 			logging.Logger.Debug("remove future txns",
 				zap.Int("count", len(deleteTxns)),
-				zap.Strings("txns", txnHashes))
+				zap.Strings("txns", txnHashes),
+				zap.Int64("future transaction limit", futureNonceAllowed))
 		}
 
 		if len(iterInfo.pastTxns) > 0 {
