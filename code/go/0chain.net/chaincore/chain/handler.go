@@ -1360,8 +1360,17 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
-	if txn.CreationDate < common.Now()-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
-		return nil, fmt.Errorf("put_transaction: time out of sync with server time")
+	err := txn.Validate(ctx)
+	if err != nil {
+		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
+		return nil, err
+	}
+
+	if txn.Value > config.MaxTokenSupply {
+		logging.Logger.Error("put transaction error - value exceeds max token supply",
+			zap.Uint64("value", uint64(txn.Value)),
+			zap.Uint64("max_token_supply", config.MaxTokenSupply))
+		return nil, fmt.Errorf("transaction value exceeds max token supply")
 	}
 
 	sc := GetServerChain()

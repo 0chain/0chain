@@ -918,6 +918,14 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
+		if txn.Value > config.MaxTokenSupply {
+			logging.Logger.Error("generate block, invalid transaction value",
+				zap.String("hash", txn.Hash),
+				zap.Uint64("value", uint64(txn.Value)))
+			tii.invalidTxns = append(tii.invalidTxns, txn)
+			return false, errors.New("invalid transaction value, exceeds max token supply")
+		}
+
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost fee",
