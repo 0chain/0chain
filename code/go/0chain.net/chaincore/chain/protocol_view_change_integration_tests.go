@@ -54,12 +54,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 				case reg := <-isRegisteredC:
 					if reg {
 						logging.Logger.Debug("SetupSC - node is already registered")
-						func() {
-							defer func() {
-								recover()
-							}()
-							close(doneC)
-						}()
+						close(doneC)
 						return
 					}
 				case <-cctx.Done():
@@ -76,12 +71,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 
 				if txn != nil && c.ConfirmTransaction(ctx, txn, 0) {
 					logging.Logger.Debug("Register node transaction confirmed")
-					func() {
-						defer func() {
-							recover()
-						}()
-						close(doneC)
-					}()
+					close(doneC)
 					return
 				}
 
