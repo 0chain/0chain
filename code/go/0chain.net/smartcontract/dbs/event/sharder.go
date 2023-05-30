@@ -57,7 +57,7 @@ func (s *Sharder) SetTotalRewards(value currency.Coin) {
 
 // swagger:model SharderGeolocation
 type SharderGeolocation struct {
-	SharderID string  `json:"sharder_id"`
+	ID        string  `json:"id"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
@@ -204,7 +204,11 @@ func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, p co
 		Model(&Sharder{}).
 		Where(&filter).Offset(p.Offset).Limit(p.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   p.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
 			Desc:   p.IsDescending,
 		})
 	return sharders, query.Scan(&sharders).Error
@@ -217,7 +221,11 @@ func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagina
 		Model(&Sharder{}).
 		Where(&filter).Offset(p.Offset).Limit(p.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   p.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
 			Desc:   p.IsDescending,
 		})
 

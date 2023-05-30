@@ -46,7 +46,7 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
-//nolint
+// nolint
 func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool, error) {
 	var minerDps []struct {
 		Miner
@@ -146,18 +146,31 @@ func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p commo
 		Model(&Miner{}).
 		Where(&filter).Offset(p.Offset).Limit(p.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   p.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
 			Desc:   p.IsDescending,
 		})
+
 	return miners, query.Scan(&miners).Error
 }
 
 func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, p common2.Pagination) ([]MinerGeolocation, error) {
 	var minerLocations []MinerGeolocation
-	query := edb.Get().Model(&Miner{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "created_at"},
-		Desc:   p.IsDescending,
-	})
+	query := edb.Get().Model(&Miner{}).
+		Where(&filter).
+		Offset(p.Offset).
+		Limit(p.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   p.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   p.IsDescending,
+		})
 	result := query.Scan(&minerLocations)
 
 	return minerLocations, result.Error
