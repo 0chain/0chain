@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -492,15 +493,30 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		if numWorkers*mc.ValidationBatchSize() < len(b.Txns) {
 			numWorkers++
 		}
-		aggregate := true
-		var aggregateSignatureScheme encryption.AggregateSignatureScheme
-		if aggregate {
-			aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme(), len(b.Txns), mc.ValidationBatchSize())
+		var aggregate bool
+		aggregateSignatureScheme := encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme(), len(b.Txns), mc.ValidationBatchSize())
+		if aggregateSignatureScheme != nil {
+			aggregate = true
 		}
-		if aggregateSignatureScheme == nil {
-			aggregate = false
+
+		var (
+			validChannel   = make(chan bool, numWorkers)
+			buildInTxnsMap = make(map[string]struct{})
+			bicLock        = &sync.Mutex{}
+		)
+
+		hasDuplicateBuildInTxns := func(txn *transaction.Transaction) bool {
+			bicLock.Lock()
+			defer bicLock.Unlock()
+			if mc.isBuildInTxn(txn) {
+				if _, ok := buildInTxnsMap[txn.FunctionName]; ok {
+					return true
+				}
+				buildInTxnsMap[txn.FunctionName] = struct{}{}
+			}
+			return false
 		}
-		validChannel := make(chan bool, numWorkers)
+
 		validate := func(ctx context.Context, txns []*transaction.Transaction, start int) {
 			result := false
 			defer func() {
@@ -529,6 +545,16 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				if err != nil {
 					cancel = true
 					logging.Logger.Error("validate transactions", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
+					return
+				}
+
+				if hasDuplicateBuildInTxns(txn) {
+					logging.Logger.Error("validate transactions - duplicated build-in transaction",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("txn", txn.Hash),
+						zap.String("function_name", txn.FunctionName))
+					cancel = true
 					return
 				}
 
@@ -1024,7 +1050,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	cctx, cancel := context.WithTimeout(ctx, mc.ChainConfig.BlockProposalMaxWaitTime())
 	defer cancel()
 
-	buildInTxns, cost, err := mc.buildInTxns(ctx, lfb, b, blockState)
+	buildInTxns, cost, err := mc.buildInTxns(ctx, lfb, b)
 	if err != nil {
 		return fmt.Errorf("get build-in txns failed: %v", err)
 	}
@@ -1258,7 +1284,7 @@ l:
 	return nil
 }
 
-func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state util.MerklePatriciaTrieI) ([]*transaction.Transaction, int, error) {
+func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*transaction.Transaction, int, error) {
 	txns := make([]*transaction.Transaction, 0, 4)
 
 	if mc.ChainConfig.IsFeeEnabled() {
