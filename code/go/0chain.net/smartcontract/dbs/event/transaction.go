@@ -7,6 +7,7 @@ import (
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
+	"strings"
 	"time"
 )
 
@@ -34,7 +35,6 @@ type Transaction struct {
 
 type TransactionErrors struct {
 	TransactionOutput string `json:"transaction_output"`
-	OutputHash        string `json:"output_hash"`
 	Count             int    `json:"count"`
 }
 
@@ -67,7 +67,11 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagin
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+			Column: clause.Column{Name: "round"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&tr)
@@ -84,9 +88,14 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
-		}).Scan(&tr)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&tr)
 	return tr, res.Error
 }
 
@@ -111,9 +120,14 @@ func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, err
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
-		}).Find(&tr)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&tr)
 
 	return tr, res.Error
 }
@@ -130,6 +144,10 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
 		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
 		Find(&tr)
 	return tr, res.Error
 }
@@ -140,6 +158,7 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 		Model(&Transaction{}).
 		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Order("round asc").
+		Order("hash desc").
 		Find(&tr)
 	return tr, res.Error
 }
@@ -158,9 +177,9 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 		return err
 	}
 
-	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, output_hash, count) "+
-		"SELECT transaction_output, output_hash, count(*) as count FROM transactions WHERE status = ? and created_at > ? "+
-		"GROUP BY output_hash, transaction_output", 2, lastDayString); dbTxn.Error != nil {
+	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, count) "+
+		"SELECT transaction_output, count(*) as count FROM transactions WHERE status = ? and created_at > ?"+
+		"GROUP BY transaction_output", 2, lastDayString); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
 		return dbTxn.Error
@@ -169,8 +188,37 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 	return nil
 }
 
-func (edb *EventDb) GetTransactionErrors() ([]TransactionErrors, error) {
-	var transactions []TransactionErrors
-	err := edb.Get().Model(&TransactionErrors{}).Find(&transactions).Order("count desc")
-	return transactions, err.Error
+func (edb *EventDb) GetTransactionErrors() (map[string][]TransactionErrors, error) {
+	var txnErrors []TransactionErrors
+
+	err := edb.Get().Model(&TransactionErrors{}).Find(&txnErrors).Order("count desc")
+
+	if err.Error != nil {
+		return nil, err.Error
+	}
+
+	transactionErrors := categorizeOnSubstring(txnErrors)
+
+	return transactionErrors, nil
+}
+
+func categorizeOnSubstring(input []TransactionErrors) map[string][]TransactionErrors {
+	categorized := make(map[string][]TransactionErrors)
+
+	for _, err := range input {
+		// Find the index of the first colon in the transaction output
+		colonIndex := strings.Index(err.TransactionOutput, ":")
+
+		if colonIndex != -1 {
+			// Extract the substring before the first colon
+			category := err.TransactionOutput[:colonIndex]
+
+			// Append the error to the corresponding category in the map
+			categorized[category] = append(categorized[category], err)
+		} else {
+			categorized[err.TransactionOutput] = append(categorized[err.TransactionOutput], err)
+		}
+	}
+
+	return categorized
 }

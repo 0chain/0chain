@@ -44,10 +44,16 @@ func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagin
 		db = db.Where("tag", search.Tag).Find(eventTable)
 	}
 
-	db = db.Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "created_at"},
-		Desc:   p.IsDescending,
-	})
+	db = db.Offset(p.Offset).
+		Limit(p.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "tx_hash"},
+			Desc:   p.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "index"},
+			Desc:   p.IsDescending,
+		})
 
 	var events []Event
 	db.WithContext(ctx).Find(&events)

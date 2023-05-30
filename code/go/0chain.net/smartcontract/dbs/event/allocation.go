@@ -66,11 +66,19 @@ func (edb *EventDb) GetClientsAllocation(clientID string, limit common.Paginatio
 
 	err := edb.Store.Get().
 		Preload("Terms").
-		Model(&Allocation{}).Where("owner = ?", clientID).Limit(limit.Limit).Offset(limit.Offset).
+		Model(&Allocation{}).
+		Where("owner = ?", clientID).
+		Limit(limit.Limit).
+		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "start_time"},
 			Desc:   limit.IsDescending,
-		}).Find(&allocs).Error
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "allocation_id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&allocs).Error
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, err)
 	}
