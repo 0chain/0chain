@@ -74,5 +74,10 @@ func (edb *EventDb) GetDelegateRewards(limit common.Pagination, PoolId string, s
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
-		}).Scan(&rds).Error
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&rds).Error
 }

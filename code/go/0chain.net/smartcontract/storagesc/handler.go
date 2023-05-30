@@ -258,7 +258,8 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit)
+
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -331,7 +332,18 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit)
+	conf, err2 := getConfig(srh.GetQueryStateContext())
+	if err2 != nil && err2 != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+		return
+	}
+
+	healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+	if conf != nil {
+		healthCheckPeriod = conf.HealthCheckPeriod
+	}
+
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -340,7 +352,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination) ([]string, error) {
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -387,7 +399,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		zap.Int64("last_health_check", int64(balances.Now())),
 	)
 
-	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now())
+	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now(), healthCheckPeriod)
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
@@ -1280,7 +1292,18 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 	var validators []event.Validator
 
 	if active == "true" {
-		validators, err = edb.GetActiveValidators(pagination)
+		conf, err2 := getConfig(srh.GetQueryStateContext())
+		if err2 != nil && err2 != util.ErrValueNotPresent {
+			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+			return
+		}
+
+		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+		if conf != nil {
+			healthCheckPeriod = conf.HealthCheckPeriod
+		}
+
+		validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
 	} else {
 		validators, err = edb.GetValidators(pagination)
 	}
@@ -2197,7 +2220,18 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 	var blobbers []event.Blobber
 	if active == "true" {
-		blobbers, err = edb.GetActiveBlobbers(limit)
+		conf, err2 := getConfig(srh.GetQueryStateContext())
+		if err2 != nil && err2 != util.ErrValueNotPresent {
+			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+			return
+		}
+
+		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+		if conf != nil {
+			healthCheckPeriod = conf.HealthCheckPeriod
+		}
+
+		blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
 	} else {
 		blobbers, err = edb.GetBlobbers(limit)
 	}

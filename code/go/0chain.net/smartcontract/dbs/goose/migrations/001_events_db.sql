@@ -1034,7 +1034,6 @@ CREATE TABLE public.transaction_errors (
                                      id SERIAL PRIMARY KEY,
                                      created_at timestamp with time zone,
                                      transaction_output text,
-                                     output_hash text,
                                      count bigint
 );
 
