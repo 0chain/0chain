@@ -8,7 +8,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/gorocksdb"
+	"github.com/linxGnu/grocksdb"
 	"go.uber.org/zap"
 )
 
@@ -19,16 +19,16 @@ func panicf(format string, args ...interface{}) {
 type dbpool struct {
 	ID     string
 	CtxKey common.ContextKey
-	Pool   *gorocksdb.TransactionDB
+	Pool   *grocksdb.TransactionDB
 }
 
 /*Connection - a struct that manages an underlying connection */
 type Connection struct {
 	sync.Mutex
-	Conn               *gorocksdb.Transaction
-	ReadOptions        *gorocksdb.ReadOptions
-	WriteOptions       *gorocksdb.WriteOptions
-	TransactionOptions *gorocksdb.TransactionOptions
+	Conn               *grocksdb.Transaction
+	ReadOptions        *grocksdb.ReadOptions
+	WriteOptions       *grocksdb.WriteOptions
+	TransactionOptions *grocksdb.TransactionOptions
 	shouldRollback     bool
 }
 
@@ -42,19 +42,19 @@ func (c *Connection) Commit() error {
 }
 
 /*CreateDB - create a database */
-func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
-	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
-	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
-	opts := gorocksdb.NewDefaultOptions()
+func CreateDB(dataDir string) (*grocksdb.TransactionDB, error) {
+	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetBlockCache(grocksdb.NewLRUCache(3 << 30))
+	opts := grocksdb.NewDefaultOptions()
 	opts.SetKeepLogFileNum(5)
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
-	tdbopts := gorocksdb.NewDefaultTransactionDBOptions()
-	return gorocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
+	tdbopts := grocksdb.NewDefaultTransactionDBOptions()
+	return grocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 }
 
-//DefaultPool - default db pool
-var DefaultPool *gorocksdb.TransactionDB
+// DefaultPool - default db pool
+var DefaultPool *grocksdb.TransactionDB
 
 var pools = make(map[string]*dbpool)
 
@@ -66,7 +66,7 @@ func getConnectionCtxKey(dbid string) common.ContextKey {
 }
 
 /*AddPool - add a database pool to the repository of db pools */
-func AddPool(dbid string, db *gorocksdb.TransactionDB) *dbpool {
+func AddPool(dbid string, db *grocksdb.TransactionDB) *dbpool {
 	dbpool := &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: db}
 	pools[dbid] = dbpool
 	return dbpool
@@ -90,10 +90,10 @@ func GetConnection() *Connection {
 }
 
 /*GetTransaction - get the transaction object associated with this db */
-func GetTransaction(db *gorocksdb.TransactionDB) *Connection {
-	ro := gorocksdb.NewDefaultReadOptions()
-	wo := gorocksdb.NewDefaultWriteOptions()
-	to := gorocksdb.NewDefaultTransactionOptions()
+func GetTransaction(db *grocksdb.TransactionDB) *Connection {
+	ro := grocksdb.NewDefaultReadOptions()
+	wo := grocksdb.NewDefaultWriteOptions()
+	to := grocksdb.NewDefaultTransactionOptions()
 
 	t := db.TransactionBegin(wo, to, nil)
 	conn := &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to, shouldRollback: true}

@@ -3,7 +3,6 @@ module 0chain.net
 go 1.20
 
 require (
-	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb
 	github.com/alicebob/miniredis/v2 v2.30.2
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.26.0
@@ -41,10 +40,11 @@ require (
 )
 
 require (
-	github.com/0chain/common v0.0.6-0.20230513053854-b6980b428fca
+	github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9
 	github.com/go-faker/faker/v4 v4.1.0
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.9
+	github.com/linxGnu/grocksdb v1.8.0
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.11.2
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
@@ -54,6 +54,7 @@ require (
 )
 
 require (
+	github.com/0chain/gorocksdb v0.0.0-20220406081817-640f6b0a3abb // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
