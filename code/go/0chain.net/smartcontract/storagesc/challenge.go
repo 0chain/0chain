@@ -269,12 +269,33 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
+	allocation, err := sc.getAllocation(alloc.ID, balances)
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Info("jayash moveToBlobbers",
+		zap.Any("err", err),
+		zap.Any("blobberReward", blobberReward),
+		zap.Any("blobAlloc.BlobberID", blobAlloc.BlobberID),
+		zap.Any("allocation", allocation),
+		zap.Any("alloc expiry", allocation.Expiration),
+		zap.Any("alloc finalized", allocation.Finalized),
+		zap.Any("alloc cancelled", allocation.Canceled),
+		zap.Any("sp", sp),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, allocationID)
 
 	logging.Logger.Info("jayash moveToBlobbers",
 		zap.Any("err", err),
 		zap.Any("blobberReward", blobberReward),
 		zap.Any("blobAlloc.BlobberID", blobAlloc.BlobberID),
+		zap.Any("allocation", allocation),
+		zap.Any("alloc expiry", allocation.Expiration),
+		zap.Any("alloc finalized", allocation.Finalized),
+		zap.Any("alloc cancelled", allocation.Canceled),
+		zap.Any("sp", sp),
 		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
 
 	if err != nil {
@@ -301,7 +322,29 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
+	logging.Logger.Info("jayash moveToValidators",
+		zap.Any("err", err),
+		zap.Any("blobberReward", blobberReward),
+		zap.Any("blobAlloc.BlobberID", blobAlloc.BlobberID),
+		zap.Any("allocation", allocation),
+		zap.Any("alloc expiry", allocation.Expiration),
+		zap.Any("alloc finalized", allocation.Finalized),
+		zap.Any("alloc cancelled", allocation.Canceled),
+		zap.Any("sp", sp),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, allocationID)
+
+	logging.Logger.Info("jayash moveToValidators",
+		zap.Any("err", err),
+		zap.Any("blobberReward", blobberReward),
+		zap.Any("blobAlloc.BlobberID", blobAlloc.BlobberID),
+		zap.Any("allocation", allocation),
+		zap.Any("alloc expiry", allocation.Expiration),
+		zap.Any("alloc finalized", allocation.Finalized),
+		zap.Any("alloc cancelled", allocation.Canceled),
+		zap.Any("sp", sp),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
 
 	logging.Logger.Info("jayash moveToValidators",
 		zap.Any("err", err),
