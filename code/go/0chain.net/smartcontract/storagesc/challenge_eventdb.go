@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"errors"
+	"go.uber.org/zap"
 	"strings"
 	"time"
 
@@ -111,6 +112,78 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
+}
+
+func emitUpdateChallengesForExpiredAllocations(allocationID string, balances cstate.StateContextI) {
+	// get all open challenges for allocation ID
+
+	edb := event.EventDb{}
+
+	var challenges []*event.Challenge
+
+	err := edb.Get().Table("challenges").Where("allocation_id = ? AND responded = 0", allocationID).Find(&challenges).Error
+	if err != nil {
+		logging.Logger.Error("emitUpdateChallengesForExpiredAllocations: failed to get challenges", zap.Error(err))
+		return
+	}
+
+	totalChallengesAfterAllocationExpiry := int64(len(challenges))
+
+	var allocation *event.Allocation
+	err = edb.Get().Table("allocations").Where("id = ?", allocationID).Find(&allocation).Error
+
+	if err != nil {
+		logging.Logger.Error("emitUpdateChallengesForExpiredAllocations: failed to get successful challenges", zap.Error(err))
+		return
+	}
+
+	blobberChallengeStats := make(map[string]int)
+
+	for _, ch := range challenges {
+		clg := event.Challenge{
+			ChallengeID:    ch.ChallengeID,
+			AllocationID:   ch.AllocationID,
+			BlobberID:      ch.BlobberID,
+			RoundResponded: balances.GetBlock().Round,
+			Passed:         true,
+			Responded:      1, // Passed challenge
+		}
+
+		balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, ch.ChallengeID, clg)
+
+		blobberChallengeStats[ch.BlobberID]++
+
+	}
+
+	a := event.Allocation{
+		AllocationID:             allocationID,
+		OpenChallenges:           allocation.OpenChallenges - totalChallengesAfterAllocationExpiry,
+		TotalChallenges:          allocation.TotalChallenges,
+		FailedChallenges:         allocation.FailedChallenges,
+		SuccessfulChallenges:     allocation.SuccessfulChallenges + totalChallengesAfterAllocationExpiry,
+		LatestClosedChallengeTxn: challenges[len(challenges)-1].ChallengeID,
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, allocationID, a)
+
+	for blobberID, count := range blobberChallengeStats {
+
+		var blobber *event.Blobber
+		err = edb.Get().Table("blobbers").Where("id = ?", blobberID).Find(&blobber).Error
+		if err != nil {
+			logging.Logger.Error("emitUpdateChallengesForExpiredAllocations: failed to get successful challenges", zap.Error(err))
+			return
+		}
+
+		b := event.Blobber{
+			Provider:            event.Provider{ID: blobberID},
+			ChallengesCompleted: blobber.ChallengesCompleted + uint64(count),
+			ChallengesPassed:    blobber.ChallengesPassed + uint64(count),
+			OpenChallenges:      blobber.OpenChallenges - uint64(count),
+		}
+
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberID, b)
+	}
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
