@@ -1865,9 +1865,9 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "RewardRound", "Timestamp")
 		return
 	}
-	// string "IsAvailable"
-	o = append(o, 0xab, 0x49, 0x73, 0x41, 0x76, 0x61, 0x69, 0x6c, 0x61, 0x62, 0x6c, 0x65)
-	o = msgp.AppendBool(o, z.IsAvailable)
+	// string "NotAvailable"
+	o = append(o, 0xac, 0x4e, 0x6f, 0x74, 0x41, 0x76, 0x61, 0x69, 0x6c, 0x61, 0x62, 0x6c, 0x65)
+	o = msgp.AppendBool(o, z.NotAvailable)
 	return
 }
 
@@ -2054,10 +2054,10 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					}
 				}
 			}
-		case "IsAvailable":
-			z.IsAvailable, bts, err = msgp.ReadBoolBytes(bts)
+		case "NotAvailable":
+			z.NotAvailable, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "IsAvailable")
+				err = msgp.WrapError(err, "NotAvailable")
 				return
 			}
 		default:
@@ -2074,7 +2074,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 14 + msgp.Float64Size + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 12 + msgp.BoolSize
+	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 14 + msgp.Float64Size + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 13 + msgp.BoolSize
 	return
 }
 
