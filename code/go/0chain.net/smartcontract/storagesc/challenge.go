@@ -80,7 +80,7 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCompletedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
-	balances cstate.StateContextI, options ...string) error {
+	balances cstate.StateContextI, allocationID string) error {
 
 	uniqueIdForLogging := uuid.NewString()
 
@@ -160,11 +160,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	if err != nil {
 		return err
-	}
-
-	var challengeID string
-	if len(options) > 0 {
-		challengeID = options[0]
 	}
 
 	// part of tokens goes to related validators
@@ -274,7 +269,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
+	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, allocationID)
 
 	logging.Logger.Info("jayash moveToBlobbers",
 		zap.Any("err", err),
@@ -302,18 +297,11 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// validators' stake pools
 	vsps, err := sc.validatorsStakePools(validators, balances)
-
-	logging.Logger.Info("jayash vsps",
-		zap.Any("err", err),
-		zap.Any("vsps", vsps),
-		zap.Any("validators", validators),
-		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
-
 	if err != nil {
 		return err
 	}
 
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, challengeID)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, allocationID)
 
 	logging.Logger.Info("jayash moveToValidators",
 		zap.Any("err", err),
@@ -401,7 +389,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 
 // move tokens from challenge pool back to write pool
 func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev common.Timestamp,
-	blobAlloc *BlobberAllocation, validators []string, balances cstate.StateContextI, options ...string) (err error) {
+	blobAlloc *BlobberAllocation, validators []string, balances cstate.StateContextI, allocationID string) (err error) {
 	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
@@ -461,14 +449,8 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 		return
 	}
 
-	var challengeID string
-
-	if len(options) > 0 {
-		challengeID = options[0]
-	}
-
 	// validators reward
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances, challengeID)
+	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances, allocationID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -524,7 +506,7 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 		}
 
 		var move currency.Coin
-		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances)
+		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances, allocationID)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -847,7 +829,7 @@ func (sc *StorageSmartContract) challengePassed(
 		partial = float64(cab.success) / float64(cab.threshold)
 	}
 
-	err = sc.blobberReward(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators, partial, balances, cab.challenge.ID)
+	err = sc.blobberReward(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators, partial, balances, cab.challenge.AllocationID)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
@@ -890,7 +872,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 
 	err := sc.blobberPenalty(cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc,
-		cab.validators, balances)
+		cab.validators, balances, cab.challenge.AllocationID)
 	if err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
 	}
