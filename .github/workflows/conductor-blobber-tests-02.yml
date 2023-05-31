@@ -187,7 +187,7 @@ jobs:
           0chain/docker.local/
           blobber/docker.local/
 
-  notify_slack:
+  notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
     needs: [CONDUCTOR_BLOBBERS_02_TESTS]
     if: always() && (needs.CONDUCTOR_BLOBBERS_02_TESTS.result == 'failure')
@@ -195,3 +195,12 @@ jobs:
       - name: "Notify Slack"
         run: |
           curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+  notify_slack_on_success:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_BLOBBERS_02_TESTS]
+    if: always() && (needs.CONDUCTOR_BLOBBERS_02_TESTS.result == 'success')
+    steps:
+      - name: "Notify Slack"
+        run: |
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

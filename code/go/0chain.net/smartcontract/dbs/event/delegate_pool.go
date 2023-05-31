@@ -70,7 +70,10 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider, p
 		Not(&DelegatePool{Status: spenum.Deleted}).
 		Offset(pagination.Offset).Limit(pagination.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
+			Column: clause.Column{Name: "pool_id"},
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "provider_type"},
 		}).
 		Find(&dps)
 	if result.Error != nil {

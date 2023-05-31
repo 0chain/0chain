@@ -25,10 +25,10 @@ jobs:
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
-    - name: Go 1.18 setup.
+    - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:
-        go-version: '1.18'
+        go-version: '1.20'
 
     - name: Docker Init Setup.
       run: |
@@ -64,10 +64,10 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-    - name: Go 1.18 setup.
+    - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:
-        go-version: '1.18'
+        go-version: '1.20'
 
     - name: Setting Up View Change
       run: |
@@ -145,10 +145,10 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-    - name: Go 1.18 setup.
+    - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:
-        go-version: '1.18'
+        go-version: '1.20'
 
     - name: Setting Up View Change
       run: |
@@ -204,10 +204,10 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-    - name: Go 1.18 setup.
+    - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:
-        go-version: '1.18'
+        go-version: '1.20'
 
     - name: Setting Up View Change
       run: |
@@ -263,10 +263,10 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-    - name: Go 1.18 setup.
+    - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:
-        go-version: '1.18'
+        go-version: '1.20'
 
     - name: Setting Up View Change
       run: |
@@ -322,10 +322,10 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-    - name: Go 1.18 setup.
+    - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:
-        go-version: '1.18'
+        go-version: '1.20'
 
     - name: Setting Up View Change
       run: |
@@ -377,3 +377,12 @@ jobs:
   #       if: github.event_name != 'workflow_dispatch' && steps.send-slack-notification.outputs.value == 'true'
   #       run: |
   #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+  # notify_slack_on_success:
+  #   runs-on: [self-hosted, arc-runner]
+  #   needs: [CONDUCTOR_BLOBBERS_01_TESTS]
+  #   if: always() && (needs.CONDUCTOR_BLOBBERS_01_TESTS.result == 'success')
+  #   steps:
+  #     - name: "Notify Slack"
+  #       run: |
+  #         curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

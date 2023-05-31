@@ -62,19 +62,32 @@ func (edb *EventDb) GetWriteMarkers(limit common.Pagination) ([]WriteMarker, err
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
+			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
-		}).Scan(&wm).Error
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "transaction_id"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&wm).Error
 }
 
 func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string, limit common.Pagination) ([]WriteMarker, error) {
 	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
-		Where(&WriteMarker{AllocationID: allocationID}).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   limit.IsDescending,
-	}).Scan(&wms)
+		Where(&WriteMarker{AllocationID: allocationID}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "block_number"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "transaction_id"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&wms)
 	return wms, result.Error
 }
 
@@ -111,7 +124,11 @@ func (edb *EventDb) GetWriteMakersFromFilter(filter, value string, limit common.
 		Where(filter+" = ?", value).
 		Offset(limit.Offset).Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
+			Column: clause.Column{Name: "block_number"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "transaction_id"},
 			Desc:   limit.IsDescending,
 		}).Scan(&wms)
 	return wms, result.Error
@@ -134,6 +151,10 @@ func (edb *EventDb) GetWriteMarkersByFilters(filters WriteMarker, selectString s
 		Where(filters).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "block_number"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "transaction_id"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&wm)

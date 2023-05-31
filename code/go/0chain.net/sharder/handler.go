@@ -65,6 +65,7 @@ func HealthcheckHandler(ctx context.Context, r *http.Request) (interface{}, erro
 			LatestFinalizedBlock: chain.GetServerChain().GetLatestFinalizedBlockSummary(),
 		},
 	}, nil
+
 }
 
 /*BlockHandler - a handler to respond to block queries */
@@ -281,8 +282,8 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 }
 
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
-
 	transactionErrors, err := GetSharderChain().Chain.GetEventDb().GetTransactionErrors()
+
 	if err != nil {
 		fmt.Fprintf(w, "Error getting transaction errors: %v", err)
 		return
@@ -299,10 +300,37 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<table width='100%%'>")
 
-	for _, transactionError := range transactionErrors {
-		fmt.Fprintf(w, "<tr><td class='tname'>%s</td><td>%d</td></tr>", transactionError.TransactionOutput, transactionError.Count)
+	for transactionError, errorDetails := range transactionErrors {
+		count := 0
+		for _, detail := range errorDetails {
+			count += detail.Count
+		}
+		fmt.Fprintf(w, "<tr><td class='tname'><a href='#' onclick='toggleDetails(this)'>%s</a></td><td>%d</td></tr>", transactionError, count)
+
+		for i, detail := range errorDetails {
+			fmt.Fprintf(w, "<tr class='details-row' style='display:none;'><td colspan='2' id='details-%d'>%s : %d</td></tr>", i, detail.TransactionOutput, detail.Count)
+		}
 	}
 
-	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "</td></tr>")
+	fmt.Fprintf(w, "</table>")
+
+	// Include the JavaScript code to toggle details
+	fmt.Fprint(w, "<script>")
+	fmt.Fprint(w, `
+		function toggleDetails(element) {
+			var row = element.parentNode.parentNode;
+			var nextRow = row.nextElementSibling;
+			nextRow.style.display = (nextRow.style.display === 'none') ? 'table-row' : 'none';
+			if (nextRow.style.display !== 'none') {
+				var detailsId = 'details-' + nextRow.cells[0].textContent;
+				var detailsElement = document.getElementById(detailsId);
+				if (detailsElement) {
+					detailsElement.style.display = 'table-cell';
+				}
+			}
+		}
+	`)
+	fmt.Fprint(w, "</script>")
 }

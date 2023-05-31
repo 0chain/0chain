@@ -35,7 +35,10 @@ func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit com
 		Where(query).Offset(limit.Offset).Limit(limit.Limit)
 
 	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
+		Column: clause.Column{Name: "block_number"},
+		Desc:   limit.IsDescending,
+	}).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "transaction_id"},
 		Desc:   limit.IsDescending,
 	})
 	var rms []ReadMarker
