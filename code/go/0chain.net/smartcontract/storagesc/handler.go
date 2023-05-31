@@ -2211,6 +2211,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 	values := r.URL.Query()
 	active := values.Get("active")
+	idsStr := values.Get("blobber_ids")
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -2231,6 +2232,25 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		}
 
 		blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
+	} else if idsStr != "" {
+		var blobber_ids []string
+		err = json.Unmarshal([]byte(idsStr), &blobber_ids)
+		if err != nil {
+			common.Respond(w, r, nil, errors.New("blobber ids list is malformed"))
+			return
+		}
+
+		if len(blobber_ids) == 0 {
+			common.Respond(w, r, nil, errors.New("blobber ids list is empty"))
+			return
+		}
+
+		if len(blobber_ids) > common2.MaxQueryLimit {
+			common.Respond(w, r, nil, errors.New(fmt.Sprintf("too many ids, cannot exceed %d", common2.MaxQueryLimit)))
+			return
+		}
+
+		blobbers, err = edb.GetBlobbersFromIDs(blobber_ids)
 	} else {
 		blobbers, err = edb.GetBlobbers(limit)
 	}
