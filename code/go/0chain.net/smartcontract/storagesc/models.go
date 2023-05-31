@@ -581,6 +581,7 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // challenge time.
 func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin, err error) {
 	move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
+
 	cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
 		logging.Logger.Warn("challenge minus failed",

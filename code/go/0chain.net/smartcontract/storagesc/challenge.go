@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -80,6 +81,17 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCompletedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation, validators []string, partial float64,
 	balances cstate.StateContextI, options ...string) error {
+
+	uniqueIdForLogging := uuid.NewString()
+
+	// log input
+	logging.Logger.Info("blobberReward",
+		zap.String("allocID", alloc.ID),
+		zap.String("blobberID", blobAlloc.BlobberID),
+		zap.Int64("latestCompletedChallTime", int64(latestCompletedChallTime)),
+		zap.Float64("partial", partial),
+		zap.String("uniqueIdForLogging", uniqueIdForLogging))
+
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
@@ -118,7 +130,27 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
 
+	logging.Logger.Info("jayash rdtu",
+		zap.Any("rdtu", rdtu),
+		zap.Any("dtu", dtu),
+		zap.Any("challengeCompletedTime", challengeCompletedTime),
+		zap.Any("latestCompletedChallTime", latestCompletedChallTime),
+		zap.Any("alloc.Expiration", alloc.Expiration),
+		zap.Any("getMaxChallengeCompletionTime()", getMaxChallengeCompletionTime()),
+		zap.Any("conf.TimeUnit", conf.TimeUnit),
+		zap.Any("alloc.ID", alloc.ID),
+		zap.Any("blobAlloc.LatestCompletedChallenge.Created", blobAlloc.LatestCompletedChallenge.Created),
+		zap.Any("blobAlloc.LatestCompletedChallenge.ID", blobAlloc.LatestCompletedChallenge.ID),
+		zap.Any("blobAlloc.LatestCompletedChallenge.AllocationID", blobAlloc.LatestCompletedChallenge.AllocationID),
+	)
+
 	move, err := blobAlloc.challenge(dtu, rdtu)
+
+	logging.Logger.Info("jayash move",
+		zap.Any("move", move),
+		zap.Any("err", err),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
@@ -131,38 +163,87 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
 	validatorsReward, err = currency.MultFloat64(move, conf.ValidatorReward)
+
+	logging.Logger.Info("jayash validatorsReward",
+		zap.Any("validatorsReward", validatorsReward),
+		zap.Any("err", err),
+		zap.Any("move", move),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
 
 	move, err = currency.MinusCoin(move, validatorsReward)
+
+	logging.Logger.Info("jayash move",
+		zap.Any("move", move),
+		zap.Any("err", err),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
 
 	// for a case of a partial verification
 	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
+
+	logging.Logger.Info("jayash blobberReward",
+		zap.Any("blobberReward", blobberReward),
+		zap.Any("err", err),
+		zap.Any("move", move),
+		zap.Any("partial", partial),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
 
 	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
+
+	logging.Logger.Info("jayash back",
+		zap.Any("back", back),
+		zap.Any("err", err),
+		zap.Any("move", move),
+		zap.Any("blobberReward", blobberReward),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
 
 	if back > 0 {
+
 		err = alloc.moveFromChallengePool(cp, back)
+		logging.Logger.Info("jayash moveFromChallengePool",
+			zap.Any("err", err),
+			zap.Any("back", back),
+			zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 		if err != nil {
 			return fmt.Errorf("moving partial challenge to write pool: %v", err)
 		}
 		newMoved, err := currency.AddCoin(alloc.MovedBack, back)
+
+		logging.Logger.Info("jayash newMoved",
+			zap.Any("err", err),
+			zap.Any("newMoved", newMoved),
+			zap.Any("back", back),
+			zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 		if err != nil {
 			return err
 		}
 		alloc.MovedBack = newMoved
 
 		newReturned, err := currency.AddCoin(blobAlloc.Returned, back)
+
+		logging.Logger.Info("jayash newReturned",
+			zap.Any("err", err),
+			zap.Any("newReturned", newReturned),
+			zap.Any("back", back),
+			zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 		if err != nil {
 			return err
 		}
@@ -175,6 +256,10 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 			Amount:       coin,
 		})
 
+		logging.Logger.Info("blobber reward - return back to write pool",
+			zap.Int64("amount", coin),
+			zap.String("allocation", alloc.ID),
+			zap.String("blobber", blobAlloc.BlobberID))
 	}
 
 	var sp *stakePool
@@ -182,13 +267,27 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
+
+	logging.Logger.Info("jayash moveToBlobbers",
+		zap.Any("err", err),
+		zap.Any("blobberReward", blobberReward),
+		zap.Any("blobAlloc.BlobberID", blobAlloc.BlobberID),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return fmt.Errorf("rewarding blobbers: %v", err)
 	}
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
+
+	logging.Logger.Info("jayash newChallengeReward",
+		zap.Any("err", err),
+		zap.Any("newChallengeReward", newChallengeReward),
+		zap.Any("blobberReward", blobberReward),
+		zap.Any("blobAlloc.ChallengeReward", blobAlloc.ChallengeReward),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
@@ -196,16 +295,39 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 
 	// validators' stake pools
 	vsps, err := sc.validatorsStakePools(validators, balances)
+
+	logging.Logger.Info("jayash vsps",
+		zap.Any("err", err),
+		zap.Any("vsps", vsps),
+		zap.Any("validators", validators),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
 
 	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, challengeID)
+
+	logging.Logger.Info("jayash moveToValidators",
+		zap.Any("err", err),
+		zap.Any("validatorsReward", validatorsReward),
+		zap.Any("validators", validators),
+		zap.Any("vsps", vsps),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
 
 	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
+
+	logging.Logger.Info("jayash moveToValidators",
+		zap.Any("err", err),
+		zap.Any("moveToValidators", moveToValidators),
+		zap.Any("validatorsReward", validatorsReward),
+		zap.Any("alloc.MovedToValidators", alloc.MovedToValidators),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging))
+
 	if err != nil {
 		return err
 	}
