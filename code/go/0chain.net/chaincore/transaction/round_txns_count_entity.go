@@ -10,7 +10,7 @@ import (
 
 type RoundTxnsCount struct {
 	datastore.HashIDField // Keyspaced hash of the round number - used as key
-	TxnsCount  int   `json:"txns_count"`
+	TxnsCount  int64   `json:"txns_count"`
 }
 
 const roundKeySpace = "round_txn_count"

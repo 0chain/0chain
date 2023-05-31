@@ -452,6 +452,10 @@ func (ms *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore
 	return val
 }
 
+func (ms *Store) Merge(ctx context.Context, entity datastore.Entity) error {
+	return ms.Write(ctx, entity)
+}
+
 func encode(entity datastore.Entity) *bytes.Buffer {
 	//return datastore.ToMsgpack(entity)
 	return datastore.ToJSON(entity)

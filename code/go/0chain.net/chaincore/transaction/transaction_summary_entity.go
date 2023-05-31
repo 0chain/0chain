@@ -86,13 +86,10 @@ func SetupTxnSummaryEntity(store datastore.Store) {
 }
 
 // SetupRoundSummaryDB - setup the round summary db
-// SummaryDB has 2 keyspaces, TRANSACTION and ROUND specified by the prefix of the key (Hash):
-// 1. Maps transaction hash to round number
-// 2. Maps round number (hashed) to number of transactions in that round
 func SetupTxnSummaryDB(workdir string) {
 	datadir := filepath.Join(workdir, "data/rocksdb/txnsummary")
 
-	db, err := ememorystore.CreateDB(datadir)
+	db, err := ememorystore.CreateDBWithMergeOperator(datadir, ememorystore.NewCounterMergeOperator("hash", "txns_count"))
 	if err != nil {
 		panic(err)
 	}

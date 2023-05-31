@@ -41,14 +41,27 @@ func (c *Connection) Commit() error {
 	return err
 }
 
-/*CreateDB - create a database */
-func CreateDB(dataDir string) (*grocksdb.TransactionDB, error) {
+func defaultDBOptions() *grocksdb.Options {
 	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(grocksdb.NewLRUCache(3 << 30))
 	opts := grocksdb.NewDefaultOptions()
 	opts.SetKeepLogFileNum(5)
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
+	return opts
+}
+
+/*CreateDB - create a database */
+func CreateDB(dataDir string) (*grocksdb.TransactionDB, error) {
+	opts := defaultDBOptions()
+	tdbopts := grocksdb.NewDefaultTransactionDBOptions()
+	return grocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
+}
+
+/* CreateDBWithMergeOperator - create a database with merge operator */
+func CreateDBWithMergeOperator(dataDir string, mergeOperator grocksdb.MergeOperator) (*grocksdb.TransactionDB, error) {
+	opts := defaultDBOptions()
+	opts.SetMergeOperator(mergeOperator)
 	tdbopts := grocksdb.NewDefaultTransactionDBOptions()
 	return grocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 }

@@ -165,18 +165,13 @@ func (sc *Chain) storeTransactions(sTxns []datastore.Entity, roundNumber int64) 
 	defer ememorystore.Close(tctx)
 
 	rtcKey := transaction.BuildSummaryRoundKey(roundNumber)
-	var rtc transaction.RoundTxnsCount
-	err := txnSummaryMetadata.GetStore().Read(tctx, rtcKey, &rtc)
-	if err != nil {
-		rtc.SetKey(rtcKey)
+	rtcDelta := transaction.RoundTxnsCount{
+		HashIDField: datastore.HashIDField{
+			Hash: rtcKey,
+		},
+		TxnsCount: int64(len(sTxns)),
 	}
-	rtc.TxnsCount += len(sTxns)
-	logging.Logger.Debug("incrementing txns count", zap.Int64("round", roundNumber), zap.Any("rtc", rtc))
-
-	err = txnSummaryMetadata.GetStore().Write(tctx, &rtc)
-	if err != nil {
-		return err
-	}
+	err := txnSummaryMetadata.GetStore().Merge(tctx, &rtcDelta)
 
 	// Write the transactions, keyspace the hash
 	for _, txn := range sTxns {
@@ -208,5 +203,5 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 	if err != nil {
 		return 0, err
 	}
-	return rtc.TxnsCount, nil
+	return int(rtc.TxnsCount), nil
 }
