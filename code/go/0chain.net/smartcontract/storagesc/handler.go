@@ -2220,7 +2220,6 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 	var blobbers []event.Blobber
 	if active == "true" {
-		blobbers, err = edb.GetActiveBlobbers(limit)
 		conf, err2 := getConfig(srh.GetQueryStateContext())
 		if err2 != nil && err2 != util.ErrValueNotPresent {
 			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
