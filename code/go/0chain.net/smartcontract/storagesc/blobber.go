@@ -220,7 +220,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
 	blobber.ProviderType = spenum.Blobber
-	blobber.IsAvailable = true
+	blobber.NotAvailable = false
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
@@ -296,6 +296,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	blobber.Capacity = updatedBlobber.Capacity
 	blobber.Terms = updatedBlobber.Terms
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
+	blobber.NotAvailable = updatedBlobber.NotAvailable
 
 	return string(blobber.Encode()), nil
 }
@@ -620,7 +621,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
 	}
 
-	return move, nil 
+	return move, nil
 }
 
 func (sc *StorageSmartContract) commitBlobberConnection(

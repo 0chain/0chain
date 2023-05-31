@@ -399,7 +399,7 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:  mockReadPrice,
 					WritePrice: mockWritePrice,
 				},
-				IsAvailable: true,
+				NotAvailable: false,
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
@@ -929,9 +929,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				WritePrice:    200,
 				MinLockDemand: 0.1,
 			},
-			Capacity:    25 * GB, // 20 GB
-			Allocated:   5 * GB,  //  5 GB
-			IsAvailable: true,
+			Capacity:     25 * GB, // 20 GB
+			Allocated:    5 * GB,  //  5 GB
+			NotAvailable: false,
 		},
 		{
 			Provider: provider.Provider{
@@ -945,9 +945,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				WritePrice:    250,
 				MinLockDemand: 0.05,
 			},
-			Capacity:    20 * GB, // 20 GB
-			Allocated:   10 * GB, // 10 GB
-			IsAvailable: true,
+			Capacity:     20 * GB, // 20 GB
+			Allocated:    10 * GB, // 10 GB
+			NotAvailable: false,
 		},
 	}
 	return

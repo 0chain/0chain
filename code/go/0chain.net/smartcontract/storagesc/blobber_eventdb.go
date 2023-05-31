@@ -19,10 +19,10 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		WritePrice:    sn.Terms.WritePrice,
 		MinLockDemand: sn.Terms.MinLockDemand,
 
-		Capacity:    sn.Capacity,
-		Allocated:   sn.Allocated,
-		SavedData:   sn.SavedData,
-		IsAvailable: sn.IsAvailable,
+		Capacity:     sn.Capacity,
+		Allocated:    sn.Allocated,
+		SavedData:    sn.SavedData,
+		NotAvailable: sn.NotAvailable,
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
@@ -51,10 +51,10 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		WritePrice:    sn.Terms.WritePrice,
 		MinLockDemand: sn.Terms.MinLockDemand,
 
-		Capacity:    sn.Capacity,
-		Allocated:   sn.Allocated,
-		SavedData:   sn.SavedData,
-		IsAvailable: true,
+		Capacity:     sn.Capacity,
+		Allocated:    sn.Allocated,
+		SavedData:    sn.SavedData,
+		NotAvailable: false,
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
