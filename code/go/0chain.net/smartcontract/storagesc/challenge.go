@@ -120,6 +120,12 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
+	logging.Logger.Info("jayash cp",
+		zap.Any("cp", cp),
+		zap.Any("alloc.ID", alloc.ID),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging),
+	)
+
 	rdtu, err := alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber reward failed: %v", err)
@@ -142,6 +148,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		zap.Any("blobAlloc.LatestCompletedChallenge.Created", blobAlloc.LatestCompletedChallenge.Created),
 		zap.Any("blobAlloc.LatestCompletedChallenge.ID", blobAlloc.LatestCompletedChallenge.ID),
 		zap.Any("blobAlloc.LatestCompletedChallenge.AllocationID", blobAlloc.LatestCompletedChallenge.AllocationID),
+		zap.Any("uniqueIdForLogging", uniqueIdForLogging),
 	)
 
 	move, err := blobAlloc.challenge(dtu, rdtu)
