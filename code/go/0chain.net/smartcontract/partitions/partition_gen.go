@@ -122,9 +122,12 @@ func (z location) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *partition) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 1
+	// map header, size 2
+	// string "Loc"
+	o = append(o, 0x82, 0xa3, 0x4c, 0x6f, 0x63)
+	o = msgp.AppendInt(o, z.Loc)
 	// string "Items"
-	o = append(o, 0x81, 0xa5, 0x49, 0x74, 0x65, 0x6d, 0x73)
+	o = append(o, 0xa5, 0x49, 0x74, 0x65, 0x6d, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Items)))
 	for za0001 := range z.Items {
 		// map header, size 2
@@ -156,6 +159,12 @@ func (z *partition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
+		case "Loc":
+			z.Loc, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Loc")
+				return
+			}
 		case "Items":
 			var zb0002 uint32
 			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
@@ -218,7 +227,7 @@ func (z *partition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *partition) Msgsize() (s int) {
-	s = 1 + 6 + msgp.ArrayHeaderSize
+	s = 1 + 4 + msgp.IntSize + 6 + msgp.ArrayHeaderSize
 	for za0001 := range z.Items {
 		s += 1 + 3 + msgp.StringPrefixSize + len(z.Items[za0001].ID) + 5 + msgp.BytesPrefixSize + len(z.Items[za0001].Data)
 	}

@@ -43,7 +43,6 @@ const (
 	TagUpdateBlobber
 	TagUpdateBlobberAllocatedSavedHealth
 	TagUpdateBlobberTotalStake
-	TagUpdateBlobberTotalUnStake
 	TagUpdateBlobberTotalOffers
 	TagDeleteBlobber
 	TagAddAuthorizer
@@ -93,17 +92,11 @@ const (
 	TagFromChallengePool
 	TagAddMint
 	TagBurn
-	TagAllocValueChange
-	TagAllocBlobberValueChange
 	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
-	TagUpdateValidatorUnStakeTotal
 	TagUpdateMinerTotalStake
-	TagUpdateMinerTotalUnStake
 	TagUpdateSharderTotalStake
-	TagUpdateSharderTotalUnStake
 	TagUpdateAuthorizerTotalStake
-	TagUpdateAuthorizerTotalUnStake
 	TagUniqueAddress
 	TagMinerHealthCheck
 	TagSharderHealthCheck
@@ -146,7 +139,6 @@ func initTagString() {
 	TagString[TagUpdateBlobber] = "TagUpdateBlobber"
 	TagString[TagUpdateBlobberAllocatedSavedHealth] = "TagUpdateBlobberAllocatedSavedHealth"
 	TagString[TagUpdateBlobberTotalStake] = "TagUpdateBlobberTotalStake"
-	TagString[TagUpdateBlobberTotalUnStake] = "TagUpdateBlobberTotalUnStake"
 	TagString[TagUpdateBlobberTotalOffers] = "TagUpdateBlobberTotalOffers"
 	TagString[TagDeleteBlobber] = "TagDeleteBlobber"
 	TagString[TagAddAuthorizer] = "TagAddAuthorizer"
@@ -196,14 +188,8 @@ func initTagString() {
 	TagString[TagFromChallengePool] = "TagFromChallengePool"
 	TagString[TagAddMint] = "TagAddMint"
 	TagString[TagBurn] = "TagBurn"
-	TagString[TagAllocValueChange] = "TagAllocValueChange"
-	TagString[TagAllocBlobberValueChange] = "TagAllocBlobberValueChange"
 	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
-	TagString[TagUpdateValidatorUnStakeTotal] = "TagUpdateValidatorUnStakeTotal"
-	TagString[TagUpdateMinerTotalUnStake] = "TagUpdateMinerTotalUnStake"
-	TagString[TagUpdateSharderTotalUnStake] = "TagUpdateSharderTotalUnStake"
-	TagString[TagUpdateAuthorizerTotalUnStake] = "TagUpdateAuthorizerTotalUnStake"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
 	TagString[TagMinerHealthCheck] = "TagMinerHealthCheck"
 	TagString[TagSharderHealthCheck] = "TagSharderHealthCheck"

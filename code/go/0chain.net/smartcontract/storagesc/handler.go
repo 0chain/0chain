@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/config"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"0chain.net/chaincore/config"
 
 	"0chain.net/smartcontract/provider"
 
@@ -75,7 +76,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/blobber-challenges", common.UserRateLimit(srh.getBlobberChallenges)),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", common.UserRateLimit(srh.getStakePoolStat)),
 		rest.MakeEndpoint(storage+"/getUserStakePoolStat", common.UserRateLimit(srh.getUserStakePoolStat)),
-		rest.MakeEndpoint(storage+"/getUserLockedTotal", common.UserRateLimit(srh.getUserLockedTotal)),
 		rest.MakeEndpoint(storage+"/block", common.UserRateLimit(srh.getBlock)),
 		rest.MakeEndpoint(storage+"/get_blocks", common.UserRateLimit(srh.getBlocks)),
 		rest.MakeEndpoint(storage+"/storage-config", common.UserRateLimit(srh.getConfig)),
@@ -257,7 +257,8 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit)
+
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -330,7 +331,18 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit)
+	conf, err2 := getConfig(srh.GetQueryStateContext())
+	if err2 != nil && err2 != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+		return
+	}
+
+	healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+	if conf != nil {
+		healthCheckPeriod = conf.HealthCheckPeriod
+	}
+
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -339,7 +351,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination) ([]string, error) {
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -386,7 +398,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		zap.Int64("last_health_check", int64(balances.Now())),
 	)
 
-	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now())
+	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now(), healthCheckPeriod)
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
@@ -904,43 +916,6 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 	common.Respond(w, r, ups, nil)
 }
 
-// swagger:model userLockedTotalResponse
-type userLockedTotalResponse struct {
-	Total int64 `json:"total"`
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserLockedTotal getUserLockedTotal
-// Gets statistic for a user's stake pools
-//
-// parameters:
-//
-//	+name: client_id
-//	 description: client for which to get stake pool information
-//	 required: true
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: userLockedTotalResponse
-//	400:
-func (srh *StorageRestHandler) getUserLockedTotal(w http.ResponseWriter, r *http.Request) {
-	clientID := r.URL.Query().Get("client_id")
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	locked, err := edb.GetUserTotalLocked(clientID)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest("blobber not found in event database: "+err.Error()))
-		return
-	}
-
-	common.Respond(w, r, &userLockedTotalResponse{Total: locked}, nil)
-
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat getStakePoolStat
 // Gets statistic for all locked tokens of a stake pool
 //
@@ -1264,7 +1239,6 @@ type validatorNodeResponse struct {
 	ValidatorID     string           `json:"validator_id"`
 	BaseUrl         string           `json:"url"`
 	StakeTotal      currency.Coin    `json:"stake_total"`
-	UnstakeTotal    currency.Coin    `json:"unstake_total"`
 	PublicKey       string           `json:"public_key"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	IsKilled        bool             `json:"is_killed"`
@@ -1284,7 +1258,6 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 		ValidatorID:              v.ID,
 		BaseUrl:                  v.BaseUrl,
 		StakeTotal:               v.TotalStake,
-		UnstakeTotal:             v.UnstakeTotal,
 		PublicKey:                v.PublicKey,
 		DelegateWallet:           v.DelegateWallet,
 		NumDelegates:             v.NumDelegates,
@@ -1318,7 +1291,18 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 	var validators []event.Validator
 
 	if active == "true" {
-		validators, err = edb.GetActiveValidators(pagination)
+		conf, err2 := getConfig(srh.GetQueryStateContext())
+		if err2 != nil && err2 != util.ErrValueNotPresent {
+			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+			return
+		}
+
+		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+		if conf != nil {
+			healthCheckPeriod = conf.HealthCheckPeriod
+		}
+
+		validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
 	} else {
 		validators, err = edb.GetValidators(pagination)
 	}
@@ -2235,7 +2219,18 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 	var blobbers []event.Blobber
 	if active == "true" {
-		blobbers, err = edb.GetActiveBlobbers(limit)
+		conf, err2 := getConfig(srh.GetQueryStateContext())
+		if err2 != nil && err2 != util.ErrValueNotPresent {
+			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+			return
+		}
+
+		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+		if conf != nil {
+			healthCheckPeriod = conf.HealthCheckPeriod
+		}
+
+		blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
 	} else {
 		blobbers, err = edb.GetBlobbers(limit)
 	}
@@ -2463,7 +2458,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, sn, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term getAllocBlobberTerms
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term alloc-blobber-term
 // Gets statistic for all locked tokens of a stake pool
 //
 // parameters:

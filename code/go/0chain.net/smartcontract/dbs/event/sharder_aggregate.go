@@ -16,7 +16,6 @@ type SharderAggregate struct {
 	BucketID  int64  `json:"bucket_id"`
 
 	Fees          currency.Coin `json:"fees"`
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
@@ -24,10 +23,6 @@ type SharderAggregate struct {
 
 func (s *SharderAggregate) GetTotalStake() currency.Coin {
 	return s.TotalStake
-}
-
-func (s *SharderAggregate) GetUnstakeTotal() currency.Coin {
-	return s.UnstakeTotal
 }
 
 func (s *SharderAggregate) GetServiceCharge() float64 {
@@ -40,10 +35,6 @@ func (s *SharderAggregate) GetTotalRewards() currency.Coin {
 
 func (s *SharderAggregate) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
-}
-
-func (s *SharderAggregate) SetUnstakeTotal(value currency.Coin) {
-	s.UnstakeTotal = value
 }
 
 func (s *SharderAggregate) SetServiceCharge(value float64) {
@@ -121,10 +112,10 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 
 	var (
 		oldShardersProcessingMap = MakeProcessingMap(oldSharders)
-		aggregates []SharderAggregate
-		gsDiff     Snapshot
-		old SharderSnapshot
-		ok bool
+		aggregates               []SharderAggregate
+		gsDiff                   Snapshot
+		old                      SharderSnapshot
+		ok                       bool
 	)
 	for _, current := range currentSharders {
 		processingEntity, found := oldShardersProcessingMap[current.ID]
@@ -144,11 +135,11 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 			handleOfflineSharder(&gsDiff, old)
 			continue
 		}
-		
+
 		aggregate := SharderAggregate{
-			Round:        round,
-			SharderID:      current.ID,
-			BucketID:     current.BucketId,
+			Round:     round,
+			SharderID: current.ID,
+			BucketID:  current.BucketId,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)

@@ -265,6 +265,10 @@ func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s 
 	fmt.Fprintf(w, "<tr>")
 
 	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, txn.Hash)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, txn.ClientID)
 	fmt.Fprintf(w, "</td>")
 
@@ -1382,7 +1386,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if cstate.ErrInvalidState(err) {
 		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
 		// of the 'error' of the miner itself.
-		return transaction.PutTransaction(ctx, txn)
+		txnRsp, err := transaction.PutTransaction(ctx, txn)
+		if err != nil {
+			logging.Logger.Error("failed to save transaction",
+				zap.Error(err),
+				zap.Any("txn", txn))
+			return nil, common.NewErrInternal("failed to save transaction")
+		}
+		return txnRsp, nil
 	}
 
 	var nonce int64
@@ -1394,7 +1405,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, errors.New("invalid transaction nonce")
 	}
 
-	if txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
+	if nonce+1 == txn.Nonce && txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
 		return nil, errors.New("insufficient balance to send")
 	}
 
@@ -1404,7 +1415,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			if cstate.ErrInvalidState(err) {
 				// put transaction into pool if got invalid state error
 				// to avoid txn rejected due to miner's own fault
-				return transaction.PutTransaction(ctx, txn)
+				txnRsp, err := transaction.PutTransaction(ctx, txn)
+				if err != nil {
+					logging.Logger.Error("failed to save transaction",
+						zap.Error(err),
+						zap.Any("txn", txn))
+					return nil, common.NewErrInternal("failed to save transaction")
+				}
+				return txnRsp, nil
 			}
 			return nil, fmt.Errorf("could not get estimated txn cost: %v", err)
 		}
@@ -1420,21 +1438,34 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.String("func", txn.FunctionName),
 				zap.Any("txn fee", txn.Fee),
 				zap.Any("minFee", minFee),
+				zap.Int64("lfb round", lfb.Round),
+				zap.String("lfb", lfb.Hash),
 				zap.Error(err))
 			return nil, err
 		}
 
-		if s.Balance < txn.Fee {
+		if nonce+1 == txn.Nonce && s.Balance < txn.Fee {
 			logging.Logger.Error("insufficient balance",
 				zap.String("txn", txn.Hash),
+				zap.String("client_id", txn.ClientID),
 				zap.String("func", txn.FunctionName),
 				zap.Any("balance", s.Balance),
-				zap.Any("fee", txn.Fee))
+				zap.Any("fee", txn.Fee),
+				zap.Int64("lfb round", lfb.Round),
+				zap.String("lfb", lfb.Hash))
 			return nil, errors.New("insufficient balance to pay fee")
 		}
 	}
 
-	return transaction.PutTransaction(ctx, txn)
+	txnRsp, err := transaction.PutTransaction(ctx, txn)
+	if err != nil {
+		logging.Logger.Error("failed to save transaction",
+			zap.Error(err),
+			zap.Any("txn", txn))
+		return nil, common.NewErrInternal("failed to save transaction")
+	}
+
+	return txnRsp, nil
 }
 
 // RoundInfoHandler collects and writes information about current round
@@ -1724,7 +1755,7 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	// Print table and heading
 	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<th align='center' colspan='7'>Transactions in pool</th>")
-	fmt.Fprintf(w, "<tr class='header'><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Txn hash</td><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
 
 	ctx := common.GetRootContext()
 

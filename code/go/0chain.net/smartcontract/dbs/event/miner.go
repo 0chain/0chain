@@ -46,7 +46,7 @@ func (edb *EventDb) GetMiner(id string) (Miner, error) {
 		First(&miner).Error
 }
 
-//nolint
+// nolint
 func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool, error) {
 	var minerDps []struct {
 		Miner
@@ -119,10 +119,6 @@ func (m *Miner) GetTotalStake() currency.Coin {
 	return m.TotalStake
 }
 
-func (m *Miner) GetUnstakeTotal() currency.Coin {
-	return m.UnstakeTotal
-}
-
 func (m *Miner) GetServiceCharge() float64 {
 	return m.ServiceCharge
 }
@@ -133,10 +129,6 @@ func (m *Miner) GetTotalRewards() currency.Coin {
 
 func (m *Miner) SetTotalStake(value currency.Coin) {
 	m.TotalStake = value
-}
-
-func (m *Miner) SetUnstakeTotal(value currency.Coin) {
-	m.UnstakeTotal = value
 }
 
 func (m *Miner) SetServiceCharge(value float64) {
@@ -154,18 +146,31 @@ func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p commo
 		Model(&Miner{}).
 		Where(&filter).Offset(p.Offset).Limit(p.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   p.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
 			Desc:   p.IsDescending,
 		})
+
 	return miners, query.Scan(&miners).Error
 }
 
 func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, p common2.Pagination) ([]MinerGeolocation, error) {
 	var minerLocations []MinerGeolocation
-	query := edb.Get().Model(&Miner{}).Where(&filter).Offset(p.Offset).Limit(p.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "created_at"},
-		Desc:   p.IsDescending,
-	})
+	query := edb.Get().Model(&Miner{}).
+		Where(&filter).
+		Offset(p.Offset).
+		Limit(p.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   p.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   p.IsDescending,
+		})
 	result := query.Scan(&minerLocations)
 
 	return minerLocations, result.Error
@@ -285,14 +290,6 @@ func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag Eve
 		},
 	}
 }
-func NewUpdateMinerTotalUnStakeEvent(ID string, unstakeTotal currency.Coin) (tag EventTag, data interface{}) {
-	return TagUpdateMinerTotalUnStake, Miner{
-		Provider: Provider{
-			ID:           ID,
-			UnstakeTotal: unstakeTotal,
-		},
-	}
-}
 
 func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
 	var provs []Provider
@@ -302,19 +299,8 @@ func (edb *EventDb) updateMinersTotalStakes(miners []Miner) error {
 	return edb.updateProviderTotalStakes(provs, "miners")
 }
 
-func (edb *EventDb) updateMinersTotalUnStakes(miners []Miner) error {
-	var provs []Provider
-	for _, s := range miners {
-		provs = append(provs, s.Provider)
-	}
-	return edb.updateProvidersTotalUnStakes(provs, "miners")
-}
-
 func mergeUpdateMinerTotalStakesEvents() *eventsMergerImpl[Miner] {
 	return newEventsMerger[Miner](TagUpdateMinerTotalStake, withUniqueEventOverwrite())
-}
-func mergeUpdateMinerTotalUnStakesEvents() *eventsMergerImpl[Miner] {
-	return newEventsMerger[Miner](TagUpdateMinerTotalUnStake, withUniqueEventOverwrite())
 }
 
 func mergeMinerHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {

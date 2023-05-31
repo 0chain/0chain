@@ -14,7 +14,6 @@ type MinerAggregate struct {
 	Round         int64         `json:"round" gorm:"index:idx_miner_aggregate,unique"`
 	BucketID      int64         `json:"bucket_id"`
 	Fees          currency.Coin `json:"fees"`
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
@@ -22,10 +21,6 @@ type MinerAggregate struct {
 
 func (m *MinerAggregate) GetTotalStake() currency.Coin {
 	return m.TotalStake
-}
-
-func (m *MinerAggregate) GetUnstakeTotal() currency.Coin {
-	return m.UnstakeTotal
 }
 
 func (m *MinerAggregate) GetServiceCharge() float64 {
@@ -38,10 +33,6 @@ func (m *MinerAggregate) GetTotalRewards() currency.Coin {
 
 func (m *MinerAggregate) SetTotalStake(value currency.Coin) {
 	m.TotalStake = value
-}
-
-func (m *MinerAggregate) SetUnstakeTotal(value currency.Coin) {
-	m.UnstakeTotal = value
 }
 
 func (m *MinerAggregate) SetServiceCharge(value float64) {
@@ -118,10 +109,10 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 
 	var (
 		oldMinersProcessingMap = MakeProcessingMap(oldMiners)
-		aggregates []MinerAggregate
-		gsDiff     Snapshot
-		old MinerSnapshot
-		ok bool
+		aggregates             []MinerAggregate
+		gsDiff                 Snapshot
+		old                    MinerSnapshot
+		ok                     bool
 	)
 	for _, current := range currentMiners {
 		processingEntity, found := oldMinersProcessingMap[current.ID]
@@ -136,15 +127,15 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 			}
 		}
 		// Case: blobber becomes killed/shutdown
-		if (current.IsOffline() && !old.IsOffline()) {
+		if current.IsOffline() && !old.IsOffline() {
 			handleOfflineMiner(&gsDiff, old)
 			continue
 		}
-		
+
 		aggregate := MinerAggregate{
-			Round:        round,
-			MinerID:      current.ID,
-			BucketID:     current.BucketId,
+			Round:    round,
+			MinerID:  current.ID,
+			BucketID: current.BucketId,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)

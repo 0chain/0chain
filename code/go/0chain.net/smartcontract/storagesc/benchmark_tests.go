@@ -107,11 +107,8 @@ func BenchmarkTests(
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
-	creationTimeRaw := viper.GetInt64(bk.MptCreationTime)
-	creationTime := common.Now()
-	if creationTimeRaw != 0 {
-		creationTime = common.Timestamp(creationTimeRaw)
-	}
+
+	creationTime := data.Now
 	timings := make(map[string]time.Duration)
 	newAllocationRequestF := func(
 		t *transaction.Transaction,
@@ -722,6 +719,9 @@ func BenchmarkTests(
 		{
 			name:     "storage.shutdown_blobber",
 			endpoint: ssc.shutdownBlobber,
+			input: (&provider.ProviderRequest{
+				ID: getMockBlobberId(0),
+			}).Encode(),
 			txn: &transaction.Transaction{
 				ClientID: getMockBlobberId(0),
 			},
@@ -729,6 +729,9 @@ func BenchmarkTests(
 		{
 			name:     "storage.shutdown_validator",
 			endpoint: ssc.shutdownValidator,
+			input: (&provider.ProviderRequest{
+				ID: data.ValidatorIds[0],
+			}).Encode(),
 			txn: &transaction.Transaction{
 				ClientID: data.ValidatorIds[0],
 			},

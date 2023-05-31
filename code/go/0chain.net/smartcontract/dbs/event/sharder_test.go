@@ -218,7 +218,7 @@ func TestSharders(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10, CommitNow())
 
 	sharder, err := eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -238,7 +238,7 @@ func TestSharders(t *testing.T) {
 		Tag:         TagAddSharder,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10, CommitNow())
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -262,7 +262,7 @@ func TestSharders(t *testing.T) {
 		Tag:         TagUpdateSharder,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10, CommitNow())
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -277,7 +277,7 @@ func TestSharders(t *testing.T) {
 		Tag:         TagDeleteSharder,
 		Data:        sn.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10)
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10, CommitNow())
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)
@@ -357,7 +357,7 @@ func TestGetSharderLocations(t *testing.T) {
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 12, len(locations), "all sharders should be returned")
 		for _, location := range locations {
-			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			id, err := strconv.ParseInt(location.ID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
 			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
 			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
@@ -368,7 +368,7 @@ func TestGetSharderLocations(t *testing.T) {
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
-			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			id, err := strconv.ParseInt(location.ID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
 			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
 			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
@@ -379,7 +379,7 @@ func TestGetSharderLocations(t *testing.T) {
 		assert.NoError(t, err, "There should be no error")
 		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
 		for _, location := range locations {
-			id, err := strconv.ParseInt(location.SharderID, 10, 0)
+			id, err := strconv.ParseInt(location.ID, 10, 0)
 			assert.NoError(t, err, "sharder id should be parsed to integer")
 			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
 			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")

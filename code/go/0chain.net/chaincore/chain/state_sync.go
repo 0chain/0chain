@@ -85,48 +85,6 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) error {
 	return nil
 }
 
-// UpdateStateFromNetwork get a bunch of state nodes from the network
-func (c *Chain) UpdateStateFromNetwork(ctx context.Context, mpt util.MerklePatriciaTrieI, keys []util.Key) error {
-	ns, err := c.getStateNodes(ctx, keys)
-	if err != nil {
-		return err
-	}
-
-	logging.Logger.Debug("UpdateStateFromNetwork get state nodes", zap.Int("num", len(ns.Nodes)))
-
-	return ns.SaveState(ctx, mpt.GetNodeDB())
-}
-
-// GetStateNodesSharders - get a bunch of state nodes from the network
-func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) {
-	ns, err := c.getStateNodesFromSharders(ctx, keys)
-	if err != nil {
-		skeys := make([]string, len(keys))
-		for idx, key := range keys {
-			skeys[idx] = util.ToHex(key)
-		}
-		logging.Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
-			zap.Strings("keys", skeys), zap.Error(err))
-		return
-	}
-	keysStr := make([]string, len(keys))
-	for i := range keys {
-		keysStr[i] = util.ToHex(keys[i])
-	}
-	err = c.SaveStateNodes(ctx, ns)
-	if err != nil {
-		logging.Logger.Error("get state nodes - error saving",
-			zap.Int("num_keys", len(keys)),
-			zap.Strings("keys:", keysStr),
-			zap.Error(err))
-	} else {
-		logging.Logger.Info("get state nodes - saving",
-			zap.Int("num_keys", len(keys)),
-			zap.Strings("keys:", keysStr),
-			zap.Int("nodes", len(ns.Nodes)))
-	}
-}
-
 // GetStateFrom - get the state from a given node
 func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialState, error) {
 	partialState := &state.PartialState{}
@@ -239,6 +197,22 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	logging.Logger.Info("get state nodes",
 		zap.Int("keys", len(keys)),
 		zap.Int("nodes", len(ns.Nodes)))
+
+	// validate the retrieved nodes keys match the requested ones
+	keysMap := make(map[string]struct{}, len(keys))
+	for _, k := range keys {
+		keysMap[util.ToHex(k)] = struct{}{}
+	}
+
+	for _, n := range ns.Nodes {
+		nk := util.ToHex(n.GetHashBytes())
+		if _, ok := keysMap[nk]; !ok {
+			logging.Logger.Error("get state nodes - retrieved node key does not match",
+				zap.String("key not requested", nk))
+			return nil, common.NewError("state_nodes_error", "retrieved node key does not match")
+		}
+	}
+
 	return ns, nil
 }
 

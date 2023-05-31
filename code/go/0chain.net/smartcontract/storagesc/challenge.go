@@ -30,7 +30,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const blobberAllocationPartitionSize = 100
+// TODO: add back after fixing the chain stuck
+//const blobberAllocationPartitionSize = 100
+
+const blobberAllocationPartitionSize = 10
 
 // completeChallenge complete the challenge
 func (sc *StorageSmartContract) completeChallenge(cab *challengeAllocBlobberPassResult) bool {
@@ -179,10 +182,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	before, err := sp.stake()
-	if err != nil {
-		return err
-	}
 
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
 	if err != nil {
@@ -217,18 +216,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return err
 	}
 
-	if blobAlloc.Terms.WritePrice > 0 {
-		stake, err := sp.stake()
-		if err != nil {
-			return err
-		}
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
-			FieldType:    event.Staked,
-			AllocationId: "",
-			BlobberId:    blobAlloc.BlobberID,
-			Delta:        int64((stake - before) / blobAlloc.Terms.WritePrice),
-		})
-	}
 	// Save the pools
 	if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)
@@ -422,14 +409,6 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 			return err
 		}
 		blobAlloc.Penalty = penalty
-		if blobAlloc.Terms.WritePrice > 0 {
-			balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobAlloc.BlobberID, event.AllocationBlobberValueChanged{
-				FieldType:    event.Staked,
-				AllocationId: "",
-				BlobberId:    blobAlloc.BlobberID,
-				Delta:        -int64(move / blobAlloc.Terms.WritePrice),
-			})
-		}
 		// Save stake pool
 		if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't Save blobber's stake pool: %v", err)
@@ -812,9 +791,9 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	case nil:
 	case util.ErrValueNotPresent:
 		logging.Logger.Error("client state has invalid allocations",
-			zap.String("selected_allocation", allocID))
-		return nil, common.NewErrorf("invalid_allocation",
-			"client state has invalid allocations")
+			zap.String("selected_allocation", allocID),
+			zap.Error(err))
+		return nil, fmt.Errorf("could not find allocation to challenge: %v", err)
 	default:
 		return nil, common.NewErrorf("adding_challenge_error",
 			"unexpected error getting allocation: %v", err)
@@ -930,7 +909,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
-	const findValidAllocRetries = 5
+	var findValidAllocRetries = 5 // avoid retry for debugging
 	var (
 		alloc                       *StorageAllocation
 		blobberAllocPartitionLength = len(randBlobberAllocs)
@@ -938,13 +917,17 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		randPerm                    = r.Perm(blobberAllocPartitionLength)
 	)
 
+	if findValidAllocRetries > blobberAllocPartitionLength {
+		findValidAllocRetries = blobberAllocPartitionLength
+	}
+
 	for i := 0; i < findValidAllocRetries; i++ {
 		// get a random allocation
 		allocID := randBlobberAllocs[randPerm[i%blobberAllocPartitionLength]].ID
 
 		// get the storage allocation from MPT
 		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
-		if err != nil && partitions.ErrItemNotFound(err) {
+		if err != nil {
 			return nil, err
 		}
 
@@ -955,14 +938,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if alloc.Finalized {
 			err := blobberAllocParts.Remove(balances, allocID)
 			if err != nil {
-				if !partitions.ErrItemNotFound(err) {
-					logging.Logger.Error("could not remove allocation from blobber",
-						zap.Error(err),
-						zap.String("blobber", blobberID),
-						zap.String("allocation", allocID))
-					return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
-				}
-				continue
+				return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
 			}
 
 			allocNum, err := blobberAllocParts.Size(balances)
