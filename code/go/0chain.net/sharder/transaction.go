@@ -27,7 +27,8 @@ func init() {
 func (sc *Chain) GetTransactionSummary(ctx context.Context, hash string) (*transaction.TransactionSummary, error) {
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	txnSummary := txnSummaryEntityMetadata.Instance().(*transaction.TransactionSummary)
-	err := txnSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), txnSummary)
+	key := transaction.BuildSummaryTransactionKey(hash)
+	err := txnSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(key), txnSummary)
 	if err != nil {
 		return nil, err
 	}
