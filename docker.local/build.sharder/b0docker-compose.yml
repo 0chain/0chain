@@ -29,6 +29,7 @@ services:
       - ../config:/0chain/config
       - ../sharder${SHARDER}/log:/0chain/log
       - ../sharder${SHARDER}/data:/0chain/data
+      - ../sharder${SHARDER}/data/blocks:/0chain/data/blocks
     ports:
       - "717${SHARDER}:717${SHARDER}"
     networks:

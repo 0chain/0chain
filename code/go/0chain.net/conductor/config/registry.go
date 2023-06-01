@@ -640,15 +640,6 @@ func init() {
 		return ex.SetServerState(cfg)
 	})
 
-	register("blobber_delete", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := NewBlobberDelete()
-		if err := cfg.Decode(val); err != nil {
-			return err
-		}
-
-		return ex.SetServerState(cfg)
-	})
-
 	register("adversarial_validator", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := NewAdversarialValidator()
 		if err := cfg.Decode(val); err != nil {
