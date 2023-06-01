@@ -37,8 +37,7 @@ type AbstractStakePool interface {
 	HasStakePool(user string) bool
 	LockPool(txn *transaction.Transaction, providerType spenum.Provider, providerId datastore.Key, status spenum.PoolStatus, balances cstate.StateContextI) (string, error)
 	EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
-	Save(providerType spenum.Provider, providerID string,
-		balances cstate.StateContextI) error
+	Save(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error
 	GetSettings() Settings
 	Empty(sscID, poolID, clientID string, balances cstate.StateContextI) error
 	UnlockPool(clientID string, providerType spenum.Provider, providerId datastore.Key, balances cstate.StateContextI) (string, error)
