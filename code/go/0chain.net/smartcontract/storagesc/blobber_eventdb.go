@@ -27,7 +27,7 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
 			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
+			ServiceCharge:   sn.StakePoolSettings.ServiceCharge,
 			LastHealthCheck: sn.LastHealthCheck,
 			TotalStake:      staked,
 		},
@@ -59,7 +59,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
 			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
+			ServiceCharge:   sn.StakePoolSettings.ServiceCharge,
 			LastHealthCheck: sn.LastHealthCheck,
 			TotalStake:      staked,
 			Rewards: event.ProviderRewards{

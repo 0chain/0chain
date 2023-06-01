@@ -543,7 +543,7 @@ func setupMocksFinishAllocation(
 	for i, blobber := range blobbers {
 		var id = strconv.Itoa(i)
 		var sp = newStakePool()
-		sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
+		sp.Settings.ServiceCharge = blobberYaml.serviceCharge
 		sp.TotalOffers = currency.Coin(200000000000)
 		for j, stake := range bStakes[i] {
 			var jd = strconv.Itoa(j)

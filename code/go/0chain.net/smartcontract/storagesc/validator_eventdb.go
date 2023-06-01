@@ -20,9 +20,9 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 		BaseURL:   v.BaseUrl,
 		PublicKey: v.PublicKey,
 		StakePoolSettings: stakepool.Settings{
-			DelegateWallet:     v.DelegateWallet,
-			MaxNumDelegates:    v.NumDelegates,
-			ServiceChargeRatio: v.ServiceCharge,
+			DelegateWallet:  v.DelegateWallet,
+			MaxNumDelegates: v.NumDelegates,
+			ServiceCharge:   v.ServiceCharge,
 		},
 	}
 }
@@ -55,7 +55,7 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 			TotalStake:      staked,
 			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
 			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
+			ServiceCharge:   vn.StakePoolSettings.ServiceCharge,
 			LastHealthCheck: vn.LastHealthCheck,
 		},
 	}
@@ -78,7 +78,7 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 			TotalStake:      staked,
 			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
 			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
+			ServiceCharge:   vn.StakePoolSettings.ServiceCharge,
 			Rewards:         event.ProviderRewards{ProviderID: vn.ID},
 			LastHealthCheck: vn.LastHealthCheck,
 		},

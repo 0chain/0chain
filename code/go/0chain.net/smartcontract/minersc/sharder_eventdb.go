@@ -42,9 +42,9 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		StakePoolResponse: &StakePoolResponse{
 			Reward: edbSharder.Rewards.Rewards,
 			Settings: stakepool.Settings{
-				DelegateWallet:     edbSharder.DelegateWallet,
-				ServiceChargeRatio: edbSharder.ServiceCharge,
-				MaxNumDelegates:    edbSharder.Provider.NumDelegates,
+				DelegateWallet:  edbSharder.DelegateWallet,
+				ServiceCharge:   edbSharder.ServiceCharge,
+				MaxNumDelegates: edbSharder.Provider.NumDelegates,
 			},
 		},
 	}
@@ -83,7 +83,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 			ID:             sn.ID,
 			TotalStake:     sn.TotalStaked,
 			DelegateWallet: sn.Settings.DelegateWallet,
-			ServiceCharge:  sn.Settings.ServiceChargeRatio,
+			ServiceCharge:  sn.Settings.ServiceCharge,
 			NumDelegates:   sn.Settings.MaxNumDelegates,
 			Rewards: event.ProviderRewards{
 				ProviderID:   sn.ID,
@@ -128,7 +128,7 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"total_stake":       sn.TotalStaked,
 			"delete":            sn.Delete,
 			"delegate_wallet":   sn.Settings.DelegateWallet,
-			"service_charge":    sn.Settings.ServiceChargeRatio,
+			"service_charge":    sn.Settings.ServiceCharge,
 			"num_delegates":     sn.Settings.MaxNumDelegates,
 			"last_health_check": sn.LastHealthCheck,
 			"longitude":         sn.SimpleNode.Geolocation.Longitude,

@@ -100,7 +100,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn.Allocated = 0
 	sn.LastHealthCheck = 0
 	sn.StakePoolSettings.MaxNumDelegates = 100
-	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
+	sn.StakePoolSettings.ServiceCharge = 0.30 // 30%
 	sn.StakePoolSettings.DelegateWallet = c.id
 	return mustEncode(t, &sn)
 }

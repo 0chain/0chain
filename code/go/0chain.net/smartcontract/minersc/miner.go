@@ -74,7 +74,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.String("pkey", newMiner.PublicKey),
 		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
-		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
+		zap.Float64("service_charge", newMiner.Settings.ServiceCharge),
 		zap.Int("num_delegates", newMiner.Settings.MaxNumDelegates),
 	)
 
@@ -287,7 +287,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewError("update_miner_settings", "access denied")
 	}
 
-	mn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
+	mn.Settings.ServiceCharge = update.Settings.ServiceCharge
 	mn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
 
 	if err = mn.save(balances); err != nil {
@@ -325,15 +325,15 @@ func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, erro
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
-	if node.Settings.ServiceChargeRatio < 0 {
+	if node.Settings.ServiceCharge < 0 {
 		return common.NewErrorf(opcode,
-			"invalid negative service charge: %v", node.Settings.ServiceChargeRatio)
+			"invalid negative service charge: %v", node.Settings.ServiceCharge)
 	}
 
-	if node.Settings.ServiceChargeRatio > gn.MaxCharge {
+	if node.Settings.ServiceCharge > gn.MaxCharge {
 		return common.NewErrorf(opcode,
 			"max_charge is greater than allowed by SC: %v > %v",
-			node.Settings.ServiceChargeRatio, gn.MaxCharge)
+			node.Settings.ServiceCharge, gn.MaxCharge)
 	}
 
 	if node.Settings.MaxNumDelegates <= 0 {

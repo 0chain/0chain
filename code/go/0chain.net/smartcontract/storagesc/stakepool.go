@@ -25,12 +25,12 @@ func validateStakePoolSettings(
 	sps stakepool.Settings,
 	conf *Config,
 ) error {
-	if sps.ServiceChargeRatio < 0.0 {
+	if sps.ServiceCharge < 0.0 {
 		return errors.New("negative service charge")
 	}
-	if sps.ServiceChargeRatio > conf.MaxCharge {
+	if sps.ServiceCharge > conf.MaxCharge {
 		return fmt.Errorf("service_charge (%f) is greater than"+
-			" max allowed by SC (%f)", sps.ServiceChargeRatio, conf.MaxCharge)
+			" max allowed by SC (%f)", sps.ServiceCharge, conf.MaxCharge)
 	}
 	if sps.MaxNumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
@@ -320,7 +320,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		sp.Minter = chainstate.MinterStorage
 	}
 
-	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
+	sp.Settings.ServiceCharge = settings.ServiceCharge
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 	return sp, nil
 }
@@ -336,7 +336,7 @@ func (ssc *StorageSmartContract) createStakePool(
 	sp := newStakePool()
 	sp.Settings.DelegateWallet = settings.DelegateWallet
 	sp.Minter = chainstate.MinterStorage
-	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
+	sp.Settings.ServiceCharge = settings.ServiceCharge
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 
 	return sp, nil

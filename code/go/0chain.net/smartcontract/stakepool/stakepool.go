@@ -58,9 +58,9 @@ type StakePool struct {
 }
 
 type Settings struct {
-	DelegateWallet     string  `json:"delegate_wallet"`
-	MaxNumDelegates    int     `json:"num_delegates"`
-	ServiceChargeRatio float64 `json:"service_charge"`
+	DelegateWallet  string  `json:"delegate_wallet"`
+	MaxNumDelegates int     `json:"num_delegates"`
+	ServiceCharge   float64 `json:"service_charge"`
 }
 
 type DelegatePool struct {
@@ -110,9 +110,9 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	spStat.StakeTotal = provider.TotalStake
 	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
 	spStat.Settings = Settings{
-		DelegateWallet:     provider.DelegateWallet,
-		MaxNumDelegates:    provider.NumDelegates,
-		ServiceChargeRatio: provider.ServiceCharge,
+		DelegateWallet:  provider.DelegateWallet,
+		MaxNumDelegates: provider.NumDelegates,
+		ServiceCharge:   provider.ServiceCharge,
 	}
 	spStat.Rewards = provider.Rewards.TotalRewards
 	for _, dp := range delegatePools {
@@ -401,7 +401,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	if err != nil {
 		return err
 	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceCharge * fValue)
 	if err != nil {
 		return err
 	}
@@ -567,7 +567,7 @@ func (sp *StakePool) DistributeRewards(
 	if err != nil {
 		return err
 	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceCharge * fValue)
 	if err != nil {
 		return err
 	}

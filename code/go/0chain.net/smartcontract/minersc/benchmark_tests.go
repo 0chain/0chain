@@ -115,8 +115,8 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
 					},
 				},
 			}).Encode(),
@@ -139,8 +139,8 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
 					},
 				},
 			}).Encode(),
@@ -345,8 +345,8 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
 					},
 				},
 			}).Encode(),
@@ -368,8 +368,8 @@ func BenchmarkTests(
 				StakePool: &stakepool.StakePool{
 					Pools: make(map[string]*stakepool.DelegatePool),
 					Settings: stakepool.Settings{
-						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
-						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						ServiceCharge:   viper.GetFloat64(bk.MinerMaxCharge),
+						MaxNumDelegates: viper.GetInt(bk.MinerMaxDelegates),
 					},
 				},
 			}).Encode(),

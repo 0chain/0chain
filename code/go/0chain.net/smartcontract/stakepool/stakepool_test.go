@@ -43,7 +43,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 				DelegateID: delegateId,
 				Balance:    arg.delegateBal[i],
 			}
-			sp.Settings.ServiceChargeRatio = arg.serviceChargeRatio
+			sp.Settings.ServiceCharge = arg.serviceChargeRatio
 		}
 
 		return sp, balances
@@ -233,7 +233,7 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						ServiceChargeRatio: 0,
+						ServiceCharge: 0,
 					},
 				},
 				vs: ValidationSettings{
@@ -262,7 +262,7 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						ServiceChargeRatio: 0,
+						ServiceCharge: 0,
 					},
 				},
 				vs: ValidationSettings{
@@ -292,7 +292,7 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						ServiceChargeRatio: 0,
+						ServiceCharge: 0,
 					},
 				},
 				vs: ValidationSettings{
@@ -321,7 +321,7 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						ServiceChargeRatio: 0,
+						ServiceCharge: 0,
 					},
 				},
 				vs: ValidationSettings{
@@ -350,7 +350,7 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						ServiceChargeRatio: 0,
+						ServiceCharge: 0,
 					},
 				},
 				vs: ValidationSettings{
@@ -379,7 +379,7 @@ func Test_validateLockRequest(t *testing.T) {
 						},
 					},
 					Settings: Settings{
-						ServiceChargeRatio: 0,
+						ServiceCharge: 0,
 					},
 				},
 				vs: ValidationSettings{

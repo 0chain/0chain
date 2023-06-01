@@ -304,9 +304,9 @@ func (z Settings) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxNumDelegates"
 	o = append(o, 0xaf, 0x4d, 0x61, 0x78, 0x4e, 0x75, 0x6d, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.MaxNumDelegates)
-	// string "ServiceChargeRatio"
-	o = append(o, 0xb2, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65, 0x52, 0x61, 0x74, 0x69, 0x6f)
-	o = msgp.AppendFloat64(o, z.ServiceChargeRatio)
+	// string "ServiceCharge"
+	o = append(o, 0xad, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
+	o = msgp.AppendFloat64(o, z.ServiceCharge)
 	return
 }
 
@@ -340,10 +340,10 @@ func (z *Settings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxNumDelegates")
 				return
 			}
-		case "ServiceChargeRatio":
-			z.ServiceChargeRatio, bts, err = msgp.ReadFloat64Bytes(bts)
+		case "ServiceCharge":
+			z.ServiceCharge, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "ServiceChargeRatio")
+				err = msgp.WrapError(err, "ServiceCharge")
 				return
 			}
 		default:
@@ -360,7 +360,7 @@ func (z *Settings) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z Settings) Msgsize() (s int) {
-	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 16 + msgp.IntSize + 19 + msgp.Float64Size
+	s = 1 + 15 + msgp.StringPrefixSize + len(z.DelegateWallet) + 16 + msgp.IntSize + 14 + msgp.Float64Size
 	return
 }
 
@@ -405,9 +405,9 @@ func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxNumDelegates"
 	o = append(o, 0xaf, 0x4d, 0x61, 0x78, 0x4e, 0x75, 0x6d, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.Settings.MaxNumDelegates)
-	// string "ServiceChargeRatio"
-	o = append(o, 0xb2, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65, 0x52, 0x61, 0x74, 0x69, 0x6f)
-	o = msgp.AppendFloat64(o, z.Settings.ServiceChargeRatio)
+	// string "ServiceCharge"
+	o = append(o, 0xad, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
+	o = msgp.AppendFloat64(o, z.Settings.ServiceCharge)
 	// string "Minter"
 	o = append(o, 0xa6, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x72)
 	o, err = z.Minter.MarshalMsg(o)
@@ -513,10 +513,10 @@ func (z *StakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 						err = msgp.WrapError(err, "Settings", "MaxNumDelegates")
 						return
 					}
-				case "ServiceChargeRatio":
-					z.Settings.ServiceChargeRatio, bts, err = msgp.ReadFloat64Bytes(bts)
+				case "ServiceCharge":
+					z.Settings.ServiceCharge, bts, err = msgp.ReadFloat64Bytes(bts)
 					if err != nil {
-						err = msgp.WrapError(err, "Settings", "ServiceChargeRatio")
+						err = msgp.WrapError(err, "Settings", "ServiceCharge")
 						return
 					}
 				default:
@@ -565,7 +565,7 @@ func (z *StakePool) Msgsize() (s int) {
 			}
 		}
 	}
-	s += 7 + z.Reward.Msgsize() + 9 + 1 + 15 + msgp.StringPrefixSize + len(z.Settings.DelegateWallet) + 16 + msgp.IntSize + 19 + msgp.Float64Size + 7 + z.Minter.Msgsize() + 14 + msgp.BoolSize
+	s += 7 + z.Reward.Msgsize() + 9 + 1 + 15 + msgp.StringPrefixSize + len(z.Settings.DelegateWallet) + 16 + msgp.IntSize + 14 + msgp.Float64Size + 7 + z.Minter.Msgsize() + 14 + msgp.BoolSize
 	return
 }
 
@@ -688,9 +688,9 @@ func (z *StakePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxNumDelegates"
 	o = append(o, 0xaf, 0x4d, 0x61, 0x78, 0x4e, 0x75, 0x6d, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.Settings.MaxNumDelegates)
-	// string "ServiceChargeRatio"
-	o = append(o, 0xb2, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65, 0x52, 0x61, 0x74, 0x69, 0x6f)
-	o = msgp.AppendFloat64(o, z.Settings.ServiceChargeRatio)
+	// string "ServiceCharge"
+	o = append(o, 0xad, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
+	o = msgp.AppendFloat64(o, z.Settings.ServiceCharge)
 	return
 }
 
@@ -788,10 +788,10 @@ func (z *StakePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 						err = msgp.WrapError(err, "Settings", "MaxNumDelegates")
 						return
 					}
-				case "ServiceChargeRatio":
-					z.Settings.ServiceChargeRatio, bts, err = msgp.ReadFloat64Bytes(bts)
+				case "ServiceCharge":
+					z.Settings.ServiceCharge, bts, err = msgp.ReadFloat64Bytes(bts)
 					if err != nil {
-						err = msgp.WrapError(err, "Settings", "ServiceChargeRatio")
+						err = msgp.WrapError(err, "Settings", "ServiceCharge")
 						return
 					}
 				default:
@@ -820,7 +820,7 @@ func (z *StakePoolStat) Msgsize() (s int) {
 	for za0001 := range z.Delegate {
 		s += z.Delegate[za0001].Msgsize()
 	}
-	s += 8 + z.Penalty.Msgsize() + 8 + z.Rewards.Msgsize() + 9 + 1 + 15 + msgp.StringPrefixSize + len(z.Settings.DelegateWallet) + 16 + msgp.IntSize + 19 + msgp.Float64Size
+	s += 8 + z.Penalty.Msgsize() + 8 + z.Rewards.Msgsize() + 9 + 1 + 15 + msgp.StringPrefixSize + len(z.Settings.DelegateWallet) + 16 + msgp.IntSize + 14 + msgp.Float64Size
 	return
 }
 

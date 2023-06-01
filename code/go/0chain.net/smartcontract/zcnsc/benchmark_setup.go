@@ -91,7 +91,7 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 				Provider: event.Provider{
 					ID:              authorizer.ID,
 					DelegateWallet:  clients[i],
-					ServiceCharge:   settings.ServiceChargeRatio,
+					ServiceCharge:   settings.ServiceCharge,
 					LastHealthCheck: common.Now(),
 				},
 			}
@@ -164,8 +164,8 @@ func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 // todo get from sc.yaml
 func getMockStakePoolSettings(wallet string) stakepool.Settings {
 	return stakepool.Settings{
-		DelegateWallet:     wallet,
-		MaxNumDelegates:    10,
-		ServiceChargeRatio: 0.1,
+		DelegateWallet:  wallet,
+		MaxNumDelegates: 10,
+		ServiceCharge:   0.1,
 	}
 }

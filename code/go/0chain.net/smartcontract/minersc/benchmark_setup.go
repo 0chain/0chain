@@ -73,7 +73,7 @@ func AddMockMiners(
 		}
 		newNode.ProviderType = providerType
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
@@ -119,7 +119,7 @@ func AddMockMiners(
 				PublicKey: newNode.PublicKey,
 				Provider: event.Provider{
 					ID:            newNode.ID,
-					ServiceCharge: newNode.Settings.ServiceChargeRatio,
+					ServiceCharge: newNode.Settings.ServiceCharge,
 					NumDelegates:  newNode.Settings.MaxNumDelegates,
 					Rewards: event.ProviderRewards{
 						ProviderID:                    newNode.ID,
@@ -236,7 +236,7 @@ func AddMockSharders(
 		}
 		newNode.ProviderType = providerType
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
 		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
@@ -283,7 +283,7 @@ func AddMockSharders(
 				Provider: event.Provider{
 					LastHealthCheck: newNode.LastHealthCheck,
 					ID:              newNode.ID,
-					ServiceCharge:   newNode.Settings.ServiceChargeRatio,
+					ServiceCharge:   newNode.Settings.ServiceCharge,
 					NumDelegates:    newNode.Settings.MaxNumDelegates,
 					Rewards: event.ProviderRewards{
 						ProviderID:                    newNode.ID,

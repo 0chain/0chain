@@ -74,7 +74,9 @@ func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	conf *Config, blobber *StorageNode, savedBlobber *StorageNode,
+	conf *Config,
+	blobber, savedBlobber *StorageNode,
+	sp *stakePool,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check terms
@@ -134,10 +136,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// update stake pool settings
-	var sp *stakePool
-	if sp, err = sc.getStakePool(spenum.Blobber, blobber.ID, balances); err != nil {
-		return fmt.Errorf("can't get stake pool:  %v", err)
-	}
 	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
 	if err != nil {
 		return fmt.Errorf("error calculating staked capacity: %v", err)
@@ -153,7 +151,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
 
-	sp.Settings.ServiceChargeRatio = blobber.StakePoolSettings.ServiceChargeRatio
+	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
 	sp.Settings.MaxNumDelegates = blobber.StakePoolSettings.MaxNumDelegates
 
 	// Save stake pool
@@ -267,6 +265,8 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
 	}
+	logging.Logger.Info("piers updateBlobberSettings",
+		zap.Any("updated blobber", updatedBlobber))
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
@@ -290,7 +290,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"access denied, allowed for delegate_wallet owner only")
 	}
 
-	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
+	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, sp, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
 	blobber.Capacity = updatedBlobber.Capacity
@@ -620,7 +620,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
 	}
 
-	return move, nil 
+	return move, nil
 }
 
 func (sc *StorageSmartContract) commitBlobberConnection(

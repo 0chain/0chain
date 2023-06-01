@@ -141,9 +141,9 @@ func CreateAuthorizerParam(delegateWalletID string, publicKey string) *AddAuthor
 		PublicKey: publicKey,
 		URL:       "http://localhost:2344",
 		StakePoolSettings: stakepool.Settings{
-			DelegateWallet:     delegateWalletID,
-			MaxNumDelegates:    12345678,
-			ServiceChargeRatio: 12345678,
+			DelegateWallet:  delegateWalletID,
+			MaxNumDelegates: 12345678,
+			ServiceCharge:   12345678,
 		},
 	}
 }
@@ -151,9 +151,9 @@ func CreateAuthorizerParam(delegateWalletID string, publicKey string) *AddAuthor
 func CreateAuthorizerStakingPoolParam(delegateWalletID string) *UpdateAuthorizerStakePoolPayload {
 	return &UpdateAuthorizerStakePoolPayload{
 		StakePoolSettings: stakepool.Settings{
-			DelegateWallet:     delegateWalletID,
-			MaxNumDelegates:    100,
-			ServiceChargeRatio: 100,
+			DelegateWallet:  delegateWalletID,
+			MaxNumDelegates: 100,
+			ServiceCharge:   100,
 		},
 	}
 }

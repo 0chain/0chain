@@ -475,9 +475,13 @@ func BenchmarkTests(
 						ID:           getMockBlobberId(0),
 						ProviderType: spenum.Blobber,
 					},
-					Terms:             getMockBlobberTerms(),
-					Capacity:          int64(totalStake * GB),
-					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
+					Terms:    getMockBlobberTerms(),
+					Capacity: int64(totalStake * GB),
+					//StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
+					StakePoolSettings: stakepool.Settings{
+						DelegateWallet:  "wallet",
+						MaxNumDelegates: viper.GetInt(bk.NumBlobberDelegates),
+					},
 				})
 				return bytes
 			}(),

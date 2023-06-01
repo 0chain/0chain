@@ -129,8 +129,8 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		changed = true
 	}
 
-	if sp.Settings.ServiceChargeRatio != settings.ServiceChargeRatio {
-		sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
+	if sp.Settings.ServiceCharge != settings.ServiceCharge {
+		sp.Settings.ServiceCharge = settings.ServiceCharge
 		changed = true
 	}
 
@@ -147,7 +147,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 }
 
 func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
-	if poolSettings.ServiceChargeRatio < 0.0 {
+	if poolSettings.ServiceCharge < 0.0 {
 		return errors.New("negative service charge")
 	}
 	if poolSettings.MaxNumDelegates <= 0 {

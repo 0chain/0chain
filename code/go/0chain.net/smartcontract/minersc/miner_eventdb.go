@@ -81,9 +81,9 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		StakePoolResponse: &StakePoolResponse{
 			Reward: edbMiner.Rewards.Rewards,
 			Settings: stakepool.Settings{
-				DelegateWallet:     edbMiner.DelegateWallet,
-				ServiceChargeRatio: edbMiner.ServiceCharge,
-				MaxNumDelegates:    edbMiner.Provider.NumDelegates,
+				DelegateWallet:  edbMiner.DelegateWallet,
+				ServiceCharge:   edbMiner.ServiceCharge,
+				MaxNumDelegates: edbMiner.Provider.NumDelegates,
 			},
 		},
 	}
@@ -121,7 +121,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 			ID:             mn.ID,
 			TotalStake:     mn.TotalStaked,
 			DelegateWallet: mn.Settings.DelegateWallet,
-			ServiceCharge:  mn.Settings.ServiceChargeRatio,
+			ServiceCharge:  mn.Settings.ServiceCharge,
 			NumDelegates:   mn.Settings.MaxNumDelegates,
 			Rewards: event.ProviderRewards{
 				ProviderID:   mn.ID,
@@ -170,7 +170,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"total_stake":       mn.TotalStaked,
 			"delete":            mn.Delete,
 			"delegate_wallet":   mn.Settings.DelegateWallet,
-			"service_charge":    mn.Settings.ServiceChargeRatio,
+			"service_charge":    mn.Settings.ServiceCharge,
 			"num_delegates":     mn.Settings.MaxNumDelegates,
 			"last_health_check": mn.LastHealthCheck,
 			"longitude":         mn.SimpleNode.Geolocation.Longitude,
