@@ -414,16 +414,41 @@ func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
 	blobberIdList := make([]string, 0, len(blobbers))
 	challengesPassedList := make([]uint64, 0, len(blobbers))
 	challengesCompletedList := make([]uint64, 0, len(blobbers))
+	challengesOpenList := make([]uint64, 0, len(blobbers))
 
 	for _, blobber := range blobbers {
 		blobberIdList = append(blobberIdList, blobber.ID)
 		challengesPassedList = append(challengesPassedList, blobber.ChallengesPassed)
 		challengesCompletedList = append(challengesCompletedList, blobber.ChallengesCompleted)
+		challengesOpenList = append(challengesOpenList, blobber.OpenChallenges)
 	}
 
 	return CreateBuilder("blobbers", "id", blobberIdList).
 		AddUpdate("challenges_passed", challengesPassedList).
-		AddUpdate("challenges_completed", challengesCompletedList).Exec(edb).Error
+		AddUpdate("challenges_completed", challengesCompletedList).
+		AddUpdate("open_challenges", challengesOpenList).
+		Exec(edb).Error
+}
+
+func (edb *EventDb) updateBlobberChallengesDelta(blobbers []Blobber) error {
+	blobberIdList := make([]string, 0, len(blobbers))
+	challengesPassedList := make([]uint64, 0, len(blobbers))
+	challengesCompletedList := make([]uint64, 0, len(blobbers))
+	challengesOpenList := make([]uint64, 0, len(blobbers))
+
+	for _, blobber := range blobbers {
+		blobberIdList = append(blobberIdList, blobber.ID)
+		challengesPassedList = append(challengesPassedList, blobber.ChallengesPassed)
+		challengesCompletedList = append(challengesCompletedList, blobber.ChallengesCompleted)
+		challengesOpenList = append(challengesOpenList, blobber.OpenChallenges)
+	}
+
+	return CreateBuilder("blobbers", "id", blobberIdList).
+		AddUpdate("challenges_passed", challengesPassedList, "blobbers.challenges_passed + t.challenges_passed").
+		AddUpdate("challenges_completed", challengesCompletedList, "blobbers.challenges_completed + t.challenges_completed").
+		AddUpdate("open_challenges", challengesOpenList, "blobbers.open_challenges - t.open_challenges").
+		Exec(edb).Error
+
 }
 
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {

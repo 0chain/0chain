@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"errors"
-	"go.uber.org/zap"
 	"strings"
 	"time"
 
@@ -105,8 +104,9 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	b := event.Blobber{
 		Provider:            event.Provider{ID: sc.BlobberID},
 		ChallengesCompleted: uint64(blobberStats.TotalChallenges),
-		ChallengesPassed:    uint64(blobberStats.SuccessChallenges),
-		OpenChallenges:      uint64(blobberStats.OpenChallenges),
+
+		ChallengesPassed: uint64(blobberStats.SuccessChallenges),
+		OpenChallenges:   uint64(blobberStats.OpenChallenges),
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
@@ -114,42 +114,24 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
 }
 
-func emitUpdateChallengesForExpiredAllocations(allocationID string, balances cstate.StateContextI) {
+func emitUpdateChallengesForExpiredAllocations(allocationID string, balances cstate.StateContextI, challenges *AllocationChallenges) {
 	// get all open challenges for allocation ID
 
-	edb := event.EventDb{}
-
-	var challenges []*event.Challenge
-
-	err := edb.Get().Table("challenges").Where("allocation_id = ? AND responded = 0", allocationID).Find(&challenges).Error
-	if err != nil {
-		logging.Logger.Error("emitUpdateChallengesForExpiredAllocations: failed to get challenges", zap.Error(err))
-		return
-	}
-
-	totalChallengesAfterAllocationExpiry := int64(len(challenges))
-
-	var allocation *event.Allocation
-	err = edb.Get().Table("allocations").Where("id = ?", allocationID).Find(&allocation).Error
-
-	if err != nil {
-		logging.Logger.Error("emitUpdateChallengesForExpiredAllocations: failed to get successful challenges", zap.Error(err))
-		return
-	}
+	totalChallengesAfterAllocationExpiry := int64(len(challenges.OpenChallenges))
 
 	blobberChallengeStats := make(map[string]int)
 
-	for _, ch := range challenges {
+	for _, ch := range challenges.OpenChallenges {
 		clg := event.Challenge{
-			ChallengeID:    ch.ChallengeID,
-			AllocationID:   ch.AllocationID,
+			ChallengeID:    ch.ID,
+			AllocationID:   allocationID,
 			BlobberID:      ch.BlobberID,
 			RoundResponded: balances.GetBlock().Round,
 			Passed:         true,
 			Responded:      1, // Passed challenge
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, ch.ChallengeID, clg)
+		balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, ch.ID, clg)
 
 		blobberChallengeStats[ch.BlobberID]++
 
@@ -157,32 +139,25 @@ func emitUpdateChallengesForExpiredAllocations(allocationID string, balances cst
 
 	a := event.Allocation{
 		AllocationID:             allocationID,
-		OpenChallenges:           allocation.OpenChallenges - totalChallengesAfterAllocationExpiry,
-		TotalChallenges:          allocation.TotalChallenges,
-		FailedChallenges:         allocation.FailedChallenges,
-		SuccessfulChallenges:     allocation.SuccessfulChallenges + totalChallengesAfterAllocationExpiry,
-		LatestClosedChallengeTxn: challenges[len(challenges)-1].ChallengeID,
+		OpenChallenges:           totalChallengesAfterAllocationExpiry,
+		TotalChallenges:          0,
+		FailedChallenges:         0,
+		SuccessfulChallenges:     totalChallengesAfterAllocationExpiry,
+		LatestClosedChallengeTxn: challenges.OpenChallenges[len(challenges.OpenChallenges)-1].ID,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, allocationID, a)
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallengeDelta, allocationID, a)
 
 	for blobberID, count := range blobberChallengeStats {
 
-		var blobber *event.Blobber
-		err = edb.Get().Table("blobbers").Where("id = ?", blobberID).Find(&blobber).Error
-		if err != nil {
-			logging.Logger.Error("emitUpdateChallengesForExpiredAllocations: failed to get successful challenges", zap.Error(err))
-			return
-		}
-
 		b := event.Blobber{
 			Provider:            event.Provider{ID: blobberID},
-			ChallengesCompleted: blobber.ChallengesCompleted + uint64(count),
-			ChallengesPassed:    blobber.ChallengesPassed + uint64(count),
-			OpenChallenges:      blobber.OpenChallenges - uint64(count),
+			ChallengesCompleted: uint64(count),
+			ChallengesPassed:    uint64(count),
+			OpenChallenges:      uint64(count),
 		}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberID, b)
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallengeDelta, blobberID, b)
 	}
 }
 

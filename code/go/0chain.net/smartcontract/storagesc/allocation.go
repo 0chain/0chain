@@ -1717,8 +1717,12 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	alloc.Finalized = true
 
-	emitUpdateChallengesForExpiredAllocations(alloc.ID, balances)
+	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	if err != nil {
+		return err
+	}
 
+	emitUpdateChallengesForExpiredAllocations(alloc.ID, balances, challenges)
 	return nil
 }
 

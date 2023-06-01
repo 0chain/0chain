@@ -73,7 +73,9 @@ const (
 	TagAddChallenge
 	TagUpdateChallenge
 	TagUpdateBlobberChallenge
+	TagUpdateBlobberChallengeDelta
 	TagUpdateAllocationChallenge
+	TagUpdateAllocationChallengeDelta
 	TagAddChallengeToAllocation
 	TagAddOrOverwriteAllocationBlobberTerm
 	TagUpdateAllocationBlobberTerm
