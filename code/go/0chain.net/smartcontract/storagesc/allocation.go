@@ -1538,6 +1538,34 @@ func (sc *StorageSmartContract) finishAllocation(
 	before := make([]currency.Coin, len(sps))
 	deductionFromWritePool := currency.Coin(0)
 
+	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	if err != nil {
+		return err
+	}
+
+	for _, challenge := range challenges.OpenChallenges {
+		ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
+
+		if ok {
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			alloc.Stats.FailedChallenges++
+			alloc.Stats.OpenChallenges--
+
+			emitUpdateChallenge(&StorageChallenge{
+				ID:           challenge.ID,
+				AllocationID: alloc.ID,
+				BlobberID:    challenge.BlobberID,
+			}, false, balances, alloc.Stats, ba.Stats)
+		}
+
+		emitUpdateChallenge(&StorageChallenge{
+			ID:           challenge.ID,
+			AllocationID: alloc.ID,
+			BlobberID:    challenge.BlobberID,
+		}, true, balances, alloc.Stats, ba.Stats)
+	}
+
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
 	// passRates list above because of algorithm of the adjustChallenges
@@ -1716,34 +1744,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	})
 
 	alloc.Finalized = true
-
-	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
-	if err != nil {
-		return err
-	}
-
-	for _, challenge := range challenges.OpenChallenges {
-		ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
-
-		if ok {
-			ba.Stats.FailedChallenges++
-			ba.Stats.OpenChallenges--
-			alloc.Stats.FailedChallenges++
-			alloc.Stats.OpenChallenges--
-
-			emitUpdateChallenge(&StorageChallenge{
-				ID:           challenge.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    challenge.BlobberID,
-			}, false, balances, alloc.Stats, ba.Stats)
-		}
-
-		emitUpdateChallenge(&StorageChallenge{
-			ID:           challenge.ID,
-			AllocationID: alloc.ID,
-			BlobberID:    challenge.BlobberID,
-		}, true, balances, alloc.Stats, ba.Stats)
-	}
 
 	return nil
 }
