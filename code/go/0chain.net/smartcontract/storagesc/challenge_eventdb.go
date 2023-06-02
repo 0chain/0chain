@@ -114,53 +114,6 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
 }
 
-func emitUpdateChallengesForExpiredAllocations(allocationID string, balances cstate.StateContextI, challenges *AllocationChallenges) {
-	// get all open challenges for allocation ID
-
-	totalChallengesAfterAllocationExpiry := int64(len(challenges.OpenChallenges))
-
-	blobberChallengeStats := make(map[string]int)
-
-	for _, ch := range challenges.OpenChallenges {
-		clg := event.Challenge{
-			ChallengeID:    ch.ID,
-			AllocationID:   allocationID,
-			BlobberID:      ch.BlobberID,
-			RoundResponded: balances.GetBlock().Round,
-			Passed:         true,
-			Responded:      1, // Passed challenge
-		}
-
-		balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, ch.ID, clg)
-
-		blobberChallengeStats[ch.BlobberID]++
-
-	}
-
-	a := event.Allocation{
-		AllocationID:             allocationID,
-		OpenChallenges:           totalChallengesAfterAllocationExpiry,
-		TotalChallenges:          0,
-		FailedChallenges:         0,
-		SuccessfulChallenges:     totalChallengesAfterAllocationExpiry,
-		LatestClosedChallengeTxn: challenges.OpenChallenges[len(challenges.OpenChallenges)-1].ID,
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallengeDelta, allocationID, a)
-
-	for blobberID, count := range blobberChallengeStats {
-
-		b := event.Blobber{
-			Provider:            event.Provider{ID: blobberID},
-			ChallengesCompleted: uint64(count),
-			ChallengesPassed:    uint64(count),
-			OpenChallenges:      uint64(count),
-		}
-
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallengeDelta, blobberID, b)
-	}
-}
-
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from,

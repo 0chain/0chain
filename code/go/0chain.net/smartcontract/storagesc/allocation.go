@@ -1722,7 +1722,29 @@ func (sc *StorageSmartContract) finishAllocation(
 		return err
 	}
 
-	emitUpdateChallengesForExpiredAllocations(alloc.ID, balances, challenges)
+	for _, challenge := range challenges.OpenChallenges {
+		ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
+
+		if ok {
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			alloc.Stats.FailedChallenges++
+			alloc.Stats.OpenChallenges--
+
+			emitUpdateChallenge(&StorageChallenge{
+				ID:           challenge.ID,
+				AllocationID: alloc.ID,
+				BlobberID:    challenge.BlobberID,
+			}, false, balances, alloc.Stats, ba.Stats)
+		}
+
+		emitUpdateChallenge(&StorageChallenge{
+			ID:           challenge.ID,
+			AllocationID: alloc.ID,
+			BlobberID:    challenge.BlobberID,
+		}, true, balances, alloc.Stats, ba.Stats)
+	}
+
 	return nil
 }
 
