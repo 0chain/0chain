@@ -2138,7 +2138,7 @@ func Test_finalize_allocation(t *testing.T) {
 	)
 
 	// expire the allocation challenging it (+ last challenge)
-	for i := int64(0); i < 2; i++ {
+	for i := int64(1); i < 3; i++ {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
