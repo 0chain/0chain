@@ -639,6 +639,9 @@ func (sc *StorageSmartContract) challengePassed(
 
 	fmt.Println("Code round : ", balances.GetBlock().Round)
 
+	fmt.Println("Reward round : ", rewardRound)
+	fmt.Println("Blobber reward round : ", blobber.RewardRound.StartRound)
+
 	if blobber.RewardRound.StartRound != rewardRound {
 
 		var dataRead float64 = 0
