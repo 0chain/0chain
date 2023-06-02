@@ -588,6 +588,11 @@ func TestVerifyChallenge(t *testing.T) {
 				tx = newTransaction(b3.id, ssc.ID, 0, tp)
 			}
 			balances.setTransaction(t, tx)
+
+			bk := &block.Block{}
+			bk.Round = 1
+			balances.setBlock(t, bk)
+
 			var resp string
 			resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			require.Equal(t, tc.err, err)
@@ -712,6 +717,10 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	tp += step / 2
 	tx := newTransaction(b3.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
+
+	b := &block.Block{}
+	b.Round = 500
+	balances.setBlock(t, b)
 
 	stateRoots := make(map[string]struct{}, 10)
 	for i := 0; i < 20; i++ {
