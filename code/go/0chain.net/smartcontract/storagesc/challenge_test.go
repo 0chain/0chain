@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -730,7 +731,7 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
 
 		bk := &block.Block{}
-		bk.Round = 500
+		bk.Round = int64(rand.Intn(9999))
 		balances.setBlock(t, bk)
 
 		var resp string
