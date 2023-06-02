@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0chain/gorocksdb"
+	"github.com/linxGnu/grocksdb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -36,7 +36,7 @@ var connections = map[string]string{
 	"block": "block",
 }
 
-var pools = make(map[string]*gorocksdb.TransactionDB)
+var pools = make(map[string]*grocksdb.TransactionDB)
 
 func initDBs() error {
 	for entityName, dbName := range connections {
@@ -66,7 +66,7 @@ func closeTestPools() {
 	for _, pool := range pools {
 		pool.Close()
 	}
-	pools = make(map[string]*gorocksdb.TransactionDB)
+	pools = make(map[string]*grocksdb.TransactionDB)
 }
 
 func TestMain(m *testing.M) {

@@ -9,6 +9,7 @@ type Store interface {
 	Write(ctx context.Context, entity Entity) error
 	InsertIfNE(ctx context.Context, entity Entity) error
 	Delete(ctx context.Context, entity Entity) error
+	Merge(ctx context.Context, entity Entity) error
 
 	MultiRead(ctx context.Context, entityMetadata EntityMetadata, keys []Key, entities []Entity) error
 	MultiWrite(ctx context.Context, entityMetadata EntityMetadata, entities []Entity) error

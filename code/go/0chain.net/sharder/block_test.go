@@ -28,9 +28,10 @@ import (
 func init() {
 	store := dmocks.NewStoreMock()
 	SetupBlockSummaries()
+	ememoryStore := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(store)
 	block.SetupEntity(store)
-	block.SetupMagicBlockMapEntity(store)
+	block.SetupMagicBlockMapEntity(ememoryStore)
 	blockstore.SetupStore(bsmocks.NewBlockStoreMock())
 	round.SetupEntity(store)
 	common.SetupRootContext(context.TODO())
@@ -41,6 +42,7 @@ const (
 	blockDataDir    = "block"
 	roundSummaryDir = "roundSummary"
 	blockSummaryDir = "blockSummary"
+	magicBlockMapDir = "magicblockmap"
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
@@ -64,6 +66,10 @@ func initDBs(t *testing.T) (closeAndClear func()) {
 	err = os.MkdirAll(bsDir, 0700)
 	require.NoError(t, err)
 
+	mbmDir := filepath.Join(dbDir, magicBlockMapDir)
+	err = os.MkdirAll(mbmDir, 0700)
+	require.NoError(t, err)
+
 	rDB, err := ememorystore.CreateDB(roundDir)
 	require.NoError(t, err)
 
@@ -84,11 +90,17 @@ func initDBs(t *testing.T) (closeAndClear func()) {
 
 	ememorystore.AddPool(block.BlockSummaryProvider().GetEntityMetadata().GetDB(), bsDB)
 
+	mbmDB, err := ememorystore.CreateDB(mbmDir)
+	require.NoError(t, err)
+
+	ememorystore.AddPool(block.MagicBlockMapProvider().GetEntityMetadata().GetDB(), mbmDB)
+
 	closeAndClear = func() {
 		rDB.Close()
 		bDB.Close()
 		rsDB.Close()
 		bsDB.Close()
+		mbmDB.Close()
 
 		err = os.RemoveAll(dbDir)
 		require.NoError(t, err)
@@ -375,4 +387,52 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_GetHighestMagicBlockMap(t *testing.T) {
+	cl := initDBs(t)
+	defer cl()
+
+	ctx := context.WithValue(context.TODO(), node.SelfNodeKey, node.Self)
+
+	sc := &Chain{
+		Chain:          GetSharderChain().Chain,
+		blockChannel:   make(chan *block.Block),
+		RoundChannel:   make(chan *round.Round),
+		BlockCache:     cache.NewLRUCache[string, *block.Block](10),
+		BlockTxnCache:  cache.NewLRUCache[string, *transaction.TransactionSummary](10),
+		SharderStats:   Stats{},
+		BlockSyncStats: &SyncStats{},
+		TieringStats:   &MinioStats{},
+	}
+
+	// Add 2 blocks
+	err := sc.StoreMagicBlockMapFromBlock(&block.MagicBlockMap{
+		IDField: datastore.IDField{
+			ID: "10", // Round number but as string
+		},
+		Hash: "AAA0000000",
+		BlockRound: 10, 
+	})
+	require.NoError(t, err)
+
+	err = sc.StoreMagicBlockMapFromBlock(&block.MagicBlockMap{
+		IDField: datastore.IDField{
+			ID: "11", // Round number but as string
+		},
+		Hash: "AAA0000001",
+		BlockRound: 11,
+	})
+	require.NoError(t, err)
+
+	mbm, err := sc.GetMagicBlockMap(ctx, "10")
+	require.NoError(t, err)
+	require.Equal(t, "AAA0000000", mbm.Hash)
+	
+
+	// Get highest block
+	highest, err := sc.GetHighestMagicBlockMap(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "AAA0000001", highest.Hash)
+	require.Equal(t, int64(11), highest.BlockRound)
 }
