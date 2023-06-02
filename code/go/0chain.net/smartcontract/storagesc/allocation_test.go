@@ -2138,7 +2138,7 @@ func Test_finalize_allocation(t *testing.T) {
 	)
 
 	// expire the allocation challenging it (+ last challenge)
-	for i := int64(1); i < 3; i++ {
+	for i := int64(0); i < 2; i++ {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
@@ -2156,7 +2156,7 @@ func Test_finalize_allocation(t *testing.T) {
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		b := &block.Block{}
-		b.Round = i
+		b.Round = 1 + i
 		balances.setBlock(t, b)
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
@@ -2313,7 +2313,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		b := &block.Block{}
-		b.Round = i
+		b.Round = 1 + i
 		balances.setBlock(t, b)
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
