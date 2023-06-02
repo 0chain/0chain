@@ -24,7 +24,7 @@ docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT -f docker.local/build.sharder/Doc
 
 for i in $(seq 1 4);
 do
-  SHARDER=$i docker-compose -p sharder"$i" -f docker.local/build.sharder/docker-compose.yml build --force-rm
+  SHARDER=$i docker-compose -p sharder"$i" -f docker.local/build.sharder/b0docker-compose.yml build --force-rm
 done
 
 docker.local/bin/sync_clock.sh
