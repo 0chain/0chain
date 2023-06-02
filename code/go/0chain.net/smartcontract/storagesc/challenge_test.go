@@ -591,7 +591,7 @@ func TestVerifyChallenge(t *testing.T) {
 			balances.setTransaction(t, tx)
 
 			bk := &block.Block{}
-			bk.Round = 1
+			bk.Round = 500
 			balances.setBlock(t, bk)
 
 			var resp string
@@ -728,6 +728,10 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 		signatureScheme := &encryption.BLS0ChainScheme{}
 		cs := cstate.NewStateContext(balances.block, clientState,
 			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
+
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
 
 		var resp string
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), cs)
