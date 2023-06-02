@@ -734,7 +734,7 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 		balances.setBlock(t, bk)
 
 		var resp string
-		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), cs)
+		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
 
 		require.Equal(t, resp, "challenge passed by blobber")
