@@ -15,6 +15,9 @@ import (
 	"0chain.net/core/viper"
 )
 
+// MaxTokenSupply represents the maximum token supply in SAS
+const MaxTokenSupply = 4e18 // max token supply 400 million ZCN
+
 var (
 	// SmartContractConfig stores the wrapper Viper global instance
 	// for the blockchain smart contracts configuration system.
