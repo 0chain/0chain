@@ -41,14 +41,27 @@ func (c *Connection) Commit() error {
 	return err
 }
 
-/*CreateDB - create a database */
-func CreateDB(dataDir string) (*grocksdb.TransactionDB, error) {
+func defaultDBOptions() *grocksdb.Options {
 	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(grocksdb.NewLRUCache(3 << 30))
 	opts := grocksdb.NewDefaultOptions()
 	opts.SetKeepLogFileNum(5)
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
+	return opts
+}
+
+/*CreateDB - create a database */
+func CreateDB(dataDir string) (*grocksdb.TransactionDB, error) {
+	opts := defaultDBOptions()
+	tdbopts := grocksdb.NewDefaultTransactionDBOptions()
+	return grocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
+}
+
+/* CreateDBWithMergeOperator - create a database with merge operator */
+func CreateDBWithMergeOperator(dataDir string, mergeOperator grocksdb.MergeOperator) (*grocksdb.TransactionDB, error) {
+	opts := defaultDBOptions()
+	opts.SetMergeOperator(mergeOperator)
 	tdbopts := grocksdb.NewDefaultTransactionDBOptions()
 	return grocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 }
@@ -180,7 +193,6 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 		cMap[dbpool.CtxKey] = GetTransaction(dbpool.Pool)
 	}
 	return ctx
-
 }
 
 /*GetEntityCon returns a connection stored in the context which got created via WithEntityConnection */
@@ -206,6 +218,41 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 		cMap[dbpool.CtxKey] = con
 	}
 	return con
+}
+
+/*CloseEntityConnection - Close takes care of maintaining the closing of a connection related to an entity stored in the context */
+func CloseEntityConnection(ctx context.Context, entity datastore.EntityMetadata) {
+	if ctx == nil {
+		return
+	}
+	dbpool := getdbpool(entity)
+	if dbpool.Pool == DefaultPool {
+		Close(ctx)
+		return
+	}
+	c := ctx.Value(CONNECTION)
+	if c == nil {
+		return
+	}
+	cMap, ok := c.(connections)
+	if !ok {
+		panicf("invalid setup, type of connection is %T", c)
+	}
+	con, ok := cMap[dbpool.CtxKey]
+	if !ok {
+		return
+	}
+	con.ReadOptions.Destroy()
+	con.WriteOptions.Destroy()
+	con.TransactionOptions.Destroy()
+	if con.shouldRollback {
+		if err := con.Conn.Rollback(); err != nil {
+			logging.Logger.Error("rollback failed", zap.Error(err))
+		} // commit is expected to be done by the caller of the get connection
+	}
+
+	con.Conn.Destroy()
+	delete(cMap, dbpool.CtxKey)
 }
 
 /*Close - Close takes care of maintaining the closing of connection(s) stored in the context */

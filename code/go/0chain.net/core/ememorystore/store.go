@@ -120,6 +120,18 @@ func (ems *Store) MultiDelete(ctx context.Context, entityMetadata datastore.Enti
 	return nil
 }
 
+// func (ems *Store) WBWrite(ctx context.Context, emd datastore.EntityMetadata, batch *AtomicWriteBatch) error {
+// 	// Build []byte key and value
+// 	c := GetEntityCon(ctx, emd)
+// 	err := 
+// }
+
+func (ems *Store) Merge(ctx context.Context, entity datastore.Entity) error {
+	c := GetEntityCon(ctx, entity.GetEntityMetadata())
+	data := datastore.ToJSON(entity).Bytes()
+	return c.Conn.Merge([]byte(datastore.ToString(entity.GetKey())), data)
+}
+
 func (ems *Store) AddToCollection(ctx context.Context, entity datastore.CollectionEntity) error {
 	return nil
 }

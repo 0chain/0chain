@@ -31,7 +31,6 @@ type WriteMarker struct {
 	MovedTokens currency.Coin `json:"-" gorm:"-"`
 
 	//ref
-	User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 

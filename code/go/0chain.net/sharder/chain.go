@@ -140,7 +140,7 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	r.Number = roundNum
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
-	defer ememorystore.Close(rctx)
+	defer ememorystore.CloseEntityConnection(rctx, roundEntityMetadata)
 	err := r.Read(rctx, r.GetKey())
 	return r, err
 }

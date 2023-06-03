@@ -2,14 +2,12 @@ package sharder
 
 import (
 	"context"
-	"strconv"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/persistencestore"
 	. "github.com/0chain/common/core/logging"
 
 	"go.uber.org/zap"
@@ -143,20 +141,25 @@ func (sc *Chain) StoreBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 /*StoreMagicBlockMapFromBlock - stores magic block number mapped to the block hash */
 func (sc *Chain) StoreMagicBlockMapFromBlock(mbm *block.MagicBlockMap) error {
 	mbMapEntityMetadata := mbm.GetEntityMetadata()
-	mctx := persistencestore.WithEntityConnection(common.GetRootContext(), mbMapEntityMetadata)
-	defer persistencestore.Close(mctx)
+	mctx := ememorystore.WithEntityConnection(common.GetRootContext(), mbMapEntityMetadata)
+	defer ememorystore.Close(mctx)
 	if len(mbm.Hash) < 64 {
 		Logger.Error("Writing block summary - block hash less than 64", zap.String("hash", mbm.Hash), zap.String("magic_block_number", mbm.ID))
 	}
-	return mbMapEntityMetadata.GetStore().Write(mctx, mbm)
+	err := mbMapEntityMetadata.GetStore().Write(mctx, mbm)
+	if err != nil {
+		return err
+	}
+	con := ememorystore.GetEntityCon(mctx, mbMapEntityMetadata)
+	return con.Commit()
 }
 
 /*GetMagicBlockMap - given a magic block number, get the magic block map */
 func (sc *Chain) GetMagicBlockMap(ctx context.Context, magicBlockNumber string) (*block.MagicBlockMap, error) {
 	magicBlockMapEntityMetadata := datastore.GetEntityMetadata("magic_block_map")
 	magicBlockMap := magicBlockMapEntityMetadata.Instance().(*block.MagicBlockMap)
-	mctx := persistencestore.WithEntityConnection(ctx, magicBlockMapEntityMetadata)
-	defer persistencestore.Close(mctx)
+	mctx := ememorystore.WithEntityConnection(ctx, magicBlockMapEntityMetadata)
+	defer ememorystore.Close(mctx)
 	err := magicBlockMapEntityMetadata.GetStore().Read(mctx, datastore.ToKey(magicBlockNumber), magicBlockMap)
 	if err != nil {
 		return nil, err
@@ -165,33 +168,35 @@ func (sc *Chain) GetMagicBlockMap(ctx context.Context, magicBlockNumber string) 
 }
 
 // GetHighestMagicBlockMap returns highest stored MB map. The highest means with
-// greatest MB number. It works with Cassandra only.
+// greatest MB number.
 func (sc *Chain) GetHighestMagicBlockMap(ctx context.Context) (
 	mbm *block.MagicBlockMap, err error) {
 
 	var mbmemd = datastore.GetEntityMetadata("magic_block_map")
 	mbm = mbmemd.Instance().(*block.MagicBlockMap)
 
-	var mctx = persistencestore.WithEntityConnection(ctx, mbmemd)
-	defer persistencestore.Close(mctx)
+	var mctx = ememorystore.WithEntityConnection(ctx, mbmemd)
+	defer ememorystore.Close(mctx)
 
-	const query = `SELECT MAX(id) FROM zerochain.magic_block_map;`
-
-	var (
-		cql    = persistencestore.GetCon(mctx)
-		number int64
-	)
-
-	if err = cql.Query(query).Scan(&number); err != nil {
+	con := ememorystore.GetEntityCon(mctx, mbmemd)
+	if con == nil {
 		return nil, common.NewErrorf("get_highest_mbm",
-			"scanning CQL result: %v", err)
+			"couldn't get connection for magic block map rocksdb")
 	}
 
-	var mbn = strconv.FormatInt(number, 10)
-	err = mbmemd.GetStore().Read(mctx, datastore.ToKey(mbn), mbm)
-	if err != nil {
+	iter := con.Conn.NewIterator(con.ReadOptions)
+	defer iter.Close()
+
+	iter.SeekToLast()
+
+	if !iter.Valid() {
 		return nil, common.NewErrorf("get_highest_mbm",
-			"getting latest MB map: %v", err)
+			"iterating over MB map: %v", err)
+	}
+
+	if err = datastore.FromJSON(iter.Value().Data(), mbm); err != nil {
+		return nil, common.NewErrorf("get_highest_mbm",
+			"decoding MB map: %v", err)
 	}
 
 	return
