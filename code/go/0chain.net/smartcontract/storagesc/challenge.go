@@ -182,7 +182,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding blobbers: %v", err)
@@ -825,7 +824,7 @@ func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlo
 	r *rand.Rand, balances cstate.StateContextI) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
-	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
+	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers, "selectBlobberForChallenge")
 	if err != nil {
 		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
@@ -895,7 +894,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	// get random allocations from the partitions
 	var randBlobberAllocs []BlobberAllocationNode
-	if err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs); err != nil {
+	if err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs, "populateGenerateChallenge"); err != nil {
 		return nil, common.NewErrorf("generate_challenge",
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
@@ -977,7 +976,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	var randValidators []ValidationPartitionNode
-	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
+	if err := validators.GetRandomItems(balances, r, &randValidators, "2 populateGenerateChallenge"); err != nil {
 		return nil, common.NewError("add_challenge",
 			"error getting validators random slice: "+err.Error())
 	}
