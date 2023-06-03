@@ -15,6 +15,9 @@ import (
 	"0chain.net/core/viper"
 )
 
+// MaxTokenSupply represents the maximum token supply in SAS
+const MaxTokenSupply = 4e18 // max token supply 400 million ZCN
+
 var (
 	// SmartContractConfig stores the wrapper Viper global instance
 	// for the blockchain smart contracts configuration system.
@@ -32,7 +35,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 	viper.SetDefault("server_chain.transaction.transfer_cost", 10)
-	viper.SetDefault("server_chain.transaction.cost_fee_coeff", 1000)
+	viper.SetDefault("server_chain.transaction.cost_fee_coeff", 100000)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 66)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)

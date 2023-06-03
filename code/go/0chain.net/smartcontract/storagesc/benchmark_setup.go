@@ -65,7 +65,7 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	const mockWriePoolSize = 12345678
+	const mockWriePoolSize = 600000000
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:              id,
@@ -98,13 +98,14 @@ func addMockAllocation(
 		bIndex := startBlobbers + j
 		bId := getMockBlobberId(bIndex)
 		ba := BlobberAllocation{
-			BlobberID:      bId,
-			AllocationID:   sa.ID,
-			Size:           viper.GetInt64(sc.StorageMinAllocSize),
-			Stats:          &StorageAllocationStats{},
-			Terms:          getMockBlobberTerms(),
-			MinLockDemand:  mockMinLockDemand,
-			AllocationRoot: encryption.Hash("allocation root"),
+			BlobberID:       bId,
+			AllocationID:    sa.ID,
+			Size:            viper.GetInt64(sc.StorageMinAllocSize),
+			Stats:           &StorageAllocationStats{},
+			Terms:           getMockBlobberTerms(),
+			MinLockDemand:   mockMinLockDemand,
+			AllocationRoot:  encryption.Hash("allocation root"),
+			LastWriteMarker: &WriteMarker{},
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 
@@ -160,6 +161,7 @@ func addMockAllocation(
 }
 
 func AddMockChallenges(
+	validatorIds []string,
 	blobbers []*StorageNode,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
@@ -189,6 +191,7 @@ func AddMockChallenges(
 			numChallengesPerBlobber,
 			numValidators,
 			getMockAllocationId(i),
+			validatorIds,
 			blobbers[blobInd],
 			&allocationChall[i],
 			eventDb,
@@ -282,6 +285,7 @@ func setupMockChallenge(
 	challengesPerBlobber int,
 	totalValidatorsNum int,
 	allocationId string,
+	validatorIds []string,
 	blobber *StorageNode,
 	ac *AllocationChallenges,
 	eventDb *event.EventDb,
@@ -290,9 +294,9 @@ func setupMockChallenge(
 ) []*StorageChallenge {
 	ac.AllocationID = allocationId
 
-	ids := make([]string, 0, totalValidatorsNum)
-	for i := 0; i < totalValidatorsNum; i++ {
-		ids = append(ids, getMockValidatorId(i))
+	if len(validatorIds) < viper.GetInt(sc.StorageValidatorsPerChallenge) {
+		log.Fatalf("number of validators %d less than validators per challenge %d",
+			len(validatorIds), viper.GetInt(sc.StorageValidatorsPerChallenge))
 	}
 
 	challenges := make([]*StorageChallenge, 0, challengesPerBlobber)
@@ -301,7 +305,7 @@ func setupMockChallenge(
 		AllocationID:    allocationId,
 		TotalValidators: totalValidatorsNum,
 		BlobberID:       blobber.ID,
-		ValidatorIDs:    ids,
+		ValidatorIDs:    validatorIds[:viper.GetInt(sc.StorageValidatorsPerChallenge)],
 	}
 	_, err := balances.InsertTrieNode(challenge.GetKey(ADDRESS), challenge)
 	if err != nil {
@@ -352,6 +356,7 @@ func AddMockBlobbers(
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
+	blobbersDb := make([]event.Blobber, 0, viper.GetInt(sc.NumBlobbers))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
@@ -406,14 +411,11 @@ func AddMockBlobbers(
 				RankMetric:          float64(i) / (float64(i) + 1),
 				IsAvailable:         blobber.IsAvailable,
 			}
-			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake))
+			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake) / 2)
 			if err != nil {
 				log.Fatal("convert currency", err)
 			}
-			if err := eventDb.Store.Get().Create(&blobberDb).Error; err != nil {
-				log.Fatal(err)
-			}
-			addMockBlobberSnapshots(blobberDb, eventDb)
+			blobbersDb = append(blobbersDb, blobberDb)
 		}
 
 		if i < numRewardPartitionBlobbers {
@@ -431,6 +433,13 @@ func AddMockBlobbers(
 			}
 		}
 	}
+	addMockBlobberSnapshots(blobbersDb, eventDb)
+	if viper.GetBool(sc.EventDbEnabled) {
+		if err := eventDb.Store.Get().Create(&blobbersDb).Error; err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	err = partition.Save(balances)
 	if err != nil {
 		log.Fatal("Save partition", err)
@@ -438,7 +447,7 @@ func AddMockBlobbers(
 	return rtvBlobbers
 }
 
-func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
+func addMockBlobberSnapshots(blobbers []event.Blobber, edb *event.EventDb) {
 	if edb == nil {
 		return
 	}
@@ -446,25 +455,51 @@ func addMockBlobberSnapshots(blobber event.Blobber, edb *event.EventDb) {
 	var mockChallengesCompleted = viper.GetUint64(sc.EventDbAggregatePeriod) + 1
 	const mockInactiveRounds = 17
 	var aggregates []event.BlobberAggregate
-	for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
-		aggregate := event.BlobberAggregate{
-			Round:               int64(i),
-			BlobberID:           blobber.ID,
-			WritePrice:          blobber.WritePrice,
-			Capacity:            blobber.Capacity,
-			Allocated:           blobber.Allocated,
-			SavedData:           blobber.SavedData,
-			ReadData:            blobber.ReadData,
-			OffersTotal:         blobber.OffersTotal,
-			UnstakeTotal:        blobber.UnstakeTotal,
-			TotalServiceCharge:  blobber.TotalServiceCharge,
-			TotalStake:          blobber.TotalStake,
-			ChallengesPassed:    mockChallengesPassed * uint64(i),
-			ChallengesCompleted: mockChallengesCompleted * uint64(i),
-			InactiveRounds:      mockInactiveRounds,
+	for _, blobber := range blobbers {
+		for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
+			aggregate := event.BlobberAggregate{
+				Round:               int64(i),
+				BlobberID:           blobber.ID,
+				WritePrice:          blobber.WritePrice,
+				Capacity:            blobber.Capacity,
+				Allocated:           blobber.Allocated,
+				SavedData:           blobber.SavedData,
+				ReadData:            blobber.ReadData,
+				OffersTotal:         blobber.OffersTotal,
+				TotalServiceCharge:  blobber.TotalServiceCharge,
+				TotalStake:          blobber.TotalStake,
+				ChallengesPassed:    mockChallengesPassed * uint64(i),
+				ChallengesCompleted: mockChallengesCompleted * uint64(i),
+				InactiveRounds:      mockInactiveRounds,
+			}
+			aggregates = append(aggregates, aggregate)
 		}
-		aggregates = append(aggregates, aggregate)
 	}
+
+	res := edb.Store.Get().Create(&aggregates)
+	if res.Error != nil {
+		log.Fatal(res.Error)
+	}
+}
+
+func addMockValidatorSnapshots(validators []event.Validator, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
+	var aggregates []event.ValidatorAggregate
+	for _, validator := range validators {
+		for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
+			aggregate := event.ValidatorAggregate{
+				Round:         int64(i),
+				ValidatorID:   validator.ID,
+				TotalStake:    validator.TotalStake,
+				TotalRewards:  validator.GetTotalRewards(),
+				ServiceCharge: validator.GetServiceCharge(),
+			}
+			aggregates = append(aggregates, aggregate)
+		}
+	}
+
 	res := edb.Store.Get().Create(&aggregates)
 	if res.Error != nil {
 		log.Fatal(res.Error)
@@ -501,7 +536,7 @@ func AddMockSnapshots(edb *event.EventDb) {
 }
 
 func AddMockValidators(
-	publicKeys []string,
+	ids, publicKeys []string,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*ValidationNode {
@@ -513,19 +548,21 @@ func AddMockValidators(
 	if err != nil {
 		panic(err)
 	}
-
-	nv := viper.GetInt(sc.NumValidators)
-	validatorNodes := make([]*ValidationNode, 0, nv)
-	for i := 0; i < nv; i++ {
-		id := getMockValidatorId(i)
-		url := getMockValidatorUrl(i)
+	if len(ids) != len(publicKeys) {
+		log.Fatalf("length validator ids %d does not equal length of public keys %d",
+			len(ids), len(publicKeys))
+	}
+	validatorNodes := make([]*ValidationNode, 0, len(ids))
+	validators := make([]event.Validator, 0, len(ids))
+	for i, id := range ids {
+		url := getMockValidatorUrl(id)
 		validator := &ValidationNode{
 			Provider: provider.Provider{
 				ID:           id,
 				ProviderType: spenum.Validator,
 			},
 			BaseURL:           url,
-			PublicKey:         publicKeys[i%len(publicKeys)],
+			PublicKey:         publicKeys[i],
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
 		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
@@ -538,9 +575,9 @@ func AddMockValidators(
 			Url: id + ".com",
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
-			validators := event.Validator{
-
-				BaseUrl: validator.BaseURL,
+			validator := event.Validator{
+				BaseUrl:   validator.BaseURL,
+				PublicKey: publicKeys[i],
 				Provider: event.Provider{
 					ID:             validator.ID,
 					DelegateWallet: validator.StakePoolSettings.DelegateWallet,
@@ -548,13 +585,18 @@ func AddMockValidators(
 					ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
 				},
 			}
-			if err := eventDb.Store.Get().Create(&validators).Error; err != nil {
-				log.Fatal(err)
-			}
+			validators = append(validators, validator)
 		}
 
 		if err := valParts.Add(balances, &vpn); err != nil {
 			panic(err)
+		}
+	}
+
+	if viper.GetBool(sc.EventDbEnabled) {
+		addMockValidatorSnapshots(validators, eventDb)
+		if err := eventDb.Store.Get().Create(&validators).Error; err != nil {
+			log.Fatal(err)
 		}
 	}
 
@@ -585,7 +627,7 @@ func GetMockBlobberStakePools(
 			id := getMockBlobberStakePoolId(i, j, clients)
 			clientIndex := (i&len(clients) + j) % len(clients)
 			sp.Pools[id] = &stakepool.DelegatePool{}
-			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
+			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10 / 2)
 			sp.Pools[id].DelegateID = clients[clientIndex]
 
 			if viper.GetBool(sc.EventDbEnabled) {
@@ -613,11 +655,16 @@ func GetMockBlobberStakePools(
 }
 
 func GetMockValidatorStakePools(
-	_ []string,
+	validatorIds []string,
 	balances cstate.StateContextI,
 ) {
+	if len(validatorIds) < viper.GetInt(sc.NumValidators) {
+		log.Fatalf("length of validator ids %d less than the num of validaotrs %d",
+			len(validatorIds), viper.GetInt(sc.NumValidators))
+	}
+
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
-		bId := getMockValidatorId(i)
+		bId := validatorIds[i]
 		sp := &stakePool{
 			StakePool: &stakepool.StakePool{
 				Pools:    make(map[string]*stakepool.DelegatePool),
@@ -626,10 +673,10 @@ func GetMockValidatorStakePools(
 			},
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
-			id := getMockValidatorStakePoolId(i, j)
+			id := getMockValidatorStakePoolId(validatorIds[i], j)
 			sp.Pools[id] = &stakepool.DelegatePool{}
-			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-			err := sp.Save(spenum.Validator, getMockValidatorId(i), balances)
+			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10 / 2)
+			err := sp.Save(spenum.Validator, validatorIds[i], balances)
 			if err != nil {
 				panic(err)
 			}
@@ -759,8 +806,8 @@ func getMockBlobberStakePoolId(blobber, stake int, clients []string) string {
 	return clients[index%len(clients)]
 }
 
-func getMockValidatorStakePoolId(blobber, stake int) string {
-	return encryption.Hash(getMockValidatorId(blobber) + "pool" + strconv.Itoa(stake))
+func getMockValidatorStakePoolId(validator string, stake int) string {
+	return encryption.Hash(validator + ":pool:" + strconv.Itoa(stake))
 }
 
 func getMockBlobberId(index int) string {
@@ -771,12 +818,8 @@ func getMockBlobberUrl(index int) string {
 	return getMockBlobberId(index) + ".com"
 }
 
-func getMockValidatorId(index int) string {
-	return encryption.Hash("mockValidator_" + strconv.Itoa(index))
-}
-
-func getMockValidatorUrl(index int) string {
-	return getMockValidatorId(index) + ".com"
+func getMockValidatorUrl(id string) string {
+	return id + ".com"
 }
 
 func getMockAllocationId(allocation int) string {
@@ -800,7 +843,7 @@ func SetMockConfig(
 ) (conf *Config) {
 	conf = newConfig()
 
-	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = viper.GetDuration(sc.TimeUnit)
 	conf.ChallengeEnabled = true
 	conf.MinAllocSize = viper.GetInt64(sc.StorageMinAllocSize)
 	conf.MinBlobberCapacity = viper.GetInt64(sc.StorageMinBlobberCapacity)

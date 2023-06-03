@@ -27,15 +27,15 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 		})
 
 		var (
-			expectedBucketId	int64
-			initialSnapshot		= Snapshot{ Round: 5 }
-			validatorIds		= createMockValidators(t, eventDb, 5, expectedBucketId)
-			validatorsBefore	[]Validator
-			validatorsAfter	[]Validator
-			validatorSnapshots	[]ValidatorSnapshot
-			expectedAggregates	[]ValidatorAggregate
-			expectedSnapshots	[]ValidatorSnapshot
-			err                 error
+			expectedBucketId   int64
+			initialSnapshot    = Snapshot{Round: 5}
+			validatorIds       = createMockValidators(t, eventDb, 5, expectedBucketId)
+			validatorsBefore   []Validator
+			validatorsAfter    []Validator
+			validatorSnapshots []ValidatorSnapshot
+			expectedAggregates []ValidatorAggregate
+			expectedSnapshots  []ValidatorSnapshot
+			err                error
 		)
 		expectedBucketId = 5 % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 		err = eventDb.Store.Get().Model(&Snapshot{}).Create(&initialSnapshot).Error
@@ -44,10 +44,10 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 		// Initial validators table image + force bucket_id for validators in bucket
 		err = eventDb.Get().Model(&Validator{}).Where("id IN ?", validatorIds).Find(&validatorsBefore).Error
 		require.NoError(t, err)
-		validatorsInBucket := []string{ validatorsBefore[0].ID, validatorsBefore[1].ID, validatorsBefore[2].ID }
+		validatorsInBucket := []string{validatorsBefore[0].ID, validatorsBefore[1].ID, validatorsBefore[2].ID}
 		err = eventDb.Store.Get().Model(&Validator{}).Where("id IN ?", validatorsInBucket).Update("bucket_id", expectedBucketId).Error
 		require.NoError(t, err)
-		err = eventDb.Store.Get().Model(&Blobber{}).Where("id NOT IN ?", validatorsInBucket).Update("bucket_id", expectedBucketId + 1).Error
+		err = eventDb.Store.Get().Model(&Blobber{}).Where("id NOT IN ?", validatorsInBucket).Update("bucket_id", expectedBucketId+1).Error
 		require.NoError(t, err)
 		err = eventDb.Get().Model(&Validator{}).Where("id IN ?", validatorIds).Find(&validatorsBefore).Error
 		require.NoError(t, err)
@@ -66,12 +66,11 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 		// Add a new validator
 		expectedBucketId = updateRound % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 		newValidator := Validator{
-			Provider:  Provider{
-				ID:        "new-validator",
-				BucketId:  expectedBucketId,
+			Provider: Provider{
+				ID:         "new-validator",
+				BucketId:   expectedBucketId,
 				TotalStake: 100,
-				UnstakeTotal: 100,
-				Downtime: 100,
+				Downtime:   100,
 			},
 			CreationRound: updateRound,
 		}
@@ -82,9 +81,8 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 
 		// Update an existing validator
 		updates := map[string]interface{}{
-			"total_stake":          gorm.Expr("total_stake * ?", 2),
-			"unstake_total":        gorm.Expr("unstake_total * ?", 2),
-			"downtime":             gorm.Expr("downtime * ?", 2),
+			"total_stake": gorm.Expr("total_stake * ?", 2),
+			"downtime":    gorm.Expr("downtime * ?", 2),
 		}
 		err = eventDb.Store.Get().Model(&Validator{}).Where("id", validatorsInBucket[0]).Updates(updates).Error
 		require.NoError(t, err)
@@ -93,14 +91,16 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 		err = eventDb.Store.Get().Model(&ProviderRewards{}).Where("provider_id", validatorsInBucket[0]).UpdateColumn("total_rewards", gorm.Expr("total_rewards * ?", 2)).Error
 		require.NoError(t, err)
 
-		// Delete 2 validators
-		err = eventDb.Store.Get().Model(&Validator{}).Where("id IN (?)", validatorsInBucket[1:]).Delete(&Validator{}).Error
+		// Kill one validator and shutdown another
+		err = eventDb.Store.Get().Model(&Validator{}).Where("id", validatorsInBucket[1]).Update("is_killed", true).Error
+		require.NoError(t, err)
+		err = eventDb.Store.Get().Model(&Validator{}).Where("id", validatorsInBucket[2]).Update("is_shutdown", true).Error
 		require.NoError(t, err)
 
 		// Get validators and snapshot after update
 		err = eventDb.Get().Model(&Validator{}).Find(&validatorsAfter).Error
 		require.NoError(t, err)
-		require.Equal(t, 4, len(validatorsAfter)) // 5 + 1 - 2
+		require.Equal(t, 6, len(validatorsAfter)) // 5 + 1
 		err = eventDb.Get().Model(&ValidatorSnapshot{}).Find(&validatorSnapshots).Error
 		require.NoError(t, err)
 
@@ -111,31 +111,26 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 		}
 		require.Contains(t, actualIds, newValidator.ID)
 
-		// Check the deleted validators are not there
-		require.NotContains(t, actualIds, validatorsInBucket[1])
-		require.NotContains(t, actualIds, validatorsInBucket[2])
-
-		// Check the updated validator is updated
-		var (
-			oldValidator Validator
-			curValidator Validator
-		)
-		for _, validator := range validatorsBefore {
-			if validator.ID == validatorsInBucket[0] {
-				oldValidator = validator
-				break
-			}
+		// Check the updated validators
+		validatorsBeforeMap := make(map[string]Validator)
+		validatorsAfterMap := make(map[string]Validator)
+		for _, v := range validatorsBefore {
+			validatorsBeforeMap[v.ID] = v
 		}
-		for _, validator := range validatorsAfter {
-			if validator.ID == validatorsInBucket[0] {
-				curValidator = validator
-				break
-			}
+		for _, v := range validatorsAfter {
+			validatorsAfterMap[v.ID] = v
 		}
+		oldValidator := validatorsBeforeMap[validatorsInBucket[0]]
+		curValidator := validatorsAfterMap[validatorsInBucket[0]]
 		require.Equal(t, oldValidator.TotalStake*2, curValidator.TotalStake)
-		require.Equal(t, oldValidator.UnstakeTotal*2, curValidator.UnstakeTotal)
 		require.Equal(t, oldValidator.Downtime*2, curValidator.Downtime)
 		require.Equal(t, oldValidator.Rewards.TotalRewards*2, curValidator.Rewards.TotalRewards)
+
+		// Check the killed validator
+		require.True(t, validatorsAfterMap[validatorsInBucket[1]].IsKilled)
+
+		// Check the shutdown validator
+		require.True(t, validatorsAfterMap[validatorsInBucket[2]].IsShutdown)
 
 		// Check generated snapshots/aggregates
 		expectedAggregates, expectedSnapshots = calculateValidatorAggregatesAndSnapshots(updateRound, expectedBucketId, validatorsAfter, validatorSnapshots)
@@ -149,11 +144,11 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 
 func createMockValidators(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Validator) []string {
 	var (
-		ids        []string
+		ids          []string
 		curValidator Validator
-		err        error
+		err          error
 		validators   []Validator
-		i          = 0
+		i            = 0
 	)
 
 	for ; i < len(seed) && i < n; i++ {
@@ -170,6 +165,8 @@ func createMockValidators(t *testing.T, eventDb *EventDb, n int, targetBucket in
 		require.NoError(t, err)
 		curValidator.DelegateWallet = OwnerId
 		curValidator.BucketId = int64((i % 2)) * targetBucket
+		curValidator.IsKilled = false
+		curValidator.IsShutdown = false
 		validators = append(validators, curValidator)
 		ids = append(ids, curValidator.ID)
 	}
@@ -194,13 +191,14 @@ func snapshotCurrentValidators(t *testing.T, edb *EventDb, round int64) {
 
 func validatorToSnapshot(validator *Validator, round int64) ValidatorSnapshot {
 	snapshot := ValidatorSnapshot{
-		ValidatorID:       	validator.ID,
-		BucketId: 			validator.BucketId,
-		UnstakeTotal:       validator.UnstakeTotal,
-		TotalRewards:       validator.Rewards.TotalRewards,
-		TotalStake:         validator.TotalStake,
-		CreationRound:      validator.CreationRound,
-		ServiceCharge: 	 	validator.ServiceCharge,
+		ValidatorID:   validator.ID,
+		BucketId:      validator.BucketId,
+		TotalRewards:  validator.Rewards.TotalRewards,
+		TotalStake:    validator.TotalStake,
+		CreationRound: validator.CreationRound,
+		ServiceCharge: validator.ServiceCharge,
+		IsKilled:      validator.IsKilled,
+		IsShutdown:    validator.IsShutdown,
 	}
 	return snapshot
 }
@@ -227,7 +225,10 @@ func calculateValidatorAggregatesAndSnapshots(round, expectedBucketId int64, cur
 			}
 		}
 
-		aggregates = append(aggregates, calculateValidatorAggregate(round, &curValidator, oldValidator))
+		if !curValidator.IsOffline() {
+			aggregates = append(aggregates, calculateValidatorAggregate(round, &curValidator, oldValidator))
+		}
+
 		snapshots = append(snapshots, validatorToSnapshot(&curValidator, round))
 	}
 
@@ -236,13 +237,12 @@ func calculateValidatorAggregatesAndSnapshots(round, expectedBucketId int64, cur
 
 func calculateValidatorAggregate(round int64, current *Validator, old *ValidatorSnapshot) ValidatorAggregate {
 	aggregate := ValidatorAggregate{
-		Round:     round,
+		Round:       round,
 		ValidatorID: current.ID,
-		BucketID:  current.BucketId,
+		BucketID:    current.BucketId,
 	}
 	aggregate.TotalStake = (old.TotalStake + current.TotalStake) / 2
 	aggregate.TotalRewards = (old.TotalRewards + current.Rewards.TotalRewards) / 2
-	aggregate.UnstakeTotal = (old.UnstakeTotal + current.UnstakeTotal) / 2
 	aggregate.ServiceCharge = (old.ServiceCharge + current.ServiceCharge) / 2
 	return aggregate
 }
@@ -285,7 +285,6 @@ func assertValidatorAggregate(t *testing.T, expected, actual *ValidatorAggregate
 	require.Equal(t, expected.BucketID, actual.BucketID)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
-	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
 }
 
@@ -293,16 +292,17 @@ func assertValidatorSnapshot(t *testing.T, expected, actual *ValidatorSnapshot) 
 	require.Equal(t, expected.ValidatorID, actual.ValidatorID)
 	require.Equal(t, expected.BucketId, actual.BucketId)
 	require.Equal(t, expected.ServiceCharge, actual.ServiceCharge)
-	require.Equal(t, expected.UnstakeTotal, actual.UnstakeTotal)
 	require.Equal(t, expected.TotalRewards, actual.TotalRewards)
 	require.Equal(t, expected.TotalStake, actual.TotalStake)
 	require.Equal(t, expected.CreationRound, actual.CreationRound)
+	require.Equal(t, expected.IsKilled, actual.IsKilled)
+	require.Equal(t, expected.IsShutdown, actual.IsShutdown)
 }
 
 func assertValidatorGlobalSnapshot(t *testing.T, edb *EventDb, round, expectedBucketId int64, actualValidators []Validator, actualSnapshot *Snapshot) {
-	expectedGlobal := Snapshot{ Round: round }
+	expectedGlobal := Snapshot{Round: round}
 	for _, validator := range actualValidators {
-		if validator.BucketId != expectedBucketId {
+		if validator.BucketId != expectedBucketId || validator.IsOffline() {
 			continue
 		}
 		expectedGlobal.TotalRewards += int64(validator.Rewards.TotalRewards)

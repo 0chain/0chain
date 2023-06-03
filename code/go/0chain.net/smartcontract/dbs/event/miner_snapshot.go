@@ -8,24 +8,25 @@ import (
 
 // swagger:model MinerSnapshot
 type MinerSnapshot struct {
-	MinerID string `json:"id" gorm:"index"`
-	BucketId	 int64  `json:"bucket_id"`
-	Round   int64  `json:"round"`
+	MinerID  string `json:"id" gorm:"index"`
+	BucketId int64  `json:"bucket_id"`
+	Round    int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin	`json:"total_rewards"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (m *MinerSnapshot) IsOffline() bool {
+	return m.IsKilled || m.IsShutdown
 }
 
 func (m *MinerSnapshot) GetTotalStake() currency.Coin {
 	return m.TotalStake
-}
-
-func (m *MinerSnapshot) GetUnstakeTotal() currency.Coin {
-	return m.UnstakeTotal
 }
 
 func (m *MinerSnapshot) GetServiceCharge() float64 {
@@ -38,10 +39,6 @@ func (m *MinerSnapshot) GetTotalRewards() currency.Coin {
 
 func (m *MinerSnapshot) SetTotalStake(value currency.Coin) {
 	m.TotalStake = value
-}
-
-func (m *MinerSnapshot) SetUnstakeTotal(value currency.Coin) {
-	m.UnstakeTotal = value
 }
 
 func (m *MinerSnapshot) SetServiceCharge(value float64) {
@@ -81,12 +78,13 @@ func (edb *EventDb) addMinerSnapshot(miners []Miner, round int64) error {
 			MinerID:       miner.ID,
 			Round:         round,
 			BucketId:      miner.BucketId,
-			UnstakeTotal:  miner.UnstakeTotal,
 			Fees:          miner.Fees,
 			TotalStake:    miner.TotalStake,
 			ServiceCharge: miner.ServiceCharge,
 			CreationRound: miner.CreationRound,
 			TotalRewards:  miner.Rewards.TotalRewards,
+			IsKilled:      miner.IsKilled,
+			IsShutdown:    miner.IsShutdown,
 		})
 	}
 

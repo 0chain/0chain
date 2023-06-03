@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"time"
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/currency"
@@ -27,10 +28,6 @@ func (v *Validator) GetTotalStake() currency.Coin {
 	return v.TotalStake
 }
 
-func (v *Validator) GetUnstakeTotal() currency.Coin {
-	return v.UnstakeTotal
-}
-
 func (v *Validator) GetServiceCharge() float64 {
 	return v.ServiceCharge
 }
@@ -41,10 +38,6 @@ func (v *Validator) GetTotalRewards() currency.Coin {
 
 func (v *Validator) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
-}
-
-func (v *Validator) SetUnstakeTotal(value currency.Coin) {
-	v.UnstakeTotal = value
 }
 
 func (v *Validator) SetServiceCharge(value float64) {
@@ -107,14 +100,14 @@ func (edb *EventDb) GetValidators(pg common2.Pagination) ([]Validator, error) {
 	return validators, result.Error
 }
 
-func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, error) {
+func (edb *EventDb) GetActiveValidators(pg common2.Pagination, healthcheckPeriod time.Duration) ([]Validator, error) {
 	now := common.Now()
 	var validators []Validator
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Validator{}).
 		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
-			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
+			common.ToTime(now).Add(-healthcheckPeriod).Unix(), false, false).
 		Limit(pg.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},
@@ -127,7 +120,6 @@ func (edb *EventDb) GetActiveValidators(pg common2.Pagination) ([]Validator, err
 func (edb *EventDb) updateValidators(validators []Validator) error {
 	updateFields := []string{
 		"base_url", "public_key", "total_stake",
-		"unstake_total",
 		"delegate_wallet", "num_delegates",
 		"service_charge",
 	}
@@ -169,13 +161,6 @@ func NewUpdateValidatorTotalStakeEvent(ID string, totalStake currency.Coin) (tag
 			TotalStake: totalStake},
 	}
 }
-func NewUpdateValidatorTotalUnStakeEvent(ID string, totalUntake currency.Coin) (tag EventTag, data interface{}) {
-	return TagUpdateValidatorUnStakeTotal, Validator{
-		Provider: Provider{
-			ID:           ID,
-			UnstakeTotal: totalUntake},
-	}
-}
 
 func (edb *EventDb) updateValidatorTotalStakes(validators []Validator) error {
 	var provs []Provider
@@ -185,24 +170,12 @@ func (edb *EventDb) updateValidatorTotalStakes(validators []Validator) error {
 	return edb.updateProviderTotalStakes(provs, "validators")
 }
 
-func (edb *EventDb) updateValidatorTotalUnStakes(validators []Validator) error {
-	var provs []Provider
-	for _, v := range validators {
-		provs = append(provs, v.Provider)
-	}
-	return edb.updateProvidersTotalUnStakes(provs, "validators")
-}
-
 func mergeUpdateValidatorsEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidator, withUniqueEventOverwrite())
 }
 
 func mergeUpdateValidatorStakesEvents() *eventsMergerImpl[Validator] {
 	return newEventsMerger[Validator](TagUpdateValidatorStakeTotal, withUniqueEventOverwrite())
-}
-
-func mergeUpdateValidatorUnStakesEvents() *eventsMergerImpl[Validator] {
-	return newEventsMerger[Validator](TagUpdateValidatorUnStakeTotal, withUniqueEventOverwrite())
 }
 
 func mergeValidatorHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {

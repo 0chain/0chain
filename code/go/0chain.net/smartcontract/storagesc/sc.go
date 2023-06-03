@@ -2,13 +2,8 @@ package storagesc
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math"
 	"net/url"
-
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/chaincore/smartcontract"
 
@@ -50,20 +45,15 @@ func (ipsc *StorageSmartContract) GetExecutionStats() map[string]interface{} {
 	return ipsc.SmartContractExecutionStats
 }
 
-func (ipsc *StorageSmartContract) GetCost(t *transaction.Transaction, funcName string, balances chainstate.StateContextI) (int, error) {
-	conf, err := ipsc.getConfig(balances, true)
+func (ipsc *StorageSmartContract) GetCostTable(balances chainstate.StateContextI) (map[string]int, error) {
+	node, err := ipsc.getConfig(balances, true)
 	if err != nil {
-		return math.MaxInt32, err
+		return map[string]int{}, err
 	}
-	if conf.Cost == nil {
-		return math.MaxInt32, errors.New("can't get cost")
+	if node.Cost == nil {
+		return map[string]int{}, err
 	}
-	cost, ok := conf.Cost[funcName]
-	if !ok {
-		logging.Logger.Error("no cost given", zap.String("funcName", funcName))
-		return math.MaxInt32, errors.New("no cost given for " + funcName)
-	}
-	return cost, nil
+	return node.Cost, nil
 }
 
 func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) {
@@ -227,7 +217,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "update_validator_settings":
 		resp, err = sc.updateValidatorSettings(t, input, balances)
 	case "blobber_block_rewards":
-		err = sc.blobberBlockRewards(balances)
+		err = sc.blobberBlockRewards(t, input, balances)
 
 	case "shutdown_blobber":
 		_, err = sc.shutdownBlobber(t, input, balances)

@@ -64,7 +64,7 @@ func (bt benchTest) Run(state cstate.TimedQueryStateContext, b *testing.B) error
 func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
 
-	indexOfNewAuth := len(data.Clients) - 1
+	indexOfNewAuth := viper.GetInt(benchmark.NumAuthorizers)
 
 	return createTestSuite(
 		[]benchTest{
@@ -77,10 +77,10 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 			{
 				name:     benchmark.ZcnSc + AuthorizerHealthCheckFunc,
 				endpoint: sc.AuthorizerHealthCheck,
-				txn:      createTransaction(owner, "", 3000),
+				txn:      createTransaction(data.Clients[0], "", 3000),
 				input: func() []byte {
 					input, _ := (&AuthorizerHealthCheckPayload{
-						ID: data.Clients[indexOfNewAuth],
+						ID: data.Clients[0],
 					}).Encode()
 					return input
 				}(),
@@ -219,11 +219,11 @@ func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchm
 	// mintNonce = mintNonce + 1
 	payload := &MintPayload{
 		EthereumTxnID:     "0xc8285f5304b1B7aAB09a7d26721D6F585448D0ed",
-		Amount:            1000,
 		Nonce:             mintNonce + 1,
 		Signatures:        sigs,
 		ReceivingClientID: client,
 	}
+	payload.Amount, _ = currency.ParseZCN(1000)
 
 	return payload.Encode()
 }
@@ -240,7 +240,7 @@ func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
 	an := &AddAuthorizerPayload{
 		PublicKey:         data.PublicKeys[index],
 		URL:               "http://localhost:303" + strconv.Itoa(index),
-		StakePoolSettings: getMockStakePoolSettings(data.Clients[index]),
+		StakePoolSettings: getMockStakePoolSettings(data.Clients[0]),
 	}
 	ap, err := an.Encode()
 	if err != nil {
@@ -250,7 +250,8 @@ func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
 }
 
 func createRandomTransaction(id, publicKey string) *transaction.Transaction {
-	return createTransaction(id, publicKey, 3000)
+	value, _ := currency.ParseZCN(3000)
+	return createTransaction(id, publicKey, value)
 }
 
 func createRandomBurnTransaction(clients, publicKey []string) *transaction.Transaction {
@@ -259,6 +260,7 @@ func createRandomBurnTransaction(clients, publicKey []string) *transaction.Trans
 }
 
 func createBurnTransaction(clientId, publicKey string) *transaction.Transaction {
+	burnAmount, _ := currency.ParseZCN(3000.0)
 	return &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("mock transaction hash"),
@@ -266,7 +268,7 @@ func createBurnTransaction(clientId, publicKey string) *transaction.Transaction 
 		ClientID:     clientId,
 		PublicKey:    publicKey,
 		ToClientID:   config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress),
-		Value:        3000,
+		Value:        burnAmount,
 		CreationDate: common.Now(),
 	}
 }

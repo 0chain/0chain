@@ -33,7 +33,6 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
@@ -103,12 +102,13 @@ func main() {
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
 
-			if err := serverChain.GetEventDb().ProcessEvents(
+			if _, err := serverChain.GetEventDb().ProcessEvents(
 				ctx,
 				[]event.Event{ev},
 				b.Round,
 				b.Hash,
 				len(b.Txns),
+				event.CommitNow(),
 			); err != nil {
 				logging.Logger.Error("process block saving event failed",
 					zap.Error(err),
@@ -379,18 +379,22 @@ func initHandlers(c chain.Chainer) {
 	if config.Development() {
 		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
 		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
+		chain.SetupDebugStateHandlers()
+		config.SetupHandlers()
 	}
-	config.SetupHandlers()
+
+	// common
 	node.SetupHandlers()
-	chain.SetupSharderHandlers(c)
-	block.SetupHandlers()
 	sharder.SetupHandlers()
+	block.SetupHandlers()
 	diagnostics.SetupHandlers()
-	chain.SetupScRestApiHandlers()
 	chain.SetupStateHandlers()
 
-	serverChain := chain.GetServerChain()
-	serverChain.SetupNodeHandlers()
+	// sharder only
+	chain.SetupSharderHandlers(c)
+	chain.GetServerChain().SetupSharderNodeHandlers()
+	chain.SetupScRestApiHandlers()
+	chain.SetupSharderStateHandlers()
 }
 
 func initEntities(workdir string) {
@@ -401,6 +405,8 @@ func initEntities(workdir string) {
 
 	round.SetupRoundSummaryDB(workdir)
 	block.SetupBlockSummaryDB(workdir)
+	block.SetupMagicBlockMapDB(workdir)
+	transaction.SetupTxnSummaryDB(workdir)
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
@@ -409,12 +415,9 @@ func initEntities(workdir string) {
 	round.SetupEntity(ememoryStorage)
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
-
-	persistencestore.InitSession()
-	persistenceStorage := persistencestore.GetStorageProvider()
-	transaction.SetupTxnSummaryEntity(persistenceStorage)
-	transaction.SetupTxnConfirmationEntity(persistenceStorage)
-	block.SetupMagicBlockMapEntity(persistenceStorage)
+	
+	transaction.SetupTxnSummaryEntity(ememoryStorage)
+	block.SetupMagicBlockMapEntity(ememoryStorage)
 
 	sharder.SetupBlockSummaries()
 	sharder.SetupRoundSummaries()

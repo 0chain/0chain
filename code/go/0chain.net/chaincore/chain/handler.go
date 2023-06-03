@@ -57,10 +57,24 @@ func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Requ
 	return m
 }
 
-func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+func minerHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	m := map[string]func(http.ResponseWriter, *http.Request){
+	m := handlersMap(c)
+	m["/v1/transaction/put"] = common.WithCORS(common.UserRateLimit(
+		datastore.ToJSONEntityReqResponse(
+			datastore.DoAsyncEntityJSONHandler(
+				memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
+				transaction.TransactionEntityChannel,
+			),
+			transactionEntityMetadata,
+		),
+	))
+	m[GetBlockV1Pattern] = common.UserRateLimit(common.ToJSONResponse(GetBlockHandler))
+	return m
+}
 
+func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
 				LatestFinalizedBlockHandler,
@@ -106,13 +120,9 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 				SuggestedFeeHandler,
 			),
 		)),
-		"/v1/transaction/put": common.WithCORS(common.UserRateLimit(
-			datastore.ToJSONEntityReqResponse(
-				datastore.DoAsyncEntityJSONHandler(
-					memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
-					transaction.TransactionEntityChannel,
-				),
-				transactionEntityMetadata,
+		"/v1/fees_table": common.WithCORS(common.UserRateLimit(
+			common.ToJSONResponse(
+				FeesTableHandler,
 			),
 		)),
 		"/_diagnostics/state_dump": common.UserRateLimit(
@@ -124,14 +134,6 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 			),
 		),
 	}
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		m[GetBlockV1Pattern] = common.UserRateLimit(
-			common.ToJSONResponse(
-				GetBlockHandler,
-			),
-		)
-	}
-
 	return m
 }
 
@@ -261,6 +263,10 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
 	//Row start
 	fmt.Fprintf(w, "<tr>")
+
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, txn.Hash)
+	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, txn.ClientID)
@@ -1354,8 +1360,17 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
-	if txn.CreationDate < common.Now()-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
-		return nil, fmt.Errorf("put_transaction: time out of sync with server time")
+	err := txn.Validate(ctx)
+	if err != nil {
+		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
+		return nil, err
+	}
+
+	if txn.Value > config.MaxTokenSupply {
+		logging.Logger.Error("put transaction error - value exceeds max token supply",
+			zap.Uint64("value", uint64(txn.Value)),
+			zap.Uint64("max_token_supply", config.MaxTokenSupply))
+		return nil, fmt.Errorf("transaction value exceeds max token supply")
 	}
 
 	sc := GetServerChain()
@@ -1380,7 +1395,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if cstate.ErrInvalidState(err) {
 		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
 		// of the 'error' of the miner itself.
-		return transaction.PutTransaction(ctx, txn)
+		txnRsp, err := transaction.PutTransaction(ctx, txn)
+		if err != nil {
+			logging.Logger.Error("failed to save transaction",
+				zap.Error(err),
+				zap.Any("txn", txn))
+			return nil, common.NewErrInternal("failed to save transaction")
+		}
+		return txnRsp, nil
 	}
 
 	var nonce int64
@@ -1392,7 +1414,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, errors.New("invalid transaction nonce")
 	}
 
-	if txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
+	if nonce+1 == txn.Nonce && txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
 		return nil, errors.New("insufficient balance to send")
 	}
 
@@ -1402,7 +1424,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			if cstate.ErrInvalidState(err) {
 				// put transaction into pool if got invalid state error
 				// to avoid txn rejected due to miner's own fault
-				return transaction.PutTransaction(ctx, txn)
+				txnRsp, err := transaction.PutTransaction(ctx, txn)
+				if err != nil {
+					logging.Logger.Error("failed to save transaction",
+						zap.Error(err),
+						zap.Any("txn", txn))
+					return nil, common.NewErrInternal("failed to save transaction")
+				}
+				return txnRsp, nil
 			}
 			return nil, fmt.Errorf("could not get estimated txn cost: %v", err)
 		}
@@ -1418,21 +1447,34 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.String("func", txn.FunctionName),
 				zap.Any("txn fee", txn.Fee),
 				zap.Any("minFee", minFee),
+				zap.Int64("lfb round", lfb.Round),
+				zap.String("lfb", lfb.Hash),
 				zap.Error(err))
 			return nil, err
 		}
 
-		if s.Balance < txn.Fee {
+		if nonce+1 == txn.Nonce && s.Balance < txn.Fee {
 			logging.Logger.Error("insufficient balance",
 				zap.String("txn", txn.Hash),
+				zap.String("client_id", txn.ClientID),
 				zap.String("func", txn.FunctionName),
 				zap.Any("balance", s.Balance),
-				zap.Any("fee", txn.Fee))
+				zap.Any("fee", txn.Fee),
+				zap.Int64("lfb round", lfb.Round),
+				zap.String("lfb", lfb.Hash))
 			return nil, errors.New("insufficient balance to pay fee")
 		}
 	}
 
-	return transaction.PutTransaction(ctx, txn)
+	txnRsp, err := transaction.PutTransaction(ctx, txn)
+	if err != nil {
+		logging.Logger.Error("failed to save transaction",
+			zap.Error(err),
+			zap.Any("txn", txn))
+		return nil, common.NewErrInternal("failed to save transaction")
+	}
+
+	return txnRsp, nil
 }
 
 // RoundInfoHandler collects and writes information about current round
@@ -1722,7 +1764,7 @@ func (c *Chain) TxnsInPoolHandler(w http.ResponseWriter, r *http.Request) {
 	// Print table and heading
 	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<th align='center' colspan='7'>Transactions in pool</th>")
-	fmt.Fprintf(w, "<tr class='header'><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Txn hash</td><td>Client ID</td><td>Value</td><td>Creation Date</td><td>Fee</td><td>Nonce</td><td>Actual Nonce</td><td>Actual Balance</td></tr>")
 
 	ctx := common.GetRootContext()
 
@@ -1921,7 +1963,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 // SetupHandlers sets up the necessary API end points for miners
 func SetupMinerHandlers(c Chainer) {
-	setupHandlers(handlersMap(c))
+	setupHandlers(minerHandlersMap(c))
 	setupHandlers(chainhandlersMap(c))
 }
 
@@ -1965,4 +2007,18 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 	return map[string]uint64{
 		"fee": uint64(fee),
 	}, nil
+}
+func FeesTableHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, errors.New("LFB not ready yet")
+	}
+
+	lfb = lfb.Clone()
+
+	table := c.GetTransactionCostFeeTable(ctx, lfb)
+
+	return table, nil
 }

@@ -176,12 +176,12 @@ storage:
 # root_dir is where the blocks will permanently be stored. It can be any mounted drive. Having it as HDD drive
 # and using SSD as cache is efficient and cost effective. Sharder can also have root_dir as mounted SSD drive and
 # don't use cache.
-  root_dir: "/path/to/root/directory"
+  root_dir: "/0chain/data/blocks"
 # cache is optional. It should be SSD drive. Having HDD drive as cache is not effective.
 # Cache is effective when blocks are stored in HDD. Cache stores uncompressed blocks so that
 # accessing and unmarshalling is faster than with compressed block in HDD.
   cache:
-    path: "/path/to/cache"
+    path: "/0chain/data/cache"
     total_blocks: 1000 # Total number of blocks this cache will store
 # integration tests related configurations
 integration_tests:

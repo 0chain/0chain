@@ -37,16 +37,19 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 	gn.OwnerId = viper.GetString(benchmark.ZcnOwner)
 	var err error
-	gn.MinStakeAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinStakeAmount))
+	gn.MinStakeAmount, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinStakeAmount))
 	if err != nil {
 		panic(err)
 	}
-	gn.MaxStakeAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMaxStakeAmount))
+	gn.MaxStakeAmount, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(benchmark.ZcnMaxStakeAmount))
 	if err != nil {
 		panic(err)
 	}
-	gn.MinLockAmount = currency.Coin(config.SmartContractConfig.GetUint64(benchmark.ZcnMinLockAmount))
-	gn.MinMintAmount, err = currency.Float64ToCoin(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
+	gn.MinLockAmount, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinLockAmount))
+	if err != nil {
+		panic(err)
+	}
+	gn.MinMintAmount, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinMintAmount))
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +58,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 		panic(err)
 	}
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.ZcnMinAuthorizers)
-	gn.MinBurnAmount, err = currency.Int64ToCoin(config.SmartContractConfig.GetInt64(benchmark.ZcnMinBurnAmount))
+	gn.MinBurnAmount, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(benchmark.ZcnMinBurnAmount))
 	if err != nil {
 		panic(err)
 	}
@@ -66,6 +69,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 }
 
 func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ctx cstate.StateContextI) {
+	authorizers := make([]event.Authorizer, 0, viper.GetInt(benchmark.NumAuthorizers))
 	for i := 0; i < viper.GetInt(benchmark.NumAuthorizers); i++ {
 		id := clients[i]
 		publicKey := publicKeys[i]
@@ -91,7 +95,12 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 					LastHealthCheck: common.Now(),
 				},
 			}
-			_ = eventDb.Store.Get().Create(&authorizer)
+			authorizers = append(authorizers, authorizer)
+		}
+	}
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		if err := eventDb.Store.Get().Create(&authorizers).Error; err != nil {
+			log.Fatal(err)
 		}
 	}
 }

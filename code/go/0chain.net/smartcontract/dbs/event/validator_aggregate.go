@@ -15,7 +15,6 @@ type ValidatorAggregate struct {
 	Round       int64  `json:"round" gorm:"index:idx_validator_aggregate,unique"`
 	BucketID    int64  `json:"bucket_id"`
 
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
@@ -23,10 +22,6 @@ type ValidatorAggregate struct {
 
 func (v *ValidatorAggregate) GetTotalStake() currency.Coin {
 	return v.TotalStake
-}
-
-func (v *ValidatorAggregate) GetUnstakeTotal() currency.Coin {
-	return v.UnstakeTotal
 }
 
 func (v *ValidatorAggregate) GetServiceCharge() float64 {
@@ -39,10 +34,6 @@ func (v *ValidatorAggregate) GetTotalRewards() currency.Coin {
 
 func (v *ValidatorAggregate) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
-}
-
-func (v *ValidatorAggregate) SetUnstakeTotal(value currency.Coin) {
-	v.UnstakeTotal = value
 }
 
 func (v *ValidatorAggregate) SetServiceCharge(value float64) {
@@ -71,7 +62,6 @@ func (edb *EventDb) updateValidatorAggregate(round, pageAmount int64, gs *Snapsh
 		logging.Logger.Error("error creating old temp table", zap.Error(exec.Error))
 		return
 	}
-
 
 	var count int64
 	r := edb.Store.Get().Raw("SELECT count(*) FROM validator_temp_ids").Scan(&count)
@@ -119,10 +109,10 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 
 	var (
 		oldValidatorsProcessingMap = MakeProcessingMap(oldValidators)
-		aggregates []ValidatorAggregate
-		gsDiff     Snapshot
-		old ValidatorSnapshot
-		ok bool
+		aggregates                 []ValidatorAggregate
+		gsDiff                     Snapshot
+		old                        ValidatorSnapshot
+		ok                         bool
 	)
 	for _, current := range currentValidators {
 		processingEntity, found := oldValidatorsProcessingMap[current.ID]
@@ -130,17 +120,23 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 			old = ValidatorSnapshot{ /* zero values */ }
 			gsDiff.ValidatorCount += 1
 		} else {
-			processingEntity.Processed = true
 			old, ok = processingEntity.Entity.(ValidatorSnapshot)
 			if !ok {
 				logging.Logger.Error("error converting processable entity to validator snapshot")
 				continue
 			}
 		}
+
+		// Case: validator becomes killed/shutdown
+		if current.IsOffline() && !old.IsOffline() {
+			handleOfflineValidator(&gsDiff, old)
+			continue
+		}
+
 		aggregate := ValidatorAggregate{
-			Round:        round,
-			ValidatorID:      current.ID,
-			BucketID:     current.BucketId,
+			Round:       round,
+			ValidatorID: current.ID,
+			BucketID:    current.BucketId,
 		}
 
 		recalculateProviderFields(&old, &current, &aggregate)
@@ -151,27 +147,7 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 
 		oldValidatorsProcessingMap[current.ID] = processingEntity
 	}
-	// Decrease global snapshot values for not processed entities (deleted)
-	var snapshotIdsToDelete []string
-	for _, processingEntity := range oldValidatorsProcessingMap {
-		if processingEntity.Entity == nil || processingEntity.Processed {
-			continue
-		}
-		old, ok = processingEntity.Entity.(ValidatorSnapshot)
-		if !ok {
-			logging.Logger.Error("error converting processable entity to validator snapshot")
-			continue
-		}
-		snapshotIdsToDelete = append(snapshotIdsToDelete, old.ValidatorID)
-		gsDiff.ValidatorCount -= 1
-		gsDiff.TotalRewards -= int64(old.TotalRewards)
-		gsDiff.TotalStaked -= int64(old.TotalStake)
-	}
-	if len(snapshotIdsToDelete) > 0 {
-		if result := edb.Store.Get().Where("validator_id in (?)", snapshotIdsToDelete).Delete(&ValidatorSnapshot{}); result.Error != nil {
-			logging.Logger.Error("deleting Validator snapshots", zap.Error(result.Error))
-		}
-	}
+
 	gs.ApplyDiff(&gsDiff)
 
 	if len(aggregates) > 0 {
@@ -190,7 +166,12 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 		zap.Int("current_validators", len(currentValidators)),
 		zap.Int("old_validators", len(oldValidators)),
 		zap.Int("aggregates", len(aggregates)),
-		zap.Int("deleted_snapshots", len(snapshotIdsToDelete)),
 		zap.Any("global_snapshot_after", gs),
 	)
+}
+
+func handleOfflineValidator(gs *Snapshot, old ValidatorSnapshot) {
+	gs.ValidatorCount -= 1
+	gs.TotalRewards -= int64(old.TotalRewards)
+	gs.TotalStaked -= int64(old.TotalStake)
 }

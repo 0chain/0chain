@@ -1,9 +1,8 @@
 package event
 
 import (
-	"fmt"
-
 	common2 "0chain.net/smartcontract/common"
+	"fmt"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -22,10 +21,17 @@ type Challenge struct {
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      bool             `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
+	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded" gorm:"index"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
+	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
+}
+
+func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
+	var chs Challenges
+	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{AllocationID: allocationID}).Find(&chs)
+	return chs, result.Error
 }
 
 func (edb *EventDb) GetChallenge(challengeID string) (*Challenge, error) {
@@ -59,10 +65,17 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 
 	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			from, blobberID, false).Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "created_at"},
-		Desc:   limit.IsDescending,
-	})
+			from, blobberID, 0).
+		Limit(limit.Limit).
+		Offset(limit.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "created_at"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "challenge_id"},
+			Desc:   limit.IsDescending,
+		})
 
 	result := query.Find(&chs)
 	if result.Error != nil {
@@ -80,8 +93,8 @@ func (edb *EventDb) addChallenges(chlgs []Challenge) error {
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	var (
 		challengeIdList []string
-		respondedList   []bool
-		passedList   	[]bool
+		respondedList   []int64
+		passedList      []bool
 	)
 
 	for _, ch := range chs {

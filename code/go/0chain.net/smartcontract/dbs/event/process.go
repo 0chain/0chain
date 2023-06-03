@@ -3,12 +3,14 @@ package event
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"golang.org/x/net/context"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 
 	"go.uber.org/zap"
@@ -19,17 +21,37 @@ import (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
+type (
+	ProcessEventsOptions struct {
+		CommitNow bool
+	}
+	ProcessEventsOptionsFunc func(peo *ProcessEventsOptions)
+)
+
+func CommitNow() ProcessEventsOptionsFunc {
+	return func(peo *ProcessEventsOptions) {
+		peo.CommitNow = true
+	}
+}
+
+// CommitOrRollbackFunc represents the callback function to do commit
+// or rollback.
+type CommitOrRollbackFunc func(rollback bool) error
+
+// ProcessEvents - process events and return commit function or error if any
+// The commit function can be called to commit the events changes when needed
 func (edb *EventDb) ProcessEvents(
 	ctx context.Context,
 	events []Event,
 	round int64,
 	block string,
 	blockSize int,
-) error {
+	opts ...ProcessEventsOptionsFunc,
+) (*EventDb, error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	pdu := time.Since(ts)
@@ -39,7 +61,7 @@ func (edb *EventDb) ProcessEvents(
 		round:     round,
 		block:     block,
 		blockSize: blockSize,
-		doneC:     make(chan struct{}, 1),
+		txC:       make(chan *EventDb, 1),
 	}
 
 	select {
@@ -50,11 +72,11 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
-		return fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
 	select {
-	case <-event.doneC:
+	case eTx := <-event.txC:
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
@@ -64,6 +86,16 @@ func (edb *EventDb) ProcessEvents(
 				zap.String("block", block),
 				zap.Int("block size", blockSize))
 		}
+		var opt ProcessEventsOptions
+		for _, f := range opts {
+			f(&opt)
+		}
+
+		if opt.CommitNow {
+			return nil, eTx.Commit()
+		}
+
+		return eTx, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -72,9 +104,8 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
+		return nil, ctx.Err()
 	}
-
-	return nil
 }
 
 func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
@@ -101,24 +132,21 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 			mergeUpdateChallengesEvents(),
 			mergeAddChallengePoolsEvents(),
+
 			mergeUpdateBlobberChallengesEvents(),
 			mergeAddChallengesToBlobberEvents(),
 			mergeUpdateAllocChallengesEvents(),
 
 			mergeUpdateBlobbersEvents(),
 			mergeUpdateBlobberTotalStakesEvents(),
-			mergeUpdateBlobberTotalUnStakesEvents(),
 			mergeUpdateBlobberTotalOffersEvents(),
 			mergeStakePoolRewardsEvents(),
 			mergeStakePoolPenaltyEvents(),
 			mergeAddDelegatePoolsEvents(),
 
 			mergeUpdateMinerTotalStakesEvents(),
-			mergeUpdateMinerTotalUnStakesEvents(),
 			mergeUpdateSharderTotalStakesEvents(),
-			mergeUpdateSharderTotalUnStakesEvents(),
 			mergeUpdateAuthorizerTotalStakesEvents(),
-			mergeUpdateAuthorizerTotalUnStakesEvents(),
 
 			mergeAddTransactionsEvents(),
 			mergeAddWriteMarkerEvents(),
@@ -127,7 +155,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeUpdateBlobberStatsEvents(),
 			mergeUpdateValidatorsEvents(),
 			mergeUpdateValidatorStakesEvents(),
-			mergeUpdateValidatorUnStakesEvents(),
 
 			mergeMinerHealthCheckEvents(),
 			mergeSharderHealthCheckEvents(),
@@ -193,86 +220,108 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
+	p := int64(-1)
 	edb.managePartitions(0)
 
 	for {
 		es := <-edb.eventsChannel
 
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					logging.Logger.Error("Recovered panic in event main loop", zap.Any("recover", r))
-				}
-
-				es.doneC <- struct{}{}
-			}()
-
-			if es.round%edb.settings.PartitionChangePeriod == 0 {
-				edb.managePartitions(es.round)
+		s, err := edb.work(ctx, gs, es, &p)
+		if err != nil {
+			if config.Development() { //panic in case of development
+				log.Panic(err)
 			}
-
-			tx, err := edb.Begin()
-			if err != nil {
-				logging.Logger.Error("error starting transaction", zap.Error(err))
-				return
-			}
-
-			if err = tx.addEvents(ctx, es); err != nil {
-				logging.Logger.Error("error saving events",
-					zap.Int64("round", es.round),
-					zap.Error(err))
-			}
-
-			tse := time.Now()
-			tags := make([]string, 0, len(es.events))
-			for _, event := range es.events {
-				tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
-				if err != nil {
-					logging.Logger.Error("error processing event",
-						zap.Int64("round", event.BlockNumber),
-						zap.Any("tag", event.Tag),
-						zap.Error(err))
-				}
-			}
-
-			// process snapshot for none adding block events only
-			if isNotAddBlockEvent(es) {
-				gs, err = updateSnapshots(gs, es, tx)
-				if err != nil {
-					logging.Logger.Error("snapshot could not be processed",
-						zap.Int64("round", es.round),
-						zap.String("block", es.block),
-						zap.Int("block size", es.blockSize),
-						zap.Error(err),
-					)
-				}
-				err = tx.updateUserAggregates(&es)
-				if err != nil {
-					logging.Logger.Error("user aggregate could not be processed",
-						zap.Error(err),
-					)
-				}
-			}
-
-			if err := tx.Commit(); err != nil {
-				logging.Logger.Error("error committing block events",
-					zap.Int64("block", es.round),
-					zap.Error(err),
-				)
-			}
-
-			due := time.Since(tse)
-			if due.Milliseconds() > 200 {
-				logging.Logger.Warn("event db work slow",
-					zap.Duration("duration", due),
-					zap.Int("events number", len(es.events)),
-					zap.Strings("tags", tags),
-					zap.Int64("round", es.round),
-					zap.String("block", es.block),
-					zap.Int("block size", es.blockSize))
-			}
-		}()
+		}
+		if s != nil {
+			gs = s
+		}
 	}
+}
+
+func (edb *EventDb) work(ctx context.Context,
+	gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
+	tx, err := edb.Begin()
+	if err != nil {
+		logging.Logger.Error("error starting transaction", zap.Error(err))
+		return nil, err
+	}
+
+	var commit bool
+	defer func() {
+		if commit {
+			es.txC <- tx
+		} else {
+			es.txC <- nil
+		}
+	}()
+
+	if *currentPartition < es.round/edb.settings.PartitionChangePeriod {
+		tx.managePartitions(es.round)
+		*currentPartition = es.round / edb.settings.PartitionChangePeriod
+	}
+
+	if err = tx.addEvents(ctx, es); err != nil {
+		logging.Logger.Error("error saving events",
+			zap.Int64("round", es.round),
+			zap.Error(err))
+
+		if rerr := tx.Rollback(); rerr != nil {
+			return nil, rerr
+		}
+		return nil, err
+	}
+
+	tse := time.Now()
+	tags := make([]string, 0, len(es.events))
+	for _, event := range es.events {
+		tags, err = tx.processEvent(event, tags, es.round, es.block, es.blockSize)
+		if err != nil {
+			logging.Logger.Error("error processing event",
+				zap.Int64("round", event.BlockNumber),
+				zap.Any("tag", event.Tag),
+				zap.Error(err))
+
+			if rerr := tx.Rollback(); rerr != nil {
+				logging.Logger.Error("commit error", zap.Error(rerr))
+				return nil, rerr
+			}
+
+			return nil, err
+		}
+	}
+
+	// process snapshot for none adding block events only
+	if isNotAddBlockEvent(es) {
+		gs, err = updateSnapshots(gs, es, tx)
+		if err != nil {
+			logging.Logger.Error("snapshot could not be processed",
+				zap.Int64("round", es.round),
+				zap.String("block", es.block),
+				zap.Int("block size", es.blockSize),
+				zap.Error(err),
+			)
+		}
+		err = tx.updateUserAggregates(&es)
+		if err != nil {
+			logging.Logger.Error("user aggregate could not be processed",
+				zap.Error(err),
+			)
+		}
+	}
+
+	commit = true
+
+	due := time.Since(tse)
+	if due.Milliseconds() > 200 {
+		logging.Logger.Warn("event db work slow",
+			zap.Duration("duration", due),
+			zap.Int("events number", len(es.events)),
+			zap.Strings("tags", tags),
+			zap.Int64("round", es.round),
+			zap.String("block", es.block),
+			zap.Int("block size", es.blockSize))
+	}
+	return gs, nil
 }
 
 func (edb *EventDb) managePartitions(round int64) {
@@ -462,12 +511,12 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateBlobber(*blobbers)
-	case TagUpdateBlobberAllocatedHealth:
+	case TagUpdateBlobberAllocatedSavedHealth:
 		blobbers, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobbersAllocatedAndHealth(*blobbers)
+		return edb.updateBlobbersAllocatedSavedAndHealth(*blobbers)
 	case TagUpdateBlobberTotalStake:
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
@@ -475,12 +524,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateBlobbersTotalStakes(*bs)
-	case TagUpdateBlobberTotalUnStake:
-		bs, ok := fromEvent[[]Blobber](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateBlobbersTotalUnStakes(*bs)
 	case TagUpdateBlobberTotalOffers:
 		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
@@ -516,12 +559,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateAuthorizersTotalStakes(*as)
-	case TagUpdateAuthorizerTotalUnStake:
-		as, ok := fromEvent[[]Authorizer](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateAuthorizersTotalUnStakes(*as)
 	case TagAddWriteMarker:
 		wms, ok := fromEvent[[]WriteMarker](event.Data)
 		if !ok {
@@ -588,12 +625,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateValidatorTotalStakes(*updates)
-	case TagUpdateValidatorUnStakeTotal:
-		updates, ok := fromEvent[[]Validator](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateValidatorTotalUnStakes(*updates)
 	case TagAddMiner:
 		miners, ok := fromEvent[[]Miner](event.Data)
 		if !ok {
@@ -625,12 +656,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.updateMinersTotalStakes(*m)
-	case TagUpdateMinerTotalUnStake:
-		m, ok := fromEvent[[]Miner](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateMinersTotalUnStakes(*m)
 	case TagUpdateSharder:
 		updates, ok := fromEvent[dbs.DbUpdates](event.Data)
 		if !ok {
@@ -650,13 +675,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateShardersTotalStakes(*s)
-	case TagUpdateSharderTotalUnStake:
-		s, ok := fromEvent[[]Sharder](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.updateShardersTotalUnStakes(*s)
-
 	//stake pool
 	case TagAddDelegatePool:
 		dps, ok := fromEvent[[]DelegatePool](event.Data)
@@ -734,7 +752,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 
 		return edb.addChallengesToAllocations(*as)
 	case TagUpdateBlobberOpenChallenges:
-		updates, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
+		updates, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
@@ -747,7 +765,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		bs, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
+		bs, ok := fromEvent[[]Blobber](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}

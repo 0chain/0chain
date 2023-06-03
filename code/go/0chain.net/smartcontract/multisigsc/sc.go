@@ -59,8 +59,8 @@ func (ms *MultiSigSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	ms.SmartContract = sc
 }
 
-func (ms *MultiSigSmartContract) GetCost(t *transaction.Transaction, funcName string, balances state.StateContextI) (int, error) {
-	return 0, nil
+func (ms *MultiSigSmartContract) GetCostTable(balances c_state.StateContextI) (map[string]int, error) {
+	return map[string]int{}, nil
 }
 
 func (ms *MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances state.StateContextI) (string, error) {

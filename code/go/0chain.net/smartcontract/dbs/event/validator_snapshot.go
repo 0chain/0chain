@@ -9,21 +9,22 @@ import (
 // swagger:model ValidatorSnapshot
 type ValidatorSnapshot struct {
 	ValidatorID string `json:"id" gorm:"index"`
-	BucketId	 int64  `json:"bucket_id"`
+	BucketId    int64  `json:"bucket_id"`
 
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (v *ValidatorSnapshot) IsOffline() bool {
+	return v.IsKilled || v.IsShutdown
 }
 
 func (v *ValidatorSnapshot) GetTotalStake() currency.Coin {
 	return v.TotalStake
-}
-
-func (v *ValidatorSnapshot) GetUnstakeTotal() currency.Coin {
-	return v.UnstakeTotal
 }
 
 func (v *ValidatorSnapshot) GetServiceCharge() float64 {
@@ -36,10 +37,6 @@ func (v *ValidatorSnapshot) GetTotalRewards() currency.Coin {
 
 func (v *ValidatorSnapshot) SetTotalStake(value currency.Coin) {
 	v.TotalStake = value
-}
-
-func (v *ValidatorSnapshot) SetUnstakeTotal(value currency.Coin) {
-	v.UnstakeTotal = value
 }
 
 func (v *ValidatorSnapshot) SetServiceCharge(value float64) {
@@ -78,11 +75,12 @@ func (edb *EventDb) addValidatorSnapshot(validators []Validator) error {
 		snapshots = append(snapshots, ValidatorSnapshot{
 			ValidatorID:   validator.ID,
 			BucketId:      validator.BucketId,
-			UnstakeTotal:  validator.UnstakeTotal,
 			TotalStake:    validator.TotalStake,
 			ServiceCharge: validator.ServiceCharge,
 			CreationRound: validator.CreationRound,
 			TotalRewards:  validator.Rewards.TotalRewards,
+			IsKilled:      validator.IsKilled,
+			IsShutdown:    validator.IsShutdown,
 		})
 	}
 

@@ -619,14 +619,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"EmitEvent",
 			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
 		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAllocValueChange, mock.Anything, mock.Anything,
-		).Return().Maybe()
-		balances.On(
-			"EmitEvent",
-			event.TypeStats, event.TagAllocBlobberValueChange, mock.Anything, mock.Anything,
-		).Return().Maybe()
 
 		balances.On(
 			"EmitEvent",
@@ -634,7 +626,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		).Return().Maybe()
 
 		balances.On(
-			"EmitEvent", event.TypeStats, event.TagUpdateBlobberAllocatedHealth,
+			"EmitEvent", event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth,
 			mock.Anything, mock.Anything).Return().Maybe()
 		balances.On(
 			"EmitEvent", event.TypeStats, event.TagLockWritePool,

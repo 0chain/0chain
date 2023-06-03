@@ -9,7 +9,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/persistencestore"
+	"0chain.net/core/ememorystore"
 )
 
 // SetupHandlers sets up the necessary API end points.
@@ -27,9 +27,9 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 	if content == "" {
 		content = "confirmation"
 	}
-	transactionConfirmationEntityMetadata := datastore.GetEntityMetadata("txn_confirmation")
-	ctx = persistencestore.WithEntityConnection(ctx, transactionConfirmationEntityMetadata)
-	defer persistencestore.Close(ctx)
+	transactionSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
+	ctx = ememorystore.WithEntityConnection(ctx, transactionSummaryEntityMetadata)
+	defer ememorystore.Close(ctx)
 	sc := GetSharderChain()
 	confirmation, err := sc.GetTransactionConfirmation(ctx, hash)
 

@@ -31,9 +31,13 @@ import (
 
 // SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
 var SmartContractExecutionTimer metrics.Timer
+var StateComputationTimer metrics.Histogram
+var EventsComputationTimer metrics.Histogram
 
 func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
+	StateComputationTimer = metrics.NewHistogram(metrics.NewUniformSample(1024))
+	EventsComputationTimer = metrics.NewHistogram(metrics.NewUniformSample(1024))
 }
 
 var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid")
@@ -76,7 +80,10 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) error {
-	return b.ComputeState(ctx, c, waitC...)
+	timer := time.Now()
+	err := b.ComputeState(ctx, c, waitC...)
+	StateComputationTimer.Update(time.Since(timer).Microseconds())
+	return err
 }
 
 // SaveChanges - persist the state changes
@@ -289,11 +296,62 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 		zap.String("txn", txn.TransactionData))
 
 	maxFee := c.ChainConfig.MaxTxnFee()
-	if maxFee > 0 && currency.Coin(currency.ZCN*cost/c.ChainConfig.TxnCostFeeCoeff()) > maxFee {
+
+	zcn := float64(cost) / float64(c.ChainConfig.TxnCostFeeCoeff())
+	parseZCN, err := currency.ParseZCN(zcn)
+	if err != nil {
 		return cost, maxFee, nil
 	}
 
-	return cost, currency.Coin(currency.ZCN * cost / c.ChainConfig.TxnCostFeeCoeff()), nil
+	if maxFee > 0 && parseZCN > maxFee {
+		return cost, maxFee, nil
+	}
+
+	return cost, parseZCN, nil
+}
+
+func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
+	b *block.Block,
+	opts ...SyncNodesOption) map[string]map[string]int64 {
+
+	var (
+		clientState = CreateTxnMPT(b.ClientState) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, nil)
+	)
+
+	table := smartcontract.GetTransactionCostTable(sctx)
+
+	table["transfer"] = map[string]int{"transfer": c.ChainConfig.TxnTransferCost()}
+
+	for _, t := range table {
+		for name := range c.ChainConfig.TxnExempt() {
+			if _, ok := t[name]; ok {
+				t[name] = 0
+			}
+		}
+	}
+
+	fees := make(map[string]map[string]int64)
+	for sc, t := range table {
+		fees[sc] = make(map[string]int64, len(t))
+		for f, cost := range t {
+			zcn := float64(cost) / float64(c.ChainConfig.TxnCostFeeCoeff())
+			parseZCN, err := currency.ParseZCN(zcn)
+			if err != nil {
+				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
+				continue
+			}
+
+			if c.ChainConfig.MaxTxnFee() > 0 && parseZCN > c.ChainConfig.MaxTxnFee() {
+				fees[sc][f] = int64(c.ChainConfig.MaxTxnFee())
+			} else {
+				fees[sc][f] = int64(parseZCN)
+			}
+
+		}
+	}
+
+	return fees
 }
 
 // NewStateContext creation helper.
@@ -419,7 +477,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.Int("txn_status", txn.Status),
 			zap.Duration("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
-			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())))
+			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())),
+			zap.String("output", output))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
 		// check src balance

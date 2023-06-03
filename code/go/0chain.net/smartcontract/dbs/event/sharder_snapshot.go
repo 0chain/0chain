@@ -9,23 +9,24 @@ import (
 // swagger:model SharderSnapshot
 type SharderSnapshot struct {
 	SharderID string `json:"id" gorm:"index"`
-	BucketId	 int64  `json:"bucket_id"`
+	BucketId  int64  `json:"bucket_id"`
 	Round     int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin	`json:"total_rewards"`
+	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (s *SharderSnapshot) IsOffline() bool {
+	return s.IsKilled || s.IsShutdown
 }
 
 func (s *SharderSnapshot) GetTotalStake() currency.Coin {
 	return s.TotalStake
-}
-
-func (s *SharderSnapshot) GetUnstakeTotal() currency.Coin {
-	return s.UnstakeTotal
 }
 
 func (s *SharderSnapshot) GetServiceCharge() float64 {
@@ -38,10 +39,6 @@ func (s *SharderSnapshot) GetTotalRewards() currency.Coin {
 
 func (s *SharderSnapshot) SetTotalStake(value currency.Coin) {
 	s.TotalStake = value
-}
-
-func (s *SharderSnapshot) SetUnstakeTotal(value currency.Coin) {
-	s.UnstakeTotal = value
 }
 
 func (s *SharderSnapshot) SetServiceCharge(value float64) {
@@ -81,12 +78,13 @@ func (edb *EventDb) addSharderSnapshot(sharders []Sharder, round int64) error {
 			SharderID:     sharder.ID,
 			BucketId:      sharder.BucketId,
 			Round:         round,
-			UnstakeTotal:  sharder.UnstakeTotal,
 			Fees:          sharder.Fees,
 			TotalStake:    sharder.TotalStake,
 			ServiceCharge: sharder.ServiceCharge,
 			CreationRound: sharder.CreationRound,
 			TotalRewards:  sharder.Rewards.TotalRewards,
+			IsKilled:      sharder.IsKilled,
+			IsShutdown:    sharder.IsShutdown,
 		})
 	}
 

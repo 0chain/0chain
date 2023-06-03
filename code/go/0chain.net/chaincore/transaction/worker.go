@@ -62,7 +62,16 @@ func CleanupWorker(ctx context.Context) {
 				logging.Logger.Error("Error in IterateCollectionAsc", zap.Error(err))
 			}
 			if len(invalidTxns) > 0 {
-				logging.Logger.Info("transactions cleanup", zap.String("collection", collectionName), zap.Int("invalid_count", len(invalidTxns)), zap.Int64("collection_size", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName)))
+				invalidTxnHashes := make([]string, len(invalidTxns))
+				for i, t := range invalidTxns {
+					invalidTxnHashes[i] = t.(*Transaction).Hash
+				}
+
+				logging.Logger.Info("transactions cleanup",
+					zap.String("collection", collectionName),
+					zap.Int("invalid_count", len(invalidTxns)),
+					zap.Strings("txns", invalidTxnHashes),
+					zap.Int64("collection_size", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName)))
 				err = transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
 				if err != nil {
 					logging.Logger.Error("Error in MultiDelete", zap.Error(err))
@@ -71,7 +80,14 @@ func CleanupWorker(ctx context.Context) {
 				}
 			}
 			if len(invalidHashes) > 0 {
-				logging.Logger.Info("missing transactions cleanup", zap.String("collection", collectionName), zap.Int("missing_count", len(invalidHashes)))
+				txnHashes := make([]string, len(invalidHashes))
+				for i, t := range invalidHashes {
+					txnHashes[i] = t.(*Transaction).Hash
+				}
+				logging.Logger.Info("missing transactions cleanup",
+					zap.String("collection", collectionName),
+					zap.Int("missing_count", len(invalidHashes)),
+					zap.Strings("txns", txnHashes))
 				err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, invalidHashes)
 				if err != nil {
 					logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
@@ -125,7 +141,14 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 		//try to delete what we can, so no return here
 	}
 	txns = append(past, txns...)
-	logging.Logger.Info("cleaning transactions", zap.String("collection", collectionName), zap.Int("missing_count", len(txns)))
+	txnHashes := make([]string, len(txns))
+	for i, t := range txns {
+		txnHashes[i] = t.(*Transaction).Hash
+	}
+	logging.Logger.Info("cleaning transactions",
+		zap.String("collection", collectionName),
+		zap.Int("missing_count", len(txns)),
+		zap.Any("txns", txnHashes))
 	err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
 	if err != nil {
 		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))

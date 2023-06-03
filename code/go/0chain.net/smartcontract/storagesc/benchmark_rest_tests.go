@@ -235,7 +235,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "get_validator",
 				Params: map[string]string{
-					"validator_id": getMockValidatorId(0),
+					"validator_id": data.ValidatorIds[0],
 				},
 				Endpoint: srh.getValidator,
 			},
@@ -388,6 +388,55 @@ func BenchmarkRestTests(
 					"blobber_id":    getMockBlobberId(0),
 				},
 				Endpoint: srh.getAllocBlobberTerms,
+			},
+			{
+				FuncName: "replicate-snapshots",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateSnapshots,
+			},
+			{
+				FuncName: "replicate-blobber-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateBlobberAggregates,
+			},
+			{
+				FuncName: "replicate-miner-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateMinerAggregates,
+			},
+			{
+				FuncName: "replicate-sharder-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateSharderAggregates,
+			},
+			{
+				FuncName: "replicate-authorizer-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateAuthorizerAggregates,
+			},
+			{
+				FuncName: "replicate-validator-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateValidatorAggregates,
+			},
+			{
+				FuncName: "replicate-user-aggregate",
+				Params: map[string]string{
+					"round": "5",
+				},
+				Endpoint: srh.replicateUserAggregates,
 			},
 		},
 		ADDRESS,

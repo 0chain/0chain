@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/ememorystore"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"github.com/linxGnu/grocksdb"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -20,8 +21,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockstore"
-
-	"github.com/0chain/gorocksdb"
 
 	"go.uber.org/zap"
 )
@@ -141,7 +140,7 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	r.Number = roundNum
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
-	defer ememorystore.Close(rctx)
+	defer ememorystore.CloseEntityConnection(rctx, roundEntityMetadata)
 	err := r.Read(rctx, r.GetKey())
 	return r, err
 }
@@ -323,7 +322,7 @@ func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
 	return // not found
 }
 
-func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator, r *round.Round) (lfb *block.Block, err error) {
+func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) (lfb *block.Block, err error) {
 
 	var rollBackCount int
 	for ; iter.Valid(); iter.Prev() {
@@ -528,18 +527,45 @@ func (sc *Chain) ValidateState(b *block.Block) bool {
 		return false
 	}
 
-	missing, err := b.ClientState.HasMissingNodes(context.Background())
-	if err != nil {
-		logging.Logger.Warn("load_lfb, find missing nodes failed",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-		return false
-	}
-
-	if missing {
-		logging.Logger.Warn("load_lfb, lfb has missing nodes",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	if err := sc.syncLFBMissingNodes(b); err != nil {
+		logging.Logger.Warn("load_lfb, sync missing nodes failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
 		return false
 	}
 
 	return true
+}
+
+func (sc *Chain) syncLFBMissingNodes(b *block.Block) error {
+	for {
+		missing, err := b.ClientState.HasMissingNodes(context.Background())
+		if err != nil {
+			logging.Logger.Warn("load_lfb, find missing nodes failed",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Error(err))
+			return err
+		}
+
+		if !missing {
+			return nil
+		}
+
+		keys := b.ClientState.GetMissingNodeKeys()
+		keysStr := make([]string, len(keys))
+		for i := range keys {
+			keysStr[i] = util.ToHex(keys[i])
+		}
+		logging.Logger.Warn("load_lfb, lfb sync missing nodes",
+			zap.Int64("round", b.Round),
+			zap.Any("missing nodes", keysStr),
+			zap.String("block", b.Hash))
+
+		if err := sc.GetStateNodes(context.Background(), keys); err != nil {
+			logging.Logger.Warn("load_lfb, sync missing nodes failed", zap.Error(err))
+			return err
+		}
+	}
 }

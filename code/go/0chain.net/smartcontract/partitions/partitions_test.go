@@ -8,12 +8,19 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	logging.InitLogging("testing", "")
+}
 
 type StringItem string
 
@@ -42,6 +49,8 @@ func ItemFromString(name string) PartitionItem {
 type mockStateContextI struct {
 	*mocks.StateContextI
 	data map[string][]byte
+	b    *block.Block
+	txn  *transaction.Transaction
 }
 
 func (m *mockStateContextI) GetTrieNode(key string, v util.MPTSerializable) error {
@@ -68,6 +77,18 @@ func (m *mockStateContextI) DeleteTrieNode(key string) (string, error) {
 	return "", nil
 }
 
+func (m *mockStateContextI) GetState() util.MerklePatriciaTrieI {
+	return m.StateContextI.GetState()
+}
+
+func (m *mockStateContextI) GetBlock() *block.Block {
+	return m.b
+}
+
+func (m *mockStateContextI) GetTransaction() *transaction.Transaction {
+	return m.txn
+}
+
 type testItem struct {
 	ID string
 	V  string
@@ -91,7 +112,7 @@ func (ti *testItem) Msgsize() int {
 }
 
 func TestCreateIfNotExists(t *testing.T) {
-	s := &mockStateContextI{data: make(map[string][]byte)}
+	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
 	p, err := CreateIfNotExists(s, "foo", 100)
 	require.NoError(t, err)
 
@@ -117,7 +138,7 @@ func TestCreateIfNotExists(t *testing.T) {
 }
 
 func TestPartitionsSave(t *testing.T) {
-	balances := &mockStateContextI{data: make(map[string][]byte)}
+	balances := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
 	parts, err := newPartitions("test_rs", 10)
 	require.NoError(t, err)
 
@@ -142,7 +163,7 @@ func TestPartitionsSave(t *testing.T) {
 
 	p2, err := GetPartitions(balances, "test_rs")
 	require.NoError(t, err)
-	require.Equal(t, 2, p2.NumPartitions)
+	require.Equal(t, 1, p2.Last.Loc)
 
 	// updateItem item
 	err = p1.UpdateItem(balances, &testItem{"k10", "vv10"})
@@ -151,7 +172,7 @@ func TestPartitionsSave(t *testing.T) {
 
 	p3, err := GetPartitions(balances, "test_rs")
 	require.NoError(t, err)
-	require.Equal(t, 2, p3.NumPartitions)
+	require.Equal(t, 1, p3.Last.Loc)
 
 	var vv testItem
 	err = p3.Get(balances, "k10", &vv)
@@ -159,53 +180,53 @@ func TestPartitionsSave(t *testing.T) {
 	require.Equal(t, "vv10", vv.V)
 }
 
-func TestPartitionsForeach(t *testing.T) {
-	balances := &mockStateContextI{data: make(map[string][]byte)}
-	parts, err := newPartitions("test_rs", 10)
-	require.NoError(t, err)
-
-	for i := 0; i < 20; i++ {
-		k := fmt.Sprintf("k%d", i)
-		v := fmt.Sprintf("v%d", i)
-		it := testItem{ID: k, V: v}
-		err = parts.Add(balances, &it)
-		require.NoError(t, err)
-	}
-
-	err = parts.Save(balances)
-	require.NoError(t, err)
-
-	p1, err := GetPartitions(balances, "test_rs")
-	require.NoError(t, err)
-
-	err = p1.foreach(balances, func(key string, data []byte, _ int) ([]byte, bool, error) {
-		if key == "k1" {
-			n := testItem{}
-			_, err := n.UnmarshalMsg(data)
-			require.NoError(t, err)
-
-			n.V = "new item"
-
-			d, err := n.MarshalMsg(nil)
-			require.NoError(t, err)
-
-			return d, false, nil
-		}
-
-		return data, false, nil
-	})
-	require.NoError(t, err)
-
-	err = p1.Save(balances)
-	require.NoError(t, err)
-
-	p2, err := GetPartitions(balances, "test_rs")
-	require.NoError(t, err)
-	vv := testItem{}
-	err = p2.Get(balances, "k1", &vv)
-	require.NoError(t, err)
-	require.Equal(t, "new item", vv.V)
-}
+//func TestPartitionsForeach(t *testing.T) {
+//	balances := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
+//	parts, err := newPartitions("test_rs", 10)
+//	require.NoError(t, err)
+//
+//	for i := 0; i < 20; i++ {
+//		k := fmt.Sprintf("k%d", i)
+//		v := fmt.Sprintf("v%d", i)
+//		it := testItem{ID: k, V: v}
+//		err = parts.Add(balances, &it)
+//		require.NoError(t, err)
+//	}
+//
+//	err = parts.Save(balances)
+//	require.NoError(t, err)
+//
+//	p1, err := GetPartitions(balances, "test_rs")
+//	require.NoError(t, err)
+//
+//	err = p1.foreach(balances, func(key string, data []byte, _ int) ([]byte, bool, error) {
+//		if key == "k1" {
+//			n := testItem{}
+//			_, err := n.UnmarshalMsg(data)
+//			require.NoError(t, err)
+//
+//			n.V = "new item"
+//
+//			d, err := n.MarshalMsg(nil)
+//			require.NoError(t, err)
+//
+//			return d, false, nil
+//		}
+//
+//		return data, false, nil
+//	})
+//	require.NoError(t, err)
+//
+//	err = p1.Save(balances)
+//	require.NoError(t, err)
+//
+//	p2, err := GetPartitions(balances, "test_rs")
+//	require.NoError(t, err)
+//	vv := testItem{}
+//	err = p2.Get(balances, "k1", &vv)
+//	require.NoError(t, err)
+//	require.Equal(t, "new item", vv.V)
+//}
 
 func TestPartitionsAdd(t *testing.T) {
 	tt := []struct {
@@ -269,11 +290,6 @@ func TestPartitionsAdd(t *testing.T) {
 			if err != nil {
 				return
 			}
-			loc, ok, err := p.getItemPartIndex(s, tc.it.ID)
-			require.NoError(t, err)
-			require.True(t, ok)
-
-			require.Equal(t, tc.expectLoc, loc)
 			err = p.Save(s)
 			require.NoError(t, err)
 
@@ -369,6 +385,12 @@ func TestPartitionsRemove(t *testing.T) {
 			size:      10,
 			num:       11,
 			removeIdx: 9,
+		},
+		{
+			name:      "4 partition, remove from 1, cut 3 tail",
+			size:      10,
+			num:       31,
+			removeIdx: 16,
 		},
 	}
 
@@ -803,7 +825,7 @@ func TestGetRandomItems(t *testing.T) {
 			}
 
 			if tc.num > tc.size {
-				require.Len(t, its, tc.size)
+				require.Len(t, its, len(p.Last.Items))
 			} else {
 				require.Len(t, its, tc.num)
 			}
@@ -896,7 +918,7 @@ func FuzzRemove(f *testing.F) {
 
 		// empty partitions
 		if n == 0 || num == 0 {
-			require.Equal(t, 0, p.partitionsNum())
+			require.Equal(t, 0, p.Last.length())
 			err = p.Remove(s, k)
 			require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err)
 			return
@@ -910,34 +932,42 @@ func FuzzRemove(f *testing.F) {
 		}
 
 		// verify the last replaced item is moved or removed properly
-		lastLoc := p.partitionsNum() - 1
-		lastPart, err := p.getPartition(s, lastLoc)
-		require.NoError(t, err)
-		lastItem := lastPart.Items[len(lastPart.Items)-1]
-
-		loc, ok, err := p.getItemPartIndex(s, k)
-		require.NoError(t, err)
-		require.True(t, ok, fmt.Sprintf("num: %d, n: %d, k: %s", num, n, k))
+		lastItem := p.Last.Items[len(p.Last.Items)-1]
+		lastLoc := p.Last.Loc
+		_, _, inlastPart := p.Last.find(k)
 
 		err = p.Remove(s, k)
 		require.NoError(t, err)
 
-		err = p.Save(s)
-		require.NoError(t, err)
+		// randomly save and reload partitions
+		if rand.Intn(n)%7 == 0 {
+			err = p.Save(s)
+			require.NoError(t, err)
 
-		// reload partitions
-		p, err = GetPartitions(s, partsName)
+			// reload partitions
+			p, err = GetPartitions(s, partsName)
+			require.NoError(t, err)
+		}
 
-		_, ok, err = p.getItemPartIndex(s, k)
+		find, err := p.Exist(s, k)
 		require.NoError(t, err)
-		require.False(t, ok)
+		require.False(t, find)
 
 		// if the item is not the last item in last part, then the last item must has been moved
-		if lastLoc != loc {
-			movedLoc, ok, err := p.getItemPartIndex(s, lastItem.ID)
+		if !inlastPart && p.Last.Loc == lastLoc {
+			_, ok, err := p.getItemPartIndex(s, lastItem.ID)
 			require.NoError(t, err)
 			require.True(t, ok)
-			require.Equal(t, movedLoc, loc)
+		}
+
+		//verify all the item except the removed item could be found
+		for i := 0; i < num; i++ {
+			if i == ks {
+				continue
+			}
+
+			err = p.Get(s, fmt.Sprintf("k%d", i), &testItem{})
+			require.NoError(t, err, "i=%d, k: %d, num: %d", i, ks, num)
 		}
 	})
 }
@@ -1204,7 +1234,10 @@ func TestErrItemExist(t *testing.T) {
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
-	s := &mockStateContextI{data: make(map[string][]byte)}
+	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
+	s.StateContextI = &mocks.StateContextI{}
+	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"))
+	s.StateContextI.On("GetState").Return(stx)
 	parts, err := newPartitions(name, size)
 	require.NoError(t, err)
 

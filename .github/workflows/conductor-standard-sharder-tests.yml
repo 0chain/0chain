@@ -3,7 +3,7 @@ name: CONDUCTOR SHARDER STANDARD TESTS
 on:
   schedule:
     # Runs everyday at 12:00 am
-    - cron: '0 0 * * * '
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 env:
@@ -25,10 +25,17 @@ jobs:
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
-    - name: Go 1.18 setup.
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.18'
+    - name: "Setup Go"
+      shell: 'script --return --quiet --command "bash {0}"'
+      run: |
+        [ -f ./https://go.dev/dl/go1.18.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.3.linux-amd64.tar.gz
+        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
+        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
+        tar -C /usr/local -xzf ./go1.18.3.linux-amd64.tar.gz
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        which go
+        go env
 
     - name: Docker Compose Setup.
       run: |
@@ -44,6 +51,7 @@ jobs:
     
     - name: Docker Init Setup.
       run: |
+        export HOME="/root"
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         make install-mockery
@@ -73,6 +81,7 @@ jobs:
 
     - name: Running Standard Tests for Sharders.
       run: |
+        export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh sharders
 
     - uses: actions/upload-artifact@v3
@@ -82,32 +91,12 @@ jobs:
         path: |
           0chain/conductor/logs/
           0chain/docker.local/
-    
-    # - name: Creating Artifact con-tests-logs.tar.gz file.
-    #   run: |
-    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-    # - name: Uploading artifact con-tests-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-logs.tar.gz
-
-    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-    #   run: |
-    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-backup-logs.tar.gz
 
     - name: Cleanup
       run: |
         rm -rf *
 
-  notify_slack:
+  notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
     needs: [CONDUCTOR_SHARDER_STANDARD_TESTS]
     if: always() && (needs.CONDUCTOR_SHARDER_STANDARD_TESTS.result == 'failure')
@@ -115,3 +104,12 @@ jobs:
       - name: "Notify Slack"
         run: |
           curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_SHARDER_STANDARD_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+  notify_slack_on_success:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_SHARDER_STANDARD_TESTS]
+    if: always() && (needs.CONDUCTOR_SHARDER_STANDARD_TESTS.result == 'success')
+    steps:
+      - name: "Notify Slack"
+        run: |
+          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_SHARDER_STANDARD_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

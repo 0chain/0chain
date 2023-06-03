@@ -26,8 +26,6 @@ type ReadMarker struct {
 	AuthTicket    string  `json:"auth_ticket" gorm:"index:idx_rauth_alloc,priority:1"`   //used in readmarkers
 	BlockNumber   int64   `json:"block_number" gorm:"index:idx_ralloc_block,priority:2"` //used in alloc_read_size
 	//ref
-	User       User       `gorm:"foreignKey:ClientID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Owner      User       `gorm:"foreignKey:OwnerID;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
@@ -37,7 +35,10 @@ func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit com
 		Where(query).Offset(limit.Offset).Limit(limit.Limit)
 
 	queryBuilder.Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
+		Column: clause.Column{Name: "block_number"},
+		Desc:   limit.IsDescending,
+	}).Order(clause.OrderByColumn{
+		Column: clause.Column{Name: "transaction_id"},
 		Desc:   limit.IsDescending,
 	})
 	var rms []ReadMarker

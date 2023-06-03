@@ -3,7 +3,6 @@ package sharder
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/persistencestore"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -29,7 +27,8 @@ func init() {
 func (sc *Chain) GetTransactionSummary(ctx context.Context, hash string) (*transaction.TransactionSummary, error) {
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	txnSummary := txnSummaryEntityMetadata.Instance().(*transaction.TransactionSummary)
-	err := txnSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), txnSummary)
+	key := transaction.BuildSummaryTransactionKey(hash)
+	err := txnSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(key), txnSummary)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +47,8 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 	} else {
 		ts = t.(*transaction.TransactionSummary)
 	}
-	confirmation := datastore.GetEntityMetadata("txn_confirmation").Instance().(*transaction.Confirmation)
+	confirmation := new(transaction.Confirmation)
+	confirmation.Version = "1.0"
 	confirmation.Hash = hash
 	bhash, err := sc.GetBlockHash(ctx, ts.Round)
 	if err != nil {
@@ -61,7 +61,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 	if err != nil {
 		bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 		bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
-		defer ememorystore.Close(bctx)
+		defer ememorystore.CloseEntityConnection(bctx, bSummaryEntityMetadata)
 		bs, err := sc.GetBlockSummary(bctx, bhash)
 		if err != nil {
 			return nil, err
@@ -116,7 +116,7 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 	ts := time.Now()
 	var success bool
 	for tries := 1; tries <= 9; tries++ {
-		err := sc.storeTransactions(sTxns)
+		err := sc.storeTransactions(sTxns, b.Round)
 		if err != nil {
 			var (
 				txnNames      []string
@@ -159,45 +159,50 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 	return nil
 }
 
-func (sc *Chain) storeTransactions(sTxns []datastore.Entity) error {
+/* storeTransactions - persists given list of transactions and increment TxnsCount of their round */
+func (sc *Chain) storeTransactions(sTxns []datastore.Entity, roundNumber int64) error {
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
-	defer persistencestore.Close(tctx)
-	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
-}
+	tctx := ememorystore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
+	defer ememorystore.Close(tctx)
 
-var txnSummaryMV = false
-var roundToHashMVTable = "round_to_hash"
+	rtcKey := transaction.BuildSummaryRoundKey(roundNumber)
+	rtcDelta := transaction.RoundTxnsCount{
+		HashIDField: datastore.HashIDField{
+			Hash: rtcKey,
+		},
+		TxnsCount: int64(len(sTxns)),
+	}
+	err := txnSummaryMetadata.GetStore().Merge(tctx, &rtcDelta)
 
-func txnSummaryCreateMV(targetTable string, srcTable string) string {
-	return fmt.Sprintf(
-		"CREATE MATERIALIZED VIEW IF NOT EXISTS %v AS SELECT ROUND, HASH FROM %v WHERE ROUND IS NOT NULL PRIMARY KEY (ROUND, HASH)",
-		targetTable, srcTable)
-}
+	// Write the transactions, keyspace the hash
+	for _, txn := range sTxns {
+		txKey := transaction.BuildSummaryTransactionKey(txn.GetKey())
+		txn.SetKey(txKey)
+	}
+	err = txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
+	if err != nil {
+		return err
+	}
 
-func getSelectCountTxn(table string, column string) string {
-	return fmt.Sprintf("SELECT COUNT(*) FROM %v where %v=?", table, column)
+	tCon := ememorystore.GetEntityCon(tctx, txnSummaryMetadata)
+	err = tCon.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) {
-	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
-	defer persistencestore.Close(tctx)
-	c := persistencestore.GetCon(tctx)
-	if !txnSummaryMV {
-		err := c.Query(txnSummaryCreateMV(roundToHashMVTable, txnSummaryEntityMetadata.GetName())).Exec()
-		if err == nil {
-			txnSummaryMV = true
-		} else {
-			logging.Logger.Error("create mv", zap.Error(err))
-			txnSummaryMV = true
-			return 0, err
-		}
+	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
+	tctx := ememorystore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
+	defer ememorystore.Close(tctx)
+
+	// Read the count of txns_per_round for this round
+	rtcKey := transaction.BuildSummaryRoundKey(r)
+	var rtc transaction.RoundTxnsCount
+	err := txnSummaryMetadata.GetStore().Read(tctx, rtcKey, &rtc)
+	if err != nil {
+		return 0, err
 	}
-	// Get the query to get the select count transactions.
-	var count int
-	if err := c.Query(getSelectCountTxn(roundToHashMVTable, "round"), r).Scan(&count); err != nil {
-		return 0, common.NewError("txns_count_failed", fmt.Sprintf("round: %v, err: %v", r, err))
-	}
-	return count, nil
+	return int(rtc.TxnsCount), nil
 }

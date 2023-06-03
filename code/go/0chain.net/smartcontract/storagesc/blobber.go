@@ -118,15 +118,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	blobber.LastHealthCheck = t.CreationDate
-	aDelta := blobber.Allocated - savedBlobber.Allocated
-	if aDelta != 0 {
-		balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
-			FieldType:    event.Allocated,
-			AllocationId: "",
-			BlobberId:    blobber.ID,
-			Delta:        aDelta,
-		})
-	}
 	blobber.Allocated = savedBlobber.Allocated
 	blobber.SavedData = savedBlobber.SavedData
 
@@ -183,13 +174,6 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
-
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.Used,
-		AllocationId: "",
-		BlobberId:    blobber.ID,
-		Delta:        -savedBlobber.Capacity,
-	})
 
 	// set to zero explicitly, for "direct" calls
 	blobber.Capacity = 0
@@ -263,13 +247,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		}
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.MaxCapacity,
-		AllocationId: "",
-		BlobberId:    blobber.ID,
-		Delta:        blobber.Capacity,
-	})
-
 	return string(blobber.Encode()), nil
 }
 
@@ -315,12 +292,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, blobber.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.Used,
-		AllocationId: "",
-		BlobberId:    blobber.ID,
-		Delta:        updatedBlobber.Capacity - blobber.Capacity,
-	})
 	blobber.Capacity = updatedBlobber.Capacity
 	blobber.Terms = updatedBlobber.Terms
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
@@ -451,8 +422,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}
-	if rp == nil {
-		rp = &readPool{}
+	if err == util.ErrValueNotPresent || rp == nil {
+		rp = new(readPool)
+		if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {
+			return "", common.NewError("new_read_pool_failed", err.Error())
+		}
 	}
 
 	var sp *stakePool
@@ -588,7 +562,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
-
+		logging.Logger.Info("commitMoveTokens", zap.Any("move", move), zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("alloc_write_pool", alloc.WritePool))
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
@@ -714,34 +688,41 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
-		return "", common.NewError("commit_connection_failed",
-			"Previous allocation root does not match the latest allocation root")
+	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
+		changeSize := blobAlloc.LastWriteMarker.Size
+		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
+		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
+		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize - changeSize
+		// TODO: check if this is correct
+		blobAlloc.Stats.NumWrites++
+		blobber.SavedData -= changeSize
+		alloc.Stats.UsedSize -= changeSize
+		alloc.Stats.NumWrites++
+	} else {
+
+		if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
+			return "", common.NewError("commit_connection_failed",
+				"Previous allocation root does not match the latest allocation root")
+		}
+
+		if blobAlloc.Stats.UsedSize+commitConnection.WriteMarker.Size >
+			blobAlloc.Size {
+
+			return "", common.NewError("commit_connection_failed",
+				"Size for blobber allocation exceeded maximum")
+		}
+
+		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
+		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
+		blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
+		blobAlloc.Stats.NumWrites++
+
+		blobber.SavedData += commitConnection.WriteMarker.Size
+
+		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
+		alloc.Stats.NumWrites++
+
 	}
-
-	if blobAlloc.Stats.UsedSize+commitConnection.WriteMarker.Size >
-		blobAlloc.Size {
-
-		return "", common.NewError("commit_connection_failed",
-			"Size for blobber allocation exceeded maximum")
-	}
-
-	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
-	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
-	blobAlloc.Stats.NumWrites++
-
-	blobber.SavedData += commitConnection.WriteMarker.Size
-
-	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
-	alloc.Stats.NumWrites++
-
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, alloc.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.Used,
-		AllocationId: alloc.ID,
-		BlobberId:    blobber.ID,
-		Delta:        commitConnection.WriteMarker.Size,
-	})
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
@@ -835,7 +816,11 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if blobUsedCapacity == 0 {
 		logging.Logger.Debug("jayash blobUsedCapacity is 0")
 		// remove from challenge ready partitions if this blobber has no data stored
-		return partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
+		err := partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
+		if err != nil && !partitions.ErrItemNotFound(err) {
+			return err
+		}
+		return nil
 	}
 
 	sp, err := getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances)
@@ -843,10 +828,10 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if err != nil {
 		return fmt.Errorf("unable to fetch blobbers stake pool: %v", err)
 	}
-	stakedAmount, err := sp.cleanStake()
+	stakedAmount, err := sp.stake()
 	logging.Logger.Debug("jayash cleanStake", zap.Any("stakedAmount", stakedAmount), zap.Error(err))
 	if err != nil {
-		return fmt.Errorf("unable to clean stake pool: %v", err)
+		return fmt.Errorf("unable to total stake pool: %v", err)
 	}
 	weight := uint64(stakedAmount) * blobUsedCapacity
 	logging.Logger.Debug("jayash weight", zap.Any("weight", weight))
@@ -938,4 +923,8 @@ func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
+}
+
+func isRollback(commitConnection BlobberCloseConnection, lastWM *WriteMarker) bool {
+	return commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitConnection.WriteMarker.Size == 0 && lastWM != nil && commitConnection.WriteMarker.Timestamp == lastWM.Timestamp && commitConnection.AllocationRoot == lastWM.PreviousAllocationRoot
 }

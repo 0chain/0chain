@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/smartcontract/partitions"
@@ -17,7 +18,6 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/threshold/bls"
 	"github.com/0chain/common/core/currency"
@@ -175,7 +175,7 @@ type StorageChallenge struct {
 	ValidatorIDMap  map[string]struct{} `json:"-" msg:"-"`
 	AllocationID    string              `json:"allocation_id"`
 	BlobberID       string              `json:"blobber_id"`
-	Responded       bool                `json:"responded"`
+	Responded       int64               `json:"responded"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
@@ -991,12 +991,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
-	balances.EmitEvent(event.TypeStats, event.TagAllocBlobberValueChange, addedBlobber.ID, event.AllocationBlobberValueChanged{
-		FieldType:    event.Allocated,
-		AllocationId: sa.ID,
-		BlobberId:    addedBlobber.ID,
-		Delta:        sa.bSize(),
-	})
 	afterSize := sa.bSize()
 
 	blobbers = append(blobbers, addedBlobber)
@@ -1183,6 +1177,7 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 			zap.Int64("alloc expiration", int64(sa.Expiration)))
 		return 0, errors.New("rest duration time overflow, timestamp is beyond alloc expiration")
 	}
+	logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sa.Expiration)), zap.Int64("now", int64(now)), zap.Float64("timeUnit", float64(timeUnit)), zap.Int64("rest", int64(sa.Expiration-now)))
 	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
 }
 
@@ -1342,7 +1337,7 @@ func getMaxChallengeCompletionTime() time.Duration {
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp) (map[string]string, error) {
+	now common.Timestamp, balances cstate.StateContextI) (map[string]string, error) {
 	var expiredChallengeBlobberMap = make(map[string]string)
 
 	cct := getMaxChallengeCompletionTime()
@@ -1372,6 +1367,13 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 			ba.Stats.OpenChallenges--
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
+
+			emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: sa.ID,
+				BlobberID:    oc.BlobberID,
+			}, false, balances, sa.Stats, ba.Stats)
+
 		}
 	}
 

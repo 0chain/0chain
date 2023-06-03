@@ -16,6 +16,7 @@ type RewardProvider struct {
 	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
 	ProviderId  string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
 	RewardType  spenum.Reward `json:"reward_type"`
+	ChallengeID string        `json:"challenge_id"`
 }
 
 func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {
@@ -29,6 +30,7 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 			BlockNumber: round,
 			ProviderId:  sp.ID,
 			RewardType:  sp.RewardType,
+			ChallengeID: sp.ChallengeID,
 		}
 		prs = append(prs, pr)
 	}
@@ -57,5 +59,10 @@ func (edb *EventDb) GetProviderRewards(limit common.Pagination, id string, start
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
-		}).Scan(&rps).Error
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&rps).Error
 }

@@ -5,10 +5,9 @@ import (
 	"encoding/binary"
 	"strconv"
 
-	"github.com/0chain/gorocksdb"
-
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/linxGnu/grocksdb"
 )
 
 var storageAPI = &Store{}
@@ -26,7 +25,7 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 	entity.SetKey(key)
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
-	var data *gorocksdb.Slice
+	var data *grocksdb.Slice
 	var err error
 	if emd.GetName() == "round" {
 		rNumber, err := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
@@ -88,7 +87,7 @@ func (ems *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 }
 
 func (ems *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
-	//TODO: even though rocksdb has MultiGet api, gorocksdb doesn't seem to have one
+	//TODO: even though rocksdb has MultiGet api, grocksdb doesn't seem to have one
 	for idx, key := range keys {
 		err := ems.Read(ctx, key, entities[idx])
 		if err != nil {
@@ -119,6 +118,18 @@ func (ems *Store) MultiDelete(ctx context.Context, entityMetadata datastore.Enti
 		}
 	}
 	return nil
+}
+
+// func (ems *Store) WBWrite(ctx context.Context, emd datastore.EntityMetadata, batch *AtomicWriteBatch) error {
+// 	// Build []byte key and value
+// 	c := GetEntityCon(ctx, emd)
+// 	err := 
+// }
+
+func (ems *Store) Merge(ctx context.Context, entity datastore.Entity) error {
+	c := GetEntityCon(ctx, entity.GetEntityMetadata())
+	data := datastore.ToJSON(entity).Bytes()
+	return c.Conn.Merge([]byte(datastore.ToString(entity.GetKey())), data)
 }
 
 func (ems *Store) AddToCollection(ctx context.Context, entity datastore.CollectionEntity) error {

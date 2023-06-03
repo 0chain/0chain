@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -492,15 +493,30 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		if numWorkers*mc.ValidationBatchSize() < len(b.Txns) {
 			numWorkers++
 		}
-		aggregate := true
-		var aggregateSignatureScheme encryption.AggregateSignatureScheme
-		if aggregate {
-			aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme(), len(b.Txns), mc.ValidationBatchSize())
+		var aggregate bool
+		aggregateSignatureScheme := encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme(), len(b.Txns), mc.ValidationBatchSize())
+		if aggregateSignatureScheme != nil {
+			aggregate = true
 		}
-		if aggregateSignatureScheme == nil {
-			aggregate = false
+
+		var (
+			validChannel   = make(chan bool, numWorkers)
+			buildInTxnsMap = make(map[string]struct{})
+			bicLock        = &sync.Mutex{}
+		)
+
+		hasDuplicateBuildInTxns := func(txn *transaction.Transaction) bool {
+			bicLock.Lock()
+			defer bicLock.Unlock()
+			if mc.isBuildInTxn(txn) {
+				if _, ok := buildInTxnsMap[txn.FunctionName]; ok {
+					return true
+				}
+				buildInTxnsMap[txn.FunctionName] = struct{}{}
+			}
+			return false
 		}
-		validChannel := make(chan bool, numWorkers)
+
 		validate := func(ctx context.Context, txns []*transaction.Transaction, start int) {
 			result := false
 			defer func() {
@@ -529,6 +545,16 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				if err != nil {
 					cancel = true
 					logging.Logger.Error("validate transactions", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
+					return
+				}
+
+				if hasDuplicateBuildInTxns(txn) {
+					logging.Logger.Error("validate transactions - duplicated build-in transaction",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("txn", txn.Hash),
+						zap.String("function_name", txn.FunctionName))
+					cancel = true
 					return
 				}
 
@@ -757,8 +783,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
 			if debugTxn {
-				logging.Logger.Info("generate block (debug transaction) error - "+
-					"txn creation not within tolerance",
+				logging.Logger.Info("generate block (debug transaction) error - txn creation not within tolerance",
 					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 					zap.Any("now", common.Now()))
 			}
@@ -919,6 +944,14 @@ func txnIterHandlerFunc(
 			return false, nil
 		}
 
+		if txn.Value > config.MaxTokenSupply {
+			logging.Logger.Error("generate block, invalid transaction value",
+				zap.String("hash", txn.Hash),
+				zap.Uint64("value", uint64(txn.Value)))
+			tii.invalidTxns = append(tii.invalidTxns, txn)
+			return false, errors.New("invalid transaction value, exceeds max token supply")
+		}
+
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
 			logging.Logger.Debug("Bad transaction cost fee",
@@ -1017,7 +1050,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	cctx, cancel := context.WithTimeout(ctx, mc.ChainConfig.BlockProposalMaxWaitTime())
 	defer cancel()
 
-	buildInTxns, cost, err := mc.buildInTxns(ctx, lfb, b, blockState)
+	buildInTxns, cost, err := mc.buildInTxns(ctx, lfb, b)
 	if err != nil {
 		return fmt.Errorf("get build-in txns failed: %v", err)
 	}
@@ -1128,13 +1161,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				zap.Int32("iteration_count", iterInfo.count),
 				zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns,
-				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)",
-					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), 0))
+				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v, future %v, reused %v)",
+					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), len(iterInfo.futureTxns), 0))
 		}
 		b.Txns = b.Txns[:blockSize]
 		iterInfo.eTxns = iterInfo.eTxns[:blockSize]
 	}
 
+l:
 	for _, biTxn := range buildInTxns {
 		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.Round, b.MinerID, blockState)
 		if err != nil {
@@ -1152,15 +1186,26 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		err = mc.processTxn(ctx, biTxn, b, blockState, iterInfo.clients)
 		if err != nil {
 			logging.Logger.Warn("generate block - process build-in txn failed",
+				zap.String("txn", txn.Hash),
 				zap.String("SC", txn.TransactionData),
 				zap.Int64("round", b.Round),
 				zap.Error(err))
+			if cstate.ErrInvalidState(err) {
+				return err
+			}
+
+			switch err {
+			case context.Canceled, context.DeadlineExceeded:
+				break l
+			}
 		}
 	}
 
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if iterInfo.byteSize > 10*mc.MaxByteSize() {
-		logging.Logger.Info("generate block (too much byte size)", zap.Int64("round", b.Round), zap.Int64("iteration byte size", iterInfo.byteSize))
+		logging.Logger.Info("generate block (too much byte size)",
+			zap.Int64("round", b.Round),
+			zap.Int64("iteration byte size", iterInfo.byteSize))
 	}
 
 	if err = client.GetClients(ctx, iterInfo.clients); err != nil {
@@ -1239,7 +1284,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	return nil
 }
 
-func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block, state util.MerklePatriciaTrieI) ([]*transaction.Transaction, int, error) {
+func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*transaction.Transaction, int, error) {
 	txns := make([]*transaction.Transaction, 0, 4)
 
 	if mc.ChainConfig.IsFeeEnabled() {

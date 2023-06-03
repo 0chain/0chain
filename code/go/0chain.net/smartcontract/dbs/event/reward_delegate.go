@@ -17,6 +17,7 @@ type RewardDelegate struct {
 	PoolID      string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
 	ProviderID  string        `json:"provider_id"`
 	RewardType  spenum.Reward `json:"reward_type"`
+	ChallengeID string        `json:"challenge_id"`
 }
 
 func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round int64) error {
@@ -29,6 +30,7 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 				PoolID:      poolId,
 				ProviderID:  sp.ID,
 				RewardType:  sp.RewardType,
+				ChallengeID: sp.ChallengeID,
 			}
 			drs = append(drs, dr)
 		}
@@ -39,6 +41,7 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 				PoolID:      poolId,
 				ProviderID:  sp.ID,
 				RewardType:  sp.RewardType,
+				ChallengeID: sp.ChallengeID,
 			}
 			drs = append(drs, dp)
 		}
@@ -71,5 +74,10 @@ func (edb *EventDb) GetDelegateRewards(limit common.Pagination, PoolId string, s
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "block_number"},
 			Desc:   limit.IsDescending,
-		}).Scan(&rds).Error
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&rds).Error
 }

@@ -29,9 +29,7 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,
-
-			UnstakeTotal: sp.TotalUnStake,
-			TotalStake:   staked,
+			TotalStake:      staked,
 		},
 		OffersTotal: sp.TotalOffers,
 	}
@@ -64,7 +62,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,
 			TotalStake:      staked,
-			UnstakeTotal:    sp.TotalUnStake,
 			Rewards: event.ProviderRewards{
 				ProviderID:   sn.ID,
 				Rewards:      sp.Reward,
@@ -81,13 +78,14 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	return nil
 }
 
-func emitUpdateBlobberAllocatedHealth(sn *StorageNode, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedHealth, sn.ID, event.Blobber{
+func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, sn.ID, event.Blobber{
 		Provider: event.Provider{
 			ID:              sn.ID,
 			LastHealthCheck: sn.LastHealthCheck,
 		},
 		Allocated: sn.Allocated,
+		SavedData: sn.SavedData,
 	})
 }
 

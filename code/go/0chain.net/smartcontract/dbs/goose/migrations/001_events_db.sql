@@ -407,7 +407,7 @@ CREATE TABLE public.challenges (
                                    validators_id text,
                                    seed bigint,
                                    allocation_root text,
-                                   responded boolean,
+                                   responded bigint,
                                    passed boolean,
                                    round_responded bigint
 );
@@ -742,7 +742,8 @@ CREATE TABLE public.reward_delegates (
                                          amount bigint,
                                          block_number bigint,
                                          pool_id text,
-                                         reward_type bigint
+                                         reward_type bigint,
+                                         challenge_id text
 );
 
 
@@ -820,7 +821,8 @@ CREATE TABLE public.reward_providers (
                                          amount bigint,
                                          block_number bigint,
                                          provider_id text,
-                                         reward_type bigint
+                                         reward_type bigint,
+                                         challenge_id text
 );
 
 
@@ -1032,7 +1034,6 @@ CREATE TABLE public.transaction_errors (
                                      id SERIAL PRIMARY KEY,
                                      created_at timestamp with time zone,
                                      transaction_output text,
-                                     output_hash text,
                                      count bigint
 );
 

@@ -17,8 +17,6 @@ import (
 	"github.com/guregu/null"
 )
 
-const ActiveBlobbersTimeLimit = 5 * time.Minute // 5 Minutes
-
 type Blobber struct {
 	Provider
 	BaseURL string `json:"url" gorm:"uniqueIndex"`
@@ -48,14 +46,14 @@ type Blobber struct {
 	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
 	Description string `json:"description" gorm:"description"`
 
-	ChallengesPassed    uint64  `json:"challenges_passed"`
-	ChallengesCompleted uint64  `json:"challenges_completed"`
-	OpenChallenges      uint64  `json:"open_challenges"`
-	RankMetric          float64 `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
-	TotalBlockRewards	currency.Coin   `json:"total_block_rewards"`
-	TotalStorageIncome 	currency.Coin   `json:"total_storage_income"`
-	TotalReadIncome 	currency.Coin   `json:"total_read_income"`
-	TotalSlashedStake 	currency.Coin   `json:"total_slashed_stake"`
+	ChallengesPassed    uint64        `json:"challenges_passed"`
+	ChallengesCompleted uint64        `json:"challenges_completed"`
+	OpenChallenges      uint64        `json:"open_challenges"`
+	RankMetric          float64       `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
+	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
+	TotalReadIncome     currency.Coin `json:"total_read_income"`
+	TotalSlashedStake   currency.Coin `json:"total_slashed_stake"`
 
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:ID"`
@@ -90,24 +88,34 @@ func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "capacity"},
 			Desc:   limit.IsDescending,
-		}).Find(&blobbers)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&blobbers)
 
 	return blobbers, result.Error
 }
 
-func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination) ([]Blobber, error) {
+func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination, healthCheckTimeLimit time.Duration) ([]Blobber, error) {
 	now := common.Now()
 	var blobbers []Blobber
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Blobber{}).Offset(limit.Offset).
 		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
-			common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix(), false, false).
+			common.ToTime(now).Add(-healthCheckTimeLimit).Unix(), false, false).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "capacity"},
 			Desc:   limit.IsDescending,
-		}).Find(&blobbers)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -122,7 +130,12 @@ func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "rank_metric"},
 			Desc:   true,
-		}).Find(&blobberIDs)
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   true,
+		}).
+		Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -135,10 +148,18 @@ func (edb *EventDb) GeBlobberByLatLong(
 		Model(&Blobber{}).
 		Select("id").
 		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).Offset(limit.Offset).Limit(limit.Limit).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "capacity"},
-		Desc:   true,
-	}).Find(&blobberIDs)
+			maxLatitude, minLatitude, maxLongitude, minLongitude).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   true,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   true,
+		}).
+		Find(&blobberIDs)
 
 	return blobberIDs, result.Error
 }
@@ -146,7 +167,10 @@ func (edb *EventDb) GeBlobberByLatLong(
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	var blobbers []Blobber
 	result := edb.Store.Get().Preload("Rewards").
-		Model(&Blobber{}).Order("id").Where("id IN ?", ids).Find(&blobbers)
+		Model(&Blobber{}).
+		Order("id").
+		Where("id IN ?", ids).
+		Find(&blobbers)
 	return blobbers, result.Error
 }
 
@@ -154,23 +178,28 @@ func (edb *EventDb) deleteBlobber(id string) error {
 	return edb.Store.Get().Model(&Blobber{}).Where("id = ?", id).Delete(&Blobber{}).Error
 }
 
-func (edb *EventDb) updateBlobbersAllocatedAndHealth(blobbers []Blobber) error {
+func (edb *EventDb) updateBlobbersAllocatedSavedAndHealth(blobbers []Blobber) error {
 	var ids []string
 	var allocated []int64
+	var savedData []int64
 	var lastHealthCheck []int64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		allocated = append(allocated, m.Allocated)
+		savedData = append(savedData, m.SavedData)
 		lastHealthCheck = append(lastHealthCheck, int64(m.LastHealthCheck))
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
-		AddUpdate("allocated", allocated).AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
+		AddUpdate("allocated", allocated).
+		AddUpdate("last_health_check", lastHealthCheck).
+		AddUpdate("saved_data", savedData).
+		Exec(edb).Error
 
 }
 
 func mergeUpdateBlobbersEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedHealth, withUniqueEventOverwrite())
+	return newEventsMerger[Blobber](TagUpdateBlobberAllocatedSavedHealth, withUniqueEventOverwrite())
 }
 
 type AllocationQuery struct {
@@ -190,28 +219,37 @@ type AllocationQuery struct {
 
 func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("base_url IN ?", urls).Limit(data.Limit).Offset(data.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "id"},
-		Desc:   data.IsDescending,
-	})
+	dbStore = dbStore.Where("base_url IN ?", urls).
+		Limit(data.Limit).
+		Offset(data.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   data.IsDescending,
+		})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
 }
 
-func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp) ([]string, error) {
+func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp, healthCheckPeriod time.Duration) ([]string, error) {
 	dbStore := edb.Store.Get().Model(&Blobber{})
 	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
 	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
-	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-ActiveBlobbersTimeLimit).Unix())
+	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-healthCheckPeriod).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
 	dbStore = dbStore.Where("is_available = true")
-	dbStore = dbStore.Limit(limit.Limit).Offset(limit.Offset).Order(clause.OrderByColumn{
-		Column: clause.Column{Name: "write_price"},
-		Desc:   limit.IsDescending,
-	})
+	dbStore = dbStore.Limit(limit.Limit).
+		Offset(limit.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "write_price"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
 }
@@ -240,7 +278,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"num_delegates",
 		"service_charge",
 		"last_health_check",
-		"unstake_total",
 		"total_stake",
 	}
 	columns, err := Columnize(blobbers)
@@ -287,15 +324,6 @@ func NewUpdateBlobberTotalStakeEvent(ID string, totalStake currency.Coin) (tag E
 	}
 }
 
-func NewUpdateBlobberTotalUnStakeEvent(ID string, totalUnStake currency.Coin) (tag EventTag, data interface{}) {
-	return TagUpdateBlobberTotalUnStake, Blobber{
-		Provider: Provider{
-			ID:           ID,
-			UnstakeTotal: totalUnStake,
-		},
-	}
-}
-
 func NewUpdateBlobberTotalOffersEvent(ID string, totalOffers currency.Coin) (tag EventTag, data interface{}) {
 	return TagUpdateBlobberTotalOffers, Blobber{
 		Provider:    Provider{ID: ID},
@@ -311,19 +339,8 @@ func (edb *EventDb) updateBlobbersTotalStakes(blobbers []Blobber) error {
 	return edb.updateProviderTotalStakes(provs, "blobbers")
 }
 
-func (edb *EventDb) updateBlobbersTotalUnStakes(blobbers []Blobber) error {
-	var provs []Provider
-	for _, b := range blobbers {
-		provs = append(provs, b.Provider)
-	}
-	return edb.updateProvidersTotalUnStakes(provs, "blobbers")
-}
-
 func mergeUpdateBlobberTotalStakesEvents() *eventsMergerImpl[Blobber] {
 	return newEventsMerger[Blobber](TagUpdateBlobberTotalStake, withUniqueEventOverwrite())
-}
-func mergeUpdateBlobberTotalUnStakesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberTotalUnStake, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateBlobbersTotalOffers(blobbers []Blobber) error {
@@ -371,71 +388,52 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	})
 }
 
-type ChallengeStatsDeltas struct {
-	Id             string `json:"id"`
-	PassedDelta    int64  `json:"passed_delta"`
-	CompletedDelta int64  `json:"completed_delta"`
-	OpenDelta      int64  `json:"open_delta"`
+func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
 }
 
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
-	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
+func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
+	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
 }
 
-func withBlobberChallengesMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
-		a.CompletedDelta += b.CompletedDelta
-		a.PassedDelta += b.PassedDelta
-		a.OpenDelta += b.OpenDelta
-		return a, nil
-	})
-}
+func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
-	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withBlobberChallengesMerged())
-}
+	blobberIdList := make([]string, 0, len(blobbers))
+	openChallengesList := make([]uint64, 0, len(blobbers))
 
-func (edb *EventDb) updateOpenBlobberChallenges(deltas []ChallengeStatsDeltas) error {
-	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(deltas)).Scan(&Blobber{}).Error
-}
-
-func sqlUpdateOpenChallenges(deltas []ChallengeStatsDeltas) string {
-	if len(deltas) == 0 {
-		return ""
+	for _, blobber := range blobbers {
+		blobberIdList = append(blobberIdList, blobber.ID)
+		openChallengesList = append(openChallengesList, blobber.OpenChallenges)
 	}
-	sql := "UPDATE blobbers \n"
-	sql += "SET "
-	sql += "  open_challenges = open_challenges + v.open\n"
-	sql += "FROM ( VALUES"
-	first := true
-	for _, delta := range deltas {
-		if first {
-			first = false
-		} else {
-			sql += ","
-		}
-		sql += fmt.Sprintf("('%s', %d)", delta.Id, delta.OpenDelta)
-	}
-	sql += "  )\n"
-	sql += "AS v (id, open)\n"
-	sql += "WHERE\n"
-	sql += "  blobbers.id = v.id"
 
-	return sql
+	return CreateBuilder("blobbers", "id", blobberIdList).
+		AddUpdate("open_challenges", openChallengesList).Exec(edb).Error
 }
 
-func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error {
-	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(deltas)).Scan(&Blobber{}).Error
+func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
+	blobberIdList := make([]string, 0, len(blobbers))
+	challengesPassedList := make([]uint64, 0, len(blobbers))
+	challengesCompletedList := make([]uint64, 0, len(blobbers))
+
+	for _, blobber := range blobbers {
+		blobberIdList = append(blobberIdList, blobber.ID)
+		challengesPassedList = append(challengesPassedList, blobber.ChallengesPassed)
+		challengesCompletedList = append(challengesCompletedList, blobber.ChallengesCompleted)
+	}
+
+	return CreateBuilder("blobbers", "id", blobberIdList).
+		AddUpdate("challenges_passed", challengesPassedList).
+		AddUpdate("challenges_completed", challengesCompletedList).Exec(edb).Error
 }
 
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 	var (
-		ids []string
-		totalBlockRewards []int64
+		ids                []string
+		totalBlockRewards  []int64
 		totalStorageIncome []int64
-		totalReadIncome []int64
-		totalSlashedStake []int64
-		totalChanges = 0
+		totalReadIncome    []int64
+		totalSlashedStake  []int64
+		totalChanges       = 0
 	)
 
 	blobberIdx := -1
@@ -450,21 +448,21 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		totalReadIncome = append(totalReadIncome, 0)
 		totalSlashedStake = append(totalSlashedStake, 0)
 
-		switch (spu.RewardType) {
-			case spenum.BlockRewardBlobber:
-				totalChanges++
-				totalBlockRewards[blobberIdx] = int64(spu.Reward)
-			case spenum.ChallengePassReward:
-				totalChanges++
-				totalStorageIncome[blobberIdx] = int64(spu.Reward)
-			case spenum.FileDownloadReward:
-				totalChanges++
-				totalReadIncome[blobberIdx] = int64(spu.Reward)
-			case spenum.ChallengeSlashPenalty:
-				totalChanges++
-				for _, penalty := range spu.DelegatePenalties {
-					totalSlashedStake[blobberIdx] += int64(penalty)
-				}
+		switch spu.RewardType {
+		case spenum.BlockRewardBlobber:
+			totalChanges++
+			totalBlockRewards[blobberIdx] = int64(spu.Reward)
+		case spenum.ChallengePassReward:
+			totalChanges++
+			totalStorageIncome[blobberIdx] = int64(spu.Reward)
+		case spenum.FileDownloadReward:
+			totalChanges++
+			totalReadIncome[blobberIdx] = int64(spu.Reward)
+		case spenum.ChallengeSlashPenalty:
+			totalChanges++
+			for _, penalty := range spu.DelegatePenalties {
+				totalSlashedStake[blobberIdx] += int64(penalty)
+			}
 		}
 	}
 
@@ -478,34 +476,6 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		AddUpdate("total_read_income", totalReadIncome, "blobbers.total_read_income + t.total_read_income").
 		AddUpdate("total_slashed_stake", totalSlashedStake, "blobbers.total_slashed_stake + t.total_slashed_stake").
 		Exec(edb).Debug().Error
-}
-
-// ref https://www.postgresql.org/docs/9.1/sql-values.html
-func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
-	if len(deltas) == 0 {
-		return ""
-	}
-	sql := "UPDATE blobbers \n"
-	sql += "SET "
-	sql += "  challenges_completed = challenges_completed + v.completed,\n"
-	sql += "  challenges_passed = challenges_passed + v.passed\n"
-	//sql += ",  rank_metric = (challenges_passed + v.passed)::FLOAT /  (blobbers.challenges_completed + v.completed)::FLOAT)::DECIMAL(10,3)\n" todo
-	sql += "FROM ( VALUES "
-	first := true
-	for _, delta := range deltas {
-		if first {
-			first = false
-		} else {
-			sql += ",\n"
-		}
-		sql += fmt.Sprintf("('%s', %d, %d)", delta.Id, delta.PassedDelta, delta.CompletedDelta)
-	}
-	sql += ")\n"
-	sql += "AS v (id, passed, completed)\n"
-	sql += "WHERE\n"
-	sql += "blobbers.id = v.id"
-
-	return sql
 }
 
 func mergeBlobberHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {

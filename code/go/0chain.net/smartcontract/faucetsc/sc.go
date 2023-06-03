@@ -3,7 +3,6 @@ package faucetsc
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/url"
 	"time"
 
@@ -56,19 +55,15 @@ func (fc *FaucetSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (fc *FaucetSmartContract) GetCost(t *transaction.Transaction, funcName string, balances c_state.StateContextI) (int, error) {
-	node, err := fc.getGlobalVariables(t, balances)
+func (fc *FaucetSmartContract) GetCostTable(balances c_state.StateContextI) (map[string]int, error) {
+	node, err := fc.getGlobalVariables(balances.GetTransaction(), balances)
 	if err != nil {
-		return math.MaxInt32, err
+		return map[string]int{}, err
 	}
 	if node.Cost == nil {
-		return math.MaxInt32, err
+		return map[string]int{}, err
 	}
-	cost, ok := node.Cost[funcName]
-	if !ok {
-		return math.MaxInt32, err
-	}
-	return cost, nil
+	return node.Cost, nil
 }
 
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
@@ -160,7 +155,11 @@ func toSeconds(dur time.Duration) common.Timestamp {
 }
 
 func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
-	user := fc.getUserVariables(t, gn, balances)
+	user, err := fc.getUserVariables(t, gn, balances)
+	if err != nil {
+		return "", err
+	}
+
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
 		var pourAmount = gn.PourAmount
@@ -234,9 +233,13 @@ func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances
 	return un, err
 }
 
-func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode, balances c_state.StateContextI) *UserNode {
+func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode, balances c_state.StateContextI) (*UserNode, error) {
 	un, err := fc.getUserNode(t.ClientID, gn.ID, balances)
 	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
@@ -245,7 +248,7 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 		un.StartTime = common.ToTime(t.CreationDate)
 		un.Used = 0
 	}
-	return un
+	return un, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {

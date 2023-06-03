@@ -71,12 +71,14 @@ func (edb *EventDb) GetBlockByRound(round int64) (Block, error) {
 func (edb *EventDb) GetBlockByDate(date string) (Block, error) {
 	block := Block{}
 
-	return block, edb.Store.Get().Table("blocks").Where("creation_date <= ?", date).Limit(1).Order(
-		clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_date"},
+	return block, edb.Store.Get().Table("blocks").
+		Where("creation_date <= ?", date).
+		Limit(1).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "round"},
 			Desc:   true,
-		},
-	).Scan(&block).Error
+		}).
+		Scan(&block).Error
 }
 
 func (edb *EventDb) GetBlocksByRound(round string) (Block, error) {

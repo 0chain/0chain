@@ -47,7 +47,7 @@ run-test:
 install-mockery:
 	@([ -d ./tmp/mockery ] || mkdir -p ./tmp/mockery) \
 	&& echo "[+]download mockery" \
-	&& ([ -f ./tmp/mockery/mockery.tar.gz ] || curl -L -o ./tmp/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.14.0/mockery_2.14.0_$(detected_OS)_$(detected_ARCH).tar.gz) \
+	&& ([ -f ./tmp/mockery/mockery.tar.gz ] || curl -L -o ./tmp/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.28.1/mockery_2.28.1_$(detected_OS)_$(detected_ARCH).tar.gz) \
 	&& echo "[+]install mockery" \
 	&& tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery \
 	&& cp ./tmp/mockery/mockery $(GOPATH)/bin/ \

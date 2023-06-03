@@ -9,25 +9,26 @@ import (
 // swagger:model AuthorizerSnapshot
 type AuthorizerSnapshot struct {
 	AuthorizerID string `json:"id" gorm:"index"`
-	BucketId	 int64  `json:"bucket_id"`
+	BucketId     int64  `json:"bucket_id"`
 	Round        int64  `json:"round"`
 
 	Fee           currency.Coin `json:"fee"`
-	UnstakeTotal  currency.Coin `json:"unstake_total"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	TotalMint     currency.Coin `json:"total_mint"`
 	TotalBurn     currency.Coin `json:"total_burn"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round" gorm:"index"`
+	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (a *AuthorizerSnapshot) IsOffline() bool {
+	return a.IsKilled || a.IsShutdown
 }
 
 func (a *AuthorizerSnapshot) GetTotalStake() currency.Coin {
 	return a.TotalStake
-}
-
-func (a *AuthorizerSnapshot) GetUnstakeTotal() currency.Coin {
-	return a.UnstakeTotal
 }
 
 func (a *AuthorizerSnapshot) GetServiceCharge() float64 {
@@ -40,10 +41,6 @@ func (a *AuthorizerSnapshot) GetTotalRewards() currency.Coin {
 
 func (a *AuthorizerSnapshot) SetTotalStake(value currency.Coin) {
 	a.TotalStake = value
-}
-
-func (a *AuthorizerSnapshot) SetUnstakeTotal(value currency.Coin) {
-	a.UnstakeTotal = value
 }
 
 func (a *AuthorizerSnapshot) SetServiceCharge(value float64) {
@@ -82,8 +79,7 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer, round int64)
 		snapshots = append(snapshots, AuthorizerSnapshot{
 			AuthorizerID:  authorizer.ID,
 			Round:         round,
-			BucketId: 	   authorizer.BucketId,
-			UnstakeTotal:  authorizer.UnstakeTotal,
+			BucketId:      authorizer.BucketId,
 			Fee:           authorizer.Fee,
 			TotalStake:    authorizer.TotalStake,
 			ServiceCharge: authorizer.ServiceCharge,
@@ -91,6 +87,8 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer, round int64)
 			TotalRewards:  authorizer.Rewards.TotalRewards,
 			TotalMint:     authorizer.TotalMint,
 			TotalBurn:     authorizer.TotalBurn,
+			IsKilled:      authorizer.IsKilled,
+			IsShutdown:    authorizer.IsShutdown,
 		})
 	}
 
