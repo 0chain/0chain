@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/ememorystore"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"github.com/linxGnu/grocksdb"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -20,8 +21,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockstore"
-
-	"github.com/0chain/gorocksdb"
 
 	"go.uber.org/zap"
 )
@@ -141,7 +140,7 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	r.Number = roundNum
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
-	defer ememorystore.Close(rctx)
+	defer ememorystore.CloseEntityConnection(rctx, roundEntityMetadata)
 	err := r.Read(rctx, r.GetKey())
 	return r, err
 }
@@ -323,7 +322,7 @@ func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
 	return // not found
 }
 
-func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator, r *round.Round) (lfb *block.Block, err error) {
+func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) (lfb *block.Block, err error) {
 
 	var rollBackCount int
 	for ; iter.Valid(); iter.Prev() {
