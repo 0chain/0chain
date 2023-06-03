@@ -226,10 +226,11 @@ func Init(workDir string, sViper *viper.Viper) {
 		basePath:              basePath,
 	}
 
-	cViper := sViper.Sub("cache")
-	if cViper != nil {
-		bStore.cache = initCache(cViper)
+	if sViper != nil {
+		cViper := sViper.Sub("cache")
+		if cViper != nil {
+			bStore.cache = initCache(cViper)
+		}
 	}
-
 	SetupStore(bStore)
 }

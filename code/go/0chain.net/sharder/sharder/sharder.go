@@ -77,9 +77,6 @@ func main() {
 	ctx := common.GetRootContext()
 	initEntities(workdir)
 	sViper := viper.Sub("storage")
-	if sViper == nil {
-		panic("Storage config is required")
-	}
 	blockstore.Init(workdir, sViper)
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
