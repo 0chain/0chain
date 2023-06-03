@@ -1,32 +1,5 @@
 version: '3'
 services:
-  cassandra:
-    image: cassandra:3.11.4
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.5'
-    #       memory: 1500M
-    #     reservations:
-    #       cpus: '0.25'
-    #       memory: 100M
-    networks:
-      default:
-    #ports:
-    #- "9042:9042"
-    volumes:
-    - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra/data
-
-  cassandra-init:
-    image: cassandra:latest
-    volumes:
-      - ../../bin:/0chain/bin
-      - ../../sql:/0chain/sql
-    command: ./0chain/bin/cassandra-init.sh
-    links:
-      - cassandra:cassandra
-    restart: on-failure
-
   sharder:
     image: 0chaindev/sharder:latest
     # deploy:
@@ -39,11 +12,6 @@ services:
     #       memory: 100M
     environment:
       - DOCKER=true
-      - CASSANDRA_CLUSTER=cassandra
-    depends_on:
-      - cassandra-init
-    links:
-      - cassandra-init:cassandra-init
     volumes:
       - ../config:/0chain/config
       - ../sharder${SHARDER}/log:/0chain/log

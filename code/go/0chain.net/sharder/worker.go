@@ -15,7 +15,6 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 
@@ -294,8 +293,8 @@ func (sc *Chain) hasBlock(bHash string, rNum int64) (*block.Block, bool) {
 
 func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool { //nolint
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
-	defer persistencestore.Close(tctx)
+	tctx := ememorystore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
+	defer ememorystore.Close(tctx)
 	for _, txn := range b.Txns {
 		_, err := sc.GetTransactionSummary(tctx, txn.Hash)
 		if err != nil {

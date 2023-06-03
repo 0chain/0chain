@@ -33,7 +33,6 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
@@ -406,6 +405,8 @@ func initEntities(workdir string) {
 
 	round.SetupRoundSummaryDB(workdir)
 	block.SetupBlockSummaryDB(workdir)
+	block.SetupMagicBlockMapDB(workdir)
+	transaction.SetupTxnSummaryDB(workdir)
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
@@ -414,12 +415,9 @@ func initEntities(workdir string) {
 	round.SetupEntity(ememoryStorage)
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
-
-	persistencestore.InitSession()
-	persistenceStorage := persistencestore.GetStorageProvider()
-	transaction.SetupTxnSummaryEntity(persistenceStorage)
-	transaction.SetupTxnConfirmationEntity(persistenceStorage)
-	block.SetupMagicBlockMapEntity(persistenceStorage)
+	
+	transaction.SetupTxnSummaryEntity(ememoryStorage)
+	block.SetupMagicBlockMapEntity(ememoryStorage)
 
 	sharder.SetupBlockSummaries()
 	sharder.SetupRoundSummaries()
