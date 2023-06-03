@@ -316,21 +316,40 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
 
-	// Include the JavaScript code to toggle details
 	fmt.Fprint(w, "<script>")
 	fmt.Fprint(w, `
-		function toggleDetails(element) {
-			var row = element.parentNode.parentNode;
-			var nextRow = row.nextElementSibling;
-			nextRow.style.display = (nextRow.style.display === 'none') ? 'table-row' : 'none';
-			if (nextRow.style.display !== 'none') {
-				var detailsId = 'details-' + nextRow.cells[0].textContent;
-				var detailsElement = document.getElementById(detailsId);
-				if (detailsElement) {
-					detailsElement.style.display = 'table-cell';
-				}
+	function toggleDetails(element) {
+		var row = element.parentNode.parentNode;
+		var nextRow = row.nextElementSibling;
+		nextRow.style.display = (nextRow.style.display === 'none') ? 'table-row' : 'none';
+		
+		if (nextRow.style.display !== 'none') {
+			var detailsElement = nextRow.querySelector('.details-row');
+			if (detailsElement) {
+				detailsElement.style.display = 'table-row';
 			}
 		}
+	}
 	`)
 	fmt.Fprint(w, "</script>")
+
+	// Include the JavaScript code to toggle details
+	//fmt.Fprint(w, "<script>")
+	//fmt.Fprint(w, `
+	//
+	//
+	//	function toggleDetails(element) {
+	//		var row = element.parentNode.parentNode;
+	//		var nextRow = row.nextElementSibling;
+	//		nextRow.style.display = (nextRow.style.display === 'none') ? 'table-row' : 'none';
+	//		if (nextRow.style.display !== 'none') {
+	//			var detailsId = 'details-' + nextRow.cells[0].textContent;
+	//			var detailsElement = document.getElementById(detailsId);
+	//			if (detailsElement) {
+	//				detailsElement.style.display = 'table-cell';
+	//			}
+	//		}
+	//	}
+	//`)
+	//fmt.Fprint(w, "</script>")
 }

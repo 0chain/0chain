@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -723,6 +722,8 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	tx := newTransaction(b3.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 
+	round := 0
+
 	stateRoots := make(map[string]struct{}, 10)
 	for i := 0; i < 20; i++ {
 		clientState := createTxnMPT(balances.GetState())
@@ -731,7 +732,8 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
 
 		bk := &block.Block{}
-		bk.Round = int64(rand.Intn(9999))
+		bk.Round = int64(round)
+		round += 30
 		balances.setBlock(t, bk)
 
 		var resp string
