@@ -756,6 +756,13 @@ func (sa *StorageAllocation) moveToChallengePool(
 	cp *challengePool,
 	value currency.Coin,
 ) error {
+
+	logging.Logger.Info("jayash MTCP : ",
+		zap.Any("cp", cp),
+		zap.Any("value", value),
+		zap.Any("sa", sa),
+	)
+
 	if cp == nil {
 		return errors.New("invalid challenge pool")
 	}

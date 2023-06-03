@@ -784,6 +784,11 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 		switch {
 		case ch > 0:
+			logging.Logger.Info("jayash adjust_challenge_pool: move to challenge pool",
+				zap.String("allocation", alloc.ID),
+				zap.Any("challenge", ch),
+				zap.Any("cp", cp))
+
 			err = alloc.moveToChallengePool(cp, ch)
 			sum += ch
 			changed = true
