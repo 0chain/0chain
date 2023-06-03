@@ -204,14 +204,10 @@ func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.B
 // Init checks for minimum disk size, inodes requirement and assigns
 // block storer to a variable. If any error occurs during initialization
 // it will panic.
-func Init(sViper *viper.Viper) {
+func Init(workDir string, sViper *viper.Viper) {
 	logging.Logger.Info("Initializing storage")
 
-	basePath := sViper.GetString("root_dir")
-	if basePath == "" {
-		panic("root dir cannot be empty")
-	}
-
+	basePath := filepath.Join(workDir, "data", "blocks")
 	err := hasEnoughInodesAndSize(basePath)
 	if err != nil {
 		// TODO comment out for build integration tests.
@@ -222,7 +218,6 @@ func Init(sViper *viper.Viper) {
 		if err != nil {
 			panic(err)
 		}
-		// remove above block
 	}
 
 	bStore := &BlockStore{
@@ -231,10 +226,11 @@ func Init(sViper *viper.Viper) {
 		basePath:              basePath,
 	}
 
-	cViper := sViper.Sub("cache")
-	if cViper != nil {
-		bStore.cache = initCache(cViper)
+	if sViper != nil {
+		cViper := sViper.Sub("cache")
+		if cViper != nil {
+			bStore.cache = initCache(cViper)
+		}
 	}
-
 	SetupStore(bStore)
 }
