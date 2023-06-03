@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/big"
 
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
 	cstate "0chain.net/chaincore/chain/state"
