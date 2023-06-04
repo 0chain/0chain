@@ -40,6 +40,7 @@ type TestConfigData struct {
 	MinTxnFee             currency.Coin `json:"min_txn_fee"`               // Minimum txn fee allowed
 	MaxTxnFee             currency.Coin `json:"max_txn_fee"`               // Maximum txn fee allowed
 	TxnCostFeeCoeff       int
+	TxnFutureNonce        int
 	PruneStateBelowCount  int   `json:"prune_state_below_count"` // Prune state below these many rounds
 	RoundRange            int64 `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 
@@ -261,6 +262,10 @@ func (t *TestConfig) MaxTxnFee() currency.Coin {
 
 func (t *TestConfig) TxnCostFeeCoeff() int {
 	return t.conf.TxnCostFeeCoeff
+}
+
+func (t *TestConfig) TxnFutureNonce() int {
+	return t.conf.TxnFutureNonce
 }
 
 func (t *TestConfig) TxnTransferCost() int {
