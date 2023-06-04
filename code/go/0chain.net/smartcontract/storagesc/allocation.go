@@ -1465,6 +1465,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(req.AllocationID, balances)
 	if err != nil {
+		fmt.Println("decode error", err)
 		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
 

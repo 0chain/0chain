@@ -66,6 +66,8 @@ func (sc *StorageSmartContract) getStorageChallenge(challengeID string,
 func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 	balances cstate.StateContextI) (ac *AllocationChallenges, err error) {
 
+	fmt.Println("here", sc.ID, allocID)
+
 	ac = new(AllocationChallenges)
 	ac.AllocationID = allocID
 	err = balances.GetTrieNode(ac.GetKey(sc.ID), ac)
@@ -181,7 +183,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
-
 
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
 	if err != nil {
