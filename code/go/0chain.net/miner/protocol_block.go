@@ -149,36 +149,36 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 }
 
 func (mc *Chain) validateTransaction(b *block.Block,
-	bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC chan struct{}) error {
+	bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC chan struct{}) (int64, error) {
 	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
-		return ErrNotTimeTolerant
+		return 0, ErrNotTimeTolerant
 	}
 	state, err := chain.GetStateById(bState, txn.ClientID)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
 			if txn.Nonce > 1 {
-				return FutureTransaction
+				return 0, FutureTransaction
 			}
 			if txn.Nonce < 1 {
-				return PastTransaction
+				return 0, PastTransaction
 			}
-			return nil
+			return 0, nil
 		}
 		if cstate.ErrInvalidState(err) {
 			mc.SyncMissingNodes(b.Round, bState.GetMissingNodeKeys(), waitC)
 		}
-		return err
+		return 0, err
 	}
 
 	if txn.Nonce-state.Nonce > 1 {
-		return FutureTransaction
+		return state.Nonce, FutureTransaction
 	}
 
 	if txn.Nonce-state.Nonce < 1 {
-		return PastTransaction
+		return state.Nonce, PastTransaction
 	}
 
-	return nil
+	return state.Nonce, nil
 }
 
 // UpdatePendingBlock - updates the block that is generated and pending
@@ -758,27 +758,42 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		}
 		var debugTxn = txn.DebugTxn()
 
-		err := mc.validateTransaction(b, bState, txn, waitC)
+		nonce, err := mc.validateTransaction(b, bState, txn, waitC)
 		switch err {
 		case PastTransaction:
 			tii.pastTxns = append(tii.pastTxns, txn)
 			if debugTxn {
-				logging.Logger.Info("generate block (debug transaction) error, transaction hash old nonce",
-					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
-					zap.Any("now", common.Now()), zap.Int64("nonce", txn.Nonce))
+				logging.Logger.Debug("generate block (debug transaction) error, transaction hash old nonce",
+					zap.String("txn", txn.Hash),
+					zap.Int32("iterate count", tii.count),
+					zap.Any("now", common.Now()),
+					zap.Int64("nonce", txn.Nonce))
 			}
 			return false, nil
 		case FutureTransaction:
-			list := tii.futureTxns[txn.ClientID]
-			list = append(list, txn)
-			sort.SliceStable(list, func(i, j int) bool {
-				if list[i].Nonce == list[j].Nonce {
+			list, ok := tii.futureTxns[txn.ClientID]
+			if !ok {
+				list = &clientNonceTxns{}
+			}
+
+			if list.nonce < nonce {
+				list.nonce = nonce
+			}
+			list.txns = append(list.txns, txn)
+			sort.SliceStable(list.txns, func(i, j int) bool {
+				if list.txns[i].Nonce == list.txns[j].Nonce {
 					//if the same nonce order by fee
-					return list[i].Fee > list[j].Fee
+					return list.txns[i].Fee > list.txns[j].Fee
 				}
-				return list[i].Nonce < list[j].Nonce
+				return list.txns[i].Nonce < list.txns[j].Nonce
 			})
 			tii.futureTxns[txn.ClientID] = list
+			if debugTxn {
+				logging.Logger.Debug("generate block - future transaction",
+					zap.String("txn", txn.Hash),
+					zap.Int64("round", b.Round),
+					zap.Int32("iterate count", tii.count))
+			}
 			return false, nil
 		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
@@ -837,12 +852,17 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 	}
 }
 
+type clientNonceTxns struct {
+	nonce int64
+	txns  []*transaction.Transaction
+}
+
 type TxnIterInfo struct {
 	clients     map[string]*client.Client
 	eTxns       []datastore.Entity
 	invalidTxns []datastore.Entity
 	pastTxns    []datastore.Entity
-	futureTxns  map[datastore.Key][]*transaction.Transaction
+	futureTxns  map[datastore.Key]*clientNonceTxns
 	currentTxns []*transaction.Transaction
 
 	txnMap map[datastore.Key]struct{}
@@ -869,7 +889,11 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 		return
 	}
 	//check whether we can execute future transactions
-	futures := tii.futureTxns[txn.ClientID]
+	nonceTxns, ok := tii.futureTxns[txn.ClientID]
+	if !ok {
+		return
+	}
+	futures := nonceTxns.txns
 	if len(futures) == 0 {
 		return
 	}
@@ -893,7 +917,15 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 	sort.SliceStable(tii.currentTxns, func(i, j int) bool { return tii.currentTxns[i].Nonce < tii.currentTxns[j].Nonce })
 
 	if i > -1 {
-		tii.futureTxns[txn.ClientID] = futures[i:]
+		tii.futureTxns[txn.ClientID].txns = futures[i:]
+		tii.futureTxns[txn.ClientID].nonce = currentNonce
+		futureNonces := make([]int64, len(futures[i:]))
+		for j, t := range futures[i:] {
+			futureNonces[j] = t.Nonce
+		}
+		logging.Logger.Debug("generate block - debug future transactions",
+			zap.Int64("current nonce", currentNonce),
+			zap.Int64s("future nonces", futureNonces))
 	}
 }
 
@@ -901,7 +933,7 @@ func newTxnIterInfo(blockSize int32) *TxnIterInfo {
 	return &TxnIterInfo{
 		clients:    make(map[string]*client.Client),
 		eTxns:      make([]datastore.Entity, 0, blockSize),
-		futureTxns: make(map[datastore.Key][]*transaction.Transaction),
+		futureTxns: make(map[datastore.Key]*clientNonceTxns),
 		txnMap:     make(map[datastore.Key]struct{}, blockSize),
 	}
 }
@@ -954,7 +986,7 @@ func txnIterHandlerFunc(
 
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
-			logging.Logger.Debug("Bad transaction cost fee",
+			logging.Logger.Debug("generate block - bad transaction cost fee",
 				zap.Error(err),
 				zap.String("txn_hash", txn.Hash))
 
@@ -974,7 +1006,7 @@ func txnIterHandlerFunc(
 			}
 
 			if err := txn.ValidateFee(mc.ChainConfig.TxnExempt(), fee); err != nil {
-				logging.Logger.Error("invalid transaction fee",
+				logging.Logger.Error("generate block - invalid transaction fee",
 					zap.Any("txn", txn),
 					zap.Any("estimated fee", fee),
 					zap.Error(err))
@@ -990,13 +1022,26 @@ func txnIterHandlerFunc(
 
 		success, err := txnProcessor(ctx, bState, txn, tii, waitC)
 		if err != nil {
+			logging.Logger.Debug("generate block txn processor failed",
+				zap.Error(err),
+				zap.Int64("round", b.Round),
+				zap.Int32("iterate count", tii.count),
+				zap.Int("current block size", len(b.Txns)))
 			return false, err
 		}
 
 		if !success {
 			// skipping and continue to check the next transaction
+			logging.Logger.Debug("generate block txn processor failed",
+				zap.Int64("round", b.Round),
+				zap.Int32("iterate count", tii.count),
+				zap.Int("current block size", len(b.Txns)))
 			return true, nil
 		}
+
+		logging.Logger.Debug("generate block - process txn success",
+			zap.Int64("round", b.Round),
+			zap.String("txn", txn.Hash))
 
 		tii.cost += cost
 		if tii.byteSize >= mc.MaxByteSize() {
@@ -1056,6 +1101,54 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	iterInfo.cost += cost
+	futureNonceAllowed := int64(mc.ChainConfig.TxnFutureNonce())
+
+	defer func() {
+		var (
+			deleteTxns = make([]datastore.Entity, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
+			txnHashes  = make([]string, 0, len(iterInfo.futureTxns)+len(iterInfo.pastTxns))
+		)
+
+		// removes future transactions with nonce is too far away
+		if len(iterInfo.futureTxns) > 0 {
+			for _, nonceTxns := range iterInfo.futureTxns {
+				txns := nonceTxns.txns
+				if len(txns) > 0 {
+					if txns[0].Nonce-nonceTxns.nonce > futureNonceAllowed {
+						// remove all following future txns
+						for _, ft := range txns {
+							deleteTxns = append(deleteTxns, ft)
+							txnHashes = append(txnHashes, ft.Hash)
+						}
+					}
+				}
+			}
+
+			logging.Logger.Debug("remove future txns",
+				zap.Int("count", len(deleteTxns)),
+				zap.Strings("txns", txnHashes),
+				zap.Int64("future transaction limit", futureNonceAllowed))
+		}
+
+		if len(iterInfo.pastTxns) > 0 {
+			fc := len(deleteTxns)
+			for _, pte := range iterInfo.pastTxns {
+				pt := pte.(*transaction.Transaction)
+				deleteTxns = append(deleteTxns, pt)
+				txnHashes = append(txnHashes, pt.Hash)
+			}
+
+			logging.Logger.Debug("remove past txns",
+				zap.Int("count", len(iterInfo.pastTxns)),
+				zap.Strings("txns", txnHashes[fc:]))
+		}
+
+		if len(deleteTxns) > 0 {
+			if err := mc.deleteTxns(deleteTxns); err != nil {
+				logging.Logger.Warn("generate block - remove future txns failed", zap.Error(err))
+			}
+		}
+	}()
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
@@ -1104,9 +1197,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	switch err {
 	case context.DeadlineExceeded:
-		logging.Logger.Debug("Slow block generation, stopping transaction collection and finishing the block")
+		logging.Logger.Debug("generate block - slow block generation, stopping transaction collection and finishing the block")
 	case context.Canceled:
-		logging.Logger.Debug("Context cancelled, rejecting current block")
+		logging.Logger.Debug("generate block - context cancelled, rejecting current block")
 		return err
 	default:
 		if err != nil {
@@ -1156,10 +1249,18 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	if iterInfo.byteSize < mc.MaxByteSize() {
 		if !waitOver && blockSize < mc.MinBlockSize() {
 			b.Txns = nil
+			var futureTxnsCount int
+			for _, ftxns := range iterInfo.futureTxns {
+				futureTxnsCount += len(ftxns.txns)
+			}
 			logging.Logger.Debug("generate block (insufficient txns)",
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", iterInfo.count),
-				zap.Int32("block_size", blockSize))
+				zap.Int32("block_size", blockSize),
+				zap.Int32("state failure", iterInfo.failedStateCount),
+				zap.Int("invalid txns", len(iterInfo.invalidTxns)),
+				zap.Int("future txns", futureTxnsCount))
+
 			return common.NewError(InsufficientTxns,
 				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v, future %v, reused %v)",
 					b.Round, iterInfo.count, blockSize, iterInfo.failedStateCount, len(iterInfo.invalidTxns), len(iterInfo.futureTxns), 0))

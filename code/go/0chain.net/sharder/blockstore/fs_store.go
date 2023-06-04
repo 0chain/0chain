@@ -69,12 +69,15 @@ func hasEnoughInodesAndSize(p string) error {
 	return nil
 }
 
-func getBlockFilePath(hash string) string {
+func getBlockFilePath(hash string) (string, error) {
+	if len(hash) < subDirs {
+		return "", fmt.Errorf("invalid block hash: %s", hash)
+	}
 	var s string
 	for i := 0; i < subDirs; i++ {
 		s += string(hash[i]) + string(os.PathSeparator)
 	}
-	return filepath.Join(s, fmt.Sprintf("%s.%s", hash[subDirs:], extension))
+	return filepath.Join(s, fmt.Sprintf("%s.%s", hash[subDirs:], extension)), nil
 }
 
 type BlockStore struct {
@@ -89,8 +92,12 @@ type BlockStore struct {
 }
 
 func (bStore *BlockStore) writeToDisk(hash string, b *block.Block) error {
-	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash))
-	err := os.MkdirAll(filepath.Dir(bPath), 0700)
+	bp, err := getBlockFilePath(hash)
+	if err != nil {
+		return err
+	}
+	bPath := filepath.Join(bStore.basePath, bp)
+	err = os.MkdirAll(filepath.Dir(bPath), 0700)
 	if err != nil {
 		return err
 	}
@@ -176,7 +183,11 @@ func (bStore *BlockStore) Read(hash string) (*block.Block, error) {
 }
 
 func (bStore *BlockStore) readFromDisk(hash string) (*block.Block, error) {
-	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash))
+	bp, err := getBlockFilePath(hash)
+	if err != nil {
+		return nil, err
+	}
+	bPath := filepath.Join(bStore.basePath, bp)
 	f, err := os.Open(bPath)
 	if err != nil {
 		return nil, err
@@ -204,14 +215,10 @@ func (bStore *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.B
 // Init checks for minimum disk size, inodes requirement and assigns
 // block storer to a variable. If any error occurs during initialization
 // it will panic.
-func Init(sViper *viper.Viper) {
+func Init(workDir string, sViper *viper.Viper) {
 	logging.Logger.Info("Initializing storage")
 
-	basePath := sViper.GetString("root_dir")
-	if basePath == "" {
-		panic("root dir cannot be empty")
-	}
-
+	basePath := filepath.Join(workDir, "data", "blocks")
 	err := hasEnoughInodesAndSize(basePath)
 	if err != nil {
 		// TODO comment out for build integration tests.
@@ -222,7 +229,6 @@ func Init(sViper *viper.Viper) {
 		if err != nil {
 			panic(err)
 		}
-		// remove above block
 	}
 
 	bStore := &BlockStore{
@@ -231,10 +237,11 @@ func Init(sViper *viper.Viper) {
 		basePath:              basePath,
 	}
 
-	cViper := sViper.Sub("cache")
-	if cViper != nil {
-		bStore.cache = initCache(cViper)
+	if sViper != nil {
+		cViper := sViper.Sub("cache")
+		if cViper != nil {
+			bStore.cache = initCache(cViper)
+		}
 	}
-
 	SetupStore(bStore)
 }
