@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/block"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -505,9 +506,13 @@ func setupMocksFinishAllocation(
 		ToClientID:   storageScId,
 		CreationDate: now,
 	}
+
+	block := &block.Block{}
+	block.Round = 100
+
 	var ctx = &mockStateContext{
 		StateContext: *cstate.NewStateContext(
-			nil,
+			block,
 			&util.MerklePatriciaTrie{},
 			txn,
 			nil,
