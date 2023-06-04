@@ -2156,7 +2156,7 @@ func Test_finalize_allocation(t *testing.T) {
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		b := &block.Block{}
-		b.Round = 1 + i
+		b.Round = 100 + i
 		balances.setBlock(t, b)
 
 		fmt.Println("Test Round : ", balances.GetBlock().Round)
@@ -2315,7 +2315,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		b := &block.Block{}
-		b.Round = 1 + i
+		b.Round = 100 + i
 		balances.setBlock(t, b)
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)

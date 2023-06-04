@@ -722,7 +722,7 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	tx := newTransaction(b3.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 
-	round := 0
+	round := 100
 
 	stateRoots := make(map[string]struct{}, 10)
 	for i := 0; i < 20; i++ {
