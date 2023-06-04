@@ -35,8 +35,9 @@ func TestBlockStoreWriteReadFromDisk(t *testing.T) {
 	b.Hash = "new hash"
 	err = bStore.writeToDisk(b.Hash, b)
 	require.NoError(t, err)
-
-	bPath := filepath.Join(basePath, getBlockFilePath(b.Hash))
+	bp, err := getBlockFilePath(b.Hash)
+	require.NoError(t, err)
+	bPath := filepath.Join(basePath, bp)
 
 	_, err = os.Stat(bPath)
 	require.NoError(t, err)
