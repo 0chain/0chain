@@ -264,12 +264,14 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
 
 	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
 
+	result, _ := currency.Float64ToCoin(mldf * rdtu)
+
 	logging.Logger.Info("minLockDemand",
 		zap.Any("terms", t),
 		zap.Any("gbSize", gbSize),
 		zap.Any("rdtu", rdtu),
 		zap.Any("WritePrice", t.WritePrice),
-		zap.Any("result", interface{}(currency.Float64ToCoin(mldf*rdtu))),
+		zap.Any("result", result),
 		zap.Any("mldf", mldf),
 		zap.Any("MinLockDemand", t.MinLockDemand),
 	)
