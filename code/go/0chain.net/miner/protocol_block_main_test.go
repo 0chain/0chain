@@ -28,7 +28,7 @@ import (
 func TestTxnIterInfo_checkForCurrent(t *testing.T) {
 	type fields struct {
 		pastTxns    []datastore.Entity
-		futureTxns  map[datastore.Key][]*transaction.Transaction
+		futureTxns  map[datastore.Key]*clientNonceTxns
 		currentTxns []*transaction.Transaction
 	}
 	type args struct {
@@ -80,104 +80,106 @@ func TestTxnIterInfo_checkForCurrent(t *testing.T) {
 			name: "test_for_empty_future_with_client",
 			fields: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[0]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[0]}}},
 				currentTxns: nil,
 			},
 			args: args{txs2[0]},
 			want: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[0]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[0]}}},
 				currentTxns: nil,
 			},
 		}, {
 			name: "test_with_gap",
 			fields: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[4], txs1[5], txs1[6]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[4], txs1[5], txs1[6]}}},
 				currentTxns: nil,
 			},
 			args: args{txs1[0]},
 			want: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[4], txs1[5], txs1[6]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[4], txs1[5], txs1[6]}}},
 				currentTxns: nil,
 			},
 		}, {
 			name: "test_with_next_and_gap",
 			fields: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[6], txs1[7], txs1[8]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[1], txs1[6], txs1[7], txs1[8]}}},
 				currentTxns: nil,
 			},
 			args: args{txs1[0]},
 			want: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[6], txs1[7], txs1[8]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {1, []*transaction.Transaction{txs1[6], txs1[7], txs1[8]}}},
 				currentTxns: []*transaction.Transaction{txs1[1]},
 			},
 		}, {
 			name: "test_with_next_two_and_gap",
 			fields: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[4], txs1[8]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[1], txs1[4], txs1[8]}}},
 				currentTxns: nil,
 			},
 			args: args{txs1[0]},
 			want: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[8]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {2, []*transaction.Transaction{txs1[8]}}},
 				currentTxns: []*transaction.Transaction{txs1[1], txs1[4]},
 			},
 		}, {
 			name: "test_with_next_three_and_no_gap",
 			fields: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[4], txs1[6]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[1], txs1[4], txs1[6]}}},
 				currentTxns: nil,
 			},
 			args: args{txs1[0]},
 			want: fields{
 				pastTxns:    nil,
-				futureTxns:  map[string][]*transaction.Transaction{"1": {}},
+				futureTxns:  map[string]*clientNonceTxns{"1": {3, []*transaction.Transaction{}}},
 				currentTxns: []*transaction.Transaction{txs1[1], txs1[4], txs1[6]},
 			},
 		}, {
 			name: "test_with_next_three_and_2_similar_no_gap",
 			fields: fields{
 				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[3], txs1[4], txs1[6]}},
+				futureTxns:  map[datastore.Key]*clientNonceTxns{"1": {0, []*transaction.Transaction{txs1[1], txs1[3], txs1[4], txs1[6]}}},
 				currentTxns: nil,
 			},
 			args: args{txs1[0]},
 			want: fields{
 				pastTxns:    []datastore.Entity{txs1[3]},
-				futureTxns:  map[string][]*transaction.Transaction{"1": {}},
+				futureTxns:  map[string]*clientNonceTxns{"1": {3, []*transaction.Transaction{}}},
 				currentTxns: []*transaction.Transaction{txs1[1], txs1[4], txs1[6]},
 			},
 		}, {
 			name: "test_with_next_three_and_2_similar_and_gap",
 			fields: fields{
-				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[3], txs1[4], txs1[6], txs1[8]}},
+				pastTxns: nil,
+				futureTxns: map[datastore.Key]*clientNonceTxns{"1": {0,
+					[]*transaction.Transaction{txs1[1], txs1[3], txs1[4], txs1[6], txs1[8]}}},
 				currentTxns: nil,
 			},
 			args: args{txs1[0]},
 			want: fields{
 				pastTxns:    []datastore.Entity{txs1[3]},
-				futureTxns:  map[string][]*transaction.Transaction{"1": {txs1[8]}},
+				futureTxns:  map[string]*clientNonceTxns{"1": {3, []*transaction.Transaction{txs1[8]}}},
 				currentTxns: []*transaction.Transaction{txs1[1], txs1[4], txs1[6]},
 			},
 		}, {
 			name: "test_full",
 			fields: fields{
-				pastTxns:    nil,
-				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[2], txs1[3], txs1[4], txs1[5], txs1[6], txs1[7], txs1[8]}},
+				pastTxns: nil,
+				futureTxns: map[datastore.Key]*clientNonceTxns{"1": {0,
+					[]*transaction.Transaction{txs1[1], txs1[2], txs1[3], txs1[4], txs1[5], txs1[6], txs1[7], txs1[8]}}},
 				currentTxns: nil,
 			},
 			args: args{txs1[0]},
 			want: fields{
 				pastTxns:    []datastore.Entity{txs1[2], txs1[3], txs1[5]},
-				futureTxns:  map[string][]*transaction.Transaction{"1": {}},
+				futureTxns:  map[string]*clientNonceTxns{"1": {5, []*transaction.Transaction{}}},
 				currentTxns: []*transaction.Transaction{txs1[1], txs1[4], txs1[6], txs1[7], txs1[8]},
 			},
 		},
@@ -191,7 +193,7 @@ func TestTxnIterInfo_checkForCurrent(t *testing.T) {
 			}
 			tii.checkForCurrent(tt.args.txn)
 			require.Equal(t, tt.want.pastTxns, tii.pastTxns)
-			require.Equal(t, tt.want.futureTxns, tii.futureTxns)
+			require.EqualValues(t, tt.want.futureTxns, tii.futureTxns)
 			require.Equal(t, tt.want.currentTxns, tii.currentTxns)
 		})
 	}

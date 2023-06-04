@@ -1393,16 +1393,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	s, err := GetStateById(lfb.ClientState, txn.ClientID)
 	if cstate.ErrInvalidState(err) {
-		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
-		// of the 'error' of the miner itself.
-		txnRsp, err := transaction.PutTransaction(ctx, txn)
-		if err != nil {
-			logging.Logger.Error("failed to save transaction",
-				zap.Error(err),
-				zap.Any("txn", txn))
-			return nil, common.NewErrInternal("failed to save transaction")
-		}
-		return txnRsp, nil
+		return nil, common.NewErrInternal("miner state not ready")
 	}
 
 	var nonce int64
@@ -1414,6 +1405,13 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, errors.New("invalid transaction nonce")
 	}
 
+	if nonce+int64(sc.ChainConfig.TxnFutureNonce()) < txn.Nonce {
+		logging.Logger.Error("invalid transaction nonce (too far)",
+			zap.Int64("txn_nonce", txn.Nonce),
+			zap.Int64("nonce", nonce))
+		return nil, errors.New("invalid future transaction")
+	}
+
 	if nonce+1 == txn.Nonce && txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
 		return nil, errors.New("insufficient balance to send")
 	}
@@ -1422,16 +1420,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		_, minFee, err := sc.EstimateTransactionCostFee(ctx, lfb, txn, WithSync())
 		if err != nil {
 			if cstate.ErrInvalidState(err) {
-				// put transaction into pool if got invalid state error
-				// to avoid txn rejected due to miner's own fault
-				txnRsp, err := transaction.PutTransaction(ctx, txn)
-				if err != nil {
-					logging.Logger.Error("failed to save transaction",
-						zap.Error(err),
-						zap.Any("txn", txn))
-					return nil, common.NewErrInternal("failed to save transaction")
-				}
-				return txnRsp, nil
+				return nil, common.NewErrInternal("miner state not ready")
 			}
 			return nil, fmt.Errorf("could not get estimated txn cost: %v", err)
 		}
