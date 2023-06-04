@@ -69,12 +69,15 @@ func hasEnoughInodesAndSize(p string) error {
 	return nil
 }
 
-func getBlockFilePath(hash string) string {
+func getBlockFilePath(hash string) (string, error) {
+	if len(hash) < subDirs {
+		return "", fmt.Errorf("invalid block hash: %s", hash)
+	}
 	var s string
 	for i := 0; i < subDirs; i++ {
 		s += string(hash[i]) + string(os.PathSeparator)
 	}
-	return filepath.Join(s, fmt.Sprintf("%s.%s", hash[subDirs:], extension))
+	return filepath.Join(s, fmt.Sprintf("%s.%s", hash[subDirs:], extension)), nil
 }
 
 type BlockStore struct {
@@ -89,8 +92,12 @@ type BlockStore struct {
 }
 
 func (bStore *BlockStore) writeToDisk(hash string, b *block.Block) error {
-	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash))
-	err := os.MkdirAll(filepath.Dir(bPath), 0700)
+	bp, err := getBlockFilePath(hash)
+	if err != nil {
+		return err
+	}
+	bPath := filepath.Join(bStore.basePath, bp)
+	err = os.MkdirAll(filepath.Dir(bPath), 0700)
 	if err != nil {
 		return err
 	}
@@ -176,7 +183,11 @@ func (bStore *BlockStore) Read(hash string) (*block.Block, error) {
 }
 
 func (bStore *BlockStore) readFromDisk(hash string) (*block.Block, error) {
-	bPath := filepath.Join(bStore.basePath, getBlockFilePath(hash))
+	bp, err := getBlockFilePath(hash)
+	if err != nil {
+		return nil, err
+	}
+	bPath := filepath.Join(bStore.basePath, bp)
 	f, err := os.Open(bPath)
 	if err != nil {
 		return nil, err
