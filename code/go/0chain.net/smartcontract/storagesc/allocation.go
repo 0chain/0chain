@@ -1045,6 +1045,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	conf *Config,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
+
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_updating_failed",
 			"missing client_id in transaction")
@@ -1056,7 +1057,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
+	uniqueIdForLogging := fmt.Sprintf("sa %s", request.ID)
+
 	if request.OwnerID == "" {
+
 		request.OwnerID = t.ClientID
 	}
 
@@ -1065,6 +1069,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get existing allocation: "+err.Error())
 	}
+
+	logging.Logger.Info("jayash updateAllocationReq "+uniqueIdForLogging, zap.Any("allocation", alloc))
 
 	if err != nil {
 		return "", err
@@ -1097,7 +1103,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
-	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
+	// This way, even if an attacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
 	if t.ClientID != alloc.Owner /* Third-party actions */ {
 		if request.Size < 0 || request.Expiration < 0 {
 			return "", common.NewError("allocation_updating_failed", "third party can only extend the allocation")
@@ -1119,6 +1125,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if newExpiration <= t.CreationDate {
 			return sc.closeAllocation(t, alloc, balances) // update alloc tx, expir
 		}
+
+		logging.Logger.Info("jayash updateAllocationReq "+uniqueIdForLogging,
+			zap.Any("newExpiration", newExpiration),
+			zap.Any("blobbers", blobbers))
 
 		// an allocation can't be shorter than configured in SC
 		// (prevent allocation shortening for entire period)

@@ -263,7 +263,18 @@ type Terms struct {
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
 
 	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return currency.Float64ToCoin(mldf * rdtu)                  //
+
+	logging.Logger.Info("minLockDemand",
+		zap.Any("terms", t),
+		zap.Any("gbSize", gbSize),
+		zap.Any("rdtu", rdtu),
+		zap.Any("WritePrice", t.WritePrice),
+		zap.Any("result", interface{}(currency.Float64ToCoin(mldf*rdtu))),
+		zap.Any("mldf", mldf),
+		zap.Any("MinLockDemand", t.MinLockDemand),
+	)
+
+	return currency.Float64ToCoin(mldf * rdtu) //
 }
 
 // validate a received terms
@@ -528,6 +539,8 @@ func newBlobberAllocation(
 	date common.Timestamp,
 	timeUnit time.Duration,
 ) (*BlobberAllocation, error) {
+	uniqueIdForLogging := fmt.Sprintf("sa %s", allocation.ID)
+
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
@@ -541,6 +554,15 @@ func newBlobberAllocation(
 	}
 
 	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu)
+
+	logging.Logger.Info("jayash newBlobberAllocation"+uniqueIdForLogging,
+		zap.Any("ba.MinLockDemand", ba.MinLockDemand),
+		zap.Any("blobber.Terms", blobber.Terms),
+		zap.Any("sizeInGB(size)", sizeInGB(size)),
+		zap.Any("rdtu", rdtu),
+		zap.Any("err", err),
+		zap.Any("ba", ba))
+
 	return ba, err
 }
 
@@ -857,8 +879,16 @@ func (sa *StorageAllocation) isActive(
 }
 
 func (sa *StorageAllocation) cost() (currency.Coin, error) {
+	uniqueIdForLogging := fmt.Sprintf("sa:%s", sa.ID)
+
 	var cost currency.Coin
 	for _, ba := range sa.BlobberAllocs {
+		logging.Logger.Info("jayash cost "+uniqueIdForLogging,
+			zap.Any("ba", ba),
+			zap.Any("sa", sa),
+			zap.Any("size", ba.Size),
+		)
+
 		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 		if err != nil {
 			return 0, err
@@ -880,6 +910,8 @@ func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (c
 }
 
 func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
+	uniqueIdForLogging := fmt.Sprintf("sa:%s", sa.ID)
+
 	cancellationCharge, err := sa.cancellationCharge(cancellationFraction)
 	if err != nil {
 		return err
@@ -888,6 +920,14 @@ func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
 	if err != nil {
 		return err
 	}
+
+	logging.Logger.Info("jayash checkFunding "+uniqueIdForLogging,
+		zap.Any("cancellationFraction", cancellationFraction),
+		zap.Any("cancellationCharge", cancellationCharge),
+		zap.Any("mld", mld),
+		zap.Any("sa.WritePool", sa.WritePool),
+	)
+
 	if sa.WritePool < cancellationCharge+mld {
 		return fmt.Errorf("not enough tokens to honor the cancellation charge plus min lock demand"+" (%d < %d + %d)",
 			sa.WritePool, cancellationCharge, mld)
@@ -1082,14 +1122,27 @@ type StorageAllocationDecode StorageAllocation
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
 func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error) {
+	uniqueIdForLogging := fmt.Sprintf("allocation:%s", sa.ID)
+
 	for _, details := range sa.BlobberAllocs {
+		logging.Logger.Info("jayash restMinLockDemand",
+			zap.String("allocation", uniqueIdForLogging),
+			zap.String("blobber", details.BlobberID),
+			zap.Any("min_lock_demand", details.MinLockDemand),
+			zap.Any("spent", details.Spent))
 		if details.MinLockDemand > details.Spent {
+			logging.Logger.Info("jayash restMinLockDemand 2",
+				zap.String("allocation", uniqueIdForLogging),
+				zap.String("blobber", details.BlobberID),
+				zap.Any("min_lock_demand", details.MinLockDemand),
+				zap.Any("spent", details.Spent))
 			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
 			if err != nil {
 				return
 			}
 		}
 	}
+
 	return
 }
 
