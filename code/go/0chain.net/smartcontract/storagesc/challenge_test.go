@@ -733,7 +733,6 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 
 		bk := &block.Block{}
 		bk.Round = int64(round)
-		round += 30
 		balances.setBlock(t, bk)
 
 		var resp string
