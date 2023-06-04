@@ -66,8 +66,6 @@ func (sc *StorageSmartContract) getStorageChallenge(challengeID string,
 func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 	balances cstate.StateContextI) (ac *AllocationChallenges, err error) {
 
-	fmt.Println("here", sc.ID, allocID)
-
 	ac = new(AllocationChallenges)
 	ac.AllocationID = allocID
 	err = balances.GetTrieNode(ac.GetKey(sc.ID), ac)
