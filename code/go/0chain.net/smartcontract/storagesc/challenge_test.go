@@ -728,15 +728,16 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		clientState := createTxnMPT(balances.GetState())
 		signatureScheme := &encryption.BLS0ChainScheme{}
-		cs := cstate.NewStateContext(balances.block, clientState,
-			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
 
 		bk := &block.Block{}
 		bk.Round = int64(round)
 		balances.setBlock(t, bk)
 
+		cs := cstate.NewStateContext(balances.block, clientState,
+			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
+
 		var resp string
-		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), cs)
 		require.NoError(t, err)
 
 		require.Equal(t, resp, "challenge passed by blobber")
