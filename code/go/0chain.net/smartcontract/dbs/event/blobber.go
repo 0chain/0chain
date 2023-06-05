@@ -239,7 +239,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
-	dbStore = dbStore.Where("is_available = true")
+	dbStore = dbStore.Where("not_available = false")
 	dbStore = dbStore.Limit(limit.Limit).
 		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
@@ -272,7 +272,7 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"capacity",
 		"allocated",
 		"saved_data",
-		"is_available",
+		"not_available",
 		"offers_total",
 		"delegate_wallet",
 		"num_delegates",
