@@ -11,7 +11,7 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/persistencestore"
+	"0chain.net/core/ememorystore"
 	"0chain.net/core/util"
 )
 
@@ -44,11 +44,9 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 		content = "confirmation"
 	}
 
-	var transactionConfirmationEntityMetadata = datastore.GetEntityMetadata(
-		"txn_confirmation")
-	ctx = persistencestore.WithEntityConnection(ctx,
-		transactionConfirmationEntityMetadata)
-	defer persistencestore.Close(ctx)
+	var transactionSummaryEntity = datastore.GetEntityMetadata("txn_summary")
+	ctx = ememorystore.WithEntityConnection(ctx, transactionSummaryEntity)
+	defer ememorystore.Close(ctx)
 
 	var (
 		state             = crpc.Client().State()

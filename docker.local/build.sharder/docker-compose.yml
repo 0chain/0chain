@@ -1,24 +1,5 @@
 version: '3'
 services:
-  cassandra:
-    image: cassandra:3.11.4
-    networks:
-      default:
-    #ports:
-    #- "9042:9042"
-    volumes:
-    - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra/data
-
-  cassandra-init:
-    image: cassandra:latest
-    volumes:
-      - ../../bin:/0chain/bin
-      - ../../sql:/0chain/sql
-    command: bash /0chain/bin/cassandra-init.sh
-    links:
-      - cassandra:cassandra
-    restart: on-failure
-
   postgres:
     image: postgres:14
     environment:
@@ -50,11 +31,6 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - DOCKER=true
-      - CASSANDRA_CLUSTER=cassandra
-    depends_on:
-      - cassandra-init
-    links:
-      - cassandra-init:cassandra-init
     volumes:
       - ../config:/0chain/config
       - ../sharder${SHARDER}/log:/0chain/log

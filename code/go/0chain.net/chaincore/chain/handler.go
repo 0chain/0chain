@@ -1360,8 +1360,17 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
-	if txn.CreationDate < common.Now()-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
-		return nil, fmt.Errorf("put_transaction: time out of sync with server time")
+	err := txn.Validate(ctx)
+	if err != nil {
+		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
+		return nil, err
+	}
+
+	if txn.Value > config.MaxTokenSupply {
+		logging.Logger.Error("put transaction error - value exceeds max token supply",
+			zap.Uint64("value", uint64(txn.Value)),
+			zap.Uint64("max_token_supply", config.MaxTokenSupply))
+		return nil, fmt.Errorf("transaction value exceeds max token supply")
 	}
 
 	sc := GetServerChain()
@@ -1384,16 +1393,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	s, err := GetStateById(lfb.ClientState, txn.ClientID)
 	if cstate.ErrInvalidState(err) {
-		// put txn to pool if the miner got 'node not found', we should not ignore the txn because
-		// of the 'error' of the miner itself.
-		txnRsp, err := transaction.PutTransaction(ctx, txn)
-		if err != nil {
-			logging.Logger.Error("failed to save transaction",
-				zap.Error(err),
-				zap.Any("txn", txn))
-			return nil, common.NewErrInternal("failed to save transaction")
-		}
-		return txnRsp, nil
+		return nil, common.NewErrInternal("miner state not ready")
 	}
 
 	var nonce int64
@@ -1405,6 +1405,13 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, errors.New("invalid transaction nonce")
 	}
 
+	if nonce+int64(sc.ChainConfig.TxnFutureNonce()) < txn.Nonce {
+		logging.Logger.Error("invalid transaction nonce (too far)",
+			zap.Int64("txn_nonce", txn.Nonce),
+			zap.Int64("nonce", nonce))
+		return nil, errors.New("invalid future transaction")
+	}
+
 	if nonce+1 == txn.Nonce && txn.TransactionType == transaction.TxnTypeSend && s.Balance < txn.Value {
 		return nil, errors.New("insufficient balance to send")
 	}
@@ -1413,16 +1420,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		_, minFee, err := sc.EstimateTransactionCostFee(ctx, lfb, txn, WithSync())
 		if err != nil {
 			if cstate.ErrInvalidState(err) {
-				// put transaction into pool if got invalid state error
-				// to avoid txn rejected due to miner's own fault
-				txnRsp, err := transaction.PutTransaction(ctx, txn)
-				if err != nil {
-					logging.Logger.Error("failed to save transaction",
-						zap.Error(err),
-						zap.Any("txn", txn))
-					return nil, common.NewErrInternal("failed to save transaction")
-				}
-				return txnRsp, nil
+				return nil, common.NewErrInternal("miner state not ready")
 			}
 			return nil, fmt.Errorf("could not get estimated txn cost: %v", err)
 		}

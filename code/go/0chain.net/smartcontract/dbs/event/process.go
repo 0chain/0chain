@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"golang.org/x/net/context"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 
 	"go.uber.org/zap"

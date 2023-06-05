@@ -68,6 +68,7 @@ server_chain:
     max_fee: 1 # max fee per txn would be 1 ZCN, adjust later if needed
     transfer_cost: 10
     cost_fee_coeff: 1000 # 1000 unit cost per 1 ZCN
+    future_nonce: 10 # allow 10 nonce ahead of current client state
     exempt:
       - contributeMpk
       - shareSignsOrShares
@@ -173,16 +174,14 @@ cassandra:
 
 # There's a TODO comment in fs_store.go. Please check this while we go into production.
 storage:
-# root_dir is where the blocks will permanently be stored. It can be any mounted drive. Having it as HDD drive
-# and using SSD as cache is efficient and cost effective. Sharder can also have root_dir as mounted SSD drive and
-# don't use cache.
-  root_dir: "/path/to/root/directory"
 # cache is optional. It should be SSD drive. Having HDD drive as cache is not effective.
 # Cache is effective when blocks are stored in HDD. Cache stores uncompressed blocks so that
 # accessing and unmarshalling is faster than with compressed block in HDD.
-  cache:
-    path: "/path/to/cache"
-    total_blocks: 1000 # Total number of blocks this cache will store
+#
+# Uncomment the following lines to enable cache.
+#  cache:
+#    path: "/path/to/cache"
+#    total_blocks: 1000 # Total number of blocks this cache will store
 # integration tests related configurations
 integration_tests:
   # address of the server

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/dbs/event"
 
 	"go.uber.org/zap"
@@ -33,10 +34,8 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/sharder"
-	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
 	"github.com/0chain/common/core/logging"
 	. "github.com/0chain/common/core/logging"
@@ -77,6 +76,8 @@ func main() {
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
 	initEntities(workdir)
+	sViper := viper.Sub("storage")
+	blockstore.Init(workdir, sViper)
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
 	err = signatureScheme.ReadKeys(reader)
@@ -168,12 +169,6 @@ func main() {
 
 	// TODO: put it in a better place
 	go sc.StartLFMBWorker(ctx)
-
-	sViper := viper.Sub("storage")
-	if sViper == nil {
-		panic("Storage config is required")
-	}
-	blockstore.Init(sViper)
 
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock, initStates)
 
@@ -406,6 +401,8 @@ func initEntities(workdir string) {
 
 	round.SetupRoundSummaryDB(workdir)
 	block.SetupBlockSummaryDB(workdir)
+	block.SetupMagicBlockMapDB(workdir)
+	transaction.SetupTxnSummaryDB(workdir)
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
@@ -415,11 +412,8 @@ func initEntities(workdir string) {
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
 
-	persistencestore.InitSession()
-	persistenceStorage := persistencestore.GetStorageProvider()
-	transaction.SetupTxnSummaryEntity(persistenceStorage)
-	transaction.SetupTxnConfirmationEntity(persistenceStorage)
-	block.SetupMagicBlockMapEntity(persistenceStorage)
+	transaction.SetupTxnSummaryEntity(ememoryStorage)
+	block.SetupMagicBlockMapEntity(ememoryStorage)
 
 	sharder.SetupBlockSummaries()
 	sharder.SetupRoundSummaries()
