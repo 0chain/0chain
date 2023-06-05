@@ -383,6 +383,13 @@ func (c *ConfigImpl) TxnCostFeeCoeff() int {
 	return coeff
 }
 
+func (c *ConfigImpl) TxnFutureNonce() int {
+	c.guard.RLock()
+	fn := c.conf.TxnFutureNonce
+	c.guard.RUnlock()
+	return fn
+}
+
 // ConfigData - chain Configuration
 type ConfigData struct {
 	version               int64         `json:"-"` //version of config to track updates
@@ -411,6 +418,7 @@ type ConfigData struct {
 	TxnMaxPayload         int           `json:"transaction_max_payload"`   // Max payload allowed in the transaction
 	TxnTransferCost       int           `json:"transaction_transfer_cost"` // Transaction transfer cost
 	TxnCostFeeCoeff       int           `json:"txn_cost_fee_coeff"`        // Transaction cost fee coefficient
+	TxnFutureNonce        int           `json:"future_nonce"`              // Future transaction nonce allowed
 	MinTxnFee             currency.Coin `json:"min_txn_fee"`               // Minimum txn fee allowed
 	MaxTxnFee             currency.Coin `json:"max_txn_fee"`               // Maximum txn fee allowed
 	PruneStateBelowCount  int           `json:"prune_state_below_count"`   // Prune state below these many rounds
@@ -497,7 +505,7 @@ func (c *ConfigImpl) FromViper() error {
 
 	conf.TxnTransferCost = viper.GetInt("server_chain.transaction.transfer_cost")
 	conf.TxnCostFeeCoeff = viper.GetInt("server_chain.transaction.cost_fee_coeff")
-	//conf.TxnCostFeeCoeff = 100000
+	conf.TxnFutureNonce = viper.GetInt("server_chain.transaction.future_nonce")
 	txnExp := viper.GetStringSlice("server_chain.transaction.exempt")
 	conf.TxnExempt = make(map[string]bool)
 	for i := range txnExp {

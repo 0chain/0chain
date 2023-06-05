@@ -106,3 +106,7 @@ func (s StoreCustom) GetCollectionSize(_ context.Context, _ datastore.EntityMeta
 func (s StoreCustom) IterateCollection(_ context.Context, _ datastore.EntityMetadata, _ string, _ datastore.CollectionIteratorHandler) error {
 	panic("not implemented")
 }
+
+func (s StoreCustom) Merge(_ context.Context, _ datastore.Entity) error {
+	panic("not implemented")
+}
