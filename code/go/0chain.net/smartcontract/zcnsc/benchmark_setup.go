@@ -65,7 +65,10 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.ZcnPercentAuthorizers)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress)
 	gn.MaxDelegates = viper.GetInt(benchmark.ZcnMaxDelegates)
-	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
+	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ctx cstate.StateContextI) {

@@ -225,7 +225,7 @@ func setUpMpt(
 	bk.Round = viper.GetInt64(benchmark.NumBlocks)
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
-
+	var benchmarkTime = common.Now()
 	balances := cstate.NewStateContext(
 		bk,
 		pMpt,
@@ -233,7 +233,7 @@ func setUpMpt(
 			HashIDField: datastore.HashIDField{
 				Hash: encryption.Hash("mock transaction hash"),
 			},
-			CreationDate: common.Now(),
+			CreationDate: benchmarkTime,
 		},
 		func(int64) *block.MagicBlock { return magicBlock },
 		func() *block.Block { return bk },
@@ -553,7 +553,7 @@ func setUpMpt(
 			log.Fatal(err)
 		}
 
-		benchData.Now = common.Now()
+		benchData.Now = benchmarkTime
 
 		if _, err := balances.InsertTrieNode(BenchDataKey, &benchData); err != nil {
 			log.Fatal(err)
