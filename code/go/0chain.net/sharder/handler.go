@@ -3,9 +3,6 @@ package sharder
 import (
 	"context"
 	"fmt"
-	"github.com/0chain/common/core/logging"
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"strings"
@@ -327,8 +324,6 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "\t\t\t<th>Count</th>")
 	fmt.Fprintln(w, "\t\t</tr>")
 
-	uniqueIdForLogging := uuid.NewString()
-
 	for transactionError, errorDetails := range transactionErrors {
 		count := 0
 		for _, detail := range errorDetails {
@@ -343,7 +338,6 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td colspan='2'>")
 		fmt.Fprintf(w, "<table>")
 		for _, detail := range errorDetails {
-			logging.Logger.Info("TransactionErrorWriter "+uniqueIdForLogging, zap.Any("detail", detail))
 			fmt.Fprintf(w, "<tr>")
 			fmt.Fprintf(w, "<td>%s</td>", detail.TransactionOutput)
 			fmt.Fprintf(w, "<td>%d</td>", detail.Count)
