@@ -280,7 +280,6 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 		MeanScanBlockStatsTime: cc.BlockSyncTimer.Mean() / 1000000.0,
 	}, nil
 }
-
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	transactionErrors, err := GetSharderChain().Chain.GetEventDb().GetTransactionErrors()
 
@@ -293,44 +292,70 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
-	fmt.Fprintf(w, "<h2>Transaction Output - Count</h2>")
-
-	fmt.Fprintf(w, "<br>")
-	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<table width='100%%'>")
+	fmt.Fprintln(w, "<!DOCTYPE html>")
+	fmt.Fprintln(w, "<html>")
+	fmt.Fprintln(w, "<head>")
+	fmt.Fprintln(w, "\t<title>Transaction Error Writer</title>")
+	fmt.Fprintln(w, "\t<style>")
+	fmt.Fprintln(w, "\t\ttable {")
+	fmt.Fprintln(w, "\t\t\twidth: 100%;")
+	fmt.Fprintln(w, "\t\t\tborder-collapse: collapse;")
+	fmt.Fprintln(w, "\t\t}")
+	fmt.Fprintln(w, "\t\ttable td, table th {")
+	fmt.Fprintln(w, "\t\t\tpadding: 8px;")
+	fmt.Fprintln(w, "\t\t\tborder-bottom: 1px solid #ddd;")
+	fmt.Fprintln(w, "\t\t}")
+	fmt.Fprintln(w, "\t\ttable th {")
+	fmt.Fprintln(w, "\t\t\tbackground-color: #f2f2f2;")
+	fmt.Fprintln(w, "\t\t\tcolor: #444;")
+	fmt.Fprintln(w, "\t\t}")
+	fmt.Fprintln(w, "\t\ttable tr:nth-child(even) {")
+	fmt.Fprintln(w, "\t\t\tbackground-color: #f9f9f9;")
+	fmt.Fprintln(w, "\t\t}")
+	fmt.Fprintln(w, "\t\ttable tr:hover {")
+	fmt.Fprintln(w, "\t\t\tbackground-color: #f5f5f5;")
+	fmt.Fprintln(w, "\t\t}")
+	fmt.Fprintln(w, "\t</style>")
+	fmt.Fprintln(w, "</head>")
+	fmt.Fprintln(w, "<body>")
+	fmt.Fprintln(w, "\t<table>")
+	fmt.Fprintln(w, "\t\t<tr>")
+	fmt.Fprintln(w, "\t\t\t<th>Transaction Error</th>")
+	fmt.Fprintln(w, "\t\t\t<th>Count</th>")
+	fmt.Fprintln(w, "\t\t</tr>")
 
 	for transactionError, errorDetails := range transactionErrors {
 		count := 0
 		for _, detail := range errorDetails {
 			count += detail.Count
 		}
-		fmt.Fprintf(w, "<tr><td class='tname'><a href='#' onclick='toggleDetails(this)'>%s</a></td><td>%d</td></tr>", transactionError, count)
+		fmt.Fprintf(w, "\t\t<tr>")
+		fmt.Fprintf(w, "<td class='tname'><a href='#' onclick='toggleDetails(this)'>%s</a></td>", transactionError)
+		fmt.Fprintf(w, "<td>%d</td>", count)
+		fmt.Fprintf(w, "</tr>\n")
 
-		for i, detail := range errorDetails {
-			fmt.Fprintf(w, "<tr class='details-row' style='display:none;'><td colspan='2' id='details-%d'>%s : %d</td></tr>", i, detail.TransactionOutput, detail.Count)
+		fmt.Fprintf(w, "\t\t<tr class='details-row' style='display:none;'>")
+		fmt.Fprintf(w, "<td colspan='2'>")
+		fmt.Fprintf(w, "<table>")
+		for _, detail := range errorDetails {
+			fmt.Fprintf(w, "<tr>")
+			fmt.Fprintf(w, "<td>%s</td>", detail.TransactionOutput)
+			fmt.Fprintf(w, "<td>%d</td>", detail.Count)
+			fmt.Fprintf(w, "</tr>\n")
 		}
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "</tr>\n")
 	}
 
-	fmt.Fprintf(w, "</table>")
-	fmt.Fprintf(w, "</td></tr>")
-	fmt.Fprintf(w, "</table>")
-
-	// Include the JavaScript code to toggle details
-	fmt.Fprint(w, "<script>")
-	fmt.Fprint(w, `
-		function toggleDetails(element) {
-			var row = element.parentNode.parentNode;
-			var nextRow = row.nextElementSibling;
-			nextRow.style.display = (nextRow.style.display === 'none') ? 'table-row' : 'none';
-			if (nextRow.style.display !== 'none') {
-				var detailsId = 'details-' + nextRow.cells[0].textContent;
-				var detailsElement = document.getElementById(detailsId);
-				if (detailsElement) {
-					detailsElement.style.display = 'table-cell';
-				}
-			}
-		}
-	`)
-	fmt.Fprint(w, "</script>")
+	fmt.Fprintln(w, "\t</table>")
+	fmt.Fprintln(w, "\t<script>")
+	fmt.Fprintln(w, "\t\tfunction toggleDetails(element) {")
+	fmt.Fprintln(w, "\t\t\tvar row = element.parentNode.parentNode;")
+	fmt.Fprintln(w, "\t\t\tvar nextRow = row.nextElementSibling;")
+	fmt.Fprintln(w, "\t\t\tnextRow.style.display = (nextRow.style.display === 'none') ? 'table-row' : 'none';")
+	fmt.Fprintln(w, "\t\t}")
+	fmt.Fprintln(w, "\t</script>")
+	fmt.Fprintln(w, "</body>")
+	fmt.Fprintln(w, "</html>")
 }
