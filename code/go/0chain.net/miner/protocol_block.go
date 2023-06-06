@@ -683,16 +683,9 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		txns = append(txns, txn)
 	}
 
-	tii := newTxnIterInfo(int32(len(b.Txns)))
-	invalidTxns := tii.checkForInvalidTxns(b.Txns)
-
 	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 	transaction.RemoveFromPool(cleanPoolCtx, txns)
-
-	if len(invalidTxns) > 0 {
-		transaction.RemoveFromPool(cleanPoolCtx, invalidTxns)
-	}
 }
 
 func (tii *TxnIterInfo) checkForInvalidTxns(txns []*transaction.Transaction) []datastore.Entity {
@@ -1128,19 +1121,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				zap.Int("count", len(deleteTxns)),
 				zap.Strings("txns", txnHashes),
 				zap.Int64("future transaction limit", futureNonceAllowed))
-		}
-
-		if len(iterInfo.pastTxns) > 0 {
-			fc := len(deleteTxns)
-			for _, pte := range iterInfo.pastTxns {
-				pt := pte.(*transaction.Transaction)
-				deleteTxns = append(deleteTxns, pt)
-				txnHashes = append(txnHashes, pt.Hash)
-			}
-
-			logging.Logger.Debug("remove past txns",
-				zap.Int("count", len(iterInfo.pastTxns)),
-				zap.Strings("txns", txnHashes[fc:]))
 		}
 
 		if len(deleteTxns) > 0 {
