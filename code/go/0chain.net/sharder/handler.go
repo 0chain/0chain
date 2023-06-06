@@ -283,7 +283,6 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 		MeanScanBlockStatsTime: cc.BlockSyncTimer.Mean() / 1000000.0,
 	}, nil
 }
-
 func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	transactionErrors, err := GetSharderChain().Chain.GetEventDb().GetTransactionErrors()
 
@@ -340,12 +339,19 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td>%d</td>", count)
 		fmt.Fprintf(w, "</tr>\n")
 
-		for i, detail := range errorDetails {
+		fmt.Fprintf(w, "\t\t<tr class='details-row' style='display:none;'>")
+		fmt.Fprintf(w, "<td colspan='2'>")
+		fmt.Fprintf(w, "<table>")
+		for _, detail := range errorDetails {
 			logging.Logger.Info("TransactionErrorWriter "+uniqueIdForLogging, zap.Any("detail", detail))
-			fmt.Fprintf(w, "\t\t<tr class='details-row' style='display:none;'>")
-			fmt.Fprintf(w, "<td colspan='2' id='details-%d'>%s : %d</td>", i, detail.TransactionOutput, detail.Count)
+			fmt.Fprintf(w, "<tr>")
+			fmt.Fprintf(w, "<td>%s</td>", detail.TransactionOutput)
+			fmt.Fprintf(w, "<td>%d</td>", detail.Count)
 			fmt.Fprintf(w, "</tr>\n")
 		}
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "</tr>\n")
 	}
 
 	fmt.Fprintln(w, "\t</table>")
@@ -354,12 +360,6 @@ func TransactionErrorWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "\t\t\tvar row = element.parentNode.parentNode;")
 	fmt.Fprintln(w, "\t\t\tvar nextRow = row.nextElementSibling;")
 	fmt.Fprintln(w, "\t\t\tnextRow.style.display = (nextRow.style.display === 'none') ? 'table-row' : 'none';")
-	fmt.Fprintln(w, "\t\t\tif (nextRow.style.display !== 'none') {")
-	fmt.Fprintln(w, "\t\t\t\tvar detailsElement = nextRow.querySelector('.details-row');")
-	fmt.Fprintln(w, "\t\t\t\tif (detailsElement) {")
-	fmt.Fprintln(w, "\t\t\t\t\tdetailsElement.style.display = 'table-row';")
-	fmt.Fprintln(w, "\t\t\t\t}")
-	fmt.Fprintln(w, "\t\t\t}")
 	fmt.Fprintln(w, "\t\t}")
 	fmt.Fprintln(w, "\t</script>")
 	fmt.Fprintln(w, "</body>")
