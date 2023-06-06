@@ -2,15 +2,21 @@ package transaction
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/encryption"
 )
 
 /*TransactionSummary - the summary of the transaction */
 type TransactionSummary struct {
-	datastore.HashIDField
+	datastore.HashIDField // Keyspaced transaction hash - used as key
 	Round int64 `json:"round"`
 }
+
+const transactionKeyspace = "transaction_round"
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl
 
@@ -23,6 +29,19 @@ func TransactionSummaryProvider() datastore.Entity {
 //GetEntityMetadata - implement interface
 func (t *TransactionSummary) GetEntityMetadata() datastore.EntityMetadata {
 	return transactionSummaryEntityMetadata
+}
+
+// SetTransactionKey - set the entity hash to the keyspaced hash of the transaction hash
+func BuildSummaryTransactionKey(hash string) datastore.Key {
+	return datastore.ToKey(
+		encryption.Hash(
+			fmt.Sprintf(
+				"%s:%s",
+				transactionKeyspace,
+				hash,
+			),
+		),
+	)
 }
 
 //GetKey - implement interface
@@ -59,8 +78,20 @@ func (t *TransactionSummary) Delete(ctx context.Context) error {
 func SetupTxnSummaryEntity(store datastore.Store) {
 	transactionSummaryEntityMetadata = datastore.MetadataProvider()
 	transactionSummaryEntityMetadata.Name = "txn_summary"
+	transactionSummaryEntityMetadata.DB = "txnsummarydb"
 	transactionSummaryEntityMetadata.Provider = TransactionSummaryProvider
 	transactionSummaryEntityMetadata.Store = store
 	transactionSummaryEntityMetadata.IDColumnName = "hash"
 	datastore.RegisterEntityMetadata("txn_summary", transactionSummaryEntityMetadata)
+}
+
+// SetupRoundSummaryDB - setup the round summary db
+func SetupTxnSummaryDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/txnsummary")
+
+	db, err := ememorystore.CreateDBWithMergeOperator(datadir, ememorystore.NewCounterMergeOperator("hash", "txns_count"))
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("txnsummarydb", db)
 }

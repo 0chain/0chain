@@ -7,10 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0chain/gorocksdb"
-
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/linxGnu/grocksdb"
 )
 
 const dataDir = "data"
@@ -39,14 +38,14 @@ func TestCreateDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
-	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
-	opts := gorocksdb.NewDefaultOptions()
+	bbto := grocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetBlockCache(grocksdb.NewLRUCache(3 << 30))
+	opts := grocksdb.NewDefaultOptions()
 	opts.SetKeepLogFileNum(5)
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
-	tdbopts := gorocksdb.NewDefaultTransactionDBOptions()
-	tDB, err := gorocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
+	tdbopts := grocksdb.NewDefaultTransactionDBOptions()
+	tDB, err := grocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +61,7 @@ func TestCreateDB(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *gorocksdb.TransactionDB
+		want    *grocksdb.TransactionDB
 		wantErr bool
 	}{
 		{
@@ -107,7 +106,7 @@ func TestAddPool(t *testing.T) {
 
 	type args struct {
 		dbid string
-		db   *gorocksdb.TransactionDB
+		db   *grocksdb.TransactionDB
 	}
 	tests := []struct {
 		name string
@@ -179,7 +178,7 @@ func TestGetTransaction(t *testing.T) {
 	defer db.Close()
 
 	type args struct {
-		db *gorocksdb.TransactionDB
+		db *grocksdb.TransactionDB
 	}
 	tests := []struct {
 		name string
@@ -190,9 +189,9 @@ func TestGetTransaction(t *testing.T) {
 			name: "Test_GetTransaction_OK",
 			args: args{db: db},
 			want: func() *Connection {
-				ro := gorocksdb.NewDefaultReadOptions()
-				wo := gorocksdb.NewDefaultWriteOptions()
-				to := gorocksdb.NewDefaultTransactionOptions()
+				ro := grocksdb.NewDefaultReadOptions()
+				wo := grocksdb.NewDefaultWriteOptions()
+				to := grocksdb.NewDefaultTransactionOptions()
 
 				t := db.TransactionBegin(wo, to, nil)
 
@@ -239,9 +238,9 @@ func TestGetEntityConnection(t *testing.T) {
 			name: "TestGetEntityConnection_OK",
 			args: args{entityMetadata: &em},
 			want: func() *Connection {
-				ro := gorocksdb.NewDefaultReadOptions()
-				wo := gorocksdb.NewDefaultWriteOptions()
-				to := gorocksdb.NewDefaultTransactionOptions()
+				ro := grocksdb.NewDefaultReadOptions()
+				wo := grocksdb.NewDefaultWriteOptions()
+				to := grocksdb.NewDefaultTransactionOptions()
 
 				t := db.TransactionBegin(wo, to, nil)
 
@@ -727,10 +726,10 @@ func TestConnection_Commit(t *testing.T) {
 	conn := GetTransaction(db)
 
 	type fields struct {
-		Conn               *gorocksdb.Transaction
-		ReadOptions        *gorocksdb.ReadOptions
-		WriteOptions       *gorocksdb.WriteOptions
-		TransactionOptions *gorocksdb.TransactionOptions
+		Conn               *grocksdb.Transaction
+		ReadOptions        *grocksdb.ReadOptions
+		WriteOptions       *grocksdb.WriteOptions
+		TransactionOptions *grocksdb.TransactionOptions
 	}
 	tests := []struct {
 		name    string
