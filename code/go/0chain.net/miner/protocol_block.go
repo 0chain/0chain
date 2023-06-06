@@ -688,22 +688,6 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	transaction.RemoveFromPool(cleanPoolCtx, txns)
 }
 
-func (tii *TxnIterInfo) checkForInvalidTxns(txns []*transaction.Transaction) []datastore.Entity {
-	invalidTxns := []datastore.Entity{}
-	pastTxns := tii.pastTxns
-
-	for _, txn := range txns {
-		for i := 0; i < len(pastTxns); i++ {
-			pastTxn := pastTxns[i].(*transaction.Transaction)
-			if txn.ClientID == pastTxn.ClientID && txn.Nonce >= pastTxn.Nonce {
-
-				invalidTxns = append(invalidTxns, pastTxns[i])
-			}
-		}
-	}
-	return invalidTxns
-}
-
 /*FinalizeBlock - finalize the transactions in the block */
 func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	modifiedTxns := make([]datastore.Entity, len(b.Txns))
