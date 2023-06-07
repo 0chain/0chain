@@ -397,7 +397,8 @@ func initEntities(workdir string) {
 	memoryStorage := memorystore.GetStorageProvider()
 
 	chain.SetupEntity(memoryStorage, workdir)
-	block.SetupEntity(memoryStorage)
+	block.SetupEntity(ememorystore.GetStorageProvider())
+	block.SetupBlocksDB(workdir)
 
 	round.SetupRoundSummaryDB(workdir)
 	block.SetupBlockSummaryDB(workdir)

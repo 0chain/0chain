@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"encoding/hex"
-	"fmt"
 	"os"
 	"path"
 	"sync"
 	"time"
 
+	"0chain.net/core/ememorystore"
 	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/config"
@@ -120,9 +120,9 @@ func getBalances(
 
 func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered in getMpt", r)
-		}
+		//if r := recover(); r != nil {
+		//	fmt.Println("Recovered in getMpt", r)
+		//}
 	}()
 	var mptDir string
 	savePath := viper.GetString(benchmark.OptionSavePath)
@@ -193,13 +193,17 @@ func setUpMpt(
 	dbPath string,
 ) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered in setUpMpt", r)
-		}
+		//if r := recover(); r != nil {
+		//	fmt.Println("Recovered in setUpMpt", r)
+		//}
 	}()
 
 	log.Println("starting building blockchain")
 	mptGenTime := time.Now()
+
+	block.SetupEntity(ememorystore.GetStorageProvider())
+	block.SetupBlocksDB("")
+	//blockstore.Init("", nil)
 
 	pNode, err := util.NewPNodeDB(
 		dbPath,
@@ -323,13 +327,13 @@ func setUpMpt(
 
 	// used as foreign key
 	timer = time.Now()
-	ebk.AddMockBlocks(miners, eventDb)
+	ebk.AddMockBlocks(miners, clients, publicKeys, eventDb)
 	log.Println("added mock blocks\t", time.Since(timer))
 
 	// used as foreign key
 	timer = time.Now()
-	ebk.AddMockTransactions(clients, eventDb)
-	log.Println("added mock transaction\t", time.Since(timer))
+	//ebk.AddMockTransactions(clients, eventDb)
+	//log.Println("added mock transaction\t", time.Since(timer))
 
 	// used as foreign key in readmarkers
 	timer = time.Now()

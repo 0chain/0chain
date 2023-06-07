@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	"0chain.net/sharder/blockstore"
 
 	"0chain.net/smartcontract/provider"
 
@@ -762,16 +763,69 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, blocks, nil)
 		return
 	}
-	var fullBlocks []fullBlock
-	txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
-	var txnIndex int
-	for i, b := range blocks {
-		fBlock := fullBlock{Block: blocks[i]}
-		for ; txnIndex < len(txs) && txs[txnIndex].Round == b.Round; txnIndex++ {
-			fBlock.Transactions = append(fBlock.Transactions, txs[txnIndex])
-		}
-		fullBlocks = append(fullBlocks, fBlock)
+
+	fullBlocks := make([]fullBlock, len(blocks))
+
+	//ttt := time.Now()
+	bHashes := make([]string, 0, len(blocks))
+	for _, eb := range blocks {
+		bHashes = append(bHashes, eb.Hash)
 	}
+
+	bks, err := blockstore.MultipleRead(bHashes)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(fmt.Sprintf("getting block %v", err.Error())))
+		return
+	}
+
+	for i, b := range bks {
+		//t := time.Now()
+		//b, err := blockstore.Read(eb.Hash)
+		//if err != nil {
+		//	common.Respond(w, r, nil, common.NewErrInternal(fmt.Sprintf("getting block %v", err.Error())))
+		//	return
+		//}
+		//fmt.Println("block read time", time.Since(t))
+
+		//tt := time.Now()
+		txns := make([]event.Transaction, len(b.Txns))
+		for j, txn := range b.Txns {
+			txns[j] = event.Transaction{
+				Hash:              txn.Hash,
+				BlockHash:         b.Hash,
+				Round:             b.Round,
+				Version:           txn.Version,
+				ClientId:          txn.ClientID,
+				ToClientId:        txn.ToClientID,
+				TransactionData:   txn.TransactionData,
+				Value:             txn.Value,
+				Signature:         txn.Signature,
+				CreationDate:      int64(txn.CreationDate),
+				Fee:               txn.Fee,
+				Nonce:             txn.Nonce,
+				TransactionType:   txn.TransactionType,
+				TransactionOutput: txn.TransactionOutput,
+				OutputHash:        txn.OutputHash,
+				Status:            txn.Status,
+			}
+		}
+		//fmt.Println("getBlocks, convert txns", time.Since(tt))
+
+		fullBlocks = append(fullBlocks, fullBlock{Block: blocks[i], Transactions: txns})
+	}
+
+	//fmt.Println("getBlocks, total", time.Since(ttt))
+
+	//var fullBlocks []fullBlock
+	//txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
+	//var txnIndex int
+	//for i, b := range blocks {
+	//	fBlock := fullBlock{Block: blocks[i]}
+	//	for ; txnIndex < len(txs) && txs[txnIndex].Round == b.Round; txnIndex++ {
+	//		fBlock.Transactions = append(fBlock.Transactions, txs[txnIndex])
+	//	}
+	//	fullBlocks = append(fullBlocks, fBlock)
+	//}
 	common.Respond(w, r, fullBlocks, nil)
 }
 

@@ -104,10 +104,13 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		wg.Run("store block", b.Round, func() error {
 			sc.SharderStats.ShardedBlocksCount++
 			ts := time.Now()
-			if err := blockstore.GetStore().Write(b); err != nil {
+			//if err := blockstore.GetStore().Write(b); err != nil {
+			//	Logger.Panic(fmt.Sprintf("store block failed, round: %d, error: %v", b.Round, err))
+			//}
+
+			if err := blockstore.Write(b); err != nil {
 				Logger.Panic(fmt.Sprintf("store block failed, round: %d, error: %v", b.Round, err))
 			}
-
 			duration := time.Since(ts)
 			blockSaveTimer.UpdateSince(ts)
 			p95 := blockSaveTimer.Percentile(.95)

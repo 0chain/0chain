@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/core/ememorystore"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -325,9 +327,21 @@ func SetupEntity(store datastore.Store) {
 	blockEntityMetadata.Name = "block"
 	blockEntityMetadata.Provider = Provider
 	blockEntityMetadata.Store = store
+	blockEntityMetadata.DB = "blocks_db"
 	blockEntityMetadata.IDColumnName = "hash"
 	datastore.RegisterEntityMetadata("block", blockEntityMetadata)
 	SetupBVTEntity()
+}
+
+func SetupBlocksDB(workdir string) {
+	datadir := filepath.Join(workdir, "data/rocksdb/blocks")
+	fmt.Println("setup blocks db: blocks_db")
+	db, err := ememorystore.CreateDB(datadir)
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("blocks_db", db)
+	fmt.Println("add pool: blocks_db")
 }
 
 // SetPreviousBlock - set the previous block of this block

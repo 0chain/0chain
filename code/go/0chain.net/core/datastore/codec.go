@@ -36,11 +36,15 @@ func ToMsgpack(entity Entity) *bytes.Buffer {
 }
 
 /*FromJSON - read data into an entity */
-func FromJSON(data interface{}, entity Entity) error {
+func FromJSON(data interface{}, entity Entity, noComputeProperties ...bool) error {
 	err := common.FromJSON(data, entity)
 	if err != nil {
 		return err
 	}
+	if len(noComputeProperties) > 0 && noComputeProperties[0] {
+		return nil
+	}
+
 	return entity.ComputeProperties()
 }
 

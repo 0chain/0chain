@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -27,6 +28,10 @@ func TestSettings(t *testing.T) {
 	for _, name := range SettingName {
 		require.EqualValues(t, name, SettingName[Settings[name].setting])
 	}
+}
+
+func TestGetKey(t *testing.T) {
+	fmt.Println(scConfigKey(ADDRESS))
 }
 
 func TestUpdateSettings(t *testing.T) {

@@ -4,7 +4,12 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
+	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
@@ -94,26 +99,30 @@ func AddMockTransactions(
 
 func AddMockBlocks(
 	miners []string,
+	clients []string,
+	publicKeys []string,
 	eventDb *event.EventDb,
 ) {
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
-	for block_number := int64(1); block_number <= viper.GetInt64(benchmark.NumBlocks); block_number++ {
+
+	const txnTxnSmartContract = 1000
+	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
 		if viper.GetBool(benchmark.EventDbEnabled) {
-			block := event.Block{
-				Hash:                  GetMockBlockHash(block_number),
+			eBlock := event.Block{
+				Hash:                  GetMockBlockHash(blockNumber),
 				Version:               "mock version",
 				CreationDate:          int64(common.Now().Duration()),
-				Round:                 block_number,
-				MinerID:               miners[int(block_number)%len(miners)],
-				RoundRandomSeed:       block_number,
+				Round:                 blockNumber,
+				MinerID:               miners[int(blockNumber)%len(miners)],
+				RoundRandomSeed:       blockNumber,
 				MerkleTreeRoot:        "mock mt root",
 				StateHash:             "mock state hash",
 				ReceiptMerkleTreeRoot: "mock rmt root",
 				NumTxns:               viper.GetInt(benchmark.NumTransactionPerBlock),
 				MagicBlockHash:        "mock matic block hash",
-				PrevHash:              GetMockBlockHash(block_number - 1),
+				PrevHash:              GetMockBlockHash(blockNumber - 1),
 				Signature:             "mock signature",
 				ChainId:               "mock chain id",
 				StateChangesCount:     33,
@@ -121,7 +130,78 @@ func AddMockBlocks(
 				RoundTimeoutCount:     0,
 				CreatedAt:             time.Now(),
 			}
-			_ = eventDb.Store.Get().Create(&block)
+			_ = eventDb.Store.Get().Create(&eBlock)
+
+			b := block.Block{}
+			b.Hash = eBlock.Hash
+			b.Version = eBlock.Version
+			b.CreationDate = common.Timestamp(eBlock.CreationDate)
+			b.Round = eBlock.Round
+			b.MinerID = eBlock.MinerID
+			b.RoundRandomSeed = eBlock.RoundRandomSeed
+			b.ClientStateHash = util.Key(eBlock.StateHash)
+			b.PrevHash = eBlock.PrevHash
+			b.Signature = eBlock.Signature
+			b.ChainID = eBlock.ChainId
+			b.StateChangesCount = eBlock.StateChangesCount
+			b.RunningTxnCount = 10
+			b.RoundTimeoutCount = eBlock.RoundTimeoutCount
+			b.Txns = make([]*transaction.Transaction, 0, viper.GetInt(benchmark.NumTransactionPerBlock))
+
+			for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
+				eTxn := event.Transaction{
+					Hash:              GetMockTransactionHash(blockNumber, i),
+					BlockHash:         GetMockBlockHash(blockNumber),
+					Round:             blockNumber,
+					Version:           "mock version",
+					ClientId:          clients[i%len(clients)],
+					ToClientId:        clients[int(blockNumber)%len(clients)],
+					TransactionData:   "{}",
+					Signature:         "mock signature",
+					CreationDate:      int64(common.Now()),
+					Fee:               100,
+					Nonce:             int64(i),
+					TransactionType:   txnTxnSmartContract,
+					TransactionOutput: "{}",
+					OutputHash:        "mock output hash",
+					Status:            0,
+				}
+				var err error
+				eTxn.Value, err = currency.Int64ToCoin(blockNumber)
+				if err != nil {
+					panic(err)
+				}
+				err = eventDb.Store.Get().Create(&eTxn).Error
+				if err != nil {
+					panic(err)
+				}
+
+				txn := transaction.Transaction{
+					HashIDField: datastore.HashIDField{
+						Hash: eTxn.Hash,
+					},
+					VersionField: datastore.VersionField{
+						Version: eTxn.Version,
+					},
+					ClientID:          eTxn.ClientId,
+					PublicKey:         publicKeys[i%len(clients)],
+					ToClientID:        eTxn.ToClientId,
+					TransactionData:   eTxn.TransactionData,
+					Signature:         eTxn.Signature,
+					CreationDate:      common.Timestamp(eTxn.CreationDate),
+					Fee:               eTxn.Fee,
+					Nonce:             eTxn.Nonce,
+					TransactionType:   eTxn.TransactionType,
+					TransactionOutput: eTxn.TransactionOutput,
+					OutputHash:        eTxn.OutputHash,
+					Status:            eTxn.Status,
+				}
+				b.Txns = append(b.Txns, &txn)
+			}
+
+			if err := blockstore.Write(&b); err != nil {
+				panic(err)
+			}
 		}
 	}
 }

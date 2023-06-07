@@ -26,8 +26,10 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "miner"
+#    - "miner"
     - "storage_rest"
+  run_tests: # run selected tests, if omitted all tests are run
+    - "storage_rest.get_blocks"
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
