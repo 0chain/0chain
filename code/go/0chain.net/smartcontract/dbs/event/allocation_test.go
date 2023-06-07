@@ -388,6 +388,13 @@ func TestAllocations(t *testing.T) {
 			TimeUnit:                12453,
 		}
 
+		// insert the blobber
+		err = eventDb.Get().Model(&Blobber{}).Create(&Blobber{
+			Provider: Provider{
+				ID:      "blobber_1",
+			},
+		}).Error
+
 		saAllocation := convertSa(sa)
 		err = eventDb.addAllocations([]Allocation{saAllocation})
 		require.NoError(t, err)
