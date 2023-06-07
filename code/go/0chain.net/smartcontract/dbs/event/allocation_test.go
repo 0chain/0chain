@@ -6,6 +6,7 @@ import (
 	"time"
 
 	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
@@ -50,9 +51,14 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 	}
 
 	// Complete count with mock allocations
+	initTime := time.Now().Add(-time.Second * time.Duration(count))
+
 	for ; i < count; i++ {
 		id := fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d%v", i)
 		allocs = append(allocs, Allocation{
+			UpdatableModel: model.UpdatableModel{
+				CreatedAt: initTime,
+			},
 			AllocationID:             id,
 			TransactionID:            fmt.Sprintf("586925180648cfbc969561cbeeca2c0dbd9b68b29c5ccbd9e185bbb962e4a5d3%v", i),
 			DataShards:               1,
@@ -85,6 +91,7 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 			ThirdPartyExtendable:     false,
 		})
 		ids = append(ids, id)
+		initTime = initTime.Add(time.Second)
 	}
 	err := edb.addAllocations(allocs)
 	assert.NoError(t, err, "inserting allocations failed")

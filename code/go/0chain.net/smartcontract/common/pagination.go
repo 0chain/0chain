@@ -62,6 +62,51 @@ func GetOffsetLimitOrderParam(values url.Values) (Pagination, error) {
 	return Pagination{Offset: offset, Limit: limit, IsDescending: isDescending}, nil
 }
 
+func GetPaginationParamsDefaultDesc(values url.Values) (Pagination, error) {
+	var (
+		offsetString = values.Get("offset")
+		limitString  = values.Get("limit")
+		sort 	   = values.Get("sort")
+
+		limit  = DefaultQueryLimit
+		offset = 0
+		isDescending = true
+		err    error
+	)
+
+	if offsetString != "" {
+		offset, err = strconv.Atoi(offsetString)
+		if err != nil {
+			return Pagination{Limit: DefaultQueryLimit}, common.NewErrBadRequest("offset parameter is not valid")
+		}
+	}
+
+	if limitString != "" {
+		limit, err = strconv.Atoi(limitString)
+		if err != nil {
+			return Pagination{Limit: DefaultQueryLimit}, common.NewErrBadRequest("limit parameter is not valid")
+		}
+
+		if limit > MaxQueryLimit {
+			msg := fmt.Sprintf("limit %d too high, cannot exceed %d", limit, DefaultQueryLimit)
+			return Pagination{Limit: MaxQueryLimit}, common.NewErrBadRequest(msg)
+		}
+	}
+
+	if sort != "" {
+		switch sort {
+		case "desc":
+			isDescending = true
+		case "asc":
+			isDescending = false
+		default:
+			return Pagination{Limit: DefaultQueryLimit}, err
+		}
+	}
+
+	return Pagination{Offset: offset, Limit: limit, IsDescending: isDescending}, nil
+}
+
 func GetStartEndBlock(values url.Values) (start int64, end int64, err error) {
 	var (
 		startBlockNum = values.Get("start")

@@ -95,6 +95,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
+		rest.MakeEndpoint(storage+"/get-blobber-allocations", srh.getBlobberAllocations),
 	}
 
 	if config.Development() {
@@ -1732,6 +1733,63 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 		return
 	}
 	common.Respond(w, r, allocations, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations allocations
+// Gets a list of allocation information for allocations owned by the client
+//
+// parameters:
+//
+//	+name: blobber_id
+//	 description: blobber id of allocations we wish to list
+//	 required: true
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc by created date
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: []StorageAllocation
+//	400:
+//	500:
+func (srh *StorageRestHandler) getBlobberAllocations(w http.ResponseWriter, r *http.Request) {
+	blobberId := r.URL.Query().Get("blobber_id")
+
+	limit, err := common2.GetPaginationParamsDefaultDesc(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	allocations, err := edb.GetAllocationsByBlobberId(blobberId, limit)
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
+		return
+	}
+
+	sas, err := prepareAllocationsResponse(edb, allocations)
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't prepare allocations response"))
+		return
+	}
+
+	common.Respond(w, r, sas, nil)
 }
 
 // getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation allocation
