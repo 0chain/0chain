@@ -502,7 +502,7 @@ func (sp *StakePool) getRandStakePools(seed int64, n int) (currency.Coin, []*Del
 	if len(pools) == 0 {
 		return 0, nil, nil
 	}
-	Strings
+
 	var stake currency.Coin
 	for _, p := range pools {
 		var err error
