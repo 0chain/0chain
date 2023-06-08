@@ -139,29 +139,13 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
-        ethereum_node_url: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
-        EOF
-        cat <<\EOF > ~/.zcn/bridge.yaml
-        owner:
-          Password: ${{ secrets.AUTH_BRIDGE_PASSWORD }}
-          EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
-          BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
-          WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
-          EthereumNodeURL: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
-          GasLimit: 300000
-          Value: 0
-          AuthorizersAddress: 0xB132C20A02AD7C38d88805F0e3fFDdfb54224C58
-          ConsensusThreshold: 60
+        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/7iEbl9UprffEQSqCmhJh4kZFdEnfM1TO
         bridge:
-          AuthorizersAddress: 0xB132C20A02AD7C38d88805F0e3fFDdfb54224C58
-          Password: ${{ secrets.AUTH_BRIDGE_PASSWORD }}
-          EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
-          BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
-          WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
-          EthereumNodeURL: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
-          GasLimit: 300000
-          Value: 0
-          ConsensusThreshold: 60
+          bridge_address: 0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+          token_address: 0xC79aD1e07f790d0Cf6AA3D09FeC393A09DC53d64
+          authorizers_address: 0xd5867B4a1F8e7BD91276b5C85a4EDC9D33400496
+          ethereum_address: 0xD8c9156e782C68EE671C09b6b92de76C97948432
+          password: “02289b9"
         EOF
 
     - name: List pwd zcn

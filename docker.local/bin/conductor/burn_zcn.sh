@@ -1,5 +1,13 @@
 #!/bin/bash
 # burn zcn in 0chain network
+
+./zwalletcli/zwallet create-wallet --wallet testing.json
+
+for i in {1..7}
+do
+  ./zwalletcli/zwallet --wallet testing.json faucet --methodName pour --input "{Pay day}"
+done
+
 burn_zcn_output=$(./zwalletcli/zwallet bridge-burn-zcn --token 1 --wallet testing.json)
 
 tx=$(echo $burn_zcn_output | sed "s/.*with txn: *\(.*\) T.*/\1/")
