@@ -58,7 +58,7 @@ smart_contracts:
     # sharders rewarded each round
     num_sharders_rewarded: 1
     # sharder delegates to get paid each round when paying fees and rewards
-    num_sharder_delegates_rewarded: 5z
+    num_sharder_delegates_rewarded: 5
     cooldown_period: 100
     cost:
       add_miner: 318
