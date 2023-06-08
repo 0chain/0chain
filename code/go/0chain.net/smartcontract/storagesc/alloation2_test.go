@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/block"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -237,7 +236,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 func TestFinalizeAllocation(t *testing.T) {
 	var now = common.Timestamp(300)
 	var blobberStakePools = [][]mockStakePool{}
-	var challenges [][]common.Timestamp
 	var scYaml = Config{
 		MaxMint:                    zcnToBalance(4000000.0),
 		BlobberSlash:               0.1,
@@ -251,7 +249,6 @@ func TestFinalizeAllocation(t *testing.T) {
 		writePrice:    0.1,
 		minLockDemand: 0.1,
 	}
-
 	var allocation = StorageAllocation{
 		DataShards:    5,
 		ParityShards:  5,
@@ -297,9 +294,8 @@ func TestFinalizeAllocation(t *testing.T) {
 		stake = stake / 10
 		if i < allocation.DataShards+allocation.ParityShards {
 			ba := &BlobberAllocation{
-				AllocationID: allocation.ID,
-				BlobberID:    nextBlobber.ID,
-				Terms:        Terms{},
+				BlobberID: nextBlobber.ID,
+				Terms:     Terms{},
 				Stats: &StorageAllocationStats{
 					UsedSize:        blobberUsedSize,
 					OpenChallenges:  int64(i + 1),
@@ -307,18 +303,10 @@ func TestFinalizeAllocation(t *testing.T) {
 				},
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
-				Size:          1 * GB,
 			}
-
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
 			allocation.Stats.OpenChallenges += ba.Stats.OpenChallenges
 			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
-
-			challenges = append(challenges, []common.Timestamp{})
-			for j := 0; j < int(allocation.BlobberAllocs[i].Stats.OpenChallenges); j++ {
-				var expires = now - common.Timestamp(float64(j)*float64(scYaml.MaxChallengeCompletionTime)/3.0)
-				challenges[i] = append(challenges[i], expires)
-			}
 		}
 	}
 	var challengePoolBalance = int64(700000)
@@ -326,7 +314,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	allocation.WritePool = currency.Coin(777777)
 
 	t.Run("finalize allocation", func(t *testing.T) {
-		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml, challengePoolBalance, now, challenges)
+		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml, challengePoolBalance, now)
 		require.NoError(t, err)
 	})
 
@@ -334,7 +322,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		var allocationExpired = allocation
 		allocationExpired.Expiration = now - toSeconds(0) + 1
 
-		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml, challengePoolBalance, now, challenges)
+		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml, challengePoolBalance, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedFailed))
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedTooSoon))
@@ -419,7 +407,7 @@ func testCancelAllocation(
 	return nil
 }
 
-func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, scYaml Config, challengePoolBalance int64, now common.Timestamp, challenges [][]common.Timestamp) error {
+func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, scYaml Config, challengePoolBalance int64, now common.Timestamp) error {
 
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
@@ -429,7 +417,6 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 		bStakes:              bStakes,
 		challengePoolBalance: challengePoolBalance,
 		now:                  now,
-		challengeCreation:    challenges,
 	}
 	f.setFinilizationPassRates()
 
@@ -437,33 +424,10 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 		t, sAllocation, blobbers, bStakes, scYaml,
 		currency.Coin(challengePoolBalance), now,
 	)
-
-	ac := AllocationChallenges{
-		AllocationID: sAllocation.ID,
-	}
-
-	for i, blobberChallenges := range challenges {
-		blobberID := strconv.Itoa(i)
-
-		err := partitionsChallengeReadyBlobberAddOrUpdate(ctx, blobberID, 1000)
-		require.NoError(t, err)
-
-		for _, created := range blobberChallenges {
-			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
-				ID:        fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
-				BlobberID: blobberID,
-				CreatedAt: created,
-			})
-		}
-		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
-		require.NoError(t, err)
-	}
-
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
 		return err
 	}
-
 	require.EqualValues(t, "finalized", resp)
 	require.NoError(t, err)
 	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
@@ -541,13 +505,9 @@ func setupMocksFinishAllocation(
 		ToClientID:   storageScId,
 		CreationDate: now,
 	}
-
-	block := &block.Block{}
-	block.Round = 100
-
 	var ctx = &mockStateContext{
 		StateContext: *cstate.NewStateContext(
-			block,
+			nil,
 			&util.MerklePatriciaTrie{},
 			txn,
 			nil,
