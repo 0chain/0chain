@@ -587,7 +587,13 @@ func TestVerifyChallenge(t *testing.T) {
 			} else {
 				tx = newTransaction(b3.id, ssc.ID, 0, tp)
 			}
+
 			balances.setTransaction(t, tx)
+
+			bk := &block.Block{}
+			bk.Round = 500
+			balances.setBlock(t, bk)
+
 			var resp string
 			resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			require.Equal(t, tc.err, err)
@@ -621,6 +627,9 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 		tp += step / 2
 		tx := newTransaction(b3.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
 		var resp string
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
@@ -713,10 +722,17 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	tx := newTransaction(b3.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 
+	round := 100
+
 	stateRoots := make(map[string]struct{}, 10)
 	for i := 0; i < 20; i++ {
 		clientState := createTxnMPT(balances.GetState())
 		signatureScheme := &encryption.BLS0ChainScheme{}
+
+		bk := &block.Block{}
+		bk.Round = int64(round)
+		balances.setBlock(t, bk)
+
 		cs := cstate.NewStateContext(balances.block, clientState,
 			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
 
