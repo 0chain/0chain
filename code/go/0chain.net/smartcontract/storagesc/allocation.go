@@ -1726,10 +1726,10 @@ func (sc *StorageSmartContract) finishAllocation(
 		ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
 
 		if ok {
-			ba.Stats.SuccessChallenges++
 			ba.Stats.OpenChallenges--
-			alloc.Stats.SuccessChallenges++
+			ba.Stats.SuccessChallenges++
 			alloc.Stats.OpenChallenges--
+			alloc.Stats.SuccessChallenges++
 
 			emitUpdateChallenge(&StorageChallenge{
 				ID:           challenge.ID,
