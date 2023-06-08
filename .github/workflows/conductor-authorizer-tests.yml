@@ -54,6 +54,7 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
+        export HOME="/root"
         cd 0chain
         make install-mockery
         make build-mocks
@@ -110,10 +111,12 @@ jobs:
 
     - name: Install zboxcli
       run: |
+        export HOME="/root"
         cd zboxcli && make install
 
     - name: Install zwalletcli
       run: |
+        export HOME="/root"
         cd zwalletcli && make install
 
     - name: 0dns Patching
