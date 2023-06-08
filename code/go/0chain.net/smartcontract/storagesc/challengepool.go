@@ -92,21 +92,14 @@ func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllo
 }
 
 func (cp *challengePool) moveToValidators(
-	sc *StorageSmartContract,
 	reward currency.Coin,
 	validators []datastore.Key,
+	vSPs []*stakePool,
 	balances cstate.StateContextI,
 	options ...string,
 ) error {
 	if len(validators) == 0 || reward == 0 {
 		return nil // nothing to move, or nothing to move to
-	}
-
-	// validators' stake pools
-	var vSPs []*stakePool
-	vSPs, err := sc.validatorsStakePools(validators, balances)
-	if err != nil {
-		return nil
 	}
 
 	if cp.ZcnPool.Balance < reward {
@@ -137,10 +130,6 @@ func (cp *challengePool) moveToValidators(
 
 	cp.ZcnPool.Balance -= reward
 
-	// Save validators' stake pools
-	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
-		return err
-	}
 	return nil
 }
 
