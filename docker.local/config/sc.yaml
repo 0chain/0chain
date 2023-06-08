@@ -58,7 +58,7 @@ smart_contracts:
     # sharders rewarded each round
     num_sharders_rewarded: 1
     # sharder delegates to get paid each round when paying fees and rewards
-    num_sharder_delegates_rewarded: 5
+    num_sharder_delegates_rewarded: 5z
     cooldown_period: 100
     cost:
       add_miner: 318
@@ -151,6 +151,7 @@ smart_contracts:
     challenge_enabled: true
     # number of validators per challenge
     validators_per_challenge: 2
+    num_validators_rewarded: 10
     # max delegates per stake pool allowed by SC
     max_delegates: 200
     # max_charge allowed for blobbers; the charge is part of blobber rewards

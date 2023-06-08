@@ -182,7 +182,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding blobbers: %v", err)
@@ -326,12 +325,6 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 		return err
 	}
 
-	// validators' stake pools
-	var vSPs []*stakePool
-	if vSPs, err = sc.validatorsStakePools(validators, balances); err != nil {
-		return
-	}
-
 	var challengeID string
 
 	if len(options) > 0 {
@@ -339,7 +332,7 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 	}
 
 	// validators reward
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances, challengeID)
+	err = cp.moveToValidators(sc, validatorsReward, validators, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -349,11 +342,6 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 		return err
 	}
 	alloc.MovedToValidators = moveToValidators
-
-	// Save validators' stake pools
-	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
-		return err
-	}
 
 	err = alloc.moveFromChallengePool(cp, move)
 	coin, _ := move.Int64()
