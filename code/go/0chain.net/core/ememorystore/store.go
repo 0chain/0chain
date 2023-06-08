@@ -46,7 +46,7 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 	}
 	defer data.Free()
 	if emd.GetName() == "block" {
-		return datastore.FromJSON(data.Data(), entity, false)
+		return datastore.FromMsgpack(data.Data(), entity, false)
 	}
 	return datastore.FromJSON(data.Data(), entity)
 }
@@ -54,7 +54,13 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
-	data := datastore.ToJSON(entity).Bytes()
+	var data []byte
+	if emd.GetName() == "block" {
+		data = datastore.ToMsgpack(entity).Bytes()
+	} else {
+		data = datastore.ToJSON(entity).Bytes()
+	}
+
 	if emd.GetName() == "round" {
 		rNumber, err := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
 		if err != nil {
@@ -91,9 +97,45 @@ func (ems *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 
 func (ems *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
 	//TODO: even though rocksdb has MultiGet api, grocksdb doesn't seem to have one
+	if len(entities) == 0 {
+		return nil
+	}
+
+	emd := entities[0].GetEntityMetadata()
+	c := GetEntityCon(ctx, emd)
 	for idx, key := range keys {
-		err := ems.Read(ctx, key, entities[idx])
-		if err != nil {
+		//err := ems.Read(ctx, key, entities[idx])
+		//if err != nil {
+		//	entities[idx].SetKey(datastore.EmptyKey)
+		//}
+		//
+		if err := func(entity datastore.Entity) error {
+			entity.SetKey(key)
+			var data *grocksdb.Slice
+			var err error
+			if emd.GetName() == "round" {
+				rNumber, err := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
+				if err != nil {
+					return err
+				}
+				key := make([]byte, 8)
+				binary.BigEndian.PutUint64(key, uint64(rNumber))
+				data, err = c.Conn.Get(c.ReadOptions, key)
+				if err != nil {
+					return err
+				}
+			} else {
+				data, err = c.Conn.Get(c.ReadOptions, []byte(key))
+				if err != nil {
+					return err
+				}
+			}
+			defer data.Free()
+			if emd.GetName() == "block" {
+				return datastore.FromMsgpack(data.Data(), entity, false)
+			}
+			return datastore.FromJSON(data.Data(), entity)
+		}(entities[idx]); err != nil {
 			entities[idx].SetKey(datastore.EmptyKey)
 		}
 	}

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/sharder/blockstore"
 
@@ -744,50 +745,70 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	var blocks []event.Block
-	if end > 0 {
-		blocks, err = edb.GetBlocksByBlockNumbers(start, end, limit)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
-			return
-		}
-	} else {
-		blocks, err = edb.GetBlocks(limit)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
-			return
-		}
-	}
+	//var blocks []event.Block
+	//var hashes []string
+	//if end > 0 {
+	//	//blocks, err = edb.GetBlocksByBlockNumbers(start, end, limit)
+	//	//if err != nil {
+	//	//	common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+	//	//	return
+	//	//}
+	//} else {
+	//	hashes, err = edb.GetBlocksHashes(limit)
+	//	if err != nil {
+	//		common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+	//		return
+	//	}
+	//}
 
 	if r.URL.Query().Get("content") != "full" {
+		var blocks []event.Block
+		if end > 0 {
+			blocks, err = edb.GetBlocksByBlockNumbers(start, end, limit)
+			if err != nil {
+				common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+				return
+			}
+		} else {
+			blocks, err = edb.GetBlocks(limit)
+			if err != nil {
+				common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+				return
+			}
+		}
 		common.Respond(w, r, blocks, nil)
 		return
 	}
 
-	fullBlocks := make([]fullBlock, len(blocks))
-
-	//ttt := time.Now()
-	bHashes := make([]string, 0, len(blocks))
-	for _, eb := range blocks {
-		bHashes = append(bHashes, eb.Hash)
+	var hashes []string
+	if end > 0 {
+		hashes, err = edb.GetBlockHashesByBlockNumbers(start, end, limit)
+	} else {
+		hashes, err = edb.GetBlocksHashes(limit)
 	}
 
-	bks, err := blockstore.MultipleRead(bHashes)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal("getting blocks "+err.Error()))
+		return
+	}
+
+	//fullBlocks := make([]fullBlock, len(blocks))
+
+	//ttt := time.Now()
+	//bHashes := make([]string, 0, len(blocks))
+	//for _, eb := range blocks {
+	//	bHashes = append(bHashes, eb.Hash)
+	//}
+
+	bks, err := blockstore.MultipleRead(hashes)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(fmt.Sprintf("getting block %v", err.Error())))
 		return
 	}
 
-	for i, b := range bks {
-		//t := time.Now()
-		//b, err := blockstore.Read(eb.Hash)
-		//if err != nil {
-		//	common.Respond(w, r, nil, common.NewErrInternal(fmt.Sprintf("getting block %v", err.Error())))
-		//	return
-		//}
-		//fmt.Println("block read time", time.Since(t))
-
-		//tt := time.Now()
+	fmt.Println("total blocks:", len(bks))
+	fullBlocks := make([]fullBlock, 0, len(bks))
+	for _, b := range bks {
 		txns := make([]event.Transaction, len(b.Txns))
 		for j, txn := range b.Txns {
 			txns[j] = event.Transaction{
@@ -811,8 +832,12 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		}
 		//fmt.Println("getBlocks, convert txns", time.Since(tt))
 
-		fullBlocks = append(fullBlocks, fullBlock{Block: blocks[i], Transactions: txns})
+		fullBlocks = append(fullBlocks, fullBlock{
+			Block:        *blockToBlockEvent(b),
+			Transactions: txns,
+		})
 	}
+	fmt.Println("full blocks:", len(fullBlocks))
 
 	//fmt.Println("getBlocks, total", time.Since(ttt))
 
@@ -827,6 +852,30 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 	//	fullBlocks = append(fullBlocks, fBlock)
 	//}
 	common.Respond(w, r, fullBlocks, nil)
+}
+
+func blockToBlockEvent(block *block.Block) *event.Block {
+	return &event.Block{
+		Hash:                  block.Hash,
+		Version:               block.Version,
+		CreationDate:          int64(block.CreationDate.Duration().Seconds()),
+		Round:                 block.Round,
+		MinerID:               block.MinerID,
+		RoundRandomSeed:       block.RoundRandomSeed,
+		MerkleTreeRoot:        block.GetMerkleTree().GetRoot(),
+		StateHash:             util.ToHex(block.ClientStateHash),
+		ReceiptMerkleTreeRoot: block.GetReceiptsMerkleTree().GetRoot(),
+		NumTxns:               len(block.Txns),
+		MagicBlockHash:        block.LatestFinalizedMagicBlockHash,
+		PrevHash:              block.PrevHash,
+		Signature:             block.Signature,
+		ChainId:               block.ChainID,
+		StateChangesCount:     block.StateChangesCount,
+		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
+		RoundTimeoutCount:     block.RoundTimeoutCount,
+		CreatedAt:             block.CreationDateField.ToTime(),
+		IsFinalised:           block.IsBlockFinalised(),
+	}
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block block

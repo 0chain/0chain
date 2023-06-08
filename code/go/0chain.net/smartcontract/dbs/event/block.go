@@ -100,6 +100,19 @@ func (edb *EventDb) GetBlocksByBlockNumbers(start, end int64, limit common.Pagin
 	return blocks, res.Error
 }
 
+func (edb *EventDb) GetBlockHashesByBlockNumbers(start, end int64, limit common.Pagination) ([]string, error) {
+	var hashes []string
+	res := edb.Store.Get().Table("blocks").
+		Where("round >= ? AND round < ?", start, end).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "round"},
+			Desc:   limit.IsDescending,
+		}).Select("hash").Find(&hashes)
+	return hashes, res.Error
+}
+
 func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").
@@ -110,6 +123,22 @@ func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 			Desc:   limit.IsDescending,
 		}).Find(&blocks)
 	return blocks, res.Error
+}
+
+func (edb *EventDb) GetBlocksHashes(limit common.Pagination) ([]string, error) {
+	var hashes []string
+	res := edb.Store.Get().Table("blocks").
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order("round desc").Select("hash").Find(&hashes)
+	//res := edb.Store.Get().Table("blocks").
+	//	Offset(limit.Offset).
+	//	Limit(limit.Limit).
+	//	Order(clause.OrderByColumn{
+	//		Column: clause.Column{Name: "round"},
+	//		Desc:   limit.IsDescending,
+	//	}).Find(&blocks)
+	return hashes, res.Error
 }
 
 func (edb *EventDb) addOrUpdateBlock(block Block) error {

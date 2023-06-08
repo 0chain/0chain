@@ -58,10 +58,13 @@ func ReadMsgpack(r io.Reader, entity Entity) error {
 }
 
 /*FromMsgpack - read data into an entity */
-func FromMsgpack(data interface{}, entity Entity) error {
+func FromMsgpack(data interface{}, entity Entity, noComputeProperties ...bool) error {
 	err := common.FromMsgpack(data, entity)
 	if err != nil {
 		return err
+	}
+	if len(noComputeProperties) > 0 && noComputeProperties[0] {
+		return nil
 	}
 	return entity.ComputeProperties()
 }
