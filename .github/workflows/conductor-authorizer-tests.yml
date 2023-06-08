@@ -88,7 +88,7 @@ jobs:
     - name: Git clone authorizer
       run: |
         git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
-        git checkout fix/conductor-tests
+        cd token_bridge_authserver && git checkout fix/conductor-tests
 
     - name: Git clone zboxcli
       run: |
