@@ -1400,9 +1400,6 @@ func (bc *BlobberCloseConnection) Verify() bool {
 	if bc.WriteMarker == nil {
 		return false
 	}
-	if len(bc.AllocationRoot) == 0 {
-		return false
-	}
 
 	if bc.WriteMarker.AllocationRoot != bc.AllocationRoot {
 		// return "", common.NewError("invalid_parameters",
@@ -1463,8 +1460,8 @@ func (wm *WriteMarker) GetHashData() string {
 }
 
 func (wm *WriteMarker) Verify() bool {
-	if len(wm.AllocationID) == 0 || len(wm.AllocationRoot) == 0 ||
-		len(wm.BlobberID) == 0 || len(wm.ClientID) == 0 || wm.Timestamp == 0 {
+	if len(wm.AllocationID) == 0 || len(wm.BlobberID) == 0 ||
+		len(wm.ClientID) == 0 || wm.Timestamp == 0 {
 		return false
 	}
 	return true
