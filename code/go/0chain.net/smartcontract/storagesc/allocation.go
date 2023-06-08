@@ -1370,7 +1370,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 
 // If blobbers doesn't provide their services, then user can use this
 // cancel_allocation transaction to close allocation and unlock all tokens
-// of write pool back to himself. The cancel_allocation doesn't pay min_lock
+// of write pool back to himself. The  cancel_allocation doesn't pay min_lock
 // demand to blobbers.
 func (sc *StorageSmartContract) cancelAllocationRequest(
 	t *transaction.Transaction, input []byte,
@@ -1537,11 +1537,6 @@ func (sc *StorageSmartContract) finishAllocation(
 ) (err error) {
 	before := make([]currency.Coin, len(sps))
 	deductionFromWritePool := currency.Coin(0)
-
-	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
-	if err != nil {
-		return err
-	}
 
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
@@ -1721,23 +1716,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	})
 
 	alloc.Finalized = true
-
-	for _, challenge := range challenges.OpenChallenges {
-		ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
-
-		if ok {
-			ba.Stats.OpenChallenges--
-			ba.Stats.SuccessChallenges++
-			alloc.Stats.OpenChallenges--
-			alloc.Stats.SuccessChallenges++
-
-			emitUpdateChallenge(&StorageChallenge{
-				ID:           challenge.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    challenge.BlobberID,
-			}, true, balances, alloc.Stats, ba.Stats)
-		}
-	}
 
 	return nil
 }
