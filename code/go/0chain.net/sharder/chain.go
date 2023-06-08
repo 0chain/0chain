@@ -126,7 +126,7 @@ func (sc *Chain) GetBlockFromStore(blockHash string, round int64) (*block.Block,
 
 /*GetBlockFromStoreBySummary - get the block from the store */
 func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Block, error) {
-	b, err := blockstore.GetStore().ReadWithBlockSummary(bs)
+	b, err := blockstore.Read(bs.Hash)
 	if err != nil {
 		logging.Logger.Error("get block from store by summary failed", zap.Error(err))
 		return nil, err
@@ -265,7 +265,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 		zap.Int64("block_with_magic_block_round",
 			lfb.LatestFinalizedMagicBlockRound))
 
-	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
+	lfmb, err = blockstore.Read(lfb.LatestFinalizedMagicBlockHash)
 	if err != nil {
 		// fatality, can't find related LFMB
 		return nil, common.NewErrorf("load_lfb",
