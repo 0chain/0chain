@@ -341,6 +341,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 	if vSPs, err = sc.validatorsStakePools(validators, balances); err != nil {
 		return
 	}
+
 	var challengeID string
 
 	if len(options) > 0 {
@@ -363,6 +364,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 	if err = sc.saveStakePools(validators, vSPs, balances); err != nil {
 		return err
 	}
+
 	err = alloc.moveFromChallengePool(cp, move)
 	coin, _ := move.Int64()
 	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
@@ -617,7 +619,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 
 func (sc *StorageSmartContract) challengePassed(
 	balances cstate.StateContextI,
-	txn *transaction.Transaction,
+	t *transaction.Transaction,
 	triggerPeriod int64,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
@@ -628,7 +630,7 @@ func (sc *StorageSmartContract) challengePassed(
 			"cannot get ongoing partition: "+err.Error())
 	}
 
-	blobber, err := sc.getBlobber(txn.ClientID, balances)
+	blobber, err := sc.getBlobber(t.ClientID, balances)
 	if err != nil {
 		return "", common.NewError("verify_challenge",
 			"can't get blobber"+err.Error())
@@ -661,7 +663,7 @@ func (sc *StorageSmartContract) challengePassed(
 
 		blobber.RewardRound = RewardRound{
 			StartRound: rewardRound,
-			Timestamp:  txn.CreationDate,
+			Timestamp:  t.CreationDate,
 		}
 
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)

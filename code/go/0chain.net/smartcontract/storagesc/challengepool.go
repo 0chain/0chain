@@ -129,7 +129,6 @@ func (cp *challengePool) moveToValidators(
 	}
 
 	cp.ZcnPool.Balance -= reward
-
 	return nil
 }
 
