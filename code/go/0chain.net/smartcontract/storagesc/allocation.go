@@ -1728,8 +1728,10 @@ func (sc *StorageSmartContract) finishAllocation(
 		if ok {
 			ba.Stats.FailedChallenges++
 			ba.Stats.OpenChallenges--
+			ba.Stats.SuccessChallenges++
 			alloc.Stats.FailedChallenges++
 			alloc.Stats.OpenChallenges--
+			alloc.Stats.SuccessChallenges++
 
 			emitUpdateChallenge(&StorageChallenge{
 				ID:           challenge.ID,
