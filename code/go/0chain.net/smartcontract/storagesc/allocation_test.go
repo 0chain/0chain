@@ -2159,7 +2159,6 @@ func Test_finalize_allocation(t *testing.T) {
 		b.Round = 100 + i
 		balances.setBlock(t, b)
 
-		fmt.Println("Test Round : ", balances.GetBlock().Round)
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
 	}

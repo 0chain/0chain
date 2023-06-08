@@ -442,8 +442,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		errCode   = "verify_challenge"
 	)
 
-	fmt.Println("verifyChallenge", balances.GetBlock().Round)
-
 	if err := json.Unmarshal(input, &challResp); err != nil {
 		return "", common.NewErrorf(errCode, "failed to decode txn input: %v", err)
 	}
@@ -636,11 +634,6 @@ func (sc *StorageSmartContract) challengePassed(
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, triggerPeriod)
 	// this expiry of blobber needs to be corrected once logic is finalized
-
-	fmt.Println("Code round : ", balances.GetBlock().Round)
-
-	fmt.Println("Reward round : ", rewardRound)
-	fmt.Println("Blobber reward round : ", blobber.RewardRound.StartRound)
 
 	if blobber.RewardRound.StartRound != rewardRound {
 
