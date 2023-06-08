@@ -182,7 +182,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
 	if err != nil {
 		return fmt.Errorf("rewarding blobbers: %v", err)
@@ -612,6 +611,11 @@ func (sc *StorageSmartContract) challengePassed(
 	t *transaction.Transaction,
 	triggerPeriod int64,
 	cab *challengeAllocBlobberPassResult) (string, error) {
+	logging.Logger.Info("challenge passed",
+		zap.Any("challengeID", cab.challenge.ID),
+		zap.Any("challenge", cab.challenge),
+		zap.Any("cab", cab))
+
 	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
 	if err != nil {
 		return "", common.NewError("verify_challenge",
