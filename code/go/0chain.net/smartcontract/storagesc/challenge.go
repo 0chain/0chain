@@ -91,6 +91,15 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return errors.New("late challenge response")
 	}
 
+	if alloc.Finalized {
+		logging.Logger.Info("blobber reward - allocation is finalized",
+			zap.String("allocation", alloc.ID),
+			zap.Int64("allocation expiry", int64(alloc.Expiration)),
+			zap.Int64("challenge time", int64(challengeCompletedTime)))
+
+		return nil
+	}
+
 	if challengeCompletedTime < latestCompletedChallTime {
 		logging.Logger.Debug("old challenge response - blobber reward",
 			zap.Int64("latestCompletedChallTime", int64(latestCompletedChallTime)),
@@ -181,7 +190,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	if sp, err = sc.getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
-
 
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
 	if err != nil {
@@ -626,8 +634,8 @@ func (sc *StorageSmartContract) challengePassed(
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, triggerPeriod)
 	// this expiry of blobber needs to be corrected once logic is finalized
-	if blobber.RewardRound.StartRound != rewardRound ||
-		balances.GetBlock().Round == 0 {
+
+	if blobber.RewardRound.StartRound != rewardRound {
 
 		var dataRead float64 = 0
 		if blobber.LastRewardDataReadRound >= rewardRound {
