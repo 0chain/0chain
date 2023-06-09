@@ -1540,6 +1540,7 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	if err != nil {
+		challenges.OpenChallenges = make([]*AllocOpenChallenge, 0)
 		logging.Logger.Info("finishAllocation: getAllocationChallenges", zap.Error(err))
 		return err
 	}
