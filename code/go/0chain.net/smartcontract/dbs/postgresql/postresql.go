@@ -56,6 +56,15 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 
 	maxRetries := 60 * 1 // 1 minutes
 	for i := 0; i < maxRetries; i++ {
+
+		fmt.Println(fmt.Sprintf(
+			"host=%v port=%v user=%v dbname=%v password=%v sslmode=disable",
+			config.Host,
+			config.Port,
+			config.User,
+			config.Name,
+			config.Password))
+
 		db, err = gorm.Open(postgres.Open(fmt.Sprintf(
 			"host=%v port=%v user=%v dbname=%v password=%v sslmode=disable",
 			config.Host,
