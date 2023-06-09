@@ -1728,13 +1728,6 @@ func (sc *StorageSmartContract) finishAllocation(
 		logging.Logger.Info("jayash challenge "+uniqueIdForLogging, zap.Any("challenge", challenge), zap.Any("sa", alloc.Stats), zap.Any("ba", ba.Stats), zap.Any("ok", ok))
 
 		if ok {
-			ba.Stats.OpenChallenges--
-			ba.Stats.SuccessChallenges++
-			alloc.Stats.OpenChallenges--
-			alloc.Stats.SuccessChallenges++
-
-			logging.Logger.Info("Infunc jayash challenge "+uniqueIdForLogging, zap.Any("challenge", challenge), zap.Any("sa", alloc.Stats), zap.Any("ba", ba.Stats), zap.Any("ok", ok))
-
 			emitUpdateChallenge(&StorageChallenge{
 				ID:           challenge.ID,
 				AllocationID: alloc.ID,
