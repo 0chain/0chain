@@ -1540,6 +1540,7 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	if err != nil {
+		logging.Logger.Info("finishAllocation: getAllocationChallenges", zap.Error(err))
 		return err
 	}
 
@@ -1720,12 +1721,8 @@ func (sc *StorageSmartContract) finishAllocation(
 		Amount:       i,
 	})
 
-	uniqueIdForLogging := fmt.Sprintf("%v-%v", "alloc-", alloc.ID)
-
 	for _, challenge := range challenges.OpenChallenges {
 		ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
-
-		logging.Logger.Info("jayash challenge "+uniqueIdForLogging, zap.Any("challenge", challenge), zap.Any("sa", alloc.Stats), zap.Any("ba", ba.Stats), zap.Any("ok", ok))
 
 		if ok {
 			emitUpdateChallenge(&StorageChallenge{
