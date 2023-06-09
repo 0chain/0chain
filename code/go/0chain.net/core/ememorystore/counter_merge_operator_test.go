@@ -65,7 +65,8 @@ func TestCounterMergeOperator_FullMerge(t *testing.T) {
 				CounterFieldName: tt.fields.CounterFieldName,
 			}
 			got, got1 := m.FullMerge(tt.args.key, tt.args.existingValue, tt.args.operands)
-			require.JSONEq(t, string(got), string(tt.want))
+			t.Logf("got: %v", string(got))
+			require.JSONEq(t, string(tt.want), string(got))
 			require.Equal(t, got1, tt.want1)
 		})
 	}
