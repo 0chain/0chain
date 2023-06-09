@@ -3,7 +3,7 @@
 
 ./zwalletcli/zwallet create-wallet --wallet testing.json
 
-for i in {1..7}
+for i in $(seq 2)
 do
   ./zwalletcli/zwallet --wallet testing.json faucet --methodName pour --input "{Pay day}"
 done
