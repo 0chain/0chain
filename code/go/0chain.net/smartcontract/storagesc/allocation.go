@@ -1370,7 +1370,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 
 // If blobbers doesn't provide their services, then user can use this
 // cancel_allocation transaction to close allocation and unlock all tokens
-// of write pool back to himself. The cancel_allocation doesn't pay min_lock
+// of write pool back to himself. The  cancel_allocation doesn't pay min_lock
 // demand to blobbers.
 func (sc *StorageSmartContract) cancelAllocationRequest(
 	t *transaction.Transaction, input []byte,
