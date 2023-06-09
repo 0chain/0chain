@@ -84,8 +84,8 @@ jobs:
       with:
         name: conductor-logs
         path: |
-          0chain/conductor/logs/
-          0chain/docker.local/
+          conductor/logs/
+          docker.local/
 
     - name: Cleanup
       run: |
