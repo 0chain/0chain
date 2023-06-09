@@ -88,17 +88,53 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 	return nil
 }
 
+type RunTestOption struct {
+	All        bool
+	PartialMap map[string]struct{}
+}
+type RunTestOptionFunc func(rto *RunTestOption)
+
+func WithRunAll() RunTestOptionFunc {
+	return func(rto *RunTestOption) {
+		rto.All = true
+	}
+}
+
+func WithPartialRun(funcNames ...string) RunTestOptionFunc {
+	return func(rto *RunTestOption) {
+		rto.PartialMap = make(map[string]struct{})
+		for _, funcName := range funcNames {
+			rto.PartialMap[funcName] = struct{}{}
+		}
+	}
+}
+
 func GetRestTests(
 	tests []TestParameters,
 	address string,
 	reciever rest.RestHandlerI,
 	source Source,
+	options ...RunTestOptionFunc,
 ) TestSuite {
 	var testsI []BenchTestI
+	var rto RunTestOption
+	for _, option := range options {
+		option(&rto)
+	}
+
 	for _, test := range tests {
 		test.Receiver = reciever
 		newTest := NewQueryBenchTest(test, address, source)
-		testsI = append(testsI, newTest)
+		if rto.All {
+			testsI = append(testsI, newTest)
+			fmt.Println("########## Run test (all)", newTest.Name())
+		} else {
+			_, ok := rto.PartialMap[newTest.Name()]
+			if ok {
+				testsI = append(testsI, newTest)
+				fmt.Println("########## Run test", newTest.Name())
+			}
+		}
 	}
 	return TestSuite{
 		Source:     source,

@@ -33,6 +33,8 @@ func BenchmarkRestTests(
 	if err != nil {
 		panic(err)
 	}
+
+	runTests := viper.GetStringSlice(bk.OptionRunTests)
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
@@ -442,5 +444,6 @@ func BenchmarkRestTests(
 		ADDRESS,
 		srh,
 		bk.StorageRest,
+		bk.WithPartialRun(runTests...),
 	)
 }
