@@ -1538,9 +1538,11 @@ func (sc *StorageSmartContract) finishAllocation(
 	before := make([]currency.Coin, len(sps))
 	deductionFromWritePool := currency.Coin(0)
 
+	openChallengesAvailable := true
+
 	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	if err != nil {
-		challenges.OpenChallenges = make([]*AllocOpenChallenge, 0)
+		openChallengesAvailable = false
 		logging.Logger.Info("finishAllocation: getAllocationChallenges", zap.Error(err))
 		return err
 	}
@@ -1722,15 +1724,17 @@ func (sc *StorageSmartContract) finishAllocation(
 		Amount:       i,
 	})
 
-	for _, challenge := range challenges.OpenChallenges {
-		ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
+	if openChallengesAvailable {
+		for _, challenge := range challenges.OpenChallenges {
+			ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
 
-		if ok {
-			emitUpdateChallenge(&StorageChallenge{
-				ID:           challenge.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    challenge.BlobberID,
-			}, true, balances, alloc.Stats, ba.Stats)
+			if ok {
+				emitUpdateChallenge(&StorageChallenge{
+					ID:           challenge.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    challenge.BlobberID,
+				}, true, balances, alloc.Stats, ba.Stats)
+			}
 		}
 	}
 
