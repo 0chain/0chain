@@ -97,7 +97,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 			zap.Int64("allocation expiry", int64(alloc.Expiration)),
 			zap.Int64("challenge time", int64(challengeCompletedTime)))
 
-		return nil
+		return fmt.Errorf("blobber reward failed: allocation is finalized")
 	}
 
 	if challengeCompletedTime < latestCompletedChallTime {
