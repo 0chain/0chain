@@ -92,9 +92,19 @@ func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) 
 		}
 	}
 
-	txnData, err := json.Marshal(payFeeInput)
+	input, err := json.Marshal(payFeeInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal pay fee input: %v", err)
+	}
+
+	scData := transaction.SmartContractData{
+		FunctionName: "payFees",
+		InputData:    input,
+	}
+
+	txnData, err := json.Marshal(scData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal smart contract data: %v", err)
 	}
 
 	//feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
