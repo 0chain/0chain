@@ -77,6 +77,10 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
+		err := tx.Rollback()
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
