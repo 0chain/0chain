@@ -1544,7 +1544,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		openChallengesAvailable = false
 		logging.Logger.Info("finishAllocation: getAllocationChallenges", zap.Error(err))
-		return err
 	}
 
 	// we can use the i for the blobbers list above because of algorithm
