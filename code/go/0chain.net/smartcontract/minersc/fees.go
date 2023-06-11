@@ -256,6 +256,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 
+	logging.Logger.Debug("Pay fee rewards sharders", zap.Any("ids", req.RewardSharderIDs))
+
 	if req.Round != b.Round {
 		return "", common.NewError("pay_fees", fmt.Sprintf("bad round, block %v but input %v", b.Round, req.Round))
 	}
@@ -374,6 +376,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	shardersIDs := rsMap.GetKeys()
+	logging.Logger.Debug("Pay fee rewards sharders - real", zap.Any("ids", shardersIDs))
 
 	if len(shardersIDs) > 0 {
 		seed := b.GetRoundRandomSeed()
