@@ -639,7 +639,7 @@ func (sc *StorageSmartContract) challengePassed(
 		zap.Any("blobberID", blobber.ID),
 		zap.Any("challengeID", cab.challenge.ID),
 		zap.Any("rewardRound", rewardRound),
-		zap.Any("lastRewardRound", blobber.RewardRound.StartRound),
+		zap.Any("lastRewardRound", blobber.RewardRound),
 		zap.Any("trigger period", triggerPeriod),
 		zap.Any("current round", balances.GetBlock().Round),
 	)
@@ -653,7 +653,7 @@ func (sc *StorageSmartContract) challengePassed(
 				zap.Any("challengeID", cab.challenge.ID),
 
 				zap.Any("rewardRound", rewardRound),
-				zap.Any("lastRewardRound", blobber.RewardRound.StartRound),
+				zap.Any("lastRewardRound", blobber.RewardRound),
 				zap.Any("trigger period", triggerPeriod),
 				zap.Any("current round", balances.GetBlock().Round),
 			)
@@ -665,7 +665,7 @@ func (sc *StorageSmartContract) challengePassed(
 			zap.Any("challengeID", cab.challenge.ID),
 
 			zap.Any("rewardRound", rewardRound),
-			zap.Any("lastRewardRound", blobber.RewardRound.StartRound),
+			zap.Any("lastRewardRound", blobber.RewardRound),
 			zap.Any("trigger period", triggerPeriod),
 			zap.Any("current round", balances.GetBlock().Round),
 		)
@@ -681,8 +681,9 @@ func (sc *StorageSmartContract) challengePassed(
 				DataRead:          dataRead,
 			})
 		if err != nil {
-			return "", common.NewError("verify_challenge",
-				"can't add to ongoing partition list "+err.Error())
+			logging.Logger.Info("verify_challenge can't add to ongoing partition list " + err.Error())
+			//return "", common.NewError("verify_challenge",
+			//	"can't add to ongoing partition list "+err.Error())
 		}
 
 		blobber.RewardRound = RewardRound{
