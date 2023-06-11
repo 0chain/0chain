@@ -89,16 +89,14 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 }
 
 type RunTestOption struct {
-	All        bool
 	PartialMap map[string]struct{}
 }
-type RunTestOptionFunc func(rto *RunTestOption)
 
-func WithRunAll() RunTestOptionFunc {
-	return func(rto *RunTestOption) {
-		rto.All = true
-	}
+func (rtp *RunTestOption) RunAll() bool {
+	return len(rtp.PartialMap) == 0
 }
+
+type RunTestOptionFunc func(rto *RunTestOption)
 
 func WithPartialRun(funcNames ...string) RunTestOptionFunc {
 	return func(rto *RunTestOption) {
@@ -122,10 +120,11 @@ func GetRestTests(
 		option(&rto)
 	}
 
+	runAll := rto.RunAll()
 	for _, test := range tests {
 		test.Receiver = reciever
 		newTest := NewQueryBenchTest(test, address, source)
-		if rto.All {
+		if runAll {
 			testsI = append(testsI, newTest)
 			fmt.Println("########## Run test (all)", newTest.Name())
 		} else {
