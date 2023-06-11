@@ -3,6 +3,7 @@ package miner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -77,7 +78,27 @@ func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) 
 	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
-	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
+
+	payFeeInput := &minersc.PayFeesInput{
+		Round: b.Round,
+	}
+
+	mb := mc.GetCurrentMagicBlock()
+	if mb != nil {
+		for _, sh := range mb.Sharders.CopyNodes() {
+			if !sh.GetIsKilled() {
+				payFeeInput.RewardSharderIDs = append(payFeeInput.RewardSharderIDs, sh.ID)
+			}
+		}
+	}
+
+	txnData, err := json.Marshal(payFeeInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal pay fee input: %v", err)
+	}
+
+	//feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
+	feeTxn.TransactionData = string(txnData)
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
 	if err := feeTxn.ComputeProperties(); err != nil {
 		return nil, err

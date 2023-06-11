@@ -20,9 +20,22 @@ func (_ *MinerSmartContract) killMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err := kill(input, txn.ClientID, gn.OwnerId, getMinerNode, balances); err != nil {
+	var req provider.ProviderRequest
+	if err := req.Decode(input); err != nil {
+		return "", common.NewErrorf("kill_sharder_failed", "decoding request: %v", err)
+	}
+	if err := kill(req.ID, txn.ClientID, gn.OwnerId, getMinerNode, balances); err != nil {
 		return "", common.NewError("kill_miner_failed", err.Error())
 	}
+
+	if mb := balances.GetChainCurrentMagicBlock(); mb != nil {
+		for _, nd := range mb.Miners.Nodes {
+			if nd.GetKey() == req.ID {
+				nd.SetKilled(true)
+			}
+		}
+	}
+
 	return "", nil
 }
 
@@ -34,38 +47,47 @@ func (_ *MinerSmartContract) killSharder(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err := kill(input, txn.ClientID, gn.OwnerId, getSharderNode, balances); err != nil {
+	var req provider.ProviderRequest
+	if err := req.Decode(input); err != nil {
+		return "", common.NewErrorf("kill_sharder_failed", "decoding request: %v", err)
+	}
+
+	if err := kill(req.ID, txn.ClientID, gn.OwnerId, getSharderNode, balances); err != nil {
 		return "", common.NewError("kill_sharder_failed", err.Error())
 	}
+
+	if mb := balances.GetChainCurrentMagicBlock(); mb != nil {
+		for _, nd := range mb.Sharders.Nodes {
+			if nd.GetKey() == req.ID {
+				nd.SetKilled(true)
+			}
+		}
+	}
+
 	return "", nil
 }
 
 // kill
 // kills a miner or sharder. We do not use Provider.kill() as that will also slash the stake pools.
 func kill(
-	input []byte,
+	id string,
 	clientId, ownerId string,
 	getNode func(string, cstate.CommonStateContextI) (*MinerNode, error),
 	balances cstate.StateContextI,
 ) error {
-	var req provider.ProviderRequest
-	if err := req.Decode(input); err != nil {
-		return err
-	}
-
 	if err := smartcontractinterface.AuthorizeWithOwner("only the owner can kill a provider", func() bool {
 		return ownerId == clientId
 	}); err != nil {
 		return err
 	}
 
-	node, err := getNode(req.ID, balances)
+	node, err := getNode(id, balances)
 	if err != nil {
 		return err
 	}
 
 	if node.SimpleNode.HasBeenKilled && node.StakePool.HasBeenKilled {
-		return fmt.Errorf("%s is already killed", req.ID)
+		return fmt.Errorf("%s is already killed", id)
 	}
 
 	node.SimpleNode.HasBeenKilled = true

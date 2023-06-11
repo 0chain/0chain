@@ -112,6 +112,7 @@ type Node struct {
 	Description    string        `json:"description" yaml:"description"`
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status" yaml:"-"`
+	IsKilled       bool          `json:"is_killed" yaml:"is_killed"`
 	InPrevMB       bool          `json:"in_prev_mb" yaml:"-"`
 	LastActiveTime time.Time     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	ErrorCount     int64         `json:"-" msgpack:"-" msg:"-" yaml:"-"`
@@ -344,7 +345,7 @@ func (n *Node) GetNodeTypeName() string {
 	}
 }
 
-//Grab - grab a slot to send message
+// Grab - grab a slot to send message
 func (n *Node) Grab() {
 	n.CommChannel <- struct{}{}
 
@@ -354,7 +355,7 @@ func (n *Node) Grab() {
 	n.sent++
 }
 
-//Release - release a slot after sending the message
+// Release - release a slot after sending the message
 func (n *Node) Release() {
 	<-n.CommChannel
 }
@@ -380,7 +381,7 @@ func (n *Node) AddReceived(num int64) {
 	n.received += num
 }
 
-//GetTimer - get the timer
+// GetTimer - get the timer
 func (n *Node) GetTimer(uri string) metrics.Timer {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
@@ -397,14 +398,14 @@ func (n *Node) getTimer(uri string) metrics.Timer {
 	return timer
 }
 
-//GetSizeMetric - get the size metric
+// GetSizeMetric - get the size metric
 func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 	return n.getSizeMetric(uri)
 }
 
-//getSizeMetric - get the size metric
+// getSizeMetric - get the size metric
 func (n *Node) getSizeMetric(uri string) metrics.Histogram {
 	metric, ok := n.SizeByURI[uri]
 	if !ok {
@@ -416,7 +417,7 @@ func (n *Node) getSizeMetric(uri string) metrics.Histogram {
 	return metric
 }
 
-//GetLargeMessageSendTime - get the time it takes to send a large message to this node
+// GetLargeMessageSendTime - get the time it takes to send a large message to this node
 func (n *Node) GetLargeMessageSendTime() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&n.largeMessageSendTime))
 }
@@ -533,7 +534,7 @@ func (n *Node) updateRequestMessageTimings() {
 	n.SmallMessagePullServeTime = minval
 }
 
-//ReadConfig - read configuration from the default config
+// ReadConfig - read configuration from the default config
 func ReadConfig() {
 	SetTimeoutSmallMessage(viper.GetDuration("network.timeout.small_message") * time.Millisecond)
 	SetTimeoutLargeMessage(viper.GetDuration("network.timeout.large_message") * time.Millisecond)
@@ -541,7 +542,7 @@ func ReadConfig() {
 	SetLargeMessageThresholdSize(viper.GetInt("network.large_message_th_size"))
 }
 
-//SetID - set the id of the node
+// SetID - set the id of the node
 func (n *Node) SetID(id string) error {
 	n.ID = id
 	bytes, err := hex.DecodeString(id)
@@ -552,7 +553,7 @@ func (n *Node) SetID(id string) error {
 	return nil
 }
 
-//IsActive - returns if this node is active or not
+// IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
@@ -571,12 +572,12 @@ func isGetRequest(uri string) bool {
 	return strings.HasSuffix(uri, "/get")
 }
 
-//GetPseudoName - create a pseudo name that is unique in the current active set
+// GetPseudoName - create a pseudo name that is unique in the current active set
 func (n *Node) GetPseudoName() string {
 	return fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex)
 }
 
-//GetOptimalLargeMessageSendTime - get the push or pull based optimal large message send time
+// GetOptimalLargeMessageSendTime - get the push or pull based optimal large message send time
 func (n *Node) GetOptimalLargeMessageSendTime() float64 {
 	return n.getOptimalLargeMessageSendTime() / 1000000
 }
@@ -692,4 +693,18 @@ func (n *Node) Clone() *Node {
 	}
 
 	return clone
+}
+
+func (n *Node) SetKilled(b bool) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.IsKilled = b
+}
+
+func (n *Node) GetIsKilled() bool {
+	var killed bool
+	n.mutex.Lock()
+	killed = n.IsKilled
+	n.mutex.Unlock()
+	return killed
 }

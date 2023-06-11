@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"0chain.net/core/sortedmap"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 
@@ -239,12 +240,25 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 }
 
 type PayFeesInput struct {
-	Round int64 `json:"round,omitempty"`
+	Round            int64    `json:"round,omitempty"`
+	RewardSharderIDs []string `json:"reward_sharder_ids"`
 }
 
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
-	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
+	input []byte, gn *GlobalNode, balances cstate.StateContextI) (resp string, err error) {
+	b := balances.GetBlock()
+	if t.ClientID != b.MinerID {
+		return "", common.NewError("pay_fees", "not block generator")
+	}
+
+	req := PayFeesInput{}
+	if err := json.Unmarshal(input, &req); err != nil {
+		return "", err
+	}
+
+	if req.Round != b.Round {
+		return "", common.NewError("pay_fees", fmt.Sprintf("bad round, block %v but input %v", b.Round, req.Round))
+	}
 
 	configuration := config.Configuration()
 	isViewChange := configuration.ChainConfig.IsViewChangeEnabled()
@@ -265,26 +279,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 	}
 
-	b := balances.GetBlock()
 	if b.Round == gn.ViewChange {
 		if err := msc.SetMagicBlock(gn, balances); err != nil {
 			return "", common.NewErrorf("pay_fees",
 				"can't set magic b round=%d viewChange=%d, %v",
 				b.Round, gn.ViewChange, err)
 		}
-	}
-
-	if t.ClientID != b.MinerID {
-		return "", common.NewError("pay_fees", "not block generator")
-	}
-
-	inputRound := PayFeesInput{}
-	if err := json.Unmarshal(input, &inputRound); err != nil {
-		return "", err
-	}
-
-	if inputRound.Round != b.Round {
-		return "", common.NewError("pay_fees", fmt.Sprintf("bad round, block %v but input %v", b.Round, inputRound.Round))
 	}
 
 	fees, err := msc.sumFee(b, true)
@@ -305,48 +305,75 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
 	}
 
-	var mn *MinerNode
-	if mn, err = getRewardedMiner(b, balances); err != nil {
-		return "", common.NewErrorf("pay_fees", "cannot get miner to reward, %v", err)
-	}
-	if mn == nil {
-		logging.Logger.Info("pay_fees, could not find miner to reward", zap.Int64("round", b.Round))
-	} else {
-		logging.Logger.Debug("pay_fees, got miner id successfully",
-			zap.String("miner id", mn.ID),
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash))
-		if err := mn.StakePool.DistributeRewardsRandN(
-			minerRewards,
-			mn.ID,
-			spenum.Miner,
-			b.GetRoundRandomSeed(),
-			gn.NumMinerDelegatesRewarded,
-			spenum.BlockRewardMiner,
-			balances,
-		); err != nil {
-			return "", err
-		}
-
-		if err := mn.StakePool.DistributeRewardsRandN(
-			minerFees,
-			mn.ID,
-			spenum.Miner,
-			b.GetRoundRandomSeed(),
-			gn.NumMinerDelegatesRewarded,
-			spenum.FeeRewardMiner,
-			balances,
-		); err != nil {
-			return "", err
-		}
+	mn, err := getMinerNode(b.MinerID, balances)
+	if err != nil {
+		return "", common.NewErrorf("pay_fees", "cannot get miner node, %v", err)
 	}
 
-	shardersIDs, err := getLiveSharderIds(balances)
+	logging.Logger.Debug("pay_fees, got miner id successfully",
+		zap.String("miner id", mn.ID),
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash))
+	if err := mn.StakePool.DistributeRewardsRandN(
+		minerRewards,
+		mn.ID,
+		spenum.Miner,
+		b.GetRoundRandomSeed(),
+		gn.NumMinerDelegatesRewarded,
+		spenum.BlockRewardMiner,
+		balances,
+	); err != nil {
+		return "", err
+	}
+
+	if err := mn.StakePool.DistributeRewardsRandN(
+		minerFees,
+		mn.ID,
+		spenum.Miner,
+		b.GetRoundRandomSeed(),
+		gn.NumMinerDelegatesRewarded,
+		spenum.FeeRewardMiner,
+		balances,
+	); err != nil {
+		return "", err
+	}
+
+	//shardersIDs, err := getLiveSharderIds(balances)
+	//if err != nil {
+	//	if err != util.ErrValueNotPresent {
+	//		return "", err
+	//	}
+	//}
+
+	// get sharders list
+	allShardersIDs, err := getAllSharderIDs(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			return "", err
+			//return "", err
+			return "", common.NewErrorf("pay_fees", "error getting sharders IDs: %v", err)
 		}
 	}
+
+	allShardersMap := make(map[string]struct{})
+	for _, id := range allShardersIDs {
+		allShardersMap[id] = struct{}{}
+	}
+
+	rewardShardersIDs := req.RewardSharderIDs
+	rsMap := sortedmap.New[string, struct{}]()
+	for _, id := range rewardShardersIDs {
+		if _, ok := rsMap.Get(id); ok {
+			return "", common.NewErrorf("pay_fees", "duplicate reward sharder ID: %s", id)
+		}
+
+		if _, ok := allShardersMap[id]; !ok {
+			// not registered yet or invalid sharder ID
+			continue
+		}
+		rsMap.Put(id, struct{}{})
+	}
+
+	shardersIDs := rsMap.GetKeys()
 
 	if len(shardersIDs) > 0 {
 		seed := b.GetRoundRandomSeed()
@@ -363,7 +390,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 
 		rewardShardersIDs := mbShardersIDs[:shardersPaid]
-		rewardSharders, err := cstate.GetItemsByIDs(rewardShardersIDs, getSharderNode, balances)
+		rewardSharders, err := cstate.GetItemsByIDs(rewardShardersIDs, getSharderNode, balances) // TODO: duplicate item access
 		if err != nil {
 			return "", err
 		}
@@ -459,17 +486,27 @@ func filterDeadNodes(nodes []*MinerNode) []*MinerNode {
 }
 
 func getLiveSharderIds(balances cstate.StateContextI) ([]string, error) {
-	nodes, err := getAllShardersList(balances)
-	if err != nil {
-		return nil, err
-	}
-	var ids []string
-	for i := range nodes.Nodes {
-		if !nodes.Nodes[i].SimpleNode.HasBeenKilled {
-			ids = append(ids, nodes.Nodes[i].ID)
-		}
-	}
-	return ids, nil
+	//nodes, err := getAllShardersList(balances)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//var ids []string
+	//for i := range nodes.Nodes {
+	//	if !nodes.Nodes[i].SimpleNode.HasBeenKilled {
+	//		ids = append(ids, nodes.Nodes[i].ID)
+	//	}
+	//}
+	//return ids, nil
+
+	return getNodeIDs(balances, AllShardersKey)
+}
+
+func getAllSharderIDs(balances cstate.StateContextI) ([]string, error) {
+	return getNodeIDs(balances, AllShardersKey)
+}
+
+func getAllMinerIDs(balances cstate.StateContextI) ([]string, error) {
+	return getNodeIDs(balances, AllMinersKey)
 }
 
 func getRegisterShardersInMagicBlock(balances cstate.StateContextI, shardersIDs []string) []string {
