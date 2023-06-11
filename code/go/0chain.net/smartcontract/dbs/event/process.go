@@ -66,6 +66,7 @@ func (edb *EventDb) ProcessEvents(
 		block:     block,
 		blockSize: blockSize,
 		tx:        tx,
+		done:      make(chan bool),
 	}
 
 	select {
