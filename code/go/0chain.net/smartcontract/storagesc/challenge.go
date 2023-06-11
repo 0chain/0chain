@@ -647,8 +647,23 @@ func (sc *StorageSmartContract) challengePassed(
 
 		var dataRead float64 = 0
 		if blobber.LastRewardDataReadRound >= rewardRound {
+			logging.Logger.Info("challenge passed in in ",
+				zap.Any("blobberID", blobber.ID),
+				zap.Any("rewardRound", rewardRound),
+				zap.Any("lastRewardRound", blobber.RewardRound.StartRound),
+				zap.Any("trigger period", triggerPeriod),
+				zap.Any("current round", balances.GetBlock().Round),
+			)
 			dataRead = blobber.DataReadLastRewardRound
 		}
+
+		logging.Logger.Info("challenge passed in ",
+			zap.Any("blobberID", blobber.ID),
+			zap.Any("rewardRound", rewardRound),
+			zap.Any("lastRewardRound", blobber.RewardRound.StartRound),
+			zap.Any("trigger period", triggerPeriod),
+			zap.Any("current round", balances.GetBlock().Round),
+		)
 
 		err := ongoingParts.Add(
 			balances,
@@ -669,6 +684,10 @@ func (sc *StorageSmartContract) challengePassed(
 			StartRound: rewardRound,
 			Timestamp:  t.CreationDate,
 		}
+
+		logging.Logger.Info("blobber.RewardRound",
+			zap.Any("blobberID", blobber.ID),
+			zap.Any("rewardRound", blobber.RewardRound))
 
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
