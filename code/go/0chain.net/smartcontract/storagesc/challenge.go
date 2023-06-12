@@ -543,7 +543,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
 	}
 
-	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, cab, conf.MaxChallengeCompletionTime)
+	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
 }
 
 type verifyTicketsResult struct {
@@ -737,8 +737,8 @@ func (sc *StorageSmartContract) challengePassed(
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 
 	err = sc.blobberReward(
-		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators,
-		validators
+		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc,
+		validators,
 		partial,
 		maxChallengeCompletionTime,
 		balances,
@@ -788,9 +788,8 @@ func (sc *StorageSmartContract) challengeFailed(
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 	err := sc.blobberPenalty(
-		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators,
+		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, validators,
 		maxChallengeCompletionTime,
-		validators
 		balances,
 	)
 	if err != nil {
