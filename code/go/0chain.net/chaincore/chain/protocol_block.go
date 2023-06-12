@@ -490,6 +490,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return nil
 	})
 
+	if err = wg.Wait(); err != nil {
+		if !waitgroup.ErrIsPanic(err) {
+			return err
+		}
+		logging.Logger.Error("delete dead block", zap.Error(err))
+	}
+
 	c.rebaseState(fb)
 	fr.Finalize(fb)
 	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {

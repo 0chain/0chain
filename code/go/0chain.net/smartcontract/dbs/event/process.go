@@ -101,6 +101,8 @@ func (edb *EventDb) ProcessEvents(
 			if err != nil {
 				return nil, err
 			}
+
+			return nil, err
 		}
 
 		var opt ProcessEventsOptions
