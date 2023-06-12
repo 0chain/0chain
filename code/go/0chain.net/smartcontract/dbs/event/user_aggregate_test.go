@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -27,7 +28,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 		PayedFees:       88,
 		CreatedAt:       time.Time{},
 	}
-	if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{ &snap }); err != nil {
+	if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{&snap}); err != nil {
 		t.Error(err)
 	}
 	type args struct {
@@ -101,7 +102,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 				if err := edb.Commit(); err != nil {
 					return true
 				}
-				edb, err = edb.Begin()
+				edb, err = edb.Begin(context.Background())
 				if err != nil {
 					return true
 				}
@@ -144,7 +145,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 		PayedFees:       88,
 		CreatedAt:       time.Time{},
 	}
-	if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{ &snap }); err != nil {
+	if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{&snap}); err != nil {
 		t.Error(err)
 	}
 
@@ -178,9 +179,9 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 				Tag:         TagLockWritePool,
 				Index:       "qwety",
 				Data: &[]WritePoolLock{{
-					Client: "test_client",
+					Client:       "test_client",
 					AllocationId: "test_allocation_id",
-					Amount: 10,
+					Amount:       10,
 				}},
 			},
 			{
@@ -189,9 +190,9 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 				Tag:         TagUnlockWritePool,
 				Index:       "qwety",
 				Data: &[]WritePoolLock{{
-					Client: "test_client",
+					Client:       "test_client",
 					AllocationId: "test_allocation_id",
-					Amount: 5,
+					Amount:       5,
 				}},
 			},
 			{
@@ -220,7 +221,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 				Tag:         TagUpdateUserPayedFees,
 				Index:       "qwety",
 				Data: &[]UserAggregate{{
-					UserID: "test_client",
+					UserID:    "test_client",
 					PayedFees: 10,
 				}},
 			},
@@ -230,7 +231,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 				Tag:         TagUpdateUserCollectedRewards,
 				Index:       "qwety",
 				Data: &[]UserAggregate{{
-					UserID: "test_client",
+					UserID:          "test_client",
 					CollectedReward: 10,
 				}},
 			},
@@ -240,7 +241,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 				Tag:         TagUpdateUserCollectedRewards,
 				Index:       "qwety",
 				Data: &[]UserAggregate{{
-					UserID: "test_client_2",
+					UserID:          "test_client_2",
 					CollectedReward: 10,
 				}},
 			},
@@ -250,7 +251,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 	err := edb.updateUserAggregates(events)
 	require.NoError(t, err)
 
-	snapsAfter, err := edb.GetUserSnapshotsByIds([]string{ "test_client", "test_client_2" })
+	snapsAfter, err := edb.GetUserSnapshotsByIds([]string{"test_client", "test_client_2"})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(snapsAfter))
 
@@ -259,12 +260,12 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 		snap1, snap2 = snap2, snap1
 	}
 	assert.Equal(t, int64(10), snap1.Round)
-	assert.Equal(t, snap.TotalStake + int64(5), snap1.TotalStake)
-	assert.Equal(t, snap.ReadPoolTotal + int64(5), snap1.ReadPoolTotal)
-	assert.Equal(t, snap.WritePoolTotal + int64(5), snap1.WritePoolTotal)
-	assert.Equal(t, snap.PayedFees + int64(10), snap1.PayedFees)
-	assert.Equal(t, snap.CollectedReward + int64(10), snap1.CollectedReward)
+	assert.Equal(t, snap.TotalStake+int64(5), snap1.TotalStake)
+	assert.Equal(t, snap.ReadPoolTotal+int64(5), snap1.ReadPoolTotal)
+	assert.Equal(t, snap.WritePoolTotal+int64(5), snap1.WritePoolTotal)
+	assert.Equal(t, snap.PayedFees+int64(10), snap1.PayedFees)
+	assert.Equal(t, snap.CollectedReward+int64(10), snap1.CollectedReward)
 
 	assert.Equal(t, int64(11), snap2.Round)
-	assert.Equal(t, int64(10), snap2.CollectedReward)	
+	assert.Equal(t, int64(10), snap2.CollectedReward)
 }
