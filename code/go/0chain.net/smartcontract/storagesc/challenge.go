@@ -1136,6 +1136,10 @@ func (sc *StorageSmartContract) generateChallenge(
 	conf *Config,
 	balances cstate.StateContextI,
 ) (err error) {
+	uniqueIdForLogging := t.Hash
+	logging.Logger.Info("generate_challenge : "+uniqueIdForLogging,
+		zap.Any("round", b.Round))
+
 	inputRound := GenerateChallengeInput{}
 	if err := json.Unmarshal(input, &inputRound); err != nil {
 		return err
@@ -1209,7 +1213,8 @@ func (sc *StorageSmartContract) generateChallenge(
 	}
 
 	if result == nil {
-		logging.Logger.Error("received empty data for challenge generation. Skipping challenge generation")
+		logging.Logger.Error("received empty data for challenge generation. Skipping challenge generation : "+uniqueIdForLogging,
+			zap.Any("block_round", b.Round))
 		return nil
 	}
 
