@@ -414,27 +414,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return nil
 	})
 
-	wg.Run("finalize block - delete dead blocks", fb.Round, func() error {
-		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
-		pfb := fb
-		for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
-
-		}
-		if pfb == nil {
-			return nil
-		}
-		frb := c.GetRoundBlocks(pfb.Round)
-		var deadBlocks []*block.Block
-		for _, b := range frb {
-			if b.Hash != pfb.Hash {
-				deadBlocks = append(deadBlocks, b)
-			}
-		}
-		// Prune all the dead blocks
-		c.DeleteBlocks(deadBlocks)
-		return nil
-	})
-
 	if err = wg.Wait(); err != nil {
 		if !waitgroup.ErrIsPanic(err) {
 			return err
@@ -488,6 +467,34 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash))
 		}
+	}
+
+	wg.Run("finalize block - delete dead blocks", fb.Round, func() error {
+		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
+		pfb := fb
+		for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
+
+		}
+		if pfb == nil {
+			return nil
+		}
+		frb := c.GetRoundBlocks(pfb.Round)
+		var deadBlocks []*block.Block
+		for _, b := range frb {
+			if b.Hash != pfb.Hash {
+				deadBlocks = append(deadBlocks, b)
+			}
+		}
+		// Prune all the dead blocks
+		c.DeleteBlocks(deadBlocks)
+		return nil
+	})
+
+	if err = wg.Wait(); err != nil {
+		if !waitgroup.ErrIsPanic(err) {
+			return err
+		}
+		logging.Logger.Error("delete dead block", zap.Error(err))
 	}
 
 	c.rebaseState(fb)
