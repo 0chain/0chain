@@ -1,7 +1,7 @@
 name: CONDUCTOR AUTHORIZER TESTS
 
 on:
-  # schedule:
+  schedule:
     - cron: '0 10 * * * '
   workflow_dispatch:
 
@@ -89,7 +89,6 @@ jobs:
     - name: Git clone authorizer
       run: |
         git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
-        cd token_bridge_authserver && git checkout fix/conductor-tests
 
     - name: Git clone zboxcli
       run: |

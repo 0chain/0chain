@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -24,7 +25,7 @@ var gEventDB *EventDb
 
 // returns an event db transaction and clean up function
 func GetTestEventDB(t *testing.T) (*EventDb, func()) {
-	db, err := gEventDB.Begin()
+	db, err := gEventDB.Begin(context.Background())
 	require.NoError(t, err)
 
 	db.managePartitions(0)
