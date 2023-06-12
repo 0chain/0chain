@@ -73,8 +73,11 @@ func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 }
 
 // update existing blobber, or reborn a deleted one
-func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	conf *Config, blobber *StorageNode, savedBlobber *StorageNode,
+func (sc *StorageSmartContract) updateBlobber(
+	t *transaction.Transaction,
+	conf *Config,
+	blobber, savedBlobber *StorageNode,
+	sp *stakePool,
 	balances cstate.StateContextI,
 ) (err error) {
 	// check terms
@@ -134,10 +137,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// update stake pool settings
-	var sp *stakePool
-	if sp, err = sc.getStakePool(spenum.Blobber, blobber.ID, balances); err != nil {
-		return fmt.Errorf("can't get stake pool:  %v", err)
-	}
 	stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
 	if err != nil {
 		return fmt.Errorf("error calculating staked capacity: %v", err)
@@ -290,7 +289,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"access denied, allowed for delegate_wallet owner only")
 	}
 
-	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, balances); err != nil {
+	if err = sc.updateBlobber(t, conf, updatedBlobber, blobber, sp, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
 	blobber.Capacity = updatedBlobber.Capacity

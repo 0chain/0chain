@@ -28,12 +28,13 @@ jobs:
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
       run: |
-        [ -f ./https://go.dev/dl/go1.18.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.3.linux-amd64.tar.gz
+        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
         [ -d /usr/local/go ] &&  rm -rf /usr/local/go
         [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
-        tar -C /usr/local -xzf ./go1.18.3.linux-amd64.tar.gz
+        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
         echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
         export PATH=$PATH:/usr/local/go/bin
+        export HOME="/root"
         which go
         go env
 
@@ -84,8 +85,8 @@ jobs:
       with:
         name: conductor-logs
         path: |
-          0chain/conductor/logs/
-          0chain/docker.local/
+          conductor/logs/
+          docker.local/
 
     - name: Cleanup
       run: |
