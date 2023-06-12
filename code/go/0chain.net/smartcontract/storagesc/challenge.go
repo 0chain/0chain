@@ -1231,6 +1231,9 @@ func (sc *StorageSmartContract) generateChallenge(
 
 	afterAddChallenge(result.challInfo.ID, result.challInfo.ValidatorIDs)
 
+	logging.Logger.Info(
+		"generate_challenge :     "+uniqueIdForLogging, zap.Any("challenge", result.challInfo))
+
 	return nil
 }
 
