@@ -91,15 +91,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return errors.New("late challenge response")
 	}
 
-	if alloc.Finalized {
-		logging.Logger.Info("blobber reward - allocation is finalized",
-			zap.String("allocation", alloc.ID),
-			zap.Int64("allocation expiry", int64(alloc.Expiration)),
-			zap.Int64("challenge time", int64(challengeCompletedTime)))
-
-		return fmt.Errorf("blobber reward failed: allocation is finalized")
-	}
-
 	if challengeCompletedTime < latestCompletedChallTime {
 		logging.Logger.Debug("old challenge response - blobber reward",
 			zap.Int64("latestCompletedChallTime", int64(latestCompletedChallTime)),
@@ -487,6 +478,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf(errCode,
 			"can't get related allocation: %v", err)
+	}
+
+	if alloc.Finalized {
+		return "", common.NewError(errCode, "allocation is finalized")
 	}
 
 	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
