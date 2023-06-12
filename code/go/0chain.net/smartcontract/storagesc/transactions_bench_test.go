@@ -282,7 +282,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 				}
 				b.StartTimer()
 
-				err = ssc.generateChallenge(tx, blk, nil, balances)
+				err = ssc.generateChallenge(tx, blk, nil, conf, balances)
 				require.NoError(b, err)
 			}
 			b.ReportAllocs()
@@ -439,6 +439,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 					storageChall,
 					allocChall,
 					challInfo,
+					conf,
 					balances)
 
 				require.NoError(b, err)
