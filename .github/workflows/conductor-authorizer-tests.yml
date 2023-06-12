@@ -1,8 +1,8 @@
 name: CONDUCTOR AUTHORIZER TESTS
 
 on:
-  # schedule:
-  #   - cron: '0 10 * * * '
+  schedule:
+    - cron: '0 10 * * * '
   workflow_dispatch:
 
 jobs:
@@ -15,10 +15,19 @@ jobs:
       run: |
         rm -rf *
 
-    - name: Go 1.20 setup.
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.20'
+    - name: "Setup Go"
+      shell: 'script --return --quiet --command "bash {0}"'
+      run: |
+        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
+        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
+        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
+        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
+
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        export HOME="/root"
+        which go
+        go env
 
     - name: Docker Compose Setup.
       run: |
@@ -46,6 +55,7 @@ jobs:
 
     - name: Docker Init Setup.
       run: |
+        export HOME="/root"
         cd 0chain
         make install-mockery
         make build-mocks
@@ -101,10 +111,12 @@ jobs:
 
     - name: Install zboxcli
       run: |
+        export HOME="/root"
         cd zboxcli && make install
 
     - name: Install zwalletcli
       run: |
+        export HOME="/root"
         cd zwalletcli && make install
 
     - name: 0dns Patching
@@ -139,29 +151,13 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
-        ethereum_node_url: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
-        EOF
-        cat <<\EOF > ~/.zcn/bridge.yaml
-        owner:
-          Password: ${{ secrets.AUTH_BRIDGE_PASSWORD }}
-          EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
-          BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
-          WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
-          EthereumNodeURL: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
-          GasLimit: 300000
-          Value: 0
-          AuthorizersAddress: 0xB132C20A02AD7C38d88805F0e3fFDdfb54224C58
-          ConsensusThreshold: 60
+        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/7iEbl9UprffEQSqCmhJh4kZFdEnfM1TO
         bridge:
-          AuthorizersAddress: 0xB132C20A02AD7C38d88805F0e3fFDdfb54224C58
-          Password: ${{ secrets.AUTH_BRIDGE_PASSWORD }}
-          EthereumAddress: 0xD8c9156e782C68EE671C09b6b92de76C97948432
-          BridgeAddress: 0x2405e40161ea6da91AE0e95061e7A8462b4D5eEa
-          WzcnAddress: 0x10140fbca3a468A1c35F132D75659eF0EB5d95DB
-          EthereumNodeURL: https://goerli.infura.io/v3/6141be73a15d47748af0dc14f53d57d7
-          GasLimit: 300000
-          Value: 0
-          ConsensusThreshold: 60
+          bridge_address: 0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+          token_address: 0xC79aD1e07f790d0Cf6AA3D09FeC393A09DC53d64
+          authorizers_address: 0xd5867B4a1F8e7BD91276b5C85a4EDC9D33400496
+          ethereum_address: 0xD8c9156e782C68EE671C09b6b92de76C97948432
+          password: “02289b9"
         EOF
 
     - name: List pwd zcn
@@ -173,6 +169,7 @@ jobs:
 
     - name: Starting authorizer Tests.
       run: |
+        export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh authorizer
 
@@ -184,27 +181,6 @@ jobs:
           0chain/conductor/logs/
           0chain/docker.local/
           token_bridge_authserver/docker.local/
-
-
-    # - name: Creating Artifact con-tests-logs.tar.gz file.
-    #   run: |
-    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-    # - name: Uploading artifact con-tests-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-logs.tar.gz
-
-    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-    #   run: |
-    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-backup-logs.tar.gz
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
