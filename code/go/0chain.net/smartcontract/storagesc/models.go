@@ -24,7 +24,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -1329,19 +1328,16 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 	return o, nil
 }
 
-func getMaxChallengeCompletionTime() time.Duration {
-	return config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)
-}
-
 // removeExpiredChallenges removes all expired challenges from the allocation,
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
-func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp, balances cstate.StateContextI) (map[string]string, error) {
+func (sa *StorageAllocation) removeExpiredChallenges(
+	allocChallenges *AllocationChallenges,
+	now common.Timestamp,
+	cct time.Duration,
+	balances cstate.StateContextI,
+) (map[string]string, error) {
 	var expiredChallengeBlobberMap = make(map[string]string)
-
-	cct := getMaxChallengeCompletionTime()
-
 	var nonExpiredChallenges []*AllocOpenChallenge
 
 	for _, oc := range allocChallenges.OpenChallenges {
