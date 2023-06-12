@@ -112,3 +112,18 @@ func (edb *EventDb) addOrOverwriteAllocationBlobberTerms(terms []AllocationBlobb
 		DoUpdates: clause.AssignmentColumns(updateFields), // column needed to be updated
 	}).Create(terms).Error
 }
+
+func (edb *EventDb) GetAllocationsByBlobberId(blobberId string, limit common2.Pagination) ([]Allocation, error) {
+	var result []Allocation
+	err := edb.Store.Get().Model(&Allocation{}).
+		Joins("JOIN allocation_blobber_terms on allocation_blobber_terms.allocation_id = allocations.allocation_id").
+		Where("blobber_id = ?", blobberId).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "allocations.created_at"},
+			Desc:   limit.IsDescending,
+		}).
+		Debug().Find(&result).Error
+	return result, err
+}
