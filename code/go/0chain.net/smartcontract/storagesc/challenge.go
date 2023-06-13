@@ -830,10 +830,14 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"found empty allocation stats")
 	}
 
-	logging.Logger.Info("getAllocationForChallenge 1",
-		zap.Any("uniqueIdForLogging", "Round : "+strconv.Itoa(int(options[0]))),
-		zap.Any("alloc", alloc),
-		zap.Any("blobberID", blobberID))
+	if len(options) > 0 {
+		logging.Logger.Info("getAllocationForChallenge 1",
+			zap.Any("uniqueIdForLogging", "Round : "+strconv.Itoa(int(options[0]))),
+			zap.Any("alloc", alloc),
+			zap.Any("blobberID", blobberID))
+	} else {
+		logging.Logger.Info("options are not here")
+	}
 
 	//we check that this allocation do have write-commits and can be challenged.
 	//We can't check only allocation to be written, because blobbers can commit in different order,
@@ -844,6 +848,8 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 				zap.Any("uniqueIdForLogging", "Round : "+strconv.Itoa(int(options[0]))),
 				zap.Any("alloc", alloc),
 				zap.Any("blobberID", blobberID))
+		} else {
+			logging.Logger.Info("2 options are not here")
 		}
 
 		return alloc, nil // found
