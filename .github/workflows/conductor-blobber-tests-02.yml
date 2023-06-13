@@ -9,7 +9,7 @@ on:
 jobs:
   CONDUCTOR_BLOBBERS_02_TESTS:
     name: CONDUCTOR-BLOBBERS-02-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test]
 
     steps:
     - name: Cleanup before restarting conductor tests.

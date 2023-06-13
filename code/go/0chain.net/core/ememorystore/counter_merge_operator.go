@@ -26,7 +26,7 @@ func (m *CounterMergeOperator) FullMerge(key, existingValue []byte, operands [][
 		curCounterEntity[m.KeyFieldName] = datastore.ToKey(key)
 		curCounterEntity[m.CounterFieldName] = float64(0)
 	} else {
-		err := common.FromJSON(existingValue, curCounterEntity)
+		err := common.FromJSON(existingValue, &curCounterEntity)
 		if err != nil {
 			return nil, false
 		}
