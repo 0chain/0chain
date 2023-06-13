@@ -55,13 +55,18 @@ func (edb *EventDb) ProcessEvents(
 	}
 
 	pdu := time.Since(ts)
+	tx, err := edb.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	event := blockEvents{
 		events:    es,
 		round:     round,
 		block:     block,
 		blockSize: blockSize,
-		txC:       make(chan *EventDb, 1),
+		tx:        tx,
+		done:      make(chan bool, 1),
 	}
 
 	select {
@@ -72,11 +77,15 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
+		err := tx.Rollback()
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
 	select {
-	case eTx := <-event.txC:
+	case commit := <-event.done:
 		du := time.Since(ts)
 		if du.Milliseconds() > 200 {
 			logging.Logger.Warn("process events slow",
@@ -86,16 +95,26 @@ func (edb *EventDb) ProcessEvents(
 				zap.String("block", block),
 				zap.Int("block size", blockSize))
 		}
+
+		if !commit {
+			err := tx.Rollback()
+			if err != nil {
+				return nil, err
+			}
+
+			return nil, err
+		}
+
 		var opt ProcessEventsOptions
 		for _, f := range opts {
 			f(&opt)
 		}
 
 		if opt.CommitNow {
-			return nil, eTx.Commit()
+			return nil, tx.Commit()
 		}
 
-		return eTx, nil
+		return tx, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -104,6 +123,10 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
+		err := tx.Rollback()
+		if err != nil {
+			return nil, err
+		}
 		return nil, ctx.Err()
 	}
 }
@@ -240,19 +263,11 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 func (edb *EventDb) work(ctx context.Context,
 	gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
-	tx, err := edb.Begin()
-	if err != nil {
-		logging.Logger.Error("error starting transaction", zap.Error(err))
-		return nil, err
-	}
+	tx := es.tx
 
 	var commit bool
 	defer func() {
-		if commit {
-			es.txC <- tx
-		} else {
-			es.txC <- nil
-		}
+		es.done <- commit
 	}()
 
 	if *currentPartition < es.round/edb.settings.PartitionChangePeriod {
@@ -260,14 +275,12 @@ func (edb *EventDb) work(ctx context.Context,
 		*currentPartition = es.round / edb.settings.PartitionChangePeriod
 	}
 
+	var err error
 	if err = tx.addEvents(ctx, es); err != nil {
 		logging.Logger.Error("error saving events",
 			zap.Int64("round", es.round),
 			zap.Error(err))
 
-		if rerr := tx.Rollback(); rerr != nil {
-			return nil, rerr
-		}
 		return nil, err
 	}
 
@@ -280,12 +293,6 @@ func (edb *EventDb) work(ctx context.Context,
 				zap.Int64("round", event.BlockNumber),
 				zap.Any("tag", event.Tag),
 				zap.Error(err))
-
-			if rerr := tx.Rollback(); rerr != nil {
-				logging.Logger.Error("commit error", zap.Error(rerr))
-				return nil, rerr
-			}
-
 			return nil, err
 		}
 	}
