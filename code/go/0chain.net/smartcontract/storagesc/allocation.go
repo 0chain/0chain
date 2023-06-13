@@ -1546,6 +1546,13 @@ func (sc *StorageSmartContract) finishAllocation(
 	before := make([]currency.Coin, len(sps))
 	deductionFromWritePool := currency.Coin(0)
 
+	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return fmt.Errorf("could not get allocation challenges: %v", err)
+		}
+	}
+
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
 	// passRates list above because of algorithm of the adjustChallenges
@@ -1723,8 +1730,21 @@ func (sc *StorageSmartContract) finishAllocation(
 		Amount:       i,
 	})
 
-	alloc.Finalized = true
+	if challenges != nil {
+		for _, challenge := range challenges.OpenChallenges {
+			ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
 
+			if ok {
+				emitUpdateChallenge(&StorageChallenge{
+					ID:           challenge.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    challenge.BlobberID,
+				}, true, balances, alloc.Stats, ba.Stats)
+			}
+		}
+	}
+
+	alloc.Finalized = true
 	return nil
 }
 
