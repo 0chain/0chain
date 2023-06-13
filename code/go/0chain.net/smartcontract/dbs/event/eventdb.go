@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -60,8 +61,8 @@ type EventDb struct {
 	eventsChannel chan blockEvents
 }
 
-func (edb *EventDb) Begin() (*EventDb, error) {
-	tx := edb.Store.Get().Begin()
+func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
+	tx := edb.Store.Get().Begin().WithContext(ctx)
 	if tx.Error != nil {
 		return nil, fmt.Errorf("begin transcation: %v", tx.Error)
 	}
@@ -115,7 +116,8 @@ type blockEvents struct {
 	blockSize int
 	round     int64
 	events    []Event
-	txC       chan *EventDb
+	tx        *EventDb
+	done      chan bool
 }
 
 func (edb *EventDb) AutoMigrate() error {

@@ -438,6 +438,16 @@ func BenchmarkRestTests(
 				},
 				Endpoint: srh.replicateUserAggregates,
 			},
+			{
+				FuncName: "get-blobber-allocations",
+				Params: map[string]string{
+					"blobber_id": getMockBlobberId(0),
+					"offset":        "",
+					"limit":         "",
+					"is_descending": "true",
+				},
+				Endpoint: srh.getBlobberAllocations,
+			},
 		},
 		ADDRESS,
 		srh,
