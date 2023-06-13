@@ -989,7 +989,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		)
 
 		// get the storage allocation from MPT
-		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
+		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances, options...)
 		if err != nil {
 			logging.Logger.Error("populateGenerateChallenge",
 				zap.String("uniqueIdForLogging", uniqueIdForLogging),
