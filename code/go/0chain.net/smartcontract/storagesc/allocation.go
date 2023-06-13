@@ -1548,7 +1548,9 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	if err != nil {
-		logging.Logger.Info("finishAllocation: getAllocationChallenges", zap.Error(err))
+		if err != util.ErrValueNotPresent {
+			return fmt.Errorf("could not get allocation challenges: %v", err)
+		}
 	}
 
 	// we can use the i for the blobbers list above because of algorithm

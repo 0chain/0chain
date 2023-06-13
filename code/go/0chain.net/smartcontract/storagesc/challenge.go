@@ -494,6 +494,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"can't get related allocation: %v", err)
 	}
 
+	if alloc.Finalized {
+		return "", common.NewError(errCode, "allocation is finalized")
+	}
+
 	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
 	if !ok {
 		return "", common.NewError(errCode, "blobber is not part of the allocation")
