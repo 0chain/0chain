@@ -937,6 +937,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
+	uniqueIdForLogging := "Round : " + strconv.Itoa(int(options[0]))
+
 	var findValidAllocRetries = 5 // avoid retry for debugging
 	var (
 		alloc                       *StorageAllocation
@@ -949,9 +951,29 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		findValidAllocRetries = blobberAllocPartitionLength
 	}
 
+	logging.Logger.Info("populateGenerateChallenge",
+		zap.String("uniqueIdForLogging", uniqueIdForLogging),
+		zap.Any("len(randBlobberAllocs)", len(randBlobberAllocs)),
+
+		zap.Any("findValidAllocRetries", findValidAllocRetries),
+		zap.Any("randBlobberAllocs", randBlobberAllocs),
+
+		zap.Any("blobberAllocPartitionLength", blobberAllocPartitionLength),
+		zap.Any("randPerm", randPerm),
+
+		zap.Any("blobberID", blobberID),
+		zap.Any("challengeID", challengeID),
+	)
+
 	for i := 0; i < findValidAllocRetries; i++ {
 		// get a random allocation
 		allocID := randBlobberAllocs[randPerm[i%blobberAllocPartitionLength]].ID
+
+		logging.Logger.Info("populateGenerateChallenge",
+			zap.String("uniqueIdForLogging", uniqueIdForLogging),
+			zap.Any("i", i),
+			zap.Any("allocID", allocID),
+		)
 
 		// get the storage allocation from MPT
 		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
@@ -959,11 +981,31 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			return nil, err
 		}
 
+		logging.Logger.Info("populateGenerateChallenge",
+			zap.String("uniqueIdForLogging", uniqueIdForLogging),
+			zap.Any("i", i),
+			zap.Any("alloc", alloc),
+		)
+
 		if alloc == nil {
+			logging.Logger.Info("populateGenerateChallenge",
+				zap.String("uniqueIdForLogging", uniqueIdForLogging),
+				zap.Any("i", i),
+				zap.Any("alloc", "NULL"),
+				zap.Any("blobberID", blobberID),
+			)
 			continue
 		}
 
 		if alloc.Finalized {
+
+			logging.Logger.Info("populateGenerateChallenge",
+				zap.String("uniqueIdForLogging", uniqueIdForLogging),
+				zap.Any("i", i),
+				zap.Any("alloc.Finalized", alloc.Finalized),
+				zap.Any("blobberID", blobberID),
+			)
+
 			err := blobberAllocParts.Remove(balances, allocID)
 			if err != nil {
 				return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
@@ -974,12 +1016,27 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, fmt.Errorf("could not get challenge partition size: %v", err)
 			}
 
+			logging.Logger.Info("populateGenerateChallenge",
+				zap.String("uniqueIdForLogging", uniqueIdForLogging),
+				zap.Any("i", i),
+				zap.Any("allocNum", allocNum),
+				zap.Any("blobberID", blobberID),
+			)
+
 			if allocNum == 0 {
 				// remove blobber from challenge ready partition when there's no allocation bind to it
 				err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
 				if err != nil && !partitions.ErrItemNotFound(err) {
 					// it could be empty if we finalize the allocation before committing any read or write
 					return nil, fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
+				} else if err == nil {
+					logging.Logger.Info("populateGenerateChallenge",
+						zap.String("uniqueIdForLogging", uniqueIdForLogging),
+						zap.Any("i", i),
+						zap.Any("allocNum", allocNum),
+						zap.Any("blobberID", blobberID),
+						zap.Any("err", err),
+					)
 				}
 			}
 			continue
