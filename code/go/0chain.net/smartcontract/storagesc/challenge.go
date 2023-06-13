@@ -1237,6 +1237,10 @@ func (sc *StorageSmartContract) generateChallenge(
 			"error getting the blobber challenge list: %v", err)
 	}
 
+	logging.Logger.Info("generate_challenge : "+uniqueIdForLogging,
+		zap.Any("challengeReadyParts", challengeReadyParts),
+	)
+
 	bcNum, err := challengeReadyParts.Size(balances)
 	if err != nil {
 		return common.NewErrorf("generate_challenge", "error getting blobber challenge size: %v", err)
