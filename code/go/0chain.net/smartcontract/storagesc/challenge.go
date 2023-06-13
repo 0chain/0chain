@@ -810,7 +810,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	t *transaction.Transaction,
 	allocID string,
 	blobberID string,
-	balances cstate.StateContextI) (alloc *StorageAllocation, err error) {
+	balances cstate.StateContextI, options ...int64) (alloc *StorageAllocation, err error) {
 
 	alloc, err = sc.getAllocation(allocID, balances)
 	switch err {
@@ -830,12 +830,25 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"found empty allocation stats")
 	}
 
+	logging.Logger.Info("getAllocationForChallenge 1",
+		zap.Any("uniqueIdForLogging", "Round : "+strconv.Itoa(int(options[0]))),
+		zap.Any("alloc", alloc),
+		zap.Any("blobberID", blobberID))
+
 	//we check that this allocation do have write-commits and can be challenged.
 	//We can't check only allocation to be written, because blobbers can commit in different order,
 	//so we check particular blobber's allocation to be written
 	if alloc.Stats.NumWrites > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
+		if len(options) > 0 {
+			logging.Logger.Info("getAllocationForChallenge 2",
+				zap.Any("uniqueIdForLogging", "Round : "+strconv.Itoa(int(options[0]))),
+				zap.Any("alloc", alloc),
+				zap.Any("blobberID", blobberID))
+		}
+
 		return alloc, nil // found
 	}
+
 	return nil, nil
 }
 
@@ -978,6 +991,13 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		// get the storage allocation from MPT
 		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
 		if err != nil {
+			logging.Logger.Error("populateGenerateChallenge",
+				zap.String("uniqueIdForLogging", uniqueIdForLogging),
+				zap.Any("i", i),
+				zap.Any("allocID", allocID),
+				zap.Any("blobberID", blobberID),
+				zap.Any("error", err),
+			)
 			return nil, err
 		}
 
