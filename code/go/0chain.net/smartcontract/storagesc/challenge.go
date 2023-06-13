@@ -907,7 +907,9 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	balances cstate.StateContextI,
 	needValidNum int,
 	conf *Config,
+	options ...int64,
 ) (*challengeOutput, error) {
+
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(1) // challengeBlobberSelection(r.Intn(2))
 	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
@@ -1002,7 +1004,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	if !foundAllocation {
 		logging.Logger.Error("populate_generate_challenge: couldn't find appropriate allocation for a blobber",
-			zap.String("blobberId", blobberID))
+			zap.String("blobberId", blobberID),
+			zap.Any("round", options))
 		return nil, nil
 	}
 
@@ -1207,6 +1210,7 @@ func (sc *StorageSmartContract) generateChallenge(
 		balances,
 		needValidNum,
 		conf,
+		b.Round,
 	)
 	if err != nil {
 		return common.NewErrorf("generate_challenge", err.Error())
