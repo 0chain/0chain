@@ -326,9 +326,8 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 }
 
 var avgTerms = Terms{
-	ReadPrice:     1 * x10,
-	WritePrice:    5 * x10,
-	MinLockDemand: 0.1,
+	ReadPrice:  1 * x10,
+	WritePrice: 5 * x10,
 }
 
 // add allocation and 20 blobbers

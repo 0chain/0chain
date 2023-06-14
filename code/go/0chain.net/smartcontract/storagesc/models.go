@@ -250,26 +250,19 @@ type Terms struct {
 	// WritePrice is price for reading. Token / GB / time unit. Also,
 	// it used to calculate min_lock_demand value.
 	WritePrice currency.Coin `json:"write_price"`
-	// MinLockDemand in number in [0; 1] range. It represents part of
-	// allocation should be locked for the blobber rewards even if
-	// user never write something to the blobber.
-	MinLockDemand float64 `json:"min_lock_demand"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
+func (t *Terms) minLockDemand(gbSize, rdtu, minLockDemand float64) (currency.Coin, error) {
 
-	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return currency.Float64ToCoin(mldf * rdtu)                  //
+	var mldf = float64(t.WritePrice) * gbSize * minLockDemand //
+	return currency.Float64ToCoin(mldf * rdtu)                //
 }
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
-		return errors.New("invalid min_lock_demand")
-	}
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
@@ -539,7 +532,7 @@ func newBlobberAllocation(
 		return nil, fmt.Errorf("new blobber allocation failed: %v", err)
 	}
 
-	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu)
+	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu, allocation.MinLockDemand)
 	return ba, err
 }
 
@@ -664,6 +657,11 @@ type StorageAllocation struct {
 	Canceled bool `json:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
 	UsedSize int64 `json:"-" msg:"-"`
+
+	// MinLockDemand in number in [0; 1] range. It represents part of
+	// allocation should be locked for the blobber rewards even if
+	// user never write something to the blobber.
+	MinLockDemand float64 `json:"min_lock_demand"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
 	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`

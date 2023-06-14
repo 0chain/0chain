@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/block"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/block"
 
 	"0chain.net/smartcontract/provider"
 
@@ -120,12 +121,12 @@ func TestCancelAllocationRequest(t *testing.T) {
 		TimeUnit:                   720 * time.Hour,
 		MaxStake:                   zcnToBalance(100.0),
 		CancellationCharge:         float64(0.2),
+		MinLockDemand:              0.1,
 	}
 	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime) * 5
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
 		writePrice:    0.1,
-		minLockDemand: 0.1,
 	}
 
 	var allocation = StorageAllocation{

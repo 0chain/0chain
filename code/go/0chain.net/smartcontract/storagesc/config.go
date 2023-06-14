@@ -120,6 +120,7 @@ type Config struct {
 
 	// allocation cancellation
 	CancellationCharge float64 `json:"cancellation_charge"`
+	MinLockDemand      float64 `json:"min_lock_demand"`
 	// free allocations
 	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation"`
 	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation"`
@@ -165,6 +166,10 @@ func (conf *Config) validate() (err error) {
 	if conf.CancellationCharge < 0.0 || 1.0 < conf.CancellationCharge {
 		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
 			conf.CancellationCharge)
+	}
+	if conf.MinLockDemand < 0.0 || 1.0 < conf.MinLockDemand {
+		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
+			conf.MinLockDemand)
 	}
 	if conf.MaxBlobbersPerAllocation <= 0 {
 		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
@@ -334,6 +339,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
 	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
+	conf.MinLockDemand = scc.GetFloat64(pfx + "MinLockDemand")
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
 	if err != nil {

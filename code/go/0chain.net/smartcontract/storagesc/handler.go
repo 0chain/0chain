@@ -2220,9 +2220,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			Longitude: blobber.Longitude,
 		},
 		Terms: Terms{
-			ReadPrice:     blobber.ReadPrice,
-			WritePrice:    blobber.WritePrice,
-			MinLockDemand: blobber.MinLockDemand,
+			ReadPrice:  blobber.ReadPrice,
+			WritePrice: blobber.WritePrice,
 		},
 		Capacity:        blobber.Capacity,
 		Allocated:       blobber.Allocated,
