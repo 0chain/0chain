@@ -144,25 +144,21 @@ tests:
           start: true
       - wait_round:
           shift: 20
-          timeout: "1m"
       - stop: ["miner-4"]
       - wait_round:
           shift: 10
-          timeout: "1m"
       - command:
           name: "sleep_3m"
       - stop: ["miner-3"]
       - start: ["miner-4"]
       - wait_round:
           shift: 10
-          timeout: "3m"
       - command:
           name: "sleep_3m"
       - stop: ["miner-2"]
       - start: ["miner-3"]
       - wait_round:
           shift: 10
-          timeout: "3m"
 
   # SHARDERS GO DOWN
   - name: "All sharders go down"
@@ -205,23 +201,19 @@ tests:
           start: true
       - wait_round:
           shift: 50
-          timeout: "1m"
       - stop: ["sharder-2"]
       - command:
           name: "sleep_3m"
       - wait_round:
           shift: 50
-          timeout: "1m"
       - start: ["sharder-2"]
       - command:
           name: "sleep_3m"
       - wait_round:
           shift: 50
-          timeout: "10m"
       - stop: ["sharder-1"]
       - wait_round:
           shift: 50
-          timeout: "10m"
 
   # NODES GO DOWN AND COME UP
   - name: "All nodes go down and come up"
