@@ -218,7 +218,7 @@ jobs:
           "text": "'"<!here> CONDUCTOR_BLOBBERS_02_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
-              "text": "CONDUCTOR BLOBBERS_02 TEST PASSING ✅",
+              "text": "CONDUCTOR BLOBBERS_02 TEST PASSED ✅",
               "color": "#22bb33"
               }
           ]
