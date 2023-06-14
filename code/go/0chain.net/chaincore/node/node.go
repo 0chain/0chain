@@ -112,7 +112,6 @@ type Node struct {
 	Description    string        `json:"description" yaml:"description"`
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status" yaml:"-"`
-	IsKilled       bool          `json:"is_killed" yaml:"is_killed"`
 	InPrevMB       bool          `json:"in_prev_mb" yaml:"-"`
 	LastActiveTime time.Time     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	ErrorCount     int64         `json:"-" msgpack:"-" msg:"-" yaml:"-"`
@@ -693,18 +692,4 @@ func (n *Node) Clone() *Node {
 	}
 
 	return clone
-}
-
-func (n *Node) SetKilled(b bool) {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
-	n.IsKilled = b
-}
-
-func (n *Node) GetIsKilled() bool {
-	var killed bool
-	n.mutex.Lock()
-	killed = n.IsKilled
-	n.mutex.Unlock()
-	return killed
 }
