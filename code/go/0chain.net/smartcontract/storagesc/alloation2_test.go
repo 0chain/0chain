@@ -20,7 +20,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -387,7 +386,9 @@ func testCancelAllocation(
 	require.EqualValues(t, "canceled", resp)
 
 	require.NoError(t, err)
-	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
+	//newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
+	//require.NoError(t, err)
+	alloc, err := ssc.getAllocation(sAllocation.ID, ctx)
 	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
@@ -396,7 +397,7 @@ func testCancelAllocation(
 		sps = append(sps, sp)
 	}
 	totalCancellationCharge := 952500
-	confirmFinalizeAllocation(t, f, *newCp, sps, int64(totalCancellationCharge/len(blobbers)))
+	confirmFinalizeAllocation(t, f, alloc.ChallengePool, sps, int64(totalCancellationCharge/len(blobbers)))
 
 	var req lockRequest
 	req.decode(input)
@@ -430,8 +431,9 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 	}
 	require.EqualValues(t, "finalized", resp)
 	require.NoError(t, err)
-	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
-	require.NoError(t, err)
+	//newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
+	//require.NoError(t, err)
+	alloc, err := ssc.getAllocation(sAllocation.ID, ctx)
 	require.NoError(t, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
@@ -440,18 +442,18 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newCp, sps, 0)
+	confirmFinalizeAllocation(t, f, alloc.ChallengePool, sps, 0)
 	return nil
 }
 
 func confirmFinalizeAllocation(
 	t *testing.T,
 	f formulaeFinalizeAllocation,
-	challengePool challengePool,
+	challengePool currency.Coin,
 	sps []*stakePool,
 	cancellationCharge int64,
 ) {
-	require.EqualValues(t, 0, challengePool.Balance)
+	require.EqualValues(t, 0, challengePool)
 
 	var rewardDelegateTransfers = [][]bool{}
 	var minLockdelegateTransfers = [][]bool{}
@@ -526,18 +528,9 @@ func setupMocksFinishAllocation(
 		},
 	}
 
+	sAllocation.ChallengePool = challengePoolBalance
 	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
 	require.NoError(t, err)
-
-	var cPool = challengePool{
-		ZcnPool: &tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      sAllocation.ID,
-				Balance: challengePoolBalance,
-			},
-		},
-	}
-	require.NoError(t, cPool.save(ssc.ID, &sAllocation, ctx))
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
 	for i, blobber := range blobbers {

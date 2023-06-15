@@ -547,10 +547,11 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		return 0, nil // zero size write marker -- no tokens movements
 	}
 
-	cp, err := sc.getChallengePool(alloc.ID, balances)
-	if err != nil {
-		return 0, fmt.Errorf("can't get related challenge pool: %v", err)
-	}
+	//cp, err := sc.getChallengePool(alloc.ID, balances)
+	//if err != nil {
+	//	return 0, fmt.Errorf("can't get related challenge pool: %v", err)
+	//}
+	//cp := alloc.ChallengePool
 
 	var move currency.Coin
 	if size > 0 {
@@ -564,9 +565,9 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 		logging.Logger.Info("commitMoveTokens", zap.Any("move", move), zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("alloc_write_pool", alloc.WritePool))
-		err = alloc.moveToChallengePool(cp, move)
+		err = alloc.moveToChallengePool(move)
 		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, alloc.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
 			AllocationId: alloc.ID,
 			Amount:       coin,
@@ -593,9 +594,9 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 
 		move = details.delete(-size, wmTime, rdtu)
-		err = alloc.moveFromChallengePool(cp, move)
+		err = alloc.moveFromChallengePool(move)
 		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, alloc.ID, event.ChallengePoolLock{
 			Client:       alloc.Owner,
 			AllocationId: alloc.ID,
 			Amount:       coin,
@@ -616,11 +617,11 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		details.Returned = returned
 	}
 
-	if err = cp.save(sc.ID, alloc, balances); err != nil {
-		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
-	}
-
-	return move, nil 
+	//if err = cp.save(sc.ID, alloc, balances); err != nil {
+	//	return 0, fmt.Errorf("can't Save challenge pool: %v", err)
+	//}
+	//
+	return move, nil
 }
 
 func (sc *StorageSmartContract) commitBlobberConnection(

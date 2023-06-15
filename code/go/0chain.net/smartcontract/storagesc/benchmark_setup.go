@@ -88,9 +88,10 @@ func addMockAllocation(
 			FailedChallenges:          1,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
-		TimeUnit:  1 * time.Hour,
-		Finalized: i == mockFinalizedAllocationIndex,
-		WritePool: mockWriePoolSize,
+		TimeUnit:      1 * time.Hour,
+		Finalized:     i == mockFinalizedAllocationIndex,
+		WritePool:     mockWriePoolSize,
+		ChallengePool: mockMinLockDemand * 100,
 	}
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
@@ -254,31 +255,31 @@ func AddMockReadPools(clients []string, balances cstate.StateContextI) {
 }
 
 func AddMockChallengePools(eventDb *event.EventDb, balances cstate.StateContextI) {
-	var challengePools []event.ChallengePool
-	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		allocationId := getMockAllocationId(i)
-		cp := newChallengePool()
-		cp.TokenPool.ID = challengePoolKey(ADDRESS, allocationId)
-		cp.Balance = mockMinLockDemand * 100
-		if _, err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
-			log.Fatal(err)
-		}
-
-		if viper.GetBool(sc.EventDbEnabled) {
-			challengePool := event.ChallengePool{
-				ID:           cp.ID,
-				AllocationID: allocationId,
-				Balance:      int64(cp.Balance),
-				Finalized:    false,
-			}
-			challengePools = append(challengePools, challengePool)
-		}
-	}
-	if len(challengePools) > 0 {
-		if err := eventDb.Store.Get().Create(&challengePools).Error; err != nil {
-			log.Fatal(err)
-		}
-	}
+	//var challengePools []event.ChallengePool
+	//for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
+	//	allocationId := getMockAllocationId(i)
+	//	cp := newChallengePool()
+	//	cp.TokenPool.ID = challengePoolKey(ADDRESS, allocationId)
+	//	cp.Balance = mockMinLockDemand * 100
+	//	if _, err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
+	//		log.Fatal(err)
+	//	}
+	//
+	//	if viper.GetBool(sc.EventDbEnabled) {
+	//		challengePool := event.ChallengePool{
+	//			ID:           cp.ID,
+	//			AllocationID: allocationId,
+	//			Balance:      int64(cp.Balance),
+	//			Finalized:    false,
+	//		}
+	//		challengePools = append(challengePools, challengePool)
+	//	}
+	//}
+	//if len(challengePools) > 0 {
+	//	if err := eventDb.Store.Get().Create(&challengePools).Error; err != nil {
+	//		log.Fatal(err)
+	//	}
+	//}
 }
 
 func setupMockChallenge(

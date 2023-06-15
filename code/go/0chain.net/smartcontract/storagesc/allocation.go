@@ -339,13 +339,13 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("create_write_pool")
 
-	if err = sc.createChallengePool(txn, sa, balances, conf); err != nil {
-		logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
-			zap.String("txn", txn.Hash),
-			zap.Error(err))
-		return "", common.NewError("allocation_creation_failed", err.Error())
-	}
-	m.tick("create_challenge_pool")
+	//if err = sc.createChallengePool(txn, sa, balances, conf); err != nil {
+	//	logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
+	//		zap.String("txn", txn.Hash),
+	//		zap.Error(err))
+	//	return "", common.NewError("allocation_creation_failed", err.Error())
+	//}
+	//m.tick("create_challenge_pool")
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
@@ -770,10 +770,11 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
-	cp, err := sc.getChallengePool(alloc.ID, balances)
-	if err != nil {
-		return fmt.Errorf("adjust_challenge_pool: %v", err)
-	}
+	//cp, err := sc.getChallengePool(alloc.ID, balances)
+	//if err != nil {
+	//	return fmt.Errorf("adjust_challenge_pool: %v", err)
+	//}
+	//cp := alloc.ChallengePool
 
 	var changed bool
 	sum := currency.Coin(0)
@@ -784,7 +785,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 		switch {
 		case ch > 0:
-			err = alloc.moveToChallengePool(cp, ch)
+			err = alloc.moveToChallengePool(ch)
 			sum += ch
 			changed = true
 		default:
@@ -796,19 +797,19 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	}
 
 	if changed {
-		err = cp.save(sc.ID, alloc, balances)
+		//err = cp.save(sc.ID, alloc, balances)
+		//if err != nil {
+		//}
+		i := int64(0)
+		i, err = sum.Int64()
 		if err != nil {
-			i := int64(0)
-			i, err = sum.Int64()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
-				Client:       alloc.Owner,
-				AllocationId: alloc.ID,
-				Amount:       i,
-			})
+			return err
 		}
+		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, alloc.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       i,
+		})
 	}
 
 	return nil
@@ -1578,16 +1579,17 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	var cp *challengePool
-	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
-		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
-	}
+	//var cp *challengePool
+	//if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
+	//	return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
+	//}
+	//cp := alloc.ChallengePool
 
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
-		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
+		if alloc.UsedSize > 0 && alloc.ChallengePool > 0 && passRates[i] > 0 && d.Stats != nil {
 			ratio := float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-			cpBalance, err := cp.Balance.Float64()
+			cpBalance, err := alloc.ChallengePool.Float64()
 			if err != nil {
 				return err
 			}
@@ -1613,19 +1615,19 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	prevBal := cp.Balance
-	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
+	prevBal := alloc.ChallengePool
+	alloc.ChallengePool, err = currency.MinusCoin(alloc.ChallengePool, passPayments)
 	if err != nil {
 		return err
 	}
 
-	if cp.Balance > 0 {
-		alloc.MovedBack, err = currency.AddCoin(alloc.MovedBack, cp.Balance)
+	if alloc.ChallengePool > 0 {
+		alloc.MovedBack, err = currency.AddCoin(alloc.MovedBack, alloc.ChallengePool)
 		if err != nil {
 			return err
 		}
 
-		err = alloc.moveFromChallengePool(cp, cp.Balance)
+		err = alloc.moveFromChallengePool(alloc.ChallengePool)
 		if err != nil {
 			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
 		}
@@ -1700,16 +1702,16 @@ func (sc *StorageSmartContract) finishAllocation(
 		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 	}
 
-	if err = cp.save(sc.ID, alloc, balances); err != nil {
-		return fmt.Errorf("failed to save challenge pool: %v", err)
-	}
+	//if err = cp.save(sc.ID, alloc, balances); err != nil {
+	//	return fmt.Errorf("failed to save challenge pool: %v", err)
+	//}
 
 	i, err = prevBal.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, alloc.ID, event.ChallengePoolLock{
 		Client:       alloc.Owner,
 		AllocationId: alloc.ID,
 		Amount:       i,

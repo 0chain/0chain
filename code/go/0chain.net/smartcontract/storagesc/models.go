@@ -649,7 +649,8 @@ type StorageAllocation struct {
 	// 00100000 - 32 - rename
 	FileOptions uint16 `json:"file_options"`
 
-	WritePool currency.Coin `json:"write_pool"`
+	WritePool     currency.Coin `json:"write_pool"`
+	ChallengePool currency.Coin `json:"challenge_pool"`
 
 	// Requested ranges.
 	ReadPriceRange  PriceRange `json:"read_price_range"`
@@ -752,21 +753,15 @@ func (sa *StorageAllocation) addToWritePool(
 	return nil
 }
 
-func (sa *StorageAllocation) moveToChallengePool(
-	cp *challengePool,
-	value currency.Coin,
-) error {
-	if cp == nil {
-		return errors.New("invalid challenge pool")
-	}
+func (sa *StorageAllocation) moveToChallengePool(value currency.Coin) error {
 	if value > sa.WritePool {
 		return fmt.Errorf("insufficient funds %v in write pool to pay %v", sa.WritePool, value)
 	}
 
-	if balance, err := currency.AddCoin(cp.Balance, value); err != nil {
+	if balance, err := currency.AddCoin(sa.ChallengePool, value); err != nil {
 		return err
 	} else {
-		cp.Balance = balance
+		sa.ChallengePool = balance
 	}
 	if writePool, err := currency.MinusCoin(sa.WritePool, value); err != nil {
 		return err
@@ -777,23 +772,17 @@ func (sa *StorageAllocation) moveToChallengePool(
 	return nil
 }
 
-func (sa *StorageAllocation) moveFromChallengePool(
-	cp *challengePool,
-	value currency.Coin,
+func (sa *StorageAllocation) moveFromChallengePool(value currency.Coin,
 ) error {
-	if cp == nil {
-		return errors.New("invalid challenge pool")
-	}
-
-	if cp.Balance < value {
+	if sa.ChallengePool < value {
 		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
-			cp.ID, cp.Balance, value)
+			sa.ID, sa.ChallengePool, value)
 	}
 
-	if balance, err := currency.MinusCoin(cp.Balance, value); err != nil {
+	if balance, err := currency.MinusCoin(sa.ChallengePool, value); err != nil {
 		return err
 	} else {
-		cp.Balance = balance
+		sa.ChallengePool = balance
 	}
 	if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
 		return err

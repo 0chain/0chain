@@ -848,9 +848,22 @@ func BenchmarkTests(
 		// todo "update_config" waiting for PR489
 	}
 	var testsI []bk.BenchTestI
+
+	runTests := viper.GetStringSlice(bk.OptionRunTests)
+	var rto bk.RunTestOption
+	bk.WithPartialRun(runTests...)(&rto)
+
+	fmt.Println("$$$$$$$$$ run storagesc tests...")
 	for _, test := range tests {
-		testsI = append(testsI, test)
+		if rto.RunAll() {
+			testsI = append(testsI, test)
+		} else {
+			if _, ok := rto.PartialMap[test.Name()]; ok {
+				testsI = append(testsI, test)
+			}
+		}
 	}
+
 	return bk.TestSuite{
 		Source:     bk.Storage,
 		Benchmarks: testsI,

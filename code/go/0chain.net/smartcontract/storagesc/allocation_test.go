@@ -726,25 +726,25 @@ func TestExtendAllocation(t *testing.T) {
 			event.TagLockWritePool,
 			mock.Anything,
 			mock.Anything).Return().Maybe()
-		balances.On(
-			"GetTrieNode", challengePoolKey(ssc.ID, sa.ID),
-			mock.MatchedBy(func(p *challengePool) bool {
-				*p = *(newChallengePool())
-				return true
-			})).Return(nil).Once()
-		balances.On(
-			"InsertTrieNode", challengePoolKey(ssc.ID, sa.ID),
-			mock.MatchedBy(func(cp *challengePool) bool {
-				var size int64
-				for _, blobber := range sa.BlobberAllocs {
-					size += blobber.Stats.UsedSize
-				}
-				dtu, err := sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)
-				require.NoError(t, err)
-				newFunds := sizeInGB(size) * float64(mockWritePrice) * dtu
-				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
-			}),
-		).Return("", nil).Once()
+		//balances.On(
+		//	"GetTrieNode", challengePoolKey(ssc.ID, sa.ID),
+		//	mock.MatchedBy(func(p *challengePool) bool {
+		//		*p = *(newChallengePool())
+		//		return true
+		//	})).Return(nil).Once()
+		//balances.On(
+		//	"InsertTrieNode", challengePoolKey(ssc.ID, sa.ID),
+		//	mock.MatchedBy(func(cp *challengePool) bool {
+		//		var size int64
+		//		for _, blobber := range sa.BlobberAllocs {
+		//			size += blobber.Stats.UsedSize
+		//		}
+		//		dtu, err := sa.durationInTimeUnits(args.request.Expiration, confTimeUnit)
+		//		require.NoError(t, err)
+		//		newFunds := sizeInGB(size) * float64(mockWritePrice) * dtu
+		//		return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
+		//	}),
+		//).Return("", nil).Once()
 
 		return ssc, &txn, sa, blobbers, balances
 	}
@@ -1319,11 +1319,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		_, err = ssc.getStakePool(spenum.Blobber, "b2", balances)
 		require.NoError(t, err)
 
-		// 3. challenge pool existence
-		var cp *challengePool
-		cp, err = ssc.getChallengePool(aresp.ID, balances)
-		require.NoError(t, err)
-
 		// blobber allocation existence
 		p, err := partitionsBlobberAllocations("b1", balances)
 		require.NoError(t, err)
@@ -1340,7 +1335,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, tx.Hash, baNode2.ID)
 
-		assert.Zero(t, cp.Balance)
+		alloc, err := ssc.getAllocation(aresp.ID, balances)
+		require.NoError(t, err)
+		assert.Zero(t, alloc.ChallengePool)
 	})
 }
 
@@ -2163,11 +2160,6 @@ func Test_finalize_allocation(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// balances
-	var cp *challengePool
-	_, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
-
 	// expire the allocation
 	var conf *Config
 	conf, err = getConfig(balances)
@@ -2188,11 +2180,10 @@ func Test_finalize_allocation(t *testing.T) {
 
 	// check out all the balances
 
-	cp, err = ssc.getChallengePool(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-
 	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
-	assert.Zero(t, cp.Balance, "should be drained")
+	assert.Zero(t, alloc.ChallengePool, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
@@ -2320,11 +2311,6 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// balances
-	var cp *challengePool
-	_, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
-
 	// expire the allocation
 	var conf *Config
 	conf, err = getConfig(balances)
@@ -2344,12 +2330,11 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	require.NoError(t, err)
 
 	// check out all the balances
-
-	cp, err = ssc.getChallengePool(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
-	assert.Zero(t, cp.Balance, "should be drained")
+	assert.Zero(t, alloc.ChallengePool, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
