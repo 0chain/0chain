@@ -390,6 +390,13 @@ func (c *ConfigImpl) TxnFutureNonce() int {
 	return fn
 }
 
+func (c *ConfigImpl) BlockFinalizationTimeout() time.Duration {
+	c.guard.RLock()
+	t := c.conf.BlockFinalizationTimeout
+	c.guard.RUnlock()
+	return t
+}
+
 // ConfigData - chain Configuration
 type ConfigData struct {
 	version               int64         `json:"-"` //version of config to track updates
@@ -435,7 +442,8 @@ type ConfigData struct {
 	BlockProposalMaxWaitTime time.Duration `json:"block_proposal_max_wait_time"` // max time to wait to receive a block proposal
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
 
-	ReuseTransactions bool `json:"reuse_txns"` // indicates if transactions from unrelated blocks can be reused
+	ReuseTransactions        bool          `json:"reuse_txns"`                 // indicates if transactions from unrelated blocks can be reused
+	BlockFinalizationTimeout time.Duration `json:"block_finalization_timeout"` // time after which the block finalization will timeout
 
 	ClientSignatureScheme string `json:"client_signature_scheme"` // indicates which signature scheme is being used
 
@@ -553,6 +561,7 @@ func (c *ConfigImpl) FromViper() error {
 		conf.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
 	conf.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
+	conf.BlockFinalizationTimeout = viper.GetDuration("server_chain.block.finalization.timeout")
 
 	conf.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
 	conf.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
@@ -695,6 +704,10 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 		return err
 	}
 	conf.ReuseTransactions, err = cf.GetBool(enums.BlockReuseTransactions)
+	if err != nil {
+		return err
+	}
+	conf.BlockFinalizationTimeout, err = cf.GetDuration(enums.BlockFinalizationTimeout)
 	if err != nil {
 		return err
 	}

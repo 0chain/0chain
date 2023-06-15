@@ -201,6 +201,7 @@ type ChainConfig interface {
 	TxnTransferCost() int
 	TxnCostFeeCoeff() int
 	TxnFutureNonce() int
+	BlockFinalizationTimeout() time.Duration
 }
 
 type DbAccess struct {

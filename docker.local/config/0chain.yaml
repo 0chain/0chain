@@ -50,6 +50,8 @@ server_chain:
     validation:
       batch_size: 1000
     reuse_txns: false
+    finalization:
+      timeout: 30s
 
   round_range: 10000000 #todo remove after laxmi is merge
   dkg: true
