@@ -86,7 +86,7 @@ func zcnToBalance(token float64) currency.Coin {
 	return currency.Coin(token * float64(x10))
 }
 
-func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
+func populateDelegates(t testing.TB, cNodes []*MinerNode, minerDelegates []float64, sharderDelegates [][]float64) {
 	var delegates [][]float64
 	delegates = append(delegates, minerDelegates)
 	delegates = append(delegates, sharderDelegates...)
@@ -112,7 +112,7 @@ func populateDelegates(t *testing.T, cNodes []*MinerNode, minerDelegates []float
 	}
 }
 
-func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f formulae, mn *MinerNode, _ cstate.StateContextI) {
+func confirmResults(t testing.TB, global GlobalNode, runtime runtimeValues, f formulae, mn *MinerNode, _ cstate.StateContextI) {
 	var epochChangeRound = runtime.blockRound%scYaml.epoch == 0
 
 	if epochChangeRound {

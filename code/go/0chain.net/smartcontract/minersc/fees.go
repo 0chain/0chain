@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 
-	"0chain.net/core/sortedmap"
+	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 
@@ -13,7 +14,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -240,8 +240,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 }
 
 type PayFeesInput struct {
-	Round            int64    `json:"round,omitempty"`
-	RewardSharderIDs []string `json:"reward_sharder_ids"`
+	Round int64 `json:"round,omitempty"`
 }
 
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
@@ -255,8 +254,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err := json.Unmarshal(input, &req); err != nil {
 		return "", err
 	}
-
-	logging.Logger.Debug("Pay fee rewards sharders", zap.Any("ids", req.RewardSharderIDs))
 
 	if req.Round != b.Round {
 		return "", common.NewError("pay_fees", fmt.Sprintf("bad round, block %v but input %v", b.Round, req.Round))
@@ -307,20 +304,22 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", fmt.Errorf("error splitting fees by ratio: %v", err)
 	}
 
-	mn, err := getMinerNode(b.MinerID, balances)
+	mn, err := getNodeStakePool(b.MinerID, balances)
 	if err != nil {
 		return "", common.NewErrorf("pay_fees", "cannot get miner node, %v", err)
 	}
 
 	logging.Logger.Debug("pay_fees, got miner id successfully",
-		zap.String("miner id", mn.ID),
+		zap.String("miner id", b.MinerID),
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash))
+
+	r := rand.New(rand.NewSource(b.GetRoundRandomSeed()))
 	if err := mn.StakePool.DistributeRewardsRandN(
 		minerRewards,
-		mn.ID,
+		b.MinerID,
 		spenum.Miner,
-		b.GetRoundRandomSeed(),
+		r,
 		gn.NumMinerDelegatesRewarded,
 		spenum.BlockRewardMiner,
 		balances,
@@ -330,9 +329,9 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	if err := mn.StakePool.DistributeRewardsRandN(
 		minerFees,
-		mn.ID,
+		b.MinerID,
 		spenum.Miner,
-		b.GetRoundRandomSeed(),
+		r,
 		gn.NumMinerDelegatesRewarded,
 		spenum.FeeRewardMiner,
 		balances,
@@ -340,43 +339,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", err
 	}
 
-	//shardersIDs, err := getLiveSharderIds(balances)
-	//if err != nil {
-	//	if err != util.ErrValueNotPresent {
-	//		return "", err
-	//	}
-	//}
-
-	// get sharders list
-	allShardersIDs, err := getAllSharderIDs(balances)
+	shardersIDs, err := getLiveSharderIds(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			//return "", err
-			return "", common.NewErrorf("pay_fees", "error getting sharders IDs: %v", err)
+			return "", err
 		}
 	}
-
-	allShardersMap := make(map[string]struct{})
-	for _, id := range allShardersIDs {
-		allShardersMap[id] = struct{}{}
-	}
-
-	rewardShardersIDs := req.RewardSharderIDs
-	rsMap := sortedmap.New[string, struct{}]()
-	for _, id := range rewardShardersIDs {
-		if _, ok := rsMap.Get(id); ok {
-			return "", common.NewErrorf("pay_fees", "duplicate reward sharder ID: %s", id)
-		}
-
-		if _, ok := allShardersMap[id]; !ok {
-			// not registered yet or invalid sharder ID
-			continue
-		}
-		rsMap.Put(id, struct{}{})
-	}
-
-	shardersIDs := rsMap.GetKeys()
-	logging.Logger.Debug("Pay fee rewards sharders - real", zap.Any("ids", shardersIDs))
 
 	if len(shardersIDs) > 0 {
 		seed := b.GetRoundRandomSeed()
@@ -393,25 +361,25 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 
 		rewardShardersIDs := mbShardersIDs[:shardersPaid]
-		rewardSharders, err := cstate.GetItemsByIDs(rewardShardersIDs, getSharderNode, balances) // TODO: duplicate item access
+		rewardSharderSPs, err := cstate.GetItemsByIDs(rewardShardersIDs, getNodeStakePool, balances)
 		if err != nil {
 			return "", err
 		}
 
 		if err := msc.payShardersAndDelegates(
-			gn, rewardSharders, sharderFees, seed,
+			gn, rewardSharderSPs, sharderFees, r,
 			spenum.FeeRewardSharder, balances); err != nil {
 			return "", err
 		}
 
 		if err := msc.payShardersAndDelegates(
-			gn, rewardSharders, sharderRewards, seed,
+			gn, rewardSharderSPs, sharderRewards, r,
 			spenum.BlockRewardSharder, balances); err != nil {
 			return "", err
 		}
 
-		for _, sh := range rewardSharders {
-			if err = sh.save(balances); err != nil {
+		for _, sh := range rewardSharderSPs {
+			if err = sh.Save(balances); err != nil {
 				return "", common.NewErrorf("pay_fees/pay_sharders",
 					"saving sharder node: %v", err)
 			}
@@ -422,7 +390,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	if mn != nil {
 		// save node first, for the VC pools work
-		if err = mn.save(balances); err != nil {
+		if err = mn.Save(balances); err != nil {
 			return "", common.NewErrorf("pay_fees",
 				"saving generator node: %v", err)
 		}
@@ -442,10 +410,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	gn.setLastRound(b.Round)
-	if err = gn.save(balances); err != nil {
-		return "", common.NewErrorf("pay_fees",
-			"saving global node: %v", err)
-	}
+	// TODO: change back to save when there are necessary changes,
+	// currently the last round updating seems unnecessary at all.
+	//if err = gn.save(balances); err != nil {
+	//	return "", common.NewErrorf("pay_fees",
+	//		"saving global node: %v", err)
+	//}
 
 	return resp, nil
 }
@@ -489,19 +459,33 @@ func filterDeadNodes(nodes []*MinerNode) []*MinerNode {
 }
 
 func getLiveSharderIds(balances cstate.StateContextI) ([]string, error) {
-	//nodes, err := getAllShardersList(balances)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//var ids []string
-	//for i := range nodes.Nodes {
-	//	if !nodes.Nodes[i].SimpleNode.HasBeenKilled {
-	//		ids = append(ids, nodes.Nodes[i].ID)
-	//	}
-	//}
-	//return ids, nil
+	allIDs, err := getNodeIDs(balances, AllShardersKey)
+	if err != nil {
+		return nil, fmt.Errorf("could not get all sharder ids: %v", err)
+	}
 
-	return getNodeIDs(balances, AllShardersKey)
+	killedIDs, err := getNodeIDs(balances, KilledShardersKey)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, fmt.Errorf("could not get killed sharder ids: %v", err)
+	}
+
+	killedMap := make(map[string]struct{}, len(killedIDs))
+	for _, id := range killedIDs {
+		killedMap[id] = struct{}{}
+	}
+
+	return removeItemsFromSlice(allIDs, killedMap), nil
+}
+
+func removeItemsFromSlice(all []string, items map[string]struct{}) []string {
+	i := 0
+	for _, item := range all {
+		if _, ok := items[item]; !ok {
+			all[i] = item
+			i++
+		}
+	}
+	return all[:i]
 }
 
 func getAllSharderIDs(balances cstate.StateContextI) ([]string, error) {
@@ -578,9 +562,9 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 // pay fees and mint sharders
 func (msc *MinerSmartContract) payShardersAndDelegates(
 	gn *GlobalNode,
-	rewardSharders []*MinerNode,
+	rewardSharders []*stakepool.NodeStakePool,
 	reward currency.Coin,
-	seed int64,
+	r *rand.Rand,
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) error {
@@ -602,7 +586,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		totalCoinLeft = cl
 	}
 
-	rewardSharder := func(sh *MinerNode) error {
+	rewardSharder := func(sh *stakepool.NodeStakePool) error {
 		var extraShare currency.Coin
 		if totalCoinLeft > 0 {
 			extraShare = 1
@@ -614,7 +598,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 			return err
 		}
 		if err = sh.StakePool.DistributeRewardsRandN(
-			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, balances,
+			moveValue, sh.ID, spenum.Sharder, r, gn.NumSharderDelegatesRewarded, rewardType, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)

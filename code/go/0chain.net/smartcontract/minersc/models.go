@@ -84,6 +84,8 @@ const (
 var (
 	AllMinersKey         = globalKeyHash("all_miners")
 	AllShardersKey       = globalKeyHash("all_sharders")
+	KilledShardersKey    = globalKeyHash("killed_sharders")
+	KilledMinersKey      = globalKeyHash("killed_miners")
 	DKGMinersKey         = globalKeyHash("dkg_miners")
 	MinersMPKKey         = globalKeyHash("miners_mpk")
 	MagicBlockKey        = globalKeyHash("magic_block")
@@ -582,7 +584,6 @@ func (gn *GlobalNode) splitByShareRatio(fees currency.Coin) (
 }
 
 func (gn *GlobalNode) setLastRound(round int64) {
-	gn.LastRound = round
 	if round%gn.Epoch == 0 {
 		gn.epochDecline()
 	}

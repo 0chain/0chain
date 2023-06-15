@@ -197,3 +197,38 @@ func TestAddMiner(t *testing.T) {
 		require.ErrorContains(t, err, "add_miner: n2nhost:port already exists") // no error expected
 	})
 }
+
+func TestNodeStakePoolEncDec(t *testing.T) {
+	mn := NewMinerNode()
+	mn.ID = "abc"
+	mn.SimpleNode.HasBeenKilled = true
+	mn.Settings.MaxNumDelegates = 10
+	mn.StakePool.HasBeenKilled = true
+
+	v, err := mn.MarshalMsg(nil)
+	require.NoError(t, err)
+
+	// decode the data to NodeStakePool
+	ns := stakepool.NewNodeStakePool()
+	_, err = ns.UnmarshalMsg(v)
+	require.NoError(t, err)
+
+	// verify that the stake pool field is correct
+	require.True(t, ns.StakePool.HasBeenKilled)
+
+	// update stake pool and encode to bytes
+	ns.StakePool.HasBeenKilled = false
+	v2, err := ns.MarshalMsg(nil)
+	require.NoError(t, err)
+
+	// decode the data to MinerNode
+	mn2 := NewMinerNode()
+	_, err = mn2.UnmarshalMsg(v2)
+	require.NoError(t, err)
+
+	// confirm the data is correct updated
+	require.Equal(t, mn2.ID, "abc")
+	require.Equal(t, mn2.Settings.MaxNumDelegates, 10)
+	require.True(t, mn2.SimpleNode.HasBeenKilled)
+	require.False(t, mn2.StakePool.HasBeenKilled)
+}

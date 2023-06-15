@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/smartcontract/provider"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )

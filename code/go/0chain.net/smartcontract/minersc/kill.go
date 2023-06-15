@@ -10,6 +10,9 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/provider"
+	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 // killMiner
@@ -22,18 +25,28 @@ func (_ *MinerSmartContract) killMiner(
 ) (resp string, err error) {
 	var req provider.ProviderRequest
 	if err := req.Decode(input); err != nil {
-		return "", common.NewErrorf("kill_sharder_failed", "decoding request: %v", err)
-	}
-	if err := kill(req.ID, txn.ClientID, gn.OwnerId, getMinerNode, balances); err != nil {
-		return "", common.NewError("kill_miner_failed", err.Error())
+		return "", common.NewErrorf("kill_miner_failed", "decoding request: %v", err)
 	}
 
-	if mb := balances.GetChainCurrentMagicBlock(); mb != nil {
-		for _, nd := range mb.Miners.Nodes {
-			if nd.GetKey() == req.ID {
-				nd.SetKilled(true)
-			}
+	killedIDs, err := getNodeIDs(balances, KilledMinersKey)
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewErrorf("kill_miner_failed", "getting killed miner ids: %v", err)
+	}
+
+	for _, id := range killedIDs {
+		if id == req.ID {
+			logging.Logger.Debug("kill miner - already in killed list", zap.String("id", id))
+			return "", common.NewError("kill_miner_failed", "miner already killed")
 		}
+	}
+
+	killedIDs = append(killedIDs, req.ID)
+	if err := killedIDs.save(balances, KilledMinersKey); err != nil {
+		return "", common.NewErrorf("kill_miner_failed", "saving killed miners ids: %v", err)
+	}
+
+	if err := kill(req.ID, txn.ClientID, gn.OwnerId, getMinerNode, balances); err != nil {
+		return "", common.NewError("kill_miner_failed", err.Error())
 	}
 
 	return "", nil
@@ -52,16 +65,25 @@ func (_ *MinerSmartContract) killSharder(
 		return "", common.NewErrorf("kill_sharder_failed", "decoding request: %v", err)
 	}
 
-	if err := kill(req.ID, txn.ClientID, gn.OwnerId, getSharderNode, balances); err != nil {
-		return "", common.NewError("kill_sharder_failed", err.Error())
+	killedIDs, err := getNodeIDs(balances, KilledShardersKey)
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewErrorf("kill_sharder_failed", "getting killed sharders ids: %v", err)
 	}
 
-	if mb := balances.GetChainCurrentMagicBlock(); mb != nil {
-		for _, nd := range mb.Sharders.Nodes {
-			if nd.GetKey() == req.ID {
-				nd.SetKilled(true)
-			}
+	for _, id := range killedIDs {
+		if id == req.ID {
+			logging.Logger.Debug("kill sharder - already in killed list", zap.String("id", id))
+			return "", common.NewError("kill_sharder_failed", "sharder already killed")
 		}
+	}
+
+	killedIDs = append(killedIDs, req.ID)
+	if err := killedIDs.save(balances, KilledShardersKey); err != nil {
+		return "", common.NewErrorf("kill_sharder_failed", "saving killed sharder ids: %v", err)
+	}
+
+	if err := kill(req.ID, txn.ClientID, gn.OwnerId, getSharderNode, balances); err != nil {
+		return "", common.NewError("kill_sharder_failed", err.Error())
 	}
 
 	return "", nil
