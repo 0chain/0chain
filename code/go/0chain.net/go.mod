@@ -41,7 +41,7 @@ require (
 require (
 	github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9
 	github.com/go-faker/faker/v4 v4.1.0
-	github.com/jackc/pgx/v5 v5.3.1
+	github.com/jackc/pgx/v5 v5.4.0
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
 	github.com/ory/dockertest/v3 v3.10.0
