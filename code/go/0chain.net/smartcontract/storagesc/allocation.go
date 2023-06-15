@@ -346,7 +346,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_challenge_pool")
-	sa.MinLockDemand = conf.MinLockDemand
+
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
 			zap.String("txn", txn.Hash),
@@ -393,6 +393,7 @@ func setupNewAllocation(
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
+	sa.MinLockDemand = conf.MinLockDemand
 	sa.ID = allocId
 	sa.Tx = allocId
 
