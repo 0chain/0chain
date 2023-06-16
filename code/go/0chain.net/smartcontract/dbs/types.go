@@ -47,7 +47,7 @@ type StakePoolReward struct {
 	// penalties delegate pools
 	DelegatePenalties map[string]currency.Coin `json:"delegate_penalties"`
 	// allocation id
-	AllocationID string `json:"challenge_id"`
+	AllocationID string `json:"allocation_id"`
 }
 
 type DelegatePoolId struct {
