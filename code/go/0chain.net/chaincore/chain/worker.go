@@ -254,7 +254,8 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 		case fbr := <-c.finalizedBlocksChannel:
 			func() {
 				// TODO: make the timeout configurable
-				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				timeout := c.ChainConfig.BlockFinalizationTimeout()
+				cctx, cancel := context.WithTimeout(ctx, timeout)
 				defer cancel()
 
 				errC := make(chan error, 1)

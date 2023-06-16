@@ -9,7 +9,7 @@ on:
 jobs:
   CONDUCTOR_BLOBBERS_02_TESTS:
     name: CONDUCTOR-BLOBBERS-02-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test]
 
     steps:
     - name: Cleanup before restarting conductor tests.
@@ -19,13 +19,14 @@ jobs:
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
       run: |
-        [ -f ./https://go.dev/dl/go1.18.10.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.18.10.linux-amd64.tar.gz
+        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
         [ -d /usr/local/go ] &&  rm -rf /usr/local/go
         [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
-        tar -C /usr/local -xzf ./go1.18.10.linux-amd64.tar.gz
+        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
 
         echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
         export PATH=$PATH:/usr/local/go/bin
+        export HOME="/root"
         which go
         go env
       
@@ -194,7 +195,17 @@ jobs:
     steps:
       - name: "Notify Slack"
         run: |
-          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          payload='{
+          "text": "'"<!here> CONDUCTOR_BLOBBERS_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "attachments": [
+              {
+              "text": "CONDUCTOR BLOBBERS_02 TEST FAILED ⚠️",
+              "color": "#ff0000"
+              }
+          ]
+          }'
+          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
@@ -203,4 +214,14 @@ jobs:
     steps:
       - name: "Notify Slack"
         run: |
-          curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          payload='{
+          "text": "'"<!here> CONDUCTOR_BLOBBERS_02_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "attachments": [
+              {
+              "text": "CONDUCTOR BLOBBERS_02 TEST PASSED ✅",
+              "color": "#22bb33"
+              }
+          ]
+          }'
+          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_02_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

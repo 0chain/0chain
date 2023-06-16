@@ -135,8 +135,10 @@ func TestAddChallenge(t *testing.T) {
 				StorageChallenge: c,
 				AllocationRoot:   alloc.BlobberAllocsMap[bid].AllocationRoot,
 			}
-
-			err = ssc.addChallenge(alloc, c, allocChallenges, challInfo, balances)
+			var conf = &Config{
+				MaxChallengeCompletionTime: p.cct,
+			}
+			err = ssc.addChallenge(alloc, c, allocChallenges, challInfo, conf, balances)
 			require.NoError(t, err)
 		}
 
@@ -262,10 +264,14 @@ func TestAddChallenge(t *testing.T) {
 
 			// add new challenge
 			c, challInfo := newChallenge(args.alloc.ID, tt.parameters.add.blobberID, tt.parameters.add.ts)
+			var conf = &Config{
+				MaxChallengeCompletionTime: tt.parameters.cct,
+			}
 			err := ssc.addChallenge(args.alloc,
 				c,
 				args.allocChallenges,
 				challInfo,
+				conf,
 				args.balances)
 
 			if tt.want.error {
@@ -953,7 +959,7 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, previous, details, validators, ctx, allocationId)
+	err = ssc.blobberPenalty(allocation, previous, details, validators, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
 	if err != nil {
 		return err
 	}
@@ -1007,7 +1013,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx, allocationId)
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
 	if err != nil {
 		return err
 	}
