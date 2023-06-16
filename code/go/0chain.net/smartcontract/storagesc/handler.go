@@ -893,6 +893,13 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		return
 	}
 
+	validatorPools, err := edb.GetUserDelegatePools(clientID, spenum.Validator, pagination)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("validator not found in event database: "+err.Error()))
+		return
+	}
+
+	pools = append(pools, validatorPools...)
 	var ups = new(stakepool.UserPoolStat)
 	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat)
 	for _, pool := range pools {
