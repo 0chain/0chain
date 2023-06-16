@@ -2164,6 +2164,7 @@ type storageNodeResponse struct {
 	TotalOffers              currency.Coin `json:"total_offers"`
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
+	CreatedAt                time.Time     `json:"created_at"`
 }
 
 func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
@@ -2243,6 +2244,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		IsShutdown:               blobber.IsShutdown,
 		SavedData:                blobber.SavedData,
 		IsAvailable:              blobber.IsAvailable,
+		CreatedAt:                blobber.CreatedAt,
 	}
 }
 
