@@ -23,24 +23,6 @@ func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlock
 	return nil, errors.Errorf("start or end block number can't be empty")
 }
 
-func (edb *EventDb) GetChallengeRewardsToProviders(challengeID string) ([]RewardProvider, []RewardProvider, error) {
-
-	var blobberRewards []RewardProvider
-	err := edb.Get().Where("challenge_id = ? AND reward_type = ?", challengeID, spenum.ChallengePassReward).Find(&blobberRewards).Error
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var validatorRewards []RewardProvider
-	err = edb.Get().Where("challenge_id = ? AND reward_type = ?", challengeID, spenum.ValidationReward).Find(&validatorRewards).Error
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return blobberRewards, validatorRewards, nil
-}
-
 func (edb *EventDb) GetAllocationCancellationRewardsToProviders(startBlock, endBlock string) ([]RewardProvider, error) {
 
 	var rps []RewardProvider
