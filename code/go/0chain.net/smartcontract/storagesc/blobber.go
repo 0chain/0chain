@@ -655,6 +655,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"can't get allocation: "+err.Error())
 	}
 
+	isAllocationEmpty := alloc.UsedSize == 0
+
 	if alloc.Owner != commitConnection.WriteMarker.ClientID {
 		return "", common.NewError("commit_connection_failed", "write marker has"+
 			" to be by the same client as owner of the allocation")
@@ -800,6 +802,26 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed", "encode last write marker failed: %v", err)
+	}
+
+	if isAllocationEmpty && commitConnection.WriteMarker.Size > 0 {
+		for _, ba := range alloc.BlobberAllocs {
+			if _, err := partitionsBlobberAllocationsAdd(balances, ba.BlobberID, ba.AllocationID); err != nil {
+				logging.Logger.Error("add_blobber_allocation_to_partitions_error",
+					zap.String("blobber", ba.BlobberID),
+					zap.String("allocation", ba.AllocationID),
+					zap.Error(err))
+				return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
+			}
+		}
+	} else if commitConnection.WriteMarker.Size < 0 && alloc.Size == 0 {
+		if _, err := partitionsBlobberAllocationsRemove(balances, blobber.ID, alloc.ID); err != nil {
+			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
+				zap.String("blobber", blobber.ID),
+				zap.String("allocation", alloc.ID),
+				zap.Error(err))
+			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
+		}
 	}
 
 	return string(blobAllocBytes), nil
