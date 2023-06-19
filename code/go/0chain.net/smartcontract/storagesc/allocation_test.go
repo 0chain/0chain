@@ -1324,22 +1324,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		cp, err = ssc.getChallengePool(aresp.ID, balances)
 		require.NoError(t, err)
 
-		// blobber allocation existence
-		p, err := partitionsBlobberAllocations("b1", balances)
-		require.NoError(t, err)
-
-		var baNode1 BlobberAllocationNode
-		err = p.Get(balances, tx.Hash, &baNode1)
-		require.NoError(t, err)
-		require.Equal(t, tx.Hash, baNode1.ID)
-
-		p, err = partitionsBlobberAllocations("b2", balances)
-		require.NoError(t, err)
-		var baNode2 BlobberAllocationNode
-		err = p.Get(balances, tx.Hash, &baNode2)
-		require.NoError(t, err)
-		require.Equal(t, tx.Hash, baNode2.ID)
-
 		assert.Zero(t, cp.Balance)
 	})
 }
@@ -2235,7 +2219,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	require.NotNil(t, b1)
 
 	// bind one more allocation to b1
-	_, err = partitionsBlobberAllocationsAdd(balances, b1.id, encryption.Hash("new_allocation_id"))
+	err = partitionsBlobberAllocationsAdd(balances, b1.id, encryption.Hash("new_allocation_id"))
 	require.NoError(t, err)
 
 	// add 10 validators

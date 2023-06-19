@@ -1000,7 +1000,7 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-	_, err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
+	err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
 	}

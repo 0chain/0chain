@@ -301,15 +301,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
 
-		if _, err := partitionsBlobberAllocationsAdd(balances, b.ID, sa.ID); err != nil {
-			logging.Logger.Error("new_allocation_request_failed: error adding allocation to blobber",
-				zap.String("txn", txn.Hash),
-				zap.String("blobber", b.ID),
-				zap.String("allocation", sa.ID),
-				zap.Error(err))
-			return "", fmt.Errorf("could not bind allocation to blobber: %v", err)
-		}
-
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 

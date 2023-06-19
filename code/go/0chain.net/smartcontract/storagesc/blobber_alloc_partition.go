@@ -25,22 +25,22 @@ func partitionsBlobberAllocations(blobberID string, balances state.StateContextI
 	return partitions.CreateIfNotExists(balances, getBlobberAllocationsKey(blobberID), blobberAllocationPartitionSize)
 }
 
-func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, allocID string) (*partitions.Partitions, error) {
+func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, allocID string) error {
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, state)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+		return fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
 	}
 
 	err = blobAllocsParts.Add(state, &BlobberAllocationNode{ID: allocID})
-	if err != nil {
-		return nil, err
+	if err != nil && !partitions.ErrItemExist(err) {
+		return err
 	}
 
 	if err := blobAllocsParts.Save(state); err != nil {
-		return nil, fmt.Errorf("could not update blobber allocations partitions: %v", err)
+		return fmt.Errorf("could not update blobber allocations partitions: %v", err)
 	}
 
-	return blobAllocsParts, nil
+	return nil
 }
 
 func partitionsBlobberAllocationsRemove(state state.StateContextI, blobberID, allocID string, blobberAllocParts *partitions.Partitions) error {
