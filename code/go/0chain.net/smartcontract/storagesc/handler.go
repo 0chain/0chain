@@ -894,6 +894,13 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		return
 	}
 
+	validatorPools, err := edb.GetUserDelegatePools(clientID, spenum.Validator, pagination)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("validator not found in event database: "+err.Error()))
+		return
+	}
+
+	pools = append(pools, validatorPools...)
 	var ups = new(stakepool.UserPoolStat)
 	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat)
 	for _, pool := range pools {
@@ -2165,6 +2172,7 @@ type storageNodeResponse struct {
 	TotalOffers              currency.Coin `json:"total_offers"`
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
+	CreatedAt                time.Time     `json:"created_at"`
 }
 
 func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
@@ -2244,6 +2252,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		IsShutdown:               blobber.IsShutdown,
 		SavedData:                blobber.SavedData,
 		IsAvailable:              blobber.IsAvailable,
+		CreatedAt:                blobber.CreatedAt,
 	}
 }
 
