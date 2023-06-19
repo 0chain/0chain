@@ -12,12 +12,12 @@ import (
 // swagger:model RewardDelegate
 type RewardDelegate struct {
 	model.UpdatableModel
-	Amount      currency.Coin `json:"amount"`
-	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_del_prov,priority:1"`
-	PoolID      string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
-	ProviderID  string        `json:"provider_id"`
-	RewardType  spenum.Reward `json:"reward_type"`
-	ChallengeID string        `json:"challenge_id"`
+	Amount       currency.Coin `json:"amount"`
+	BlockNumber  int64         `json:"block_number" gorm:"index:idx_rew_del_prov,priority:1"`
+	PoolID       string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
+	ProviderID   string        `json:"provider_id"`
+	RewardType   spenum.Reward `json:"reward_type"`
+	AllocationID string        `json:"allocation_id"`
 }
 
 func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round int64) error {
@@ -25,23 +25,23 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 	for _, sp := range inserts {
 		for poolId, amount := range sp.DelegateRewards {
 			dr := RewardDelegate{
-				Amount:      amount,
-				BlockNumber: round,
-				PoolID:      poolId,
-				ProviderID:  sp.ID,
-				RewardType:  sp.RewardType,
-				ChallengeID: sp.ChallengeID,
+				Amount:       amount,
+				BlockNumber:  round,
+				PoolID:       poolId,
+				ProviderID:   sp.ID,
+				RewardType:   sp.RewardType,
+				AllocationID: sp.AllocationID,
 			}
 			drs = append(drs, dr)
 		}
 		for poolId, amount := range sp.DelegatePenalties {
 			dp := RewardDelegate{
-				Amount:      amount,
-				BlockNumber: round,
-				PoolID:      poolId,
-				ProviderID:  sp.ID,
-				RewardType:  sp.RewardType,
-				ChallengeID: sp.ChallengeID,
+				Amount:       amount,
+				BlockNumber:  round,
+				PoolID:       poolId,
+				ProviderID:   sp.ID,
+				RewardType:   sp.RewardType,
+				AllocationID: sp.AllocationID,
 			}
 			drs = append(drs, dp)
 		}

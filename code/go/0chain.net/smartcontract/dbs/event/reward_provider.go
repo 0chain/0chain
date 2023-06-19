@@ -12,11 +12,11 @@ import (
 // swagger:model RewardProvider
 type RewardProvider struct {
 	model.UpdatableModel
-	Amount      currency.Coin `json:"amount"`
-	BlockNumber int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
-	ProviderId  string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
-	RewardType  spenum.Reward `json:"reward_type"`
-	ChallengeID string        `json:"challenge_id"`
+	Amount       currency.Coin `json:"amount"`
+	BlockNumber  int64         `json:"block_number" gorm:"index:idx_rew_block_prov,priority:1"`
+	ProviderId   string        `json:"provider_id" gorm:"index:idx_rew_block_prov,priority:2"`
+	RewardType   spenum.Reward `json:"reward_type"`
+	AllocationID string        `json:"allocation_id"`
 }
 
 func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round int64) error {
@@ -26,11 +26,11 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 	var prs []RewardProvider
 	for _, sp := range inserts {
 		pr := RewardProvider{
-			Amount:      sp.Reward,
-			BlockNumber: round,
-			ProviderId:  sp.ID,
-			RewardType:  sp.RewardType,
-			ChallengeID: sp.ChallengeID,
+			Amount:       sp.Reward,
+			BlockNumber:  round,
+			ProviderId:   sp.ID,
+			RewardType:   sp.RewardType,
+			AllocationID: sp.AllocationID,
 		}
 		prs = append(prs, pr)
 	}

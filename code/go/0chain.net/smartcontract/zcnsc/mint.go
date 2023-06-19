@@ -151,12 +151,12 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	ctx.EmitEvent(event.TypeStats, event.TagAddBridgeMint, trans.ClientID, &event.BridgeMint{
-		UserID: trans.ClientID,
+		UserID:    trans.ClientID,
 		MintNonce: payload.Nonce,
-		Amount: payload.Amount,
-		Signers: signers,
+		Amount:    payload.Amount,
+		Signers:   signers,
 	})
-	
+
 	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
 	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 

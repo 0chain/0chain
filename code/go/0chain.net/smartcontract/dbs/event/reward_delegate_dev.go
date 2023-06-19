@@ -24,25 +24,6 @@ func (edb *EventDb) GetRewardsToDelegates(blockNumber, startBlockNumber, endBloc
 
 }
 
-func (edb *EventDb) GetChallengeRewardsToDelegates(challengeID string) ([]RewardDelegate, []RewardDelegate, error) {
-
-	var blobberRewards []RewardDelegate
-	err := edb.Get().Where("challenge_id = ? AND reward_type = ?", challengeID, spenum.ChallengePassReward).Find(&blobberRewards).Error
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var validatorRewards []RewardDelegate
-	err = edb.Get().Where("challenge_id = ? AND reward_type = ?", challengeID, spenum.ValidationReward).Find(&validatorRewards).Error
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return blobberRewards, validatorRewards, nil
-}
-
 func (edb *EventDb) GetAllocationCancellationRewardsToDelegates(startBlock, endBlock string) ([]RewardDelegate, error) {
 
 	var rps []RewardDelegate
