@@ -85,7 +85,7 @@ func (sc *StorageSmartContract) blobberReward(
 	partial float64,
 	maxChallengeCompletionTime time.Duration,
 	balances cstate.StateContextI,
-	options ...string,
+	allocationID string,
 ) error {
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
@@ -128,11 +128,6 @@ func (sc *StorageSmartContract) blobberReward(
 	move, err := blobAlloc.challenge(dtu, rdtu)
 	if err != nil {
 		return err
-	}
-
-	var challengeID string
-	if len(options) > 0 {
-		challengeID = options[0]
 	}
 
 	// part of tokens goes to related validators
@@ -189,7 +184,7 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, challengeID)
+	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, allocationID)
 	if err != nil {
 		return fmt.Errorf("rewarding blobbers: %v", err)
 	}
@@ -206,7 +201,7 @@ func (sc *StorageSmartContract) blobberReward(
 		return err
 	}
 
-	err = cp.moveToValidators(validatorsReward, validators, vsps, balances, challengeID)
+	err = cp.moveToValidators(validatorsReward, validators, vsps, balances, allocationID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -284,7 +279,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 	validators []string,
 	maxChallengeCompletionTime time.Duration,
 	balances cstate.StateContextI,
-	options ...string,
+	allocationID string,
 ) (err error) {
 	var conf *Config
 	if conf, err = sc.getConfig(balances, true); err != nil {
@@ -345,14 +340,8 @@ func (sc *StorageSmartContract) blobberPenalty(
 		return
 	}
 
-	var challengeID string
-
-	if len(options) > 0 {
-		challengeID = options[0]
-	}
-
 	// validators reward
-	err = cp.moveToValidators(validatorsReward, validators, vSPs, balances, challengeID)
+	err = cp.moveToValidators(validatorsReward, validators, vSPs, balances, allocationID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -408,7 +397,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 		}
 
 		var move currency.Coin
-		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances)
+		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances, allocationID)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -737,7 +726,7 @@ func (sc *StorageSmartContract) challengePassed(
 		partial,
 		maxChallengeCompletionTime,
 		balances,
-		cab.challenge.ID,
+		cab.challenge.AllocationID,
 	)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
@@ -786,6 +775,7 @@ func (sc *StorageSmartContract) challengeFailed(
 		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, validators,
 		maxChallengeCompletionTime,
 		balances,
+		cab.challenge.AllocationID,
 	)
 	if err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
