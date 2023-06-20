@@ -943,6 +943,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 
 		if alloc == nil {
+			logging.Logger.Debug("allocation not found for blobber", zap.String("blobber_id", blobberID),
+				zap.String("alloc_id", allocID))
 			continue
 		}
 
@@ -957,6 +959,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			foundAllocation = true
 			break
 		}
+		logging.Logger.Debug("allocation expiry is wrong", zap.String("blobber_id", blobberID),
+			zap.String("alloc_id", allocID))
 
 		err = alloc.save(balances, sc.ID)
 		if err != nil {

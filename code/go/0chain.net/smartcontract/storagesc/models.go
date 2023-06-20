@@ -1033,16 +1033,22 @@ func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *Blobb
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)
 	}
 
-	if err := blobAllocsParts.Remove(balances, allocID); err != nil {
+	err = blobAllocsParts.Remove(balances, allocID)
+	if err != nil && !partitions.ErrItemNotFound(err) {
 		logging.Logger.Error("could not remove allocation from blobber",
 			zap.Error(err),
 			zap.String("blobber", blobberID),
 			zap.String("allocation", allocID))
 		return fmt.Errorf("could not remove allocation from blobber: %v", err)
-	}
-
-	if err := blobAllocsParts.Save(balances); err != nil {
-		return fmt.Errorf("could not update blobber allocation partitions: %v", err)
+	} else if partitions.ErrItemNotFound(err) {
+		logging.Logger.Error("allocation is not in partition",
+			zap.Error(err),
+			zap.String("blobber", blobberID),
+			zap.String("allocation", allocID))
+	} else if err == nil {
+		if err := blobAllocsParts.Save(balances); err != nil {
+			return fmt.Errorf("could not update blobber allocation partitions: %v", err)
+		}
 	}
 
 	allocNum, err := blobAllocsParts.Size(balances)
