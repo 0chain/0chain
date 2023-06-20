@@ -257,7 +257,9 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewErrorf("update_miner_settings",
 			"decoding request: %v", err)
 	}
-
+	logging.Logger.Info("piers UpdateMinerSettings start",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Any("update", update))
 	err = validateNodeSettings(update, gn, "update_miner_settings")
 	if err != nil {
 		return "", err
@@ -297,7 +299,9 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	if err = emitUpdateMiner(mn, balances, false); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
 	}
-
+	logging.Logger.Info("piers UpdateMinerSettings end",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Any("mn", mn))
 	return string(mn.Encode()), nil
 }
 
