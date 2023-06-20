@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -37,7 +40,9 @@ func Kill(
 	if err := req.Decode(input); err != nil {
 		return err
 	}
-
+	logging.Logger.Info("piers kill provider",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Any("input", req))
 	p, sp, err := providerSpecific(req)
 	if err != nil {
 		return err

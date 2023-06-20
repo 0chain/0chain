@@ -342,6 +342,9 @@ func (sp *StakePool) SlashFraction(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
+	logging.Logger.Info("piers SlashFraction",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Any("stake pools before slash", sp))
 	if killSlashFraction == 0.0 {
 		return nil
 	}
@@ -365,6 +368,9 @@ func (sp *StakePool) SlashFraction(
 		}
 	}
 	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
+	logging.Logger.Info("piers SlashFraction",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Any("stake pools after slash", sp))
 	return nil
 }
 
