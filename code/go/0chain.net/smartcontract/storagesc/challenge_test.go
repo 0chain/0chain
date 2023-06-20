@@ -959,7 +959,7 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, previous, details, validators, scYaml.MaxChallengeCompletionTime, ctx)
+	err = ssc.blobberPenalty(allocation, previous, details, validators, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
 	if err != nil {
 		return err
 	}
@@ -1013,7 +1013,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, scYaml.MaxChallengeCompletionTime, ctx)
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
 	if err != nil {
 		return err
 	}

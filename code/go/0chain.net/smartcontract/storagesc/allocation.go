@@ -1571,7 +1571,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				return err
 			}
 
-			err = sps[i].DistributeRewards(delta, d.BlobberID, spenum.Blobber, spenum.MinLockDemandReward, balances)
+			err = sps[i].DistributeRewards(delta, d.BlobberID, spenum.Blobber, spenum.MinLockDemandReward, balances, alloc.ID)
 			if err != nil {
 				return fmt.Errorf("distribute rewards failed, paying min_lock %v for blobber "+
 					"%v from write pool %v, minlock demand %v spent %v error %v",
@@ -1603,7 +1603,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				return err
 			}
 
-			err = sps[i].DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances)
+			err = sps[i].DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
 			if err != nil {
 				return fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", d.BlobberID, err)
 			}
@@ -1672,7 +1672,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 
 	for i, ba := range alloc.BlobberAllocs {
-		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances)
+		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
 		if err != nil {
 			return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
 		}
