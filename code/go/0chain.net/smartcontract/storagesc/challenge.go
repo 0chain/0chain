@@ -932,6 +932,10 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		findValidAllocRetries = blobberAllocPartitionLength
 	}
 
+	if findValidAllocRetries == 0 {
+		logging.Logger.Debug("empty blobber")
+	}
+
 	for i := 0; i < findValidAllocRetries; i++ {
 		// get a random allocation
 		allocID := randBlobberAllocs[randPerm[i%blobberAllocPartitionLength]].ID

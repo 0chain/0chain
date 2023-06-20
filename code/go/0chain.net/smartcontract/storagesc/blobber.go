@@ -688,6 +688,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	allocSizeBefore := alloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize := blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
@@ -751,7 +752,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 
-	if alloc.UsedSize == 0 && commitConnection.WriteMarker.Size > 0 {
+	if allocSizeBefore == 0 && commitConnection.WriteMarker.Size > 0 {
 		for _, ba := range alloc.BlobberAllocs {
 			if err := partitionsBlobberAllocationsAdd(balances, ba.BlobberID, ba.AllocationID); err != nil {
 				logging.Logger.Error("add_blobber_allocation_to_partitions_error",
@@ -761,7 +762,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
 			}
 		}
-	} else if commitConnection.WriteMarker.Size < 0 && alloc.Size == 0 {
+	} else if alloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
 		blobAllocsParts, err := partitionsBlobberAllocations(blobber.ID, balances)
 		if err != nil {
 			return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
