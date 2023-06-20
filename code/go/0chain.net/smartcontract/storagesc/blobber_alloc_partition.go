@@ -5,6 +5,8 @@ import (
 
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -34,6 +36,8 @@ func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, alloc
 	err = blobAllocsParts.Add(state, &BlobberAllocationNode{ID: allocID})
 	if err != nil && !partitions.ErrItemExist(err) {
 		return err
+	} else if partitions.ErrItemExist(err) {
+		return nil
 	}
 
 	if err := blobAllocsParts.Save(state); err != nil {
@@ -43,14 +47,23 @@ func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, alloc
 	return nil
 }
 
-func partitionsBlobberAllocationsRemove(state state.StateContextI, blobberID, allocID string, blobberAllocParts *partitions.Partitions) error {
-
-	err := blobberAllocParts.Remove(state, allocID)
-	if err != nil {
+func partitionsBlobberAllocationsRemove(state state.StateContextI, blobberID, allocID string, blobAllocsParts *partitions.Partitions) error {
+	err := blobAllocsParts.Remove(state, allocID)
+	if err != nil && !partitions.ErrItemNotFound(err) {
+		logging.Logger.Error("could not remove allocation from blobber",
+			zap.Error(err),
+			zap.String("blobber", blobberID),
+			zap.String("allocation", allocID))
 		return fmt.Errorf("could not remove allocation from blobber: %v", err)
 	}
+	if partitions.ErrItemNotFound(err) {
+		logging.Logger.Error("allocation is not in partition",
+			zap.Error(err),
+			zap.String("blobber", blobberID),
+			zap.String("allocation", allocID))
+	}
 
-	allocNum, err := blobberAllocParts.Size(state)
+	allocNum, err := blobAllocsParts.Size(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge partition size: %v", err)
 	}
