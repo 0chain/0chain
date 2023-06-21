@@ -3,6 +3,9 @@ package storagesc
 import (
 	"strings"
 
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
@@ -24,6 +27,9 @@ func (_ *StorageSmartContract) killBlobber(
 	if err != nil {
 		return "", common.NewError("can't get config", err.Error())
 	}
+	logging.Logger.Info("killBlobber start",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Float64("blobber slash", conf.BlobberSlash))
 
 	var blobber = &StorageNode{}
 	err = provider.Kill(

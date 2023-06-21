@@ -342,9 +342,6 @@ func (sp *StakePool) SlashFraction(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
-	logging.Logger.Info("piers SlashFraction",
-		zap.Int64("round", balances.GetBlock().Round),
-		zap.Any("stake pools before slash", sp))
 	if killSlashFraction == 0.0 {
 		return nil
 	}
@@ -358,10 +355,21 @@ func (sp *StakePool) SlashFraction(
 	if reduction > 1 {
 		reduction = 1
 	}
+	logging.Logger.Info("piers SlashFraction",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Float64("killSlashFraction", killSlashFraction),
+		zap.Float64("reduction", reduction),
+	)
 	orderedPoolIds := sp.OrderedPoolIds()
 	for _, id := range orderedPoolIds {
 		var err error
 		dp := sp.Pools[id]
+		newValue, _ := currency.MultFloat64(dp.Balance, reduction)
+		logging.Logger.Info("piers SlashFraction",
+			zap.Int64("round", balances.GetBlock().Round),
+			zap.Any("id", id),
+			zap.Any("before", dp.Balance),
+			zap.Any("after", newValue))
 		dp.Balance, err = currency.MultFloat64(dp.Balance, reduction)
 		if err != nil {
 			return err
