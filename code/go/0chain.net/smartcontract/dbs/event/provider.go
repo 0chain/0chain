@@ -20,6 +20,7 @@ import (
 
 type Provider struct {
 	ID              string `gorm:"primaryKey"`
+	Index           int32  `gorm:"idx"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	BucketId        int64            `gorm:"not null,default:0"`

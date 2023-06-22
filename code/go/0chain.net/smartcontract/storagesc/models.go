@@ -9,10 +9,8 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/provider"
-
 	"0chain.net/smartcontract/partitions"
-	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/provider"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
@@ -168,14 +166,14 @@ type allocationChallengesDecoder AllocationChallenges
 
 // swagger:model StorageChallenge
 type StorageChallenge struct {
-	Created         common.Timestamp    `json:"created"`
-	ID              string              `json:"id"`
-	TotalValidators int                 `json:"total_validators"`
-	ValidatorIDs    []string            `json:"validator_ids"`
+	TotalValidators int                 `json:"total_validators" msg:"tv"`
+	Responded       int64               `json:"responded" msg:"r"`
+	Created         common.Timestamp    `json:"created" msg:"c"`
+	ID              string              `json:"id" msg:"i"`
+	AllocationID    string              `json:"allocation_id" msg:"a"`
+	BlobberID       string              `json:"blobber_id" msg:"b"`
+	ValidatorIDs    []string            `json:"validator_ids" msg:"vs"`
 	ValidatorIDMap  map[string]struct{} `json:"-" msg:"-"`
-	AllocationID    string              `json:"allocation_id"`
-	BlobberID       string              `json:"blobber_id"`
-	Responded       int64               `json:"responded"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
@@ -326,11 +324,11 @@ type Info struct {
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	provider.Provider
+	Index                   int32                  `json:"index"`
 	BaseURL                 string                 `json:"url"`
 	Geolocation             StorageNodeGeolocation `json:"geolocation"`
-	Terms                   Terms                  `json:"terms"`     // terms
-	Capacity                int64                  `json:"capacity"`  // total blobber capacity
-	Allocated               int64                  `json:"allocated"` // allocated capacity
+	Terms                   Terms                  `json:"terms"`    // terms
+	Capacity                int64                  `json:"capacity"` // total blobber capacity
 	PublicKey               string                 `json:"-"`
 	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
@@ -409,47 +407,45 @@ func (sn *StorageNodes) GetHashBytes() []byte {
 }
 
 type StorageAllocationStats struct {
-	UsedSize                  int64  `json:"used_size"`
-	NumWrites                 int64  `json:"num_of_writes"`
-	NumReads                  int64  `json:"num_of_reads"`
-	TotalChallenges           int64  `json:"total_challenges"`
-	OpenChallenges            int64  `json:"num_open_challenges"`
-	SuccessChallenges         int64  `json:"num_success_challenges"`
-	FailedChallenges          int64  `json:"num_failed_challenges"`
-	LastestClosedChallengeTxn string `json:"latest_closed_challenge"`
+	UsedSize                  int64  `json:"used_size" msg:"u"`
+	NumWrites                 int64  `json:"num_of_writes" msg:"nw"`
+	NumReads                  int64  `json:"num_of_reads" msg:"nr"`
+	TotalChallenges           int64  `json:"total_challenges" msg:"tc"`
+	OpenChallenges            int64  `json:"num_open_challenges" msg:"oc"`
+	SuccessChallenges         int64  `json:"num_success_challenges" msg:"sc"`
+	FailedChallenges          int64  `json:"num_failed_challenges" msg:"fc"`
+	LastestClosedChallengeTxn string `json:"latest_closed_challenge" msg:"lcc"`
 }
 
-type BlobberAllocation struct {
-	BlobberID    string `json:"blobber_id"`
-	AllocationID string `json:"allocation_id"`
-	// Size is blobber allocation maximum size
-	Size            int64                   `json:"size"`
-	AllocationRoot  string                  `json:"allocation_root"`
-	LastWriteMarker *WriteMarker            `json:"write_marker"`
-	Stats           *StorageAllocationStats `json:"stats"`
-	// Terms of the BlobberAllocation represents weighted average terms
+// AllocBlobber represents the blobber info for an allocation
+type AllocBlobber struct {
+	BlobberID     string        `json:"blobber_id" msg:"bid"`
+	MinLockDemand currency.Coin `json:"min_lock_demand" msg:"m"`
+
+	// Terms of the blobber allocation represents weighted average terms
 	// for the allocation. The MinLockDemand can be increased only,
 	// to prevent some attacks. If a user extends an allocation then
 	// we calculate new weighted average terms based on previous terms,
 	// size and expiration and new terms size and expiration.
-	Terms Terms `json:"terms"`
-	// MinLockDemand for the allocation in tokens.
-	MinLockDemand currency.Coin `json:"min_lock_demand"`
+	Terms Terms `json:"terms" msg:"t"`
+}
+
+type BlobberAllocation struct {
 	// Spent is number of tokens sent from write pool to challenge pool
 	// for this blobber. It's used to calculate min lock demand left
 	// for this blobber. For a case, where a client uses > 1 parity shards
 	// and don't sends a data to one of blobbers, the blobber should
 	// receive its min_lock_demand tokens. Thus, we can't use shared
 	// (for allocation) min_lock_demand and spent.
-	Spent currency.Coin `json:"spent"`
+	Spent currency.Coin `json:"spent" msg:"s"`
 	// Penalty o the blobber for the allocation in tokens.
-	Penalty currency.Coin `json:"penalty"`
+	Penalty currency.Coin `json:"penalty" msg:"p"`
 	// ReadReward of the blobber.
-	ReadReward currency.Coin `json:"read_reward"`
+	ReadReward currency.Coin `json:"read_reward" msg:"rr"`
 	// Returned back to write pool on challenge failed.
-	Returned currency.Coin `json:"returned"`
+	Returned currency.Coin `json:"returned" msg:"r"`
 	// ChallengeReward of the blobber.
-	ChallengeReward currency.Coin `json:"challenge_reward"`
+	ChallengeReward currency.Coin `json:"challenge_reward" msg:"cr"`
 
 	// ChallengePoolIntegralValue represents integral price * size * dt for this
 	// blobber. Since, a user can upload and delete file, and a challenge
@@ -517,59 +513,51 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
-	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
+	ChallengePoolIntegralValue currency.Coin `json:"challenge_pool_integral_value" msg:"cpi"`
+	// Terms of the BlobberAllocation represents weighted average terms
+	// for the allocation. The MinLockDemand can be increased only,
+	// to prevent some attacks. If a user extends an allocation then
+	// we calculate new weighted average terms based on previous terms,
+	// size and expiration and new terms size and expiration.
+	//Terms Terms `json:"terms" msg:"t"`
+	// Size is blobber allocation maximum size
+	//Size                     int64                   `json:"size" msg:"sz"`
+	Stats                    *StorageAllocationStats `json:"stats" msg:"sts"`
+	BlobberID                string                  `json:"blobber_id" msg:"b"`
+	AllocationID             string                  `json:"allocation_id" msg:"-"`
+	AllocationRoot           string                  `json:"allocation_root" msg:"ar"`
+	LastWriteMarker          *WriteMarker            `json:"write_marker" msg:"wm"`
+	LatestCompletedChallenge *StorageChallenge       `json:"latest_completed_challenge" msg:"-"`
 }
 
-func newBlobberAllocation(
-	size int64,
-	allocation *StorageAllocation,
-	blobber *StorageNode,
-	date common.Timestamp,
-	timeUnit time.Duration,
-) (*BlobberAllocation, error) {
+func newBlobberAllocation(blobber *StorageNode) (*BlobberAllocation, error) {
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
-	ba.Size = size
-	ba.Terms = blobber.Terms
-	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
-
-	rdtu, err := allocation.restDurationInTimeUnits(date, timeUnit)
-	if err != nil {
-		return nil, fmt.Errorf("new blobber allocation failed: %v", err)
-	}
-
-	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu)
-	return ba, err
+	return ba, nil
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
-func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin, err error) {
-
-	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+func (d *BlobberAllocation) upload(size int64, wp currency.Coin, rdtu float64) (move currency.Coin, err error) {
+	move = currency.Coin(sizeInGB(size) * float64(wp) * rdtu)
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
 		return
 	}
 	d.ChallengePoolIntegralValue = challengePoolIntegralValue
-
 	return
 }
 
-func (d *BlobberAllocation) Offer() currency.Coin {
-	return currency.Coin(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
+func getOffer(size int64, t Terms) currency.Coin {
+	return currency.Coin(sizeInGB(size) * float64(t.WritePrice))
 }
 
 // The upload used after commitBlobberConnection (size < 0) to calculate
 // internal integral value. The size argument expected to be positive (not
 // negative).
-func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin) {
-
-	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+func (d *BlobberAllocation) delete(size int64, writePrice currency.Coin, rdtu float64) (move currency.Coin) {
+	move = currency.Coin(sizeInGB(size) * float64(writePrice) * rdtu)
 	d.ChallengePoolIntegralValue -= move
 	return
 }
@@ -615,29 +603,6 @@ func (pr *PriceRange) isMatch(price currency.Coin) bool {
 // StorageAllocation request and entity.
 // swagger:model StorageAllocation
 type StorageAllocation struct {
-	// ID is unique allocation ID that is equal to hash of transaction with
-	// which the allocation has created.
-	ID string `json:"id"`
-	// Tx keeps hash with which the allocation has created or updated. todo do we need this field?
-	Tx string `json:"tx"`
-
-	DataShards        int                     `json:"data_shards"`
-	ParityShards      int                     `json:"parity_shards"`
-	Size              int64                   `json:"size"`
-	Expiration        common.Timestamp        `json:"expiration_date"`
-	Owner             string                  `json:"owner_id"`
-	OwnerPublicKey    string                  `json:"owner_public_key"`
-	Stats             *StorageAllocationStats `json:"stats"`
-	DiverseBlobbers   bool                    `json:"diverse_blobbers"`
-	PreferredBlobbers []string                `json:"preferred_blobbers"`
-	// Blobbers not to be used anywhere except /allocation and /allocations table
-	// if Blobbers are getting used in any smart-contract, we should avoid.
-	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
-	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
-
-	// Flag to determine if anyone can extend this allocation
-	ThirdPartyExtendable bool `json:"third_party_extendable"`
-
 	// FileOptions to define file restrictions on an allocation for third-parties
 	// default 00000000 for all crud operations suggesting only owner has the below listed abilities.
 	// enabling option/s allows any third party to perform certain ops
@@ -647,38 +612,65 @@ type StorageAllocation struct {
 	// 00001000 - 8  - move
 	// 00010000 - 16 - copy
 	// 00100000 - 32 - rename
-	FileOptions uint16 `json:"file_options"`
+	FileOptions uint16 `json:"file_options" msg:"fo"`
 
-	WritePool     currency.Coin `json:"write_pool"`
-	ChallengePool currency.Coin `json:"challenge_pool"`
+	DataShards   int   `json:"data_shards" msg:"d"`
+	ParityShards int   `json:"parity_shards" msg:"p"`
+	Size         int64 `json:"size" msg:"s"`
+	BSize        int64 `json:"bsize" msg:"bz"`
 
 	// Requested ranges.
-	ReadPriceRange  PriceRange `json:"read_price_range"`
-	WritePriceRange PriceRange `json:"write_price_range"`
+	ReadPriceRange  PriceRange `json:"read_price_range" msg:"rp"`
+	WritePriceRange PriceRange `json:"write_price_range" msg:"wp"`
 
-	// StartTime is time when the allocation has been created. We will
-	// use it to check blobber's MaxOfferTime extending the allocation.
-	StartTime common.Timestamp `json:"start_time"`
+	//DiverseBlobbers bool `json:"diverse_blobbers" msg:"db"`
+	// Flag to determine if anyone can extend this allocation
+	ThirdPartyExtendable bool `json:"third_party_extendable" msg:"tpe"`
 	// Finalized is true where allocation has been finalized.
-	Finalized bool `json:"finalized,omitempty"`
+	Finalized bool `json:"finalized,omitempty" msg:"f"`
 	// Canceled set to true where allocation finalized by cancel_allocation
 	// transaction.
-	Canceled bool `json:"canceled,omitempty"`
-	// UsedSize used to calculate blobber reward ratio.
-	UsedSize int64 `json:"-" msg:"-"`
+	Canceled bool `json:"canceled,omitempty" msg:"c"`
+
+	WritePool     currency.Coin `json:"write_pool" msg:"w"`
+	ChallengePool currency.Coin `json:"challenge_pool" msg:"cp"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
-	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
+	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty" msg:"mtc"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
-	MovedBack currency.Coin `json:"moved_back,omitempty"`
+	MovedBack currency.Coin `json:"moved_back,omitempty" msg:"mb"`
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
-	MovedToValidators currency.Coin `json:"moved_to_validators,omitempty"`
+	MovedToValidators currency.Coin `json:"moved_to_validators,omitempty" msg:"mv"`
+	CancelCost        currency.Coin `json:"cancel_cost" msg:"cc"`
+
+	Expiration common.Timestamp `json:"expiration_date" msg:"ep"`
+	// StartTime is time when the allocation has been created. We will
+	// use it to check blobber's MaxOfferTime extending the allocation.
+	StartTime common.Timestamp `json:"start_time" msg:"st"`
 
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
-	TimeUnit time.Duration `json:"time_unit"`
+	TimeUnit time.Duration `json:"time_unit" msg:"tu"`
+	// UsedSize used to calculate blobber reward ratio.
+	UsedSize int64 `json:"-" msg:"-"`
+
+	// ID is unique allocation ID that is equal to hash of transaction with
+	// which the allocation has created.
+	ID string `json:"id" msg:"i"`
+	// Tx keeps hash with which the allocation has created or updated. todo do we need this field?
+	Tx string `json:"tx" msg:"t"`
+
+	Owner          string `json:"owner_id" msg:"o"`
+	OwnerPublicKey string `json:"owner_public_key" msg:"op"`
+	//PreferredBlobbers []string `json:"preferred_blobbers" msg:"pb"`
+
+	Stats *StorageAllocationStats `json:"stats"  msg:"sts"`
+
+	Blobbers         []*AllocBlobber               `json:"blobbers"  msg:"bs"`
+	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details" msg:"bas"`
+	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
 }
 
 type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
@@ -794,6 +786,7 @@ func (sa *StorageAllocation) moveFromChallengePool(value currency.Coin,
 
 func (sa *StorageAllocation) isActive(
 	blobber *StorageNode,
+	allocated int64,
 	total, offers currency.Coin,
 	conf *Config,
 	now common.Timestamp,
@@ -820,9 +813,9 @@ func (sa *StorageAllocation) isActive(
 
 	bSize := sa.bSize()
 	// filter by blobber's capacity left
-	if blobber.Capacity-blobber.Allocated < bSize {
+	if blobber.Capacity-allocated < bSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
-			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
+			blobber.ID, blobber.Capacity-allocated, bSize)
 	}
 
 	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
@@ -838,10 +831,25 @@ func (sa *StorageAllocation) isActive(
 	return nil
 }
 
-func (sa *StorageAllocation) cost() (currency.Coin, error) {
+func (sa *StorageAllocation) cost(bs []*StorageNode) (currency.Coin, error) {
 	var cost currency.Coin
-	for _, ba := range sa.BlobberAllocs {
-		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+	if len(sa.BlobberAllocs) == 0 {
+		// no blobber allocs happens when creating a new allocation
+		for _, ba := range bs {
+			c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(sa.bSize()))
+			if err != nil {
+				return 0, err
+			}
+			cost, err = currency.AddCoin(cost, c)
+			if err != nil {
+				return 0, err
+			}
+		}
+		return cost, nil
+	}
+
+	for i := range sa.BlobberAllocs {
+		c, err := currency.MultFloat64(sa.Blobbers[i].Terms.WritePrice, sizeInGB(sa.BSize))
 		if err != nil {
 			return 0, err
 		}
@@ -853,26 +861,26 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
-func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
-	cost, err := sa.cost()
-	if err != nil {
-		return 0, err
-	}
+func (sa *StorageAllocation) bTerms(i int) Terms {
+	return sa.Blobbers[i].Terms
+}
+
+func (sa *StorageAllocation) bMinLockDemand(i int) currency.Coin {
+	return sa.Blobbers[i].MinLockDemand
+}
+
+func cancellationCharge(cancellationFraction float64, cost currency.Coin) (currency.Coin, error) {
 	return currency.MultFloat64(cost, cancellationFraction)
 }
 
-func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
-	cancellationCharge, err := sa.cancellationCharge(cancellationFraction)
-	if err != nil {
-		return err
-	}
+func (sa *StorageAllocation) checkFunding() error {
 	mld, err := sa.restMinLockDemand()
 	if err != nil {
 		return err
 	}
-	if sa.WritePool < cancellationCharge+mld {
+	if sa.WritePool < sa.CancelCost+mld {
 		return fmt.Errorf("not enough tokens to honor the cancellation charge plus min lock demand"+" (%d < %d + %d)",
-			sa.WritePool, cancellationCharge, mld)
+			sa.WritePool, sa.CancelCost, mld)
 	}
 
 	return nil
@@ -919,6 +927,8 @@ func (sa *StorageAllocation) removeBlobber(
 			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
 			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
 
+			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
+			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
 			if err := removeAllocationFromBlobber(balances, d); err != nil {
 				return nil, err
 			}
@@ -941,6 +951,7 @@ func (sa *StorageAllocation) removeBlobber(
 func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
 	blobbers []*StorageNode,
+	bil BlobberOfferStakeList,
 	addId, removeId string,
 	ssc *StorageSmartContract,
 	now common.Timestamp,
@@ -966,41 +977,39 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
-		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
-	}
-	staked, err := sp.stake()
-	if err != nil {
+	bi := bil[addedBlobber.Index]
+	if err := sa.isActive(addedBlobber, bi.Allocated, bi.TotalStake, bi.TotalOffers, conf, now); err != nil {
 		return nil, err
 	}
 
-	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
-		return nil, err
-	}
-
-	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
-	afterSize := sa.bSize()
+	bs := sa.bSize()
+	bi.Allocated += bs
 
 	blobbers = append(blobbers, addedBlobber)
-	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now, conf.TimeUnit)
+	ba, err := newBlobberAllocation(addedBlobber)
 	if err != nil {
 		return nil, fmt.Errorf("can't allocate blobber: %v", err)
 	}
 
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+	mld, err := sa.minLockDemand(addedBlobber.Terms, now)
+	if err != nil {
+		return nil, err
+	}
+	sa.Blobbers = append(sa.Blobbers, &AllocBlobber{
+		BlobberID:     addedBlobber.ID,
+		Terms:         addedBlobber.Terms,
+		MinLockDemand: mld,
+	})
+
 	_, err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
 	}
 
-	if err := sp.addOffer(ba.Offer()); err != nil {
+	if err := bi.addOffer(getOffer(bs, addedBlobber.Terms)); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)
-	}
-
-	if err := sp.Save(spenum.Blobber, addId, balances); err != nil {
-		return nil, err
 	}
 
 	return blobbers, nil
@@ -1064,64 +1073,40 @@ type StorageAllocationDecode StorageAllocation
 // don't receive tokens, their spent will be zero, and the min lock demand
 // will be blobber reward anyway.
 func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error) {
-	for _, details := range sa.BlobberAllocs {
-		if details.MinLockDemand > details.Spent {
-			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
-			if err != nil {
-				return
-			}
+	for _, dm := range sa.Blobbers {
+		rest, err = currency.AddCoin(rest, dm.MinLockDemand)
+		if err != nil {
+			return
 		}
 	}
+
+	for _, ba := range sa.BlobberAllocs {
+		rest, err = currency.MinusCoin(rest, ba.Spent)
+		if err != nil {
+			return
+		}
+	}
+
 	return
+}
+
+func (sa *StorageAllocation) minLockDemand(terms Terms, date common.Timestamp) (currency.Coin, error) {
+	rdtu, err := sa.restDurationInTimeUnits(date, sa.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("could not get rest duration in time unit: %v", err)
+	}
+
+	return terms.minLockDemand(sizeInGB(sa.BSize), rdtu)
 }
 
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
 type filterValidatorFunc func(validator *ValidationNode) (kick bool, err error)
 
-func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
-	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
-	filtered []*StorageNode, err error) {
-
-	var (
-		i int
-	)
-
-List:
-	for _, b := range list {
-		// filter by read price
-		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
-			continue
-		}
-		// filter by write price
-		if !sa.WritePriceRange.isMatch(b.Terms.WritePrice) {
-			continue
-		}
-		// filter by blobber's capacity left
-		if b.Capacity-b.Allocated < bsize {
-			continue
-		}
-
-		for _, filter := range filters {
-			kick, err := filter(b)
-			if err != nil {
-				return nil, err
-			}
-
-			if kick {
-				continue List
-			}
-		}
-		list[i] = b
-		i++
-	}
-
-	return list[:i], nil
-}
-
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(
-	blobbers []*storageNodeResponse,
+	blobbers []*StorageNode,
+	bil BlobberOfferStakeList,
 	creationDate common.Timestamp,
 	conf *Config,
 ) ([]*StorageNode, []string) {
@@ -1129,15 +1114,14 @@ func (sa *StorageAllocation) validateEachBlobber(
 		errs     = make([]string, 0, len(blobbers))
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
-	for _, b := range blobbers {
-		sn := StoragNodeResponseToStorageNode(*b)
-		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, conf, creationDate)
+	for i, b := range blobbers {
+		err := sa.isActive(b, bil[b.Index].Allocated, bil[b.Index].TotalStake, bil[b.Index].TotalOffers, conf, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errs = append(errs, err.Error())
 			continue
 		}
-		filtered = append(filtered, &sn)
+		filtered = append(filtered, blobbers[i])
 	}
 	return filtered, errs
 }
@@ -1166,7 +1150,7 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 			zap.Int64("alloc expiration", int64(sa.Expiration)))
 		return 0, errors.New("rest duration time overflow, timestamp is beyond alloc expiration")
 	}
-	logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sa.Expiration)), zap.Int64("now", int64(now)), zap.Float64("timeUnit", float64(timeUnit)), zap.Int64("rest", int64(sa.Expiration-now)))
+	//logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sa.Expiration)), zap.Int64("now", int64(now)), zap.Float64("timeUnit", float64(timeUnit)), zap.Int64("rest", int64(sa.Expiration-now)))
 	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
 }
 
@@ -1234,9 +1218,9 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 			continue
 		}
 		var (
-			size = sizeInGB(d.Stats.UsedSize)  // in GB
-			nwp  = float64(d.Terms.WritePrice) // new write price
-			owp  float64                       // original write price
+			size = sizeInGB(d.Stats.UsedSize)       // in GB
+			nwp  = float64(sa.bTerms(i).WritePrice) // new write price
+			owp  float64                            // original write price
 
 			a, b, diff float64 // original value, new value, value difference
 		)
@@ -1244,7 +1228,7 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 		if oterms != nil {
 			owp = float64(oterms[i].WritePrice) // original write price
 		} else {
-			owp = float64(d.Terms.WritePrice) // terms weren't changed
+			owp = float64(sa.bTerms(i).WritePrice) // terms weren't changed
 		}
 
 		a = owp * size * odrtu // original value (by original terms)
@@ -1371,6 +1355,20 @@ func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *Allocation
 	return expiredChallengeBlobberMap, nil
 }
 
+func (sa *StorageAllocation) getTerms(blobberID string) (Terms, bool) {
+	for i, b := range sa.Blobbers {
+		if b.BlobberID == blobberID {
+			return sa.bTerms(i), true
+		}
+	}
+
+	return Terms{}, false
+}
+
+//func (sa *StorageAllocation) bOffer(size int64, i int) currency.Coin {
+//	return currency.Coin(sizeInGB(size) * float64(sa.Blobbers[i].Terms.WritePrice))
+//}
+
 type BlobberCloseConnection struct {
 	AllocationRoot     string       `json:"allocation_root"`
 	PrevAllocationRoot string       `json:"prev_allocation_root"`
@@ -1408,15 +1406,15 @@ func (bc *BlobberCloseConnection) Verify() bool {
 }
 
 type WriteMarker struct {
-	AllocationRoot         string           `json:"allocation_root"`
-	PreviousAllocationRoot string           `json:"prev_allocation_root"`
-	FileMetaRoot           string           `json:"file_meta_root"`
-	AllocationID           string           `json:"allocation_id"`
-	Size                   int64            `json:"size"`
-	BlobberID              string           `json:"blobber_id"`
-	Timestamp              common.Timestamp `json:"timestamp"`
-	ClientID               string           `json:"client_id"`
-	Signature              string           `json:"signature"`
+	Size                   int64            `json:"size" msg:"s"`
+	Timestamp              common.Timestamp `json:"timestamp" msg:"t"`
+	AllocationRoot         string           `json:"allocation_root" msg:"ar"`
+	PreviousAllocationRoot string           `json:"prev_allocation_root" msg:"pa"`
+	FileMetaRoot           string           `json:"file_meta_root" msg:"fmr"`
+	AllocationID           string           `json:"allocation_id" msg:"a"`
+	BlobberID              string           `json:"blobber_id" msg:"b"`
+	ClientID               string           `json:"client_id" msg:"c"`
+	Signature              string           `json:"signature" msg:"sg"`
 }
 
 func (wm *WriteMarker) VerifySignature(

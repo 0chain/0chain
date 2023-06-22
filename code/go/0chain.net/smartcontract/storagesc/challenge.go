@@ -424,8 +424,13 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
+		bTerms, ok := alloc.getTerms(blobAlloc.BlobberID)
+		if !ok {
+			return fmt.Errorf("can't get blobber's terms")
+		}
+
 		var move currency.Coin
-		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances)
+		move, err = sp.slash(blobAlloc.BlobberID, getOffer(alloc.BSize, bTerms), slash, balances)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}

@@ -37,18 +37,7 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
-	ta := &StorageAllocation{}
-	err := balances.GetTrieNode(alloc.GetKey(sc.ID), ta)
-	if err == nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
-	}
-	if err != util.ErrValueNotPresent {
-		return "", common.NewErrorf("add_allocation_failed",
-			"unexpected error: %v", err)
-	}
-
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err := balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
@@ -60,8 +49,10 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
+	// TODO: return simple message rather than whole allocation info
 	buff := alloc.Encode()
 	return string(buff), nil
+	//return "add_allocation", nil
 }
 
 type newAllocationRequest struct {
@@ -89,7 +80,6 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.Expiration = nar.Expiration
 	sa.Owner = nar.Owner
 	sa.OwnerPublicKey = nar.OwnerPublicKey
-	sa.PreferredBlobbers = nar.Blobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.ThirdPartyExtendable = nar.ThirdPartyExtendable
@@ -228,11 +218,14 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.Owner = txn.ClientID
 		request.OwnerPublicKey = txn.PublicKey
 	}
+	m.tick("decode and validate")
 
 	blobbers, err := getBlobbersByIDs(request.Blobbers, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "get blobbers failed: %v", err)
 	}
+
+	m.tick("get blobbers")
 
 	if len(blobbers) < (request.DataShards + request.ParityShards) {
 		logging.Logger.Error("new_allocation_request_failed: blobbers fetched are less than requested blobbers",
@@ -249,43 +242,23 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
-	var sa = request.storageAllocation() // (set fields, including expiration)
-	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
-	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
-	}
-	if len(spMap) != len(blobbers) {
-		return "", common.NewErrorf("allocation_creation_failed", "missing blobber's stake pool: %v", err)
-	}
-	var sns []*storageNodeResponse
-	for i := 0; i < len(blobbers); i++ {
-		stake, err := spMap[blobbers[i].ID].stake()
-		if err != nil {
-			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", blobbers[i].ID, err)
-		}
-		snr := StoragNodeToStorageNodeResponse(*blobbers[i])
-		snr.TotalOffers = spMap[blobbers[i].ID].TotalOffers
-		snr.TotalStake = stake
-		sns = append(sns, &snr)
-	}
-
-	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn.CreationDate, conf, txn.Hash)
+	bil, err := getBlobbersInfoList(balances)
 	if err != nil {
 		return "", err
 	}
 
-	for _, b := range blobberNodes {
-		_, err = balances.InsertTrieNode(b.GetKey(), b)
-		if err != nil {
-			logging.Logger.Error("new_allocation_request_failed: error inserting blobber",
-				zap.String("txn", txn.Hash),
-				zap.String("blobber", b.ID),
-				zap.Error(err))
-			return "", fmt.Errorf("can't Save blobber: %v", err)
-		}
+	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
+	var sa = request.storageAllocation() // (set fields, including expiration)
+	sa, blobberNodes, err := setupNewAllocation(request, blobbers, bil, m, txn.CreationDate, conf, txn.Hash)
+	if err != nil {
+		return "", err
+	}
 
-		if err := spMap[b.ID].addOffer(sa.BlobberAllocsMap[b.ID].Offer()); err != nil {
+	m.tick("setup new alloc")
+
+	for _, b := range blobberNodes {
+		offer := currency.Coin(sizeInGB(sa.bSize()) * float64(b.Terms.WritePrice))
+		if err := bil[b.Index].addOffer(offer); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
 				zap.String("txn", txn.Hash),
 				zap.String("blobber", b.ID),
@@ -293,24 +266,15 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("ading offer: %v", err)
 		}
 
-		if err = spMap[b.ID].Save(spenum.Blobber, b.ID, balances); err != nil {
-			logging.Logger.Error("new_allocation_request_failed: error saving blobber pool",
-				zap.String("txn", txn.Hash),
-				zap.String("blobber", b.ID),
-				zap.Error(err))
-			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
-		}
+		emitUpdateBlobberAllocatedSavedHealth(b.ID, b.LastHealthCheck, bil[b.Index].Allocated, b.SavedData, balances)
+	}
 
-		if _, err := partitionsBlobberAllocationsAdd(balances, b.ID, sa.ID); err != nil {
-			logging.Logger.Error("new_allocation_request_failed: error adding allocation to blobber",
-				zap.String("txn", txn.Hash),
-				zap.String("blobber", b.ID),
-				zap.String("allocation", sa.ID),
-				zap.Error(err))
-			return "", fmt.Errorf("could not bind allocation to blobber: %v", err)
-		}
+	if err := bil.Save(balances); err != nil {
+		return "", err
+	}
 
-		emitUpdateBlobberAllocatedSavedHealth(b, balances)
+	if _, err := partitionsAllocBlobbersAdd(balances, sa.ID); err != nil {
+		return "", fmt.Errorf("could not bind allocation to blobbers: %v", err)
 	}
 
 	var options []WithOption
@@ -325,7 +289,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	cost, err := sa.cost()
+	cost, err := sa.cost(blobbers)
 	if err != nil {
 		return "", err
 	}
@@ -334,19 +298,16 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			fmt.Sprintf("not enough tokens to cover the allocation cost"+" (%d < %d)", sa.WritePool, cost))
 	}
 
-	if err := sa.checkFunding(conf.CancellationCharge); err != nil {
+	cancelCosts, err := cancellationCharge(conf.CancellationCharge, cost)
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed", "cancellation charge: %v", err)
+	}
+	sa.CancelCost = cancelCosts
+
+	if err := sa.checkFunding(); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_write_pool")
-
-	//if err = sc.createChallengePool(txn, sa, balances, conf); err != nil {
-	//	logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
-	//		zap.String("txn", txn.Hash),
-	//		zap.Error(err))
-	//	return "", common.NewError("allocation_creation_failed", err.Error())
-	//}
-	//m.tick("create_challenge_pool")
-
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
 			zap.String("txn", txn.Hash),
@@ -363,7 +324,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 func setupNewAllocation(
 	request newAllocationRequest,
-	blobbers []*storageNodeResponse,
+	blobbers []*StorageNode,
+	bil BlobberOfferStakeList,
 	m Timings,
 	now common.Timestamp,
 	conf *Config,
@@ -396,29 +358,33 @@ func setupNewAllocation(
 	sa.ID = allocId
 	sa.Tx = allocId
 
-	blobberNodes, bSize, err := validateBlobbers(common.ToTime(now), sa, blobbers, conf)
+	blobberNodes, bSize, err := validateBlobbers(common.ToTime(now), sa, blobbers, bil, conf)
 	if err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error validating blobbers",
 			zap.Error(err))
 		return nil, nil, common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
-	bi := make([]string, 0, len(blobberNodes))
-	for _, b := range blobberNodes {
-		bi = append(bi, b.ID)
-	}
-	logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
+	//logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
 	m.tick("validate_blobbers")
 
 	sa.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(blobberNodes))
 	for _, b := range blobberNodes {
-		balloc, err := newBlobberAllocation(bSize, sa, b, now, conf.TimeUnit)
+		rdtu, err := sa.restDurationInTimeUnits(now, sa.TimeUnit)
 		if err != nil {
-			return nil, nil, common.NewErrorf("allocation_creation_failed",
-				"can't create blobber allocation: %v", err)
+			return nil, nil, fmt.Errorf("could not get rest duration in time unit: %v", err)
 		}
-		sa.BlobberAllocs = append(sa.BlobberAllocs, balloc)
-		sa.BlobberAllocsMap[b.ID] = balloc
-		b.Allocated += bSize
+
+		mld, err := b.Terms.minLockDemand(sizeInGB(sa.bSize()), rdtu)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not get min lock demand: %v", err)
+		}
+
+		sa.Blobbers = append(sa.Blobbers, &AllocBlobber{
+			BlobberID:     b.ID,
+			Terms:         b.Terms,
+			MinLockDemand: mld,
+		})
+		bil[b.Index].Allocated += bSize
 	}
 	m.tick("add_offer")
 
@@ -442,12 +408,14 @@ func (t *Timings) tick(name string) {
 		return
 	}
 	t.timings[name] = time.Since(t.start)
+	t.start = time.Now()
 }
 
 func validateBlobbers(
 	creationDate time.Time,
 	sa *StorageAllocation,
-	blobbers []*storageNodeResponse,
+	blobbers []*StorageNode,
+	bil BlobberOfferStakeList,
 	conf *Config,
 ) ([]*StorageNode, int64, error) {
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
@@ -456,7 +424,7 @@ func validateBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list, errs = sa.validateEachBlobber(blobbers, common.Timestamp(creationDate.Unix()), conf)
+	var list, errs = sa.validateEachBlobber(blobbers, bil, common.Timestamp(creationDate.Unix()), conf)
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))
@@ -549,7 +517,7 @@ func (uar *updateAllocationRequest) getBlobbersSizeDiff(
 func (uar *updateAllocationRequest) getNewBlobbersSize(
 	alloc *StorageAllocation) (newSize int64) {
 
-	return alloc.BlobberAllocs[0].Size + uar.getBlobbersSizeDiff(alloc)
+	return alloc.BSize + uar.getBlobbersSizeDiff(alloc)
 }
 
 // get blobbers by IDs concurrently, return error if any of them could not be acquired.
@@ -560,6 +528,45 @@ func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]
 		},
 		balances)
 }
+
+//func getBlobbersBriefByIDs(ids []string, balances chainstate.CommonStateContextI) ([]*StorageNode, error) {
+//	return chainstate.GetItemsByIDs(ids,
+//		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
+//			return getBlobberBrief(id, balances)
+//		},
+//		balances)
+//}
+
+//func getStakePoolsBriefByIDs(ids []string, providerType spenum.Provider, balances chainstate.CommonStateContextI) (map[string]*stakePoolBrief, error) {
+//	type stakePoolPID struct {
+//		pid  string
+//		pool *stakePoolBrief
+//	}
+//
+//	stakePools, err := chainstate.GetItemsByIDs(ids,
+//		func(id string, balances chainstate.CommonStateContextI) (*stakePoolPID, error) {
+//			sp, err := getStakePoolBrief(providerType, id, balances)
+//			if err != nil {
+//				return nil, err
+//			}
+//
+//			return &stakePoolPID{
+//				pid:  id,
+//				pool: sp,
+//			}, nil
+//		},
+//		balances)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	stakePoolMap := make(map[string]*stakePoolBrief, len(ids))
+//	for _, sp := range stakePools {
+//		stakePoolMap[sp.pid] = sp.pool
+//	}
+//
+//	return stakePoolMap, nil
+//}
 
 func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
 	type stakePoolPID struct {
@@ -595,8 +602,8 @@ func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances cha
 // getAllocationBlobbers loads blobbers of an allocation from store
 func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (blobbers []*StorageNode, err error) {
-	ids := make([]string, 0, len(alloc.BlobberAllocs))
-	for _, ba := range alloc.BlobberAllocs {
+	ids := make([]string, 0, len(alloc.Blobbers))
+	for _, ba := range alloc.Blobbers {
 		ids = append(ids, ba.BlobberID)
 	}
 
@@ -610,7 +617,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 // closeAllocation making it expired; the allocation will be alive the
 // challenge_completion_time and be closed then
 func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
-	alloc *StorageAllocation, balances chainstate.StateContextI) (
+	alloc *StorageAllocation, blobbers []*StorageNode, balances chainstate.StateContextI) (
 	resp string, err error) {
 
 	if alloc.Expiration-t.CreationDate <
@@ -622,13 +629,13 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	// mark as expired, but it will be alive at least chellenge_competion_time
 	alloc.Expiration = t.CreationDate
 
-	for _, ba := range alloc.BlobberAllocs {
+	for i, ba := range alloc.BlobberAllocs {
 		var sp *stakePool
 		if sp, err = sc.getStakePool(spenum.Blobber, ba.BlobberID, balances); err != nil {
 			return "", fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
 				err)
 		}
-		if err := sp.reduceOffer(ba.Offer()); err != nil {
+		if err := sp.reduceOffer(getOffer(alloc.BSize, alloc.bTerms(i))); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
@@ -653,18 +660,23 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 
 func (sa *StorageAllocation) saveUpdatedAllocation(
 	blobbers []*StorageNode,
+	bil BlobberOfferStakeList,
 	balances chainstate.StateContextI,
 ) (err error) {
 	for _, b := range blobbers {
 		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
-		emitUpdateBlobberAllocatedSavedHealth(b, balances)
+		emitUpdateBlobberAllocatedSavedHealth(b.ID, b.LastHealthCheck, bil[b.Index].Allocated, b.SavedData, balances)
 	}
 	// Save allocation
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
+	}
+
+	if err := bil.Save(balances); err != nil {
+		return fmt.Errorf("saving blobbers info list failed: %v", err)
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
@@ -822,6 +834,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	conf *Config,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
+	bil BlobberOfferStakeList,
 	req *updateAllocationRequest,
 	balances chainstate.StateContextI,
 ) (err error) {
@@ -843,8 +856,8 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
-		originalTerms = append(originalTerms, details.Terms) // keep original terms will be changed
-		oldOffer := details.Offer()
+		originalTerms = append(originalTerms, alloc.bTerms(i)) // keep original terms will be changed
+		oldOffer := getOffer(alloc.BSize, alloc.bTerms(i))
 		var b = blobbers[i]
 		if b.ID != details.BlobberID {
 			return common.NewErrorf("allocation_extending_failed",
@@ -855,24 +868,23 @@ func (sc *StorageSmartContract) extendAllocation(
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s no longer provides its service", b.ID)
 		}
+		bi := bil[b.Index]
 		if req.Size > 0 {
-			if b.Capacity-b.Allocated-diff < 0 {
+			if b.Capacity-bi.Allocated-diff < 0 {
 				return common.NewErrorf("allocation_extending_failed",
 					"blobber %s doesn't have enough free space", b.ID)
 			}
 		}
 
-		b.Allocated += diff // new capacity used
+		bi.Allocated += diff // new capacity used
 
 		// update terms using weighted average
-		details.Terms, err = weightedAverage(&details.Terms, &b.Terms,
-			txn.CreationDate, prevExpiration, alloc.Expiration, details.Size,
+		alloc.Blobbers[i].Terms, err = weightedAverage(&alloc.Blobbers[i].Terms, &b.Terms,
+			txn.CreationDate, prevExpiration, alloc.Expiration, alloc.BSize,
 			diff)
 		if err != nil {
 			return err
 		}
-
-		details.Size = size // new size
 
 		// since, new terms is weighted average based on previous terms and
 		// past allocation time and new terms and new allocation time; then
@@ -887,28 +899,25 @@ func (sc *StorageSmartContract) extendAllocation(
 			return common.NewError("allocation_extending_failed", err.Error())
 		}
 
-		nbmld, err := details.Terms.minLockDemand(gbSize, rdtu)
+		bt := alloc.bTerms(i)
+		nbmld, err := bt.minLockDemand(gbSize, rdtu)
 		if err != nil {
 			return err
 		}
 
 		// min_lock_demand can be increased only
-		if nbmld > details.MinLockDemand {
-			details.MinLockDemand = nbmld
+		if nbmld > alloc.bMinLockDemand(i) {
+			alloc.Blobbers[i].MinLockDemand = nbmld
 		}
 
-		newOffer := details.Offer()
+		newOffer := getOffer(size, alloc.bTerms(i))
 		if newOffer != oldOffer {
-			var sp *stakePool
-			if sp, err = sc.getStakePool(spenum.Blobber, details.BlobberID, balances); err != nil {
-				return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
-			}
 			if newOffer > oldOffer {
 				coin, err := currency.MinusCoin(newOffer, oldOffer)
 				if err != nil {
 					return err
 				}
-				if err := sp.addOffer(coin); err != nil {
+				if err := bil[b.Index].addOffer(coin); err != nil {
 					return fmt.Errorf("adding offer: %v", err)
 				}
 			} else {
@@ -916,17 +925,13 @@ func (sc *StorageSmartContract) extendAllocation(
 				if err != nil {
 					return err
 				}
-				if err := sp.reduceOffer(coin); err != nil {
+				if err := bil[b.Index].reduceOffer(coin); err != nil {
 					return fmt.Errorf("reduce offer: %v", err)
 				}
 			}
-			if err = sp.Save(spenum.Blobber, details.BlobberID, balances); err != nil {
-				return fmt.Errorf("can't save stake pool of %s: %v", details.BlobberID,
-					err)
-			}
-
 		}
 	}
+	alloc.BSize = size // update to new size
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
@@ -951,12 +956,13 @@ func (sc *StorageSmartContract) reduceAllocation(
 	conf *Config,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
+	bil BlobberOfferStakeList,
 	req *updateAllocationRequest,
 	balances chainstate.StateContextI,
 ) (err error) {
 	var (
-		diff = req.getBlobbersSizeDiff(alloc) // size difference
-		size = req.getNewBlobbersSize(alloc)  // blobber size
+		diff    = req.getBlobbersSizeDiff(alloc) // newSize difference
+		newSize = req.getNewBlobbersSize(alloc)  // blobber newSize
 
 		// original allocation duration remains
 		originalRemainingDuration = alloc.Expiration - txn.CreationDate
@@ -967,38 +973,30 @@ func (sc *StorageSmartContract) reduceAllocation(
 	alloc.Size += req.Size
 
 	// 1. update terms
-	for i, ba := range alloc.BlobberAllocs {
+	for i := range alloc.BlobberAllocs {
 		var b = blobbers[i]
-		oldOffer := ba.Offer()
-		b.Allocated += diff // new capacity used
+		bi := bil[b.Index]
+		oldOffer := getOffer(alloc.BSize, alloc.bTerms(i))
+		bi.Allocated += diff // new capacity used
 
-		ba.Size = size // new size
 		// update stake pool
-		newOffer := ba.Offer()
+		newOffer := getOffer(newSize, alloc.bTerms(i))
 		if newOffer != oldOffer {
-			var sp *stakePool
-			if sp, err = sc.getStakePool(spenum.Blobber, ba.BlobberID, balances); err != nil {
-				return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
-					err)
-			}
 			if newOffer < oldOffer {
-				if err := sp.reduceOffer(oldOffer - newOffer); err != nil {
+				if err := bil[b.Index].reduceOffer(oldOffer - newOffer); err != nil {
 					return fmt.Errorf("removing offer: %v", err)
 				}
 			} else {
 				// if we are adding a blobber then we will want to add a new offer for that blobber
-				if err := sp.addOffer(newOffer - oldOffer); err != nil {
+				if err := bil[b.Index].addOffer(newOffer - oldOffer); err != nil {
 					return fmt.Errorf("adding offer: %v", err)
 				}
 			}
 
-			if err = sp.Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
-				return fmt.Errorf("can't Save stake pool of %s: %v", ba.BlobberID,
-					err)
-			}
-			emitUpdateBlobberAllocatedSavedHealth(b, balances)
+			emitUpdateBlobberAllocatedSavedHealth(b.ID, b.LastHealthCheck, bi.Allocated, b.SavedData, balances)
 		}
 	}
+	alloc.BSize = newSize // update to new bSize
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
@@ -1092,6 +1090,11 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			err.Error())
 	}
 
+	bil, err := getBlobbersInfoList(balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_updating_failed", "could not get blobbers info list", err.Error())
+	}
+
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
 	if t.ClientID != alloc.Owner /* Third-party actions */ {
@@ -1099,7 +1102,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			return "", common.NewError("allocation_updating_failed", "third party can only extend the allocation")
 		}
 
-		err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, conf, alloc, blobbers, bil, &request, balances)
 		if err != nil {
 			return "", err
 		}
@@ -1113,7 +1116,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		// close allocation now
 
 		if newExpiration <= t.CreationDate {
-			return sc.closeAllocation(t, alloc, balances) // update alloc tx, expir
+			return sc.closeAllocation(t, alloc, blobbers, balances) // update alloc tx, expir
 		}
 
 		// an allocation can't be shorter than configured in SC
@@ -1133,7 +1136,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
+				conf, blobbers, bil, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1146,31 +1149,31 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 
 		if request.UpdateTerms {
-			for i, bd := range alloc.BlobberAllocs {
-				if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
-					bd.Terms.WritePrice = blobbers[i].Terms.WritePrice
+			for i := range alloc.BlobberAllocs {
+				if alloc.bTerms(i).WritePrice >= blobbers[i].Terms.WritePrice {
+					alloc.Blobbers[i].Terms.WritePrice = blobbers[i].Terms.WritePrice
 				}
-				if bd.Terms.ReadPrice >= blobbers[i].Terms.ReadPrice {
-					bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
+				if alloc.bTerms(i).ReadPrice >= blobbers[i].Terms.ReadPrice {
+					alloc.Blobbers[i].Terms.ReadPrice = blobbers[i].Terms.ReadPrice
 				}
-				bd.Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
+				alloc.Blobbers[i].Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
 			}
 		}
 
 		// if size or expiration increased, then we use new terms
 		// otherwise, we use the same terms
 		if request.Size > 0 || request.Expiration > 0 {
-			err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
+			err = sc.extendAllocation(t, conf, alloc, blobbers, bil, &request, balances)
 		} else if request.Size < 0 || request.Expiration < 0 {
-			err = sc.reduceAllocation(t, conf, alloc, blobbers, &request, balances)
+			err = sc.reduceAllocation(t, conf, alloc, blobbers, bil, &request, balances)
 		} else if len(request.AddBlobberId) > 0 {
-			err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
+			err = sc.extendAllocation(t, conf, alloc, blobbers, bil, &request, balances)
 		}
 		if err != nil {
 			return "", err
 		}
 
-		if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
+		if err := alloc.checkFunding(); err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
 		}
 
@@ -1198,10 +1201,9 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			}
 			alloc.OwnerPublicKey = request.OwnerPublicKey
 		}
-
 	}
 
-	err = alloc.saveUpdatedAllocation(blobbers, balances)
+	err = alloc.saveUpdatedAllocation(blobbers, bil, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
@@ -1409,13 +1411,13 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	alloc.Expiration = t.CreationDate
 
 	sps := make([]*stakePool, 0, len(alloc.BlobberAllocs))
-	for _, d := range alloc.BlobberAllocs {
+	for i, d := range alloc.BlobberAllocs {
 		var sp *stakePool
 		if sp, err = sc.getStakePool(spenum.Blobber, d.BlobberID, balances); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		if err := sp.reduceOffer(d.Offer()); err != nil {
+		if err := sp.reduceOffer(getOffer(alloc.BSize, alloc.bTerms(i))); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
@@ -1544,8 +1546,9 @@ func (sc *StorageSmartContract) finishAllocation(
 	// passRates list above because of algorithm of the adjustChallenges
 	for i, d := range alloc.BlobberAllocs {
 		// min lock demand rest
-		if d.MinLockDemand > d.Spent {
-			delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
+		mld := alloc.bMinLockDemand(i)
+		if mld > d.Spent {
+			delta, err := currency.MinusCoin(mld, d.Spent)
 			if err != nil {
 				return err
 			}
@@ -1570,7 +1573,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return fmt.Errorf("distribute rewards failed, paying min_lock %v for blobber "+
 					"%v from write pool %v, minlock demand %v spent %v error %v",
-					delta, d.BlobberID, alloc.WritePool, d.MinLockDemand, d.Spent, err.Error())
+					delta, d.BlobberID, alloc.WritePool, mld, d.Spent, err.Error())
 			}
 			d.Spent, err = currency.AddCoin(d.Spent, delta)
 			if err != nil {
@@ -1633,12 +1636,8 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	cancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
-	if err != nil {
-		return fmt.Errorf("failed to get cancellation charge: %v", err)
-	}
-
-	if alloc.WritePool < cancellationCharge {
+	cancellationCharge := alloc.CancelCost
+	if alloc.WritePool < alloc.CancelCost {
 		cancellationCharge = alloc.WritePool
 		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
 	}
@@ -1666,7 +1665,10 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		return fmt.Errorf("failed to distribute cancellation charge: %v", err)
 	}
-
+	bil, err := getBlobbersInfoList(balances)
+	if err != nil {
+		return err
+	}
 	for i, ba := range alloc.BlobberAllocs {
 		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances)
 		if err != nil {
@@ -1690,8 +1692,11 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"can't get blobber "+ba.BlobberID+": "+err.Error())
 		}
-		blobber.SavedData += (-ba.Stats.UsedSize)
-		blobber.Allocated += (-ba.Size)
+		blobber.SavedData -= ba.Stats.UsedSize
+		//bil[blobber.Index].Allocated -= ba.Size
+		bil[blobber.Index].Allocated -= alloc.BSize
+		allocated := bil[blobber.Index].Allocated
+		//blobber.Allocated += (-ba.Size)
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
@@ -1699,7 +1704,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 
 		// Update saved data on events_db
-		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+		emitUpdateBlobberAllocatedSavedHealth(blobber.ID, blobber.LastHealthCheck, allocated, blobber.SavedData, balances)
 	}
 
 	//if err = cp.save(sc.ID, alloc, balances); err != nil {

@@ -44,7 +44,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	var dpsSze = alloc.DataShards + alloc.ParityShards
 	var gbSize = sizeInGB((alloc.Size + int64(dpsSze-1)) / int64(dpsSze))
 	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
-
+	bs := make([]*AllocBlobber, 0, len(blobbers))
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &storageNodeResponse{
 			ID:      b.ID,
@@ -72,13 +72,15 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		if err != nil {
 			return nil, err
 		}
-
-		ba := &BlobberAllocation{
+		bs = append(bs, &AllocBlobber{
 			BlobberID:     b.ID,
-			AllocationID:  alloc.AllocationID,
-			Size:          b.Allocated,
 			Terms:         terms,
 			MinLockDemand: minLockDemand,
+		})
+
+		ba := &BlobberAllocation{
+			BlobberID:    b.ID,
+			AllocationID: alloc.AllocationID,
 		}
 		blobberDetails = append(blobberDetails, ba)
 		blobberMap[b.ID] = ba
@@ -106,6 +108,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
+		Blobbers:          bs,
 		BlobberAllocs:     blobberDetails,
 		BlobberAllocsMap:  blobberMap,
 		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
@@ -169,13 +172,13 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 
 func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberTerm {
 	bTerms := make([]event.AllocationBlobberTerm, 0, len(sa.BlobberAllocs))
-	for _, b := range sa.BlobberAllocs {
+	for i, b := range sa.BlobberAllocs {
 		bTerms = append(bTerms, event.AllocationBlobberTerm{
 			AllocationID:  sa.ID,
 			BlobberID:     b.BlobberID,
-			ReadPrice:     int64(b.Terms.ReadPrice),
-			WritePrice:    int64(b.Terms.WritePrice),
-			MinLockDemand: b.Terms.MinLockDemand,
+			ReadPrice:     int64(sa.bTerms(i).ReadPrice),
+			WritePrice:    int64(sa.bTerms(i).WritePrice),
+			MinLockDemand: sa.bTerms(i).MinLockDemand,
 		})
 	}
 

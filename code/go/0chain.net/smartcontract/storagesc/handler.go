@@ -1639,15 +1639,33 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	var sns []*storageNodeResponse
+	sns := make([]*StorageNode, 0, len(blobbers))
+	var maxIndex int32
 	for _, b := range blobbers {
 		sn := blobberTableToStorageNode(b)
-		sns = append(sns, &sn)
+		sns = append(sns, sn)
+		if b.Index > maxIndex {
+			maxIndex = b.Index
+		}
+	}
+
+	bil := BlobberOfferStakeList{}
+	for i := int32(0); i <= maxIndex; i++ {
+		bil = append(bil, &BlobberOfferStake{})
+	}
+
+	for _, b := range blobbers {
+		bil[b.Index] = &BlobberOfferStake{
+			TotalOffers: b.OffersTotal,
+			TotalStake:  b.TotalStake,
+			Allocated:   b.Allocated,
+		}
 	}
 
 	sa, _, err := setupNewAllocation(
 		request,
 		sns,
+		bil,
 		Timings{timings: nil, start: common.ToTime(balances.Now())},
 		balances.Now(),
 		conf,
@@ -1658,7 +1676,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-	cost, err := sa.cost()
+	cost, err := sa.cost(sns)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -2100,52 +2118,7 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 }
 
-func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
-	return storageNodeResponse{
-		ID:                      sn.ID,
-		BaseURL:                 sn.BaseURL,
-		Geolocation:             sn.Geolocation,
-		Terms:                   sn.Terms,
-		Capacity:                sn.Capacity,
-		Allocated:               sn.Allocated,
-		LastHealthCheck:         sn.LastHealthCheck,
-		PublicKey:               sn.PublicKey,
-		SavedData:               sn.SavedData,
-		DataReadLastRewardRound: sn.DataReadLastRewardRound,
-		LastRewardDataReadRound: sn.LastRewardDataReadRound,
-		StakePoolSettings:       sn.StakePoolSettings,
-		RewardRound:             sn.RewardRound,
-		IsKilled:                sn.IsKilled(),
-		IsShutdown:              sn.IsShutDown(),
-		IsAvailable:             sn.IsAvailable,
-	}
-}
-
-func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
-	return StorageNode{
-		Provider: provider.Provider{
-			ID:              snr.ID,
-			ProviderType:    spenum.Blobber,
-			LastHealthCheck: snr.LastHealthCheck,
-			HasBeenKilled:   snr.IsKilled,
-			HasBeenShutDown: snr.IsShutdown,
-		},
-		BaseURL:                 snr.BaseURL,
-		Geolocation:             snr.Geolocation,
-		Terms:                   snr.Terms,
-		Capacity:                snr.Capacity,
-		Allocated:               snr.Allocated,
-		PublicKey:               snr.PublicKey,
-		SavedData:               snr.SavedData,
-		DataReadLastRewardRound: snr.DataReadLastRewardRound,
-		LastRewardDataReadRound: snr.LastRewardDataReadRound,
-		StakePoolSettings:       snr.StakePoolSettings,
-		RewardRound:             snr.RewardRound,
-		IsAvailable:             snr.IsAvailable,
-	}
-}
-
-func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
+func blobberTableToStorageNodeResponse(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		ID:      blobber.ID,
 		BaseURL: blobber.BaseURL,
@@ -2177,6 +2150,35 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		IsShutdown:               blobber.IsShutdown,
 		SavedData:                blobber.SavedData,
 		IsAvailable:              blobber.IsAvailable,
+	}
+}
+
+func blobberTableToStorageNode(blobber event.Blobber) *StorageNode {
+	return &StorageNode{
+		Provider: provider.Provider{
+			ID:              blobber.ID,
+			HasBeenKilled:   blobber.IsKilled,
+			HasBeenShutDown: blobber.IsShutdown,
+			LastHealthCheck: blobber.LastHealthCheck,
+		},
+		BaseURL: blobber.BaseURL,
+		Geolocation: StorageNodeGeolocation{
+			Latitude:  blobber.Latitude,
+			Longitude: blobber.Longitude,
+		},
+		Terms: Terms{
+			ReadPrice:     blobber.ReadPrice,
+			WritePrice:    blobber.WritePrice,
+			MinLockDemand: blobber.MinLockDemand,
+		},
+		Capacity: blobber.Capacity,
+		StakePoolSettings: stakepool.Settings{
+			DelegateWallet:     blobber.DelegateWallet,
+			MaxNumDelegates:    blobber.NumDelegates,
+			ServiceChargeRatio: blobber.ServiceCharge,
+		},
+		SavedData:   blobber.SavedData,
+		IsAvailable: blobber.IsAvailable,
 	}
 }
 
@@ -2266,7 +2268,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	}
 
 	for _, blobber := range blobbers {
-		sn := blobberTableToStorageNode(blobber)
+		sn := blobberTableToStorageNodeResponse(blobber)
 		sns.Nodes = append(sns.Nodes, sn)
 	}
 
@@ -2474,7 +2476,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	sn := blobberTableToStorageNode(*blobber)
+	sn := blobberTableToStorageNodeResponse(*blobber)
 	common.Respond(w, r, sn, nil)
 }
 
