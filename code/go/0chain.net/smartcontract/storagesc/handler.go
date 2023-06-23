@@ -400,7 +400,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		zap.Int64("last_health_check", int64(balances.Now())),
 	)
 
-	blobbers, err := edb.GetActiveBlobbers(limit, healthCheckPeriod)
+	blobbers, err := edb.GetActiveBlobbersOrderedByWritePrice(limit, healthCheckPeriod)
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())

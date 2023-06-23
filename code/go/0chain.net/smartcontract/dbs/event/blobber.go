@@ -119,6 +119,27 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination, healthCheckTimeL
 	return blobbers, result.Error
 }
 
+func (edb *EventDb) GetActiveBlobbersOrderedByWritePrice(limit common2.Pagination, healthCheckTimeLimit time.Duration) ([]Blobber, error) {
+	now := common.Now()
+	var blobbers []Blobber
+	result := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Blobber{}).Offset(limit.Offset).
+		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
+			common.ToTime(now).Add(-healthCheckTimeLimit).Unix(), false, false).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "write_price"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&blobbers)
+	return blobbers, result.Error
+}
+
 func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error) {
 	var blobberIDs []string
 
@@ -225,30 +246,6 @@ func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},
 			Desc:   data.IsDescending,
-		})
-	var blobberIDs []string
-	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
-}
-
-func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit common2.Pagination, now common.Timestamp, healthCheckPeriod time.Duration) ([]string, error) {
-	dbStore := edb.Store.Get().Model(&Blobber{})
-	dbStore = dbStore.Where("read_price between ? and ?", allocation.ReadPriceRange.Min, allocation.ReadPriceRange.Max)
-	dbStore = dbStore.Where("write_price between ? and ?", allocation.WritePriceRange.Min, allocation.WritePriceRange.Max)
-	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
-	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-healthCheckPeriod).Unix())
-	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
-	dbStore = dbStore.Where("is_killed = false")
-	dbStore = dbStore.Where("is_shutdown = false")
-	dbStore = dbStore.Where("is_available = true")
-	dbStore = dbStore.Limit(limit.Limit).
-		Offset(limit.Offset).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "write_price"},
-			Desc:   limit.IsDescending,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
-			Desc:   limit.IsDescending,
 		})
 	var blobberIDs []string
 	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
