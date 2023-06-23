@@ -400,10 +400,29 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		zap.Int64("last_health_check", int64(balances.Now())),
 	)
 
-	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now(), healthCheckPeriod)
+	blobbers, err := edb.GetActiveBlobbers(limit, healthCheckPeriod)
 	if err != nil {
 		logging.Logger.Error("get_blobbers_for_request", zap.Error(err))
 		return nil, errors.New("failed to get blobbers: " + err.Error())
+	}
+
+	sa := StorageAllocation{
+		DataShards:    request.DataShards,
+		ParityShards:  request.ParityShards,
+		Size:          request.Size,
+		Expiration:    request.Expiration,
+		ReadPriceRange: request.ReadPriceRange,
+		WritePriceRange: request.WritePriceRange,
+	}
+
+	blobberIDs := make([]string, 0, len(blobbers))
+
+	for _, b := range blobbers {
+		sn := StoragNodeResponseToStorageNode(blobberTableToStorageNode(b))
+		logging.Logger.Debug("alloc_blobbers", zap.Any("blobber", sn))
+		if err := sa.isActive(&sn, b.TotalStake, b.OffersTotal, conf, balances.Now()); err == nil {
+			blobberIDs = append(blobberIDs, b.ID)
+		}
 	}
 
 	if len(blobberIDs) < numberOfBlobbers {
