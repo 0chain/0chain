@@ -10,7 +10,7 @@ We love your input! We want to make contributing to this project as easy and tra
 ## We Develop with Github
 We use github to host code, to track issues and feature requests, as well as accept pull requests.
 
-## We Use [Github Actions](https://guides.github.com/introduction/flow/index.html), So All Code Changes Happen Through Pull Requests
+## We Use [Github Actions](https://docs.github.com/en/actions), So All Code Changes Happen Through Pull Requests
 Pull requests are the best way to propose changes to the codebase (we use [Github Actions](https://docs.github.com/en/actions)). We actively welcome your pull requests:
 
 1. Clone the repo and create your branch from `staging`.
