@@ -173,6 +173,9 @@ func (sc *Chain) storeTransactions(sTxns []datastore.Entity, roundNumber int64) 
 		TxnsCount: int64(len(sTxns)),
 	}
 	err := txnSummaryMetadata.GetStore().Merge(tctx, &rtcDelta)
+	if err != nil {
+		return err
+	}
 
 	// Write the transactions, keyspace the hash
 	for _, txn := range sTxns {
