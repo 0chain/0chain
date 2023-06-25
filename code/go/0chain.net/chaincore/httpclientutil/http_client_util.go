@@ -290,6 +290,7 @@ func MakeClientStateRequest(ctx context.Context, clientID string, urls []string,
 	//maxCount := 0
 	numSuccess := 0
 	numErrs := 0
+	numNotFound := 0
 
 	var clientState state.State
 	var errString string
@@ -315,6 +316,12 @@ func MakeClientStateRequest(ctx context.Context, clientID string, urls []string,
 			continue
 		}
 
+		if response.StatusCode == 400 {
+			logging.N2n.Error("Node is not registered yet", zap.String("URL", sharder))
+			numNotFound++
+			response.Body.Close()
+			continue
+		}
 		if response.StatusCode != 200 {
 			logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Int("response Status", response.StatusCode))
 			numErrs++
@@ -337,11 +344,17 @@ func MakeClientStateRequest(ctx context.Context, clientID string, urls []string,
 		numSuccess++
 	}
 
-	if numSuccess+numErrs == 0 {
+	total := numSuccess + numErrs + numNotFound
+	if total == 0 {
 		return clientState, common.NewError("req_not_run", "Could not run the request") //why???
 	}
 
-	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	nr := int(math.Ceil((float64(numNotFound) * 100) / float64(total)))
+	if numNotFound > 0 && nr >= consensus {
+		return state.State{}, nil
+	}
+
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(total)))
 
 	// We've at least one success and success rate sr is at least same as consensus
 	if numSuccess > 0 && sr >= consensus {
