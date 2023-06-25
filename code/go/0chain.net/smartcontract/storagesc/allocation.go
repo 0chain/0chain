@@ -81,12 +81,12 @@ type newAllocationRequest struct {
 }
 
 // storageAllocation from the request
-func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
+func (nar *newAllocationRequest) storageAllocation(conf *Config) (sa *StorageAllocation) {
 	sa = new(StorageAllocation)
 	sa.DataShards = nar.DataShards
 	sa.ParityShards = nar.ParityShards
 	sa.Size = nar.Size
-	sa.Expiration = nar.Expiration
+	sa.Expiration = common.Timestamp(time.Now().Add(conf.TimeUnit).Unix())
 	sa.Owner = nar.Owner
 	sa.OwnerPublicKey = nar.OwnerPublicKey
 	sa.PreferredBlobbers = nar.Blobbers
@@ -250,7 +250,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
-	var sa = request.storageAllocation() // (set fields, including expiration)
+	var sa = request.storageAllocation(conf) // (set fields, ignore expiration)
 	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
@@ -390,7 +390,7 @@ func setupNewAllocation(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.Strings("blobbers", request.Blobbers))
-	var sa = request.storageAllocation() // (set fields, including expiration)
+	sa := request.storageAllocation(conf) // (set fields, ignore expiration)
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
 	sa.ID = allocId
