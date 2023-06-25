@@ -301,15 +301,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
 
-		if _, err := partitionsBlobberAllocationsAdd(balances, b.ID, sa.ID); err != nil {
-			logging.Logger.Error("new_allocation_request_failed: error adding allocation to blobber",
-				zap.String("txn", txn.Hash),
-				zap.String("blobber", b.ID),
-				zap.String("allocation", sa.ID),
-				zap.Error(err))
-			return "", fmt.Errorf("could not bind allocation to blobber: %v", err)
-		}
-
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 
@@ -1709,6 +1700,20 @@ func (sc *StorageSmartContract) finishAllocation(
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"saving blobber "+ba.BlobberID+": "+err.Error())
+		}
+
+		// get blobber allocations partitions
+		blobberAllocParts, err := partitionsBlobberAllocations(ba.BlobberID, balances)
+		if err != nil {
+			return common.NewErrorf("fini_alloc_failed",
+				"error getting blobber_challenge_allocation list: %v", err)
+		}
+		if err := partitionsBlobberAllocationsRemove(balances, ba.BlobberID, ba.AllocationID, blobberAllocParts); err != nil {
+			return err
+		}
+		if err := blobberAllocParts.Save(balances); err != nil {
+			return common.NewErrorf("fini_alloc_failed",
+				"error saving blobber allocation partitions: %v", err)
 		}
 
 		// Update saved data on events_db
