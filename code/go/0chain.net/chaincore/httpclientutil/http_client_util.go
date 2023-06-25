@@ -286,65 +286,96 @@ func MakeClientNonceRequest(ctx context.Context, clientID string, urls []string,
 // MakeClientStateRequest to get a client's balance
 func MakeClientStateRequest(ctx context.Context, clientID string, urls []string, consensus int) (state.State, error) {
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
+	var (
+		clientState state.State
+		waitGroup   sync.WaitGroup
+		mutex       sync.Mutex
+		numSuccess  int
+		numErrs     int
+		errString   string
+		taskCh      = make(chan string)
+		maxWorkers  = int(math.Min(8.0, float64(len(urls)))) // keep at most 8 workers
+	)
 
-	//maxCount := 0
-	numSuccess := 0
-	numErrs := 0
+	sharderWorker := func() {
+		defer waitGroup.Done()
 
-	var clientState state.State
-	var errString string
+		for sharderURL := range taskCh {
+			u := fmt.Sprintf("%v/%v%v", sharderURL, clientBalanceURL, clientID)
 
-	for _, sharder := range urls {
-		u := fmt.Sprintf("%v/%v%v", sharder, clientBalanceURL, clientID)
+			logging.N2n.Info("Running GetClientBalance on", zap.String("url", u))
 
-		logging.N2n.Info("Running GetClientBalance on", zap.String("url", u))
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+			if err != nil {
+				logging.N2n.Error("Error creating request for sc rest api", zap.Error(err))
+				mutex.Lock()
+				numErrs++
+				errString = errString + sharderURL + ":" + err.Error()
+				mutex.Unlock()
+				return
+			}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-		if err != nil {
-			logging.N2n.Error("Error creating request for sc rest api", zap.Error(err))
-			numErrs++
-			errString = errString + sharder + ":" + err.Error()
-			continue
+			response, err := httpClient.Do(req)
+			if err != nil {
+				logging.N2n.Error("Error getting response for sc rest api", zap.Error(err))
+				mutex.Lock()
+				numErrs++
+				errString = errString + sharderURL + ":" + err.Error()
+				mutex.Unlock()
+				return
+			}
+
+			defer response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				logging.N2n.Error("Error getting response from", zap.String("URL", sharderURL), zap.Int("response Status", response.StatusCode))
+				mutex.Lock()
+				numErrs++
+				errString = errString + sharderURL + ": response_code: " + strconv.Itoa(response.StatusCode)
+				mutex.Unlock()
+				return
+			}
+
+			var sharderClientState state.State
+			decoder := json.NewDecoder(response.Body)
+			decoder.UseNumber()
+			err = decoder.Decode(&sharderClientState)
+			if err != nil {
+				logging.Logger.Error("Error unmarshalling response", zap.Error(err))
+				mutex.Lock()
+				numErrs++
+				errString = errString + sharderURL + ":" + err.Error()
+				mutex.Unlock()
+				return
+			}
+
+			mutex.Lock()
+			numSuccess++
+			clientState = sharderClientState // Update the client state with the latest successful response
+			mutex.Unlock()
 		}
-
-		response, err := httpClient.Do(req)
-		if err != nil {
-			logging.N2n.Error("Error getting response for sc rest api", zap.Error(err))
-			numErrs++
-			errString = errString + sharder + ":" + err.Error()
-			continue
-		}
-
-		if response.StatusCode != 200 {
-			logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Int("response Status", response.StatusCode))
-			numErrs++
-			errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
-			response.Body.Close()
-			continue
-		}
-
-		d := json.NewDecoder(response.Body)
-		d.UseNumber()
-		err = d.Decode(&clientState)
-		response.Body.Close()
-		if err != nil {
-			logging.Logger.Error("Error unmarshalling response", zap.Error(err))
-			numErrs++
-			errString = errString + sharder + ":" + err.Error()
-			continue
-		}
-
-		numSuccess++
 	}
+
+	for i := 0; i < maxWorkers; i++ {
+		waitGroup.Add(1)
+		go sharderWorker()
+	}
+
+	// Enqueue sharder URLs as tasks
+	for _, sharder := range urls {
+		taskCh <- sharder
+	}
+
+	close(taskCh) // Close the task channel to signal that no more tasks will be enqueued
+	waitGroup.Wait()
 
 	if numSuccess+numErrs == 0 {
 		return clientState, common.NewError("req_not_run", "Could not run the request") //why???
 	}
 
-	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	successRate := int(float64(numSuccess) / float64(len(urls)))
 
 	// We've at least one success and success rate sr is at least same as consensus
-	if numSuccess > 0 && sr >= consensus {
+	if numSuccess > 0 && successRate >= consensus {
 		return clientState, nil
 	} else if numSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
