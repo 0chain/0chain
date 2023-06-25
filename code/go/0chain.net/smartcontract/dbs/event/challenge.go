@@ -23,7 +23,7 @@ type Challenge struct {
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 	Passed         bool             `json:"passed"`
-	RoundResponded int64            `json:"round_responded" gorm:"index"`
+	RoundResponded int64            `json:"round_responded"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
@@ -63,7 +63,7 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 		Model(&Challenge{}).
 		Where("blobber_id = ? AND round_responded >= ? AND round_responded < ?",
 			blobberId, start, end).
-		Find(&chs)
+		Find(&chs).Debug()
 	return chs, result.Error
 }
 
