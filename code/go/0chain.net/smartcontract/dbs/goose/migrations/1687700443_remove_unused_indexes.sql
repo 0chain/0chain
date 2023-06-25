@@ -22,6 +22,8 @@ DROP INDEX IF EXISTS idx_sharder_creation_round;
 DROP INDEX IF EXISTS idx_sharder_snapshots_creation_round;
 DROP INDEX IF EXISTS idx_blobber_creation_round;
 DROP INDEX IF EXISTS idx_blobber_snapshots_creation_round;
+DROP INDEX IF EXISTS idx_del_id;
+DROP INDEX IF EXISTS idx_blobbers_rank_metric;
 -- +goose StatementEnd
 
 -- +goose Down
