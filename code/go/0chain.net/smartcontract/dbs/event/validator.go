@@ -21,7 +21,7 @@ type Validator struct {
 	BaseUrl   string `json:"url"`
 	PublicKey string `json:"public_key"`
 
-	CreationRound int64 `json:"creation_round" gorm:"index:idx_validator_creation_round"`
+	CreationRound int64 `json:"creation_round"`
 }
 
 func (v *Validator) GetTotalStake() currency.Coin {

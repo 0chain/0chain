@@ -11,6 +11,17 @@ ALTER TABLE challenges DROP COLUMN deleted_at;
 DROP INDEX IF EXISTS idx_ba_rankmetric;
 DROP INDEX IF EXISTS idx_walloc_file;
 DROP INDEX IF EXISTS idx_wblocknum;
+DROP INDEX IF EXISTS idx_astart_time;
+DROP INDEX IF EXISTS idx_authorizer_creation_round;
+DROP INDEX IF EXISTS idx_authorizer_snapshots_creation_round;
+DROP INDEX IF EXISTS idx_validator_creation_round;
+DROP INDEX IF EXISTS idx_validator_snapshots_creation_round;
+DROP INDEX IF EXISTS idx_miner_creation_round;
+DROP INDEX IF EXISTS idx_miner_snapshots_creation_round;
+DROP INDEX IF EXISTS idx_sharder_creation_round;
+DROP INDEX IF EXISTS idx_sharder_snapshots_creation_round;
+DROP INDEX IF EXISTS idx_blobber_creation_round;
+DROP INDEX IF EXISTS idx_blobber_snapshots_creation_round;
 -- +goose StatementEnd
 
 -- +goose Down
