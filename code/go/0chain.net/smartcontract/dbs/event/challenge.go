@@ -1,19 +1,20 @@
 package event
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"fmt"
+
+	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
-	"gorm.io/gorm"
 )
 
 // swagger:model Challenges
 type Challenges []Challenge
 
 type Challenge struct {
-	gorm.Model
+	model.UpdatableModel
 	ChallengeID    string           `json:"challenge_id" gorm:"index:idx_cchallenge_id,unique"`
 	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_copen_challenge,priority:1"`
 	AllocationID   string           `json:"allocation_id"`

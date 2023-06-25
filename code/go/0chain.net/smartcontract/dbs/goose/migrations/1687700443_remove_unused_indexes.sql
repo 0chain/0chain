@@ -6,6 +6,8 @@ DROP INDEX IF EXISTS idx_event;
 DROP INDEX IF EXISTS idx_tcreation_date;
 DROP INDEX IF EXISTS idx_bcreation_date;
 DROP INDEX IF EXISTS idx_challenges_round_responded;
+DROP INDEX IF EXISTS idx_challenges_deleted_at;
+ALTER TABLE challenges DROP COLUMN deleted_at;
 -- +goose StatementEnd
 
 -- +goose Down
