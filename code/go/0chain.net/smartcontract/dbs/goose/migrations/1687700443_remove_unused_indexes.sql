@@ -9,6 +9,8 @@ DROP INDEX IF EXISTS idx_challenges_round_responded;
 DROP INDEX IF EXISTS idx_challenges_deleted_at;
 ALTER TABLE challenges DROP COLUMN deleted_at;
 DROP INDEX IF EXISTS idx_ba_rankmetric;
+DROP INDEX IF EXISTS idx_walloc_file;
+DROP INDEX IF EXISTS idx_wblocknum;
 -- +goose StatementEnd
 
 -- +goose Down

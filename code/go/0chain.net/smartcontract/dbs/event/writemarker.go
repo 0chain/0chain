@@ -17,7 +17,7 @@ type WriteMarker struct {
 	model.UpdatableModel
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
-	AllocationID  string `json:"allocation_id" gorm:"index:idx_walloc_block,priority:1;index:idx_walloc_file,priority:2"` //used in alloc_write_marker_count, alloc_written_size
+	AllocationID  string `json:"allocation_id" gorm:"index:idx_walloc_block,priority:1"` //used in alloc_write_marker_count, alloc_written_size
 	TransactionID string `json:"transaction_id" gorm:"uniqueIndex"`
 
 	AllocationRoot         string `json:"allocation_root"`
@@ -26,7 +26,7 @@ type WriteMarker struct {
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum,priority:1;index:idx_walloc_block,priority:2"` //used in alloc_written_size
+	BlockNumber            int64  `json:"block_number" gorm:"index:idx_walloc_block,priority:2"` //used in alloc_written_size
 
 	MovedTokens currency.Coin `json:"-" gorm:"-"`
 
