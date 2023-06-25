@@ -250,7 +250,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
-	var sa = request.storageAllocation(conf) // (set fields, ignore expiration)
+	sa := request.storageAllocation(conf) // (set fields, ignore expiration)
 	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
