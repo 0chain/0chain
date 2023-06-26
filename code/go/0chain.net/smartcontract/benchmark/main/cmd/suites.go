@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sync"
 	"testing"
 	"time"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -74,7 +78,7 @@ func runSuites(
 	storagesc.SetupRestHandler(restSetup)
 	vestingsc.SetupRestHandler(restSetup)
 	zcnsc.SetupRestHandler(restSetup)
-
+	var eventMap map[string][]event.Event
 	for _, suite := range suites {
 		log.Println("starting suite ==>", suite.Source)
 		wg.Add(1)
@@ -84,7 +88,11 @@ func runSuites(
 			if suite.ReadOnly {
 				suiteResult = runReadOnlySuite(suite, mpt, root, data, timedBalance)
 			} else {
-				suiteResult = runSuite(suite, mpt, root, data)
+				var events map[string][]event.Event
+				suiteResult, events = runSuite(suite, mpt, root, data)
+				for key, value := range events {
+					eventMap[suite.Name+"."+key] = value
+				}
 			}
 			if suiteResult == nil {
 				return
@@ -96,7 +104,23 @@ func runSuites(
 		}(suite, &wg)
 	}
 	wg.Wait()
+	err := writeEvents(viper.GetString(benchmark.OptionsSmartContractEventFile), eventMap)
+	if err != nil {
+		log.Fatal("error writing out events: " + err.Error())
+	}
+
 	return results
+}
+
+func writeEvents(filename string, events map[string][]event.Event) error {
+	if filename == "" {
+		return nil
+	}
+	data, err := json.MarshalIndent(events, "", " ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, data, 0644)
 }
 
 func runReadOnlySuite(
@@ -150,8 +174,9 @@ func runSuite(
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
 	data *benchmark.BenchData,
-) []benchmarkResults {
+) ([]benchmarkResults, map[string][]event.Event) {
 	var benchmarkResult []benchmarkResults
+	var benchmarkEvents map[string][]event.Event
 	var wg sync.WaitGroup
 
 	for _, bm := range suite.Benchmarks {
@@ -167,13 +192,14 @@ func runSuite(
 			log.Println("starting", bm.Name())
 			var err error
 			var runCount int
+			var balances cstate.StateContextI
 			result := testing.Benchmark(func(b *testing.B) {
 				b.StopTimer()
 				var prevMptHashRoot string
 				_ = prevMptHashRoot
 				for i := 0; i < b.N; i++ {
 					cloneMPT := util.CloneMPT(mpt)
-					_, balances := getBalances(
+					_, balances = getBalances(
 						bm.Transaction(),
 						extractMpt(cloneMPT, root),
 						data,
@@ -198,6 +224,7 @@ func runSuite(
 						prevMptHashRoot = currMptHashRoot
 					}
 				}
+				benchmarkEvents[bm.Name()] = balances.GetEvents()
 			})
 			log.Println(bm.Name(), "run count is:", runCount)
 			var resTimings map[string]time.Duration
@@ -219,5 +246,5 @@ func runSuite(
 		}(bm, &wg)
 	}
 	wg.Wait()
-	return benchmarkResult
+	return benchmarkResult, benchmarkEvents
 }

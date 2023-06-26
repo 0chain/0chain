@@ -12,18 +12,9 @@ import (
 	"0chain.net/core/common"
 	"github.com/spf13/pflag"
 
-	"0chain.net/smartcontract/zcnsc"
-
-	"0chain.net/smartcontract/benchmark/main/cmd/control"
-
 	"0chain.net/chaincore/node"
 	bk "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
-	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/multisigsc"
-	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/vestingsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,21 +23,6 @@ import (
 const (
 	defaultConfigPath = "testdata/benchmark.yaml"
 )
-
-var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
-	bk.Storage:         storagesc.BenchmarkTests,
-	bk.StorageRest:     storagesc.BenchmarkRestTests,
-	bk.Miner:           minersc.BenchmarkTests,
-	bk.MinerRest:       minersc.BenchmarkRestTests,
-	bk.Faucet:          faucetsc.BenchmarkTests,
-	bk.FaucetRest:      faucetsc.BenchmarkRestTests,
-	bk.Vesting:         vestingsc.BenchmarkTests,
-	bk.VestingRest:     vestingsc.BenchmarkRestTests,
-	bk.MultiSig:        multisigsc.BenchmarkTests,
-	bk.ZCNSCBridge:     zcnsc.BenchmarkTests,
-	bk.ZCNSCBridgeRest: zcnsc.BenchmarkRestTests,
-	bk.Control:         control.BenchmarkTests,
-}
 
 func init() {
 	logging.InitLogging("testing", "")

@@ -38,6 +38,31 @@ func CommitNow() ProcessEventsOptionsFunc {
 // or rollback.
 type CommitOrRollbackFunc func(rollback bool) error
 
+func (edb *EventDb) MergeEvents(
+	ctx context.Context,
+	events []Event,
+	round int64,
+	block string,
+	blockSize int,
+) (blockEvents, *EventDb, error) {
+	es, err := mergeEvents(round, block, events)
+	if err != nil {
+		return blockEvents{}, nil, err
+	}
+	tx, err := edb.Begin(ctx)
+	if err != nil {
+		return blockEvents{}, nil, err
+	}
+	return blockEvents{
+		events:    es,
+		round:     round,
+		block:     block,
+		blockSize: blockSize,
+		tx:        tx,
+		done:      make(chan bool, 1),
+	}, tx, nil
+}
+
 // ProcessEvents - process events and return commit function or error if any
 // The commit function can be called to commit the events changes when needed
 func (edb *EventDb) ProcessEvents(

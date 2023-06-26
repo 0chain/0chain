@@ -32,6 +32,7 @@ const (
 	ZCNSCBridge
 	ZCNSCBridgeRest
 	Control
+	EventDatabase
 	NumberOdfBenchmarkSources
 )
 
@@ -129,12 +130,17 @@ const (
 	MptCreationTime         = Internal + "mpt_creation_time"
 	BenchDataListLength     = Internal + "bench_data_list_length"
 
-	OptionVerbose          = Options + "verbose"
-	OptionTestSuites       = Options + "test_suites"
-	OptionOmittedTests     = Options + "omitted_tests"
-	OptionLoadPath         = Options + "load_path"
-	OptionSavePath         = Options + "save_path"
-	OptionsLoadConcurrency = Options + "load_concurrency"
+	OptionVerbose                  = Options + "verbose"
+	OptionTestSuites               = Options + "test_suites"
+	OptionOmittedTests             = Options + "omitted_tests"
+	OptionLoadPath                 = Options + "load_path"
+	OptionSavePath                 = Options + "save_path"
+	OptionsLoadConcurrency         = Options + "load_concurrency"
+	OptionsSmartContractBenchmarks = Options + "smart_contract_benchmarks"
+	OptionsQueryBenchmarks         = Options + "query_benchmarks"
+	OptionsEventDatabaseBenchmarks = Options + "event_database_benchmarks"
+	OptionsSmartContractEventFile  = Options + "smart_contract_event_file"
+	OptionsEventDatabaseEventFile  = Options + "event_database_event_file"
 
 	MinerMOwner       = SmartContract + MinerSc + "owner_id"
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
@@ -308,6 +314,7 @@ type SignatureScheme interface {
 }
 
 type TestSuite struct {
+	Name       string
 	Source     Source
 	Benchmarks []BenchTestI
 	ReadOnly   bool
