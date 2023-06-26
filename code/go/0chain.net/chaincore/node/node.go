@@ -316,11 +316,17 @@ func (n *Node) ComputeProperties() error {
 
 /*GetURLBase - get the end point base */
 func (n *Node) GetURLBase() string {
+	if len(n.Path) > 0 {
+		return fmt.Sprintf("https://%v:%v/%v", n.Host, n.Port, n.Path)
+	}
 	return fmt.Sprintf("https://%v:%v", n.Host, n.Port)
 }
 
 /*GetN2NURLBase - get the end point base for n2n communication */
 func (n *Node) GetN2NURLBase() string {
+	if len(n.Path) > 0 {
+		return fmt.Sprintf("https://%v:%v/%v", n.Host, n.Port, n.Path)
+	}
 	return fmt.Sprintf("https://%v:%v", n.N2NHost, n.Port)
 }
 
