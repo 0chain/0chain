@@ -47,6 +47,24 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	return tx.Commit()
 }
 
+func GetBenchmarkTestSuite(eventsMap map[string][]Event) bk.TestSuite {
+	var edbTests []bk.BenchTestI
+	for key, events := range eventsMap {
+		edbTests = append(edbTests, DbTest{
+			name:      key,
+			events:    events,
+			blockSize: 1,
+			ctx:       context.TODO(),
+		})
+	}
+	return bk.TestSuite{
+		Source:     bk.EventDatabase,
+		Benchmarks: edbTests,
+		ReadOnly:   true,
+	}
+}
+
+/* piers remove
 func GetBenchmarkTests(
 	eventsMap map[string][]Event,
 ) func(bk.BenchData, bk.SignatureScheme) bk.TestSuite {
@@ -67,3 +85,4 @@ func GetBenchmarkTests(
 		}
 	}
 }
+*/

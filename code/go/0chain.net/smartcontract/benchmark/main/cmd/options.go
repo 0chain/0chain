@@ -38,6 +38,7 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 	bk.Control:         control.BenchmarkTests,
 }
 
+/* piers remove
 func getBenchmarkSources() (map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite, error) {
 	_, ok := benchmarkSources[bk.EventDatabase]
 	if ok {
@@ -54,6 +55,7 @@ func getBenchmarkSources() (map[bk.Source]func(data bk.BenchData, sigScheme bk.S
 	benchmarkSources[bk.EventDatabase] = event.GetBenchmarkTests(testMap)
 	return benchmarkSources, nil
 }
+*/
 
 func readEdbTests(filename string) (map[string][]event.Event, error) {
 	file, _ := ioutil.ReadFile(filename)
@@ -83,12 +85,8 @@ func getTestSuites(
 	bkNames, omit []string,
 ) []bk.TestSuite {
 	var suites []bk.TestSuite
-	bSources, err := getBenchmarkSources()
-	if err != nil {
-		log.Fatal("error getting benchmarks: " + err.Error())
-	}
 	if len(bkNames) == 0 {
-		for _, bks := range bSources {
+		for _, bks := range benchmarkSources {
 			suite := bks(*data, &BLS0ChainScheme{})
 			suite.RemoveBenchmarks(omit)
 			suites = append(suites, suite)

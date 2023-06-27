@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"0chain.net/chaincore/block"
+	"0chain.net/core/encryption"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -86,7 +88,7 @@ func runSuites(
 			defer wg.Done()
 			var suiteResult []benchmarkResults
 			if suite.ReadOnly {
-				suiteResult = runReadOnlySuite(suite, mpt, root, data, timedBalance)
+				suiteResult = runReadOnlySuite(suite, timedBalance)
 			} else {
 				var events map[string][]event.Event
 				suiteResult, events = runSuite(suite, mpt, root, data)
@@ -109,6 +111,17 @@ func runSuites(
 		log.Fatal("error writing out events: " + err.Error())
 	}
 
+	if viper.GetBool(benchmark.OptionsEventDatabaseBenchmarks) {
+		if viper.GetString(benchmark.OptionsSmartContractEventFile) != viper.GetString(benchmark.OptionsEventDatabaseEventFile) {
+			eventMap, err = readEdbTests(viper.GetString(benchmark.OptionsEventDatabaseEventFile))
+			if err != nil {
+				log.Fatal(fmt.Sprintf("error reading event db benchmarks file %s: %v",
+					viper.GetString(benchmark.OptionsEventDatabaseEventFile), err))
+			}
+			runEventDatabaseSuite(event.GetBenchmarkTestSuite(eventMap), data.EventDb)
+		}
+	}
+
 	return results
 }
 
@@ -123,11 +136,66 @@ func writeEvents(filename string, events map[string][]event.Event) error {
 	return ioutil.WriteFile(filename, data, 0644)
 }
 
+func runEventDatabaseSuite(
+	suite benchmark.TestSuite,
+	edb *event.EventDb,
+) []benchmarkResults {
+	var benchmarkResult []benchmarkResults
+	var wg sync.WaitGroup
+	for _, bm := range suite.Benchmarks {
+		wg.Add(1)
+		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
+			defer wg.Done()
+			timer := time.Now()
+			log.Println("starting", bm.Name())
+			var err error
+			result := testing.Benchmark(func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					b.StopTimer()
+					cloneEdb, err := edb.Clone("")
+					if err != nil {
+						log.Fatal("cloning event database: " + err.Error())
+					}
+					balances := cstate.NewStateContext(
+						nil,
+						nil,
+						nil,
+						func(int64) *block.MagicBlock { return nil },
+						func() *block.Block { return nil },
+						func() *block.MagicBlock { return nil },
+						func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
+						func() *block.Block { return nil },
+						cloneEdb,
+					)
+					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
+						return 0
+					})
+					b.StartTimer()
+					err = bm.Run(timedBalance, b)
+					b.StopTimer()
+					err = cloneEdb.Delete()
+					if err != nil {
+						log.Fatal("error deleting event database: " + err.Error())
+					}
+				}
+			})
+			benchmarkResult = append(
+				benchmarkResult,
+				benchmarkResults{
+					test:   bm,
+					result: result,
+					error:  err,
+				},
+			)
+			log.Println("test", bm.Name(), "done. took:", time.Since(timer))
+		}(bm, &wg)
+	}
+	wg.Wait()
+	return nil
+}
+
 func runReadOnlySuite(
 	suite benchmark.TestSuite,
-	_ *util.MerklePatriciaTrie,
-	_ util.Key,
-	_ *benchmark.BenchData,
 	balances cstate.TimedQueryStateContext,
 ) []benchmarkResults {
 	if !viper.GetBool(benchmark.EventDbEnabled) || balances.GetEventDB() == nil {
