@@ -2,7 +2,7 @@ name: DOCKER IMAGES CLEANUP FROM RUNNERS.
 
 on:
   schedule:
-    # Runs everyday 2 day
+    # Runs everyday
     - cron: '0 0 * * *'
   workflow_dispatch:
   
