@@ -12,12 +12,11 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		return err
 	}
 	data := &event.Blobber{
-		BaseURL:       sn.BaseURL,
-		Latitude:      sn.Geolocation.Latitude,
-		Longitude:     sn.Geolocation.Longitude,
-		ReadPrice:     sn.Terms.ReadPrice,
-		WritePrice:    sn.Terms.WritePrice,
-		MinLockDemand: sn.Terms.MinLockDemand,
+		BaseURL:    sn.BaseURL,
+		Latitude:   sn.Geolocation.Latitude,
+		Longitude:  sn.Geolocation.Longitude,
+		ReadPrice:  sn.Terms.ReadPrice,
+		WritePrice: sn.Terms.WritePrice,
 
 		Capacity:    sn.Capacity,
 		Allocated:   sn.Allocated,
@@ -44,12 +43,11 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	data := &event.Blobber{
-		BaseURL:       sn.BaseURL,
-		Latitude:      sn.Geolocation.Latitude,
-		Longitude:     sn.Geolocation.Longitude,
-		ReadPrice:     sn.Terms.ReadPrice,
-		WritePrice:    sn.Terms.WritePrice,
-		MinLockDemand: sn.Terms.MinLockDemand,
+		BaseURL:    sn.BaseURL,
+		Latitude:   sn.Geolocation.Latitude,
+		Longitude:  sn.Geolocation.Longitude,
+		ReadPrice:  sn.Terms.ReadPrice,
+		WritePrice: sn.Terms.WritePrice,
 
 		Capacity:    sn.Capacity,
 		Allocated:   sn.Allocated,
