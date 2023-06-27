@@ -1,0 +1,25 @@
+name: DOCKER IMAGES CLEANUP FROM RUNNERS.
+
+on:
+  schedule:
+    # Runs everyday 2 day
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+  
+jobs:
+  docker_conductor_runner:
+    runs-on: conductor-test
+    
+    steps:
+      - name: Delete unused images.
+        run: |
+          echo 'y' | docker system prune -a
+
+  docker_conductor03_runner:
+    runs-on: conductor-test03
+    
+    steps:
+      - name: Delete unused images.
+        run: |
+          echo 'y' | docker system prune -a
+    
