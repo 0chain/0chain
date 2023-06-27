@@ -17,52 +17,53 @@ import (
 
 func scConfigKey(scKey string) datastore.Key {
 	return scKey + encryption.Hash("storagesc_config")
+	//return "c"
 }
 
 type freeAllocationSettings struct {
-	DataShards       int        `json:"data_shards"`
-	ParityShards     int        `json:"parity_shards"`
-	Size             int64      `json:"size"`
-	ReadPriceRange   PriceRange `json:"read_price_range"`
-	WritePriceRange  PriceRange `json:"write_price_range"`
-	ReadPoolFraction float64    `json:"read_pool_fraction"`
+	DataShards       int        `json:"data_shards" msg:"d"`
+	ParityShards     int        `json:"parity_shards" msg:"p"`
+	Size             int64      `json:"size" msg:"s"`
+	ReadPriceRange   PriceRange `json:"read_price_range" msg:"r"`
+	WritePriceRange  PriceRange `json:"write_price_range" msg:"w"`
+	ReadPoolFraction float64    `json:"read_pool_fraction" msg:"f"`
 }
 
 type stakePoolConfig struct {
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	KillSlash     float64       `json:"kill_slash"`
+	MinLockPeriod time.Duration `json:"min_lock_period" msg:"m"`
+	KillSlash     float64       `json:"kill_slash" msg:"k"`
 }
 
 type readPoolConfig struct {
-	MinLock currency.Coin `json:"min_lock"`
+	MinLock currency.Coin `json:"min_lock" msg:"m"`
 }
 
 type writePoolConfig struct {
-	MinLock currency.Coin `json:"min_lock"`
+	MinLock currency.Coin `json:"min_lock" msg:"m"`
 }
 
 type blockReward struct {
-	BlockReward             currency.Coin    `json:"block_reward"`
-	BlockRewardChangePeriod int64            `json:"block_reward_change_period"`
-	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio"`
-	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
-	SharderWeight           float64          `json:"sharder_weight"`
-	MinerWeight             float64          `json:"miner_weight"`
-	TriggerPeriod           int64            `json:"trigger_period"`
-	Gamma                   blockRewardGamma `json:"gamma"`
-	Zeta                    blockRewardZeta  `json:"zeta"`
+	BlockReward             currency.Coin    `json:"block_reward" msg:"r"`
+	BlockRewardChangePeriod int64            `json:"block_reward_change_period" msg:"c"`
+	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio" msg:"o"`
+	QualifyingStake         currency.Coin    `json:"qualifying_stake" msg:"q"`
+	SharderWeight           float64          `json:"sharder_weight" msg:"s"`
+	MinerWeight             float64          `json:"miner_weight" msg:"m"`
+	TriggerPeriod           int64            `json:"trigger_period" msg:"t"`
+	Gamma                   blockRewardGamma `json:"gamma" msg:"g"`
+	Zeta                    blockRewardZeta  `json:"zeta" msg:"z"`
 }
 
 type blockRewardGamma struct {
-	Alpha float64 `json:"alpha"`
-	A     float64 `json:"a"`
-	B     float64 `json:"b"`
+	Alpha float64 `json:"alpha" msg:"l"`
+	A     float64 `json:"a" msg:"a"`
+	B     float64 `json:"b" msg:"b"`
 }
 
 type blockRewardZeta struct {
-	I  float64 `json:"i"`
-	K  float64 `json:"k"`
-	Mu float64 `json:"mu"`
+	I  float64 `json:"i" msg:"i"`
+	K  float64 `json:"k" msg:"k"`
+	Mu float64 `json:"mu" msg:"m"`
 }
 
 func newConfig() *Config {
@@ -81,73 +82,73 @@ type Config struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
 	// measured in tok / GB / time unit. Where the time unit is this
 	// configuration.
-	TimeUnit time.Duration `json:"time_unit"`
+	TimeUnit time.Duration `json:"time_unit" msg:"t"`
 	// MaxMint is max minting.
-	MaxMint currency.Coin `json:"max_mint"`
+	MaxMint currency.Coin `json:"max_mint" msg:"m"`
 	// Minted tokens by entire SC.
-	Minted currency.Coin `json:"minted"`
+	Minted currency.Coin `json:"minted" msg:"mt"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
-	MinAllocSize int64 `json:"min_alloc_size"`
+	MinAllocSize int64 `json:"min_alloc_size" msg:"ma"`
 	// MaxChallengeCompletionTime is max time to complete a challenge.
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time" msg:"mcc"`
 	// MinBlobberCapacity allowed to register in the SC.
-	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
+	MinBlobberCapacity int64 `json:"min_blobber_capacity" msg:"bc"`
 	// ReadPool related configurations.
-	ReadPool *readPoolConfig `json:"readpool"`
+	ReadPool *readPoolConfig `json:"readpool" msg:"rp"`
 	// WritePool related configurations.
-	WritePool *writePoolConfig `json:"write_pool"`
+	WritePool *writePoolConfig `json:"write_pool" msg:"wp"`
 	// StakePool related configurations.
-	StakePool *stakePoolConfig `json:"stakepool"`
+	StakePool *stakePoolConfig `json:"stakepool" msg:"s"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
 	// goes to validators. Even if a blobber doesn't pass a challenge validators
 	// receive this reward.
-	ValidatorReward float64 `json:"validator_reward"`
+	ValidatorReward float64 `json:"validator_reward" msg:"v"`
 	// BlobberSlash represents % (value in [0; 1] range) of blobbers' stake
 	// tokens penalized on challenge not passed.
-	BlobberSlash      float64       `json:"blobber_slash"`
-	HealthCheckPeriod time.Duration `json:"health_check_period"`
+	BlobberSlash      float64       `json:"blobber_slash" msg:"b"`
+	HealthCheckPeriod time.Duration `json:"health_check_period" msg:"h"`
 	// MaxBlobbersPerAllocation maximum blobbers that can be sent per allocation
-	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation"`
+	MaxBlobbersPerAllocation int `json:"max_blobbers_per_allocation" msg:"p"`
 
 	// price limits for blobbers
 
 	// MaxReadPrice allowed for a blobber.
-	MaxReadPrice currency.Coin `json:"max_read_price"`
+	MaxReadPrice currency.Coin `json:"max_read_price" msg:"mr"`
 	// MaxWrtiePrice
-	MaxWritePrice currency.Coin `json:"max_write_price"`
-	MinWritePrice currency.Coin `json:"min_write_price"`
+	MaxWritePrice currency.Coin `json:"max_write_price" msg:"w"`
+	MinWritePrice currency.Coin `json:"min_write_price" msg:"i"`
 
 	// allocation cancellation
-	CancellationCharge float64 `json:"cancellation_charge"`
+	CancellationCharge float64 `json:"cancellation_charge" msg:"cc"`
 	// free allocations
-	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation"`
-	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation"`
-	FreeAllocationSettings      freeAllocationSettings `json:"free_allocation_settings"`
+	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation" msg:"f"`
+	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation" msg:"if"`
+	FreeAllocationSettings      freeAllocationSettings `json:"free_allocation_settings" msg:"fa"`
 
 	// challenges generating
 
 	// ChallengeEnabled is challenges generating pin.
-	ChallengeEnabled bool `json:"challenge_enabled"`
+	ChallengeEnabled bool `json:"challenge_enabled" msg:"ce"`
 	// ValidatorsPerChallenge is the number of validators to select per
 	// challenges.
-	ValidatorsPerChallenge int `json:"validators_per_challenge"`
+	ValidatorsPerChallenge int `json:"validators_per_challenge" msg:"vp"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
-	MinStake currency.Coin `json:"min_stake"`
+	MinStake currency.Coin `json:"min_stake" msg:"is"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
-	MaxStake currency.Coin `json:"max_stake"`
+	MaxStake currency.Coin `json:"max_stake" msg:"ms"`
 
 	// MaxDelegates per stake pool
-	MaxDelegates int `json:"max_delegates"`
+	MaxDelegates int `json:"max_delegates" msg:"md"`
 
 	// MaxCharge that blobber gets from rewards to its delegate_wallet.
-	MaxCharge float64 `json:"max_charge"`
+	MaxCharge float64 `json:"max_charge" msg:"mc"`
 
-	BlockReward *blockReward `json:"block_reward"`
+	BlockReward *blockReward `json:"block_reward" msg:"br"`
 
-	OwnerId string         `json:"owner_id"`
-	Cost    map[string]int `json:"cost"`
+	OwnerId string         `json:"owner_id" msg:"o"`
+	Cost    map[string]int `json:"cost" msg:"c"`
 }
 
 func (conf *Config) validate() (err error) {

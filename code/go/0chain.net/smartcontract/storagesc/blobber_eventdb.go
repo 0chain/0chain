@@ -22,7 +22,7 @@ func emitUpdateBlobber(sn *StorageNode, bi *BlobberOfferStake, sp *stakePool, ba
 
 		Capacity:    sn.Capacity,
 		Allocated:   bi.Allocated,
-		SavedData:   sn.SavedData,
+		SavedData:   bi.SavedData,
 		IsAvailable: sn.IsAvailable,
 		Provider: event.Provider{
 			ID:              sn.ID,
@@ -54,7 +54,7 @@ func emitAddBlobber(sn *StorageNode, idx int32, bi *BlobberOfferStake, sp *stake
 
 		Capacity:    sn.Capacity,
 		Allocated:   bi.Allocated,
-		SavedData:   sn.SavedData,
+		SavedData:   bi.SavedData,
 		IsAvailable: true,
 		Provider: event.Provider{
 			ID:              sn.ID,

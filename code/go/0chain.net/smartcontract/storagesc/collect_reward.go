@@ -5,6 +5,7 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -32,6 +33,33 @@ func (ssc *StorageSmartContract) collectReward(
 			sp, err := ssc.getStakePool(crr.ProviderType, crr.ProviderId, balances)
 			if err != nil {
 				return 0, err
+			}
+
+			// TODO: do for other provider types in storagesc
+			if crr.ProviderType == spenum.Blobber {
+				bil, err := getBlobbersInfoList(balances)
+				if err != nil {
+					return 0, err
+				}
+
+				b, err := getBlobber(crr.ProviderId, balances)
+				if err != nil {
+					return 0, err
+				}
+
+				if err := sp.DistributeRewards(
+					bil[b.Index].Rewards,
+					crr.ProviderId,
+					crr.ProviderType,
+					spenum.CancellationChargeReward, // TODO: use correct reward type
+					balances); err != nil {
+					return 0, err
+				}
+
+				bil[b.Index].Rewards = 0
+				if err := bil.Save(balances); err != nil {
+					return 0, err
+				}
 			}
 
 			minted, err := sp.MintRewards(

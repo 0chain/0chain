@@ -3,7 +3,7 @@ package storagesc
 import (
 	"fmt"
 
-	state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
 )
 

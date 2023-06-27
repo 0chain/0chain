@@ -120,7 +120,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	blobber.Index = savedBlobber.Index
 	blobber.LastHealthCheck = t.CreationDate
-	blobber.SavedData = savedBlobber.SavedData
 
 	// update statistics
 	sc.statIncr(statUpdateBlobber)
@@ -697,6 +696,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewErrorf("commit_connection_failed",
 			"error fetching blobber: %v", err)
 	}
+	bil, err := getBlobbersInfoList(balances)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed", "error fetching blobbers info list: %v", err)
+	}
 
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize := blobAlloc.LastWriteMarker.Size
@@ -705,7 +708,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize - changeSize
 		// TODO: check if this is correct
 		blobAlloc.Stats.NumWrites++
-		blobber.SavedData -= changeSize
+		bil[blobber.Index].SavedData -= changeSize
 		alloc.Stats.UsedSize -= changeSize
 		alloc.Stats.NumWrites++
 	} else {
@@ -725,7 +728,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 		blobAlloc.Stats.NumWrites++
 
-		blobber.SavedData += commitConnection.WriteMarker.Size
+		bil[blobber.Index].SavedData += commitConnection.WriteMarker.Size
 
 		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 		alloc.Stats.NumWrites++
@@ -760,7 +763,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"insufficient funds: %v", err)
 	}
 
-	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, uint64(blobber.SavedData)); err != nil {
+	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, uint64(bil[blobber.Index].SavedData)); err != nil {
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 
@@ -779,7 +782,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
-		brn.TotalData = sizeInGB(blobber.SavedData)
+		brn.TotalData = sizeInGB(bil[blobber.Index].SavedData)
 
 		err = parts.UpdateItem(balances, &brn)
 		if err != nil {

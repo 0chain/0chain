@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *BlobberOfferStake) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
 	// string "o"
-	o = append(o, 0x83, 0xa1, 0x6f)
+	o = append(o, 0x84, 0xa1, 0x6f)
 	o, err = z.TotalOffers.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "TotalOffers")
@@ -27,6 +27,9 @@ func (z *BlobberOfferStake) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "a"
 	o = append(o, 0xa1, 0x61)
 	o = msgp.AppendInt64(o, z.Allocated)
+	// string "d"
+	o = append(o, 0xa1, 0x64)
+	o = msgp.AppendInt64(o, z.SavedData)
 	return
 }
 
@@ -66,6 +69,12 @@ func (z *BlobberOfferStake) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Allocated")
 				return
 			}
+		case "d":
+			z.SavedData, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "SavedData")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -80,7 +89,7 @@ func (z *BlobberOfferStake) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *BlobberOfferStake) Msgsize() (s int) {
-	s = 1 + 2 + z.TotalOffers.Msgsize() + 2 + z.TotalStake.Msgsize() + 2 + msgp.Int64Size
+	s = 1 + 2 + z.TotalOffers.Msgsize() + 2 + z.TotalStake.Msgsize() + 2 + msgp.Int64Size + 2 + msgp.Int64Size
 	return
 }
 
@@ -92,24 +101,11 @@ func (z BlobberOfferStakeList) MarshalMsg(b []byte) (o []byte, err error) {
 		if z[za0001] == nil {
 			o = msgp.AppendNil(o)
 		} else {
-			// map header, size 3
-			// string "o"
-			o = append(o, 0x83, 0xa1, 0x6f)
-			o, err = z[za0001].TotalOffers.MarshalMsg(o)
+			o, err = z[za0001].MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, za0001, "TotalOffers")
+				err = msgp.WrapError(err, za0001)
 				return
 			}
-			// string "s"
-			o = append(o, 0xa1, 0x73)
-			o, err = z[za0001].TotalStake.MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, za0001, "TotalStake")
-				return
-			}
-			// string "a"
-			o = append(o, 0xa1, 0x61)
-			o = msgp.AppendInt64(o, z[za0001].Allocated)
 		}
 	}
 	return
@@ -139,47 +135,10 @@ func (z *BlobberOfferStakeList) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			if (*z)[zb0001] == nil {
 				(*z)[zb0001] = new(BlobberOfferStake)
 			}
-			var field []byte
-			_ = field
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadMapHeaderBytes(bts)
+			bts, err = (*z)[zb0001].UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, zb0001)
 				return
-			}
-			for zb0003 > 0 {
-				zb0003--
-				field, bts, err = msgp.ReadMapKeyZC(bts)
-				if err != nil {
-					err = msgp.WrapError(err, zb0001)
-					return
-				}
-				switch msgp.UnsafeString(field) {
-				case "o":
-					bts, err = (*z)[zb0001].TotalOffers.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001, "TotalOffers")
-						return
-					}
-				case "s":
-					bts, err = (*z)[zb0001].TotalStake.UnmarshalMsg(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001, "TotalStake")
-						return
-					}
-				case "a":
-					(*z)[zb0001].Allocated, bts, err = msgp.ReadInt64Bytes(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001, "Allocated")
-						return
-					}
-				default:
-					bts, err = msgp.Skip(bts)
-					if err != nil {
-						err = msgp.WrapError(err, zb0001)
-						return
-					}
-				}
 			}
 		}
 	}
@@ -190,11 +149,11 @@ func (z *BlobberOfferStakeList) UnmarshalMsg(bts []byte) (o []byte, err error) {
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z BlobberOfferStakeList) Msgsize() (s int) {
 	s = msgp.ArrayHeaderSize
-	for zb0004 := range z {
-		if z[zb0004] == nil {
+	for zb0003 := range z {
+		if z[zb0003] == nil {
 			s += msgp.NilSize
 		} else {
-			s += 1 + 2 + z[zb0004].TotalOffers.Msgsize() + 2 + z[zb0004].TotalStake.Msgsize() + 2 + msgp.Int64Size
+			s += z[zb0003].Msgsize()
 		}
 	}
 	return

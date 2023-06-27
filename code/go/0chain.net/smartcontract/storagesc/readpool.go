@@ -181,10 +181,18 @@ func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, inpu
 		req.TargetId = txn.ClientID
 	}
 
-	return ssc.readPoolLockInternal(txn, txn.Value, false, req.TargetId, balances)
+	rp, err := ssc.getReadPool(req.TargetId, balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		} else {
+			rp = new(readPool)
+		}
+	}
+	return ssc.readPoolLockInternal(txn, rp, txn.Value, false, req.TargetId, balances)
 }
 
-func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transaction, toLock currency.Coin, mint bool, targetId string, balances cstate.StateContextI) (string, error) {
+func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transaction, rp *readPool, toLock currency.Coin, mint bool, targetId string, balances cstate.StateContextI) (string, error) {
 	if !mint {
 		// check client balance
 		if err := stakepool.CheckClientBalance(txn.ClientID, toLock, balances); err != nil {
@@ -205,22 +213,13 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 		}
 	}
 
-	rp, err := ssc.getReadPool(targetId, balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return "", common.NewError("read_pool_lock_failed", err.Error())
-		} else {
-			rp = new(readPool)
-		}
-	}
-
 	//add to read pool balance
-	if err = rp.add(toLock); err != nil {
+	if err := rp.add(toLock); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
 	// Save read pool
-	if err = rp.save(ssc.ID, targetId, balances); err != nil {
+	if err := rp.save(ssc.ID, targetId, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 

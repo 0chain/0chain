@@ -330,7 +330,6 @@ type StorageNode struct {
 	Terms                   Terms                  `json:"terms"`    // terms
 	Capacity                int64                  `json:"capacity"` // total blobber capacity
 	PublicKey               string                 `json:"-"`
-	SavedData               int64                  `json:"saved_data"`
 	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
@@ -530,11 +529,11 @@ type BlobberAllocation struct {
 	LatestCompletedChallenge *StorageChallenge       `json:"latest_completed_challenge" msg:"-"`
 }
 
-func newBlobberAllocation(blobber *StorageNode) (*BlobberAllocation, error) {
+func newBlobberAllocation(blobberID string) *BlobberAllocation {
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
-	ba.BlobberID = blobber.ID
-	return ba, nil
+	ba.BlobberID = blobberID
+	return ba
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
@@ -586,8 +585,8 @@ func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin, er
 
 // PriceRange represents a price range allowed by user to filter blobbers.
 type PriceRange struct {
-	Min currency.Coin `json:"min"`
-	Max currency.Coin `json:"max"`
+	Min currency.Coin `json:"min" msg:"i"`
+	Max currency.Coin `json:"max" msg:"m"`
 }
 
 // isValid price range.
@@ -690,9 +689,6 @@ func WithTokenMint(coin currency.Coin) WithOption {
 
 func WithTokenTransfer(value currency.Coin, clientId, toClientId string) WithOption {
 	return func(balances cstate.StateContextI) (currency.Coin, error) {
-		if err := stakepool.CheckClientBalance(clientId, value, balances); err != nil {
-			return 0, err
-		}
 		transfer := state.NewTransfer(clientId, toClientId, value)
 		if err := balances.AddTransfer(transfer); err != nil {
 			return 0, fmt.Errorf("adding transfer to allocation pool: %v", err)
@@ -906,11 +902,9 @@ func (sa *StorageAllocation) removeBlobber(
 	}
 	delete(sa.BlobberAllocsMap, blobberID)
 
-	var removedBlobber *StorageNode
 	found = false
 	for i, d := range blobbers {
 		if d.ID == blobberID {
-			removedBlobber = blobbers[i]
 			blobbers[i] = blobbers[len(blobbers)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
@@ -929,20 +923,12 @@ func (sa *StorageAllocation) removeBlobber(
 
 			sa.Blobbers[i] = sa.Blobbers[len(sa.Blobbers)-1]
 			sa.Blobbers = sa.Blobbers[:len(sa.Blobbers)-1]
-			if err := removeAllocationFromBlobber(balances, d); err != nil {
-				return nil, err
-			}
-
 			found = true
 			break
 		}
 	}
 	if !found {
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
-	}
-
-	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
 
 	return blobbers, nil
@@ -953,6 +939,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	blobbers []*StorageNode,
 	bil BlobberOfferStakeList,
 	addId, removeId string,
+	addedBlobber *StorageNode,
 	ssc *StorageSmartContract,
 	now common.Timestamp,
 	balances cstate.StateContextI,
@@ -972,11 +959,6 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("allocation already has blobber %s", addId)
 	}
 
-	addedBlobber, err := getBlobber(addId, balances)
-	if err != nil {
-		return nil, err
-	}
-
 	bi := bil[addedBlobber.Index]
 	if err := sa.isActive(addedBlobber, bi.Allocated, bi.TotalStake, bi.TotalOffers, conf, now); err != nil {
 		return nil, err
@@ -986,10 +968,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	bi.Allocated += bs
 
 	blobbers = append(blobbers, addedBlobber)
-	ba, err := newBlobberAllocation(addedBlobber)
-	if err != nil {
-		return nil, fmt.Errorf("can't allocate blobber: %v", err)
-	}
+	ba := newBlobberAllocation(addedBlobber.ID)
 
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
@@ -1002,11 +981,6 @@ func (sa *StorageAllocation) changeBlobbers(
 		Terms:         addedBlobber.Terms,
 		MinLockDemand: mld,
 	})
-
-	_, err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
-	}
 
 	if err := bi.addOffer(getOffer(bs, addedBlobber.Terms)); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)

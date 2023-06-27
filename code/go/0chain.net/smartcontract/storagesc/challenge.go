@@ -718,14 +718,19 @@ func (sc *StorageSmartContract) challengePassed(
 			dataRead = blobber.DataReadLastRewardRound
 		}
 
-		err := ongoingParts.Add(
+		bil, err := getBlobbersInfoList(balances)
+		if err != nil {
+			return "", common.NewError("verify_challenge", err.Error())
+		}
+
+		err = ongoingParts.Add(
 			balances,
 			&BlobberRewardNode{
 				ID:                blobber.ID,
 				SuccessChallenges: 0,
 				WritePrice:        blobber.Terms.WritePrice,
 				ReadPrice:         blobber.Terms.ReadPrice,
-				TotalData:         sizeInGB(blobber.SavedData),
+				TotalData:         sizeInGB(bil[blobber.Index].SavedData),
 				DataRead:          dataRead,
 			})
 		if err != nil {

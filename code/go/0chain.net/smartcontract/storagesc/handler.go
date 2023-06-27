@@ -1659,6 +1659,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 			TotalOffers: b.OffersTotal,
 			TotalStake:  b.TotalStake,
 			Allocated:   b.Allocated,
+			SavedData:   b.SavedData,
 		}
 	}
 
@@ -2177,7 +2178,6 @@ func blobberTableToStorageNode(blobber event.Blobber) *StorageNode {
 			MaxNumDelegates:    blobber.NumDelegates,
 			ServiceChargeRatio: blobber.ServiceCharge,
 		},
-		SavedData:   blobber.SavedData,
 		IsAvailable: blobber.IsAvailable,
 	}
 }

@@ -1834,9 +1834,9 @@ func (z *StorageChallenge) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 13
+	// map header, size 12
 	// string "Provider"
-	o = append(o, 0x8d, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0x8c, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	o, err = z.Provider.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Provider")
@@ -1883,9 +1883,6 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "PublicKey"
 	o = append(o, 0xa9, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
 	o = msgp.AppendString(o, z.PublicKey)
-	// string "SavedData"
-	o = append(o, 0xa9, 0x53, 0x61, 0x76, 0x65, 0x64, 0x44, 0x61, 0x74, 0x61)
-	o = msgp.AppendInt64(o, z.SavedData)
 	// string "DataReadLastRewardRound"
 	o = append(o, 0xb7, 0x44, 0x61, 0x74, 0x61, 0x52, 0x65, 0x61, 0x64, 0x4c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64)
 	o = msgp.AppendFloat64(o, z.DataReadLastRewardRound)
@@ -2042,12 +2039,6 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "PublicKey")
 				return
 			}
-		case "SavedData":
-			z.SavedData, bts, err = msgp.ReadInt64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "SavedData")
-				return
-			}
 		case "DataReadLastRewardRound":
 			z.DataReadLastRewardRound, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
@@ -2121,7 +2112,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 6 + msgp.Int32Size + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 14 + msgp.Float64Size + 9 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 12 + msgp.BoolSize
+	s = 1 + 9 + z.Provider.Msgsize() + 6 + msgp.Int32Size + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 14 + msgp.Float64Size + 9 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 12 + msgp.BoolSize
 	return
 }
 
