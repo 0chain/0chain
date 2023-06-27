@@ -932,6 +932,10 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		findValidAllocRetries = blobberAllocPartitionLength
 	}
 
+	if findValidAllocRetries == 0 {
+		logging.Logger.Debug("empty blobber")
+	}
+
 	for i := 0; i < findValidAllocRetries; i++ {
 		// get a random allocation
 		allocID := randBlobberAllocs[randPerm[i%blobberAllocPartitionLength]].ID
@@ -943,27 +947,14 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 
 		if alloc == nil {
+			logging.Logger.Debug("allocation not found for blobber", zap.String("blobber_id", blobberID),
+				zap.String("alloc_id", allocID))
 			continue
 		}
 
 		if alloc.Finalized {
-			err := blobberAllocParts.Remove(balances, allocID)
-			if err != nil {
-				return nil, fmt.Errorf("could not remove allocation from blobber: %v", err)
-			}
-
-			allocNum, err := blobberAllocParts.Size(balances)
-			if err != nil {
-				return nil, fmt.Errorf("could not get challenge partition size: %v", err)
-			}
-
-			if allocNum == 0 {
-				// remove blobber from challenge ready partition when there's no allocation bind to it
-				err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
-				if err != nil && !partitions.ErrItemNotFound(err) {
-					// it could be empty if we finalize the allocation before committing any read or write
-					return nil, fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
-				}
+			if err := partitionsBlobberAllocationsRemove(balances, blobberID, allocID, blobberAllocParts); err != nil {
+				return nil, err
 			}
 			continue
 		}
@@ -972,6 +963,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			foundAllocation = true
 			break
 		}
+		logging.Logger.Debug("allocation expiry is wrong", zap.String("blobber_id", blobberID),
+			zap.String("alloc_id", allocID))
 
 		err = alloc.save(balances, sc.ID)
 		if err != nil {

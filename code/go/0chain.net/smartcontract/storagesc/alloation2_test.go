@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/block"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/block"
 
 	"0chain.net/smartcontract/provider"
 
@@ -611,7 +612,7 @@ func setupMocksFinishAllocation(
 	require.NoError(t, err)
 
 	for _, ba := range sAllocation.BlobberAllocs {
-		_, err = partitionsBlobberAllocationsAdd(ctx, ba.BlobberID, ba.AllocationID)
+		err = partitionsBlobberAllocationsAdd(ctx, ba.BlobberID, ba.AllocationID)
 		require.NoError(t, err)
 	}
 
