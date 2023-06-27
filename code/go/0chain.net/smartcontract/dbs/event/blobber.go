@@ -49,7 +49,7 @@ type Blobber struct {
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
-	RankMetric          float64       `json:"rank_metric" gorm:"index"` // currently ChallengesPassed / ChallengesCompleted
+	RankMetric          float64       `json:"rank_metric"` // currently ChallengesPassed / ChallengesCompleted
 	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
 	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
 	TotalReadIncome     currency.Coin `json:"total_read_income"`
@@ -58,7 +58,7 @@ type Blobber struct {
 	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:ID"`
 	ReadMarkers  []ReadMarker  `gorm:"foreignKey:BlobberID;references:ID"`
 
-	CreationRound int64 `json:"creation_round" gorm:"index:idx_blobber_creation_round"`
+	CreationRound int64 `json:"creation_round"`
 }
 
 // BlobberPriceRange represents a price range allowed by user to filter blobbers.

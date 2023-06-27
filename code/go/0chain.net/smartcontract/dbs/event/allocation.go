@@ -27,7 +27,7 @@ type Allocation struct {
 	ReadPriceMax             currency.Coin `json:"read_price_max"`
 	WritePriceMin            currency.Coin `json:"write_price_min"`
 	WritePriceMax            currency.Coin `json:"write_price_max"`
-	StartTime                int64         `json:"start_time" gorm:"index:idx_astart_time"`
+	StartTime                int64         `json:"start_time"`
 	Finalized                bool          `json:"finalized"`
 	Cancelled                bool          `json:"cancelled"`
 	UsedSize                 int64         `json:"used_size"`
