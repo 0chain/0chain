@@ -26,9 +26,8 @@ type Blobber struct {
 	Longitude float64 `json:"longitude"`
 
 	// terms
-	ReadPrice     currency.Coin `json:"read_price"`
-	WritePrice    currency.Coin `json:"write_price"`
-	MinLockDemand float64       `json:"min_lock_demand"`
+	ReadPrice  currency.Coin `json:"read_price"`
+	WritePrice currency.Coin `json:"write_price"`
 
 	Capacity    int64 `json:"capacity"`   // total blobber capacity
 	Allocated   int64 `json:"allocated"`  // allocated capacity
