@@ -1243,7 +1243,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, aresp.Decode([]byte(resp)))
 
 		assert.Equal(t, tx.Hash, aresp.ID)
-		assert.Equal(t, len(aresp.Blobber_ids), 2)
+		assert.Equal(t, len(aresp.Blobber_ids), 4)
 
 		// expected blobbers after the allocation
 		var sb = newTestAllBlobbers()
