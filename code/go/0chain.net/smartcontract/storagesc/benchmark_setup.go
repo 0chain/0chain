@@ -709,12 +709,12 @@ func AddMockFreeStorageAssigners(
 		_, err := balances.InsertTrieNode(
 			freeStorageAssignerKey(sscId, clients[i]),
 			&freeStorageAssigner{
-				ClientId:           clients[i],
-				PublicKey:          keys[i],
-				IndividualLimit:    currency.Coin(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
-				TotalLimit:         currency.Coin(viper.GetFloat64(sc.StorageMaxTotalFreeAllocation) * 1e10),
-				CurrentRedeemed:    0,
-				RedeemedTimestamps: []common.Timestamp{},
+				ClientId:        clients[i],
+				PublicKey:       keys[i],
+				IndividualLimit: currency.Coin(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
+				TotalLimit:      currency.Coin(viper.GetFloat64(sc.StorageMaxTotalFreeAllocation) * 1e10),
+				CurrentRedeemed: 0,
+				RedeemedNonces:  []int64{},
 			},
 		)
 		if err != nil {
