@@ -2229,9 +2229,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			Longitude: blobber.Longitude,
 		},
 		Terms: Terms{
-			ReadPrice:     blobber.ReadPrice,
-			WritePrice:    blobber.WritePrice,
-			MinLockDemand: blobber.MinLockDemand,
+			ReadPrice:  blobber.ReadPrice,
+			WritePrice: blobber.WritePrice,
 		},
 		Capacity:        blobber.Capacity,
 		Allocated:       blobber.Allocated,
@@ -2351,7 +2350,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank blobbers-by-rank
 // Gets list of all blobbers ordered by rank
-//
+// TODO: See if we need to remove since no longer used
 // parameters:
 //
 //	+name: offset

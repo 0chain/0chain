@@ -40,16 +40,15 @@ const blobberHealthTime = 60 * 60 // 1 Hour
 
 func TestSelectBlobbers(t *testing.T) {
 	const (
-		randomSeed         = 1
-		mockURL            = "mock_url"
-		mockOwner          = "mock owner"
-		mockPublicKey      = "mock public key"
-		mockBlobberId      = "mock_blobber_id"
-		mockPoolId         = "mock pool id"
-		mockMinPrice       = 0
-		confTimeUnit       = 720 * time.Hour
-		confMinAllocSize   = 800
-		mockMaxOffDuration = 744 * time.Hour
+		randomSeed       = 1
+		mockURL          = "mock_url"
+		mockOwner        = "mock owner"
+		mockPublicKey    = "mock public key"
+		mockBlobberId    = "mock_blobber_id"
+		mockPoolId       = "mock pool id"
+		mockMinPrice     = 0
+		confTimeUnit     = 720 * time.Hour
+		confMinAllocSize = 800
 	)
 	var mockStatke = zcnToBalance(100)
 	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
@@ -925,9 +924,8 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
-				ReadPrice:     20,
-				WritePrice:    200,
-				MinLockDemand: 0.1,
+				ReadPrice:  20,
+				WritePrice: 200,
 			},
 			Capacity:     25 * GB, // 20 GB
 			Allocated:    5 * GB,  //  5 GB
@@ -941,9 +939,8 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
-				ReadPrice:     25,
-				WritePrice:    250,
-				MinLockDemand: 0.05,
+				ReadPrice:  25,
+				WritePrice: 250,
 			},
 			Capacity:     20 * GB, // 20 GB
 			Allocated:    10 * GB, // 10 GB
