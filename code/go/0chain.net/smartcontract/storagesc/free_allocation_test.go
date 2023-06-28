@@ -117,12 +117,12 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 
 		balances.On("InsertTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name),
 			&freeStorageAssigner{
-				ClientId:           p.info.Name,
-				PublicKey:          p.info.PublicKey,
-				IndividualLimit:    zcnToBalance(p.info.IndividualLimit),
-				TotalLimit:         zcnToBalance(p.info.TotalLimit),
-				CurrentRedeemed:    p.existing.CurrentRedeemed,
-				RedeemedTimestamps: p.existing.RedeemedTimestamps,
+				ClientId:        p.info.Name,
+				PublicKey:       p.info.PublicKey,
+				IndividualLimit: zcnToBalance(p.info.IndividualLimit),
+				TotalLimit:      zcnToBalance(p.info.TotalLimit),
+				CurrentRedeemed: p.existing.CurrentRedeemed,
+				RedeemedNonces:  p.existing.RedeemedNonces,
 			}).Return("", nil).Once()
 
 		return args{ssc, txn, input, balances}
@@ -158,12 +158,12 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 				},
 				exists: true,
 				existing: freeStorageAssigner{
-					ClientId:           mockCooperationId + "ok_existing",
-					PublicKey:          mockAnotherPublicKey,
-					IndividualLimit:    mockIndividualTokenLimit / 2,
-					TotalLimit:         mockTotalTokenLimit / 2,
-					CurrentRedeemed:    mockTotalTokenLimit / 4,
-					RedeemedTimestamps: []common.Timestamp{20, 30, 50, 70, 110, 130, 170},
+					ClientId:        mockCooperationId + "ok_existing",
+					PublicKey:       mockAnotherPublicKey,
+					IndividualLimit: mockIndividualTokenLimit / 2,
+					TotalLimit:      mockTotalTokenLimit / 2,
+					CurrentRedeemed: mockTotalTokenLimit / 4,
+					RedeemedNonces:  []int64{20, 30, 50, 70, 110, 130, 170},
 				},
 			},
 		},
@@ -208,7 +208,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockCooperationId        = "mock cooperation id"
 		mockNumBlobbers          = 10
 		mockRecipient            = "mock recipient"
-		mockTimestamp            = 7000
+		mockNonce                = 7000
 		mockUserPublicKey        = "mock user public key"
 		mockTransactionHash      = "12345678"
 		mockReadPoolFraction     = 0.2
@@ -327,7 +327,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					Assigner:   mockCooperationId + "ok_no_previous",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "ok_no_previous",
@@ -346,7 +346,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					Assigner:   mockCooperationId + "Total_limit_exceeded",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "Total_limit_exceeded",
@@ -367,7 +367,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					Assigner:   mockCooperationId + "individual_limit_exceeded",
 					Recipient:  mockRecipient,
 					FreeTokens: mockIndividualTokenLimit + 1,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "individual_limit_exceeded",
@@ -382,44 +382,24 @@ func TestFreeAllocationRequest(t *testing.T) {
 			},
 		},
 		{
-			name: "future_timestamp",
+			name: "repeated_old_nonce",
 			parameters: parameters{
 				marker: freeStorageMarker{
-					Assigner:   mockCooperationId + "future_timestamp",
+					Assigner:   mockCooperationId + "repeated_old_nonce",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
-					Timestamp:  now + 1,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
-					ClientId:        mockCooperationId + "future_timestamp",
+					ClientId:        mockCooperationId + "repeated_old_nonce",
 					IndividualLimit: zcnToBalance(mockIndividualTokenLimit),
 					TotalLimit:      zcnToBalance(mockTotalTokenLimit),
+					RedeemedNonces:  []int64{190, mockNonce},
 				},
 			},
 			want: want{
 				true,
-				"free_allocation_failed: marker verification failed: marker timestamped in the future: 23000001",
-			},
-		},
-		{
-			name: "repeated_old_timestamp",
-			parameters: parameters{
-				marker: freeStorageMarker{
-					Assigner:   mockCooperationId + "repeated_old_timestamp",
-					Recipient:  mockRecipient,
-					FreeTokens: mockFreeTokens,
-					Timestamp:  mockTimestamp,
-				},
-				assigner: freeStorageAssigner{
-					ClientId:           mockCooperationId + "repeated_old_timestamp",
-					IndividualLimit:    zcnToBalance(mockIndividualTokenLimit),
-					TotalLimit:         zcnToBalance(mockTotalTokenLimit),
-					RedeemedTimestamps: []common.Timestamp{190, mockTimestamp},
-				},
-			},
-			want: want{
-				true,
-				"free_allocation_failed: marker verification failed: marker already redeemed, timestamp: 7000",
+				"free_allocation_failed: marker verification failed: marker already redeemed, nonce: 7000",
 			},
 		},
 	}
@@ -452,7 +432,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		mockNumBlobbers          = 10
 		mockRecipient            = "mock recipient"
 		mockFreeTokens           = 5
-		mockTimestamp            = 7000
+		mockNonce                = 7000
 		mockUserPublicKey        = "mock user public key"
 		mockTransactionHash      = "12345678"
 	)
@@ -530,7 +510,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			Assigner:   p.marker.Assigner,
 			Recipient:  p.marker.Recipient,
 			FreeTokens: p.marker.FreeTokens,
-			Timestamp:  p.marker.Timestamp,
+			Nonce:      p.marker.Nonce,
 		})
 
 		markerBytes, err := json.Marshal(&p.marker)
@@ -600,12 +580,12 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"InsertTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
 			&freeStorageAssigner{
-				ClientId:           p.assigner.ClientId,
-				PublicKey:          p.assigner.PublicKey,
-				IndividualLimit:    p.assigner.IndividualLimit,
-				TotalLimit:         p.assigner.TotalLimit,
-				CurrentRedeemed:    p.assigner.CurrentRedeemed + txn.Value,
-				RedeemedTimestamps: append(p.assigner.RedeemedTimestamps, p.marker.Timestamp),
+				ClientId:        p.assigner.ClientId,
+				PublicKey:       p.assigner.PublicKey,
+				IndividualLimit: p.assigner.IndividualLimit,
+				TotalLimit:      p.assigner.TotalLimit,
+				CurrentRedeemed: p.assigner.CurrentRedeemed + txn.Value,
+				RedeemedNonces:  append(p.assigner.RedeemedNonces, p.marker.Nonce),
 			},
 		).Return("", nil).Once()
 
@@ -647,7 +627,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					Assigner:   mockCooperationId + "ok_no_previous",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "ok_no_previous",
@@ -667,7 +647,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					Assigner:   mockCooperationId + "Total_limit_exceeded",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "Total_limit_exceeded",
@@ -689,7 +669,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					Assigner:   mockCooperationId + "individual_limit_exceeded",
 					Recipient:  mockRecipient,
 					FreeTokens: mockIndividualTokenLimit + 1,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "individual_limit_exceeded",
@@ -710,7 +690,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					Assigner:   mockCooperationId + "assigner_not_on_blockchain",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				doesNotExist: true,
 			},
@@ -720,25 +700,25 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 		},
 		{
-			name: "repeated_old_timestamp",
+			name: "repeated_old_nonce",
 			parameters: parameters{
 				allocationId: mockAllocationId,
 				marker: freeStorageMarker{
-					Assigner:   mockCooperationId + "repeated_old_timestamp",
+					Assigner:   mockCooperationId + "repeated_old_nonce",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
-					Timestamp:  mockTimestamp,
+					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
-					ClientId:           mockCooperationId + "repeated_old_timestamp",
-					IndividualLimit:    zcnToBalance(mockIndividualTokenLimit),
-					TotalLimit:         zcnToBalance(mockTotalTokenLimit),
-					RedeemedTimestamps: []common.Timestamp{mockTimestamp},
+					ClientId:        mockCooperationId + "repeated_old_nonce",
+					IndividualLimit: zcnToBalance(mockIndividualTokenLimit),
+					TotalLimit:      zcnToBalance(mockTotalTokenLimit),
+					RedeemedNonces:  []int64{mockNonce},
 				},
 			},
 			want: want{
 				true,
-				"update_free_storage_request: marker verification failed: marker already redeemed, timestamp: 7000",
+				"update_free_storage_request: marker verification failed: marker already redeemed, nonce: 7000",
 			},
 		},
 	}
@@ -760,19 +740,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 }
 
 func signFreeAllocationMarker(t *testing.T, frm freeStorageMarker) (string, string) {
-	var request = struct {
-		Recipient  string           `json:"recipient"`
-		FreeTokens float64          `json:"free_tokens"`
-		Timestamp  common.Timestamp `json:"timestamp"`
-	}{
-		frm.Recipient, frm.FreeTokens, frm.Timestamp,
-	}
-	responseBytes, err := json.Marshal(&request)
-	require.NoError(t, err)
+	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
 	signatureScheme := encryption.NewBLS0ChainScheme()
-	err = signatureScheme.GenerateKeys()
+	err := signatureScheme.GenerateKeys()
 	require.NoError(t, err)
-	signature, err := signatureScheme.Sign(hex.EncodeToString(responseBytes))
+	signature, err := signatureScheme.Sign(hex.EncodeToString([]byte(marker)))
 	require.NoError(t, err)
 	return signature, signatureScheme.GetPublicKey()
 }
