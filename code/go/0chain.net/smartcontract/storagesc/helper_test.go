@@ -326,9 +326,8 @@ func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
 }
 
 var avgTerms = Terms{
-	ReadPrice:     1 * x10,
-	WritePrice:    5 * x10,
-	MinLockDemand: 0.1,
+	ReadPrice:  1 * x10,
+	WritePrice: 5 * x10,
 }
 
 // add allocation and 20 blobbers
@@ -394,7 +393,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
 	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "5m")
-
+	conf.MinLockDemand = 0.1
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks

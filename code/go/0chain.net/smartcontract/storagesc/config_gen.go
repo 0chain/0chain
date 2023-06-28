@@ -113,6 +113,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "CancellationCharge"
 	o = append(o, 0xb2, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
 	o = msgp.AppendFloat64(o, z.CancellationCharge)
+	// string "MinLockDemand"
+	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b, 0x44, 0x65, 0x6d, 0x61, 0x6e, 0x64)
+	o = msgp.AppendFloat64(o, z.MinLockDemand)
 	// string "MaxTotalFreeAllocation"
 	o = append(o, 0xb6, 0x4d, 0x61, 0x78, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x46, 0x72, 0x65, 0x65, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e)
 	o, err = z.MaxTotalFreeAllocation.MarshalMsg(o)
@@ -419,6 +422,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.CancellationCharge, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "CancellationCharge")
+				return
+			}
+		case "MinLockDemand":
+			z.MinLockDemand, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MinLockDemand")
 				return
 			}
 		case "MaxTotalFreeAllocation":

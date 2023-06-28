@@ -384,6 +384,7 @@ func setupNewAllocation(
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
+	sa.MinLockDemand = conf.MinLockDemand
 	sa.ID = allocId
 	sa.Tx = allocId
 
@@ -745,9 +746,6 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	if err != nil {
 		return
 	}
-
-	// just copy from next
-	avg.MinLockDemand = next.MinLockDemand
 	return
 }
 
@@ -881,7 +879,7 @@ func (sc *StorageSmartContract) extendAllocation(
 			return common.NewError("allocation_extending_failed", err.Error())
 		}
 
-		nbmld, err := details.Terms.minLockDemand(gbSize, rdtu)
+		nbmld, err := details.Terms.minLockDemand(gbSize, rdtu, alloc.MinLockDemand)
 		if err != nil {
 			return err
 		}
@@ -1147,7 +1145,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				if bd.Terms.ReadPrice >= blobbers[i].Terms.ReadPrice {
 					bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
 				}
-				bd.Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
 			}
 		}
 

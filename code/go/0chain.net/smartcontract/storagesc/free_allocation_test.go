@@ -256,8 +256,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				ReadPrice:     mockFreeAllocationSettings.ReadPriceRange.Max,
-				MinLockDemand: mockMinLock,
+				ReadPrice: mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
 		}
 		mockAllBlobbers.Nodes.add(mockBlobber)
