@@ -689,6 +689,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	allocSizeBefore := alloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize := blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
@@ -750,6 +751,30 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, uint64(blobber.SavedData)); err != nil {
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
+	}
+
+	if allocSizeBefore == 0 && commitConnection.WriteMarker.Size > 0 {
+		for _, ba := range alloc.BlobberAllocs {
+			if err := partitionsBlobberAllocationsAdd(balances, ba.BlobberID, ba.AllocationID); err != nil {
+				logging.Logger.Error("add_blobber_allocation_to_partitions_error",
+					zap.String("blobber", ba.BlobberID),
+					zap.String("allocation", ba.AllocationID),
+					zap.Error(err))
+				return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
+			}
+		}
+	} else if alloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
+		blobAllocsParts, err := partitionsBlobberAllocations(blobber.ID, balances)
+		if err != nil {
+			return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+		}
+		if err := partitionsBlobberAllocationsRemove(balances, blobber.ID, alloc.ID, blobAllocsParts); err != nil {
+			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
+				zap.String("blobber", blobber.ID),
+				zap.String("allocation", alloc.ID),
+				zap.Error(err))
+			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
+		}
 	}
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
