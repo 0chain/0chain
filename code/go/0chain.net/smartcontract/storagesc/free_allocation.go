@@ -121,7 +121,7 @@ func (fsa *freeStorageAssigner) validate(
 
 	for _, nonce := range fsa.RedeemedNonces {
 		if marker.Nonce == nonce {
-			return fmt.Errorf("nonce already redeemed, timestamp: %v", marker.Nonce)
+			return fmt.Errorf("marker already redeemed, nonce: %v", marker.Nonce)
 		}
 	}
 
