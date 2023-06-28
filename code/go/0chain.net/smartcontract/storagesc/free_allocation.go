@@ -98,10 +98,6 @@ func (fsa *freeStorageAssigner) validate(
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	if marker.Timestamp > now {
-		return fmt.Errorf("marker timestamped in the future: %v", marker.Timestamp)
-	}
-
 	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
 	if err != nil {
 		return err
@@ -123,9 +119,9 @@ func (fsa *freeStorageAssigner) validate(
 		return fmt.Errorf("%d exceeded permitted free storage  %d", value, fsa.IndividualLimit)
 	}
 
-	for _, timestamp := range fsa.RedeemedTimestamps {
-		if marker.Timestamp == timestamp {
-			return fmt.Errorf("marker already redeemed, timestamp: %v", marker.Timestamp)
+	for _, nonce := range fsa.RedeemedNonces {
+		if marker.Nonce == nonce {
+			return fmt.Errorf("nonce already redeemed, timestamp: %v", marker.Nonce)
 		}
 	}
 
@@ -202,11 +198,11 @@ func verifyFreeAllocationRequest(
 	balances cstate.StateContextI,
 ) (bool, error) {
 	var request = struct {
-		Recipient  string           `json:"recipient"`
-		FreeTokens float64          `json:"free_tokens"`
-		Timestamp  common.Timestamp `json:"timestamp"`
+		Recipient  string  `json:"recipient"`
+		FreeTokens float64 `json:"free_tokens"`
+		Timestamp  int64   `json:"timestamp"`
 	}{
-		frm.Recipient, frm.FreeTokens, frm.Timestamp,
+		frm.Recipient, frm.FreeTokens, frm.Nonce,
 	}
 	responseBytes, err := json.Marshal(&request)
 	if err != nil {
@@ -317,7 +313,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "unmarshalling allocation: %v", err)
 	}
 
-	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
+	assigner.RedeemedNonces = append(assigner.RedeemedNonces, marker.Nonce)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "assigner Save failed: %v", err)
 	}
@@ -389,7 +385,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"can't add redeemed tokens: %v", err)
 	}
 	assigner.CurrentRedeemed = newRedeemed
-	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
+	assigner.RedeemedNonces = append(assigner.RedeemedNonces, marker.Nonce)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request", "assigner Save failed: %v", err)
 	}
