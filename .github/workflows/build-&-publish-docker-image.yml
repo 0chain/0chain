@@ -197,7 +197,7 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: "Set PR status as pending"
-        uses: 0chain/actions/set-pr-status@master
+        uses: 0chain/actions/set-pr-status@fix-timeunit
         if: steps.findPr.outputs.number
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
@@ -224,7 +224,7 @@ jobs:
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@master
+        uses: 0chain/actions/deploy-0chain@fix-timeunit
         with:
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
@@ -234,10 +234,7 @@ jobs:
           validator_image: staging
           authorizer_image: staging
           zbox_image: staging
-          zblock_image: staging
           zdns_image: staging
-          explorer_image: latest
-          zsearch_image: staging
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
           custom_go_sdk_version: staging
@@ -248,7 +245,7 @@ jobs:
           graphnode_ethereum_node_url: https://rpc.tenderly.co/fork/${{ secrets.TENDERLY_FORK_ID }}
 
       - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@master
+        uses: 0chain/actions/run-system-tests@fix-timeunit
         with:
           system_tests_branch: master
           network: ${{ env.NETWORK_URL }}
@@ -267,7 +264,7 @@ jobs:
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
-        uses: 0chain/actions/set-pr-status@master
+        uses: 0chain/actions/set-pr-status@fix-timeunit
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests with default config"
