@@ -21,6 +21,11 @@ import (
 	"0chain.net/core/common"
 )
 
+type NewAllocationTxnOutput struct {
+	ID          string   `json:"id"`
+	Blobber_ids []string `json:"blobber_ids"`
+}
+
 // getAllocation by ID
 func (sc *StorageSmartContract) getAllocation(allocID string,
 	balances chainstate.StateContextI) (alloc *StorageAllocation, err error) {
@@ -60,7 +65,13 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
-	buff := alloc.Encode()
+	blobber_ids := make([]string, len(alloc.BlobberAllocs))
+	for _, v := range alloc.BlobberAllocs {
+		blobber_ids = append(blobber_ids, v.BlobberID)
+	}
+
+	transaction_output := NewAllocationTxnOutput{alloc.ID, blobber_ids}
+	buff, _ := json.Marshal(transaction_output)
 	return string(buff), nil
 }
 

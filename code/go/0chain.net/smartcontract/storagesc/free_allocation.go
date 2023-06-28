@@ -24,11 +24,11 @@ const (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type freeStorageMarker struct {
-	Assigner   string           `json:"assigner"`
-	Recipient  string           `json:"recipient"`
-	FreeTokens float64          `json:"free_tokens"`
-	Timestamp  common.Timestamp `json:"timestamp"`
-	Signature  string           `json:"signature"`
+	Assigner   string  `json:"assigner"`
+	Recipient  string  `json:"recipient"`
+	FreeTokens float64 `json:"free_tokens"`
+	Nonce      int64   `json:"nonce"`
+	Signature  string  `json:"signature"`
 }
 
 func (frm *freeStorageMarker) decode(b []byte) error {
@@ -66,12 +66,12 @@ func freeStorageAssignerKey(sscKey, clientId string) datastore.Key {
 }
 
 type freeStorageAssigner struct {
-	ClientId           string             `json:"client_id"`
-	PublicKey          string             `json:"public_key"`
-	IndividualLimit    currency.Coin      `json:"individual_limit"`
-	TotalLimit         currency.Coin      `json:"total_limit"`
-	CurrentRedeemed    currency.Coin      `json:"current_redeemed"`
-	RedeemedTimestamps []common.Timestamp `json:"redeemed_timestamps"`
+	ClientId        string        `json:"client_id"`
+	PublicKey       string        `json:"public_key"`
+	IndividualLimit currency.Coin `json:"individual_limit"`
+	TotalLimit      currency.Coin `json:"total_limit"`
+	CurrentRedeemed currency.Coin `json:"current_redeemed"`
+	RedeemedNonces  []int64       `json:"redeemed_nonces"`
 }
 
 func (fsa *freeStorageAssigner) Encode() []byte {
@@ -91,7 +91,7 @@ func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContext
 	return err
 }
 
-//TODO test that we really send some value here
+// TODO test that we really send some value here
 func (fsa *freeStorageAssigner) validate(
 	marker freeStorageMarker,
 	now common.Timestamp,
