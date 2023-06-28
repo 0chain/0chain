@@ -874,11 +874,13 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 200}
 	balances := newTestBalances(t, false)
 	conf := setConfig(t, balances)
-	var alloc = nar.storageAllocation(conf)
+	now := common.Timestamp(time.Now().Unix())
+	var alloc = nar.storageAllocation(conf, now)
 	require.Equal(t, alloc.DataShards, nar.DataShards)
 	require.Equal(t, alloc.ParityShards, nar.ParityShards)
 	require.Equal(t, alloc.Size, nar.Size)
 	require.Equal(t, alloc.Owner, nar.Owner)
+	require.Equal(t, alloc.Expiration, common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()))
 	require.Equal(t, alloc.OwnerPublicKey, nar.OwnerPublicKey)
 	require.True(t, isEqualStrings(alloc.PreferredBlobbers,
 		nar.Blobbers))

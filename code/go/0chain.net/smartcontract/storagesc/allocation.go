@@ -96,12 +96,12 @@ type newAllocationRequest struct {
 }
 
 // storageAllocation from the request
-func (nar *newAllocationRequest) storageAllocation(conf *Config) (sa *StorageAllocation) {
+func (nar *newAllocationRequest) storageAllocation(conf *Config, now common.Timestamp) (sa *StorageAllocation) {
 	sa = new(StorageAllocation)
 	sa.DataShards = nar.DataShards
 	sa.ParityShards = nar.ParityShards
 	sa.Size = nar.Size
-	sa.Expiration = common.Timestamp(time.Now().Add(conf.TimeUnit).Unix())
+	sa.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix())
 	sa.Owner = nar.Owner
 	sa.OwnerPublicKey = nar.OwnerPublicKey
 	sa.PreferredBlobbers = nar.Blobbers
@@ -134,10 +134,10 @@ func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
 		return errors.New("insufficient allocation size")
 	}
 
-	dur := common.ToTime(nar.Expiration).Sub(now)
-	if dur < conf.TimeUnit {
-		return errors.New("insufficient allocation duration")
-	}
+	//dur := common.ToTime(nar.Expiration).Sub(now)
+	//if dur < conf.TimeUnit {
+	//	return errors.New("insufficient allocation duration")
+	//}
 	return nil
 }
 
@@ -265,7 +265,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
-	sa := request.storageAllocation(conf) // (set fields, ignore expiration)
+	sa := request.storageAllocation(conf, txn.CreationDate) // (set fields, ignore expiration)
 	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
@@ -396,7 +396,7 @@ func setupNewAllocation(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.Strings("blobbers", request.Blobbers))
-	sa := request.storageAllocation(conf) // (set fields, ignore expiration)
+	sa := request.storageAllocation(conf, now) // (set fields, ignore expiration)
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
 	sa.MinLockDemand = conf.MinLockDemand
