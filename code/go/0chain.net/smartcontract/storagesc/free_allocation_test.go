@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -741,19 +740,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 }
 
 func signFreeAllocationMarker(t *testing.T, frm freeStorageMarker) (string, string) {
-	var request = struct {
-		Recipient  string  `json:"recipient"`
-		FreeTokens float64 `json:"free_tokens"`
-		Nonce      int64   `json:"timestamp"`
-	}{
-		frm.Recipient, frm.FreeTokens, frm.Nonce,
-	}
-	responseBytes, err := json.Marshal(&request)
-	require.NoError(t, err)
+	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
 	signatureScheme := encryption.NewBLS0ChainScheme()
-	err = signatureScheme.GenerateKeys()
+	err := signatureScheme.GenerateKeys()
 	require.NoError(t, err)
-	signature, err := signatureScheme.Sign(hex.EncodeToString(responseBytes))
+	signature, err := signatureScheme.Sign(marker)
 	require.NoError(t, err)
 	return signature, signatureScheme.GetPublicKey()
 }

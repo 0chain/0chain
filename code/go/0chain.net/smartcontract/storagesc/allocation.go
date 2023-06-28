@@ -26,6 +26,10 @@ type NewAllocationTxnOutput struct {
 	Blobber_ids []string `json:"blobber_ids"`
 }
 
+func (sn *NewAllocationTxnOutput) Decode(input []byte) error {
+	return json.Unmarshal(input, sn)
+}
+
 // getAllocation by ID
 func (sc *StorageSmartContract) getAllocation(allocID string,
 	balances chainstate.StateContextI) (alloc *StorageAllocation, err error) {

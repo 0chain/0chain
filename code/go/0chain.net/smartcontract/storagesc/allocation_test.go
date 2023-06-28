@@ -1239,14 +1239,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 
 		// check response
-		var aresp StorageAllocation
+		var aresp NewAllocationTxnOutput
 		require.NoError(t, aresp.Decode([]byte(resp)))
 
 		assert.Equal(t, tx.Hash, aresp.ID)
-		assert.Equal(t, 1, aresp.DataShards)
-		assert.Equal(t, 1, aresp.ParityShards)
-		assert.Equal(t, int64(10*GB), aresp.Size)
-		assert.Equal(t, tx.CreationDate+100, aresp.Expiration)
+		assert.Equal(t, len(aresp.Blobber_ids), 2)
 
 		// expected blobbers after the allocation
 		var sb = newTestAllBlobbers()

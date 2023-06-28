@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -197,22 +196,12 @@ func verifyFreeAllocationRequest(
 	publicKey string,
 	balances cstate.StateContextI,
 ) (bool, error) {
-	var request = struct {
-		Recipient  string  `json:"recipient"`
-		FreeTokens float64 `json:"free_tokens"`
-		Timestamp  int64   `json:"timestamp"`
-	}{
-		frm.Recipient, frm.FreeTokens, frm.Nonce,
-	}
-	responseBytes, err := json.Marshal(&request)
-	if err != nil {
-		return false, err
-	}
+	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(frm.Signature, hex.EncodeToString(responseBytes))
+	return signatureScheme.Verify(frm.Signature, marker)
 }
 
 func (ssc *StorageSmartContract) freeAllocationRequest(
