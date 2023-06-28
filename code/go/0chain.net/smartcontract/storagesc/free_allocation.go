@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -201,7 +202,7 @@ func verifyFreeAllocationRequest(
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(frm.Signature, marker)
+	return signatureScheme.Verify(frm.Signature, hex.EncodeToString([]byte(marker)))
 }
 
 func (ssc *StorageSmartContract) freeAllocationRequest(

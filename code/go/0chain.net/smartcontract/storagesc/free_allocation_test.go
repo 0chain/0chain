@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -385,13 +386,13 @@ func TestFreeAllocationRequest(t *testing.T) {
 			name: "repeated_old_nonce",
 			parameters: parameters{
 				marker: freeStorageMarker{
-					Assigner:   mockCooperationId + "repeated_old_timestamp",
+					Assigner:   mockCooperationId + "repeated_old_nonce",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
 					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
-					ClientId:        mockCooperationId + "repeated_old_timestamp",
+					ClientId:        mockCooperationId + "repeated_old_nonce",
 					IndividualLimit: zcnToBalance(mockIndividualTokenLimit),
 					TotalLimit:      zcnToBalance(mockTotalTokenLimit),
 					RedeemedNonces:  []int64{190, mockNonce},
@@ -399,7 +400,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			},
 			want: want{
 				true,
-				"free_allocation_failed: marker verification failed: marker already redeemed, timestamp: 7000",
+				"free_allocation_failed: marker verification failed: marker already redeemed, nonce: 7000",
 			},
 		},
 	}
@@ -700,17 +701,17 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 		},
 		{
-			name: "repeated_old_timestamp",
+			name: "repeated_old_nonce",
 			parameters: parameters{
 				allocationId: mockAllocationId,
 				marker: freeStorageMarker{
-					Assigner:   mockCooperationId + "repeated_old_timestamp",
+					Assigner:   mockCooperationId + "repeated_old_nonce",
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
 					Nonce:      mockNonce,
 				},
 				assigner: freeStorageAssigner{
-					ClientId:        mockCooperationId + "repeated_old_timestamp",
+					ClientId:        mockCooperationId + "repeated_old_nonce",
 					IndividualLimit: zcnToBalance(mockIndividualTokenLimit),
 					TotalLimit:      zcnToBalance(mockTotalTokenLimit),
 					RedeemedNonces:  []int64{mockNonce},
@@ -718,7 +719,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 			want: want{
 				true,
-				"update_free_storage_request: marker verification failed: marker already redeemed, timestamp: 7000",
+				"update_free_storage_request: marker verification failed: marker already redeemed, nonce: 7000",
 			},
 		},
 	}
@@ -744,7 +745,7 @@ func signFreeAllocationMarker(t *testing.T, frm freeStorageMarker) (string, stri
 	signatureScheme := encryption.NewBLS0ChainScheme()
 	err := signatureScheme.GenerateKeys()
 	require.NoError(t, err)
-	signature, err := signatureScheme.Sign(marker)
+	signature, err := signatureScheme.Sign(hex.EncodeToString([]byte(marker)))
 	require.NoError(t, err)
 	return signature, signatureScheme.GetPublicKey()
 }
