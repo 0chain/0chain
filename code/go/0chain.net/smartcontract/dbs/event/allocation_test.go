@@ -89,6 +89,7 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 			FailedChallenges:         0,
 			LatestClosedChallengeTxn: "latest_closed_challenge_txn",
 			ThirdPartyExtendable:     false,
+			MinLockDemand:            0.17,
 		})
 		ids = append(ids, id)
 		initTime = initTime.Add(time.Second)
@@ -123,10 +124,6 @@ func TestAllocations(t *testing.T) {
 		// WritePrice is price for reading. Token / GB / time unit. Also,
 		// it used to calculate min_lock_demand value.
 		WritePrice currency.Coin `json:"write_price"`
-		// MinLockDemand in number in [0; 1] range. It represents part of
-		// allocation should be locked for the blobber rewards even if
-		// user never write something to the blobber.
-		MinLockDemand float64 `json:"min_lock_demand"`
 	}
 
 	type PriceRange struct {
@@ -230,7 +227,8 @@ func TestAllocations(t *testing.T) {
 		// transaction.
 		Canceled bool `json:"canceled,omitempty"`
 		// UsedSize used to calculate blobber reward ratio.
-		UsedSize int64 `json:"-"`
+		UsedSize      int64   `json:"-"`
+		MinLockDemand float64 `json:"min_lock_demand"`
 
 		// MovedToChallenge is number of tokens moved to challenge pool.
 		MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
@@ -252,11 +250,10 @@ func TestAllocations(t *testing.T) {
 		var allocationTerms []AllocationBlobberTerm
 		for _, b := range sa.BlobberDetails {
 			allocationTerms = append(allocationTerms, AllocationBlobberTerm{
-				BlobberID:     b.BlobberID,
-				AllocationID:  b.AllocationID,
-				ReadPrice:     int64(b.Terms.ReadPrice),
-				WritePrice:    int64(b.Terms.WritePrice),
-				MinLockDemand: b.Terms.MinLockDemand,
+				BlobberID:    b.BlobberID,
+				AllocationID: b.AllocationID,
+				ReadPrice:    int64(b.Terms.ReadPrice),
+				WritePrice:   int64(b.Terms.WritePrice),
 			})
 		}
 
@@ -290,6 +287,7 @@ func TestAllocations(t *testing.T) {
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 			FileOptions:              sa.FileOptions,
+			MinLockDemand:            sa.MinLockDemand,
 		}
 	}
 
@@ -319,9 +317,8 @@ func TestAllocations(t *testing.T) {
 						Longitude: 141,
 					},
 					Terms: Terms{
-						ReadPrice:     10,
-						WritePrice:    10,
-						MinLockDemand: 2,
+						ReadPrice:  10,
+						WritePrice: 10,
 					},
 					Capacity:        100,
 					Allocated:       50,
@@ -351,9 +348,8 @@ func TestAllocations(t *testing.T) {
 					BlobberID:    "blobber_1",
 					AllocationID: "storage_allocation_id",
 					Terms: Terms{
-						ReadPrice:     10,
-						WritePrice:    10,
-						MinLockDemand: 2,
+						ReadPrice:  10,
+						WritePrice: 10,
 					},
 				},
 			},
@@ -362,9 +358,8 @@ func TestAllocations(t *testing.T) {
 					BlobberID:    "blobber_1",
 					AllocationID: "storage_allocation_id",
 					Terms: Terms{
-						ReadPrice:     10,
-						WritePrice:    10,
-						MinLockDemand: 2,
+						ReadPrice:  10,
+						WritePrice: 10,
 					},
 				},
 			},
@@ -391,7 +386,7 @@ func TestAllocations(t *testing.T) {
 		// insert the blobber
 		err = eventDb.Get().Model(&Blobber{}).Create(&Blobber{
 			Provider: Provider{
-				ID:      "blobber_1",
+				ID: "blobber_1",
 			},
 		}).Error
 

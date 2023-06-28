@@ -28,7 +28,7 @@ type Authorizer struct {
 	TotalMint currency.Coin `json:"total_mint"`
 	TotalBurn currency.Coin `json:"total_burn"`
 
-	CreationRound int64 `json:"creation_round" gorm:"index:idx_authorizer_creation_round"`
+	CreationRound int64 `json:"creation_round"`
 }
 
 func (a *Authorizer) GetTotalStake() currency.Coin {

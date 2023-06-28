@@ -25,7 +25,6 @@ type mockBlobberYaml struct {
 	serviceCharge float64
 	readPrice     float64
 	writePrice    float64
-	minLockDemand float64
 }
 
 var (
