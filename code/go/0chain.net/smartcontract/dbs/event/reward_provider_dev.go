@@ -194,6 +194,7 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 	}
 
 	result = append(result, totals...)
+
 	return result, err
 }
 

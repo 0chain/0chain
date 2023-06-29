@@ -5,8 +5,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 // TransactionID and BlockNumber is added at the time of emitting event
@@ -30,8 +28,6 @@ func emitAddWriteMarker(t *transaction.Transaction, wm *WriteMarker, alloc *Stor
 	balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker,
 		t.Hash, writeMarkerToWriteMarkerTable(wm, movedTokens, t.Hash))
-
-	logging.Logger.Info("emitAddWriteMarker", zap.Any("wm", wm), zap.Any("alloc", alloc), zap.Any("txnHash", t.Hash))
 
 	emitUpdateAllocationStatEvent(alloc, balances)
 	emitUpdateBlobberWriteStatEvent(wm, movedTokens, balances)
