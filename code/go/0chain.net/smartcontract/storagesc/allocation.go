@@ -21,6 +21,15 @@ import (
 	"0chain.net/core/common"
 )
 
+type NewAllocationTxnOutput struct {
+	ID          string   `json:"id"`
+	Blobber_ids []string `json:"blobber_ids"`
+}
+
+func (sn *NewAllocationTxnOutput) Decode(input []byte) error {
+	return json.Unmarshal(input, sn)
+}
+
 // getAllocation by ID
 func (sc *StorageSmartContract) getAllocation(allocID string,
 	balances chainstate.StateContextI) (alloc *StorageAllocation, err error) {
@@ -60,7 +69,13 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
-	buff := alloc.Encode()
+	blobber_ids := make([]string, len(alloc.BlobberAllocs))
+	for _, v := range alloc.BlobberAllocs {
+		blobber_ids = append(blobber_ids, v.BlobberID)
+	}
+
+	transaction_output := NewAllocationTxnOutput{alloc.ID, blobber_ids}
+	buff, _ := json.Marshal(transaction_output)
 	return string(buff), nil
 }
 
@@ -384,6 +399,7 @@ func setupNewAllocation(
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
+	sa.MinLockDemand = conf.MinLockDemand
 	sa.ID = allocId
 	sa.Tx = allocId
 
@@ -745,9 +761,6 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	if err != nil {
 		return
 	}
-
-	// just copy from next
-	avg.MinLockDemand = next.MinLockDemand
 	return
 }
 
@@ -881,7 +894,7 @@ func (sc *StorageSmartContract) extendAllocation(
 			return common.NewError("allocation_extending_failed", err.Error())
 		}
 
-		nbmld, err := details.Terms.minLockDemand(gbSize, rdtu)
+		nbmld, err := details.Terms.minLockDemand(gbSize, rdtu, alloc.MinLockDemand)
 		if err != nil {
 			return err
 		}
@@ -1147,7 +1160,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				if bd.Terms.ReadPrice >= blobbers[i].Terms.ReadPrice {
 					bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
 				}
-				bd.Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
 			}
 		}
 

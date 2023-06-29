@@ -14,7 +14,7 @@ type Block struct {
 
 	Hash                  string    `json:"hash" gorm:"uniqueIndex:idx_bhash"`
 	Version               string    `json:"version"`
-	CreationDate          int64     `json:"creation_date" gorm:"index:idx_bcreation_date"`
+	CreationDate          int64     `json:"creation_date"`
 	Round                 int64     `json:"round" gorm:"index:idx_bround"`
 	MinerID               string    `json:"miner_id"`
 	RoundRandomSeed       int64     `json:"round_random_seed"`
