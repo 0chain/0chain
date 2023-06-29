@@ -855,6 +855,8 @@ func SetMockConfig(
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
+	conf.NumValidatorsRewarded = viper.GetInt(sc.StorageNumValidatorsRewarded)
+	conf.ValidatorsPerChallenge = viper.GetInt(sc.StorageValidatorsPerChallenge)
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
 	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
