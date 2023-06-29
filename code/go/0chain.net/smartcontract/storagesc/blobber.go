@@ -697,7 +697,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		// TODO: check if this is correct
 		blobAlloc.Stats.NumWrites++
 		blobber.SavedData -= changeSize
-		alloc.Stats.UsedSize -= changeSize
+		alloc.Stats.UsedSize -= changeSize * int64(alloc.DataShards/alloc.DataShards+alloc.ParityShards)
 		alloc.Stats.NumWrites++
 	} else {
 
@@ -720,7 +720,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 		blobber.SavedData += commitConnection.WriteMarker.Size
 
-		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
+		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size * int64(alloc.DataShards/alloc.DataShards+alloc.ParityShards)
 		alloc.Stats.NumWrites++
 
 	}
