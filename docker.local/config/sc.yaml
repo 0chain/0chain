@@ -140,8 +140,8 @@ smart_contracts:
     # duration between health check after which a blobber or validator is considered inactive
     health_check_period: 90m
     # max prices for blobbers (tokens per GB)
-    max_read_price: 100.0
-    max_write_price: 100.0
+    max_read_price: 7.0
+    max_write_price: 7.0
     min_write_price: 0.001
     max_blobbers_per_allocation: 40
     #
