@@ -12,13 +12,13 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// swagger:model WriteMarker 
+// swagger:model WriteMarker
 type WriteMarker struct {
 	model.UpdatableModel
 	ClientID      string `json:"client_id"`
 	BlobberID     string `json:"blobber_id"`
 	AllocationID  string `json:"allocation_id" gorm:"index:idx_walloc_block,priority:1"` //used in alloc_write_marker_count, alloc_written_size
-	TransactionID string `json:"transaction_id" gorm:"uniqueIndex"`
+	TransactionID string `json:"transaction_id"`
 
 	AllocationRoot         string `json:"allocation_root"`
 	PreviousAllocationRoot string `json:"previous_allocation_root"`
