@@ -239,16 +239,6 @@ func mergeAllocationStatsEvents() *eventsMergerImpl[Allocation] {
 	return newEventsMerger[Allocation](TagUpdateAllocationStat, withUniqueEventOverwrite())
 }
 
-func withAllocStatsMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
-		a.UsedSize += int64(float64(b.UsedSize) * float64(a.DataShards) / float64(a.DataShards+a.ParityShards))
-		a.NumWrites += b.NumWrites
-		a.MovedToChallenge += b.MovedToChallenge
-		a.MovedBack += b.MovedBack
-		return a, nil
-	})
-}
-
 func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 	var (
 		allocationIdList     []string
