@@ -2,10 +2,7 @@ package event
 
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/logging"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
@@ -169,8 +166,6 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 
 func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error) {
 
-	uniqueIdForLogging := uuid.New().String()
-
 	var result []int64
 	var totals []int64
 
@@ -181,13 +176,9 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 		return nil, err
 	}
 
-	logging.Logger.Info("jayash blockRewards : "+uniqueIdForLogging, zap.Any("blockRewards", blockRewards))
-
 	for _, br := range blockRewards {
 		result = append(result, br.Amount)
 	}
-
-	logging.Logger.Info("jayash result : "+uniqueIdForLogging, zap.Any("result", result))
 
 	for _, br := range blockRewards {
 
@@ -197,21 +188,12 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 			return nil, err
 		}
 
-		logging.Logger.Info("jayash delegateRewards : "+uniqueIdForLogging, zap.Any("delegateRewards", delegateRewards))
-
 		result = append(result, delegateRewards.Amount)
 
-		logging.Logger.Info("jayash result2 : "+uniqueIdForLogging, zap.Any("result", result))
-
 		totals = append(totals, br.Amount+delegateRewards.Amount)
-
-		logging.Logger.Info("jayash totals : "+uniqueIdForLogging, zap.Any("totals", totals))
 	}
 
 	result = append(result, totals...)
-
-	logging.Logger.Info("jayash result3 : "+uniqueIdForLogging, zap.Any("result", result))
-
 	return result, err
 }
 

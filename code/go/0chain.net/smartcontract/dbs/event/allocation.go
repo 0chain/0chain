@@ -241,6 +241,11 @@ func mergeAllocationStatsEvents() *eventsMergerImpl[Allocation] {
 
 func withAllocStatsMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
+		logging.Logger.Info("jayash - withAllocStatsMerged",
+			zap.Any("a", a),
+			zap.Any("b", b),
+			zap.Any("eqn", int64(float64(b.UsedSize)*float64(a.DataShards)/float64(a.DataShards+a.ParityShards))))
+
 		a.UsedSize += int64(float64(b.UsedSize) * float64(a.DataShards) / float64(a.DataShards+a.ParityShards))
 		a.NumWrites += b.NumWrites
 		a.MovedToChallenge += b.MovedToChallenge
