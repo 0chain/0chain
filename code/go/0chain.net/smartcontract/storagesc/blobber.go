@@ -698,20 +698,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.Stats.NumWrites++
 		blobber.SavedData -= changeSize
 
-		allocUsedSizeBefore := alloc.Stats.UsedSize
-
 		alloc.Stats.UsedSize -= int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
-
-		logging.Logger.Info("commitBlobberConnection",
-			zap.Any("alloc", alloc),
-			zap.Any("used_size", alloc.Stats.UsedSize),
-			zap.Any("used_size_before", allocUsedSizeBefore),
-			zap.Any("alloc_size", alloc.Size),
-			zap.Any("writemarker_size", commitConnection.WriteMarker.Size),
-			zap.Any("blobber_used_size", blobAlloc.Stats.UsedSize),
-			zap.Any("blobber_size", blobAlloc.Size),
-			zap.Any("blobber_saved_data", blobber.SavedData),
-		)
 
 		alloc.Stats.NumWrites++
 	} else {
@@ -735,20 +722,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 		blobber.SavedData += commitConnection.WriteMarker.Size
 
-		allocUsedSizeBefore := alloc.Stats.UsedSize
-
 		alloc.Stats.UsedSize += int64(float64(commitConnection.WriteMarker.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
-
-		logging.Logger.Info("commitBlobberConnection",
-			zap.Any("alloc", alloc),
-			zap.Any("used_size", alloc.Stats.UsedSize),
-			zap.Any("used_size_before", allocUsedSizeBefore),
-			zap.Any("alloc_size", alloc.Size),
-			zap.Any("writemarker_size", commitConnection.WriteMarker.Size),
-			zap.Any("blobber_used_size", blobAlloc.Stats.UsedSize),
-			zap.Any("blobber_size", blobAlloc.Size),
-			zap.Any("blobber_saved_data", blobber.SavedData),
-		)
 
 		alloc.Stats.NumWrites++
 
