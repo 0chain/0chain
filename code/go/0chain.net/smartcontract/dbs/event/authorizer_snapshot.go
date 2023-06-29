@@ -18,7 +18,7 @@ type AuthorizerSnapshot struct {
 	TotalMint     currency.Coin `json:"total_mint"`
 	TotalBurn     currency.Coin `json:"total_burn"`
 	ServiceCharge float64       `json:"service_charge"`
-	CreationRound int64         `json:"creation_round" gorm:"index"`
+	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
 	IsShutdown    bool          `json:"is_shutdown"`
 }
