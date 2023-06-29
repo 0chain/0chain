@@ -379,7 +379,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf = newConfig()
 
-	conf.TimeUnit = 1 * time.Minute // use one hour as the time unit in the tests
+	conf.TimeUnit = 1 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ValidatorsPerChallenge = 10
 	conf.MaxBlobbersPerAllocation = 10

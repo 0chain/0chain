@@ -150,6 +150,7 @@ func TestUpdateSettings(t *testing.T) {
 					"max_write_price":                "100",
 					"challenge_enabled":              "true",
 					"validators_per_challenge":       "2",
+					"num_validators_rewarded":        "10",
 					"max_delegates":                  "100",
 					"owner_id":                       "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
 					"block_reward.block_reward":      "1000",
@@ -392,6 +393,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"max_write_price":                                "100",
 					"challenge_enabled":                              "true",
 					"validators_per_challenge":                       "2",
+					"num_validators_rewarded":                        "10",
 					"max_delegates":                                  "100",
 					"owner_id":                                       "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
 					"block_reward.block_reward":                      "1000",
@@ -516,6 +518,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.ChallengeEnabled
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
+	case NumValidatorsRewarded:
+		return conf.NumValidatorsRewarded
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:
