@@ -68,6 +68,7 @@ const (
 	MinWritePrice
 	ChallengeEnabled
 	ValidatorsPerChallenge
+	NumValidatorsRewarded
 	MaxDelegates
 
 	BlockRewardBlockReward
@@ -170,6 +171,7 @@ func initSettingName() {
 	SettingName[MinWritePrice] = "min_write_price"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
+	SettingName[NumValidatorsRewarded] = "num_validators_rewarded"
 	SettingName[MaxDelegates] = "max_delegates"
 	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
 	SettingName[BlockRewardQualifyingStake] = "block_reward.qualifying_stake"
@@ -252,6 +254,7 @@ func initSettings() {
 		MinWritePrice.String():                    {MinWritePrice, smartcontract.CurrencyCoin},
 		ChallengeEnabled.String():                 {ChallengeEnabled, smartcontract.Boolean},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, smartcontract.Int},
+		NumValidatorsRewarded.String():            {NumValidatorsRewarded, smartcontract.Int},
 		MaxDelegates.String():                     {MaxDelegates, smartcontract.Int},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
 		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
@@ -363,6 +366,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.MaxBlobbersPerAllocation = change
 	case ValidatorsPerChallenge:
 		conf.ValidatorsPerChallenge = change
+	case NumValidatorsRewarded:
+		conf.NumValidatorsRewarded = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
@@ -677,6 +682,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ChallengeEnabled
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
+	case NumValidatorsRewarded:
+		return conf.NumValidatorsRewarded
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:
