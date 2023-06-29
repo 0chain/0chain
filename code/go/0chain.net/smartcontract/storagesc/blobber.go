@@ -821,7 +821,15 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	emitAddWriteMarker(t, commitConnection.WriteMarker, movedTokens, balances)
+	emitAddWriteMarker(t, commitConnection.WriteMarker, &StorageAllocation{
+		Stats: &StorageAllocationStats{
+			UsedSize:  alloc.Stats.UsedSize,
+			NumWrites: alloc.Stats.NumWrites,
+		},
+		MovedToChallenge: alloc.MovedToChallenge,
+		MovedBack:        alloc.MovedBack,
+		WritePool:        alloc.WritePool,
+	}, movedTokens, balances)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {

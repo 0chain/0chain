@@ -236,16 +236,11 @@ func mergeUpdateAllocStatsEvents() *eventsMergerImpl[Allocation] {
 }
 
 func mergeAllocationStatsEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagUpdateAllocationStat, withAllocStatsMerged())
+	return newEventsMerger[Allocation](TagUpdateAllocationStat, withUniqueEventOverwrite())
 }
 
 func withAllocStatsMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
-		logging.Logger.Info("jayash - withAllocStatsMerged",
-			zap.Any("a", a),
-			zap.Any("b", b),
-			zap.Any("eqn", int64(float64(b.UsedSize)*float64(a.DataShards)/float64(a.DataShards+a.ParityShards))))
-
 		a.UsedSize += int64(float64(b.UsedSize) * float64(a.DataShards) / float64(a.DataShards+a.ParityShards))
 		a.NumWrites += b.NumWrites
 		a.MovedToChallenge += b.MovedToChallenge
@@ -291,11 +286,18 @@ func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
-		AddUpdate("used_size", usedSizeList, "allocations.used_size + t.used_size").
-		AddUpdate("num_writes", numWritesList, "allocations.num_writes + t.num_writes").
-		AddUpdate("moved_to_challenge", movedToChallengeList, "allocations.moved_to_challenge + t.moved_to_challenge").
-		AddUpdate("moved_back", movedBackList, "allocations.moved_back + t.moved_back").
-		AddUpdate("write_pool", writePoolList, "allocations.write_pool - t.moved_to_challenge + t.moved_back").Exec(edb).Error
+		AddUpdate("used_size", usedSizeList, "allocations.used_size").
+		AddUpdate("num_writes", numWritesList, "allocations.num_writes").
+		AddUpdate("moved_to_challenge", movedToChallengeList, "allocations.moved_to_challenge").
+		AddUpdate("moved_back", movedBackList, "allocations.moved_back").
+		AddUpdate("write_pool", writePoolList, "allocations.write_pool").Exec(edb).Error
+
+	//return CreateBuilder("allocations", "allocation_id", allocationIdList).
+	//	AddUpdate("used_size", usedSizeList, "allocations.used_size + t.used_size").
+	//	AddUpdate("num_writes", numWritesList, "allocations.num_writes + t.num_writes").
+	//	AddUpdate("moved_to_challenge", movedToChallengeList, "allocations.moved_to_challenge + t.moved_to_challenge").
+	//	AddUpdate("moved_back", movedBackList, "allocations.moved_back + t.moved_back").
+	//	AddUpdate("write_pool", writePoolList, "allocations.write_pool - t.moved_to_challenge + t.moved_back").Exec(edb).Error
 }
 
 func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {
