@@ -1775,5 +1775,7 @@ func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chain
 		WritePool:        allocation.WritePool,
 	}
 
+	logging.Logger.Info("emitUpdateAllocationStatEvent", zap.Any("alloc", alloc))
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStat, alloc.AllocationID, &alloc)
 }
