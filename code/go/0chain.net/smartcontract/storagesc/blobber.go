@@ -822,6 +822,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	emitAddWriteMarker(t, commitConnection.WriteMarker, &StorageAllocation{
+		ID: alloc.ID,
 		Stats: &StorageAllocationStats{
 			UsedSize:  alloc.Stats.UsedSize,
 			NumWrites: alloc.Stats.NumWrites,
