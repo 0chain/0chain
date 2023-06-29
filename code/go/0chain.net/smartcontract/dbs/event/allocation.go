@@ -285,6 +285,17 @@ func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 		movedBackList = append(movedBackList, coinValue)
 	}
 
+	logging.Logger.Info("updateAllocationsStats",
+		zap.Int("num", len(allocs)),
+		zap.Any("allocs", allocs),
+		zap.Any("allocationIdList", allocationIdList),
+		zap.Any("usedSizeList", usedSizeList),
+		zap.Any("numWritesList", numWritesList),
+		zap.Any("movedToChallengeList", movedToChallengeList),
+		zap.Any("movedBackList", movedBackList),
+		zap.Any("writePoolList", writePoolList),
+	)
+
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
 		AddUpdate("used_size", usedSizeList, "allocations.used_size").
 		AddUpdate("num_writes", numWritesList, "allocations.num_writes").
