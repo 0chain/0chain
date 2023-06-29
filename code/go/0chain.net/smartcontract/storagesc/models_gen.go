@@ -2065,7 +2065,7 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 14 + msgp.Float64Size + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 13 + msgp.BoolSize
+	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 13 + msgp.BoolSize
 	return
 }
 
