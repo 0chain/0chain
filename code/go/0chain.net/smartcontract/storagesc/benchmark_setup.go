@@ -377,7 +377,7 @@ func AddMockBlobbers(
 			Allocated:         mockUsedData,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			IsAvailable:       true,
+			NotAvailable:      false,
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
@@ -409,7 +409,7 @@ func AddMockBlobbers(
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
-				IsAvailable:         blobber.IsAvailable,
+				NotAvailable:        blobber.NotAvailable,
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake) / 2)
 			if err != nil {
