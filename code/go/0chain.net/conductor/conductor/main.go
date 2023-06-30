@@ -146,9 +146,9 @@ func appendTests(conf *config.Config, tests *config.Config) {
 }
 
 type reportTestCase struct {
-	name       string
-	s, e       time.Time // start at, end at
-	directives []reportFlowDirective
+	name               string
+	startedAt, endedAt time.Time // start at, end at
+	directives         []reportFlowDirective
 }
 
 type reportFlowDirective struct {
@@ -837,7 +837,7 @@ func (r *Runner) processReport() (success bool) {
 
 		var caseError error = nil
 		var caseSuccess bool = true
-		totalDuration += testCase.e.Sub(testCase.s)
+		totalDuration += testCase.endedAt.Sub(testCase.startedAt)
 
 		for i, flowDirective := range testCase.directives {
 			caseSuccess = caseSuccess && flowDirective.success
@@ -851,7 +851,7 @@ func (r *Runner) processReport() (success bool) {
 		}
 
 		fmt.Printf("  %s after %s\n", okString(caseSuccess),
-			testCase.e.Sub(testCase.s).Round(time.Second))
+			testCase.endedAt.Sub(testCase.startedAt).Round(time.Second))
 
 		success = success && caseSuccess
 
@@ -914,7 +914,7 @@ func (r *Runner) Run() (err error, success bool) {
 			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name
-			report.s = time.Now()
+			report.startedAt = time.Now()
 
 			log.Print("=======================================================")
 			log.Printf("Test case %d: %s", i, testCase.Name)
@@ -935,7 +935,7 @@ func (r *Runner) Run() (err error, success bool) {
 						directive: d.GetName(),
 					})
 
-					report.e = time.Now()
+					report.endedAt = time.Now()
 					r.report = append(r.report, report) // add to report
 					r.stopAll()
 					r.resetWaiters()
@@ -961,7 +961,7 @@ func (r *Runner) Run() (err error, success bool) {
 				})
 			}
 
-			report.e = time.Now()
+			report.endedAt = time.Now()
 			r.report = append(r.report, report)
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}
