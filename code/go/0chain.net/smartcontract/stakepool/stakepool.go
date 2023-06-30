@@ -587,7 +587,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	valueBalance := valueLeft
-	stake, err := sp.stake()
+	stake, err := sp.Stake()
 	if err != nil {
 		return err
 	}
@@ -635,7 +635,7 @@ func (sp *StakePool) DistributeRewards(
 	return nil
 }
 
-func (sp *StakePool) stake() (stake currency.Coin, err error) {
+func (sp *StakePool) Stake() (stake currency.Coin, err error) {
 	orderedPoolIds := sp.OrderedPoolIds()
 	for _, id := range orderedPoolIds {
 		dp := sp.Pools[id]
