@@ -8,9 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/core/encryption"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -284,11 +281,11 @@ func runEventDatabaseSuite(
 						nil,
 						nil,
 						nil,
-						func(int64) *block.MagicBlock { return nil },
-						func() *block.Block { return nil },
-						func() *block.MagicBlock { return nil },
-						func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
-						func() *block.Block { return nil },
+						nil,
+						nil,
+						nil,
+						nil,
+						nil,
 						cloneEdb,
 					)
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
