@@ -25,7 +25,7 @@ import (
 func (r *Runner) setupTimeout(tm time.Duration) {
 	r.timer = time.NewTimer(tm)
 	if tm <= 0 {
-		<-r.timer.C // drain zero timeout
+		<-r.timer.C // drain zero timeout so that wherever it is waited upon it waits indefinitely
 	}
 }
 
