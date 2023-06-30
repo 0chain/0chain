@@ -214,7 +214,7 @@ func (c *Config) TestsOfSet(set *Set) (cs []Case) {
 	return
 }
 
-// IsEnabled returns true it given Set enabled.
+// IsEnabled returns true if given set is included in `enable“ list.
 func (c *Config) IsEnabled(set *Set) bool {
 	for _, name := range c.Enable {
 		if set.Name == name {
