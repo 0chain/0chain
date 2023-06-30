@@ -359,6 +359,26 @@ func init() {
 		return nil
 	})
 
+	register("sleep", func(_ string,
+		_ Executor, val interface{}, _ time.Duration) (err error) {
+		var d time.Duration
+		switch v := val.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return
+			}
+		case time.Duration:
+			d = v
+		case int:
+			d = time.Duration(v)
+		default:
+			return fmt.Errorf("Invalid duration argument: %v", val)
+		}
+		time.Sleep(d)
+		return nil
+	})
+
 	// Blobber related executors
 
 	register("storage_tree", func(name string,
@@ -692,6 +712,15 @@ func init() {
 
 	register("blobber_delete", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := NewBlobberDelete()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("generate_challenge", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewGenerateChallenge()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
