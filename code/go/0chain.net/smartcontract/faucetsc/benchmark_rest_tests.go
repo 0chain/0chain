@@ -11,6 +11,7 @@ func BenchmarkRestTests(
 	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	frh := NewFaucetscRestHandler(rh)
 	return benchmark.GetRestTests(
+		"faucet",
 		[]benchmark.TestParameters{
 			{
 				FuncName: "personalPeriodicLimit",

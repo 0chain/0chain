@@ -92,6 +92,41 @@ func (edb *EventDb) Rollback() error {
 	return edb.Store.Get().Rollback().Error
 }
 
+func (edb *EventDb) Clone(dbName string) (*EventDb, error) {
+	var dba = config.DbAccess{
+		Enabled:  true,
+		Name:     dbName,
+		User:     edb.dbConfig.User,
+		Password: edb.dbConfig.Password,
+		Host:     edb.dbConfig.Host,
+		Port:     edb.dbConfig.Port,
+
+		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
+		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
+		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
+	}
+	cloneEdb, err := postgresql.GetPostgresSqlDb(dba)
+	if err != nil {
+		return nil, err
+	}
+	result := cloneEdb.Get().Exec(fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s;"),
+		dbName, edb.dbConfig.Name, edb.dbConfig.User)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &EventDb{
+		Store:         cloneEdb,
+		dbConfig:      dba,
+		eventsChannel: nil,
+		settings:      config.DbSettings{},
+	}, nil
+}
+
+func (edb *EventDb) Delete() error {
+	return edb.Get().Exec("DROP DATABASE " + edb.dbConfig.Name + ";").Error
+}
+
 func (edb *EventDb) UpdateSettings(updates map[string]string) error {
 	return edb.settings.Update(updates)
 }

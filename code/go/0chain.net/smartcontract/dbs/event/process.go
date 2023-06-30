@@ -131,6 +131,31 @@ func (edb *EventDb) ProcessEvents(
 	}
 }
 
+func (edb *EventDb) mergeEvents(
+	ctx context.Context,
+	events []Event,
+	round int64,
+	block string,
+	blockSize int,
+) (blockEvents, *EventDb, error) {
+	es, err := mergeEvents(round, block, events)
+	if err != nil {
+		return blockEvents{}, nil, err
+	}
+	tx, err := edb.Begin(ctx)
+	if err != nil {
+		return blockEvents{}, nil, err
+	}
+	return blockEvents{
+		events:    es,
+		round:     round,
+		block:     block,
+		blockSize: blockSize,
+		tx:        tx,
+		done:      make(chan bool, 1),
+	}, tx, nil
+}
+
 func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	var (
 		mergers = []eventsMerger{

@@ -1,10 +1,17 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sync"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/core/encryption"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -75,6 +82,7 @@ func runSuites(
 	vestingsc.SetupRestHandler(restSetup)
 	zcnsc.SetupRestHandler(restSetup)
 
+	var eventMap map[string][]event.Event
 	for _, suite := range suites {
 		log.Println("starting suite ==>", suite.Source)
 		wg.Add(1)
@@ -82,9 +90,13 @@ func runSuites(
 			defer wg.Done()
 			var suiteResult []benchmarkResults
 			if suite.ReadOnly {
-				suiteResult = runReadOnlySuite(suite, mpt, root, data, timedBalance)
+				suiteResult = runReadOnlySuite(suite, timedBalance)
 			} else {
-				suiteResult = runSuite(suite, mpt, root, data)
+				var events map[string][]event.Event
+				suiteResult, events = runSuite(suite, mpt, root, data)
+				for key, value := range events {
+					eventMap[suite.Name+"."+key] = value
+				}
 			}
 			if suiteResult == nil {
 				return
@@ -96,14 +108,26 @@ func runSuites(
 		}(suite, &wg)
 	}
 	wg.Wait()
+	err := writeEvents(viper.GetString(benchmark.OptionsSmartContractEventFile), eventMap)
+	if err != nil {
+		log.Fatal("error writing out events: " + err.Error())
+	}
+
+	if viper.GetBool(benchmark.OptionsEventDatabaseBenchmarks) {
+		if viper.GetString(benchmark.OptionsSmartContractEventFile) != viper.GetString(benchmark.OptionsEventDatabaseEventFile) {
+			eventMap, err = readEventDbTests(viper.GetString(benchmark.OptionsEventDatabaseEventFile))
+			if err != nil {
+				log.Fatal(fmt.Sprintf("error reading event db benchmarks file %s: %v",
+					viper.GetString(benchmark.OptionsEventDatabaseEventFile), err))
+			}
+			runEventDatabaseSuite(event.GetBenchmarkTestSuite(eventMap), data.EventDb)
+		}
+	}
 	return results
 }
 
 func runReadOnlySuite(
 	suite benchmark.TestSuite,
-	_ *util.MerklePatriciaTrie,
-	_ util.Key,
-	_ *benchmark.BenchData,
 	balances cstate.TimedQueryStateContext,
 ) []benchmarkResults {
 	if !viper.GetBool(benchmark.EventDbEnabled) || balances.GetEventDB() == nil {
@@ -150,8 +174,9 @@ func runSuite(
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
 	data *benchmark.BenchData,
-) []benchmarkResults {
+) ([]benchmarkResults, map[string][]event.Event) {
 	var benchmarkResult []benchmarkResults
+	var benchmarkEvents map[string][]event.Event
 	var wg sync.WaitGroup
 
 	for _, bm := range suite.Benchmarks {
@@ -167,13 +192,14 @@ func runSuite(
 			log.Println("starting", bm.Name())
 			var err error
 			var runCount int
+			var balances cstate.StateContextI
 			result := testing.Benchmark(func(b *testing.B) {
 				b.StopTimer()
 				var prevMptHashRoot string
 				_ = prevMptHashRoot
 				for i := 0; i < b.N; i++ {
 					cloneMPT := util.CloneMPT(mpt)
-					_, balances := getBalances(
+					_, balances = getBalances(
 						bm.Transaction(),
 						extractMpt(cloneMPT, root),
 						data,
@@ -198,6 +224,7 @@ func runSuite(
 						prevMptHashRoot = currMptHashRoot
 					}
 				}
+				benchmarkEvents[bm.Name()] = balances.GetEvents()
 			})
 			log.Println(bm.Name(), "run count is:", runCount)
 			var resTimings map[string]time.Duration
@@ -219,5 +246,74 @@ func runSuite(
 		}(bm, &wg)
 	}
 	wg.Wait()
-	return benchmarkResult
+	return benchmarkResult, benchmarkEvents
+}
+
+func writeEvents(filename string, events map[string][]event.Event) error {
+	if filename == "" {
+		return nil
+	}
+	data, err := json.MarshalIndent(events, "", " ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, data, 0644)
+}
+
+func runEventDatabaseSuite(
+	suite benchmark.TestSuite,
+	edb *event.EventDb,
+) []benchmarkResults {
+	var benchmarkResult []benchmarkResults
+	var wg sync.WaitGroup
+	for _, bm := range suite.Benchmarks {
+		wg.Add(1)
+		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
+			defer wg.Done()
+			timer := time.Now()
+			log.Println("starting", bm.Name())
+			var err error
+			result := testing.Benchmark(func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					b.StopTimer()
+					cloneEdb, err := edb.Clone("")
+					if err != nil {
+						log.Fatal("cloning event database: " + err.Error())
+					}
+					balances := cstate.NewStateContext(
+						nil,
+						nil,
+						nil,
+						func(int64) *block.MagicBlock { return nil },
+						func() *block.Block { return nil },
+						func() *block.MagicBlock { return nil },
+						func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
+						func() *block.Block { return nil },
+						cloneEdb,
+					)
+					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
+						return 0
+					})
+					b.StartTimer()
+					err = bm.Run(timedBalance, b)
+					b.StopTimer()
+					err = cloneEdb.Delete()
+					if err != nil {
+						log.Fatal("error deleting event database: " + err.Error())
+					}
+				}
+			})
+			benchmarkResult = append(
+				benchmarkResult,
+				benchmarkResults{
+					test:   bm,
+					result: result,
+					error:  err,
+				},
+			)
+			log.Println("test", bm.Name(), "done. took:", time.Since(timer))
+		}(bm, &wg)
+	}
+	wg.Wait()
+	return nil
 }

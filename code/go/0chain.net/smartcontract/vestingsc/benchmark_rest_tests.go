@@ -13,6 +13,7 @@ func BenchmarkRestTests(
 	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	vrh := NewVestingRestHandler(rh)
 	return benchmark.GetRestTests(
+		"vesting",
 		[]benchmark.TestParameters{
 			{
 				FuncName: "vesting_config",

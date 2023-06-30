@@ -89,6 +89,7 @@ func (qbt *QueryBenchTest) Run(balances cstate.TimedQueryStateContext, b *testin
 }
 
 func GetRestTests(
+	name string,
 	tests []TestParameters,
 	address string,
 	reciever rest.RestHandlerI,
@@ -101,6 +102,7 @@ func GetRestTests(
 		testsI = append(testsI, newTest)
 	}
 	return TestSuite{
+		Name:       name,
 		Source:     source,
 		Benchmarks: testsI,
 	}

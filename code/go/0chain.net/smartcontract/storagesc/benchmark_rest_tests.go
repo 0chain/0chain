@@ -34,6 +34,7 @@ func BenchmarkRestTests(
 		panic(err)
 	}
 	return bk.GetRestTests(
+		"storage",
 		[]bk.TestParameters{
 			{
 				FuncName: "blobbers-by-geolocation",
