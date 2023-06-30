@@ -407,8 +407,12 @@ Now run the script containing unit tests .
 ```
 ./docker.local/bin/unit_test.sh
 ```
+OR to run the unit tests without the mocks,
+```
+./docker.local/bin/unit_test.sh --no-mocks 
+```
 
-The list of packages is optional, and if provided runs only the tests from those packages. Command for running unit tests with specific packages .
+The list of packages is optional, and if provided runs only the tests from those packages. The command for running unit tests with specific packages.
 
 ```
 ./docker.local/bin/unit_test.sh [<packages>]
