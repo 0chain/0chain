@@ -126,7 +126,7 @@ var rootCmd = &cobra.Command{
 		log.Println("read in command line options")
 
 		executor := common.NewWithContextFunc(viper.GetInt(bk.OptionsLoadConcurrency))
-		mpt, root, data := getMpt(loadPath, configPath, executor)
+		mpt, root, data, _ := getMpt(loadPath, configPath, executor)
 		log.Println("finished setting up blockchain", "root", string(root))
 
 		savePath := viper.GetString(bk.OptionSavePath)

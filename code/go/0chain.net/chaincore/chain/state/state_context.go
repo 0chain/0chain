@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	encrypt "0chain.net/core/encryption"
+	"github.com/0chain/common/core/encryption"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
@@ -19,7 +21,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 )
@@ -113,7 +114,7 @@ type StateContextI interface {
 	GetSignedTransfers() []*state.SignedTransfer
 	GetMints() []*state.Mint // cannot use in smart contracts or REST endpoints
 	Validate() error
-	GetSignatureScheme() encryption.SignatureScheme
+	GetSignatureScheme() encrypt.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(eventType event.EventType, eventTag event.EventTag, index string, data interface{}, appender ...Appender)
 	EmitError(error)
@@ -136,7 +137,7 @@ type StateContext struct {
 	getLatestFinalizedBlock       func() *block.Block
 	getMagicBlock                 func(round int64) *block.MagicBlock
 	getChainCurrentMagicBlock     func() *block.MagicBlock
-	getSignature                  func() encryption.SignatureScheme
+	getSignature                  func() encrypt.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 }
@@ -167,7 +168,7 @@ func NewStateContext(
 	getMagicBlock func(int64) *block.MagicBlock,
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
-	getChainSignature func() encryption.SignatureScheme,
+	getChainSignature func() encrypt.SignatureScheme,
 	getLatestFinalizedBlock func() *block.Block,
 	eventDb *event.EventDb,
 ) (
@@ -452,7 +453,7 @@ func (sc *StateContext) GetChainCurrentMagicBlock() *block.MagicBlock {
 	return sc.getChainCurrentMagicBlock()
 }
 
-func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
+func (sc *StateContext) GetSignatureScheme() encrypt.SignatureScheme {
 	return sc.getSignature()
 }
 

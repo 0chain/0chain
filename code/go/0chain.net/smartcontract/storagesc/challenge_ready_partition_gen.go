@@ -7,6 +7,58 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
+func (z ChallengeReadyAllocNode) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "a"
+	o = append(o, 0x81, 0xa1, 0x61)
+	o = msgp.AppendString(o, z.AllocID)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *ChallengeReadyAllocNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "a":
+			z.AllocID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "AllocID")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z ChallengeReadyAllocNode) Msgsize() (s int) {
+	s = 1 + 2 + msgp.StringPrefixSize + len(z.AllocID)
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z ChallengeReadyBlobber) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 2

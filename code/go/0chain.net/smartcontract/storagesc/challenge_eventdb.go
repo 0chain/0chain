@@ -12,12 +12,8 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge { //nolint
-	var validators = make([]string, 0, len(ch.Validators))
-	for _, v := range ch.Validators {
-		validators = append(validators, v.ID)
-	}
-	validatorsStr := strings.Join(validators, ",")
+func storageChallengeToChallengeTable(ch *challengeInfo, expiredN int) *event.Challenge { //nolint
+	validatorsStr := strings.Join(ch.ValidatorIDs, ",")
 	return &event.Challenge{
 		ChallengeID:    ch.ID,
 		CreatedAt:      ch.Created,
@@ -37,18 +33,18 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	if len(vIDs) == 0 {
 		return nil, errors.New("no validators in challenge")
 	}
-	validators, err := getValidators(vIDs, edb)
+	validators, err := getValidatorsEventDB(vIDs, edb)
 	if err != nil {
 		return nil, err
 	}
 	return &StorageChallengeResponse{
 		StorageChallenge: &StorageChallenge{
-			Created:         ch.CreatedAt,
-			ID:              ch.ChallengeID,
-			TotalValidators: 0,
-			AllocationID:    ch.AllocationID,
-			BlobberID:       ch.BlobberID,
-			Responded:       ch.Responded,
+			Created: ch.CreatedAt,
+			ID:      ch.ChallengeID,
+			//TotalValidators: 0,
+			AllocationID: ch.AllocationID,
+			BlobberID:    ch.BlobberID,
+			Responded:    ch.Responded,
 		},
 		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
@@ -57,7 +53,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]int, expiredN int, balances cstate.StateContextI, allocStats, blobberStats *StorageAllocationStats) {
+func emitAddChallenge(ch *challengeInfo, expiredN int, balances cstate.StateContextI, allocStats, blobberStats *StorageAllocationStats) {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
 		AllocationID:         ch.AllocationID,

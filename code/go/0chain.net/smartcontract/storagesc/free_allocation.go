@@ -295,7 +295,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		resp     string
 		rc       = concurrentReader{}
 	)
-	rc.add(func(state cstate.StateContextI) error {
+	rc.add(func() error {
 		var err error
 		assigner, err = ssc.getFreeStorageAssigner(marker.Assigner, balances)
 		if err != nil {
@@ -309,7 +309,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return nil
 	})
 
-	rc.add(func(state cstate.StateContextI) error {
+	rc.add(func() error {
 		var err error
 		rp, err = ssc.getReadPool(marker.Recipient, balances)
 		if err != nil {
@@ -322,7 +322,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return nil
 	})
 
-	rc.add(func(state cstate.StateContextI) error {
+	rc.add(func() error {
 		var request = newAllocationRequest{
 			DataShards:      conf.FreeAllocationSettings.DataShards,
 			ParityShards:    conf.FreeAllocationSettings.ParityShards,
@@ -344,7 +344,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return nil
 	})
 
-	if err := rc.do(balances); err != nil {
+	if err := rc.do(); err != nil {
 		return "", err
 	}
 	m.tick("concurrent run")
@@ -376,21 +376,21 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 }
 
 type concurrentReader struct {
-	funcs []func(cstate.StateContextI) error
+	funcs []func() error
 }
 
-func (rc *concurrentReader) add(f func(cstate.StateContextI) error) {
+func (rc *concurrentReader) add(f func() error) {
 	rc.funcs = append(rc.funcs, f)
 }
 
-func (rc *concurrentReader) do(state cstate.StateContextI) error {
+func (rc *concurrentReader) do() error {
 	wg := sync.WaitGroup{}
 	errs := make([]error, len(rc.funcs))
 	for i, f := range rc.funcs {
 		wg.Add(1)
-		go func(idx int, f func(s cstate.StateContextI) error) {
+		go func(idx int, f func() error) {
 			defer wg.Done()
-			errs[idx] = f(state)
+			errs[idx] = f()
 		}(i, f)
 	}
 	wg.Wait()
@@ -425,7 +425,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	//var conf *Config
 	assignErrC := make(chan error, 1)
 	cr := concurrentReader{}
-	cr.add(func(state cstate.StateContextI) error {
+	cr.add(func() error {
 		var err error
 		assigner, err = ssc.getFreeStorageAssigner(marker.Assigner, balances)
 		if err != nil {
@@ -446,7 +446,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	})
 
 	var resp string
-	cr.add(func(state cstate.StateContextI) error {
+	cr.add(func() error {
 		alloc, bil, conf, err := ssc.preloadUpdateAllocation(inputObj.AllocationId, balances)
 		if err != nil {
 			return err
@@ -466,7 +466,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		return nil
 	})
 
-	if err := cr.do(balances); err != nil {
+	if err := cr.do(); err != nil {
 		return "", err
 	}
 

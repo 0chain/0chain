@@ -39,8 +39,9 @@ require (
 )
 
 require (
-	github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9
+	github.com/0chain/common v0.0.6-0.20230629065254-29d20e19d6b3
 	github.com/go-faker/faker/v4 v4.1.0
+	github.com/golang/protobuf v1.5.3
 	github.com/jackc/pgx/v5 v5.3.1
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
@@ -48,6 +49,7 @@ require (
 	github.com/pressly/goose/v3 v3.11.2
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 	golang.org/x/sys v0.8.0
+	google.golang.org/protobuf v1.30.0
 	gorm.io/driver/sqlite v1.5.1
 	moul.io/zapgorm2 v1.3.0
 )
@@ -102,6 +104,7 @@ require (
 	github.com/philhofer/fwd v1.1.2-0.20210722190033-5c56ac6d0bb9 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
+	github.com/skycoin/skycoin v0.27.1 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect

@@ -58,9 +58,9 @@ type StakePool struct {
 }
 
 type Settings struct {
-	DelegateWallet     string  `json:"delegate_wallet"`
-	MaxNumDelegates    int     `json:"num_delegates"`
-	ServiceChargeRatio float64 `json:"service_charge"`
+	DelegateWallet     string  `json:"delegate_wallet" msg:"d"`
+	MaxNumDelegates    int     `json:"num_delegates" msg:"m"`
+	ServiceChargeRatio float64 `json:"service_charge" msg:"s"`
 }
 
 type DelegatePool struct {

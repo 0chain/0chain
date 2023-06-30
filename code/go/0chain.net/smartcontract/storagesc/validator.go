@@ -49,8 +49,8 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		err = validatorPartitions.Add(
 			balances,
 			&ValidationPartitionNode{
-				Id:  t.ClientID,
-				Url: newValidator.BaseURL,
+				Id: t.ClientID,
+				//Url: newValidator.BaseURL,
 			})
 		if err != nil {
 			return "", err
@@ -264,9 +264,9 @@ func (sc *StorageSmartContract) updateValidator(t *transaction.Transaction,
 }
 
 func filterHealthyValidators(now common.Timestamp) filterValidatorFunc {
-	return filterValidatorFunc(func(v *ValidationNode) (kick bool, err error) {
+	return func(v *ValidatorHealthCheck) (kick bool, err error) {
 		return v.LastHealthCheck <= (now - validatorHealthTime), nil
-	})
+	}
 }
 
 func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,

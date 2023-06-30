@@ -256,7 +256,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
-			err = sc.generateChallenge(t, balances.GetBlock(), input, balances)
+			err = sc.generateChallenge(t, balances.GetBlock(), input, balances, nil)
 			if err != nil {
 				return
 			}

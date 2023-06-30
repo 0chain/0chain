@@ -25,6 +25,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/stakepool"
 
+	chainstate "0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
@@ -34,7 +35,7 @@ import (
 
 const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
 
-//msgp:ignore StorageAllocation AllocationChallenges
+//msgp:ignore StorageAllocation
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
@@ -83,101 +84,25 @@ type ChallengeResponse struct {
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
-type AllocOpenChallenge struct {
-	ID        string           `json:"id"`
-	CreatedAt common.Timestamp `json:"created_at"`
-	BlobberID string           `json:"blobber_id"` // blobber id
-}
-
-type AllocationChallenges struct {
-	AllocationID   string                         `json:"allocation_id"`
-	OpenChallenges []*AllocOpenChallenge          `json:"open_challenges"`
-	ChallengeMap   map[string]*AllocOpenChallenge `json:"-" msg:"-"`
-}
-
-func (acs *AllocationChallenges) GetKey(globalKey string) datastore.Key {
-	return globalKey + ":allocation_challenges:" + acs.AllocationID
-}
-
-func (acs *AllocationChallenges) MarshalMsg(b []byte) ([]byte, error) {
-	d := allocationChallengesDecoder(*acs)
-	return d.MarshalMsg(b)
-}
-
-func (acs *AllocationChallenges) UnmarshalMsg(b []byte) ([]byte, error) {
-	d := &allocationChallengesDecoder{}
-	v, err := d.UnmarshalMsg(b)
-	if err != nil {
-		return nil, err
-	}
-
-	*acs = AllocationChallenges(*d)
-	acs.ChallengeMap = make(map[string]*AllocOpenChallenge)
-	for _, challenge := range acs.OpenChallenges {
-		acs.ChallengeMap[challenge.ID] = challenge
-	}
-
-	return v, nil
-}
-
-func (acs *AllocationChallenges) addChallenge(challenge *StorageChallenge) bool {
-	if acs.ChallengeMap == nil {
-		acs.ChallengeMap = make(map[string]*AllocOpenChallenge)
-	}
-
-	if _, ok := acs.ChallengeMap[challenge.ID]; !ok {
-		oc := &AllocOpenChallenge{
-			ID:        challenge.ID,
-			BlobberID: challenge.BlobberID,
-			CreatedAt: challenge.Created,
-		}
-		acs.OpenChallenges = append(acs.OpenChallenges, oc)
-		acs.ChallengeMap[challenge.ID] = oc
-		return true
-	}
-
-	return false
-}
-
-// Save saves the AllocationChallenges to MPT state
-func (acs *AllocationChallenges) Save(state cstate.StateContextI, scAddress string) error {
-	_, err := state.InsertTrieNode(acs.GetKey(scAddress), acs)
-	return err
-}
-
-func (acs *AllocationChallenges) removeChallenge(challenge *StorageChallenge) bool {
-	if _, ok := acs.ChallengeMap[challenge.ID]; !ok {
-		return false
-	}
-
-	delete(acs.ChallengeMap, challenge.ID)
-	for i := range acs.OpenChallenges {
-		if acs.OpenChallenges[i].ID == challenge.ID {
-			acs.OpenChallenges = append(
-				acs.OpenChallenges[:i], acs.OpenChallenges[i+1:]...)
-			return true
-		}
-	}
-
-	return true
-}
-
-type allocationChallengesDecoder AllocationChallenges
-
 // swagger:model StorageChallenge
 type StorageChallenge struct {
-	TotalValidators int                 `json:"total_validators" msg:"tv"`
-	Responded       int64               `json:"responded" msg:"r"`
-	Created         common.Timestamp    `json:"created" msg:"c"`
-	ID              string              `json:"id" msg:"i"`
-	AllocationID    string              `json:"allocation_id" msg:"a"`
-	BlobberID       string              `json:"blobber_id" msg:"b"`
-	ValidatorIDs    []string            `json:"validator_ids" msg:"vs"`
-	ValidatorIDMap  map[string]struct{} `json:"-" msg:"-"`
+	//TotalValidators int                 `json:"total_validators" msg:"tv"`
+	Responded      int64               `json:"responded" msg:"r"`
+	Created        common.Timestamp    `json:"created" msg:"c"`
+	ID             string              `json:"id" msg:"i"`
+	AllocationID   string              `json:"allocation_id" msg:"a"`
+	BlobberID      string              `json:"blobber_id" msg:"b"`
+	BlobberIndex   int8                `json:"-" msg:"-"`
+	ValidatorIDs   []string            `json:"validator_ids" msg:"vs"`
+	ValidatorIDMap map[string]struct{} `json:"-" msg:"-"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {
 	return storageChallengeKey(globalKey, sc.ID)
+}
+
+func (sc *StorageChallenge) GetID() string {
+	return sc.ID
 }
 
 func storageChallengeKey(globalKey, challengeID string) datastore.Key {
@@ -192,10 +117,35 @@ func (sc *StorageChallenge) Save(state cstate.StateContextI, scAddress string) e
 
 type ValidationNode struct {
 	provider.Provider
-	BaseURL           string             `json:"url"`
+	BaseURL           string             `json:"url" msg:"b"`
 	PublicKey         string             `json:"-" msg:"-"`
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
-	LastHealthCheck   common.Timestamp   `json:"last_health_check"`
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings" msg:"s"`
+	//LastHealthCheck   common.Timestamp   `json:"last_health_check" msg:"l"`
+}
+
+type ValidatorHealthCheck struct {
+	ID              string           `msg:"i"`
+	LastHealthCheck common.Timestamp `msg:"l"`
+}
+
+func getValidatorsHCsByIDs(ids []string, balances cstate.StateContextI) ([]*ValidatorHealthCheck, error) {
+	return chainstate.GetItemsByIDs(ids,
+		func(id string, balances chainstate.CommonStateContextI) (*ValidatorHealthCheck, error) {
+			return getValidatorHealthCheck(id, balances)
+		},
+		balances)
+}
+
+func getValidatorHealthCheck(
+	validatorID string,
+	balances cstate.CommonStateContextI,
+) (*ValidatorHealthCheck, error) {
+	vch := &ValidatorHealthCheck{ID: validatorID}
+	err := balances.GetTrieNode(provider.GetKey(validatorID), vch)
+	if err != nil {
+		return nil, err
+	}
+	return vch, nil
 }
 
 // validate the validator configurations
@@ -229,13 +179,13 @@ func (sn *ValidationNode) Decode(input []byte) error {
 	return nil
 }
 
-func (sn *ValidationNode) GetHash() string {
-	return util.ToHex(sn.GetHashBytes())
-}
-
-func (sn *ValidationNode) GetHashBytes() []byte {
-	return encryption.RawHash(sn.Encode())
-}
+//func (sn *ValidationNode) GetHash() string {
+//	return util.ToHex(sn.GetHashBytes())
+//}
+//
+//func (sn *ValidationNode) GetHashBytes() []byte {
+//	return encryption.RawHash(sn.Encode())
+//}
 
 type ValidatorNodes struct {
 	Nodes []*ValidationNode
@@ -416,9 +366,50 @@ type StorageAllocationStats struct {
 	LastestClosedChallengeTxn string `json:"latest_closed_challenge" msg:"lcc"`
 }
 
+// allocBlobberID is brief struct of AllocBlobber for decoding BlobberID field only
+type allocBlobberID struct {
+	BlobberID string `msg:"b"`
+}
+
+// blobberAlloc is brief struct of StorageAllocation for decoding AllocationRoot field only
+type blobberAlloc struct {
+	AllocationRoot  string       `msg:"ar"`
+	LastWriteMarker *wmTimestamp `msg:"wm"`
+}
+
+type wmTimestamp struct {
+	Timestamp common.Timestamp `msg:"t"`
+}
+
+// allocBlobbers is brief struct of StorageAllocation for decoding blobbers only
+type allocBlobbers struct {
+	ID            string            `msg:"-"`
+	Blobbers      []*allocBlobberID `msg:"bs"`
+	BlobberAllocs []*blobberAlloc   `msg:"bas"`
+}
+
+func (ab *allocBlobbers) blobberIndex(blobberID string) int {
+	for i, b := range ab.Blobbers {
+		if b.BlobberID == blobberID {
+			return i
+		}
+	}
+	return -1
+}
+
+func getAllocationBlobbers(balances cstate.StateContextI, allocID string) (*allocBlobbers, error) {
+	key := ADDRESS + allocID
+	var alloc allocBlobbers
+	err := balances.GetTrieNode(key, &alloc)
+	if err != nil {
+		return nil, err
+	}
+	return &alloc, nil
+}
+
 // AllocBlobber represents the blobber info for an allocation
 type AllocBlobber struct {
-	BlobberID     string        `json:"blobber_id" msg:"bid"`
+	BlobberID     string        `json:"blobber_id" msg:"b"`
 	MinLockDemand currency.Coin `json:"min_lock_demand" msg:"m"`
 
 	// Terms of the blobber allocation represents weighted average terms
@@ -696,6 +687,15 @@ func WithTokenTransfer(value currency.Coin, clientId, toClientId string) WithOpt
 
 		return value, nil
 	}
+}
+
+func (sa *StorageAllocation) blobberIndex(blobberID string) int {
+	for i, b := range sa.Blobbers {
+		if b.BlobberID == blobberID {
+			return i
+		}
+	}
+	return -1
 }
 
 func (sa *StorageAllocation) addToWritePool(
@@ -1075,7 +1075,7 @@ func (sa *StorageAllocation) minLockDemand(terms Terms, date common.Timestamp) (
 
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
-type filterValidatorFunc func(validator *ValidationNode) (kick bool, err error)
+type filterValidatorFunc func(validator *ValidatorHealthCheck) (kick bool, err error)
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(
@@ -1283,50 +1283,78 @@ func getMaxChallengeCompletionTime() time.Duration {
 // removeExpiredChallenges removes all expired challenges from the allocation,
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
-func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp, balances cstate.StateContextI) (map[string]string, error) {
-	var expiredChallengeBlobberMap = make(map[string]string)
+func (sa *StorageAllocation) removeExpiredChallenges(
+	allocChallenges *AllocationChallenges,
+	acs *AllocationChallengeStats,
+	now common.Timestamp,
+	balances cstate.StateContextI) ([]*AllocOpenChallenge, error) {
+	if len(allocChallenges.OpenChallenges) == 0 {
+		// no open challenges, nothing to do
+		return nil, nil
+	}
 
-	cct := getMaxChallengeCompletionTime()
+	var (
+		expiredChallengeBlobberMap = make(map[string]struct{})
+		cct                        = getMaxChallengeCompletionTime()
+	)
 
-	var nonExpiredChallenges []*AllocOpenChallenge
-
+	//var nonExpiredChallenges []*AllocOpenChallenge
+	var expiredChallenges []*AllocOpenChallenge
 	for _, oc := range allocChallenges.OpenChallenges {
 		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
 		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
-		logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
-		if _, ok := expiredChallengeBlobberMap[oc.ID]; ok {
-			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ID))
+		logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ChallengeID))
+		if _, ok := expiredChallengeBlobberMap[oc.ChallengeID]; ok {
+			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ChallengeID))
 			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
 		}
 
-		if !isChallengeExpired(now, oc.CreatedAt, cct) {
-			nonExpiredChallenges = append(nonExpiredChallenges, oc)
-			continue
+		if !isChallengeExpired(now, common.Timestamp(oc.CreatedAt), cct) {
+			//expiredChallenges = append(expiredChallenges, oc)
+			//continue
+			break
 		}
+		expiredChallenges = append(expiredChallenges, oc)
+
+		//if !isChallengeExpired(now, common.Timestamp(oc.CreatedAt), cct) {
+		//	nonExpiredChallenges = append(nonExpiredChallenges, oc)
+		//	continue
+		//}
 
 		// expired
-		expiredChallengeBlobberMap[oc.ID] = oc.BlobberID
+		expiredChallengeBlobberMap[oc.ChallengeID] = struct{}{}
 
-		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
-		if ok {
-			ba.Stats.FailedChallenges++
-			ba.Stats.OpenChallenges--
-			sa.Stats.FailedChallenges++
-			sa.Stats.OpenChallenges--
-
-			emitUpdateChallenge(&StorageChallenge{
-				ID:           oc.ID,
-				AllocationID: sa.ID,
-				BlobberID:    oc.BlobberID,
-			}, false, balances, sa.Stats, ba.Stats)
-
+		acs.FailChallenges(oc.BlobberIndex)
+		bsts, err := acs.GetBlobberStatsByIndex(int(oc.BlobberIndex))
+		if err != nil {
+			return nil, err
 		}
+
+		emitUpdateChallenge(&StorageChallenge{
+			ID:           oc.ChallengeID,
+			AllocationID: sa.ID,
+			BlobberID:    sa.Blobbers[oc.BlobberIndex].BlobberID,
+		}, false, balances, acs.GetAllocStats(), bsts)
+
+		//ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
+		//if ok {
+		//	ba.Stats.FailedChallenges++
+		//	ba.Stats.OpenChallenges--
+		//	sa.Stats.FailedChallenges++
+		//	sa.Stats.OpenChallenges--
+		//
+		//	emitUpdateChallenge(&StorageChallenge{
+		//		ID:           oc.ID,
+		//		AllocationID: sa.ID,
+		//		BlobberID:    oc.BlobberID,
+		//	}, false, balances, sa.Stats, ba.Stats)
+		//
+		//}
 	}
 
-	allocChallenges.OpenChallenges = nonExpiredChallenges
+	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[len(expiredChallenges):]
 
-	return expiredChallengeBlobberMap, nil
+	return expiredChallenges, nil
 }
 
 func (sa *StorageAllocation) getTerms(blobberID string) (Terms, bool) {
@@ -1570,3 +1598,43 @@ func (vt *ValidationTicket) Validate(challengeID, blobberID string) error {
 
 	return nil
 }
+
+func partitionsChallenges(balances cstate.StateContextI) (*partitions.Partitions, error) {
+	parts, err := partitions.CreateIfNotExists(balances, "Challenges", 5)
+	if err != nil {
+		return nil, fmt.Errorf("could not create challenges partitions: %v", err)
+	}
+
+	return parts, nil
+}
+
+func partitionsChallengesAdd(balances cstate.StateContextI, ch *StorageChallenge) error {
+	parts, err := partitionsChallenges(balances)
+	if err != nil {
+		return err
+	}
+
+	if err := parts.Add(balances, ch); err != nil {
+		return fmt.Errorf("could not add challenge to partitions: %v", err)
+	}
+
+	if err := parts.Save(balances); err != nil {
+		return fmt.Errorf("could not save challenges partitions: %v", err)
+	}
+
+	return nil
+}
+
+//func partitionsChallengesHead(balances cstate.StateContextI) (*parts, error) {
+//	parts, err := partitionsChallenges(balances)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	ch, err := parts.Head(balances)
+//	if err != nil {
+//		return nil, fmt.Errorf("could not get head challenge from partitions: %v", err)
+//	}
+//
+//	return ch.(*StorageChallenge), nil
+//}

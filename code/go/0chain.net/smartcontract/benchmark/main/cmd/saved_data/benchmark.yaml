@@ -1,0 +1,208 @@
+config: testdata/benchmark.yaml
+dbs:
+    events:
+        aggregate_period: 5
+        conn_max_lifetime: 20s
+        enabled: false
+        host: postgres
+        max_idle_conns: 100
+        max_open_conns: 200
+        name: events_db
+        password: postgres
+        port: 5432
+        user: postgres
+    settings:
+        aggregate_period: 10
+        debug: false
+        page_limit: 50
+        partition_change_period: 100
+        partition_keep_count: 10
+internal:
+    available_keys: 10
+    bad: 50ms
+    bench_data_list_length: 20
+    colour: true
+    control_m: 25000
+    control_n: 90
+    mpt_creation_time: 1688124766
+    mpt_root: 3173a378f03a66f3d0ed1a26aba5e1b314320cd33b3f9bf4f62787116d8d2f57
+    satisfactory: 1ms
+    show_output: true
+    signature_scheme: bls0chain
+    start_tokens: 100000000000000
+    t: 2
+    time_unit: 720h
+    worry: 10ms
+load: ""
+options:
+    load_concurrency: 4
+    omitted_tests: []
+    run_tests:
+        - storage.generate_challenge
+    save_path: ./saved_data
+    test_suites:
+        - storage
+    verbose: true
+simulation:
+    num_active_clients: 210
+    num_active_miners: 100
+    num_allocation_payers: 1
+    num_allocation_payers_pools: 1
+    num_allocations: 300
+    num_authorizers: 12
+    num_blobber_delegates: 10
+    num_blobbers: 30
+    num_blobbers_per_allocation: 9
+    num_blocks: 200
+    num_challenges_blobber: 1
+    num_clients: 210
+    num_free_storage_assigners: 1
+    num_miner_delegates: 10
+    num_miners: 100
+    num_reward_partition_blobber: 5
+    num_sharder_delegates: 10
+    num_transactions_per_block: 10
+    num_validators: 10
+    num_vesting_destinations_client: 1
+    num_write_redeem_allocation: 1
+    nun_active_sharders: 20
+    nun_sharders: 20
+smart_contracts:
+    faucetsc:
+        owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    minersc:
+        block_reward: 0.21
+        contribute_rounds: 50
+        cost:
+            add_miner: 100
+            add_sharder: 100
+            addtodelegatepool: 100
+            collect_reward: 100
+            contributempk: 100
+            delete_miner: 100
+            delete_sharder: 100
+            deletefromdelegatepool: 100
+            feespaid: 100
+            miner_health_check: 100
+            mintedtokens: 100
+            payfees: 0
+            sharder_health_check: 100
+            sharder_keep: 100
+            sharesignsorshares: 100
+            update_globals: 100
+            update_miner_settings: 100
+            update_settings: 100
+            update_sharder_settings: 100
+            wait: 100
+        epoch: 15000000
+        interest_decline_rate: 0.1
+        interest_rate: 0
+        k_percent: 0.75
+        max_charge: 0.5
+        max_delegates: 200
+        max_mint: 1.5e+06
+        max_n: 7
+        max_s: 2
+        max_stake: 170
+        min_delegates: 0
+        min_n: 3
+        min_s: 1
+        min_stake: 0
+        num_miner_delegates_rewarded: 10
+        num_sharder_delegates_rewarded: 5
+        num_sharders_rewarded: 1
+        owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+        publish_rounds: 50
+        reward_decline_rate: 0.1
+        reward_rate: 1
+        reward_round_frequency: 250
+        share_ratio: 0.8
+        share_rounds: 50
+        start_rounds: 50
+        t_percent: 0.66
+        wait_rounds: 50
+        x_percent: 0.7
+    storagesc:
+        block_reward:
+            blobber_ratio: 50
+            block_reward: 1
+            block_reward_change_period: 10000
+            block_reward_change_ratio: 0.1
+            gamma:
+                a: 10
+                alpha: 0.2
+                b: 9
+            miner_ratio: 40
+            qualifying_stake: 1
+            sharder_ratio: 10
+            trigger_period: 30
+            zeta:
+                i: 1
+                k: 0.9
+                mu: 0.2
+        challenge_enabled: true
+        diverse_blobbers: false
+        failed_challenges_to_cancel: 0
+        free_allocation_settings:
+            data_shards: 2
+            duration: 50h
+            max_challenge_completion_time: 1m
+            mint_amount: 0.5
+            parity_shards: 2
+            read_pool_fraction: 0.2
+            read_price_range:
+                max: 1
+                min: 0
+            size: 10000000
+            write_price_range:
+                max: 1
+                min: 0
+        max_blobbers_per_allocation: 40
+        max_challenge_completion_time: 3m
+        max_challenges_per_generation: 1
+        max_charge: 0.2
+        max_delegates: 200
+        max_individual_free_allocation: 1700
+        max_mint: 1.5e+06
+        max_offer_duration: 744h
+        max_read_price: 100
+        max_stake: 20000
+        max_total_free_allocation: 10000
+        max_write_price: 100
+        min_alloc_duration: 50h
+        min_alloc_size: 1024
+        min_blobber_capacity: 1024
+        min_offer_duration: 10h
+        min_stake: 0
+        owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+        readpool:
+            min_lock: 0.3
+        stakepool:
+            min_lock: 0.1
+        validators_per_challenge: 2
+        writepool:
+            min_lock: 0.1
+    vestingsc:
+        max_description_length: 100
+        max_destinations: 10
+        max_duration: 1000h
+        min_duration: 1m
+        min_lock: 0.01
+        owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    zcnsc:
+        burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
+        cost:
+            add-authorizer: 100
+            authorizer-health-check: 100
+            burn: 100
+            delete-authorizer: 100
+            mint: 100
+        max_delegates: 10
+        max_fee: 100
+        min_authorizers: 1
+        min_burn: 1
+        min_lock: 0
+        min_mint: 1
+        min_stake: 3
+        owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+        percent_authorizers: 0

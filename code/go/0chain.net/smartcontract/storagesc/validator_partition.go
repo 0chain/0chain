@@ -7,15 +7,15 @@ import (
 
 //go:generate msgp -v -io=false -tests=false -unexported=true
 
-const allValidatorsPartitionSize = 50
+const allValidatorsPartitionSize = 5
 
 func getValidatorsList(state state.StateContextI) (*partitions.Partitions, error) {
 	return partitions.GetPartitions(state, ALL_VALIDATORS_KEY)
 }
 
 type ValidationPartitionNode struct {
-	Id  string `json:"id"`
-	Url string `json:"url"`
+	Id string `json:"id" msg:"i"`
+	//Url string `json:"url" msg:"u"`
 }
 
 func (vn *ValidationPartitionNode) GetID() string {

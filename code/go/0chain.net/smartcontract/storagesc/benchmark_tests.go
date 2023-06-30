@@ -118,12 +118,23 @@ func BenchmarkTests(
 		return ssc.newAllocationRequest(t, r, b, timings)
 	}
 
+	freeAllocationRequestF := func(
+		txn *transaction.Transaction,
+		input []byte,
+		balances cstate.StateContextI,
+	) (string, error) {
+		return ssc.freeAllocationRequest(txn, input, balances, timings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
 			name:     "storage.read_redeem",
 			endpoint: ssc.commitBlobberRead,
 			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("read_redeem"),
+				},
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
@@ -291,7 +302,7 @@ func BenchmarkTests(
 		},
 		{
 			name:     "storage.free_allocation_request",
-			endpoint: ssc.freeAllocationRequest,
+			endpoint: freeAllocationRequestF,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -338,6 +349,7 @@ func BenchmarkTests(
 				})
 				return bytes
 			}(),
+			timings: timings,
 		},
 		{
 			name:     "storage.free_update_allocation",
@@ -831,7 +843,7 @@ func BenchmarkTests(
 					return "", err2
 				}
 				if challengesEnabled {
-					err := ssc.generateChallenge(txn, balances.GetBlock(), marshal, balances)
+					err := ssc.generateChallenge(txn, balances.GetBlock(), marshal, balances, timings)
 					if err != nil {
 						return "", nil
 					}
@@ -843,7 +855,8 @@ func BenchmarkTests(
 			txn: &transaction.Transaction{
 				CreationDate: creationTime,
 			},
-			input: nil,
+			input:   nil,
+			timings: timings,
 		},
 		// todo "update_config" waiting for PR489
 	}

@@ -7,4 +7,4 @@ package storagesc
 
 func afterInsertBlobber(id string)                                 {}
 func afterAddChallenge(challengeID string, validatorsIDs []string) {}
-func beforeEmitAddChallenge(challenge *StorageChallengeResponse)   {}
+func beforeEmitAddChallenge(challenge *challengeInfo)              {}

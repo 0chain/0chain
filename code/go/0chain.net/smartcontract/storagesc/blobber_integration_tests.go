@@ -30,7 +30,7 @@ func afterAddChallenge(challengeID string, validatorsIDs []string) {
 
 }
 
-func beforeEmitAddChallenge(challenge *StorageChallengeResponse) {
+func beforeEmitAddChallenge(challenge *challengeInfo) {
 	var (
 		client = crpc.Client()
 		state  = client.State()
