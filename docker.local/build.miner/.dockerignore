@@ -3,3 +3,7 @@ logs/
 .git
 *.md
 .cache
+awsnet
+docker.local/miner*
+docker.local/sharder*
+docker.local/conductor.backup_logs
