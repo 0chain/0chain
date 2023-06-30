@@ -2,10 +2,7 @@
 
 set -e
 
-for running in $(docker ps -q)
-do
-    docker stop "$running"
-done
+docker stop $(docker ps -q)
 
 ./docker.local/bin/clean.sh
 
