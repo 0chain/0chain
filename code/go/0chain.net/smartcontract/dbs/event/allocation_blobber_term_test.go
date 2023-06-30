@@ -51,25 +51,22 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationID:  allocId,
-				BlobberID:     blobber1Id,
-				ReadPrice:     int64(currency.Coin(29)),
-				WritePrice:    int64(currency.Coin(31)),
-				MinLockDemand: 37.0,
+				AllocationID: allocId,
+				BlobberID:    blobber1Id,
+				ReadPrice:    int64(currency.Coin(29)),
+				WritePrice:   int64(currency.Coin(31)),
 			},
 			{
-				AllocationID:  allocId,
-				BlobberID:     blobber2Id,
-				ReadPrice:     int64(currency.Coin(41)),
-				WritePrice:    int64(currency.Coin(43)),
-				MinLockDemand: 47.0,
+				AllocationID: allocId,
+				BlobberID:    blobber2Id,
+				ReadPrice:    int64(currency.Coin(41)),
+				WritePrice:   int64(currency.Coin(43)),
 			},
 		}
 
 		err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
 		require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
 
-		var term *AllocationBlobberTerm
 		var res []AllocationBlobberTerm
 		limit := common2.Pagination{
 			Offset:       0,
@@ -79,12 +76,8 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		res, err = eventDb.GetAllocationBlobberTerms(terms[0].AllocationID, limit)
 		require.Equal(t, 2, len(res), "AllocationBlobberTerm not getting inserted")
 
-		terms[1].MinLockDemand = 70.0
 		err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
 		require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
-
-		term, err = eventDb.GetAllocationBlobberTerm(terms[1].AllocationID, terms[1].BlobberID)
-		require.Equal(t, terms[1].MinLockDemand, term.MinLockDemand, "Error while overriding AllocationBlobberTerm in event Database")
 	})
 
 	t.Run("test edb.updateAllocationBlobberTerms", func(t *testing.T) {
@@ -117,21 +110,19 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			BaseURL: "http://localhost:3232",
 		}).Error
 		require.NoError(t, err, "blobber couldn't be created")
-		
+
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationID:  allocId,
-				BlobberID:     blobber1Id,
-				ReadPrice:     int64(currency.Coin(29)),
-				WritePrice:    int64(currency.Coin(31)),
-				MinLockDemand: 37.0,
+				AllocationID: allocId,
+				BlobberID:    blobber1Id,
+				ReadPrice:    int64(currency.Coin(29)),
+				WritePrice:   int64(currency.Coin(31)),
 			},
 			{
-				AllocationID:  allocId,
-				BlobberID:     blobber2Id,
-				ReadPrice:     int64(currency.Coin(41)),
-				WritePrice:    int64(currency.Coin(43)),
-				MinLockDemand: 47.0,
+				AllocationID: allocId,
+				BlobberID:    blobber2Id,
+				ReadPrice:    int64(currency.Coin(41)),
+				WritePrice:   int64(currency.Coin(43)),
 			},
 		}
 
@@ -140,17 +131,15 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		err = eventDb.updateAllocationBlobberTerms([]AllocationBlobberTerm{
 			{
-				AllocationID:  allocId,
-				BlobberID:     blobber1Id,
-				ReadPrice:     int64(currency.Coin(59)),
-				WritePrice:    int64(currency.Coin(61)),
-				MinLockDemand: 57.0,
+				AllocationID: allocId,
+				BlobberID:    blobber1Id,
+				ReadPrice:    int64(currency.Coin(59)),
+				WritePrice:   int64(currency.Coin(61)),
 			}, {
-				AllocationID:  allocId,
-				BlobberID:     blobber2Id,
-				ReadPrice:     int64(currency.Coin(61)),
-				WritePrice:    int64(currency.Coin(63)),
-				MinLockDemand: 67.0,
+				AllocationID: allocId,
+				BlobberID:    blobber2Id,
+				ReadPrice:    int64(currency.Coin(61)),
+				WritePrice:   int64(currency.Coin(63)),
 			},
 		})
 		require.NoError(t, err, "Error while updating Allocation's Blobber's AllocationBlobberTerm to event database")
@@ -160,14 +149,12 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		require.Equal(t, int64(currency.Coin(59)), term.ReadPrice)
 		require.Equal(t, int64(currency.Coin(61)), term.WritePrice)
-		require.Equal(t, float64(57.0), term.MinLockDemand)
 
 		term, err = eventDb.GetAllocationBlobberTerm(allocId, blobber2Id)
 		require.NoError(t, err, "Error while reading Allocation Blobber Terms")
 
 		require.Equal(t, int64(currency.Coin(61)), term.ReadPrice)
 		require.Equal(t, int64(currency.Coin(63)), term.WritePrice)
-		require.Equal(t, float64(67.0), term.MinLockDemand)
 	})
 }
 
@@ -244,39 +231,39 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 			name: "get allocations by blobber id, ascending",
 			args: args{
 				blobberId: blobbers[0].ID,
-				limit:    common2.Pagination{
-					Offset: 0,
-					Limit:  10,
+				limit: common2.Pagination{
+					Offset:       0,
+					Limit:        10,
 					IsDescending: false,
 				},
 			},
-			want: []string{allocationIds[0], allocationIds[2], allocationIds[4]},
+			want:    []string{allocationIds[0], allocationIds[2], allocationIds[4]},
 			wantErr: false,
 		},
 		{
 			name: "get allocations by blobber id, with pagination descending",
 			args: args{
 				blobberId: blobbers[2].ID,
-				limit:    common2.Pagination{
-					Offset: 1,
-					Limit:  2,
+				limit: common2.Pagination{
+					Offset:       1,
+					Limit:        2,
 					IsDescending: true,
 				},
 			},
-			want: []string{allocationIds[3], allocationIds[1]},
+			want:    []string{allocationIds[3], allocationIds[1]},
 			wantErr: false,
 		},
 		{
 			name: "get allocations by blobber id, with pagination ascending",
 			args: args{
 				blobberId: blobbers[2].ID,
-				limit:    common2.Pagination{
-					Offset: 2,
-					Limit:  2,
+				limit: common2.Pagination{
+					Offset:       2,
+					Limit:        2,
 					IsDescending: false,
 				},
 			},
-			want: []string{allocationIds[3], allocationIds[4]},
+			want:    []string{allocationIds[3], allocationIds[4]},
 			wantErr: false,
 		},
 	}
@@ -300,10 +287,9 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 
 func mockAllocationBlobberTerm(allocationId string, blobberId string) AllocationBlobberTerm {
 	return AllocationBlobberTerm{
-		AllocationID:  allocationId,
-		BlobberID:     blobberId,
-		ReadPrice:     int64(currency.Coin(41)),
-		WritePrice:    int64(currency.Coin(43)),
-		MinLockDemand: 47.0,
+		AllocationID: allocationId,
+		BlobberID:    blobberId,
+		ReadPrice:    int64(currency.Coin(41)),
+		WritePrice:   int64(currency.Coin(43)),
 	}
 }
