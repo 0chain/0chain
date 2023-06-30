@@ -23,7 +23,7 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
-		eventsChannel: make(chan blockEvents, 1),
+		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
@@ -44,7 +44,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
-		eventsChannel: make(chan blockEvents, 1),
+		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
@@ -58,7 +58,7 @@ type EventDb struct {
 	dbs.Store
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
-	eventsChannel chan blockEvents
+	eventsChannel chan BlockEvents
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -146,7 +146,7 @@ func (edb *EventDb) Debug() bool {
 	return edb.settings.Debug
 }
 
-type blockEvents struct {
+type BlockEvents struct {
 	block     string
 	blockSize int
 	round     int64

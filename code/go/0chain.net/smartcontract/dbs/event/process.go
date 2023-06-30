@@ -60,7 +60,7 @@ func (edb *EventDb) ProcessEvents(
 		return nil, err
 	}
 
-	event := blockEvents{
+	event := BlockEvents{
 		events:    es,
 		round:     round,
 		block:     block,
@@ -131,22 +131,22 @@ func (edb *EventDb) ProcessEvents(
 	}
 }
 
-func (edb *EventDb) mergeEvents(
+func (edb *EventDb) MergeEvents(
 	ctx context.Context,
 	events []Event,
 	round int64,
 	block string,
 	blockSize int,
-) (blockEvents, *EventDb, error) {
+) (BlockEvents, *EventDb, error) {
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
-		return blockEvents{}, nil, err
+		return BlockEvents{}, nil, err
 	}
 	tx, err := edb.Begin(ctx)
 	if err != nil {
-		return blockEvents{}, nil, err
+		return BlockEvents{}, nil, err
 	}
-	return blockEvents{
+	return BlockEvents{
 		events:    es,
 		round:     round,
 		block:     block,
@@ -274,7 +274,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	for {
 		es := <-edb.eventsChannel
 
-		s, err := edb.work(ctx, gs, es, &p)
+		s, err := edb.Work(ctx, gs, es, &p)
 		if err != nil {
 			if config.Development() { //panic in case of development
 				log.Panic(err)
@@ -286,8 +286,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
-func (edb *EventDb) work(ctx context.Context,
-	gs *Snapshot, es blockEvents, currentPartition *int64) (*Snapshot, error) {
+func (edb *EventDb) Work(ctx context.Context,
+	gs *Snapshot, es BlockEvents, currentPartition *int64) (*Snapshot, error) {
 	tx := es.tx
 
 	var commit bool
@@ -408,11 +408,11 @@ func (edb *EventDb) managePartitions(round int64) {
 	}
 }
 
-func isNotAddBlockEvent(es blockEvents) bool {
+func isNotAddBlockEvent(es BlockEvents) bool {
 	return !(len(es.events) == 1 && es.events[0].Type == TypeChain && es.events[0].Tag == TagAddBlock)
 }
 
-func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, error) {
+func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, error) {
 	if gs != nil {
 		return tx.updateSnapshots(es, gs)
 	}
@@ -499,7 +499,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 	return tags, nil
 }
 
-func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, error) {
+func (edb *EventDb) updateSnapshots(e BlockEvents, s *Snapshot) (*Snapshot, error) {
 	round := e.round
 	var events []Event
 	for _, ev := range e.events { //filter out round events

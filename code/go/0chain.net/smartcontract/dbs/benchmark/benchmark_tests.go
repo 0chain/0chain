@@ -1,7 +1,9 @@
-package event
+package benchmark
 
 import (
 	"testing"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -11,7 +13,7 @@ import (
 
 type DbTest struct {
 	name      string
-	events    []Event
+	events    []event.Event
 	blockSize int
 	ctx       context.Context
 }
@@ -28,7 +30,7 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	if len(et.events) == 0 {
 		return nil
 	}
-	be, tx, err := sCtx.GetEventDB().mergeEvents(
+	be, tx, err := sCtx.GetEventDB().MergeEvents(
 		et.ctx,
 		et.events,
 		et.events[0].BlockNumber,
@@ -38,16 +40,16 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	if err != nil {
 		return err
 	}
-	var gs *Snapshot
+	var gs *event.Snapshot
 	p := int64(-1)
-	_, err = sCtx.GetEventDB().work(et.ctx, gs, be, &p)
+	_, err = sCtx.GetEventDB().Work(et.ctx, gs, be, &p)
 	if err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-func GetBenchmarkTestSuite(eventsMap map[string][]Event) bk.TestSuite {
+func GetBenchmarkTestSuite(eventsMap map[string][]event.Event) bk.TestSuite {
 	var edbTests []bk.BenchTestI
 	for key, events := range eventsMap {
 		edbTests = append(edbTests, DbTest{
@@ -64,26 +66,3 @@ func GetBenchmarkTestSuite(eventsMap map[string][]Event) bk.TestSuite {
 		ReadOnly:   true,
 	}
 }
-
-/* piers remove
-func GetBenchmarkTests(
-	eventsMap map[string][]Event,
-) func(bk.BenchData, bk.SignatureScheme) bk.TestSuite {
-	var edbTests []bk.BenchTestI
-	for key, events := range eventsMap {
-		edbTests = append(edbTests, DbTest{
-			name:      key,
-			events:    events,
-			blockSize: 1,
-			ctx:       context.TODO(),
-		})
-	}
-	return func(_ bk.BenchData, _ bk.SignatureScheme) bk.TestSuite {
-		return bk.TestSuite{
-			Source:     bk.EventDatabase,
-			Benchmarks: edbTests,
-			ReadOnly:   true,
-		}
-	}
-}
-*/

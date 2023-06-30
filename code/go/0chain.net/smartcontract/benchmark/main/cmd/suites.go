@@ -21,9 +21,9 @@ import (
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
-
 	"0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	ebk "0chain.net/smartcontract/dbs/benchmark"
 	"github.com/0chain/common/core/util"
 )
 
@@ -79,7 +79,7 @@ func runSuites(
 	vestingsc.SetupRestHandler(restSetup)
 	zcnsc.SetupRestHandler(restSetup)
 
-	var eventMap map[string][]event.Event
+	var eventMap = make(map[string][]event.Event)
 	for _, suite := range suites {
 		log.Println("starting suite ==>", suite.Source)
 		wg.Add(1)
@@ -92,7 +92,9 @@ func runSuites(
 				var events map[string][]event.Event
 				suiteResult, events = runSuite(suite, mpt, root, data)
 				for key, value := range events {
-					eventMap[suite.Name+"."+key] = value
+					if len(value) > 0 {
+						eventMap[suite.Name+"."+key] = value
+					}
 				}
 			}
 			if suiteResult == nil {
@@ -117,7 +119,7 @@ func runSuites(
 				log.Fatal(fmt.Sprintf("error reading event db benchmarks file %s: %v",
 					viper.GetString(benchmark.OptionsEventDatabaseEventFile), err))
 			}
-			runEventDatabaseSuite(event.GetBenchmarkTestSuite(eventMap), data.EventDb)
+			runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap), data.EventDb)
 		}
 	}
 	return results
@@ -173,7 +175,7 @@ func runSuite(
 	data *benchmark.BenchData,
 ) ([]benchmarkResults, map[string][]event.Event) {
 	var benchmarkResult []benchmarkResults
-	var benchmarkEvents map[string][]event.Event
+	var benchmarkEvents = make(map[string][]event.Event)
 	var wg sync.WaitGroup
 
 	for _, bm := range suite.Benchmarks {
@@ -221,6 +223,10 @@ func runSuite(
 						prevMptHashRoot = currMptHashRoot
 					}
 				}
+				events := balances.GetEvents()
+				name := bm.Name()
+				events = events
+				name = name
 				benchmarkEvents[bm.Name()] = balances.GetEvents()
 			})
 			log.Println(bm.Name(), "run count is:", runCount)
