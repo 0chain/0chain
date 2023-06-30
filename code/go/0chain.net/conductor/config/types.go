@@ -104,6 +104,18 @@ func (n *BlobberDelete) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
 
+type GenerateChallege struct {
+	BlobberID string `json:"blobber_id" mapstructure:"blobber_id"`
+}
+
+func (g *GenerateChallege) Decode(val interface{}) error {
+	return mapstructure.Decode(val, g)
+}
+
+func NewGenerateChallenge() *GenerateChallege {
+	return &GenerateChallege{}
+}
+
 // AdversarialValidator represents the blobber_delete directive state.
 type AdversarialValidator struct {
 	ID                 string `json:"id" yaml:"id" mapstructure:"id"`
