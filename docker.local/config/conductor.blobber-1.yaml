@@ -7,19 +7,12 @@
 # enabled test cases sets
 enable:
   - "Blobber Up/Down"
-## DISABLED: Test does not match description
-#  - "Invalid sharder response"
 
 # sets of test cases
 sets:
   - name: "Blobber Up/Down"
     tests:
       - "One blobber down"
-## DISABLED: Test does not match description
-#  - name: "Invalid sharder response"
-#    tests:
-#      - "Sharder sends wrong transaction verification"
-
 # test cases
 tests:
   ## One blobber to go down after allocation was created.
@@ -40,16 +33,10 @@ tests:
       - wait_round:
           round: 15 # just wait the BC starts
       #wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
           start: true
-      # - wait_round:
-      #     round: 250 # just wait the BC starts
-      # - wait_add:
-      #     blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
-      #     timeout: '1m'
       - command:
           name: 'init_allocation'
           timeout: '15m'
@@ -58,14 +45,10 @@ tests:
           name: 'list'
       - command:
           name: 'download'
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - command:
           name: 'delete'
-      - command:
-          name: "sleep_20s"
-      - command:
-          name: "sleep_20s"
+      - sleep: "40s"
       - command:
           name: 'upload'
       - cleanup_bc: {}
