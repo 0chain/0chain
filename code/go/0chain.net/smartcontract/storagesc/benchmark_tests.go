@@ -836,20 +836,21 @@ func BenchmarkTests(
 				_ []byte,
 				balances cstate.StateContextI,
 			) (string, error) {
-				challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
-				input := &GenerateChallengeInput{Round: balances.GetBlock().Round}
-				marshal, err2 := json.Marshal(input)
-				if err2 != nil {
-					return "", err2
+				//challengesEnabled := viper.GetBool(bk.StorageChallengeEnabled)
+				//input := &GenerateChallengeInput{Round: balances.GetBlock().Round}
+				////marshal, err2 := json.Marshal(input)
+				////if err2 != nil {
+				////	return "", err2
+				////}
+				//if challengesEnabled {
+				input := fmt.Sprintf(`{"round": %v}`, balances.GetBlock().Round)
+				err := ssc.generateChallenge(txn, balances.GetBlock(), []byte(input), balances, timings)
+				if err != nil {
+					return "", err
 				}
-				if challengesEnabled {
-					err := ssc.generateChallenge(txn, balances.GetBlock(), marshal, balances, timings)
-					if err != nil {
-						return "", nil
-					}
-				} else {
-					return "OpenChallenges disabled in the config", nil
-				}
+				//} else {
+				//	return "OpenChallenges disabled in the config", nil
+				//}
 				return "OpenChallenges generated", nil
 			},
 			txn: &transaction.Transaction{

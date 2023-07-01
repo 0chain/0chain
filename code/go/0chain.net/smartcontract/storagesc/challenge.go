@@ -897,7 +897,8 @@ type challengeInfo struct {
 }
 
 type challengeOutput struct {
-	alloc            *allocBlobbers
+	//alloc            *allocBlobbers
+	alloc            *StorageAllocation
 	storageChallenge *StorageChallenge
 	allocChallenges  *AllocationChallenges
 	challInfo        *challengeInfo
@@ -962,7 +963,8 @@ type blobberAllocRootWM struct {
 }
 
 type challengeAllocBlobber struct {
-	alloc                *allocBlobbers
+	//alloc                *allocBlobbers
+	alloc                *StorageAllocation
 	allocChallenges      *AllocationChallenges
 	allocChallengesStats *AllocationChallengeStats
 	allocBlobber         *blobberAllocRootWM
@@ -983,11 +985,13 @@ func (sc *StorageSmartContract) selectAllocBlobberForChallenge(
 	allocID := allocs[randomIndex].AllocID
 
 	cr := concurrentReader{}
-	var alloc *allocBlobbers
+	//var alloc *allocBlobbers
+	var alloc *StorageAllocation
 	var acs *AllocationChallengeStats
 	cr.add(func() error {
 		var err error
-		alloc, err = getAllocationBlobbers(balances, allocID)
+		//alloc, err = getAllocationBlobbers(balances, allocID)
+		alloc, err = sc.getAllocation(allocID, balances)
 		if err != nil {
 			return fmt.Errorf("could not get allocation: %v", err)
 		}
@@ -1333,7 +1337,8 @@ func (sc *StorageSmartContract) generateChallenge(t *transaction.Transaction,
 
 func removeExpiredChallenges(
 	allocID string,
-	abs *allocBlobbers,
+	//abs *allocBlobbers,
+	abs *StorageAllocation,
 	allocChallenges *AllocationChallenges,
 	acs *AllocationChallengeStats,
 	now common.Timestamp,
@@ -1386,9 +1391,9 @@ func removeExpiredChallenges(
 }
 
 func (sc *StorageSmartContract) addChallenge(
-	//alloc *StorageAllocation,
 	allocID string,
-	alloc *allocBlobbers,
+	//alloc *allocBlobbers,
+	alloc *StorageAllocation,
 	challenge *challengeInfo,
 	allocChallenges *AllocationChallenges,
 	acs *AllocationChallengeStats,
@@ -1453,19 +1458,19 @@ func (sc *StorageSmartContract) addChallenge(
 	if err := acs.AddAllocOpenChallenge(bIdx); err != nil {
 		return common.NewErrorf("add_challenge", "update alloc open challenge stats failed: %v", err)
 	}
-	if err := acs.Save(balances, alloc.ID); err != nil {
-		return common.NewErrorf("add_challenge", "save alloc challenge stats failed: %v", err)
-	}
+	//if err := acs.Save(balances, alloc.ID); err != nil {
+	//	return common.NewErrorf("add_challenge", "save alloc challenge stats failed: %v", err)
+	//}
 
 	//alloc.Stats.OpenChallenges++
 	//alloc.Stats.TotalChallenges++
 	//blobAlloc.Stats.OpenChallenges++
 	//blobAlloc.Stats.TotalChallenges++
 
-	//if err := alloc.save(balances, sc.ID); err != nil {
-	//	return common.NewErrorf("add_challenge",
-	//		"error storing allocation: %v", err)
-	//}
+	if err := alloc.save(balances, sc.ID); err != nil {
+		return common.NewErrorf("add_challenge",
+			"error storing allocation: %v", err)
+	}
 
 	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
 
