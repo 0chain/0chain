@@ -987,7 +987,7 @@ func (sc *StorageSmartContract) selectAllocBlobberForChallenge(
 	cr := concurrentReader{}
 	//var alloc *allocBlobbers
 	var alloc *StorageAllocation
-	var acs *AllocationChallengeStats
+	//var acs *AllocationChallengeStats
 	cr.add(func() error {
 		var err error
 		//alloc, err = getAllocationBlobbers(balances, allocID)
@@ -998,11 +998,11 @@ func (sc *StorageSmartContract) selectAllocBlobberForChallenge(
 		return nil
 	})
 	cr.add(func() error {
-		var err error
-		acs, err = getAllocationChallengeStats(balances, allocID)
-		if err != nil {
-			return fmt.Errorf("could not get allocation stats: %v", err)
-		}
+		//var err error
+		//acs, err = getAllocationChallengeStats(balances, allocID)
+		//if err != nil {
+		//	return fmt.Errorf("could not get allocation stats: %v", err)
+		//}
 		return nil
 	})
 
@@ -1029,8 +1029,9 @@ func (sc *StorageSmartContract) selectAllocBlobberForChallenge(
 	// filter out all blobbers that have data written
 	//blobbers := make([]string, 0, len(alloc.Blobbers))
 	bIdxs := make([]int, 0, len(alloc.Blobbers))
-	for i, ba := range acs.GetBlobbersStats() {
-		if ba.NumWrites > 0 {
+	//for i, ba := range acs.GetBlobbersStats() {
+	for i, ba := range alloc.BlobberAllocs {
+		if ba.Stats.NumWrites > 0 {
 			//blobbers = append(blobbers, alloc.Blobbers[i].BlobberID)
 			bIdxs = append(bIdxs, i)
 		}
@@ -1051,9 +1052,9 @@ func (sc *StorageSmartContract) selectAllocBlobberForChallenge(
 	alloc.ID = allocID
 
 	return &challengeAllocBlobber{
-		alloc:                alloc,
-		allocChallenges:      allocChallenges,
-		allocChallengesStats: acs,
+		alloc:           alloc,
+		allocChallenges: allocChallenges,
+		//allocChallengesStats: acs,
 		allocBlobber: &blobberAllocRootWM{
 			blobberID:       alloc.Blobbers[idx].BlobberID,
 			allocRoot:       alloc.BlobberAllocs[idx].AllocationRoot,
@@ -1370,17 +1371,18 @@ func removeExpiredChallenges(
 
 		expiredChallenges = append(expiredChallenges, oc)
 		expiredChallengeBlobberMap[oc.ChallengeID] = struct{}{}
-		acs.FailChallenges(oc.BlobberIndex)
-		bsts, err := acs.GetBlobberStatsByIndex(int(oc.BlobberIndex))
-		if err != nil {
-			return nil, err
-		}
+		//acs.FailChallenges(oc.BlobberIndex)
+		//bsts, err := acs.GetBlobberStatsByIndex(int(oc.BlobberIndex))
+		//if err != nil {
+		//	return nil, err
+		//}
 
-		emitUpdateChallenge(&StorageChallenge{
-			ID:           oc.ChallengeID,
-			AllocationID: allocID,
-			BlobberID:    abs.Blobbers[oc.BlobberIndex].BlobberID,
-		}, false, balances, acs.GetAllocStats(), bsts)
+		//emitUpdateChallenge(&StorageChallenge{
+		//	ID:           oc.ChallengeID,
+		//	AllocationID: allocID,
+		//	BlobberID:    abs.Blobbers[oc.BlobberIndex].BlobberID,
+		//}, false, balances, acs.GetAllocStats(), bsts)
+
 		// expire 1 challenge at a time
 		break
 	}
@@ -1398,7 +1400,6 @@ func (sc *StorageSmartContract) addChallenge(
 	allocChallenges *AllocationChallenges,
 	acs *AllocationChallengeStats,
 	balances cstate.StateContextI) error {
-
 	if challenge.BlobberID == "" {
 		return common.NewError("add_challenge",
 			"no blobber to add challenge to")
@@ -1454,10 +1455,10 @@ func (sc *StorageSmartContract) addChallenge(
 	}
 
 	// get blobber index
-	bIdx := alloc.blobberIndex(challenge.BlobberID)
-	if err := acs.AddAllocOpenChallenge(bIdx); err != nil {
-		return common.NewErrorf("add_challenge", "update alloc open challenge stats failed: %v", err)
-	}
+	//bIdx := alloc.blobberIndex(challenge.BlobberID)
+	//if err := acs.AddAllocOpenChallenge(bIdx); err != nil {
+	//	return common.NewErrorf("add_challenge", "update alloc open challenge stats failed: %v", err)
+	//}
 	//if err := acs.Save(balances, alloc.ID); err != nil {
 	//	return common.NewErrorf("add_challenge", "save alloc challenge stats failed: %v", err)
 	//}
@@ -1476,11 +1477,11 @@ func (sc *StorageSmartContract) addChallenge(
 
 	beforeEmitAddChallenge(challenge)
 
-	bSts, err := acs.GetBlobberStatsByIndex(bIdx)
-	if err != nil {
-		return common.NewErrorf("add_challenge", "get blobber stats failed: %v", err)
-	}
-	emitAddChallenge(challenge, len(expiredChallenges), balances, acs.GetAllocStats(), bSts)
+	//bSts, err := acs.GetBlobberStatsByIndex(bIdx)
+	//if err != nil {
+	//	return common.NewErrorf("add_challenge", "get blobber stats failed: %v", err)
+	//}
+	//emitAddChallenge(challenge, len(expiredChallenges), balances, acs.GetAllocStats(), bSts)
 	return nil
 }
 
