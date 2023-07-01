@@ -19,6 +19,6 @@ func InitPartitions(state state.StateContextI) error {
 	return nil
 }
 
-func regInitPartsFunc(f initPartitionFunc) {
-	initPartitionsFuncs = append(initPartitionsFuncs, f)
+func regInitPartsFunc(fs ...initPartitionFunc) {
+	initPartitionsFuncs = append(initPartitionsFuncs, fs...)
 }

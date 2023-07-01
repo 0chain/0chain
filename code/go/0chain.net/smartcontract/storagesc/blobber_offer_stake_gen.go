@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *BlobberOfferStake) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 5
 	// string "o"
-	o = append(o, 0x84, 0xa1, 0x6f)
+	o = append(o, 0x85, 0xa1, 0x6f)
 	o, err = z.TotalOffers.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "TotalOffers")
@@ -22,6 +22,13 @@ func (z *BlobberOfferStake) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.TotalStake.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "TotalStake")
+		return
+	}
+	// string "r"
+	o = append(o, 0xa1, 0x72)
+	o, err = z.Rewards.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Rewards")
 		return
 	}
 	// string "a"
@@ -63,6 +70,12 @@ func (z *BlobberOfferStake) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "TotalStake")
 				return
 			}
+		case "r":
+			bts, err = z.Rewards.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Rewards")
+				return
+			}
 		case "a":
 			z.Allocated, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
@@ -89,7 +102,7 @@ func (z *BlobberOfferStake) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *BlobberOfferStake) Msgsize() (s int) {
-	s = 1 + 2 + z.TotalOffers.Msgsize() + 2 + z.TotalStake.Msgsize() + 2 + msgp.Int64Size + 2 + msgp.Int64Size
+	s = 1 + 2 + z.TotalOffers.Msgsize() + 2 + z.TotalStake.Msgsize() + 2 + z.Rewards.Msgsize() + 2 + msgp.Int64Size + 2 + msgp.Int64Size
 	return
 }
 

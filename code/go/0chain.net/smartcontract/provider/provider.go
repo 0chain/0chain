@@ -21,11 +21,11 @@ type AbstractProvider interface {
 }
 
 type Provider struct {
-	ID              string           `json:"id" validate:"hexadecimal,len=64"`
-	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	HasBeenShutDown bool             `json:"is_shut_down"`
-	HasBeenKilled   bool             `json:"is_killed"`
-	ProviderType    spenum.Provider  `json:"provider_type"`
+	ID              string           `json:"id" validate:"hexadecimal,len=64" msg:"i"`
+	LastHealthCheck common.Timestamp `json:"last_health_check" msg:"l"`
+	HasBeenShutDown bool             `json:"is_shut_down" msg:"s"`
+	HasBeenKilled   bool             `json:"is_killed" msg:"k"`
+	ProviderType    spenum.Provider  `json:"provider_type" msg:"t"`
 }
 
 func GetKey(id string) datastore.Key {

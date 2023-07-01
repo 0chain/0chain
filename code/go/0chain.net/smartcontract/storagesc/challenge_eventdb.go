@@ -37,7 +37,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	if len(vIDs) == 0 {
 		return nil, errors.New("no validators in challenge")
 	}
-	validators, err := getValidators(vIDs, edb)
+	validators, err := getValidatorsEventDB(vIDs, edb)
 	if err != nil {
 		return nil, err
 	}
