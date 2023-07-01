@@ -337,13 +337,6 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
-
-	conf, err := sc.getConfig(balances, true)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"cannot get config: %v", err)
-	}
-
 	var commitRead = &ReadConnection{}
 	if err = commitRead.Decode(input); err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
@@ -360,33 +353,87 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	var (
+		conf            *Config
 		lastCommittedRM = &ReadConnection{}
 		lastKnownCtr    int64
+		alloc           *StorageAllocation
+		blobber         *StorageNode
+		rp              *readPool
+		sp              *stakePool
 	)
+	cr := concurrentReader{}
+	cr.add(func() error {
+		var err error
+		conf, err = sc.getConfig(balances, true)
+		if err != nil {
+			return common.NewErrorf("commit_blobber_read",
+				"cannot get config: %v", err)
+		}
+		return nil
+	})
+	cr.add(func() error {
+		err = balances.GetTrieNode(commitRead.GetKey(sc.ID), lastCommittedRM)
+		switch err {
+		case nil:
+			lastKnownCtr = lastCommittedRM.ReadMarker.ReadCounter
+		case util.ErrValueNotPresent:
+		default:
+			return common.NewErrorf("commit_blobber_read",
+				"can't get latest blobber client read: %v", err)
+		}
 
-	err = balances.GetTrieNode(commitRead.GetKey(sc.ID), lastCommittedRM)
-	switch err {
-	case nil:
-		lastKnownCtr = lastCommittedRM.ReadMarker.ReadCounter
-	case util.ErrValueNotPresent:
-		err = nil
-	default:
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't get latest blobber client read: %v", err)
-	}
+		err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker, balances)
+		if err != nil {
+			return common.NewErrorf("commit_blobber_read",
+				"can't verify read marker: %v", err)
+		}
+		return nil
+	})
+	cr.add(func() error {
+		// move tokens to blobber's stake pool from client's read pool
+		alloc, err = sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
+		if err != nil {
+			return common.NewErrorf("commit_blobber_read",
+				"can't get related allocation: %v", err)
+		}
 
-	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't verify read marker: %v", err)
-	}
+		return nil
+	})
+	cr.add(func() error {
+		blobber, err = sc.getBlobber(commitRead.ReadMarker.BlobberID, balances)
+		if err != nil {
+			return common.NewErrorf("commit_blobber_read",
+				"error fetching blobber object: %v", err)
+		}
+		return nil
+	})
+	cr.add(func() error {
+		rp, err = sc.getReadPool(commitRead.ReadMarker.ClientID, balances)
+		if err != nil && err != util.ErrValueNotPresent {
+			return common.NewErrorf("commit_blobber_read",
+				"can't get related read pool: %v", err)
+		}
+		if err == util.ErrValueNotPresent || rp == nil {
+			rp = new(readPool)
+			//if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {
+			//	return common.NewError("new_read_pool_failed", err.Error())
+			//}
+		}
 
-	// move tokens to blobber's stake pool from client's read pool
-	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't get related allocation: %v", err)
+		return nil
+	})
+	cr.add(func() error {
+		sp, err = sc.getStakePool(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
+		if err != nil {
+			return common.NewErrorf("commit_blobber_read",
+				"can't get related stake pool: %v", err)
+		}
+
+		return nil
+	})
+
+	if err := cr.do(); err != nil {
+		return "", err
 	}
 
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
@@ -412,12 +459,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"blobber doesn't belong to allocation")
 	}
 
-	blobber, err := sc.getBlobber(details.BlobberID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"error fetching blobber object: %v", err)
-	}
-
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr //todo check if it can be negative
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
@@ -425,30 +466,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	)
 
 	commitRead.ReadMarker.ReadSize = sizeRead
-
-	// move tokens from read pool to blobber
-	rp, err := sc.getReadPool(commitRead.ReadMarker.ClientID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't get related read pool: %v", err)
-	}
-	if err == util.ErrValueNotPresent || rp == nil {
-		rp = new(readPool)
-		if err = rp.save(sc.ID, commitRead.ReadMarker.ClientID, balances); err != nil {
-			return "", common.NewError("new_read_pool_failed", err.Error())
-		}
-	}
-
-	var sp *stakePool
-	sp, err = sc.getStakePool(spenum.Blobber, commitRead.ReadMarker.BlobberID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
-			"can't get related stake pool: %v", err)
-	}
-
 	details.Stats.NumReads++
 	alloc.Stats.NumReads++
 
+	// move tokens from read pool to blobber
 	resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
 		commitRead.ReadMarker.BlobberID, sp, value, balances)
 	if err != nil {
