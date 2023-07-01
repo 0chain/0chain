@@ -1437,12 +1437,16 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	case util.ErrValueNotPresent:
 	case nil:
 		for _, oc := range allocChallenges.OpenChallenges {
-			ba := alloc.BlobberAllocs[oc.BlobberIndex]
+			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
+			if !ok {
+				continue
+			}
+
 			if ba.Stats == nil {
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = common.Timestamp(oc.CreatedAt) + toSeconds(getMaxChallengeCompletionTime())
+			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
 			if expire < now {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
