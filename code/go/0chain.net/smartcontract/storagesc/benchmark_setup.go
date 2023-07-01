@@ -95,6 +95,11 @@ func addMockAllocation(
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 	allocBlobbersNum := viper.GetInt(sc.NumBlobbersPerAllocation)
+	bil, err := getBlobbersInfoList(balances)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for j := 0; j < allocBlobbersNum; j++ {
 		bIndex := startBlobbers + j
 		bId := getMockBlobberId(bIndex)
@@ -103,11 +108,18 @@ func addMockAllocation(
 			Terms:         getMockBlobberTerms(),
 			MinLockDemand: mockMinLockDemand,
 		})
+		blobber, err := getBlobber(bId, balances)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := bil[blobber.Index].addOffer(getOffer(sa.BSize, getMockBlobberTerms())); err != nil {
+			log.Fatal(err)
+		}
 
 		ba := BlobberAllocation{
 			BlobberID:       bId,
 			AllocationID:    sa.ID,
-			Stats:           &StorageAllocationStats{},
+			Stats:           &StorageAllocationStats{NumWrites: 10},
 			AllocationRoot:  encryption.Hash("allocation root"),
 			LastWriteMarker: &WriteMarker{},
 		}
@@ -126,6 +138,10 @@ func addMockAllocation(
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := bil.Save(balances); err != nil {
 		log.Fatal(err)
 	}
 
@@ -283,6 +299,26 @@ func AddMockChallengePools(eventDb *event.EventDb, balances cstate.StateContextI
 	//		log.Fatal(err)
 	//	}
 	//}
+}
+
+func getAllocation(balances cstate.StateContextI, allocID string) (*StorageAllocation, error) {
+	alloc := new(StorageAllocation)
+	alloc.ID = allocID
+	if err := balances.GetTrieNode(alloc.GetKey(ADDRESS), alloc); err != nil {
+		return nil, err
+	}
+
+	if len(alloc.BlobberAllocs) == 0 {
+		alloc.BlobberAllocs = make([]*BlobberAllocation, len(alloc.Blobbers))
+		alloc.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(alloc.Blobbers))
+		for i, b := range alloc.Blobbers {
+			ba := newBlobberAllocation(b.BlobberID)
+			alloc.BlobberAllocs[i] = ba
+			alloc.BlobberAllocsMap[b.BlobberID] = ba
+		}
+	}
+	return alloc, nil
+
 }
 
 func setupMockChallenge(
@@ -595,8 +631,8 @@ func AddMockValidators(
 		}
 		validatorNodes = append(validatorNodes, validator)
 		vpn := ValidationPartitionNode{
-			Id:  id,
-			Url: id + ".com",
+			Id: id,
+			//Url: id + ".com",
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			validator := event.Validator{
@@ -733,12 +769,15 @@ func AddMockFreeStorageAssigners(
 		_, err := balances.InsertTrieNode(
 			freeStorageAssignerKey(sscId, clients[i]),
 			&freeStorageAssigner{
-				ClientId:           clients[i],
-				PublicKey:          keys[i],
-				IndividualLimit:    currency.Coin(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
-				TotalLimit:         currency.Coin(viper.GetFloat64(sc.StorageMaxTotalFreeAllocation) * 1e10),
-				CurrentRedeemed:    0,
-				RedeemedTimestamps: []common.Timestamp{},
+				ClientId:  clients[i],
+				PublicKey: keys[i],
+				//IndividualLimit: currency.Coin(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
+				//TotalLimit:      currency.Coin(viper.GetFloat64(sc.StorageMaxTotalFreeAllocation) * 1e10),
+				IndividualLimit: uint64(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
+				TotalLimit:      uint64(viper.GetFloat64(sc.StorageMaxTotalFreeAllocation) * 1e10),
+				CurrentRedeemed: 0,
+				//RedeemedTimestamps: []common.Timestamp{},
+				RedeemedTimestamps: []int64{},
 			},
 		)
 		if err != nil {
