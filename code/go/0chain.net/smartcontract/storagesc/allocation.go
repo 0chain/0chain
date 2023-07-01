@@ -240,7 +240,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	)
 
 	cr := concurrentReader{}
-	cr.add(func(state chainstate.StateContextI) error {
+	cr.add(func() error {
 		var err error
 		blobbers, err = getBlobbersByIDs(request.Blobbers, balances)
 		if err != nil {
@@ -260,7 +260,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return nil
 	})
 
-	cr.add(func(state chainstate.StateContextI) error {
+	cr.add(func() error {
 		var err error
 		bil, err = getBlobbersInfoList(balances)
 		return err
@@ -268,12 +268,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	if mintNewTokens == 0 {
 		// check lock token balance
-		cr.add(func(state chainstate.StateContextI) error {
+		cr.add(func() error {
 			return stakepool.CheckClientBalance(txn.ClientID, txn.Value, balances)
 		})
 	}
 
-	if err := cr.do(balances); err != nil {
+	if err := cr.do(); err != nil {
 		return nil, err
 	}
 
@@ -1096,7 +1096,7 @@ func (sc *StorageSmartContract) preloadUpdateAllocation(allocID string, balances
 		conf  *Config
 	)
 	cr := concurrentReader{}
-	cr.add(func(i chainstate.StateContextI) error {
+	cr.add(func() error {
 		var err error
 		alloc, err = sc.getAllocation(allocID, balances)
 		if err != nil {
@@ -1106,7 +1106,7 @@ func (sc *StorageSmartContract) preloadUpdateAllocation(allocID string, balances
 
 		return nil
 	})
-	cr.add(func(chainstate.StateContextI) error {
+	cr.add(func() error {
 		var err error
 		bil, err = getBlobbersInfoList(balances)
 		if err != nil {
@@ -1115,7 +1115,7 @@ func (sc *StorageSmartContract) preloadUpdateAllocation(allocID string, balances
 
 		return nil
 	})
-	cr.add(func(i chainstate.StateContextI) error {
+	cr.add(func() error {
 		var err error
 		conf, err = sc.getConfig(balances, false)
 		if err != nil {
@@ -1124,7 +1124,7 @@ func (sc *StorageSmartContract) preloadUpdateAllocation(allocID string, balances
 		return nil
 	})
 
-	if err := cr.do(balances); err != nil {
+	if err := cr.do(); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -1170,7 +1170,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	var blobbers []*StorageNode
 	cr := concurrentReader{}
-	cr.add(func(i chainstate.StateContextI) error {
+	cr.add(func() error {
 		var err error
 		blobbers, err = sc.getAllocationBlobbers(alloc, balances)
 		if err != nil {
@@ -1182,7 +1182,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	var addBlobber *StorageNode
 	if len(request.AddBlobberId) > 0 {
-		cr.add(func(i chainstate.StateContextI) error {
+		cr.add(func() error {
 			var err error
 			addBlobber, err = sc.getBlobber(request.AddBlobberId, balances)
 			if err != nil {
@@ -1195,12 +1195,12 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// check lock token balance
 	if t.Value > 0 {
-		cr.add(func(state chainstate.StateContextI) error {
+		cr.add(func() error {
 			return stakepool.CheckClientBalance(t.ClientID, t.Value, balances)
 		})
 	}
 
-	if err := cr.do(balances); err != nil {
+	if err := cr.do(); err != nil {
 		return "", err
 	}
 
@@ -1437,16 +1437,12 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 	case util.ErrValueNotPresent:
 	case nil:
 		for _, oc := range allocChallenges.OpenChallenges {
-			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
-			if !ok {
-				continue
-			}
-
+			ba := alloc.BlobberAllocs[oc.BlobberIndex]
 			if ba.Stats == nil {
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = oc.CreatedAt + toSeconds(getMaxChallengeCompletionTime())
+			var expire = common.Timestamp(oc.CreatedAt) + toSeconds(getMaxChallengeCompletionTime())
 			if expire < now {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
