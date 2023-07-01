@@ -29,12 +29,12 @@ type Blobber struct {
 	ReadPrice  currency.Coin `json:"read_price"`
 	WritePrice currency.Coin `json:"write_price"`
 
-	Capacity    int64 `json:"capacity"`   // total blobber capacity
-	Allocated   int64 `json:"allocated"`  // allocated capacity
-	Used        int64 `json:"used"`       // total of files saved on blobber
-	SavedData   int64 `json:"saved_data"` // total of files saved on blobber
-	ReadData    int64 `json:"read_data"`
-	IsAvailable bool  `json:"is_available"`
+	Capacity     int64 `json:"capacity"`   // total blobber capacity
+	Allocated    int64 `json:"allocated"`  // allocated capacity
+	Used         int64 `json:"used"`       // total of files saved on blobber
+	SavedData    int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData     int64 `json:"read_data"`
+	NotAvailable bool  `json:"not_available"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	//todo update
@@ -238,7 +238,7 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
-	dbStore = dbStore.Where("is_available = true")
+	dbStore = dbStore.Where("not_available = false")
 	dbStore = dbStore.Limit(limit.Limit).
 		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
@@ -271,7 +271,7 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"capacity",
 		"allocated",
 		"saved_data",
-		"is_available",
+		"not_available",
 		"offers_total",
 		"delegate_wallet",
 		"num_delegates",
