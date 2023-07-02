@@ -14,9 +14,10 @@ var blobbersInfoListName = encryption.Hash(ADDRESS + "blobbers_info_list")
 type BlobberOfferStake struct {
 	TotalOffers currency.Coin `msg:"o"`
 	TotalStake  currency.Coin `msg:"s"`
-	Rewards     currency.Coin `msg:"r"`
-	Allocated   int64         `msg:"a"`
-	SavedData   int64         `msg:"d"`
+	// Rewards represents the un distributed rewards, they need to be distributed to delegate pools
+	Rewards   currency.Coin `msg:"r"` //
+	Allocated int64         `msg:"a"`
+	SavedData int64         `msg:"d"`
 }
 
 type BlobberOfferStakeList []*BlobberOfferStake

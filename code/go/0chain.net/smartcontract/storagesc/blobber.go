@@ -576,12 +576,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		return 0, nil // zero size write marker -- no tokens movements
 	}
 
-	//cp, err := sc.getChallengePool(alloc.ID, balances)
-	//if err != nil {
-	//	return 0, fmt.Errorf("can't get related challenge pool: %v", err)
-	//}
-	//cp := alloc.ChallengePool
-
 	var move currency.Coin
 	if size > 0 {
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
@@ -646,10 +640,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		details.Returned = returned
 	}
 
-	//if err = cp.save(sc.ID, alloc, balances); err != nil {
-	//	return 0, fmt.Errorf("can't Save challenge pool: %v", err)
-	//}
-	//
+	emitChallengePoolEvent(alloc, balances)
 	return move, nil
 }
 

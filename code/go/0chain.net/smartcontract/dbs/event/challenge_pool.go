@@ -5,12 +5,11 @@ import (
 )
 
 type ChallengePool struct {
-	ID           string `gorm:"primarykey"`
-	AllocationID string `gorm:"uniqueIndex"`
-	Balance      int64  `json:"balance"`
-	StartTime    int64  `json:"start_time"`
-	Expiration   int64  `json:"expiration"`
-	Finalized    bool   `json:"finalized"`
+	ID         string `gorm:"primarykey"` // TODO: update event db
+	Balance    int64  `json:"balance"`
+	StartTime  int64  `json:"start_time"`
+	Expiration int64  `json:"expiration"`
+	Finalized  bool   `json:"finalized"`
 }
 
 func (edb *EventDb) addOrUpdateChallengePools(cps []ChallengePool) error {

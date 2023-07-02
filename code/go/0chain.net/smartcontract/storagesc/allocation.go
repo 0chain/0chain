@@ -351,6 +351,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("add_allocation")
 
 	// emit event to eventDB
+	emitChallengePoolEvent(sa, balances)
 	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn)
 
 	return sa, nil
@@ -826,12 +827,6 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
-	//cp, err := sc.getChallengePool(alloc.ID, balances)
-	//if err != nil {
-	//	return fmt.Errorf("adjust_challenge_pool: %v", err)
-	//}
-	//cp := alloc.ChallengePool
-
 	var changed bool
 	sum := currency.Coin(0)
 	for _, ch := range changes {
@@ -853,9 +848,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	}
 
 	if changed {
-		//err = cp.save(sc.ID, alloc, balances)
-		//if err != nil {
-		//}
+		emitChallengePoolEvent(alloc, balances)
 		i := int64(0)
 		i, err = sum.Int64()
 		if err != nil {
@@ -1100,8 +1093,8 @@ func (sc *StorageSmartContract) preloadUpdateAllocation(allocID string, balances
 		var err error
 		alloc, err = sc.getAllocation(allocID, balances)
 		if err != nil {
-			return common.NewError("allocation_updating_failed",
-				"can't get existing allocation: "+err.Error())
+			return common.NewErrorf("allocation_updating_failed",
+				"can't get existing allocation: %v", err)
 		}
 
 		return nil
@@ -1110,7 +1103,8 @@ func (sc *StorageSmartContract) preloadUpdateAllocation(allocID string, balances
 		var err error
 		bil, err = getBlobbersInfoList(balances)
 		if err != nil {
-			return common.NewErrorf("allocation_updating_failed", "could not get blobbers info list", err.Error())
+			return common.NewErrorf("allocation_updating_failed",
+				"could not get blobbers info list: %v", err)
 		}
 
 		return nil
@@ -1740,12 +1734,6 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	//var cp *challengePool
-	//if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
-	//	return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
-	//}
-	//cp := alloc.ChallengePool
-
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		if alloc.UsedSize > 0 && alloc.ChallengePool > 0 && passRates[i] > 0 && d.Stats != nil {
@@ -1863,6 +1851,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		emitUpdateBlobberAllocatedSavedHealth(b.ID, b.LastHealthCheck, allocated, bil[b.Index].SavedData, balances)
 	}
 
+	emitChallengePoolEvent(alloc, balances)
 	pbi, err := prevBal.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)

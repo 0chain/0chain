@@ -77,9 +77,14 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 }
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
-func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCompletedChallTime common.Timestamp,
-	blobAlloc *BlobberAllocation, validators []string, partial float64,
-	balances cstate.StateContextI, options ...string) error {
+func (sc *StorageSmartContract) blobberReward(
+	alloc *StorageAllocation,
+	latestCompletedChallTime common.Timestamp,
+	blobAlloc *BlobberAllocation,
+	validators []string,
+	partial float64,
+	balances cstate.StateContextI,
+	options ...string) error {
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
@@ -110,13 +115,6 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 	if challengeCompletedTime > alloc.Expiration {
 		challengeCompletedTime = alloc.Expiration // last challenge
 	}
-
-	// pool
-	//var cp *challengePool
-	//if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
-	//	return fmt.Errorf("can't get allocation's challenge pool: %v", err)
-	//}
-	//cp := alloc.ChallengePool
 
 	rdtu, err := alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
 	if err != nil {
@@ -230,13 +228,11 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation, latestCo
 		return fmt.Errorf("can't save sake pool: %v", err)
 	}
 
-	//if err = cp.save(sc.ID, alloc, balances); err != nil {
-	//	return fmt.Errorf("can't save allocation's challenge pool: %v", err)
-	//}
-
 	if err = alloc.saveUpdatedStakes(balances); err != nil {
 		return fmt.Errorf("can't save allocation: %v", err)
 	}
+
+	emitChallengePoolEvent(alloc, balances)
 
 	return nil
 }
@@ -329,13 +325,6 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 	if challengeCompleteTime > alloc.Expiration {
 		challengeCompleteTime = alloc.Expiration // last challenge
 	}
-
-	// pools
-	//var cp *challengePool
-	//if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
-	//	return fmt.Errorf("can't get allocation's challenge pool: %v", err)
-	//}
-	//cp := alloc.ChallengePool
 
 	rdtu, err := alloc.restDurationInTimeUnits(prev, conf.TimeUnit)
 	if err != nil {
@@ -455,10 +444,7 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation, prev co
 			"saving allocation pools: "+err.Error())
 	}
 
-	//if err = cp.save(sc.ID, alloc, balances); err != nil {
-	//	return fmt.Errorf("can't Save allocation's challenge pool: %v", err)
-	//}
-
+	emitChallengePoolEvent(alloc, balances)
 	return
 }
 
