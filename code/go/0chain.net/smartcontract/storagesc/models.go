@@ -512,21 +512,13 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin `json:"challenge_pool_integral_value" msg:"cpi"`
-	// Terms of the BlobberAllocation represents weighted average terms
-	// for the allocation. The MinLockDemand can be increased only,
-	// to prevent some attacks. If a user extends an allocation then
-	// we calculate new weighted average terms based on previous terms,
-	// size and expiration and new terms size and expiration.
-	//Terms Terms `json:"terms" msg:"t"`
-	// Size is blobber allocation maximum size
-	//Size                     int64                   `json:"size" msg:"sz"`
-	Stats                    *StorageAllocationStats `json:"stats" msg:"sts"`
-	BlobberID                string                  `json:"blobber_id" msg:"b"`
-	AllocationID             string                  `json:"allocation_id" msg:"-"`
-	AllocationRoot           string                  `json:"allocation_root" msg:"ar"`
-	LastWriteMarker          *WriteMarker            `json:"write_marker" msg:"wm"`
-	LatestCompletedChallenge *StorageChallenge       `json:"latest_completed_challenge" msg:"-"`
+	ChallengePoolIntegralValue currency.Coin           `json:"challenge_pool_integral_value" msg:"cpi"`
+	Stats                      *StorageAllocationStats `json:"stats" msg:"sts"`
+	BlobberID                  string                  `json:"blobber_id" msg:"b"`
+	AllocationID               string                  `json:"allocation_id" msg:"-"`
+	AllocationRoot             string                  `json:"allocation_root" msg:"ar"`
+	LastWriteMarker            *WriteMarker            `json:"write_marker" msg:"wm"`
+	LatestCompletedChallenge   *StorageChallenge       `json:"latest_completed_challenge" msg:"-"`
 }
 
 func newBlobberAllocation(blobberID string) *BlobberAllocation {
