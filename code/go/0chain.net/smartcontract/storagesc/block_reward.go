@@ -169,6 +169,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 				"data_read":   br.DataRead,
 				"write_price": br.WritePrice,
 				"read_price":  br.ReadPrice,
+				"challenges":  br.SuccessChallenges,
 			})
 	}
 
