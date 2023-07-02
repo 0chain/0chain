@@ -89,7 +89,7 @@ func addMockAllocation(
 		},
 		TimeUnit:      1 * time.Hour,
 		Finalized:     i == mockFinalizedAllocationIndex,
-		WritePool:     mockWriePoolSize,
+		WritePool:     2e10,
 		ChallengePool: mockMinLockDemand * 100,
 	}
 
@@ -106,7 +106,7 @@ func addMockAllocation(
 		sa.Blobbers = append(sa.Blobbers, &AllocBlobber{
 			BlobberID:     bId,
 			Terms:         getMockBlobberTerms(),
-			MinLockDemand: mockMinLockDemand,
+			MinLockDemand: mockMinLockDemand * 1e9,
 		})
 		blobber, err := getBlobber(bId, balances)
 		if err != nil {
