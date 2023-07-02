@@ -1613,21 +1613,19 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	var (
-		alloc           *StorageAllocation
+		//alloc           *StorageAllocation
 		allocChallenges *AllocationChallenges
 		conf            *Config
 		blobbers        []*StorageNode
 		bil             BlobberOfferStakeList
 	)
 
+	alloc, err := sc.getAllocation(req.AllocationID, balances)
+	if err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
 	var cr concurrentReader
-	cr.add(func() error {
-		alloc, err = sc.getAllocation(req.AllocationID, balances)
-		if err != nil {
-			return common.NewError("fini_alloc_failed", err.Error())
-		}
-		return nil
-	})
 	cr.add(func() error {
 		var err error
 		conf, err = getConfig(balances)
@@ -1658,7 +1656,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	})
 	cr.add(func() error {
 		var err error
-		allocChallenges, err = sc.getAllocationChallenges(alloc.ID, balances)
+		allocChallenges, err = sc.getAllocationChallenges(req.AllocationID, balances)
 		switch err {
 		case nil, util.ErrValueNotPresent:
 			return nil
