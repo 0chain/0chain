@@ -263,6 +263,20 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit c
 	return sas, nil
 }
 
+func prepareAllocationsResponse(eventDb *event.EventDb, eAllocs []event.Allocation) ([]*StorageAllocationBlobbers, error) {
+	sas := make([]*StorageAllocationBlobbers, 0, len(eAllocs))
+	for _, eAlloc := range eAllocs {
+		sa, err := allocationTableToStorageAllocationBlobbers(&eAlloc, eventDb)
+		if err != nil {
+			return nil, err
+		}
+
+		sas = append(sas, sa)
+	}
+
+	return sas, nil
+}
+
 func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.buildEventBlobberTerms())
 }

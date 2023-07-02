@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -952,7 +954,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
+		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1161,7 +1163,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(getMaxChallengeCompletionTime()))
+		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)))
 
 		tp += 10 // a not expired allocation to cancel
 

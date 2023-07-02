@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	numberDevelopmentEndpoints = 6
+	numberDevelopmentEndpoints = 7
 	numberDuplicatedTests      = 3
 	numberMissingTests         = 0
 )

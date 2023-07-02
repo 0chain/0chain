@@ -33,13 +33,11 @@ func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Rew
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
 
-	var challengeID string
+	var allocationID string
 	if len(options) > 0 {
-		challengeID = options[0]
-	} else {
-		challengeID = ""
+		allocationID = options[0]
 	}
-	spu.ChallengeID = challengeID
+	spu.AllocationID = allocationID
 
 	return &spu
 }
@@ -60,11 +58,11 @@ func (spu StakePoolReward) Emit(
 
 func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolReward {
 	return &dbs.StakePoolReward{
-		ProviderID:      spu.ProviderID,
-		Reward:          spu.Reward,
-		DelegateRewards: spu.DelegateRewards,
+		ProviderID:        spu.ProviderID,
+		Reward:            spu.Reward,
+		DelegateRewards:   spu.DelegateRewards,
 		DelegatePenalties: spu.DelegatePenalties,
-		RewardType:      spu.RewardType,
-		ChallengeID:     spu.ChallengeID,
+		RewardType:        spu.RewardType,
+		AllocationID:      spu.AllocationID,
 	}
 }

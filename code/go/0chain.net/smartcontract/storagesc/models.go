@@ -22,7 +22,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -998,16 +997,22 @@ func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *Blobb
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)
 	}
 
-	if err := blobAllocsParts.Remove(balances, allocID); err != nil {
+	err = blobAllocsParts.Remove(balances, allocID)
+	if err != nil && !partitions.ErrItemNotFound(err) {
 		logging.Logger.Error("could not remove allocation from blobber",
 			zap.Error(err),
 			zap.String("blobber", blobberID),
 			zap.String("allocation", allocID))
 		return fmt.Errorf("could not remove allocation from blobber: %v", err)
-	}
-
-	if err := blobAllocsParts.Save(balances); err != nil {
-		return fmt.Errorf("could not update blobber allocation partitions: %v", err)
+	} else if partitions.ErrItemNotFound(err) {
+		logging.Logger.Error("allocation is not in partition",
+			zap.Error(err),
+			zap.String("blobber", blobberID),
+			zap.String("allocation", allocID))
+	} else if err == nil {
+		if err := blobAllocsParts.Save(balances); err != nil {
+			return fmt.Errorf("could not update blobber allocation partitions: %v", err)
+		}
 	}
 
 	allocNum, err := blobAllocsParts.Size(balances)
@@ -1268,19 +1273,16 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 	return o, nil
 }
 
-func getMaxChallengeCompletionTime() time.Duration {
-	return config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)
-}
-
 // removeExpiredChallenges removes all expired challenges from the allocation,
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
-func (sa *StorageAllocation) removeExpiredChallenges(allocChallenges *AllocationChallenges,
-	now common.Timestamp, balances cstate.StateContextI) (map[string]string, error) {
+func (sa *StorageAllocation) removeExpiredChallenges(
+	allocChallenges *AllocationChallenges,
+	now common.Timestamp,
+	cct time.Duration,
+	balances cstate.StateContextI,
+) (map[string]string, error) {
 	var expiredChallengeBlobberMap = make(map[string]string)
-
-	cct := getMaxChallengeCompletionTime()
-
 	var nonExpiredChallenges []*AllocOpenChallenge
 
 	for _, oc := range allocChallenges.OpenChallenges {

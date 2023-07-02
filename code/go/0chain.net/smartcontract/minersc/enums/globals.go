@@ -36,6 +36,7 @@ const (
 	BlockShardingMinActiveReplicators
 	BlockValidationBatchSize
 	BlockReuseTransactions
+	BlockFinalizationTimeout
 	BlockMinGenerators
 	BlockGeneratorsPercent
 
@@ -170,6 +171,7 @@ func initGlobalSettingNames() {
 	GlobalSettingName[BlockShardingMinActiveReplicators] = "server_chain.block.sharding.min_active_replicators"
 	GlobalSettingName[BlockValidationBatchSize] = "server_chain.block.validation.batch_size"
 	GlobalSettingName[BlockReuseTransactions] = "server_chain.block.reuse_txns"
+	GlobalSettingName[BlockFinalizationTimeout] = "server_chain.block.finalization.timeout"
 	GlobalSettingName[BlockMinGenerators] = "server_chain.block.min_generators"
 	GlobalSettingName[BlockGeneratorsPercent] = "server_chain.block.generators_percent"
 
@@ -296,6 +298,7 @@ func initGlobalSettings() {
 		GlobalSettingName[BlockShardingMinActiveReplicators]: {smartcontract.Int, true},
 		GlobalSettingName[BlockValidationBatchSize]:          {smartcontract.Int, true},
 		GlobalSettingName[BlockReuseTransactions]:            {smartcontract.Boolean, true},
+		GlobalSettingName[BlockFinalizationTimeout]:          {smartcontract.Duration, true},
 		GlobalSettingName[BlockMinGenerators]:                {smartcontract.Int, true},
 		GlobalSettingName[BlockGeneratorsPercent]:            {smartcontract.Float64, true},
 

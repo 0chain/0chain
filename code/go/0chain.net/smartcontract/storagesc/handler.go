@@ -95,15 +95,17 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-authorizer-aggregates", srh.replicateAuthorizerAggregates),
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
+		rest.MakeEndpoint(storage+"/get-blobber-allocations", srh.getBlobberAllocations),
 	}
 
 	if config.Development() {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/all-challenges", srh.getAllChallenges))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/passed-challenges", srh.getPassedChallengesForBlobberAllocation))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/block-rewards", srh.getBlockRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/read-rewards", srh.getReadRewards))
-		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/challenge-rewards", srh.getChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/total-challenge-rewards", srh.getTotalChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/alloc-challenge-rewards", srh.getAllocationChallengeRewards))
 	}
 
 	return restEndpoints
@@ -892,6 +894,13 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		return
 	}
 
+	validatorPools, err := edb.GetUserDelegatePools(clientID, spenum.Validator, pagination)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest("validator not found in event database: "+err.Error()))
+		return
+	}
+
+	pools = append(pools, validatorPools...)
 	var ups = new(stakepool.UserPoolStat)
 	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat)
 	for _, pool := range pools {
@@ -1184,7 +1193,15 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		return
 	}
 
-	challenges, err := getOpenChallengesForBlobber(blobberID, from, common.Timestamp(getMaxChallengeCompletionTime().Seconds()), limit, sctx.GetEventDB())
+	conf, err := getConfig(sctx)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	challenges, err := getOpenChallengesForBlobber(
+		blobberID, from, common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), limit, sctx.GetEventDB(),
+	)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
@@ -1753,6 +1770,63 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, allocations, nil)
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations allocations
+// Gets a list of allocation information for allocations owned by the client
+//
+// parameters:
+//
+//	+name: blobber_id
+//	 description: blobber id of allocations we wish to list
+//	 required: true
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc by created date
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: []StorageAllocation
+//	400:
+//	500:
+func (srh *StorageRestHandler) getBlobberAllocations(w http.ResponseWriter, r *http.Request) {
+	blobberId := r.URL.Query().Get("blobber_id")
+
+	limit, err := common2.GetPaginationParamsDefaultDesc(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	allocations, err := edb.GetAllocationsByBlobberId(blobberId, limit)
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
+		return
+	}
+
+	sas, err := prepareAllocationsResponse(edb, allocations)
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't prepare allocations response"))
+		return
+	}
+
+	common.Respond(w, r, sas, nil)
+}
+
 // getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation allocation
 // Gets allocation object
 //
@@ -2117,6 +2191,7 @@ type storageNodeResponse struct {
 	TotalOffers              currency.Coin `json:"total_offers"`
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
+	CreatedAt                time.Time     `json:"created_at"`
 }
 
 func blobberTableToStorageNodeResponse(blobber event.Blobber) storageNodeResponse {
@@ -2151,6 +2226,7 @@ func blobberTableToStorageNodeResponse(blobber event.Blobber) storageNodeRespons
 		IsShutdown:               blobber.IsShutdown,
 		SavedData:                blobber.SavedData,
 		IsAvailable:              blobber.IsAvailable,
+		CreatedAt:                blobber.CreatedAt,
 	}
 }
 

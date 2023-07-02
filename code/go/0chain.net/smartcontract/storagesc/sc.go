@@ -10,7 +10,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -253,10 +252,12 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "collect_reward":
 		resp, err = sc.collectReward(t, input, balances)
 	case "generate_challenge":
-		challengesEnabled := config.SmartContractConfig.GetBool(
-			"smart_contracts.storagesc.challenge_enabled")
-		if challengesEnabled {
-			err = sc.generateChallenge(t, balances.GetBlock(), input, balances)
+		var conf *Config
+		if conf, err = sc.getConfig(balances, true); err != nil {
+			return "", fmt.Errorf("can't get SC configurations: %v", err.Error())
+		}
+		if conf.ChallengeEnabled {
+			err = sc.generateChallenge(t, balances.GetBlock(), input, conf, balances)
 			if err != nil {
 				return
 			}

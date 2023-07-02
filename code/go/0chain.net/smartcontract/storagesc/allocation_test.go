@@ -1557,17 +1557,17 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 	// 1. expiring allocation
 	alloc.Expiration = 1049
-	_, err = ssc.closeAllocation(&tx, alloc, balances)
-	requireErrMsg(t, err, errMsg1)
-
 	var conf = Config{
 		MaxChallengeCompletionTime: 30 * time.Minute,
 	}
 
+	_, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
+	requireErrMsg(t, err, errMsg1)
+
 	// 2. close (all related pools has created)
 	alloc.Expiration = tx.CreationDate +
 		toSeconds(conf.MaxChallengeCompletionTime) + 20
-	resp, err = ssc.closeAllocation(&tx, alloc, balances)
+	resp, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
 
@@ -2226,7 +2226,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	require.NotNil(t, b1)
 
 	// bind one more allocation to b1
-	_, err = partitionsBlobberAllocationsAdd(balances, b1.id, encryption.Hash("new_allocation_id"))
+	err = partitionsBlobberAllocationsAdd(balances, b1.id, encryption.Hash("new_allocation_id"))
 	require.NoError(t, err)
 
 	// add 10 validators
