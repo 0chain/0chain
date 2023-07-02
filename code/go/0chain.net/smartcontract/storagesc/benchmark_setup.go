@@ -402,14 +402,18 @@ func AddMockBlobbers(
 				Provider: event.Provider{
 					ID:              blobber.ID,
 					DelegateWallet:  blobber.StakePoolSettings.DelegateWallet,
-					NumDelegates:    blobber.StakePoolSettings.MaxNumDelegates,
-					ServiceCharge:   blobber.StakePoolSettings.ServiceChargeRatio,
 					LastHealthCheck: blobber.LastHealthCheck,
 				},
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
 				NotAvailable:        blobber.NotAvailable,
+			}
+			if blobber.StakePoolSettings.ServiceChargeRatio != nil {
+				blobberDb.ServiceCharge = *blobber.StakePoolSettings.ServiceChargeRatio
+			}
+			if blobber.StakePoolSettings.MaxNumDelegates != nil {
+				blobberDb.NumDelegates = *blobber.StakePoolSettings.MaxNumDelegates
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake) / 2)
 			if err != nil {
@@ -575,17 +579,21 @@ func AddMockValidators(
 			Url: id + ".com",
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
-			validator := event.Validator{
+			currentValidator := event.Validator{
 				BaseUrl:   validator.BaseURL,
 				PublicKey: publicKeys[i],
 				Provider: event.Provider{
 					ID:             validator.ID,
 					DelegateWallet: validator.StakePoolSettings.DelegateWallet,
-					NumDelegates:   validator.StakePoolSettings.MaxNumDelegates,
-					ServiceCharge:  validator.StakePoolSettings.ServiceChargeRatio,
 				},
 			}
-			validators = append(validators, validator)
+			if validator.StakePoolSettings.ServiceChargeRatio != nil {
+				currentValidator.ServiceCharge = *validator.StakePoolSettings.ServiceChargeRatio
+			}
+			if validator.StakePoolSettings.MaxNumDelegates != nil {
+				currentValidator.NumDelegates = *validator.StakePoolSettings.MaxNumDelegates
+			}
+			validators = append(validators, currentValidator)
 		}
 
 		if err := valParts.Add(balances, &vpn); err != nil {
@@ -791,10 +799,12 @@ func getMockBlobberTerms() Terms {
 }
 
 func getMockStakePoolSettings(blobber string) stakepool.Settings {
+	numDelegate := viper.GetInt(sc.NumBlobberDelegates)
+	serviceChargeRatio := viper.GetFloat64(sc.StorageMaxCharge)
 	return stakepool.Settings{
 		DelegateWallet:     blobber,
-		MaxNumDelegates:    viper.GetInt(sc.NumBlobberDelegates),
-		ServiceChargeRatio: viper.GetFloat64(sc.StorageMaxCharge),
+		MaxNumDelegates:    &numDelegate,
+		ServiceChargeRatio: &serviceChargeRatio,
 	}
 }
 

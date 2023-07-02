@@ -129,12 +129,12 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		changed = true
 	}
 
-	if sp.Settings.ServiceChargeRatio != settings.ServiceChargeRatio {
+	if sp.Settings.ServiceChargeRatio != nil && settings.ServiceChargeRatio != nil && *sp.Settings.ServiceChargeRatio != *settings.ServiceChargeRatio {
 		sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 		changed = true
 	}
 
-	if sp.Settings.MaxNumDelegates != settings.MaxNumDelegates {
+	if *sp.Settings.MaxNumDelegates != *settings.MaxNumDelegates {
 		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 		changed = true
 	}
@@ -145,6 +145,8 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
+
+func bool
 
 func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
 	if poolSettings.ServiceChargeRatio < 0.0 {

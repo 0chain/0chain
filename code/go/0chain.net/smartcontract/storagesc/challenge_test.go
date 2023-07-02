@@ -1147,7 +1147,7 @@ func setupChallengeMocks(
 	require.NoError(t, cPool.save(ssc.ID, allocation, ctx))
 
 	var sp = newStakePool()
-	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
+	sp.Settings.ServiceChargeRatio = &blobberYaml.serviceCharge
 	for i, stake := range stakes {
 		var id = strconv.Itoa(i)
 		sp.Pools["paula"+id] = &stakepool.DelegatePool{}
@@ -1161,7 +1161,7 @@ func setupChallengeMocks(
 	var validatorsSPs []*stakePool
 	for i, validator := range validators {
 		var sPool = newStakePool()
-		sPool.Settings.ServiceChargeRatio = validatorYamls[i].serviceCharge
+		sPool.Settings.ServiceChargeRatio = &validatorYamls[i].serviceCharge
 		for j, stake := range validatorStakes[i] {
 			var pool = &stakepool.DelegatePool{}
 			pool.Balance = currency.Coin(stake)

@@ -58,9 +58,9 @@ type StakePool struct {
 }
 
 type Settings struct {
-	DelegateWallet     string  `json:"delegate_wallet"`
-	MaxNumDelegates    int     `json:"num_delegates"`
-	ServiceChargeRatio float64 `json:"service_charge"`
+	DelegateWallet     string   `json:"delegate_wallet"`
+	MaxNumDelegates    *int     `json:"num_delegates,omitempty"`
+	ServiceChargeRatio *float64 `json:"service_charge,omitempty"`
 }
 
 type DelegatePool struct {
@@ -111,8 +111,8 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
 	spStat.Settings = Settings{
 		DelegateWallet:     provider.DelegateWallet,
-		MaxNumDelegates:    provider.NumDelegates,
-		ServiceChargeRatio: provider.ServiceCharge,
+		MaxNumDelegates:    &provider.NumDelegates,
+		ServiceChargeRatio: &provider.ServiceCharge,
 	}
 	spStat.Rewards = provider.Rewards.TotalRewards
 	for _, dp := range delegatePools {
@@ -149,6 +149,18 @@ func NewStakePool() *StakePool {
 	return &StakePool{
 		Pools: make(map[string]*DelegatePool),
 	}
+}
+
+func NewDelegates(delegates int) *int {
+	val := new(int)
+	*val = delegates
+	return val
+}
+
+func NewServiceCharge(serviceCharge float64) *float64 {
+	val := new(float64)
+	*val = serviceCharge
+	return val
 }
 
 func (sp *StakePool) Encode() (b []byte) {
@@ -401,7 +413,11 @@ func (sp *StakePool) DistributeRewardsRandN(
 	if err != nil {
 		return err
 	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+	if sp.Settings.ServiceChargeRatio == nil {
+		// ServiceChargeRatio is not set
+		return common.NewError("value not present", "serviceChargeRatio is not present in the stakePool")
+	}
+	serviceCharge, err := currency.Float64ToCoin(*sp.Settings.ServiceChargeRatio * fValue)
 	if err != nil {
 		return err
 	}
@@ -567,7 +583,11 @@ func (sp *StakePool) DistributeRewards(
 	if err != nil {
 		return err
 	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+	if sp.Settings.ServiceChargeRatio == nil {
+		// ServiceChargeRatio is not set
+		return common.NewError("value not present", "serviceChargeRatio is not present in the stakePool")
+	}
+	serviceCharge, err := currency.Float64ToCoin(*sp.Settings.ServiceChargeRatio * fValue)
 	if err != nil {
 		return err
 	}
@@ -730,7 +750,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 		return s, err2
 	}
 
-	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
+	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", *sp.GetSettings().MaxNumDelegates))
 
 	out, err := sp.LockPool(t, spr.ProviderType, spr.ProviderID, spenum.Active, balances)
 	if err != nil {

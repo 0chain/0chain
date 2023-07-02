@@ -106,8 +106,12 @@ func (c *Client) addNodeRequest(delegateWallet string) *MinerNode {
 	mn.ShortName = "test_miner(" + c.id + ")"
 	mn.BuildTag = "commit"
 	mn.Settings.DelegateWallet = delegateWallet
-	mn.Settings.ServiceChargeRatio = minerServiceCharge
-	mn.Settings.MaxNumDelegates = 10
+
+	mn.Settings.ServiceChargeRatio = new(float64)
+	*mn.Settings.ServiceChargeRatio = minerServiceCharge
+
+	mn.Settings.MaxNumDelegates = new(int)
+	*mn.Settings.MaxNumDelegates = 10
 	return mn
 }
 

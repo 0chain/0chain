@@ -74,8 +74,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.String("pkey", newMiner.PublicKey),
 		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newMiner.Settings.DelegateWallet),
-		zap.Float64("service_charge", newMiner.Settings.ServiceChargeRatio),
-		zap.Int("num_delegates", newMiner.Settings.MaxNumDelegates),
+		zap.Float64("service_charge", *newMiner.Settings.ServiceChargeRatio),
+		zap.Int("num_delegates", *newMiner.Settings.MaxNumDelegates),
 	)
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
@@ -325,26 +325,30 @@ func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, erro
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
-	if node.Settings.ServiceChargeRatio < 0 {
-		return common.NewErrorf(opcode,
-			"invalid negative service charge: %v", node.Settings.ServiceChargeRatio)
+	if node.Settings.ServiceChargeRatio != nil {
+		if *node.Settings.ServiceChargeRatio < 0 {
+			return common.NewErrorf(opcode,
+				"invalid negative service charge: %v", *node.Settings.ServiceChargeRatio)
+		}
+
+		if *node.Settings.ServiceChargeRatio > gn.MaxCharge {
+			return common.NewErrorf(opcode,
+				"max_charge is greater than allowed by SC: %v > %v",
+				*node.Settings.ServiceChargeRatio, gn.MaxCharge)
+		}
 	}
 
-	if node.Settings.ServiceChargeRatio > gn.MaxCharge {
-		return common.NewErrorf(opcode,
-			"max_charge is greater than allowed by SC: %v > %v",
-			node.Settings.ServiceChargeRatio, gn.MaxCharge)
-	}
+	if node.Settings.MaxNumDelegates != nil {
+		if *node.Settings.MaxNumDelegates <= 0 {
+			return common.NewErrorf(opcode,
+				"invalid non-positive number_of_delegates: %v", *node.Settings.MaxNumDelegates)
+		}
 
-	if node.Settings.MaxNumDelegates <= 0 {
-		return common.NewErrorf(opcode,
-			"invalid non-positive number_of_delegates: %v", node.Settings.MaxNumDelegates)
-	}
-
-	if node.Settings.MaxNumDelegates > gn.MaxDelegates {
-		return common.NewErrorf(opcode,
-			"number_of_delegates greater than max_delegates of SC: %v > %v",
-			node.Settings.MaxNumDelegates, gn.MaxDelegates)
+		if *node.Settings.MaxNumDelegates > gn.MaxDelegates {
+			return common.NewErrorf(opcode,
+				"number_of_delegates greater than max_delegates of SC: %v > %v",
+				*node.Settings.MaxNumDelegates, gn.MaxDelegates)
+		}
 	}
 
 	return nil

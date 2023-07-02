@@ -73,8 +73,10 @@ func AddMockMiners(
 		}
 		newNode.ProviderType = providerType
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
-		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
+		serviceCharge := viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.ServiceChargeRatio = &serviceCharge
+		maxDelegates := viper.GetInt(benchmark.MinerMaxDelegates)
+		newNode.Settings.MaxNumDelegates = &maxDelegates
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
 		newNode.Reward = providerReward
@@ -119,8 +121,8 @@ func AddMockMiners(
 				PublicKey: newNode.PublicKey,
 				Provider: event.Provider{
 					ID:            newNode.ID,
-					ServiceCharge: newNode.Settings.ServiceChargeRatio,
-					NumDelegates:  newNode.Settings.MaxNumDelegates,
+					ServiceCharge: *newNode.Settings.ServiceChargeRatio,
+					NumDelegates:  *newNode.Settings.MaxNumDelegates,
 					Rewards: event.ProviderRewards{
 						ProviderID:                    newNode.ID,
 						RoundServiceChargeLastUpdated: 7,
@@ -236,8 +238,10 @@ func AddMockSharders(
 		}
 		newNode.ProviderType = providerType
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.MptCreationTime))
-		newNode.Settings.ServiceChargeRatio = viper.GetFloat64(benchmark.MinerMaxCharge)
-		newNode.Settings.MaxNumDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
+		serviceCharge := viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.Settings.ServiceChargeRatio = &serviceCharge
+		maxDelegates := viper.GetInt(benchmark.MinerMaxDelegates)
+		newNode.Settings.MaxNumDelegates = &maxDelegates
 		newNode.NodeType = NodeTypeMiner
 		newNode.Settings.DelegateWallet = clients[0]
 		newNode.Reward = providerReward
@@ -283,8 +287,8 @@ func AddMockSharders(
 				Provider: event.Provider{
 					LastHealthCheck: newNode.LastHealthCheck,
 					ID:              newNode.ID,
-					ServiceCharge:   newNode.Settings.ServiceChargeRatio,
-					NumDelegates:    newNode.Settings.MaxNumDelegates,
+					ServiceCharge:   *newNode.Settings.ServiceChargeRatio,
+					NumDelegates:    *newNode.Settings.MaxNumDelegates,
 					Rewards: event.ProviderRewards{
 						ProviderID:                    newNode.ID,
 						RoundServiceChargeLastUpdated: 11,

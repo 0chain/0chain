@@ -2237,8 +2237,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		LastHealthCheck: blobber.LastHealthCheck,
 		StakePoolSettings: stakepool.Settings{
 			DelegateWallet:     blobber.DelegateWallet,
-			MaxNumDelegates:    blobber.NumDelegates,
-			ServiceChargeRatio: blobber.ServiceCharge,
+			MaxNumDelegates:    &blobber.NumDelegates,
+			ServiceChargeRatio: &blobber.ServiceCharge,
 		},
 		TotalStake:               blobber.TotalStake,
 		CreationRound:            blobber.CreationRound,

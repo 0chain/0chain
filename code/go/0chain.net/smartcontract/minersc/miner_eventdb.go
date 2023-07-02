@@ -82,8 +82,8 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 			Reward: edbMiner.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbMiner.DelegateWallet,
-				ServiceChargeRatio: edbMiner.ServiceCharge,
-				MaxNumDelegates:    edbMiner.Provider.NumDelegates,
+				ServiceChargeRatio: stakepool.NewServiceCharge(edbMiner.Provider.ServiceCharge),
+				MaxNumDelegates:    stakepool.NewDelegates(edbMiner.Provider.NumDelegates),
 			},
 		},
 	}
@@ -108,7 +108,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 }
 
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
-	return event.Miner{
+	minerEvent := event.Miner{
 		N2NHost:   mn.N2NHost,
 		Host:      mn.Host,
 		Port:      mn.Port,
@@ -121,8 +121,6 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 			ID:             mn.ID,
 			TotalStake:     mn.TotalStaked,
 			DelegateWallet: mn.Settings.DelegateWallet,
-			ServiceCharge:  mn.Settings.ServiceChargeRatio,
-			NumDelegates:   mn.Settings.MaxNumDelegates,
 			Rewards: event.ProviderRewards{
 				ProviderID:   mn.ID,
 				Rewards:      mn.Reward,
@@ -136,6 +134,16 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		Longitude: mn.Geolocation.Longitude,
 		Latitude:  mn.Geolocation.Latitude,
 	}
+
+	if mn.Settings.ServiceChargeRatio != nil {
+		minerEvent.Provider.ServiceCharge = *mn.Settings.ServiceChargeRatio
+	}
+
+	if mn.Settings.MaxNumDelegates != nil {
+		minerEvent.Provider.NumDelegates = *mn.Settings.MaxNumDelegates
+	}
+
+	return minerEvent
 }
 
 func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {

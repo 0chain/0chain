@@ -54,10 +54,16 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 			ID:              vn.ID,
 			TotalStake:      staked,
 			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
-			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: vn.LastHealthCheck,
 		},
+	}
+
+	if vn.StakePoolSettings.ServiceChargeRatio != nil {
+		data.ServiceCharge = *vn.StakePoolSettings.ServiceChargeRatio
+	}
+
+	if vn.StakePoolSettings.MaxNumDelegates != nil {
+		data.NumDelegates = *vn.StakePoolSettings.MaxNumDelegates
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
@@ -77,11 +83,17 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 			ID:              vn.ID,
 			TotalStake:      staked,
 			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
-			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
 			Rewards:         event.ProviderRewards{ProviderID: vn.ID},
 			LastHealthCheck: vn.LastHealthCheck,
 		},
+	}
+
+	if vn.StakePoolSettings.ServiceChargeRatio != nil {
+		data.Provider.ServiceCharge = *vn.StakePoolSettings.ServiceChargeRatio
+	}
+
+	if vn.StakePoolSettings.MaxNumDelegates != nil {
+		data.Provider.NumDelegates = *vn.StakePoolSettings.MaxNumDelegates
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)

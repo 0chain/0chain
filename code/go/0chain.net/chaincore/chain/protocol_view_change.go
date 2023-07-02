@@ -188,9 +188,11 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.BuildTag = selfNode.Info.BuildTag
 
 	// miner SC configurations
+	serviceCharge := viper.GetFloat64("service_charge")
+	maxDelegates := viper.GetInt("number_of_delegates")
 	mn.Settings.DelegateWallet = viper.GetString("delegate_wallet")
-	mn.Settings.ServiceChargeRatio = viper.GetFloat64("service_charge")
-	mn.Settings.MaxNumDelegates = viper.GetInt("number_of_delegates")
+	mn.Settings.ServiceChargeRatio = &serviceCharge
+	mn.Settings.MaxNumDelegates = &maxDelegates
 
 	mn.Geolocation = minersc.SimpleNodeGeolocation{
 		Latitude:  viper.GetFloat64("latitude"),

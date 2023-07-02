@@ -43,8 +43,8 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 			Reward: edbSharder.Rewards.Rewards,
 			Settings: stakepool.Settings{
 				DelegateWallet:     edbSharder.DelegateWallet,
-				ServiceChargeRatio: edbSharder.ServiceCharge,
-				MaxNumDelegates:    edbSharder.Provider.NumDelegates,
+				ServiceChargeRatio: stakepool.NewServiceCharge(edbSharder.ServiceCharge),
+				MaxNumDelegates:    stakepool.NewDelegates(edbSharder.Provider.NumDelegates),
 			},
 		},
 	}
@@ -70,7 +70,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 }
 
 func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
-	return event.Sharder{
+	sharderEvent := event.Sharder{
 		N2NHost:   sn.N2NHost,
 		Host:      sn.Host,
 		Port:      sn.Port,
@@ -83,8 +83,6 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 			ID:             sn.ID,
 			TotalStake:     sn.TotalStaked,
 			DelegateWallet: sn.Settings.DelegateWallet,
-			ServiceCharge:  sn.Settings.ServiceChargeRatio,
-			NumDelegates:   sn.Settings.MaxNumDelegates,
 			Rewards: event.ProviderRewards{
 				ProviderID:   sn.ID,
 				Rewards:      sn.Reward,
@@ -98,6 +96,16 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		Longitude: sn.Geolocation.Longitude,
 		Latitude:  sn.Geolocation.Latitude,
 	}
+
+	if sn.Settings.ServiceChargeRatio != nil {
+		sharderEvent.Provider.ServiceCharge = *sn.Settings.ServiceChargeRatio
+	}
+
+	if sn.Settings.MaxNumDelegates != nil {
+		sharderEvent.Provider.NumDelegates = *sn.Settings.MaxNumDelegates
+	}
+
+	return sharderEvent
 }
 
 func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) {

@@ -94,10 +94,13 @@ func addMockAuthorizers(eventDb *event.EventDb, clients, publicKeys []string, ct
 				Provider: event.Provider{
 					ID:              authorizer.ID,
 					DelegateWallet:  clients[i],
-					ServiceCharge:   settings.ServiceChargeRatio,
 					LastHealthCheck: common.Now(),
 				},
 			}
+			if settings.ServiceChargeRatio != nil {
+				authorizer.ServiceCharge = *settings.ServiceChargeRatio
+			}
+
 			authorizers = append(authorizers, authorizer)
 		}
 	}

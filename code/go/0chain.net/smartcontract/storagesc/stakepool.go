@@ -25,14 +25,16 @@ func validateStakePoolSettings(
 	sps stakepool.Settings,
 	conf *Config,
 ) error {
-	if sps.ServiceChargeRatio < 0.0 {
-		return errors.New("negative service charge")
+	if sps.ServiceChargeRatio != nil {
+		if *sps.ServiceChargeRatio < 0.0 {
+			return errors.New("negative service charge")
+		}
+		if *sps.ServiceChargeRatio > conf.MaxCharge {
+			return fmt.Errorf("service_charge (%f) is greater than"+
+				" max allowed by SC (%f)", *sps.ServiceChargeRatio, conf.MaxCharge)
+		}
 	}
-	if sps.ServiceChargeRatio > conf.MaxCharge {
-		return fmt.Errorf("service_charge (%f) is greater than"+
-			" max allowed by SC (%f)", sps.ServiceChargeRatio, conf.MaxCharge)
-	}
-	if sps.MaxNumDelegates <= 0 {
+	if sps.MaxNumDelegates != nil && *sps.MaxNumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
 	}
 	return nil

@@ -100,8 +100,8 @@ func (msc *MinerSmartContract) AddSharder(
 		zap.String("pkey", newSharder.PublicKey),
 		zap.String("mscID", msc.ID),
 		zap.String("delegate_wallet", newSharder.Settings.DelegateWallet),
-		zap.Float64("service_charge", newSharder.Settings.ServiceChargeRatio),
-		zap.Int("number_of_delegates", newSharder.Settings.MaxNumDelegates))
+		zap.Float64("service_charge", *newSharder.Settings.ServiceChargeRatio),
+		zap.Int("number_of_delegates", *newSharder.Settings.MaxNumDelegates))
 
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")

@@ -43,7 +43,8 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 				DelegateID: delegateId,
 				Balance:    arg.delegateBal[i],
 			}
-			sp.Settings.ServiceChargeRatio = arg.serviceChargeRatio
+			serviceCharge := arg.serviceChargeRatio
+			sp.Settings.ServiceChargeRatio = &serviceCharge
 		}
 
 		return sp, balances
@@ -184,6 +185,12 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 	}
 }
 
+func getZeroServiceChargeSettings() Settings {
+	serviceCharge := 0.0
+	return Settings{
+		ServiceChargeRatio: &serviceCharge,
+	}
+}
 func TestGetOrderedPools(t *testing.T) {
 	sp := &StakePool{
 		Pools: map[string]*DelegatePool{
@@ -232,9 +239,7 @@ func Test_validateLockRequest(t *testing.T) {
 							Balance: 20,
 						},
 					},
-					Settings: Settings{
-						ServiceChargeRatio: 0,
-					},
+					Settings: getZeroServiceChargeSettings(),
 				},
 				vs: ValidationSettings{
 					MinStake:        0,
@@ -261,9 +266,7 @@ func Test_validateLockRequest(t *testing.T) {
 							Balance: 20,
 						},
 					},
-					Settings: Settings{
-						ServiceChargeRatio: 0,
-					},
+					Settings: getZeroServiceChargeSettings(),
 				},
 				vs: ValidationSettings{
 					MinStake:        0,
@@ -291,9 +294,7 @@ func Test_validateLockRequest(t *testing.T) {
 							Balance: 20,
 						},
 					},
-					Settings: Settings{
-						ServiceChargeRatio: 0,
-					},
+					Settings: getZeroServiceChargeSettings(),
 				},
 				vs: ValidationSettings{
 					MinStake:        0,
@@ -320,9 +321,7 @@ func Test_validateLockRequest(t *testing.T) {
 							Balance: 20,
 						},
 					},
-					Settings: Settings{
-						ServiceChargeRatio: 0,
-					},
+					Settings: getZeroServiceChargeSettings(),
 				},
 				vs: ValidationSettings{
 					MinStake:        0,
@@ -349,9 +348,7 @@ func Test_validateLockRequest(t *testing.T) {
 							Balance: 20,
 						},
 					},
-					Settings: Settings{
-						ServiceChargeRatio: 0,
-					},
+					Settings: getZeroServiceChargeSettings(),
 				},
 				vs: ValidationSettings{
 					MinStake:        20,
@@ -378,9 +375,7 @@ func Test_validateLockRequest(t *testing.T) {
 							Balance: 20,
 						},
 					},
-					Settings: Settings{
-						ServiceChargeRatio: 0,
-					},
+					Settings: getZeroServiceChargeSettings(),
 				},
 				vs: ValidationSettings{
 					MinStake:        0,

@@ -25,13 +25,18 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
-			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,
 			TotalStake:      staked,
 		},
 		OffersTotal: sp.TotalOffers,
 	}
+	if sn.StakePoolSettings.ServiceChargeRatio != nil {
+		data.Provider.ServiceCharge = *sn.StakePoolSettings.ServiceChargeRatio
+	}
+	if sn.StakePoolSettings.MaxNumDelegates != nil {
+		data.Provider.NumDelegates = *sn.StakePoolSettings.MaxNumDelegates
+	}
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
 	return nil
 }
@@ -56,8 +61,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
-			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: sn.LastHealthCheck,
 			TotalStake:      staked,
 			Rewards: event.ProviderRewards{
@@ -70,6 +73,12 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		OffersTotal: sp.TotalOffers,
 
 		CreationRound: balances.GetBlock().Round,
+	}
+	if sp.Settings.ServiceChargeRatio != nil {
+		data.Provider.ServiceCharge = *sp.Settings.ServiceChargeRatio
+	}
+	if sp.Settings.MaxNumDelegates != nil {
+		data.Provider.NumDelegates = *sp.Settings.MaxNumDelegates
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)

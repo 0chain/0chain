@@ -59,8 +59,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			LastHealthCheck: b.LastHealthCheck,
 			StakePoolSettings: stakepool.Settings{
 				DelegateWallet:     b.DelegateWallet,
-				MaxNumDelegates:    b.NumDelegates,
-				ServiceChargeRatio: b.ServiceCharge,
+				MaxNumDelegates:    &b.NumDelegates,
+				ServiceChargeRatio: &b.ServiceCharge,
 			},
 		})
 
