@@ -182,15 +182,16 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 
 	for _, br := range blockRewards {
 
-		var delegateRewards BlockReward
-		err = edb.Get().Table("reward_delegates").Select("provider_id, sum(amount) as amount").Where("reward_type = ? AND block_number >= ? AND block_number <= ?", spenum.BlockRewardBlobber, startBlock, endBlock).Group("provider_id").Scan(&delegateRewards).Error
+		var delegateReward int64
+
+		err = edb.Get().Table("reward_delegates").Select("sum(amount) as amount").Where("reward_type = ? AND provider_id = ? AND block_number >= ? AND block_number <= ?", spenum.BlockRewardBlobber, br.ProviderID, startBlock, endBlock).Scan(&delegateReward).Error
 		if err != nil {
 			return nil, err
 		}
 
-		result = append(result, delegateRewards.Amount)
+		result = append(result, delegateReward)
 
-		totals = append(totals, br.Amount+delegateRewards.Amount)
+		totals = append(totals, br.Amount+delegateReward)
 	}
 
 	result = append(result, totals...)
