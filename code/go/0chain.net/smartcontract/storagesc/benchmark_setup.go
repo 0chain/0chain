@@ -189,8 +189,7 @@ func AddMockChallenges(
 	numAllocations := viper.GetInt(sc.NumAllocations)
 	allocationChall := make([]AllocationChallenges, numAllocations)
 
-	challengeReadyBlobbersPart, err := partitions.CreateIfNotExists(balances,
-		ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
+	challengeReadyAllocsPart, err := partitionsChallengeReadyAllocs(balances)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -229,8 +228,8 @@ func AddMockChallenges(
 			continue
 		}
 
-		err := challengeReadyBlobbersPart.Add(balances, &ChallengeReadyBlobber{
-			BlobberID: ch.BlobberID,
+		err := challengeReadyAllocsPart.Add(balances, &ChallengeReadyAllocNode{
+			AllocID: ch.AllocationID,
 		})
 		if err != nil {
 			panic(err)
@@ -239,7 +238,7 @@ func AddMockChallenges(
 		blobbersMap[ch.BlobberID] = struct{}{}
 	}
 
-	err = challengeReadyBlobbersPart.Save(balances)
+	err = challengeReadyAllocsPart.Save(balances)
 	if err != nil {
 		panic(err)
 	}
