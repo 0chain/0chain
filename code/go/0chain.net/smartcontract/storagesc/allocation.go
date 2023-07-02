@@ -307,10 +307,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return nil, err
 	}
 
-	//if _, err := partitionsAllocBlobbersAdd(balances, sa.ID); err != nil {
-	//	return nil, fmt.Errorf("could not bind allocation to blobbers: %v", err)
-	//}
-
 	var options []WithOption
 	if mintNewTokens > 0 {
 		options = []WithOption{WithTokenMint(mintNewTokens)}
@@ -1833,40 +1829,17 @@ func (sc *StorageSmartContract) finishAllocation(
 		//	return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
 		//}
 
-		//if err = sps[i].Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
-		//	return fmt.Errorf("failed to save stake pool: %s, err: %v", ba.BlobberID, err)
-		//}
-
 		// TODO: update when locking new stake or collect rewards
-		//staked, err := sps[i].Stake()
-		//if err != nil {
-		//	return err
-		//}
-		//bil[i].TotalStake = staked
-
-		//tag, data := event.NewUpdateBlobberTotalStakeEvent(ba.BlobberID, staked)
-		//balances.EmitEvent(event.TypeStats, tag, ba.BlobberID, data)
-
 		bil[b.Index].Allocated -= alloc.BSize
 		bil[b.Index].SavedData -= ba.Stats.UsedSize
 		allocated := bil[b.Index].Allocated
 
-		// get blobber allocations partitions
-		blobberAllocParts, err := partitionsBlobberAllocations(ba.BlobberID, balances)
-		if err != nil {
-			return common.NewErrorf("fini_alloc_failed",
-				"error getting blobber_challenge_allocation list: %v", err)
-		}
-		if err := partitionsBlobberAllocationsRemove(balances, ba.BlobberID, ba.AllocationID, blobberAllocParts); err != nil {
-			return err
-		}
-		if err := blobberAllocParts.Save(balances); err != nil {
-			return common.NewErrorf("fini_alloc_failed",
-				"error saving blobber allocation partitions: %v", err)
-		}
-
 		// Update saved data on events_db
 		emitUpdateBlobberAllocatedSavedHealth(b.ID, b.LastHealthCheck, allocated, bil[b.Index].SavedData, balances)
+	}
+
+	if err := partitionsChallengeReadyAllocsRemove(balances, alloc.ID); err != nil {
+		return fmt.Errorf("failed to remove alloc from challenge ready partitions: %v", err)
 	}
 
 	emitChallengePoolEvent(alloc, balances)

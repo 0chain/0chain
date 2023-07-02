@@ -108,7 +108,7 @@ func partitionsChallengeReadyAllocsAdd(state state.StateContextI, allocID string
 	return nil
 }
 
-func partitionChallengeReadyAllocsRemove(state state.StateContextI, allocID string) error {
+func partitionsChallengeReadyAllocsRemove(state state.StateContextI, allocID string) error {
 	part, err := partitionsChallengeReadyAllocs(state)
 	if err != nil {
 		return err
