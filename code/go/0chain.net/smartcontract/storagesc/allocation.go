@@ -307,9 +307,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return nil, err
 	}
 
-	if _, err := partitionsAllocBlobbersAdd(balances, sa.ID); err != nil {
-		return nil, fmt.Errorf("could not bind allocation to blobbers: %v", err)
-	}
+	//if _, err := partitionsAllocBlobbersAdd(balances, sa.ID); err != nil {
+	//	return nil, fmt.Errorf("could not bind allocation to blobbers: %v", err)
+	//}
 
 	var options []WithOption
 	if mintNewTokens > 0 {
