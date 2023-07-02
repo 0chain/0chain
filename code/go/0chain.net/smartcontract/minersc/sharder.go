@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract/dto"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -21,19 +23,19 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	var update = NewMinerNode()
-	if err = update.Decode(inputData); err != nil {
+	requiredUpdateInSharderNode := dto.NewMinerDtoNode()
+	if err = json.Unmarshal(inputData, &requiredUpdateInSharderNode); err != nil {
 		return "", common.NewErrorf("update_sharder_settings",
 			"decoding request: %v", err)
 	}
 
-	err = validateNodeSettings(update, gn, "update_sharder_settings")
+	err = validateNodeUpdateSettings(requiredUpdateInSharderNode, gn, "update_sharder_settings")
 	if err != nil {
 		return "", err
 	}
 
 	var sn *MinerNode
-	sn, err = msc.getSharderNode(update.ID, balances)
+	sn, err = msc.getSharderNode(requiredUpdateInSharderNode.ID, balances)
 	if err != nil {
 		return "", common.NewError("update_sharder_settings", err.Error())
 	}
@@ -49,8 +51,14 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", common.NewError("update_sharder_settings", "access denied")
 	}
 
-	sn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
-	sn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
+	// only update when there were values sent
+	if requiredUpdateInSharderNode.StakePool.StakePoolSettings.ServiceChargeRatio != nil {
+		sn.Settings.ServiceChargeRatio = *requiredUpdateInSharderNode.StakePoolSettings.ServiceChargeRatio
+	}
+
+	if requiredUpdateInSharderNode.StakePool.StakePoolSettings.MaxNumDelegates != nil {
+		sn.Settings.MaxNumDelegates = *requiredUpdateInSharderNode.StakePoolSettings.MaxNumDelegates
+	}
 
 	if err = sn.save(balances); err != nil {
 		return "", common.NewErrorf("update_sharder_settings", "saving: %v", err)
