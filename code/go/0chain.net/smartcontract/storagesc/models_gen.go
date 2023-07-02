@@ -748,15 +748,15 @@ func (z *Info) Msgsize() (s int) {
 func (z *PriceRange) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 2
-	// string "Min"
-	o = append(o, 0x82, 0xa3, 0x4d, 0x69, 0x6e)
+	// string "i"
+	o = append(o, 0x82, 0xa1, 0x69)
 	o, err = z.Min.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Min")
 		return
 	}
-	// string "Max"
-	o = append(o, 0xa3, 0x4d, 0x61, 0x78)
+	// string "m"
+	o = append(o, 0xa1, 0x6d)
 	o, err = z.Max.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Max")
@@ -783,13 +783,13 @@ func (z *PriceRange) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "Min":
+		case "i":
 			bts, err = z.Min.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Min")
 				return
 			}
-		case "Max":
+		case "m":
 			bts, err = z.Max.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Max")
@@ -809,7 +809,7 @@ func (z *PriceRange) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *PriceRange) Msgsize() (s int) {
-	s = 1 + 4 + z.Min.Msgsize() + 4 + z.Max.Msgsize()
+	s = 1 + 2 + z.Min.Msgsize() + 2 + z.Max.Msgsize()
 	return
 }
 
@@ -1104,15 +1104,15 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "rp"
 	o = append(o, 0xa2, 0x72, 0x70)
 	// map header, size 2
-	// string "Min"
-	o = append(o, 0x82, 0xa3, 0x4d, 0x69, 0x6e)
+	// string "i"
+	o = append(o, 0x82, 0xa1, 0x69)
 	o, err = z.ReadPriceRange.Min.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "ReadPriceRange", "Min")
 		return
 	}
-	// string "Max"
-	o = append(o, 0xa3, 0x4d, 0x61, 0x78)
+	// string "m"
+	o = append(o, 0xa1, 0x6d)
 	o, err = z.ReadPriceRange.Max.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "ReadPriceRange", "Max")
@@ -1121,15 +1121,15 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "wp"
 	o = append(o, 0xa2, 0x77, 0x70)
 	// map header, size 2
-	// string "Min"
-	o = append(o, 0x82, 0xa3, 0x4d, 0x69, 0x6e)
+	// string "i"
+	o = append(o, 0x82, 0xa1, 0x69)
 	o, err = z.WritePriceRange.Min.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "WritePriceRange", "Min")
 		return
 	}
-	// string "Max"
-	o = append(o, 0xa3, 0x4d, 0x61, 0x78)
+	// string "m"
+	o = append(o, 0xa1, 0x6d)
 	o, err = z.WritePriceRange.Max.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "WritePriceRange", "Max")
@@ -1320,13 +1320,13 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 					return
 				}
 				switch msgp.UnsafeString(field) {
-				case "Min":
+				case "i":
 					bts, err = z.ReadPriceRange.Min.UnmarshalMsg(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "ReadPriceRange", "Min")
 						return
 					}
-				case "Max":
+				case "m":
 					bts, err = z.ReadPriceRange.Max.UnmarshalMsg(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "ReadPriceRange", "Max")
@@ -1355,13 +1355,13 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 					return
 				}
 				switch msgp.UnsafeString(field) {
-				case "Min":
+				case "i":
 					bts, err = z.WritePriceRange.Min.UnmarshalMsg(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "WritePriceRange", "Min")
 						return
 					}
-				case "Max":
+				case "m":
 					bts, err = z.WritePriceRange.Max.UnmarshalMsg(bts)
 					if err != nil {
 						err = msgp.WrapError(err, "WritePriceRange", "Max")
@@ -1562,7 +1562,7 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageAllocationDecode) Msgsize() (s int) {
-	s = 3 + 3 + msgp.Uint16Size + 2 + msgp.IntSize + 2 + msgp.IntSize + 2 + msgp.Int64Size + 3 + msgp.Int64Size + 3 + 1 + 4 + z.ReadPriceRange.Min.Msgsize() + 4 + z.ReadPriceRange.Max.Msgsize() + 3 + 1 + 4 + z.WritePriceRange.Min.Msgsize() + 4 + z.WritePriceRange.Max.Msgsize() + 4 + msgp.BoolSize + 2 + msgp.BoolSize + 2 + msgp.BoolSize + 2 + z.WritePool.Msgsize() + 3 + z.ChallengePool.Msgsize() + 4 + z.MovedToChallenge.Msgsize() + 3 + z.MovedBack.Msgsize() + 3 + z.MovedToValidators.Msgsize() + 3 + z.CancelCost.Msgsize() + 3 + z.Expiration.Msgsize() + 3 + z.StartTime.Msgsize() + 3 + msgp.DurationSize + 2 + msgp.StringPrefixSize + len(z.ID) + 2 + msgp.StringPrefixSize + len(z.Tx) + 2 + msgp.StringPrefixSize + len(z.Owner) + 3 + msgp.StringPrefixSize + len(z.OwnerPublicKey) + 4
+	s = 3 + 3 + msgp.Uint16Size + 2 + msgp.IntSize + 2 + msgp.IntSize + 2 + msgp.Int64Size + 3 + msgp.Int64Size + 3 + 1 + 2 + z.ReadPriceRange.Min.Msgsize() + 2 + z.ReadPriceRange.Max.Msgsize() + 3 + 1 + 2 + z.WritePriceRange.Min.Msgsize() + 2 + z.WritePriceRange.Max.Msgsize() + 4 + msgp.BoolSize + 2 + msgp.BoolSize + 2 + msgp.BoolSize + 2 + z.WritePool.Msgsize() + 3 + z.ChallengePool.Msgsize() + 4 + z.MovedToChallenge.Msgsize() + 3 + z.MovedBack.Msgsize() + 3 + z.MovedToValidators.Msgsize() + 3 + z.CancelCost.Msgsize() + 3 + z.Expiration.Msgsize() + 3 + z.StartTime.Msgsize() + 3 + msgp.DurationSize + 2 + msgp.StringPrefixSize + len(z.ID) + 2 + msgp.StringPrefixSize + len(z.Tx) + 2 + msgp.StringPrefixSize + len(z.Owner) + 3 + msgp.StringPrefixSize + len(z.OwnerPublicKey) + 4
 	if z.Stats == nil {
 		s += msgp.NilSize
 	} else {

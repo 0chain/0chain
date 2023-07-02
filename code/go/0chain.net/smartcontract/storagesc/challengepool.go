@@ -8,9 +8,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 )
 
-//msgp:ignore challengePoolStat
-//go:generate msgp -io=false -tests=false -unexported=true -v
-
 func emitChallengePoolEvent(alloc *StorageAllocation, balances cstate.StateContextI) {
 	data := event.ChallengePool{
 		ID:         alloc.ID,
