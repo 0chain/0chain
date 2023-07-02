@@ -171,7 +171,7 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 
 	var blockRewards []BlockReward
 
-	err := edb.Get().Table("reward_providers").Select("provider_id, sum(amount) as amount").Where("reward_type = ? AND block_number >= ? AND block_number <= ?", spenum.BlockRewardBlobber, startBlock, endBlock).Group("provider_id").Scan(&blockRewards).Error
+	err := edb.Get().Table("reward_providers").Select("provider_id, sum(amount) as amount").Where("reward_type = ? AND block_number >= ? AND block_number <= ?", spenum.BlockRewardBlobber, startBlock, endBlock).Group("provider_id").Order("provider_id").Scan(&blockRewards).Error
 	if err != nil {
 		return nil, err
 	}
