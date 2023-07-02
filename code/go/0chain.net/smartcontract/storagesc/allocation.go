@@ -1408,21 +1408,17 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 // challenge requests and their expiration
 func (sc *StorageSmartContract) canceledPassRates(
 	alloc *StorageAllocation,
+	allocChallenges *AllocationChallenges,
 	now common.Timestamp,
 	maxChallengeCompletionTime time.Duration,
-	balances chainstate.StateContextI,
-) (
-	passRates []float64, err error) {
+) (passRates []float64, err error) {
 
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberAllocs))
 
-	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
-	switch err {
-	case util.ErrValueNotPresent:
-	case nil:
+	if allocChallenges != nil {
 		for _, oc := range allocChallenges.OpenChallenges {
 			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
 			if !ok {
@@ -1444,9 +1440,6 @@ func (sc *StorageSmartContract) canceledPassRates(
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 		}
-
-	default:
-		return nil, fmt.Errorf("getting allocation challenge: %v", err)
 	}
 
 	for _, ba := range alloc.BlobberAllocs {
@@ -1483,11 +1476,38 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
-	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(req.AllocationID, balances)
+	var (
+		alloc *StorageAllocation
+		conf  *Config
+		bil   BlobberOfferStakeList
+	)
+	cr := concurrentReader{}
+	cr.add(func() error {
+		alloc, err = sc.getAllocation(req.AllocationID, balances)
+		if err != nil {
+			return common.NewError("alloc_cancel_failed", err.Error())
+		}
+		return nil
+	})
+	cr.add(func() error {
+		var err error
+		conf, err = getConfig(balances)
+		if err != nil {
+			return common.NewError("can't get config", err.Error())
+		}
+		return nil
+	})
+	cr.add(func() error {
+		var err error
+		bil, err = getBlobbersInfoList(balances)
+		if err != nil {
+			return common.NewErrorf("alloc_cancel_failed", "could not get blobbers info list: %v", err)
+		}
+		return nil
+	})
 
-	if err != nil {
-		return "", common.NewError("alloc_cancel_failed", err.Error())
+	if err := cr.do(); err != nil {
+		return "", err
 	}
 
 	if alloc.Owner != t.ClientID {
@@ -1500,35 +1520,43 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"trying to cancel expired allocation")
 	}
 
-	conf, err := getConfig(balances)
-	if err != nil {
-		return "", common.NewError("can't get config", err.Error())
+	var (
+		allocChallenges *AllocationChallenges
+		blobbers        []*StorageNode
+	)
+	cr = concurrentReader{}
+	cr.add(func() error {
+		allocChallenges, err = sc.getAllocationChallenges(alloc.ID, balances)
+		switch err {
+		case nil, util.ErrValueNotPresent:
+			return nil
+		default:
+			return common.NewErrorf("alloc_cancel_failed", "could not get allocation challenges: %v", err)
+		}
+	})
+	cr.add(func() error {
+		bids := make([]string, 0, len(alloc.Blobbers))
+		for _, b := range alloc.Blobbers {
+			bids = append(bids, b.BlobberID)
+		}
+
+		blobbers, err = getBlobbersByIDs(bids, balances)
+		if err != nil {
+			return common.NewErrorf("alloc_cancel_failed", "could not get blobbers: %v", err)
+		}
+		return nil
+	})
+
+	if err := cr.do(); err != nil {
+		return "", err
 	}
+
 	var passRates []float64
-	passRates, err = sc.canceledPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.canceledPassRates(alloc, allocChallenges, t.CreationDate, conf.MaxChallengeCompletionTime)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
-
-	bil, err := getBlobbersInfoList(balances)
-	if err != nil {
-		return "", common.NewErrorf("alloc_cancel_failed", "could not get blobbers info list: %v", err)
-	}
-	bids := make([]string, 0, len(alloc.Blobbers))
-	for _, b := range alloc.Blobbers {
-		bids = append(bids, b.BlobberID)
-	}
-
-	blobbers, err := getBlobbersByIDs(bids, balances)
-	if err != nil {
-		return "", common.NewErrorf("alloc_cancel_failed", "could not get blobbers: %v", err)
-	}
-
-	//sps, err := getStakePoolsByIDs(spenum.Blobber, bids, balances)
-	//if err != nil {
-	//	return "", common.NewErrorf("alloc_cancel_failed", "could not get stake pools: %v", err)
-	//}
 
 	// can cancel
 	// new values
@@ -1537,19 +1565,13 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	//sps := make([]*stakePool, 0, len(alloc.BlobberAllocs))
 	for i := range alloc.BlobberAllocs {
 		b := blobbers[i]
-		//var sp *stakePool
-		//if sp, err = sc.getStakePool(spenum.Blobber, d.BlobberID, balances); err != nil {
-		//	return "", common.NewError("fini_alloc_failed",
-		//		"can't get stake pool of "+d.BlobberID+": "+err.Error())
-		//}
 		if err := bil[b.Index].reduceOffer(getOffer(alloc.BSize, alloc.bTerms(i))); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
-		//sps = append(sps, sp)
 	}
 
-	err = sc.finishAllocation(t, alloc, blobbers, bil, passRates, balances)
+	err = sc.finishAllocation(t, alloc, allocChallenges, blobbers, bil, passRates, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
@@ -1590,10 +1612,63 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
 
-	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(req.AllocationID, balances)
-	if err != nil {
-		return "", common.NewError("fini_alloc_failed", err.Error())
+	var (
+		alloc           *StorageAllocation
+		allocChallenges *AllocationChallenges
+		conf            *Config
+		blobbers        []*StorageNode
+		bil             BlobberOfferStakeList
+	)
+
+	var cr concurrentReader
+	cr.add(func() error {
+		alloc, err = sc.getAllocation(req.AllocationID, balances)
+		if err != nil {
+			return common.NewError("fini_alloc_failed", err.Error())
+		}
+		return nil
+	})
+	cr.add(func() error {
+		var err error
+		conf, err = getConfig(balances)
+		if err != nil {
+			return common.NewError("can't get config", err.Error())
+		}
+		return nil
+	})
+
+	cr.add(func() error {
+		bids := make([]string, 0, len(alloc.Blobbers))
+		for _, b := range alloc.Blobbers {
+			bids = append(bids, b.BlobberID)
+		}
+
+		blobbers, err = getBlobbersByIDs(bids, balances)
+		if err != nil {
+			return common.NewErrorf("alloc_cancel_failed", "could not get blobbers: %v", err)
+		}
+		return nil
+	})
+	cr.add(func() error {
+		bil, err = getBlobbersInfoList(balances)
+		if err != nil {
+			return common.NewErrorf("alloc_cancel_failed", "could not get blobbers info list: %v", err)
+		}
+		return nil
+	})
+	cr.add(func() error {
+		var err error
+		allocChallenges, err = sc.getAllocationChallenges(alloc.ID, balances)
+		switch err {
+		case nil, util.ErrValueNotPresent:
+			return nil
+		default:
+			return common.NewErrorf("alloc_cancel_failed", "could not get allocation challenges: %v", err)
+		}
+	})
+
+	if err := cr.do(); err != nil {
+		return "", err
 	}
 
 	// should be owner or one of blobbers of the allocation
@@ -1606,11 +1681,6 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	if alloc.Finalized {
 		return "", common.NewError("fini_alloc_failed",
 			"allocation already finalized")
-	}
-
-	conf, err := getConfig(balances)
-	if err != nil {
-		return "", common.NewError("can't get config", err.Error())
 	}
 
 	// should be expired
@@ -1626,27 +1696,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
 
-	bids := make([]string, 0, len(alloc.Blobbers))
-	for _, b := range alloc.Blobbers {
-		bids = append(bids, b.BlobberID)
-	}
-
-	blobbers, err := getBlobbersByIDs(bids, balances)
-	if err != nil {
-		return "", common.NewErrorf("alloc_cancel_failed", "could not get blobbers: %v", err)
-	}
-
-	//sps, err := getStakePoolsByIDs(spenum.Blobber, bids, balances)
-	//if err != nil {
-	//	return "", common.NewErrorf("alloc_cancel_failed", "could not get stake pools: %v", err)
-	//}
-
-	bil, err := getBlobbersInfoList(balances)
-	if err != nil {
-		return "", common.NewErrorf("alloc_cancel_failed", "could not get blobbers info list: %v", err)
-	}
-
-	err = sc.finishAllocation(t, alloc, blobbers, bil, passRates, balances)
+	err = sc.finishAllocation(t, alloc, allocChallenges, blobbers, bil, passRates, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
@@ -1672,6 +1722,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 func (sc *StorageSmartContract) finishAllocation(
 	t *transaction.Transaction,
 	alloc *StorageAllocation,
+	challenges *AllocationChallenges,
 	blobbers []*StorageNode,
 	bil BlobberOfferStakeList,
 	passRates []float64,
@@ -1680,13 +1731,6 @@ func (sc *StorageSmartContract) finishAllocation(
 ) (err error) {
 	//before := make([]currency.Coin, len(blobbers))
 	deductionFromWritePool := currency.Coin(0)
-
-	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return fmt.Errorf("could not get allocation challenges: %v", err)
-		}
-	}
 
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
