@@ -234,3 +234,37 @@ func handleOfflineBlobber(gsDiff *Snapshot, old BlobberSnapshot) {
 		gsDiff.StakedStorage += -old.Capacity
 	}
 }
+
+func (edb *EventDb) CreateBlobberAggregates(blobbers []Blobber, round int64) error {
+	var aggregates []BlobberAggregate
+	for _, blobber := range blobbers {
+		aggregate := BlobberAggregate{
+			Round:     round,
+			BlobberID: blobber.ID,
+			BucketID:  blobber.BucketId,
+		}
+		aggregate.WritePrice = blobber.WritePrice
+		aggregate.Capacity = blobber.Capacity
+		aggregate.Allocated = blobber.Allocated
+		aggregate.SavedData = blobber.SavedData
+		aggregate.ReadData = blobber.ReadData
+		aggregate.TotalStake = blobber.TotalStake
+		aggregate.TotalRewards = blobber.Rewards.TotalRewards
+		aggregate.OffersTotal = blobber.OffersTotal
+		aggregate.OpenChallenges = blobber.OpenChallenges
+		aggregate.TotalBlockRewards = blobber.TotalBlockRewards
+		aggregate.TotalStorageIncome = blobber.TotalStorageIncome
+		aggregate.TotalReadIncome = blobber.TotalReadIncome
+		aggregate.TotalSlashedStake = blobber.TotalSlashedStake
+		aggregate.Downtime = blobber.Downtime
+		aggregate.ChallengesPassed = blobber.ChallengesPassed
+		aggregate.ChallengesCompleted = blobber.ChallengesCompleted
+		if blobber.ChallengesCompleted == 0 {
+			aggregate.RankMetric = 0
+		} else {
+			aggregate.RankMetric = float64(blobber.ChallengesPassed) / float64(blobber.ChallengesCompleted)
+		}
+		aggregates = append(aggregates, aggregate)
+	}
+	return edb.Store.Get().Create(&aggregates).Error
+}

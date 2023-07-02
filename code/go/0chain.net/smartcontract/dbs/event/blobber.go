@@ -66,6 +66,10 @@ type BlobberPriceRange struct {
 	Max null.Int `json:"max"`
 }
 
+func (b Blobber) GetID() string {
+	return b.ID
+}
+
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	err := edb.Store.Get().
