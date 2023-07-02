@@ -35,13 +35,30 @@ func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challen
 }
 
 func (edb *EventDb) GetPassedChallengesForBlobberAllocation(allocationID string) (map[string]int, error) {
-	var result map[string]int
 
-	edb.Store.Get().Table("challenges").
+	rows, err := edb.Store.Get().Table("challenges").
 		Select("blobber_id, count(*) as count").
 		Where("allocation_id = ? AND passed = ?", allocationID, true).
 		Group("blobber_id").
-		Scan(&result)
+		Rows()
+
+	result := make(map[string]int)
+
+	for rows.Next() {
+		var blobberID string
+		var count int
+
+		err := rows.Scan(&blobberID, &count)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning result: %v", err)
+		}
+
+		result[blobberID] = count
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error retriving passed challenges for allocation %v; error: %v", allocationID, err)
+	}
 
 	return result, nil
 }
