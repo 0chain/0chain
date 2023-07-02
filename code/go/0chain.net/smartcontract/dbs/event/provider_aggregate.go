@@ -41,20 +41,78 @@ var providerEventHandlers = map[reflect.Type]EventProvidersIdsExtractorsMap{
 		TagKillProvider: extractProvidersIdsFromDbsProviderId[Blobber],
 		TagCollectProviderReward: extractProviderIdFromEventIndex,
 	},
-	reflect.TypeOf(Sharder{}): {},
-	reflect.TypeOf(Miner{}): {},
-	reflect.TypeOf(Validator{}): {},
-	reflect.TypeOf(Authorizer{}): {},
+	reflect.TypeOf(Sharder{}): {
+		TagAddSharder: extractProvidersIdsFromProvider[Sharder],
+		TagUpdateSharder: extractProvidersIdsFromProvider[Sharder],
+		TagUpdateSharderTotalStake: extractProvidersIdsFromProvider[Sharder],
+		TagStakePoolReward: extractProvidersIdsFromSPUs,
+		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
+		TagMintReward: extractProviderIdFromRewards[Sharder],
+		TagCollectProviderReward: extractProviderIdFromEventIndex,
+		TagSharderHealthCheck: extractProvidersIdsFromHealthCheck,
+		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Sharder],
+		TagKillProvider: extractProvidersIdsFromDbsProviderId[Sharder],
+	},
+	reflect.TypeOf(Miner{}): {
+		TagAddMiner: extractProvidersIdsFromProvider[Miner],
+		TagUpdateMiner: extractProvidersIdsFromProvider[Miner],
+		TagUpdateMinerTotalStake: extractProvidersIdsFromProvider[Miner],
+		TagStakePoolReward: extractProvidersIdsFromSPUs,
+		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
+		TagMintReward: extractProviderIdFromRewards[Miner],
+		TagCollectProviderReward: extractProviderIdFromEventIndex,
+		TagMinerHealthCheck: extractProvidersIdsFromHealthCheck,
+		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Miner],
+		TagKillProvider: extractProvidersIdsFromDbsProviderId[Miner],
+	},
+	reflect.TypeOf(Validator{}): {
+		TagAddOrOverwiteValidator: extractProvidersIdsFromProvider[Validator],
+		TagUpdateValidator: extractProvidersIdsFromProvider[Validator],
+		TagUpdateValidatorStakeTotal: extractProvidersIdsFromProvider[Validator],
+		TagStakePoolReward: extractProvidersIdsFromSPUs,
+		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
+		TagMintReward: extractProviderIdFromRewards[Validator],
+		TagCollectProviderReward: extractProviderIdFromEventIndex,
+		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Validator],
+		TagKillProvider: extractProvidersIdsFromDbsProviderId[Validator],
+	},
+	reflect.TypeOf(Authorizer{}): {
+		TagAddAuthorizer: extractProvidersIdsFromProvider[Authorizer],
+		TagUpdateAuthorizer: extractProvidersIdsFromProvider[Authorizer],
+		TagUpdateAuthorizerTotalStake: extractProvidersIdsFromProvider[Authorizer],
+		TagStakePoolReward: extractProvidersIdsFromSPUs,
+		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
+		TagMintReward: extractProviderIdFromRewards[Authorizer],
+		TagCollectProviderReward: extractProviderIdFromEventIndex,
+		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Authorizer],
+		TagKillProvider: extractProvidersIdsFromDbsProviderId[Authorizer],
+	},
 }
 
 var providerAggregatesCreators = map[reflect.Type]ProviderAggregateCreator {
-	reflect.TypeOf(Blobber{}): func(edb *EventDb, providers interface{}, round int64) (error) {
+	reflect.TypeOf(Blobber{}): func(edb *EventDb, providers interface{}, round int64) error {
 		blobbers, ok := providers.([]Blobber)
 		if !ok {
 			return errors.New("invalid providers")
 		}
 
 		return edb.CreateBlobberAggregates(blobbers, round)
+	},
+	reflect.TypeOf(Sharder{}): func(edb *EventDb, providers interface{}, round int64) error {
+		sharders, ok := providers.([]Sharder)
+		if !ok {
+			return errors.New("invalid providers")
+		}
+
+		return edb.CreateSharderAggregates(sharders, round)
+	},
+	reflect.TypeOf(Miner{}): func(edb *EventDb, providers interface{}, round int64) error {
+		miners, ok := providers.([]Miner)
+		if !ok {
+			return errors.New("invalid providers")
+		}
+
+		return edb.CreateMinerAggregates(miners, round)
 	},
 }
 

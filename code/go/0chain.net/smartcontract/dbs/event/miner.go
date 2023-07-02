@@ -37,6 +37,10 @@ type MinerGeolocation struct {
 	Longitude float64 `json:"longitude"`
 }
 
+func (m Miner) GetID() string {
+	return m.ID
+}	
+
 func (edb *EventDb) GetMiner(id string) (Miner, error) {
 	var miner Miner
 	return miner, edb.Store.Get().

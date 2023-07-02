@@ -142,7 +142,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 			BucketID:  current.BucketId,
 		}
 
-		recalculateProviderFields(&old, &current, &aggregate)
+		// recalculateProviderFields(&old, &current, &aggregate)
 		aggregate.Fees = (old.Fees + current.Fees) / 2
 		aggregates = append(aggregates, aggregate)
 
@@ -177,4 +177,24 @@ func handleOfflineSharder(gsDiff *Snapshot, old SharderSnapshot) {
 	gsDiff.SharderCount -= 1
 	gsDiff.TotalStaked -= int64(old.TotalStake)
 	gsDiff.TotalRewards -= int64(old.TotalRewards)
+}
+
+func (edb *EventDb) CreateSharderAggregates(sharders []Sharder, round int64) error {
+	var aggregates []SharderAggregate
+	for _, s := range sharders {
+		aggregate := SharderAggregate{
+			Round:    round,
+			SharderID:  s.ID,
+			BucketID: s.BucketId,
+		}
+		recalculateProviderFields(&s, &aggregate)
+		aggregate.Fees = s.Fees
+		aggregates = append(aggregates, aggregate)
+	}
+	if len(aggregates) > 0 {
+		if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
+			return result.Error
+		}
+	}
+	return nil
 }

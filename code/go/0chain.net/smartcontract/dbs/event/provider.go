@@ -43,10 +43,10 @@ type ProviderAggregate interface {
 	SetTotalRewards(value currency.Coin)
 }
 
-func recalculateProviderFields(prev, curr, result ProviderAggregate) {
-	result.SetTotalStake((curr.GetTotalStake() + prev.GetTotalStake()) / 2)
-	result.SetServiceCharge((curr.GetServiceCharge() + prev.GetServiceCharge()) / 2)
-	result.SetTotalRewards((curr.GetTotalRewards() + prev.GetTotalRewards()) / 2)
+func recalculateProviderFields(curr, result ProviderAggregate) {
+	result.SetTotalStake(curr.GetTotalStake())
+	result.SetServiceCharge(curr.GetServiceCharge())
+	result.SetTotalRewards(curr.GetTotalRewards())
 }
 
 func (p *Provider) IsOffline() bool {

@@ -139,7 +139,7 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 			BucketID:    current.BucketId,
 		}
 
-		recalculateProviderFields(&old, &current, &aggregate)
+		// recalculateProviderFields(&old, &current, &aggregate)
 		aggregates = append(aggregates, aggregate)
 
 		gsDiff.TotalRewards += int64(current.Rewards.TotalRewards - old.TotalRewards)
@@ -174,4 +174,23 @@ func handleOfflineValidator(gs *Snapshot, old ValidatorSnapshot) {
 	gs.ValidatorCount -= 1
 	gs.TotalRewards -= int64(old.TotalRewards)
 	gs.TotalStaked -= int64(old.TotalStake)
+}
+
+func (edb *EventDb) CreateValidatorAggregates(validators []Validator, round int64) error {
+	var aggregates []ValidatorAggregate
+	for _, v := range validators {
+		agg := ValidatorAggregate{
+			Round:       round,
+			ValidatorID: v.ID,
+			BucketID:    v.BucketId,
+		}
+		recalculateProviderFields(&v, &agg)
+		aggregates = append(aggregates, agg)
+	}
+
+	if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
+		return result.Error
+	}
+
+	return nil
 }

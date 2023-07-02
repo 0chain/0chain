@@ -142,7 +142,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 			BucketID:     current.BucketId,
 		}
 
-		recalculateProviderFields(&old, &current, &aggregate)
+		// recalculateProviderFields(&old, &current, &aggregate)
 
 		aggregate.TotalMint = (old.TotalMint + current.TotalMint) / 2
 		aggregate.TotalBurn = (old.TotalBurn + current.TotalBurn) / 2
@@ -181,4 +181,23 @@ func handleOfflineAuthorizer(gs *Snapshot, old AuthorizerSnapshot) {
 	gs.AuthorizerCount -= 1
 	gs.TotalRewards -= int64(old.TotalRewards)
 	gs.TotalStaked -= int64(old.TotalStake)
+}
+
+func (edb *EventDb) CreateAuthorizerAggregates(authorizers []Authorizer, round int64) error {
+	var aggregates []AuthorizerAggregate
+	for _, v := range authorizers {
+		agg := AuthorizerAggregate{
+			Round:       round,
+			AuthorizerID: v.ID,
+			BucketID:    v.BucketId,
+		}
+		recalculateProviderFields(&v, &agg)
+		aggregates = append(aggregates, agg)
+	}
+
+	if result := edb.Store.Get().Create(&aggregates); result.Error != nil {
+		return result.Error
+	}
+
+	return nil
 }
