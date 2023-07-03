@@ -28,15 +28,17 @@ func (_ *StorageSmartContract) shutdownBlobber(
 					"can't get the blobber "+tx.ClientID+": "+err.Error())
 			}
 
-			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-				return nil, nil, err
-			}
+			// TODO: Check if blobber is killed or shutdown when generate challenges
+			// the blobber will not be challenged
+
+			//if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
+			//	return nil, nil, err
+			//}
 
 			sp, err := getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
-
 			return blobber, sp, nil
 		},
 		balances,
