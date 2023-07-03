@@ -16,7 +16,7 @@ type MinerSnapshot struct {
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
-	CreationRound int64         `json:"creation_round" gorm:"index"`
+	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
 	IsShutdown    bool          `json:"is_shutdown"`
 }
