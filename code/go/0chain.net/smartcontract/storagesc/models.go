@@ -36,10 +36,9 @@ const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
-	AUTHORIZERS_COUNT_KEY            = ADDRESS + encryption.Hash("all_authorizers")
-	ALL_VALIDATORS_KEY               = ADDRESS + encryption.Hash("all_validators")
-	ALL_CHALLENGE_READY_BLOBBERS_KEY = ADDRESS + encryption.Hash("all_challenge_ready_blobbers")
-	BLOBBER_REWARD_KEY               = ADDRESS + encryption.Hash("blobber_rewards")
+	AUTHORIZERS_COUNT_KEY = ADDRESS + encryption.Hash("all_authorizers")
+	ALL_VALIDATORS_KEY    = ADDRESS + encryption.Hash("all_validators")
+	BLOBBER_REWARD_KEY    = ADDRESS + encryption.Hash("blobber_rewards")
 )
 
 func getBlobberAllocationsKey(blobberID string) string {

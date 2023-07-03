@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/big"
 
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -849,36 +848,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	return string(blobAllocBytes), nil
-}
-
-// updateBlobberChallengeReady add or update blobber challenge weight or
-// remove itself from challenge ready partitions if there's no data stored
-func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.StateContextI,
-	blobAlloc *BlobberAllocation, blobUsedCapacity uint64) error {
-	logging.Logger.Info("commit_connection, add or update blobber challenge ready partitions",
-		zap.String("blobber", blobAlloc.BlobberID))
-	if blobUsedCapacity == 0 {
-		// remove from challenge ready partitions if this blobber has no data stored
-		err := partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
-		if err != nil && !partitions.ErrItemNotFound(err) {
-			return err
-		}
-		return nil
-	}
-
-	sp, err := getStakePool(spenum.Blobber, blobAlloc.BlobberID, balances)
-	if err != nil {
-		return fmt.Errorf("unable to fetch blobbers stake pool: %v", err)
-	}
-	stakedAmount, err := sp.stake()
-	if err != nil {
-		return fmt.Errorf("unable to total stake pool: %v", err)
-	}
-	weight := uint64(stakedAmount) * blobUsedCapacity
-	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {
-		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
-	}
-	return nil
 }
 
 // insert new blobber, filling its stake pool
