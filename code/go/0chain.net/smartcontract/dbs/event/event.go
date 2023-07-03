@@ -11,11 +11,11 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber int64       `json:"block_number" gorm:"index:idx_event"`
-	TxHash      string      `json:"tx_hash" gorm:"index:idx_event"`
-	Type        EventType   `json:"type" gorm:"index:idx_event"`
-	Tag         EventTag    `json:"tag" gorm:"index:idx_event"`
-	Index       string      `json:"index" gorm:"index:idx_event"`
+	BlockNumber int64       `json:"block_number"`
+	TxHash      string      `json:"tx_hash"`
+	Type        EventType   `json:"type"`
+	Tag         EventTag    `json:"tag"`
+	Index       string      `json:"index"`
 	Data        interface{} `json:"data" gorm:"-"`
 }
 

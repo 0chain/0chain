@@ -24,7 +24,7 @@ type Transaction struct {
 	TransactionData   string        `json:"transaction_data"`
 	Value             currency.Coin `json:"value"`
 	Signature         string        `json:"signature"`
-	CreationDate      int64         `json:"creation_date"  gorm:"index:idx_tcreation_date"`
+	CreationDate      int64         `json:"creation_date"`
 	Fee               currency.Coin `json:"fee"`
 	Nonce             int64         `json:"nonce"`
 	TransactionType   int           `json:"transaction_type"`
@@ -47,6 +47,7 @@ func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
 }
 
 // GetTransactionByHash finds the transaction record by hash
+// Used Index: idx_thash
 func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 	tr := Transaction{}
 	res := edb.Store.
@@ -58,6 +59,7 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 }
 
 // GetTransactionByClientId searches for transaction by clientID
+// Used Index: idx_tclient_id
 func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.
@@ -79,6 +81,7 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagin
 }
 
 // GetTransactionByToClientId searches for transaction by toClientID
+// Used Index: idx_tto_client_id
 func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.
@@ -99,6 +102,8 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 	return tr, res.Error
 }
 
+// GetTransactionByBlockHash finds the transaction record by block hash
+// Used Index: idx_tblock_hash
 func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pagination) ([]Transaction, error) {
 	var tr []Transaction
 	res := edb.Store.
@@ -152,6 +157,7 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 	return tr, res.Error
 }
 
+// GetTransactionsForBlocks finds the transaction record between two block numbers
 func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Transaction, error) {
 	tr := []Transaction{}
 	res := edb.Store.Get().

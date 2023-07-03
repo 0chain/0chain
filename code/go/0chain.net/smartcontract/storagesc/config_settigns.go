@@ -47,6 +47,7 @@ const (
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
 	CancellationCharge
+	MinLockDemand
 
 	FreeAllocationDataShards
 	FreeAllocationParityShards
@@ -67,6 +68,7 @@ const (
 	MinWritePrice
 	ChallengeEnabled
 	ValidatorsPerChallenge
+	NumValidatorsRewarded
 	MaxDelegates
 
 	BlockRewardBlockReward
@@ -153,6 +155,7 @@ func initSettingName() {
 	SettingName[MaxTotalFreeAllocation] = "max_total_free_allocation"
 	SettingName[MaxIndividualFreeAllocation] = "max_individual_free_allocation"
 	SettingName[CancellationCharge] = "cancellation_charge"
+	SettingName[MinLockDemand] = "min_lock_demand"
 	SettingName[FreeAllocationDataShards] = "free_allocation_settings.data_shards"
 	SettingName[FreeAllocationParityShards] = "free_allocation_settings.parity_shards"
 	SettingName[FreeAllocationSize] = "free_allocation_settings.size"
@@ -170,6 +173,7 @@ func initSettingName() {
 	SettingName[MinWritePrice] = "min_write_price"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
+	SettingName[NumValidatorsRewarded] = "num_validators_rewarded"
 	SettingName[MaxDelegates] = "max_delegates"
 	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
 	SettingName[BlockRewardQualifyingStake] = "block_reward.qualifying_stake"
@@ -234,6 +238,7 @@ func initSettings() {
 		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
 		MaxIndividualFreeAllocation.String():      {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
 		CancellationCharge.String():               {CancellationCharge, smartcontract.Float64},
+		MinLockDemand.String():                    {MinLockDemand, smartcontract.Float64},
 		FreeAllocationDataShards.String():         {FreeAllocationDataShards, smartcontract.Int},
 		FreeAllocationParityShards.String():       {FreeAllocationParityShards, smartcontract.Int},
 		FreeAllocationSize.String():               {FreeAllocationSize, smartcontract.Int64},
@@ -251,6 +256,7 @@ func initSettings() {
 		MinWritePrice.String():                    {MinWritePrice, smartcontract.CurrencyCoin},
 		ChallengeEnabled.String():                 {ChallengeEnabled, smartcontract.Boolean},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, smartcontract.Int},
+		NumValidatorsRewarded.String():            {NumValidatorsRewarded, smartcontract.Int},
 		MaxDelegates.String():                     {MaxDelegates, smartcontract.Int},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
 		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
@@ -362,6 +368,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.MaxBlobbersPerAllocation = change
 	case ValidatorsPerChallenge:
 		conf.ValidatorsPerChallenge = change
+	case NumValidatorsRewarded:
+		conf.NumValidatorsRewarded = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
@@ -447,6 +455,8 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.ValidatorReward = change
 	case CancellationCharge:
 		conf.CancellationCharge = change
+	case MinLockDemand:
+		conf.MinLockDemand = change
 	case StakePoolKillSlash:
 		conf.StakePool.KillSlash = change
 	case BlobberSlash:
@@ -636,6 +646,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxIndividualFreeAllocation
 	case CancellationCharge:
 		return conf.CancellationCharge
+	case MinLockDemand:
+		return conf.MinLockDemand
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
 	case FreeAllocationParityShards:
@@ -672,6 +684,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.ChallengeEnabled
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
+	case NumValidatorsRewarded:
+		return conf.NumValidatorsRewarded
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:
