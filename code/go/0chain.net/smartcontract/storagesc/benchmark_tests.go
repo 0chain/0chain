@@ -170,7 +170,7 @@ func BenchmarkTests(
 					AllocationRoot:         encryption.Hash("allocation root"),
 					PreviousAllocationRoot: encryption.Hash("allocation root"),
 					AllocationID:           getMockAllocationId(0),
-					Size:                   1024,
+					Size:                   100,
 					BlobberID:              getMockBlobberId(0),
 					Timestamp:              1,
 					ClientID:               data.Clients[0],

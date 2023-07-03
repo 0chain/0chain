@@ -647,15 +647,8 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 func (sc *StorageSmartContract) commitBlobberConnection(
 	t *transaction.Transaction, input []byte, balances cstate.StateContextI) (
 	string, error) {
-
-	conf, err := sc.getConfig(balances, true)
-	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"malformed input: "+err.Error())
-	}
-
 	var commitConnection BlobberCloseConnection
-	err = json.Unmarshal(input, &commitConnection)
+	err := json.Unmarshal(input, &commitConnection)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"malformed input: "+err.Error())
@@ -670,48 +663,78 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid Blobber ID for closing connection. Write marker not for this blobber")
 	}
 
-	alloc, err := sc.getAllocation(commitConnection.WriteMarker.AllocationID,
-		balances)
-	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"can't get allocation: "+err.Error())
-	}
+	var (
+		conf      *Config
+		alloc     *StorageAllocation
+		blobAlloc *BlobberAllocation
+		blobber   *StorageNode
+		bil       BlobberOfferStakeList
+	)
 
-	if alloc.Owner != commitConnection.WriteMarker.ClientID {
-		return "", common.NewError("commit_connection_failed", "write marker has"+
-			" to be by the same client as owner of the allocation")
-	}
+	cr := concurrentReader{}
+	cr.add(func() error {
+		var err error
+		conf, err = sc.getConfig(balances, true)
+		if err != nil {
+			return common.NewErrorf("commit_connection_failed", "malformed input: %v", err)
+		}
+		return nil
+	})
+	cr.add(func() error {
+		alloc, err = sc.getAllocation(commitConnection.WriteMarker.AllocationID,
+			balances)
+		if err != nil {
+			return common.NewErrorf("commit_connection_failed",
+				"can't get allocation: %v", err)
+		}
 
-	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
-	if !ok {
-		return "", common.NewError("commit_connection_failed",
-			"Blobber is not part of the allocation")
-	}
+		if alloc.Owner != commitConnection.WriteMarker.ClientID {
+			return common.NewError("commit_connection_failed",
+				"write marker has to be by the same client as owner of the allocation")
+		}
 
-	blobAllocBytes, err := json.Marshal(blobAlloc)
-	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"error marshalling allocation blobber details")
-	}
+		var ok bool
+		blobAlloc, ok = alloc.BlobberAllocsMap[t.ClientID]
+		if !ok {
+			return common.NewError("commit_connection_failed", "blobber is not part of the allocation")
+		}
+		// TODO: slow, do it in another thread and check error in the end
+		if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
+			return common.NewError("commit_connection_failed", "invalid signature for write marker")
+		}
 
-	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
-		return "", common.NewError("commit_connection_failed",
-			"Invalid signature for write marker")
+		return nil
+	})
+
+	cr.add(func() error {
+		blobber, err = sc.getBlobber(t.ClientID, balances)
+		if err != nil {
+			return common.NewErrorf("commit_connection_failed", "error fetching blobber: %v", err)
+		}
+		return nil
+	})
+
+	cr.add(func() error {
+		bil, err = getBlobbersInfoList(balances)
+		if err != nil {
+			return common.NewErrorf("commit_connection_failed", "error fetching blobbers info list: %v", err)
+		}
+
+		return nil
+	})
+	if err := cr.do(); err != nil {
+		return "", err
 	}
 
 	if blobAlloc.AllocationRoot == commitConnection.AllocationRoot && blobAlloc.LastWriteMarker != nil &&
 		blobAlloc.LastWriteMarker.PreviousAllocationRoot == commitConnection.PrevAllocationRoot {
-		return string(blobAllocBytes), nil
-	}
+		blobAllocBytes, err := json.Marshal(blobAlloc)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error marshalling allocation blobber details")
+		}
 
-	blobber, err := sc.getBlobber(blobAlloc.BlobberID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"error fetching blobber: %v", err)
-	}
-	bil, err := getBlobbersInfoList(balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed", "error fetching blobbers info list: %v", err)
+		return string(blobAllocBytes), nil
 	}
 
 	allocSizeBefore := alloc.Stats.UsedSize
@@ -842,7 +865,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	emitAddWriteMarker(t, commitConnection.WriteMarker, movedTokens, balances)
 
-	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
+	blobAllocBytes, err := json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed", "encode last write marker failed: %v", err)
 	}
