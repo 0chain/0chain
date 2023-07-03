@@ -164,10 +164,11 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 	return result, nil
 }
 
-func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error) {
+func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) (map[string]int64, error) {
 
-	var result []int64
-	var totals []int64
+	var result map[string]int64
+	result = make(map[string]int64)
+	//var totals []int64
 
 	var blockRewards []BlockReward
 
@@ -177,7 +178,7 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 	}
 
 	for _, br := range blockRewards {
-		result = append(result, br.Amount)
+		result[br.ProviderID] = br.Amount
 	}
 
 	for _, br := range blockRewards {
@@ -189,12 +190,12 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 			return nil, err
 		}
 
-		result = append(result, delegateReward)
+		result[br.ProviderID] += delegateReward
 
-		totals = append(totals, br.Amount+delegateReward)
+		//totals = append(totals, br.Amount+delegateReward)
 	}
 
-	result = append(result, totals...)
+	//result = append(result, totals...)
 
 	return result, err
 }
