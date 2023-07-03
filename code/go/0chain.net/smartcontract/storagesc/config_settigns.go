@@ -114,6 +114,7 @@ const (
 	CostShutdownBlobber
 	CostShutdownValidator
 	NumberOfSettings
+	MaxCharge
 )
 
 func (s Setting) String() string {
@@ -144,6 +145,7 @@ func initSettingName() {
 	SettingName[MinAllocSize] = "min_alloc_size"
 	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
+	SettingName[MaxCharge] = "max_charge"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
 	SettingName[WritePoolMinLock] = "writepool.min_lock"
 	SettingName[StakePoolKillSlash] = "stakepool.kill_slash"
