@@ -78,7 +78,7 @@ func addMockAllocation(
 		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
 		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
 		Stats: &StorageAllocationStats{
-			UsedSize:                  100,
+			UsedSize:                  1,
 			NumWrites:                 1,
 			NumReads:                  1,
 			TotalChallenges:           1,
