@@ -27,7 +27,7 @@ type Miner struct {
 	Active        bool
 	Longitude     float64
 	Latitude      float64
-	CreationRound int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
+	CreationRound int64 `json:"creation_round"`
 }
 
 // swagger:model MinerGeolocation

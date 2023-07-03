@@ -89,6 +89,7 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 			FailedChallenges:         0,
 			LatestClosedChallengeTxn: "latest_closed_challenge_txn",
 			ThirdPartyExtendable:     false,
+			MinLockDemand:            0.17,
 		})
 		ids = append(ids, id)
 		initTime = initTime.Add(time.Second)
@@ -123,10 +124,6 @@ func TestAllocations(t *testing.T) {
 		// WritePrice is price for reading. Token / GB / time unit. Also,
 		// it used to calculate min_lock_demand value.
 		WritePrice currency.Coin `json:"write_price"`
-		// MinLockDemand in number in [0; 1] range. It represents part of
-		// allocation should be locked for the blobber rewards even if
-		// user never write something to the blobber.
-		MinLockDemand float64 `json:"min_lock_demand"`
 	}
 
 	type PriceRange struct {
@@ -230,7 +227,8 @@ func TestAllocations(t *testing.T) {
 		// transaction.
 		Canceled bool `json:"canceled,omitempty"`
 		// UsedSize used to calculate blobber reward ratio.
-		UsedSize int64 `json:"-"`
+		UsedSize      int64   `json:"-"`
+		MinLockDemand float64 `json:"min_lock_demand"`
 
 		// MovedToChallenge is number of tokens moved to challenge pool.
 		MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
@@ -252,11 +250,10 @@ func TestAllocations(t *testing.T) {
 		var allocationTerms []AllocationBlobberTerm
 		for _, b := range sa.BlobberDetails {
 			allocationTerms = append(allocationTerms, AllocationBlobberTerm{
-				BlobberID:     b.BlobberID,
-				AllocationID:  b.AllocationID,
-				ReadPrice:     int64(b.Terms.ReadPrice),
-				WritePrice:    int64(b.Terms.WritePrice),
-				MinLockDemand: b.Terms.MinLockDemand,
+				BlobberID:    b.BlobberID,
+				AllocationID: b.AllocationID,
+				ReadPrice:    int64(b.Terms.ReadPrice),
+				WritePrice:   int64(b.Terms.WritePrice),
 			})
 		}
 
@@ -290,6 +287,7 @@ func TestAllocations(t *testing.T) {
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 			FileOptions:              sa.FileOptions,
+			MinLockDemand:            sa.MinLockDemand,
 		}
 	}
 
@@ -319,9 +317,8 @@ func TestAllocations(t *testing.T) {
 						Longitude: 141,
 					},
 					Terms: Terms{
-						ReadPrice:     10,
-						WritePrice:    10,
-						MinLockDemand: 2,
+						ReadPrice:  10,
+						WritePrice: 10,
 					},
 					Capacity:        100,
 					Allocated:       50,
@@ -351,9 +348,8 @@ func TestAllocations(t *testing.T) {
 					BlobberID:    "blobber_1",
 					AllocationID: "storage_allocation_id",
 					Terms: Terms{
-						ReadPrice:     10,
-						WritePrice:    10,
-						MinLockDemand: 2,
+						ReadPrice:  10,
+						WritePrice: 10,
 					},
 				},
 			},
@@ -362,9 +358,8 @@ func TestAllocations(t *testing.T) {
 					BlobberID:    "blobber_1",
 					AllocationID: "storage_allocation_id",
 					Terms: Terms{
-						ReadPrice:     10,
-						WritePrice:    10,
-						MinLockDemand: 2,
+						ReadPrice:  10,
+						WritePrice: 10,
 					},
 				},
 			},
@@ -391,7 +386,7 @@ func TestAllocations(t *testing.T) {
 		// insert the blobber
 		err = eventDb.Get().Model(&Blobber{}).Create(&Blobber{
 			Provider: Provider{
-				ID:      "blobber_1",
+				ID: "blobber_1",
 			},
 		}).Error
 
@@ -697,6 +692,7 @@ func TestAllocations(t *testing.T) {
 				NumWrites:        10,
 				MovedToChallenge: currency.Coin(100),
 				MovedBack:        currency.Coin(200),
+				WritePool:        currency.Coin(100),
 			},
 			{
 				AllocationID:     aid2,
@@ -704,6 +700,7 @@ func TestAllocations(t *testing.T) {
 				NumWrites:        20,
 				MovedToChallenge: currency.Coin(200),
 				MovedBack:        currency.Coin(400),
+				WritePool:        currency.Coin(200),
 			},
 		})
 
@@ -711,21 +708,22 @@ func TestAllocations(t *testing.T) {
 
 		// Test update was successful (1)
 		alloc, err = eventDb.GetAllocation(aid1)
+
 		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		require.Equal(t, alloc.UsedSize, int64(10000))
+		require.Equal(t, alloc.NumWrites, int64(10))
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(100))
+		require.Equal(t, alloc.MovedBack, currency.Coin(200))
+		require.Equal(t, alloc.WritePool, currency.Coin(100))
+
+		// Test update was successful (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
 		require.Equal(t, alloc.UsedSize, int64(20000))
 		require.Equal(t, alloc.NumWrites, int64(20))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(200))
 		require.Equal(t, alloc.MovedBack, currency.Coin(400))
 		require.Equal(t, alloc.WritePool, currency.Coin(200))
-
-		// Test update was successful (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
-		require.Equal(t, alloc.UsedSize, int64(40000))
-		require.Equal(t, alloc.NumWrites, int64(40))
-		require.Equal(t, alloc.MovedToChallenge, currency.Coin(400))
-		require.Equal(t, alloc.MovedBack, currency.Coin(800))
-		require.Equal(t, alloc.WritePool, currency.Coin(400))
 	})
 
 	t.Run("test edb.updateAllocationChallenges", func(t *testing.T) {

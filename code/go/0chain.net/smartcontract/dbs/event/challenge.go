@@ -1,19 +1,20 @@
 package event
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"fmt"
+
+	common2 "0chain.net/smartcontract/common"
+	"0chain.net/smartcontract/dbs/model"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
-	"gorm.io/gorm"
 )
 
 // swagger:model Challenges
 type Challenges []Challenge
 
 type Challenge struct {
-	gorm.Model
+	model.UpdatableModel
 	ChallengeID    string           `json:"challenge_id" gorm:"index:idx_cchallenge_id,unique"`
 	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_copen_challenge,priority:1"`
 	AllocationID   string           `json:"allocation_id"`
@@ -23,7 +24,7 @@ type Challenge struct {
 	AllocationRoot string           `json:"allocation_root"`
 	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 	Passed         bool             `json:"passed"`
-	RoundResponded int64            `json:"round_responded" gorm:"index"`
+	RoundResponded int64            `json:"round_responded"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
@@ -80,7 +81,7 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 		Model(&Challenge{}).
 		Where("blobber_id = ? AND round_responded >= ? AND round_responded < ?",
 			blobberId, start, end).
-		Find(&chs)
+		Find(&chs).Debug()
 	return chs, result.Error
 }
 

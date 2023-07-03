@@ -40,16 +40,15 @@ const blobberHealthTime = 60 * 60 // 1 Hour
 
 func TestSelectBlobbers(t *testing.T) {
 	const (
-		randomSeed         = 1
-		mockURL            = "mock_url"
-		mockOwner          = "mock owner"
-		mockPublicKey      = "mock public key"
-		mockBlobberId      = "mock_blobber_id"
-		mockPoolId         = "mock pool id"
-		mockMinPrice       = 0
-		confTimeUnit       = 720 * time.Hour
-		confMinAllocSize   = 800
-		mockMaxOffDuration = 744 * time.Hour
+		randomSeed       = 1
+		mockURL          = "mock_url"
+		mockOwner        = "mock owner"
+		mockPublicKey    = "mock public key"
+		mockBlobberId    = "mock_blobber_id"
+		mockPoolId       = "mock pool id"
+		mockMinPrice     = 0
+		confTimeUnit     = 720 * time.Hour
+		confMinAllocSize = 800
 	)
 	var mockStatke = zcnToBalance(100)
 	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
@@ -399,7 +398,7 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:  mockReadPrice,
 					WritePrice: mockWritePrice,
 				},
-				IsAvailable: true,
+				NotAvailable: false,
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
@@ -873,12 +872,15 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	nar.Blobbers = []string{"one", "two"}
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 200}
-	var alloc = nar.storageAllocation()
+	balances := newTestBalances(t, false)
+	conf := setConfig(t, balances)
+	now := common.Timestamp(time.Now().Unix())
+	var alloc = nar.storageAllocation(conf, now)
 	require.Equal(t, alloc.DataShards, nar.DataShards)
 	require.Equal(t, alloc.ParityShards, nar.ParityShards)
 	require.Equal(t, alloc.Size, nar.Size)
-	require.Equal(t, alloc.Expiration, nar.Expiration)
 	require.Equal(t, alloc.Owner, nar.Owner)
+	require.Equal(t, alloc.Expiration, common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()))
 	require.Equal(t, alloc.OwnerPublicKey, nar.OwnerPublicKey)
 	require.True(t, isEqualStrings(alloc.PreferredBlobbers,
 		nar.Blobbers))
@@ -925,13 +927,12 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
-				ReadPrice:     20,
-				WritePrice:    200,
-				MinLockDemand: 0.1,
+				ReadPrice:  20,
+				WritePrice: 200,
 			},
-			Capacity:    25 * GB, // 20 GB
-			Allocated:   5 * GB,  //  5 GB
-			IsAvailable: true,
+			Capacity:     25 * GB, // 20 GB
+			Allocated:    5 * GB,  //  5 GB
+			NotAvailable: false,
 		},
 		{
 			Provider: provider.Provider{
@@ -941,13 +942,12 @@ func newTestAllBlobbers() (all *StorageNodes) {
 			},
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
-				ReadPrice:     25,
-				WritePrice:    250,
-				MinLockDemand: 0.05,
+				ReadPrice:  25,
+				WritePrice: 250,
 			},
-			Capacity:    20 * GB, // 20 GB
-			Allocated:   10 * GB, // 10 GB
-			IsAvailable: true,
+			Capacity:     20 * GB, // 20 GB
+			Allocated:    10 * GB, // 10 GB
+			NotAvailable: false,
 		},
 	}
 	return
@@ -1239,14 +1239,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 
 		// check response
-		var aresp StorageAllocation
+		var aresp NewAllocationTxnOutput
 		require.NoError(t, aresp.Decode([]byte(resp)))
 
 		assert.Equal(t, tx.Hash, aresp.ID)
-		assert.Equal(t, 1, aresp.DataShards)
-		assert.Equal(t, 1, aresp.ParityShards)
-		assert.Equal(t, int64(10*GB), aresp.Size)
-		assert.Equal(t, tx.CreationDate+100, aresp.Expiration)
+		assert.Equal(t, len(aresp.Blobber_ids), 4)
 
 		// expected blobbers after the allocation
 		var sb = newTestAllBlobbers()
@@ -1274,44 +1271,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		blob2, err = ssc.getBlobber("b2", balances)
 		require.NoError(t, err)
 		assert.EqualValues(t, sb.Nodes[1], blob2)
-
-		assert.Equal(t, clientID, aresp.Owner)
-		assert.Equal(t, pubKey, aresp.OwnerPublicKey)
-
-		if assert.NotNil(t, aresp.Stats) {
-			assert.Zero(t, *aresp.Stats)
-		}
-
-		assert.NotNil(t, aresp.PreferredBlobbers)
-		assert.Equal(t, PriceRange{10, 40}, aresp.ReadPriceRange)
-		assert.Equal(t, PriceRange{100, 400}, aresp.WritePriceRange)
-
-		assert.Equal(t, tx.CreationDate, aresp.StartTime)
-		assert.False(t, aresp.Finalized)
-
-		// details
-		var details = []*BlobberAllocation{
-			{
-				BlobberID:     "b1",
-				AllocationID:  tx.Hash,
-				Size:          10 * GB,
-				Stats:         &StorageAllocationStats{},
-				Terms:         sb.Nodes[0].Terms,
-				MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
-				Spent:         0,
-			},
-			{
-				BlobberID:     "b2",
-				AllocationID:  tx.Hash,
-				Size:          10 * GB,
-				Stats:         &StorageAllocationStats{},
-				Terms:         sb.Nodes[1].Terms,
-				MinLockDemand: 104, // (wp * (size/GB) * mld) / time_unit
-				Spent:         0,
-			},
-		}
-
-		assert.Equal(t, len(details), len(aresp.BlobberAllocs))
 
 		_, err = ssc.getStakePool(spenum.Blobber, "b1", balances)
 		require.NoError(t, err)

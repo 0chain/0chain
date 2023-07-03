@@ -34,7 +34,7 @@ func TestUpdateBlobber(t *testing.T) {
 	blobber1.WritePrice = 176
 	blobber1.ReadPrice = 1111
 	blobber1.TotalStake = 23
-	blobber1.IsAvailable = true
+	blobber1.NotAvailable = false
 	blobber1.LastHealthCheck = common.Timestamp(123)
 
 	blobber2.ID = ids[1]
@@ -43,7 +43,7 @@ func TestUpdateBlobber(t *testing.T) {
 	blobber2.WritePrice = 17
 	blobber2.ReadPrice = 1
 	blobber2.TotalStake = 14783
-	blobber2.IsAvailable = true
+	blobber2.NotAvailable = false
 	blobber2.LastHealthCheck = common.Timestamp(3333333331)
 
 	require.NoError(t, edb.updateBlobber([]Blobber{blobber1, blobber2}))
@@ -64,91 +64,91 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	err := edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Create([]Blobber{
 		{
 			Provider: Provider{
-				ID:                "B000",
+				ID: "B000",
 			},
-			BaseURL: "https://blobber.zero",
-			TotalBlockRewards: 0,
+			BaseURL:            "https://blobber.zero",
+			TotalBlockRewards:  0,
 			TotalStorageIncome: 0,
-			TotalReadIncome:   0,
-			TotalSlashedStake: 0,
+			TotalReadIncome:    0,
+			TotalSlashedStake:  0,
 		},
 		{
 			Provider: Provider{
-				ID:                "B001",
+				ID: "B001",
 			},
-			BaseURL: "https://blobber.one",
-			TotalBlockRewards: 0,
+			BaseURL:            "https://blobber.one",
+			TotalBlockRewards:  0,
 			TotalStorageIncome: 0,
-			TotalReadIncome:   0,
-			TotalSlashedStake: 0,
+			TotalReadIncome:    0,
+			TotalSlashedStake:  0,
 		},
 		{
 			Provider: Provider{
-				ID:                "B002",
+				ID: "B002",
 			},
-			BaseURL: "https://blobber.two",
-			TotalBlockRewards: 0,
+			BaseURL:            "https://blobber.two",
+			TotalBlockRewards:  0,
 			TotalStorageIncome: 0,
-			TotalReadIncome:   0,
-			TotalSlashedStake: 0,
+			TotalReadIncome:    0,
+			TotalSlashedStake:  0,
 		},
 		{
 			Provider: Provider{
-				ID:                "B003",
+				ID: "B003",
 			},
-			BaseURL: "https://blobber.three",
-			TotalBlockRewards: 0,
+			BaseURL:            "https://blobber.three",
+			TotalBlockRewards:  0,
 			TotalStorageIncome: 0,
-			TotalReadIncome:   0,
-			TotalSlashedStake: 0,
+			TotalReadIncome:    0,
+			TotalSlashedStake:  0,
 		},
 	}).Error
 	require.NoError(t, err)
-	
+
 	spus := []dbs.StakePoolReward{
 		{
 			// Shouldn't affect anybody
 			ProviderID: dbs.ProviderID{
-				ID: "M000",
+				ID:   "M000",
 				Type: spenum.Miner,
 			},
-			Reward: 10,
+			Reward:     10,
 			RewardType: spenum.BlockRewardMiner,
 		},
 		{
 			// Block Reward: blobber zero
 			ProviderID: dbs.ProviderID{
-				ID: "B000",
+				ID:   "B000",
 				Type: spenum.Blobber,
 			},
-			Reward: 10,
+			Reward:     10,
 			RewardType: spenum.BlockRewardBlobber,
 		},
 		{
 			// Storage income : blobber one
 			ProviderID: dbs.ProviderID{
-				ID: "B001",
+				ID:   "B001",
 				Type: spenum.Blobber,
 			},
-			Reward: 20,
+			Reward:     20,
 			RewardType: spenum.ChallengePassReward,
 		},
 		{
 			// Read income : blobber two
 			ProviderID: dbs.ProviderID{
-				ID: "B002",
+				ID:   "B002",
 				Type: spenum.Blobber,
 			},
-			Reward: 30,
+			Reward:     30,
 			RewardType: spenum.FileDownloadReward,
 		},
 		{
 			// Slashed stake : blobber three slashed stake should increase by 60
 			ProviderID: dbs.ProviderID{
-				ID: "B003",
+				ID:   "B003",
 				Type: spenum.Blobber,
 			},
-			Reward: 40,
+			Reward:     40,
 			RewardType: spenum.ChallengeSlashPenalty,
 			DelegatePenalties: map[string]currency.Coin{
 				"delegate1": 10,
@@ -172,25 +172,25 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	err = edb.Store.Get().Model(&Blobber{}).Omit(clause.Associations).Order("id ASC").Find(&blobbersAfter).Error
 	require.NoError(t, err)
 
-	assert.Equal(t, blobbersBefore[0].TotalBlockRewards + 10, blobbersAfter[0].TotalBlockRewards)
+	assert.Equal(t, blobbersBefore[0].TotalBlockRewards+10, blobbersAfter[0].TotalBlockRewards)
 	assert.Equal(t, blobbersBefore[0].TotalStorageIncome, blobbersAfter[0].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[0].TotalReadIncome, blobbersAfter[0].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[0].TotalSlashedStake, blobbersAfter[0].TotalSlashedStake)
 
-	assert.Equal(t, blobbersBefore[1].TotalBlockRewards, blobbersAfter[1].TotalBlockRewards)	
-	assert.Equal(t, blobbersBefore[1].TotalStorageIncome + 20, blobbersAfter[1].TotalStorageIncome)
+	assert.Equal(t, blobbersBefore[1].TotalBlockRewards, blobbersAfter[1].TotalBlockRewards)
+	assert.Equal(t, blobbersBefore[1].TotalStorageIncome+20, blobbersAfter[1].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[1].TotalReadIncome, blobbersAfter[1].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[1].TotalSlashedStake, blobbersAfter[1].TotalSlashedStake)
 
 	assert.Equal(t, blobbersBefore[2].TotalBlockRewards, blobbersAfter[2].TotalBlockRewards)
 	assert.Equal(t, blobbersBefore[2].TotalStorageIncome, blobbersAfter[2].TotalStorageIncome)
-	assert.Equal(t, blobbersBefore[2].TotalReadIncome + 30, blobbersAfter[2].TotalReadIncome)
+	assert.Equal(t, blobbersBefore[2].TotalReadIncome+30, blobbersAfter[2].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[2].TotalSlashedStake, blobbersAfter[2].TotalSlashedStake)
 
 	assert.Equal(t, blobbersBefore[3].TotalBlockRewards, blobbersAfter[3].TotalBlockRewards)
 	assert.Equal(t, blobbersBefore[3].TotalStorageIncome, blobbersAfter[3].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[3].TotalReadIncome, blobbersAfter[3].TotalReadIncome)
-	assert.Equal(t, blobbersBefore[3].TotalSlashedStake + 60, blobbersAfter[3].TotalSlashedStake)
+	assert.Equal(t, blobbersBefore[3].TotalSlashedStake+60, blobbersAfter[3].TotalSlashedStake)
 }
 
 func compareBlobbers(t *testing.T, b1, b2 Blobber) {
@@ -200,7 +200,7 @@ func compareBlobbers(t *testing.T, b1, b2 Blobber) {
 	require.Equal(t, b1.WritePrice, b2.WritePrice)
 	require.Equal(t, b1.ReadPrice, b2.ReadPrice)
 	require.Equal(t, b1.TotalStake, b2.TotalStake)
-	require.Equal(t, b1.IsAvailable, b2.IsAvailable)
+	require.Equal(t, b1.NotAvailable, b2.NotAvailable)
 	require.Equal(t, b1.LastHealthCheck, b2.LastHealthCheck)
 }
 
