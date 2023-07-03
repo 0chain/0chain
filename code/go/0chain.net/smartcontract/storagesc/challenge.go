@@ -201,7 +201,7 @@ func (sc *StorageSmartContract) blobberReward(
 		return err
 	}
 
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps, balances, allocationID)
+	err = cp.moveToValidators(validatorsReward, validators, vsps, balances, allocationID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -341,7 +341,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 	}
 
 	// validators reward
-	err = cp.moveToValidators(sc.ID, validatorsReward, validators, vSPs, balances, allocationID)
+	err = cp.moveToValidators(validatorsReward, validators, vSPs, balances, allocationID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -524,10 +524,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	}
 
 	if !(result.pass && result.fresh) {
-		return sc.challengeFailed(balances, cab, conf.MaxChallengeCompletionTime)
+		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
 	}
 
-	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, cab, conf.MaxChallengeCompletionTime)
+	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
 }
 
 type verifyTicketsResult struct {
@@ -618,6 +618,7 @@ func (sc *StorageSmartContract) challengePassed(
 	balances cstate.StateContextI,
 	t *transaction.Transaction,
 	triggerPeriod int64,
+	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
 	maxChallengeCompletionTime time.Duration,
 ) (string, error) {
@@ -717,9 +718,11 @@ func (sc *StorageSmartContract) challengePassed(
 	if cab.success < cab.threshold {
 		partial = float64(cab.success) / float64(cab.threshold)
 	}
+	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 
 	err = sc.blobberReward(
-		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators,
+		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc,
+		validators,
 		partial,
 		maxChallengeCompletionTime,
 		balances,
@@ -743,6 +746,7 @@ func (sc *StorageSmartContract) challengePassed(
 
 func (sc *StorageSmartContract) challengeFailed(
 	balances cstate.StateContextI,
+	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
 	maxChallengeCompletionTime time.Duration,
 ) (string, error) {
@@ -766,9 +770,9 @@ func (sc *StorageSmartContract) challengeFailed(
 	}
 
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
-
+	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 	err := sc.blobberPenalty(
-		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, cab.validators,
+		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, validators,
 		maxChallengeCompletionTime,
 		balances,
 		cab.challenge.AllocationID,
@@ -791,8 +795,22 @@ func (sc *StorageSmartContract) challengeFailed(
 	return "Challenge Failed by Blobber", nil
 }
 
+func getRandomSubSlice(slice []string, size int, seed int64) []string {
+	if size > len(slice) {
+		size = len(slice)
+	}
+	sort.Strings(slice)
+	indices := rand.New(rand.NewSource(seed)).Perm(len(slice))
+	subSlice := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+		subSlice = append(subSlice, slice[indices[i]])
+	}
+
+	return subSlice
+}
+
 func (sc *StorageSmartContract) getAllocationForChallenge(
-	t *transaction.Transaction,
+	_ *transaction.Transaction,
 	allocID string,
 	blobberID string,
 	balances cstate.StateContextI, options ...int64) (alloc *StorageAllocation, err error) {

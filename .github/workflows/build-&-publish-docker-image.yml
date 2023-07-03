@@ -234,10 +234,7 @@ jobs:
           validator_image: staging
           authorizer_image: staging
           zbox_image: staging
-          zblock_image: staging
           zdns_image: staging
-          explorer_image: latest
-          zsearch_image: staging
           zbox_cli_branch: staging
           zwallet_cli_branch: staging
           custom_go_sdk_version: staging
