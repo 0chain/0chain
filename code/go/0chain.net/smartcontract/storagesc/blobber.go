@@ -923,6 +923,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	idx := bil.Add(&BlobberOfferStake{})
 	blobber.Index = idx
 
+	if err := bil.Save(balances); err != nil {
+		return err
+	}
+
 	tag, data := event.NewUpdateBlobberTotalStakeEvent(t.ClientID, 0)
 	balances.EmitEvent(event.TypeStats, tag, t.ClientID, data)
 
