@@ -78,7 +78,7 @@ func addMockAllocation(
 		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
 		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
 		Stats: &StorageAllocationStats{
-			UsedSize:                  1,
+			UsedSize:                  100,
 			NumWrites:                 1,
 			NumReads:                  1,
 			TotalChallenges:           1,
@@ -91,6 +91,9 @@ func addMockAllocation(
 		Finalized:     i == mockFinalizedAllocationIndex,
 		WritePool:     2e10,
 		ChallengePool: mockMinLockDemand * 100,
+	}
+	if err := partitionsChallengeReadyAllocsAdd(balances, sa.ID); err != nil {
+		log.Fatal(err)
 	}
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
@@ -119,22 +122,11 @@ func addMockAllocation(
 		ba := BlobberAllocation{
 			BlobberID:       bId,
 			AllocationID:    sa.ID,
-			Stats:           &StorageAllocationStats{NumWrites: 10},
+			Stats:           &StorageAllocationStats{NumWrites: 10, UsedSize: 100},
 			AllocationRoot:  encryption.Hash("allocation root"),
 			LastWriteMarker: &WriteMarker{},
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
-
-		blobAllocPart, err := partitionsBlobberAllocations(bId, balances)
-		if err != nil {
-			log.Fatal("add blob alloc partition", err)
-		}
-		if err := blobAllocPart.Add(balances, &BlobberAllocationNode{ID: sa.ID}); err != nil {
-			log.Fatal("add blob alloc node", err)
-		}
-		if err := blobAllocPart.Save(balances); err != nil {
-			log.Fatal("save blob alloc part", err)
-		}
 	}
 
 	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
@@ -189,11 +181,6 @@ func AddMockChallenges(
 	numAllocations := viper.GetInt(sc.NumAllocations)
 	allocationChall := make([]AllocationChallenges, numAllocations)
 
-	challengeReadyAllocsPart, err := partitionsChallengeReadyAllocs(balances)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	var (
 		numAllocBlobbers        = viper.GetInt(sc.NumBlobbersPerAllocation)
 		numValidators           = numAllocBlobbers / 2
@@ -228,19 +215,7 @@ func AddMockChallenges(
 			continue
 		}
 
-		err := challengeReadyAllocsPart.Add(balances, &ChallengeReadyAllocNode{
-			AllocID: ch.AllocationID,
-		})
-		if err != nil {
-			panic(err)
-		}
-
 		blobbersMap[ch.BlobberID] = struct{}{}
-	}
-
-	err = challengeReadyAllocsPart.Save(balances)
-	if err != nil {
-		panic(err)
 	}
 
 	// adding allocation challenges

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -983,55 +982,6 @@ func (sa *StorageAllocation) changeBlobbers(
 func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) error {
 	_, err := state.InsertTrieNode(sa.GetKey(scAddress), sa)
 	return err
-}
-
-// removeAllocationFromBlobber removes the allocation from blobber
-func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *BlobberAllocation) error {
-	var (
-		blobberID = blobAlloc.BlobberID
-		allocID   = blobAlloc.AllocationID
-	)
-
-	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
-	if err != nil {
-		return fmt.Errorf("could not get blobber allocations partition: %v", err)
-	}
-
-	err = blobAllocsParts.Remove(balances, allocID)
-	if err != nil && !partitions.ErrItemNotFound(err) {
-		logging.Logger.Error("could not remove allocation from blobber",
-			zap.Error(err),
-			zap.String("blobber", blobberID),
-			zap.String("allocation", allocID))
-		return fmt.Errorf("could not remove allocation from blobber: %v", err)
-	} else if partitions.ErrItemNotFound(err) {
-		logging.Logger.Error("allocation is not in partition",
-			zap.Error(err),
-			zap.String("blobber", blobberID),
-			zap.String("allocation", allocID))
-	} else if err == nil {
-		if err := blobAllocsParts.Save(balances); err != nil {
-			return fmt.Errorf("could not update blobber allocation partitions: %v", err)
-		}
-	}
-
-	allocNum, err := blobAllocsParts.Size(balances)
-	if err != nil {
-		return fmt.Errorf("could not get challenge partition size: %v", err)
-	}
-
-	if allocNum > 0 {
-		return nil
-	}
-
-	// remove blobber from challenge ready partition when there's no allocation bind to it
-	err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
-	if err != nil && !partitions.ErrItemNotFound(err) {
-		// it could be empty if we finalize the allocation before committing any read or write
-		return fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
-	}
-
-	return nil
 }
 
 type StorageAllocationDecode StorageAllocation
