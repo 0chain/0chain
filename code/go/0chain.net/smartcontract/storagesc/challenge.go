@@ -1026,12 +1026,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 		logging.Logger.Debug("allocation expiry is wrong", zap.String("blobber_id", blobberID),
 			zap.String("alloc_id", allocID))
-
-		err = alloc.save(balances, sc.ID)
-		if err != nil {
-			return nil, common.NewErrorf("populate_challenge",
-				"error saving expired allocation: %v", err)
-		}
 	}
 
 	if err := blobberAllocParts.Save(balances); err != nil {
