@@ -91,7 +91,8 @@ func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllo
 	return
 }
 
-func (cp *challengePool) moveToValidators(sscKey string, reward currency.Coin,
+func (cp *challengePool) moveToValidators(
+	reward currency.Coin,
 	validators []datastore.Key,
 	vSPs []*stakePool,
 	balances cstate.StateContextI,

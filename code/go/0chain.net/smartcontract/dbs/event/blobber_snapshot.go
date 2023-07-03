@@ -26,7 +26,7 @@ type BlobberSnapshot struct {
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
-	CreationRound       int64         `json:"creation_round" gorm:"index"`
+	CreationRound       int64         `json:"creation_round"`
 	RankMetric          float64       `json:"rank_metric"`
 	IsKilled            bool          `json:"is_killed"`
 	IsShutdown          bool          `json:"is_shutdown"`
