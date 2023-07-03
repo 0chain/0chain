@@ -6,6 +6,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 )
 
 var blobbersInfoListName = encryption.Hash(ADDRESS + "blobbers_info_list")
@@ -25,7 +26,9 @@ type BlobberOfferStakeList []*BlobberOfferStake
 func getBlobbersInfoList(balance cstate.StateContextI) (BlobberOfferStakeList, error) {
 	var bil BlobberOfferStakeList
 	if err := balance.GetTrieNode(blobbersInfoListName, &bil); err != nil {
-		return nil, fmt.Errorf("could not get blobbers info list: %v", err)
+		if err != util.ErrValueNotPresent {
+			return nil, fmt.Errorf("could not get blobbers info list: %v", err)
+		}
 	}
 	return bil, nil
 }
