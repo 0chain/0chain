@@ -115,8 +115,8 @@ const (
 	CostKillValidator
 	CostShutdownBlobber
 	CostShutdownValidator
-	NumberOfSettings
 	MaxCharge
+	NumberOfSettings
 )
 
 func (s Setting) String() string {
