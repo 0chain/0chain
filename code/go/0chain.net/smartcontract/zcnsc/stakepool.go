@@ -166,7 +166,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
 			"failed to get global node error: %v", err)
 	}
 
-	return stakepool.StakePoolLock(t, input, balances, stakepool.ValidationSettings{
+	return stakepool.StakePoolLock(balances, t, input, stakepool.ValidationSettings{
 		MinStake:        gn.MinStakeAmount,
 		MaxStake:        gn.MaxStakeAmount,
 		MaxNumDelegates: gn.MaxDelegates,

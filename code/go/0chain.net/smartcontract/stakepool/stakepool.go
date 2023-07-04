@@ -46,6 +46,7 @@ type AbstractStakePool interface {
 	Kill(float64, string, spenum.Provider, cstate.StateContextI) error
 	IsDead() bool
 	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
+	Stake() (currency.Coin, error)
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -711,8 +712,17 @@ func (spr *StakePoolRequest) decode(p []byte) (err error) {
 	return json.Unmarshal(p, spr)
 }
 
-func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI, vs ValidationSettings,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
+type getStakePoolFunc func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)
+type stakePoolAccessFunc func(req *StakePoolRequest, sp AbstractStakePool) error
+
+func StakePoolLock(
+	balances cstate.StateContextI,
+	t *transaction.Transaction,
+	input []byte,
+	vs ValidationSettings,
+	get getStakePoolFunc,
+	spaFunc ...stakePoolAccessFunc) (
+	resp string, err error) {
 
 	var spr StakePoolRequest
 	if err = spr.decode(input); err != nil {
@@ -741,6 +751,12 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"saving stake pool: %v", err)
+	}
+
+	if len(spaFunc) > 0 && spaFunc[0] != nil {
+		if err := spaFunc[0](&spr, sp); err != nil {
+			return "", common.NewError("stake_pool_lock_failed", err.Error())
+		}
 	}
 
 	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
@@ -792,11 +808,13 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 }
 
 // StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
-func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
-) (resp string, err error) {
+func StakePoolUnlock(
+	balances cstate.StateContextI,
+	t *transaction.Transaction,
+	input []byte,
+	get getStakePoolFunc,
+	spaFunc ...stakePoolAccessFunc) (resp string, err error) {
 	var spr StakePoolRequest
-
 	if err = spr.decode(input); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)
@@ -844,6 +862,12 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 	if err = sp.Save(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
+	}
+
+	if len(spaFunc) > 0 && spaFunc[0] != nil {
+		if err := spaFunc[0](&spr, sp); err != nil {
+			return "", common.NewError("stake_pool_unlock_failed", err.Error())
+		}
 	}
 
 	err = sp.EmitStakeEvent(spr.ProviderType, spr.ProviderID, balances)
