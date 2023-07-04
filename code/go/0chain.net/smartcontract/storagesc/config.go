@@ -344,7 +344,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
 	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
-	conf.MinLockDemand = scc.GetFloat64(pfx + "MinLockDemand")
+	conf.MinLockDemand = scc.GetFloat64(pfx + "min_lock_demand")
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
 	if err != nil {
