@@ -40,6 +40,7 @@ jobs:
       - name: "Copy 0chain.yaml and sc.yaml in 0helm one-pool-staging-test branch"
         if: ${{ contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml') || contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml') }}
         run: |
+          mkdir -p 0helm/updated_configs
           touch 0helm/updated_configs/0chain.yaml
           touch 0helm/updated_configs/sc.yaml
           cp docker.local/config/0chain.yaml 0helm/updated_configs/0chain.yaml

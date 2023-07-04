@@ -1,32 +1,49 @@
 version: '3'
 services:
-  sharder:
-    image: 0chaindev/sharder:latest
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.5'
-    #       memory: 500M
-    #     reservations:
-    #       cpus: '0.1'
-    #       memory: 100M
+  postgres:
+    container_name: sharder-postgres-${SHARDER}
+    image: postgres:14
     environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    # ports:
+    #   - 5432
+    volumes:
+      - ../config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ${PROJECT_ROOT_SSD}/sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    restart: always
+    networks:
+      testnet0:
+        ipv4_address: 198.18.2.${SHARDER}
+
+  sharder:
+    container_name: sharder-${SHARDER}
+    image: 0chaindev/sharder:staging
+    environment:
+      - POSTGRES_HOST=sharder-postgres-${SHARDER}
       - DOCKER=true
+    depends_on:
+      - postgres
     volumes:
       - ../config:/0chain/config
-      - ../sharder${SHARDER}/log:/0chain/log
-      - ../sharder${SHARDER}/data:/0chain/data
+      - ${PROJECT_ROOT_HDD}/sharder${SHARDER}/log:/0chain/log
+      - ${PROJECT_ROOT_HDD}/sharder${SHARDER}/data:/0chain/data
     ports:
       - "717${SHARDER}:717${SHARDER}"
+    command:
+      - /bin/sh
+      - -c
+      - mkdir -p /0chain/data/blocks && mkdir -p /0chain/data/rocksdb && ./bin/sharder --deployment_mode 0 --keys_file config/b0snode${SHARDER}_keys.txt
+    restart: always
     networks:
-      default:
       testnet0:
-        ipv4_address: 198.18.0.8${SHARDER}
-    command: ./bin/sharder --deployment_mode 0 --keys_file config/b0snode${SHARDER}_keys.txt
+        ipv4_address: 198.18.1.${SHARDER}
 
 networks:
-  default:
-    driver: bridge
   testnet0:
     external: true
 
