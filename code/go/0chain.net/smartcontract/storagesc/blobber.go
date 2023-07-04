@@ -698,7 +698,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		// TODO: check if this is correct
 		blobAlloc.Stats.NumWrites++
 		blobber.SavedData -= changeSize
-		alloc.Stats.UsedSize -= changeSize
+		alloc.Stats.UsedSize -= int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+
 		alloc.Stats.NumWrites++
 	} else {
 
@@ -720,8 +721,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.Stats.NumWrites++
 
 		blobber.SavedData += commitConnection.WriteMarker.Size
+		alloc.Stats.UsedSize += int64(float64(commitConnection.WriteMarker.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 
-		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 		alloc.Stats.NumWrites++
 
 	}
@@ -821,7 +822,16 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	emitAddWriteMarker(t, commitConnection.WriteMarker, movedTokens, balances)
+	emitAddWriteMarker(t, commitConnection.WriteMarker, &StorageAllocation{
+		ID: alloc.ID,
+		Stats: &StorageAllocationStats{
+			UsedSize:  alloc.Stats.UsedSize,
+			NumWrites: alloc.Stats.NumWrites,
+		},
+		MovedToChallenge: alloc.MovedToChallenge,
+		MovedBack:        alloc.MovedBack,
+		WritePool:        alloc.WritePool,
+	}, movedTokens, balances)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {

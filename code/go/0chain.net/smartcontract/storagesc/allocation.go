@@ -1765,16 +1765,14 @@ func (sc *StorageSmartContract) finishAllocation(
 	return nil
 }
 
-func emitUpdateAllocationStatEvent(w *WriteMarker, movedTokens currency.Coin, balances chainstate.StateContextI) {
+func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chainstate.StateContextI) {
 	alloc := event.Allocation{
-		AllocationID: w.AllocationID,
-		UsedSize:     w.Size,
-	}
-
-	if w.Size > 0 {
-		alloc.MovedToChallenge = movedTokens
-	} else if w.Size < 0 {
-		alloc.MovedBack = movedTokens
+		AllocationID:     allocation.ID,
+		UsedSize:         allocation.Stats.UsedSize,
+		NumWrites:        allocation.Stats.NumWrites,
+		MovedToChallenge: allocation.MovedToChallenge,
+		MovedBack:        allocation.MovedBack,
+		WritePool:        allocation.WritePool,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStat, alloc.AllocationID, &alloc)
