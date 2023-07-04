@@ -707,6 +707,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.Zeta.Mu
 	case OwnerId:
 		return conf.OwnerId
+	case MaxCharge:
+		return conf.MaxCharge
 	default:
 		panic("Setting not implemented")
 	}
