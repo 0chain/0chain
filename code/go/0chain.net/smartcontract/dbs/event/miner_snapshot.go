@@ -21,6 +21,22 @@ type MinerSnapshot struct {
 	IsShutdown    bool          `json:"is_shutdown"`
 }
 
+func (ms *MinerSnapshot) GetID() string {
+	return ms.MinerID
+}
+
+func (ms *MinerSnapshot) GetRound() int64 {
+	return ms.Round
+}
+
+func (ms *MinerSnapshot) SetID(id string) {
+	ms.MinerID = id
+}
+
+func (ms *MinerSnapshot) SetRound(round int64) {
+	ms.Round = round
+}
+
 func (m *MinerSnapshot) IsOffline() bool {
 	return m.IsKilled || m.IsShutdown
 }

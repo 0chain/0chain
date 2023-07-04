@@ -32,6 +32,22 @@ type BlobberSnapshot struct {
 	IsShutdown          bool          `json:"is_shutdown"`
 }
 
+func (bs *BlobberSnapshot) GetID() string {
+	return bs.BlobberID
+}
+
+func (bs *BlobberSnapshot) GetRound() int64 {
+	return bs.CreationRound
+}
+
+func (bs *BlobberSnapshot) SetID(id string) {
+	bs.BlobberID = id
+}
+
+func (bs *BlobberSnapshot) SetRound(round int64) {
+	bs.CreationRound = round
+}
+
 func (bs *BlobberSnapshot) IsOffline() bool {
 	return bs.IsKilled || bs.IsShutdown
 }

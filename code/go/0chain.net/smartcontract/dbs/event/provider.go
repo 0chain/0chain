@@ -18,6 +18,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type IProvider interface {
+	GetID() string
+}
+
+
 type Provider struct {
 	ID              string `gorm:"primaryKey"`
 	CreatedAt       time.Time
@@ -47,6 +52,10 @@ func recalculateProviderFields(curr, result ProviderAggregate) {
 	result.SetTotalStake(curr.GetTotalStake())
 	result.SetServiceCharge(curr.GetServiceCharge())
 	result.SetTotalRewards(curr.GetTotalRewards())
+}
+
+func (p *Provider) GetID() string {
+	return p.ID
 }
 
 func (p *Provider) IsOffline() bool {

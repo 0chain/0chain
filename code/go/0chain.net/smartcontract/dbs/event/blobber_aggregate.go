@@ -36,8 +36,6 @@ type BlobberAggregate struct {
 	Downtime            uint64        `json:"downtime"`
 }
 
-const GB = float64(1024 * 1024 * 1024)
-
 func (edb *EventDb) updateBlobberAggregate(round, pageAmount int64, gs *Snapshot) {
 	currentBucket := round % config.Configuration().ChainConfig.DbSettings().AggregatePeriod
 

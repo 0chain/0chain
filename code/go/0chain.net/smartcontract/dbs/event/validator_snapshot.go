@@ -11,12 +11,29 @@ type ValidatorSnapshot struct {
 	ValidatorID string `json:"id" gorm:"index"`
 	BucketId    int64  `json:"bucket_id"`
 
+	Round		  int64         `json:"round"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
 	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (vs *ValidatorSnapshot) GetID() string {
+	return vs.ValidatorID
+}
+
+func (vs *ValidatorSnapshot) GetRound() int64 {
+	return vs.Round
+}
+
+func (vs *ValidatorSnapshot) SetID(id string) {
+	vs.ValidatorID = id
+}
+
+func (vs *ValidatorSnapshot) SetRound(round int64) {
+	vs.Round = round
 }
 
 func (v *ValidatorSnapshot) IsOffline() bool {

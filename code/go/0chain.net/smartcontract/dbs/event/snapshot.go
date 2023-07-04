@@ -1,9 +1,14 @@
 package event
 
 import (
+	"reflect"
+
 	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
+	"gorm.io/gorm"
 
 	"go.uber.org/zap"
 )
@@ -16,6 +21,29 @@ import (
 //used - this is the actual usage or data that is in the server.
 //staked + unstaked = max_capacity
 //allocated + unallocated = staked
+
+type FieldType int
+
+type ProviderIDMap map[string]dbs.ProviderID
+
+type AllocationValueChanged struct {
+	FieldType    FieldType
+	AllocationId string
+	Delta        int64
+}
+type AllocationBlobberValueChanged struct {
+	FieldType    FieldType
+	AllocationId string
+	BlobberId    string
+	Delta        int64
+}
+
+type IProviderSnapshot interface {
+	GetID() string
+	GetRound() int64
+	SetID(id string)
+	SetRound(round int64)
+}
 
 type Snapshot struct {
 	Round int64 `gorm:"primaryKey;autoIncrement:false" json:"round"`
@@ -52,7 +80,80 @@ type Snapshot struct {
 	BlobberTotalRewards  int64 `json:"blobber_total_rewards"`            // Total rewards of blobbers
 }
 
+const (
+	Allocated = iota
+	MaxCapacity
+	Staked
+	Used
+)
+
+const GB = float64(1024 * 1024 * 1024)
+
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
+
+
+func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snapshot, providers []dbs.ProviderID, round int64) (error) {
+	var (
+		providersFromDB []P
+		snaphots []S
+		snapshotsMap = make(map[string]S)
+		ids []string
+		pModel P
+		ptypeName = ProviderTextMapping[reflect.TypeOf(pModel)]
+	)
+	for _, provider := range providers {
+		ids = append(ids, provider.GetID())
+	}
+
+	err := edb.Store.Get().Where("id IN (?)", ids).Find(&providersFromDB).Error;
+	if err != nil {
+		return err
+	}
+	
+	err = edb.Store.Get().Where("? IN (?)", gorm.Expr("?_id", ptypeName), ids).Find(&snaphots).Error;
+	if err != nil {
+		return err
+	}
+	for _, snapshot := range snaphots {
+		snapshotsMap[snapshot.GetID()] = snapshot
+	}
+
+	var (
+		snap S
+		ok bool
+	)
+	for _, provider := range providersFromDB {
+		snap, ok = snapshotsMap[provider.GetID()]
+		if !ok {
+			snap = *new(S)
+			snap.SetID(provider.GetID())
+			snap.SetRound(round)
+		}
+
+		switch ptypeName {
+		case "blobber":
+			err = gs.ApplyDiffBlobber(provider, snap)
+		case "miner":
+			err = gs.ApplyDiffMiner(provider, snap)
+		case "sharder":
+			err = gs.ApplyDiffSharder(provider, snap)
+		case "validator":
+			err = gs.ApplyDiffValidator(provider, snap)
+		case "authorizer":
+			err = gs.ApplyDiffAuthorizer(provider, snap)
+		default:
+			continue
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ApplyMixedProviderDiff()
+
 func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.TotalMint += diff.TotalMint
 	s.TotalChallengePools += diff.TotalChallengePools
@@ -88,25 +189,103 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	}
 }
 
-type FieldType int
+func (s *Snapshot) ApplyDiffBlobber(provider IProvider, snapshot IProviderSnapshot) error {
+	current, ok := provider.(*Blobber)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid blobber data")
+	}
+	previous, ok := snapshot.(*BlobberSnapshot)
+	if !ok {
+		return common.NewError("invalid_blobber_aggregate", "invalid blobber snapshot data")
+	}
+	s.SuccessfulChallenges += int64(current.ChallengesPassed - previous.ChallengesPassed)
+	s.TotalChallenges += int64(current.ChallengesCompleted - previous.ChallengesCompleted)
+	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
+	s.StorageTokenStake += int64(current.TotalStake - previous.TotalStake)
+	s.AllocatedStorage += current.Allocated - previous.Allocated
+	s.MaxCapacityStorage += current.Capacity - previous.Capacity
+	s.UsedStorage += current.SavedData - previous.SavedData
+	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
+	s.BlobberTotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
 
-const (
-	Allocated = iota
-	MaxCapacity
-	Staked
-	Used
-)
-
-type AllocationValueChanged struct {
-	FieldType    FieldType
-	AllocationId string
-	Delta        int64
+	// Change in staked storage (staked_storage = total_stake / write_price)
+	previousSS := previous.Capacity
+	if previous.WritePrice > 0 {
+		previousSS = int64((float64(previous.TotalStake) / float64(previous.WritePrice)) * GB)
+	}
+	newSS := current.Capacity
+	if current.WritePrice > 0 {
+		newSS = int64((float64(current.TotalStake) / float64(current.WritePrice)) * GB)
+	}
+	s.StakedStorage += (newSS - previousSS)
+	s.BlobberCount++
+	return nil
 }
-type AllocationBlobberValueChanged struct {
-	FieldType    FieldType
-	AllocationId string
-	BlobberId    string
-	Delta        int64
+
+func (s *Snapshot) ApplyDiffMiner(provider IProvider, snapshot IProviderSnapshot) error {
+	current, ok := provider.(*Miner)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid miner data")
+	}
+	previous, ok := snapshot.(*MinerSnapshot)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid miner snapshot data")
+	}
+
+	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
+	s.MinerTotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
+	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
+	s.MinerCount++
+	return nil
+}
+
+func (s *Snapshot) ApplyDiffSharder(provider IProvider, snapshot IProviderSnapshot) error {
+	current, ok := provider.(*Sharder)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid sharder data")
+	}
+	previous, ok := snapshot.(*SharderSnapshot)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid sharder snapshot data")
+	}
+	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
+	s.SharderTotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
+	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
+	s.SharderCount++
+	return nil
+}
+
+func (s *Snapshot) ApplyDiffValidator(provider IProvider, snapshot IProviderSnapshot) error {
+	current, ok := provider.(*Validator)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid validator data")
+	}
+	previous, ok := snapshot.(*ValidatorSnapshot)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid validator snapshot data")
+	}
+
+	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
+	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
+	s.ValidatorCount++
+	return nil
+}
+
+func (s *Snapshot) ApplyDiffAuthorizer(provider IProvider, snapshot IProviderSnapshot) error {
+	current, ok := provider.(*Authorizer)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid authorizer data")
+	}
+	previous, ok := snapshot.(*AuthorizerSnapshot)
+	if !ok {
+		return common.NewError("apply_provider_diff", "invalid authorizer snapshot data")
+	}
+
+	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
+	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
+	s.TotalMint += int64(current.TotalMint - previous.TotalMint)
+	s.AuthorizerCount++
+	return nil
 }
 
 func (edb *EventDb) ReplicateSnapshots(round int64, limit int) ([]Snapshot, error) {
@@ -129,12 +308,95 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 	return s, res.Error
 }
 
-func (gs *Snapshot) update(e []Event) {
+func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
+	providerIds := map[spenum.Provider]ProviderIDMap{
+		spenum.Blobber:    make(ProviderIDMap),
+		spenum.Miner:      make(ProviderIDMap),
+		spenum.Sharder:    make(ProviderIDMap),
+		spenum.Validator:  make(ProviderIDMap),
+		spenum.Authorizer: make(ProviderIDMap),
+	}
+
 	for _, event := range e {
 		logging.Logger.Debug("update snapshot",
 			zap.String("tag", event.Tag.String()),
 			zap.Int64("block_number", event.BlockNumber))
 		switch event.Tag {
+		case TagAddBlobber,
+			TagUpdateBlobber,
+			TagUpdateBlobberAllocatedSavedHealth,
+			TagUpdateBlobberTotalStake,
+			TagUpdateBlobberTotalOffers,
+			TagUpdateBlobberChallenge,
+			TagUpdateBlobberOpenChallenges,
+			TagUpdateBlobberStat:
+			blobbers, ok := fromEvent[[]Blobber](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			for _, b := range *blobbers {
+				if _, ok := providerIds[spenum.Blobber][b.ID]; !ok {
+					providerIds[spenum.Blobber][b.ID] = dbs.ProviderID{ID: b.ID, Type: spenum.Blobber}
+				}
+			}
+		case TagAddMiner,
+			TagUpdateMiner,
+			TagUpdateMinerTotalStake:
+			miners, ok := fromEvent[[]Miner](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			for _, m := range *miners {
+				if _, ok := providerIds[spenum.Miner][m.ID]; !ok {
+					providerIds[spenum.Miner][m.ID] = dbs.ProviderID{ID: m.ID, Type: spenum.Miner}
+				}
+			}
+		case TagAddSharder,
+			TagUpdateSharder,
+			TagUpdateSharderTotalStake:
+			sharders, ok := fromEvent[[]Sharder](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			for _, s := range *sharders {
+				if _, ok := providerIds[spenum.Sharder][s.ID]; !ok {
+					providerIds[spenum.Sharder][s.ID] = dbs.ProviderID{ID: s.ID, Type: spenum.Sharder}
+				}
+			}
+		case TagAddAuthorizer,
+			TagUpdateAuthorizer,
+			TagUpdateAuthorizerTotalStake:
+			authorizers, ok := fromEvent[[]Authorizer](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			for _, a := range *authorizers {
+				if _, ok := providerIds[spenum.Authorizer][a.ID]; !ok {
+					providerIds[spenum.Authorizer][a.ID] = dbs.ProviderID{ID: a.ID, Type: spenum.Authorizer}
+				}
+			}
+		case TagAddOrOverwiteValidator,
+			TagUpdateValidator,
+			TagUpdateValidatorStakeTotal:
+			validators, ok := fromEvent[[]Validator](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			for _, v := range *validators {
+				if _, ok := providerIds[spenum.Validator][v.ID]; !ok {
+					providerIds[spenum.Validator][v.ID] = dbs.ProviderID{ID: v.ID, Type: spenum.Validator}
+				}
+			}
 		case TagToChallengePool:
 			cp, ok := fromEvent[ChallengePoolLock](event.Data)
 			if !ok {
@@ -231,6 +493,29 @@ func (gs *Snapshot) update(e []Event) {
 					}
 					gs.MinedTotal += dr
 				}
+				idsMap, ok := providerIds[spu.ProviderID.Type]
+				if !ok {
+					continue
+				}
+				if _, ok := idsMap[spu.ProviderID.ID]; !ok {
+					idsMap[spu.ProviderID.ID] = spu.ProviderID
+				}
+			}
+		case TagStakePoolPenalty:
+			spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			for _, spu := range *spus {
+				idsMap, ok := providerIds[spu.ProviderID.Type]
+				if !ok {
+					continue
+				}
+				if _, ok := idsMap[spu.ProviderID.ID]; !ok {
+					idsMap[spu.ProviderID.ID] = spu.ProviderID
+				}
 			}
 		case TagFinalizeBlock:
 			gs.BlockCount += 1
@@ -249,9 +534,139 @@ func (gs *Snapshot) update(e []Event) {
 				totalFee += int(txn.Fee)
 			}
 			gs.TotalTxnFee += int64(totalFee)
+		case TagCollectProviderReward:
+			// Since we don't know the type, we'll need to add it to all maps
+			providerIds[spenum.Blobber][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Blobber}
+			providerIds[spenum.Miner][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Miner}
+			providerIds[spenum.Sharder][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Sharder}
+			providerIds[spenum.Authorizer][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Authorizer}
+			providerIds[spenum.Validator][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Validator}
+		case TagBlobberHealthCheck:
+			healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			idMap := providerIds[spenum.Blobber]
+			for _, hcu := range *healthCheckUpdates {
+				if _, ok := idMap[hcu.ID]; !ok {
+					idMap[hcu.ID] = dbs.ProviderID{ID: hcu.ID, Type: spenum.Blobber}
+				}
+			}
+		case TagMinerHealthCheck:
+			healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			idMap := providerIds[spenum.Miner]
+			for _, hcu := range *healthCheckUpdates {
+				if _, ok := idMap[hcu.ID]; !ok {
+					idMap[hcu.ID] = dbs.ProviderID{ID: hcu.ID, Type: spenum.Miner}
+				}
+			}
+		case TagSharderHealthCheck:
+			healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			idMap := providerIds[spenum.Sharder]
+			for _, hcu := range *healthCheckUpdates {
+				if _, ok := idMap[hcu.ID]; !ok {
+					idMap[hcu.ID] = dbs.ProviderID{ID: hcu.ID, Type: spenum.Sharder}
+				}
+			}
+		case TagAuthorizerHealthCheck:
+			healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			idMap := providerIds[spenum.Authorizer]
+			for _, hcu := range *healthCheckUpdates {
+				if _, ok := idMap[hcu.ID]; !ok {
+					idMap[hcu.ID] = dbs.ProviderID{ID: hcu.ID, Type: spenum.Authorizer}
+				}
+			}
+		case TagValidatorHealthCheck:
+			healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
+				continue
+			}
+			idMap := providerIds[spenum.Validator]
+			for _, hcu := range *healthCheckUpdates {
+				if _, ok := idMap[hcu.ID]; !ok {
+					idMap[hcu.ID] = dbs.ProviderID{ID: hcu.ID, Type: spenum.Validator}
+				}
+			}
+		case TagShutdownProvider:
+			pids, ok := fromEvent[[]dbs.ProviderID](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			for _, pid := range *pids {
+				idMap := providerIds[pid.Type]
+				if _, ok := idMap[pid.ID]; !ok {
+					idMap[pid.ID] = pid
+				}
+			}
+		case TagKillProvider:
+			pids, ok := fromEvent[[]dbs.ProviderID](event.Data)
+			if !ok {
+				return ErrInvalidEventData
+			}
+			for _, pid := range *pids {
+				idMap := providerIds[pid.Type]
+				if _, ok := idMap[pid.ID]; !ok {
+					idMap[pid.ID] = pid
+				}
+			}
 		}
-
 	}
+
+	idMap := providerIds[spenum.Blobber]
+	providers := make([]dbs.ProviderID, 0, len(idMap))
+	for _, pid := range idMap {
+		providers = append(providers, pid)
+	}
+	ApplyProvidersDiff[Blobber, *BlobberSnapshot](edb, gs, providers, round)
+
+	idMap = providerIds[spenum.Miner]
+	providers = make([]dbs.ProviderID, 0, len(idMap))
+	for _, pid := range idMap {
+		providers = append(providers, pid)
+	}
+	ApplyProvidersDiff[Miner, *MinerSnapshot](edb, gs, providers, round)
+
+	idMap = providerIds[spenum.Sharder]
+	providers = make([]dbs.ProviderID, 0, len(idMap))
+	for _, pid := range idMap {
+		providers = append(providers, pid)
+	}
+	ApplyProvidersDiff[Sharder, *SharderSnapshot](edb, gs, providers, round)
+
+	idMap = providerIds[spenum.Authorizer]
+	providers = make([]dbs.ProviderID, 0, len(idMap))
+	for _, pid := range idMap {
+		providers = append(providers, pid)
+	}
+	ApplyProvidersDiff[Authorizer, *AuthorizerSnapshot](edb, gs, providers, round)
+
+	idMap = providerIds[spenum.Validator]
+	providers = make([]dbs.ProviderID, 0, len(idMap))
+	for _, pid := range idMap {
+		providers = append(providers, pid)
+	}
+	ApplyProvidersDiff[Validator, *ValidatorSnapshot](edb, gs, providers, round)
+
+	return nil
 }
 
 

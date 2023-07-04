@@ -21,6 +21,22 @@ type SharderSnapshot struct {
 	IsShutdown    bool          `json:"is_shutdown"`
 }
 
+func (ss *SharderSnapshot) GetID() string {
+	return ss.SharderID
+}
+
+func (ss *SharderSnapshot) GetRound() int64 {
+	return ss.Round
+}
+
+func (ss *SharderSnapshot) SetID(id string) {
+	ss.SharderID = id
+}
+
+func (ss *SharderSnapshot) SetRound(round int64) {
+	ss.Round = round
+}
+
 func (s *SharderSnapshot) IsOffline() bool {
 	return s.IsKilled || s.IsShutdown
 }

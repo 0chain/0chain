@@ -23,6 +23,22 @@ type AuthorizerSnapshot struct {
 	IsShutdown    bool          `json:"is_shutdown"`
 }
 
+func (as *AuthorizerSnapshot) GetID() string {
+	return as.AuthorizerID
+}
+
+func (as *AuthorizerSnapshot) GetRound() int64 {
+	return as.Round
+}
+
+func (as *AuthorizerSnapshot) SetID(id string) {
+	as.AuthorizerID = id
+}
+
+func (as *AuthorizerSnapshot) SetRound(round int64) {
+	as.Round = round
+}
+
 func (a *AuthorizerSnapshot) IsOffline() bool {
 	return a.IsKilled || a.IsShutdown
 }

@@ -11,10 +11,6 @@ import (
 type EventProvidersIdsExtractorsMap map[EventTag]func(e Event) ([]string, error)
 type ProviderAggregateCreator func(edb *EventDb, providers interface{}, round int64) (error)
 
-type IProvider interface {
-	GetID() string
-}
-
 var ProviderTextMapping = map[reflect.Type]string{
 	reflect.TypeOf(Blobber{}): "blobber",
 	reflect.TypeOf(Sharder{}): "sharder",
@@ -32,7 +28,6 @@ var providerEventHandlers = map[reflect.Type]EventProvidersIdsExtractorsMap{
 		TagUpdateBlobberTotalOffers: extractProvidersIdsFromProvider[Blobber],
 		TagStakePoolReward: extractProvidersIdsFromSPUs,
 		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
-		TagMintReward: extractProviderIdFromRewards[Blobber],
 		TagUpdateBlobberOpenChallenges: extractProvidersIdsFromProvider[Blobber],
 		TagUpdateBlobberChallenge: extractProvidersIdsFromProvider[Blobber],
 		TagUpdateBlobberStat: extractProvidersIdsFromProvider[Blobber],
@@ -47,7 +42,6 @@ var providerEventHandlers = map[reflect.Type]EventProvidersIdsExtractorsMap{
 		TagUpdateSharderTotalStake: extractProvidersIdsFromProvider[Sharder],
 		TagStakePoolReward: extractProvidersIdsFromSPUs,
 		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
-		TagMintReward: extractProviderIdFromRewards[Sharder],
 		TagCollectProviderReward: extractProviderIdFromEventIndex,
 		TagSharderHealthCheck: extractProvidersIdsFromHealthCheck,
 		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Sharder],
@@ -59,7 +53,6 @@ var providerEventHandlers = map[reflect.Type]EventProvidersIdsExtractorsMap{
 		TagUpdateMinerTotalStake: extractProvidersIdsFromProvider[Miner],
 		TagStakePoolReward: extractProvidersIdsFromSPUs,
 		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
-		TagMintReward: extractProviderIdFromRewards[Miner],
 		TagCollectProviderReward: extractProviderIdFromEventIndex,
 		TagMinerHealthCheck: extractProvidersIdsFromHealthCheck,
 		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Miner],
@@ -71,7 +64,6 @@ var providerEventHandlers = map[reflect.Type]EventProvidersIdsExtractorsMap{
 		TagUpdateValidatorStakeTotal: extractProvidersIdsFromProvider[Validator],
 		TagStakePoolReward: extractProvidersIdsFromSPUs,
 		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
-		TagMintReward: extractProviderIdFromRewards[Validator],
 		TagCollectProviderReward: extractProviderIdFromEventIndex,
 		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Validator],
 		TagKillProvider: extractProvidersIdsFromDbsProviderId[Validator],
@@ -82,7 +74,6 @@ var providerEventHandlers = map[reflect.Type]EventProvidersIdsExtractorsMap{
 		TagUpdateAuthorizerTotalStake: extractProvidersIdsFromProvider[Authorizer],
 		TagStakePoolReward: extractProvidersIdsFromSPUs,
 		TagStakePoolPenalty: extractProvidersIdsFromSPUs,
-		TagMintReward: extractProviderIdFromRewards[Authorizer],
 		TagCollectProviderReward: extractProviderIdFromEventIndex,
 		TagShutdownProvider: extractProvidersIdsFromDbsProviderId[Authorizer],
 		TagKillProvider: extractProvidersIdsFromDbsProviderId[Authorizer],
@@ -171,19 +162,6 @@ func extractProvidersIdsFromSPUs(e Event) ([]string, error) {
 		ids = append(ids, spu.ProviderID.ID)
 	}
 	return ids, nil
-}
-
-func extractProviderIdFromRewards[T any](e Event) ([]string, error) {
-	reward, ok := e.Data.(RewardMint)
-	if !ok {
-		return nil, ErrInvalidEventData
-	}
-
-	var model T
-	if reward.ProviderType != ProviderTextMapping[reflect.TypeOf(model)] {
-		return nil, nil
-	}
-	return []string{reward.ProviderID}, nil
 }
 
 func extractProvidersIdsFromHealthCheck(e Event) ([]string, error) {

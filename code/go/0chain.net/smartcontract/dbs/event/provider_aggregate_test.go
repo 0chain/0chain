@@ -110,20 +110,6 @@ func TestBlobberAggregates(t *testing.T) {
 			},
 		},
 		{
-			Tag: TagMintReward,
-			Data: RewardMint{
-				ProviderID: "blobber4",
-				ProviderType: "blobber",
-			},
-		},
-		{
-			Tag: TagMintReward,
-			Data: RewardMint{
-				ProviderID: "minerx",
-				ProviderType: "miner",
-			},
-		},
-		{
 			Tag: TagBlobberHealthCheck,
 			Data: []dbs.DbHealthCheck{
 				{
@@ -295,22 +281,9 @@ func TestUpdateMinerAggregates(t *testing.T) {
 			},
 		},
 		{
-			Tag: TagMintReward,
-			Data: RewardMint{
-				ProviderID: "miner4",
-				ProviderType: "miner",
-			},
-		},
-		{
-			Tag: TagMintReward,
-			Data: RewardMint{
-				ProviderID: "blobber2",
-				ProviderType: "blobber",
-			},
-		},
-		{
 			Tag: TagShutdownProvider,
 			Data: []dbs.ProviderID{
+				{ID: "miner4", Type: spenum.Miner},
 				{ID: "miner5", Type: spenum.Miner},
 				{ID: "miner6", Type: spenum.Miner},
 				{ID: "blobber1", Type: spenum.Blobber},
