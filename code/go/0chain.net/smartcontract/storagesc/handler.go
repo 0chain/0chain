@@ -2163,7 +2163,7 @@ type storageNodeResponse struct {
 	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
 	StakePoolSettings       stakepool.Settings     `json:"stake_pool_settings"`
 	RewardRound             RewardRound            `json:"reward_round"`
-	IsAvailable             bool                   `json:"is_available"`
+	NotAvailable            bool                   `json:"not_available"`
 
 	TotalStake               currency.Coin `json:"total_stake"`
 	CreationRound            int64         `json:"creation_round"`
@@ -2192,7 +2192,7 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		RewardRound:             sn.RewardRound,
 		IsKilled:                sn.IsKilled(),
 		IsShutdown:              sn.IsShutDown(),
-		IsAvailable:             sn.IsAvailable,
+		NotAvailable:            sn.NotAvailable,
 	}
 }
 
@@ -2216,7 +2216,7 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 		LastRewardDataReadRound: snr.LastRewardDataReadRound,
 		StakePoolSettings:       snr.StakePoolSettings,
 		RewardRound:             snr.RewardRound,
-		IsAvailable:             snr.IsAvailable,
+		NotAvailable:            snr.NotAvailable,
 	}
 }
 
@@ -2229,9 +2229,8 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			Longitude: blobber.Longitude,
 		},
 		Terms: Terms{
-			ReadPrice:     blobber.ReadPrice,
-			WritePrice:    blobber.WritePrice,
-			MinLockDemand: blobber.MinLockDemand,
+			ReadPrice:  blobber.ReadPrice,
+			WritePrice: blobber.WritePrice,
 		},
 		Capacity:        blobber.Capacity,
 		Allocated:       blobber.Allocated,
@@ -2251,7 +2250,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		IsKilled:                 blobber.IsKilled,
 		IsShutdown:               blobber.IsShutdown,
 		SavedData:                blobber.SavedData,
-		IsAvailable:              blobber.IsAvailable,
+		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
 	}
 }
@@ -2351,7 +2350,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 
 // getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank blobbers-by-rank
 // Gets list of all blobbers ordered by rank
-//
+// TODO: See if we need to remove since no longer used
 // parameters:
 //
 //	+name: offset

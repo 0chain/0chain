@@ -13,8 +13,8 @@ import (
 type RewardDelegate struct {
 	model.UpdatableModel
 	Amount       currency.Coin `json:"amount"`
-	BlockNumber  int64         `json:"block_number" gorm:"index:idx_rew_del_prov,priority:1"`
-	PoolID       string        `json:"pool_id" gorm:"index:idx_rew_del_prov,priority:2"`
+	BlockNumber  int64         `json:"block_number"`
+	PoolID       string        `json:"pool_id"`
 	ProviderID   string        `json:"provider_id"`
 	RewardType   spenum.Reward `json:"reward_type"`
 	AllocationID string        `json:"allocation_id"`

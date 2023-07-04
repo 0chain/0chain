@@ -24,11 +24,11 @@ const (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type freeStorageMarker struct {
-	Assigner   string           `json:"assigner"`
-	Recipient  string           `json:"recipient"`
-	FreeTokens float64          `json:"free_tokens"`
-	Timestamp  common.Timestamp `json:"timestamp"`
-	Signature  string           `json:"signature"`
+	Assigner   string  `json:"assigner"`
+	Recipient  string  `json:"recipient"`
+	FreeTokens float64 `json:"free_tokens"`
+	Nonce      int64   `json:"nonce"`
+	Signature  string  `json:"signature"`
 }
 
 func (frm *freeStorageMarker) decode(b []byte) error {
@@ -66,12 +66,12 @@ func freeStorageAssignerKey(sscKey, clientId string) datastore.Key {
 }
 
 type freeStorageAssigner struct {
-	ClientId           string             `json:"client_id"`
-	PublicKey          string             `json:"public_key"`
-	IndividualLimit    currency.Coin      `json:"individual_limit"`
-	TotalLimit         currency.Coin      `json:"total_limit"`
-	CurrentRedeemed    currency.Coin      `json:"current_redeemed"`
-	RedeemedTimestamps []common.Timestamp `json:"redeemed_timestamps"`
+	ClientId        string        `json:"client_id"`
+	PublicKey       string        `json:"public_key"`
+	IndividualLimit currency.Coin `json:"individual_limit"`
+	TotalLimit      currency.Coin `json:"total_limit"`
+	CurrentRedeemed currency.Coin `json:"current_redeemed"`
+	RedeemedNonces  []int64       `json:"redeemed_nonces"`
 }
 
 func (fsa *freeStorageAssigner) Encode() []byte {
@@ -91,17 +91,13 @@ func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContext
 	return err
 }
 
-//TODO test that we really send some value here
+// TODO test that we really send some value here
 func (fsa *freeStorageAssigner) validate(
 	marker freeStorageMarker,
 	now common.Timestamp,
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	if marker.Timestamp > now {
-		return fmt.Errorf("marker timestamped in the future: %v", marker.Timestamp)
-	}
-
 	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
 	if err != nil {
 		return err
@@ -123,9 +119,9 @@ func (fsa *freeStorageAssigner) validate(
 		return fmt.Errorf("%d exceeded permitted free storage  %d", value, fsa.IndividualLimit)
 	}
 
-	for _, timestamp := range fsa.RedeemedTimestamps {
-		if marker.Timestamp == timestamp {
-			return fmt.Errorf("marker already redeemed, timestamp: %v", marker.Timestamp)
+	for _, nonce := range fsa.RedeemedNonces {
+		if marker.Nonce == nonce {
+			return fmt.Errorf("marker already redeemed, nonce: %v", marker.Nonce)
 		}
 	}
 
@@ -201,22 +197,12 @@ func verifyFreeAllocationRequest(
 	publicKey string,
 	balances cstate.StateContextI,
 ) (bool, error) {
-	var request = struct {
-		Recipient  string           `json:"recipient"`
-		FreeTokens float64          `json:"free_tokens"`
-		Timestamp  common.Timestamp `json:"timestamp"`
-	}{
-		frm.Recipient, frm.FreeTokens, frm.Timestamp,
-	}
-	responseBytes, err := json.Marshal(&request)
-	if err != nil {
-		return false, err
-	}
+	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(frm.Signature, hex.EncodeToString(responseBytes))
+	return signatureScheme.Verify(frm.Signature, hex.EncodeToString([]byte(marker)))
 }
 
 func (ssc *StorageSmartContract) freeAllocationRequest(
@@ -317,7 +303,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "unmarshalling allocation: %v", err)
 	}
 
-	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
+	assigner.RedeemedNonces = append(assigner.RedeemedNonces, marker.Nonce)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "assigner Save failed: %v", err)
 	}
@@ -389,7 +375,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"can't add redeemed tokens: %v", err)
 	}
 	assigner.CurrentRedeemed = newRedeemed
-	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
+	assigner.RedeemedNonces = append(assigner.RedeemedNonces, marker.Nonce)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request", "assigner Save failed: %v", err)
 	}
