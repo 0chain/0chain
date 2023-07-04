@@ -301,13 +301,13 @@ func (edb *EventDb) Work(ctx context.Context,
 	}
 
 	var err error
-	if err = tx.addEvents(ctx, es); err != nil {
-		logging.Logger.Error("error saving events",
-			zap.Int64("round", es.round),
-			zap.Error(err))
+	//if err = tx.addEvents(ctx, es); err != nil {
+	//	logging.Logger.Error("error saving events",
+	//		zap.Int64("round", es.round),
+	//		zap.Error(err))
 
-		return nil, err
-	}
+	//	return nil, err
+	//}
 
 	tse := time.Now()
 	tags := make([]string, 0, len(es.events))

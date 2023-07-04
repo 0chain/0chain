@@ -28,6 +28,33 @@ func GetPostgresSqlDb(config config.DbAccess) (dbs.Store, error) {
 	return db, nil
 }
 
+func ClonePostgresSqlDb(config config.DbAccess, dbName, tamplateName string) (dbs.Store, error) {
+	newStore := &PostgresStore{}
+	postgresDBs, err := gorm.Open(postgres.Open(fmt.Sprintf(
+		"host=%v port=%v  user=%v password=%v dbname=%s sslmode=disable",
+		config.Host, config.Port, config.User, config.Password, "postgres",
+	)),
+		&gorm.Config{
+			Logger:                 logger.Default.LogMode(logger.Silent),
+			SkipDefaultTransaction: true,
+			CreateBatchSize:        50,
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	createDatabaseCommand := fmt.Sprintf(
+		"CREATE DATABASE %s WITH TEMPLATE %s OWNER %s;",
+		config.Name, tamplateName, config.User,
+	)
+	result := postgresDBs.Exec(createDatabaseCommand)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	newStore.db = result
+	return newStore, nil
+}
+
 type PostgresStore struct {
 	db *gorm.DB
 }

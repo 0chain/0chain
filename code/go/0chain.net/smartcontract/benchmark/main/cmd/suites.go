@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -93,7 +94,7 @@ func runSuites(
 				suiteResult, events = runSuite(suite, mpt, root, data)
 				for key, value := range events {
 					if len(value) > 0 {
-						eventMap[suite.Name+"."+key] = value
+						eventMap[suite.Name+"_"+key] = value
 					}
 				}
 			}
@@ -107,7 +108,12 @@ func runSuites(
 		}(suite, &wg)
 	}
 	wg.Wait()
-	err := writeEvents(viper.GetString(benchmark.OptionsSmartContractEventFile), eventMap)
+	data.EventDb.Close()
+	sqlDB, err := data.EventDb.Get().DB()
+	// Close
+	err = sqlDB.Close()
+
+	err = writeEvents(viper.GetString(benchmark.OptionsSmartContractEventFile), eventMap)
 	if err != nil {
 		log.Fatal("error writing out events: " + err.Error())
 	}
@@ -119,8 +125,8 @@ func runSuites(
 				log.Fatal(fmt.Sprintf("error reading event db benchmarks file %s: %v",
 					viper.GetString(benchmark.OptionsEventDatabaseEventFile), err))
 			}
-			runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap), data.EventDb)
 		}
+		runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap), data.EventDb)
 	}
 	return results
 }
@@ -268,55 +274,65 @@ func runEventDatabaseSuite(
 	edb *event.EventDb,
 ) []benchmarkResults {
 	var benchmarkResult []benchmarkResults
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 	for _, bm := range suite.Benchmarks {
-		wg.Add(1)
-		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
-			defer wg.Done()
-			timer := time.Now()
-			log.Println("starting", bm.Name())
-			var err error
-			result := testing.Benchmark(func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					b.StopTimer()
-					cloneEdb, err := edb.Clone("")
-					if err != nil {
-						log.Fatal("cloning event database: " + err.Error())
-					}
-					balances := cstate.NewStateContext(
-						nil,
-						nil,
-						nil,
-						nil,
-						nil,
-						nil,
-						nil,
-						nil,
-						cloneEdb,
-					)
-					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
-						return 0
-					})
-					b.StartTimer()
-					err = bm.Run(timedBalance, b)
-					b.StopTimer()
-					err = cloneEdb.Delete()
-					if err != nil {
-						log.Fatal("error deleting event database: " + err.Error())
-					}
-				}
-			})
-			benchmarkResult = append(
-				benchmarkResult,
-				benchmarkResults{
-					test:   bm,
-					result: result,
-					error:  err,
-				},
-			)
-			log.Println("test", bm.Name(), "done. took:", time.Since(timer))
-		}(bm, &wg)
+		//wg.Add(1)
+		//go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
+		//	defer wg.Done()
+		timer := time.Now()
+		log.Println("starting", bm.Name())
+		var err error
+		result := testing.Benchmark(func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				err = runEventDatabaseBenchmark(b, edb, bm)
+			}
+		})
+		benchmarkResult = append(
+			benchmarkResult,
+			benchmarkResults{
+				test:   bm,
+				result: result,
+				error:  err,
+			},
+		)
+		log.Println("test", bm.Name(), "done. took:", time.Since(timer))
+		//}(bm, &wg)
 	}
-	wg.Wait()
+	//wg.Wait()
 	return nil
+}
+
+func runEventDatabaseBenchmark(b *testing.B, edb *event.EventDb, bm benchmark.BenchTestI) (err error) {
+	b.StopTimer()
+	cleanName := strings.Replace("edb_"+bm.Name(), ".", "_", -1)
+	cloneEdb, err := edb.Clone(cleanName)
+	if err != nil {
+		log.Fatal("cloning event database: " + err.Error())
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic running events", r)
+		}
+		if err := cloneEdb.Delete(); err != nil {
+			log.Fatal("error deleting event database: " + err.Error())
+		}
+	}()
+	balances := cstate.NewStateContext(
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		cloneEdb,
+	)
+	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
+		return 0
+	})
+	b.StartTimer()
+	err = bm.Run(timedBalance, b)
+	b.StopTimer()
+	return err
 }

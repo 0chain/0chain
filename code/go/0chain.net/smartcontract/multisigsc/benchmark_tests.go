@@ -133,6 +133,7 @@ func BenchmarkTests(
 		testsI = append(testsI, test)
 	}
 	return bk.TestSuite{
+		Name:       "multisig",
 		Source:     bk.MultiSig,
 		Benchmarks: testsI,
 	}

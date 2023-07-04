@@ -1,8 +1,9 @@
 package faucetsc
 
 import (
-	"0chain.net/core/common"
 	"testing"
+
+	"0chain.net/core/common"
 
 	"0chain.net/core/viper"
 
@@ -120,6 +121,7 @@ func BenchmarkTests(
 		testsI = append(testsI, test)
 	}
 	return bk.TestSuite{
+		Name:       "faucet",
 		Source:     bk.Faucet,
 		Benchmarks: testsI,
 	}
