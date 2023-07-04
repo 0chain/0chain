@@ -29,7 +29,6 @@ func GetPostgresSqlDb(config config.DbAccess) (dbs.Store, error) {
 }
 
 func ClonePostgresSqlDb(config config.DbAccess, dbName, tamplateName string) (dbs.Store, error) {
-	newStore := &PostgresStore{}
 	postgresDBs, err := gorm.Open(postgres.Open(fmt.Sprintf(
 		"host=%v port=%v  user=%v password=%v dbname=%s sslmode=disable",
 		config.Host, config.Port, config.User, config.Password, "postgres",
@@ -51,7 +50,14 @@ func ClonePostgresSqlDb(config config.DbAccess, dbName, tamplateName string) (db
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	newStore.db = result
+
+	newStore := &PostgresStore{}
+	err = newStore.Open(config)
+	if err != nil {
+		return nil, err
+	}
+
+	//newStore.db = result
 	return newStore, nil
 }
 

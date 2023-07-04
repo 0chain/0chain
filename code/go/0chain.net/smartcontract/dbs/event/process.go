@@ -142,7 +142,7 @@ func (edb *EventDb) MergeEvents(
 	if err != nil {
 		return BlockEvents{}, nil, err
 	}
-	tx, err := edb.Begin(ctx)
+	//tx, err := edb.Begin(ctx)
 	if err != nil {
 		return BlockEvents{}, nil, err
 	}
@@ -151,9 +151,9 @@ func (edb *EventDb) MergeEvents(
 		round:     round,
 		block:     block,
 		blockSize: blockSize,
-		tx:        tx,
+		tx:        edb,
 		done:      make(chan bool, 1),
-	}, tx, nil
+	}, edb, nil
 }
 
 func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
@@ -301,13 +301,13 @@ func (edb *EventDb) Work(ctx context.Context,
 	}
 
 	var err error
-	//if err = tx.addEvents(ctx, es); err != nil {
-	//	logging.Logger.Error("error saving events",
-	//		zap.Int64("round", es.round),
-	//		zap.Error(err))
+	if err = tx.addEvents(ctx, es); err != nil {
+		logging.Logger.Error("error saving events",
+			zap.Int64("round", es.round),
+			zap.Error(err))
 
-	//	return nil, err
-	//}
+		return nil, err
+	}
 
 	tse := time.Now()
 	tags := make([]string, 0, len(es.events))

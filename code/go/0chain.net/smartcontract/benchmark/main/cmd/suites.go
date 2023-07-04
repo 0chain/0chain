@@ -108,6 +108,10 @@ func runSuites(
 		}(suite, &wg)
 	}
 	wg.Wait()
+	var evt2 event.Event
+	res2 := data.EventDb.Store.Get().Model(&event.Event{}).First(&evt2)
+	res2 = res2
+
 	data.EventDb.Close()
 	sqlDB, err := data.EventDb.Get().DB()
 	// Close
