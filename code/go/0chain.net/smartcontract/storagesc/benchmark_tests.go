@@ -322,16 +322,17 @@ func BenchmarkTests(
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
-				responseBytes, err := json.Marshal(&request)
-				if err != nil {
-					panic(err)
-				}
+
+				marker := fmt.Sprintf("%s:%f:%d",
+					request.Recipient,
+					request.FreeTokens,
+					request.Nonce)
 				err = sigScheme.SetPublicKey(data.PublicKeys[0])
 				if err != nil {
 					panic(err)
 				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				signature, err := sigScheme.Sign(hex.EncodeToString(responseBytes))
+				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				if err != nil {
 					panic(err)
 				}
@@ -373,10 +374,14 @@ func BenchmarkTests(
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
-				responseBytes, _ := json.Marshal(&request)
+
+				marker := fmt.Sprintf("%s:%f:%d",
+					request.Recipient,
+					request.FreeTokens,
+					request.Nonce)
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				signature, _ := sigScheme.Sign(hex.EncodeToString(responseBytes))
+				signature, _ := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				fsmBytes, _ := json.Marshal(&freeStorageMarker{
 					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 					Recipient:  request.Recipient,
