@@ -26,11 +26,11 @@ const (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type freeStorageMarker struct {
-	Assigner   string           `json:"assigner"`
-	Recipient  string           `json:"recipient"`
-	FreeTokens float64          `json:"free_tokens"`
-	Timestamp  common.Timestamp `json:"timestamp"`
-	Signature  string           `json:"signature"`
+	Assigner   string  `json:"assigner"`
+	Recipient  string  `json:"recipient"`
+	FreeTokens float64 `json:"free_tokens"`
+	Nonce      int64   `json:"nonce"`
+	Signature  string  `json:"signature"`
 }
 
 func (frm *freeStorageMarker) decode(b []byte) error {
@@ -69,24 +69,24 @@ func freeStorageAssignerKey(sscKey, clientId string) datastore.Key {
 }
 
 type freeStorageAssigner struct {
-	IndividualLimit    uint64  `json:"individual_limit" msg:"i"`
-	TotalLimit         uint64  `json:"total_limit" msg:"t"`
-	CurrentRedeemed    uint64  `json:"current_redeemed" msg:"r"`
-	RedeemedTimestamps []int64 `json:"redeemed_timestamps" msg:"rt"`
-	ClientId           string  `json:"client_id" msg:"c"`
-	PublicKey          string  `json:"public_key" msg:"p"`
+	IndividualLimit uint64  `json:"individual_limit" msg:"i"`
+	TotalLimit      uint64  `json:"total_limit" msg:"t"`
+	CurrentRedeemed uint64  `json:"current_redeemed" msg:"r"`
+	RedeemedNonces  []int64 `json:"redeemed_nonces" msg:"n"`
+	ClientId        string  `json:"client_id" msg:"c"`
+	PublicKey       string  `json:"public_key" msg:"p"`
 }
 
 func (fsa *freeStorageAssigner) Copy() *freeStorageAssigner {
 	f := &freeStorageAssigner{
-		IndividualLimit:    fsa.IndividualLimit,
-		TotalLimit:         fsa.TotalLimit,
-		CurrentRedeemed:    fsa.CurrentRedeemed,
-		ClientId:           fsa.ClientId,
-		PublicKey:          fsa.PublicKey,
-		RedeemedTimestamps: make([]int64, len(fsa.RedeemedTimestamps)),
+		IndividualLimit: fsa.IndividualLimit,
+		TotalLimit:      fsa.TotalLimit,
+		CurrentRedeemed: fsa.CurrentRedeemed,
+		ClientId:        fsa.ClientId,
+		PublicKey:       fsa.PublicKey,
+		RedeemedNonces:  make([]int64, len(fsa.RedeemedNonces)),
 	}
-	copy(f.RedeemedTimestamps[:], fsa.RedeemedTimestamps[:])
+	copy(f.RedeemedNonces[:], fsa.RedeemedNonces[:])
 
 	return f
 }
@@ -115,10 +115,6 @@ func (fsa *freeStorageAssigner) validate(
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	if marker.Timestamp > now {
-		return fmt.Errorf("marker timestamped in the future: %v", marker.Timestamp)
-	}
-
 	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
 	if err != nil {
 		return err
@@ -140,9 +136,9 @@ func (fsa *freeStorageAssigner) validate(
 		return fmt.Errorf("%d exceeded permitted free storage  %d", value, fsa.IndividualLimit)
 	}
 
-	for _, timestamp := range fsa.RedeemedTimestamps {
-		if int64(marker.Timestamp) == timestamp {
-			return fmt.Errorf("marker already redeemed, timestamp: %v", marker.Timestamp)
+	for _, nonce := range fsa.RedeemedNonces {
+		if marker.Nonce == nonce {
+			return fmt.Errorf("marker already redeemed, nonce: %v", marker.Nonce)
 		}
 	}
 
@@ -218,22 +214,12 @@ func verifyFreeAllocationRequest(
 	publicKey string,
 	balances cstate.StateContextI,
 ) (bool, error) {
-	var request = struct {
-		Recipient  string           `json:"recipient"`
-		FreeTokens float64          `json:"free_tokens"`
-		Timestamp  common.Timestamp `json:"timestamp"`
-	}{
-		frm.Recipient, frm.FreeTokens, frm.Timestamp,
-	}
-	responseBytes, err := json.Marshal(&request)
-	if err != nil {
-		return false, err
-	}
+	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(frm.Signature, hex.EncodeToString(responseBytes))
+	return signatureScheme.Verify(frm.Signature, hex.EncodeToString([]byte(marker)))
 }
 
 func (ssc *StorageSmartContract) freeAllocationRequest(
@@ -366,7 +352,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", err
 	}
 	assigner.CurrentRedeemed = uint64(newRedeemed)
-	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, int64(marker.Timestamp))
+	assigner.RedeemedNonces = append(assigner.RedeemedNonces, int64(marker.Nonce))
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "assigner Save failed: %v", err)
 	}
@@ -476,7 +462,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"can't add redeemed tokens: %v", err)
 	}
 	assigner.CurrentRedeemed = uint64(newRedeemed)
-	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, int64(marker.Timestamp))
+	assigner.RedeemedNonces = append(assigner.RedeemedNonces, int64(marker.Nonce))
 
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request", "assigner Save failed: %v", err)

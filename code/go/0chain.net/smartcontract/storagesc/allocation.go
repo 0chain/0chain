@@ -22,6 +22,15 @@ import (
 	"0chain.net/core/common"
 )
 
+type NewAllocationTxnOutput struct {
+	ID          string   `json:"id"`
+	Blobber_ids []string `json:"blobber_ids"`
+}
+
+func (sn *NewAllocationTxnOutput) Decode(input []byte) error {
+	return json.Unmarshal(input, sn)
+}
+
 // getAllocation by ID
 func (sc *StorageSmartContract) getAllocation(allocID string,
 	balances chainstate.StateContextI) (alloc *StorageAllocation, err error) {
@@ -60,10 +69,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
-	// TODO: return simple message rather than whole allocation info
-	//buff := alloc.Encode()
-	//return string(buff), nil
-	//return "add_allocation", nil
 	return nil
 }
 
@@ -84,12 +89,12 @@ type newAllocationRequest struct {
 }
 
 // storageAllocation from the request
-func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
+func (nar *newAllocationRequest) storageAllocation(conf *Config, now common.Timestamp) (sa *StorageAllocation) {
 	sa = new(StorageAllocation)
 	sa.DataShards = nar.DataShards
 	sa.ParityShards = nar.ParityShards
 	sa.Size = nar.Size
-	sa.Expiration = nar.Expiration
+	sa.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix())
 	sa.Owner = nar.Owner
 	sa.OwnerPublicKey = nar.OwnerPublicKey
 	sa.ReadPriceRange = nar.ReadPriceRange
@@ -121,10 +126,10 @@ func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
 		return errors.New("insufficient allocation size")
 	}
 
-	dur := common.ToTime(nar.Expiration).Sub(now)
-	if dur < conf.TimeUnit {
-		return errors.New("insufficient allocation duration")
-	}
+	//dur := common.ToTime(nar.Expiration).Sub(now)
+	//if dur < conf.TimeUnit {
+	//	return errors.New("insufficient allocation duration")
+	//}
 	return nil
 }
 
@@ -210,7 +215,14 @@ func (sc *StorageSmartContract) newAllocationRequest(
 		return "", err
 	}
 
-	return string(sa.Encode()), nil
+	blobberIDs := make([]string, len(sa.Blobbers))
+	for _, v := range sa.Blobbers {
+		blobberIDs = append(blobberIDs, v.BlobberID)
+	}
+
+	output := NewAllocationTxnOutput{sa.ID, blobberIDs}
+	buff, _ := json.Marshal(output)
+	return string(buff), nil
 }
 
 // newAllocationRequest creates new allocation
@@ -381,8 +393,10 @@ func setupNewAllocation(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.Strings("blobbers", request.Blobbers))
-	sa := request.storageAllocation() // (set fields, including expiration)
+	sa := request.storageAllocation(conf, now) // (set fields, ignore expiration)
+	m.tick("fetch_pools")
 	sa.TimeUnit = conf.TimeUnit
+	sa.MinLockDemand = conf.MinLockDemand
 	sa.ID = allocId
 	sa.Tx = allocId
 
@@ -400,7 +414,7 @@ func setupNewAllocation(
 			return nil, nil, fmt.Errorf("could not get rest duration in time unit: %v", err)
 		}
 
-		mld, err := b.Terms.minLockDemand(sizeInGB(sa.bSize()), rdtu)
+		mld, err := b.Terms.minLockDemand(sizeInGB(sa.bSize()), rdtu, sa.MinLockDemand)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get min lock demand: %v", err)
 		}
@@ -796,9 +810,6 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	if err != nil {
 		return
 	}
-
-	// just copy from next
-	avg.MinLockDemand = next.MinLockDemand
 	return
 }
 
@@ -926,7 +937,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		bt := alloc.bTerms(i)
-		nbmld, err := bt.minLockDemand(gbSize, rdtu)
+		nbmld, err := bt.minLockDemand(gbSize, rdtu, alloc.MinLockDemand)
 		if err != nil {
 			return err
 		}
@@ -1253,7 +1264,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				if alloc.bTerms(i).ReadPrice >= blobbers[i].Terms.ReadPrice {
 					alloc.Blobbers[i].Terms.ReadPrice = blobbers[i].Terms.ReadPrice
 				}
-				alloc.Blobbers[i].Terms.MinLockDemand = blobbers[i].Terms.MinLockDemand
 			}
 		}
 
@@ -1914,16 +1924,14 @@ func (sc *StorageSmartContract) finishAllocation(
 	return nil
 }
 
-func emitUpdateAllocationStatEvent(w *WriteMarker, movedTokens currency.Coin, balances chainstate.StateContextI) {
+func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chainstate.StateContextI) {
 	alloc := event.Allocation{
-		AllocationID: w.AllocationID,
-		UsedSize:     w.Size,
-	}
-
-	if w.Size > 0 {
-		alloc.MovedToChallenge = movedTokens
-	} else if w.Size < 0 {
-		alloc.MovedBack = movedTokens
+		AllocationID:     allocation.ID,
+		UsedSize:         allocation.Stats.UsedSize,
+		NumWrites:        allocation.Stats.NumWrites,
+		MovedToChallenge: allocation.MovedToChallenge,
+		MovedBack:        allocation.MovedBack,
+		WritePool:        allocation.WritePool,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStat, alloc.AllocationID, &alloc)

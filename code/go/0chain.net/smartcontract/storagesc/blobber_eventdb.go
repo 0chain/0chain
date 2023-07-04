@@ -13,17 +13,16 @@ func emitUpdateBlobber(sn *StorageNode, bi *BlobberOfferStake, sp *stakePool, ba
 		return err
 	}
 	data := &event.Blobber{
-		BaseURL:       sn.BaseURL,
-		Latitude:      sn.Geolocation.Latitude,
-		Longitude:     sn.Geolocation.Longitude,
-		ReadPrice:     sn.Terms.ReadPrice,
-		WritePrice:    sn.Terms.WritePrice,
-		MinLockDemand: sn.Terms.MinLockDemand,
+		BaseURL:    sn.BaseURL,
+		Latitude:   sn.Geolocation.Latitude,
+		Longitude:  sn.Geolocation.Longitude,
+		ReadPrice:  sn.Terms.ReadPrice,
+		WritePrice: sn.Terms.WritePrice,
 
-		Capacity:    sn.Capacity,
-		Allocated:   bi.Allocated,
-		SavedData:   bi.SavedData,
-		IsAvailable: sn.IsAvailable,
+		Capacity:     sn.Capacity,
+		Allocated:    bi.Allocated,
+		SavedData:    bi.SavedData,
+		NotAvailable: sn.NotAvailable,
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
@@ -45,17 +44,16 @@ func emitAddBlobber(sn *StorageNode, idx int32, bi *BlobberOfferStake, sp *stake
 	}
 
 	data := &event.Blobber{
-		BaseURL:       sn.BaseURL,
-		Latitude:      sn.Geolocation.Latitude,
-		Longitude:     sn.Geolocation.Longitude,
-		ReadPrice:     sn.Terms.ReadPrice,
-		WritePrice:    sn.Terms.WritePrice,
-		MinLockDemand: sn.Terms.MinLockDemand,
+		BaseURL:    sn.BaseURL,
+		Latitude:   sn.Geolocation.Latitude,
+		Longitude:  sn.Geolocation.Longitude,
+		ReadPrice:  sn.Terms.ReadPrice,
+		WritePrice: sn.Terms.WritePrice,
 
-		Capacity:    sn.Capacity,
-		Allocated:   bi.Allocated,
-		SavedData:   bi.SavedData,
-		IsAvailable: true,
+		Capacity:     sn.Capacity,
+		Allocated:    bi.Allocated,
+		SavedData:    bi.SavedData,
+		NotAvailable: false,
 		Provider: event.Provider{
 			ID:              sn.ID,
 			Index:           idx,

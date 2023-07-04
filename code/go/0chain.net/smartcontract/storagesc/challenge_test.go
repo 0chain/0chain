@@ -754,6 +754,45 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	require.Equal(t, len(stateRoots), 1)
 }
 
+func TestGetRandomSubSlice(t *testing.T) {
+	const seed = 29
+	t.Run("length greater than size", func(t *testing.T) {
+		size := 3
+		slice := []string{"2", "4", "3", "1"}
+		result := getRandomSubSlice(slice, size, seed)
+		require.Len(t, result, 3)
+	})
+
+	t.Run("length length than size", func(t *testing.T) {
+		size := 6
+		slice := []string{"2", "4", "3", "1"}
+		result := getRandomSubSlice(slice, size, seed)
+		require.Len(t, result, 4)
+	})
+
+	t.Run("size zero", func(t *testing.T) {
+		size := 0
+		slice := []string{"2", "4", "3", "1"}
+		result := getRandomSubSlice(slice, size, seed)
+		require.Len(t, result, 0)
+	})
+
+	t.Run("length zero", func(t *testing.T) {
+		size := 6
+		slice := []string{}
+		result := getRandomSubSlice(slice, size, seed)
+		require.Len(t, result, 0)
+	})
+
+	t.Run("slice nil", func(t *testing.T) {
+		size := 6
+		var slice []string
+		slice = nil
+		result := getRandomSubSlice(slice, size, seed)
+		require.Len(t, result, 0)
+	})
+}
+
 func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
 	*StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode, []*Client) {
 	var (

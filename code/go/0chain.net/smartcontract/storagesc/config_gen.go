@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 29
+	// map header, size 31
 	// string "t"
-	o = append(o, 0xde, 0x0, 0x1d, 0xa1, 0x74)
+	o = append(o, 0xde, 0x0, 0x1f, 0xa1, 0x74)
 	o = msgp.AppendDuration(o, z.TimeUnit)
 	// string "m"
 	o = append(o, 0xa1, 0x6d)
@@ -113,6 +113,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "cc"
 	o = append(o, 0xa2, 0x63, 0x63)
 	o = msgp.AppendFloat64(o, z.CancellationCharge)
+	// string "ml"
+	o = append(o, 0xa2, 0x6d, 0x6c)
+	o = msgp.AppendFloat64(o, z.MinLockDemand)
 	// string "f"
 	o = append(o, 0xa1, 0x66)
 	o, err = z.MaxTotalFreeAllocation.MarshalMsg(o)
@@ -140,6 +143,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "vp"
 	o = append(o, 0xa2, 0x76, 0x70)
 	o = msgp.AppendInt(o, z.ValidatorsPerChallenge)
+	// string "nv"
+	o = append(o, 0xa2, 0x6e, 0x76)
+	o = msgp.AppendInt(o, z.NumValidatorsRewarded)
 	// string "is"
 	o = append(o, 0xa2, 0x69, 0x73)
 	o, err = z.MinStake.MarshalMsg(o)
@@ -418,6 +424,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "CancellationCharge")
 				return
 			}
+		case "ml":
+			z.MinLockDemand, bts, err = msgp.ReadFloat64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MinLockDemand")
+				return
+			}
 		case "f":
 			bts, err = z.MaxTotalFreeAllocation.UnmarshalMsg(bts)
 			if err != nil {
@@ -446,6 +458,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.ValidatorsPerChallenge, bts, err = msgp.ReadIntBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ValidatorsPerChallenge")
+				return
+			}
+		case "nv":
+			z.NumValidatorsRewarded, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "NumValidatorsRewarded")
 				return
 			}
 		case "is":
@@ -557,7 +575,7 @@ func (z *Config) Msgsize() (s int) {
 	} else {
 		s += 1 + 2 + msgp.DurationSize + 2 + msgp.Float64Size
 	}
-	s += 2 + msgp.Float64Size + 2 + msgp.Float64Size + 2 + msgp.DurationSize + 2 + msgp.IntSize + 3 + z.MaxReadPrice.Msgsize() + 2 + z.MaxWritePrice.Msgsize() + 2 + z.MinWritePrice.Msgsize() + 3 + msgp.Float64Size + 2 + z.MaxTotalFreeAllocation.Msgsize() + 3 + z.MaxIndividualFreeAllocation.Msgsize() + 3 + z.FreeAllocationSettings.Msgsize() + 3 + msgp.BoolSize + 3 + msgp.IntSize + 3 + z.MinStake.Msgsize() + 3 + z.MaxStake.Msgsize() + 3 + msgp.IntSize + 3 + msgp.Float64Size + 3
+	s += 2 + msgp.Float64Size + 2 + msgp.Float64Size + 2 + msgp.DurationSize + 2 + msgp.IntSize + 3 + z.MaxReadPrice.Msgsize() + 2 + z.MaxWritePrice.Msgsize() + 2 + z.MinWritePrice.Msgsize() + 3 + msgp.Float64Size + 3 + msgp.Float64Size + 2 + z.MaxTotalFreeAllocation.Msgsize() + 3 + z.MaxIndividualFreeAllocation.Msgsize() + 3 + z.FreeAllocationSettings.Msgsize() + 3 + msgp.BoolSize + 3 + msgp.IntSize + 3 + msgp.IntSize + 3 + z.MinStake.Msgsize() + 3 + z.MaxStake.Msgsize() + 3 + msgp.IntSize + 3 + msgp.Float64Size + 3
 	if z.BlockReward == nil {
 		s += msgp.NilSize
 	} else {

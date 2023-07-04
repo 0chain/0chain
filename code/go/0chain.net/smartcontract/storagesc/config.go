@@ -121,6 +121,7 @@ type Config struct {
 
 	// allocation cancellation
 	CancellationCharge float64 `json:"cancellation_charge" msg:"cc"`
+	MinLockDemand      float64 `json:"min_lock_demand" msg:"ml"`
 	// free allocations
 	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation" msg:"f"`
 	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation" msg:"if"`
@@ -133,6 +134,7 @@ type Config struct {
 	// ValidatorsPerChallenge is the number of validators to select per
 	// challenges.
 	ValidatorsPerChallenge int `json:"validators_per_challenge" msg:"vp"`
+	NumValidatorsRewarded  int `json:"num_validators_rewarded" msg:"nv"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake" msg:"is"`
@@ -166,6 +168,10 @@ func (conf *Config) validate() (err error) {
 	if conf.CancellationCharge < 0.0 || 1.0 < conf.CancellationCharge {
 		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
 			conf.CancellationCharge)
+	}
+	if conf.MinLockDemand < 0.0 || 1.0 < conf.MinLockDemand {
+		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
+			conf.MinLockDemand)
 	}
 	if conf.MaxBlobbersPerAllocation <= 0 {
 		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
@@ -221,6 +227,10 @@ func (conf *Config) validate() (err error) {
 	if conf.ValidatorsPerChallenge <= 0 {
 		return fmt.Errorf("invalid validators_per_challenge <= 0: %v",
 			conf.ValidatorsPerChallenge)
+	}
+	if conf.NumValidatorsRewarded <= 0 {
+		return fmt.Errorf("invalid num_validators_rewarded <= 0: %v",
+			conf.NumValidatorsRewarded)
 	}
 	if conf.MaxStake < conf.MinStake {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", conf.MinStake,
@@ -335,6 +345,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
 	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
+	conf.MinLockDemand = scc.GetFloat64(pfx + "MinLockDemand")
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
 	if err != nil {
@@ -414,9 +425,8 @@ func getConfiguredConfig() (conf *Config, err error) {
 
 	// challenges generating
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
-	conf.ValidatorsPerChallenge = scc.GetInt(
-		pfx + "validators_per_challenge")
-
+	conf.ValidatorsPerChallenge = scc.GetInt(pfx + "validators_per_challenge")
+	conf.NumValidatorsRewarded = scc.GetInt(pfx + "num_validators_rewarded")
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 

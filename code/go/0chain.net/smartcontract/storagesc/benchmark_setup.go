@@ -32,6 +32,7 @@ import (
 const (
 	mockMinLockDemand            = 1
 	mockFinalizedAllocationIndex = 2
+	mockAllocationMinLockDemand  = 0.1
 )
 
 func AddMockAllocations(
@@ -87,6 +88,7 @@ func addMockAllocation(
 			FailedChallenges:          1,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
+		MinLockDemand: mockAllocationMinLockDemand,
 		TimeUnit:      1 * time.Hour,
 		Finalized:     i == mockFinalizedAllocationIndex,
 		WritePool:     2e10,
@@ -141,11 +143,10 @@ func addMockAllocation(
 		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for k, b := range sa.BlobberAllocs {
 			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
-				BlobberID:     b.BlobberID,
-				AllocationID:  b.AllocationID,
-				ReadPrice:     int64(sa.bTerms(k).ReadPrice),
-				WritePrice:    int64(sa.bTerms(k).WritePrice),
-				MinLockDemand: sa.bTerms(k).MinLockDemand,
+				BlobberID:    b.BlobberID,
+				AllocationID: b.AllocationID,
+				ReadPrice:    int64(sa.bTerms(k).ReadPrice),
+				WritePrice:   int64(sa.bTerms(k).WritePrice),
 			})
 		}
 
@@ -393,7 +394,7 @@ func AddMockBlobbers(
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			IsAvailable:       true,
+			NotAvailable:      false,
 		}
 		stake, err := stakePools[i].stake()
 		if err != nil {
@@ -419,15 +420,14 @@ func AddMockBlobbers(
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
-				BaseURL:       blobber.BaseURL,
-				Latitude:      blobber.Geolocation.Latitude,
-				Longitude:     blobber.Geolocation.Longitude,
-				ReadPrice:     blobber.Terms.ReadPrice,
-				WritePrice:    blobber.Terms.WritePrice,
-				MinLockDemand: blobber.Terms.MinLockDemand,
-				Capacity:      blobber.Capacity,
-				Allocated:     bi.Allocated,
-				ReadData:      bi.Allocated * 2,
+				BaseURL:    blobber.BaseURL,
+				Latitude:   blobber.Geolocation.Latitude,
+				Longitude:  blobber.Geolocation.Longitude,
+				ReadPrice:  blobber.Terms.ReadPrice,
+				WritePrice: blobber.Terms.WritePrice,
+				Capacity:   blobber.Capacity,
+				Allocated:  bi.Allocated,
+				ReadData:   bi.Allocated * 2,
 				Provider: event.Provider{
 					ID:              blobber.ID,
 					DelegateWallet:  blobber.StakePoolSettings.DelegateWallet,
@@ -438,7 +438,7 @@ func AddMockBlobbers(
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
-				IsAvailable:         blobber.IsAvailable,
+				NotAvailable:        blobber.NotAvailable,
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake) / 2)
 			if err != nil {
@@ -605,8 +605,8 @@ func AddMockValidators(
 		}
 		validatorNodes = append(validatorNodes, validator)
 		vpn := ValidationPartitionNode{
-			Id: id,
-			//Url: id + ".com",
+			Id:  id,
+			Url: id + ".com",
 		}
 		if viper.GetBool(sc.EventDbEnabled) {
 			validator := event.Validator{
@@ -743,15 +743,12 @@ func AddMockFreeStorageAssigners(
 		_, err := balances.InsertTrieNode(
 			freeStorageAssignerKey(sscId, clients[i]),
 			&freeStorageAssigner{
-				ClientId:  clients[i],
-				PublicKey: keys[i],
-				//IndividualLimit: currency.Coin(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
-				//TotalLimit:      currency.Coin(viper.GetFloat64(sc.StorageMaxTotalFreeAllocation) * 1e10),
+				ClientId:        clients[i],
+				PublicKey:       keys[i],
 				IndividualLimit: uint64(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
 				TotalLimit:      uint64(viper.GetFloat64(sc.StorageMaxTotalFreeAllocation) * 1e10),
 				CurrentRedeemed: 0,
-				//RedeemedTimestamps: []common.Timestamp{},
-				RedeemedTimestamps: []int64{},
+				RedeemedNonces:  []int64{},
 			},
 		)
 		if err != nil {
@@ -822,9 +819,8 @@ func AddMockWriteRedeems(
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:     currency.Coin(0.1 * 1e10),
-		WritePrice:    currency.Coin(0.1 * 1e10),
-		MinLockDemand: 0.0007,
+		ReadPrice:  currency.Coin(0.1 * 1e10),
+		WritePrice: currency.Coin(0.1 * 1e10),
 	}
 }
 
@@ -889,9 +885,12 @@ func SetMockConfig(
 	conf.HealthCheckPeriod = 1 * time.Hour
 	conf.BlobberSlash = 0.1
 	conf.CancellationCharge = 0.2
+	conf.MinLockDemand = mockAllocationMinLockDemand
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
+	conf.NumValidatorsRewarded = viper.GetInt(sc.StorageNumValidatorsRewarded)
+	conf.ValidatorsPerChallenge = viper.GetInt(sc.StorageValidatorsPerChallenge)
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
 	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)

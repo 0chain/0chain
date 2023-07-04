@@ -246,26 +246,19 @@ type Terms struct {
 	// WritePrice is price for reading. Token / GB / time unit. Also,
 	// it used to calculate min_lock_demand value.
 	WritePrice currency.Coin `json:"write_price"`
-	// MinLockDemand in number in [0; 1] range. It represents part of
-	// allocation should be locked for the blobber rewards even if
-	// user never write something to the blobber.
-	MinLockDemand float64 `json:"min_lock_demand"`
 }
 
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu float64) (currency.Coin, error) {
+func (t *Terms) minLockDemand(gbSize, rdtu, minLockDemand float64) (currency.Coin, error) {
 
-	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return currency.Float64ToCoin(mldf * rdtu)                  //
+	var mldf = float64(t.WritePrice) * gbSize * minLockDemand //
+	return currency.Float64ToCoin(mldf * rdtu)                //
 }
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
-		return errors.New("invalid min_lock_demand")
-	}
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
@@ -332,7 +325,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
-	IsAvailable       bool               `json:"is_available"`
+	NotAvailable      bool               `json:"not_available"`
 }
 
 // validate the blobber configurations
@@ -623,6 +616,11 @@ type StorageAllocation struct {
 	WritePool     currency.Coin `json:"write_pool" msg:"w"`
 	ChallengePool currency.Coin `json:"challenge_pool" msg:"cp"`
 
+	// MinLockDemand in number in [0; 1] range. It represents part of
+	// allocation should be locked for the blobber rewards even if
+	// user never write something to the blobber.
+	MinLockDemand float64 `json:"min_lock_demand"`
+
 	// MovedToChallenge is number of tokens moved to challenge pool.
 	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty" msg:"mtc"`
 	// MovedBack is number of tokens moved from challenge pool to
@@ -781,7 +779,7 @@ func (sa *StorageAllocation) isActive(
 		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
 	}
 
-	if !blobber.IsAvailable {
+	if blobber.NotAvailable {
 		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
 	}
 
@@ -1016,7 +1014,7 @@ func (sa *StorageAllocation) minLockDemand(terms Terms, date common.Timestamp) (
 		return 0, fmt.Errorf("could not get rest duration in time unit: %v", err)
 	}
 
-	return terms.minLockDemand(sizeInGB(sa.BSize), rdtu)
+	return terms.minLockDemand(sizeInGB(sa.BSize), rdtu, sa.MinLockDemand)
 }
 
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)

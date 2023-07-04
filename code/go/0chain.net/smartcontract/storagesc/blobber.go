@@ -222,7 +222,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
 	blobber.ProviderType = spenum.Blobber
-	blobber.IsAvailable = true
+	blobber.NotAvailable = false
 
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
@@ -303,6 +303,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	blobber.Capacity = updatedBlobber.Capacity
 	blobber.Terms = updatedBlobber.Terms
 	blobber.StakePoolSettings = updatedBlobber.StakePoolSettings
+	blobber.NotAvailable = updatedBlobber.NotAvailable
 
 	return string(blobber.Encode()), nil
 }
@@ -746,7 +747,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		// TODO: check if this is correct
 		blobAlloc.Stats.NumWrites++
 		bil[blobber.Index].SavedData -= changeSize
-		alloc.Stats.UsedSize -= changeSize
+		alloc.Stats.UsedSize -= int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 		alloc.Stats.NumWrites++
 	} else {
 
@@ -766,8 +767,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.Stats.NumWrites++
 
 		bil[blobber.Index].SavedData += commitConnection.WriteMarker.Size
-
-		alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
+		alloc.Stats.UsedSize += int64(float64(commitConnection.WriteMarker.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 		alloc.Stats.NumWrites++
 
 	}
@@ -863,7 +863,16 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	emitAddWriteMarker(t, commitConnection.WriteMarker, movedTokens, balances)
+	emitAddWriteMarker(t, commitConnection.WriteMarker, &StorageAllocation{
+		ID: alloc.ID,
+		Stats: &StorageAllocationStats{
+			UsedSize:  alloc.Stats.UsedSize,
+			NumWrites: alloc.Stats.NumWrites,
+		},
+		MovedToChallenge: alloc.MovedToChallenge,
+		MovedBack:        alloc.MovedBack,
+		WritePool:        alloc.WritePool,
+	}, movedTokens, balances)
 
 	blobAllocBytes, err := json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {

@@ -27,7 +27,7 @@ type Allocation struct {
 	ReadPriceMax             currency.Coin `json:"read_price_max"`
 	WritePriceMin            currency.Coin `json:"write_price_min"`
 	WritePriceMax            currency.Coin `json:"write_price_max"`
-	StartTime                int64         `json:"start_time" gorm:"index:idx_astart_time"`
+	StartTime                int64         `json:"start_time"`
 	Finalized                bool          `json:"finalized"`
 	Cancelled                bool          `json:"cancelled"`
 	UsedSize                 int64         `json:"used_size"`
@@ -45,6 +45,7 @@ type Allocation struct {
 	WritePool                currency.Coin `json:"write_pool"`
 	ThirdPartyExtendable     bool          `json:"third_party_extendable"`
 	FileOptions              uint16        `json:"file_options"`
+	MinLockDemand            float64       `json:"min_lock_demand"`
 
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -132,6 +133,7 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"latest_closed_challenge_txn",
 		"third_party_extendable",
 		"file_options",
+		"min_lock_demand",
 	}
 
 	columns, err := Columnize(allocs)
@@ -234,17 +236,7 @@ func mergeUpdateAllocStatsEvents() *eventsMergerImpl[Allocation] {
 }
 
 func mergeAllocationStatsEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagUpdateAllocationStat, withAllocStatsMerged())
-}
-
-func withAllocStatsMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *Allocation) (*Allocation, error) {
-		a.UsedSize += b.UsedSize
-		a.NumWrites += b.NumWrites
-		a.MovedToChallenge += b.MovedToChallenge
-		a.MovedBack += b.MovedBack
-		return a, nil
-	})
+	return newEventsMerger[Allocation](TagUpdateAllocationStat, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
@@ -284,11 +276,11 @@ func (edb *EventDb) updateAllocationsStats(allocs []Allocation) error {
 	}
 
 	return CreateBuilder("allocations", "allocation_id", allocationIdList).
-		AddUpdate("used_size", usedSizeList, "allocations.used_size + t.used_size").
-		AddUpdate("num_writes", numWritesList, "allocations.num_writes + t.num_writes").
-		AddUpdate("moved_to_challenge", movedToChallengeList, "allocations.moved_to_challenge + t.moved_to_challenge").
-		AddUpdate("moved_back", movedBackList, "allocations.moved_back + t.moved_back").
-		AddUpdate("write_pool", writePoolList, "allocations.write_pool - t.moved_to_challenge + t.moved_back").Exec(edb).Error
+		AddUpdate("used_size", usedSizeList).
+		AddUpdate("num_writes", numWritesList).
+		AddUpdate("moved_to_challenge", movedToChallengeList).
+		AddUpdate("moved_back", movedBackList).
+		AddUpdate("write_pool", writePoolList).Exec(edb).Error
 }
 
 func mergeUpdateAllocBlobbersTermsEvents() *eventsMergerImpl[AllocationBlobberTerm] {

@@ -119,13 +119,13 @@ func TestCancelAllocationRequest(t *testing.T) {
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
 		MaxStake:                   zcnToBalance(100.0),
-		CancellationCharge:         float64(0.2),
+		CancellationCharge:         0.2,
+		MinLockDemand:              0.1,
 	}
 	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime) * 5
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
 		writePrice:    0.1,
-		minLockDemand: 0.1,
 	}
 
 	var allocation = StorageAllocation{
@@ -139,6 +139,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		Size:          4560,
 		UsedSize:      456,
 		WritePool:     77777,
+		MinLockDemand: scYaml.MinLockDemand,
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
@@ -160,7 +161,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		nextBlobber.ProviderType = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
-		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand
+		var minLockDemand = float64(allocation.Size) * writePrice * allocation.MinLockDemand
 		blobbers.add(&nextBlobber)
 		blobberStakePools = append(blobberStakePools, []mockStakePool{})
 		blobberStakePools[i] = append(blobberStakePools[i], mockStakePool{
@@ -249,7 +250,6 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
 		writePrice:    0.1,
-		minLockDemand: 0.1,
 	}
 
 	var allocation = StorageAllocation{
@@ -285,7 +285,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		nextBlobber.ProviderType = spenum.Blobber
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
 		writePrice *= 0.9
-		var minLockDemand = float64(allocation.Size) * writePrice * blobberYaml.minLockDemand
+		var minLockDemand = float64(allocation.Size) * writePrice * allocation.MinLockDemand
 		blobbers.add(&nextBlobber)
 		blobberStakePools = append(blobberStakePools, []mockStakePool{})
 		blobberStakePools[i] = append(blobberStakePools[i], mockStakePool{

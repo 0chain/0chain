@@ -19,11 +19,11 @@ func (z *freeStorageAssigner) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "r"
 	o = append(o, 0xa1, 0x72)
 	o = msgp.AppendUint64(o, z.CurrentRedeemed)
-	// string "rt"
-	o = append(o, 0xa2, 0x72, 0x74)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.RedeemedTimestamps)))
-	for za0001 := range z.RedeemedTimestamps {
-		o = msgp.AppendInt64(o, z.RedeemedTimestamps[za0001])
+	// string "n"
+	o = append(o, 0xa1, 0x6e)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.RedeemedNonces)))
+	for za0001 := range z.RedeemedNonces {
+		o = msgp.AppendInt64(o, z.RedeemedNonces[za0001])
 	}
 	// string "c"
 	o = append(o, 0xa1, 0x63)
@@ -70,22 +70,22 @@ func (z *freeStorageAssigner) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "CurrentRedeemed")
 				return
 			}
-		case "rt":
+		case "n":
 			var zb0002 uint32
 			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "RedeemedTimestamps")
+				err = msgp.WrapError(err, "RedeemedNonces")
 				return
 			}
-			if cap(z.RedeemedTimestamps) >= int(zb0002) {
-				z.RedeemedTimestamps = (z.RedeemedTimestamps)[:zb0002]
+			if cap(z.RedeemedNonces) >= int(zb0002) {
+				z.RedeemedNonces = (z.RedeemedNonces)[:zb0002]
 			} else {
-				z.RedeemedTimestamps = make([]int64, zb0002)
+				z.RedeemedNonces = make([]int64, zb0002)
 			}
-			for za0001 := range z.RedeemedTimestamps {
-				z.RedeemedTimestamps[za0001], bts, err = msgp.ReadInt64Bytes(bts)
+			for za0001 := range z.RedeemedNonces {
+				z.RedeemedNonces[za0001], bts, err = msgp.ReadInt64Bytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "RedeemedTimestamps", za0001)
+					err = msgp.WrapError(err, "RedeemedNonces", za0001)
 					return
 				}
 			}
@@ -115,7 +115,7 @@ func (z *freeStorageAssigner) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *freeStorageAssigner) Msgsize() (s int) {
-	s = 1 + 2 + msgp.Uint64Size + 2 + msgp.Uint64Size + 2 + msgp.Uint64Size + 3 + msgp.ArrayHeaderSize + (len(z.RedeemedTimestamps) * (msgp.Int64Size)) + 2 + msgp.StringPrefixSize + len(z.ClientId) + 2 + msgp.StringPrefixSize + len(z.PublicKey)
+	s = 1 + 2 + msgp.Uint64Size + 2 + msgp.Uint64Size + 2 + msgp.Uint64Size + 2 + msgp.ArrayHeaderSize + (len(z.RedeemedNonces) * (msgp.Int64Size)) + 2 + msgp.StringPrefixSize + len(z.ClientId) + 2 + msgp.StringPrefixSize + len(z.PublicKey)
 	return
 }
 
@@ -132,13 +132,9 @@ func (z *freeStorageMarker) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "FreeTokens"
 	o = append(o, 0xaa, 0x46, 0x72, 0x65, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x73)
 	o = msgp.AppendFloat64(o, z.FreeTokens)
-	// string "Timestamp"
-	o = append(o, 0xa9, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70)
-	o, err = z.Timestamp.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Timestamp")
-		return
-	}
+	// string "Nonce"
+	o = append(o, 0xa5, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
+	o = msgp.AppendInt64(o, z.Nonce)
 	// string "Signature"
 	o = append(o, 0xa9, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65)
 	o = msgp.AppendString(o, z.Signature)
@@ -181,10 +177,10 @@ func (z *freeStorageMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "FreeTokens")
 				return
 			}
-		case "Timestamp":
-			bts, err = z.Timestamp.UnmarshalMsg(bts)
+		case "Nonce":
+			z.Nonce, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Timestamp")
+				err = msgp.WrapError(err, "Nonce")
 				return
 			}
 		case "Signature":
@@ -207,7 +203,7 @@ func (z *freeStorageMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *freeStorageMarker) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.Assigner) + 10 + msgp.StringPrefixSize + len(z.Recipient) + 11 + msgp.Float64Size + 10 + z.Timestamp.Msgsize() + 10 + msgp.StringPrefixSize + len(z.Signature)
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.Assigner) + 10 + msgp.StringPrefixSize + len(z.Recipient) + 11 + msgp.Float64Size + 6 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.Signature)
 	return
 }
 
