@@ -172,7 +172,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 
 func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberTerm {
 	bTerms := make([]event.AllocationBlobberTerm, 0, len(sa.BlobberAllocs))
-	for i, b := range sa.BlobberAllocs {
+	for i, b := range sa.Blobbers {
 		bTerms = append(bTerms, event.AllocationBlobberTerm{
 			AllocationID:  sa.ID,
 			BlobberID:     b.BlobberID,

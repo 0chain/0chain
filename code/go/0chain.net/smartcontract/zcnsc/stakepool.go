@@ -177,5 +177,5 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	return stakepool.StakePoolUnlock(t, inputData, balances, zcn.getStakePoolAdapter)
+	return stakepool.StakePoolUnlock(balances, t, inputData, zcn.getStakePoolAdapter)
 }
