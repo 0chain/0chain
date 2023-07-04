@@ -926,7 +926,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	blobbers []*StorageNode,
 	bil BlobberOfferStakeList,
 	addId, removeId string,
-	addedBlobber *StorageNode,
+	addBlobber *StorageNode,
 	ssc *StorageSmartContract,
 	now common.Timestamp,
 	balances cstate.StateContextI,
@@ -946,30 +946,30 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("allocation already has blobber %s", addId)
 	}
 
-	bi := bil[addedBlobber.Index]
-	if err := sa.isActive(addedBlobber, bi.Allocated, bi.TotalStake, bi.TotalOffers, conf, now); err != nil {
+	bi := bil[addBlobber.Index]
+	if err := sa.isActive(addBlobber, bi.Allocated, bi.TotalStake, bi.TotalOffers, conf, now); err != nil {
 		return nil, err
 	}
 
 	bs := sa.bSize()
 	bi.Allocated += bs
 
-	blobbers = append(blobbers, addedBlobber)
-	ba := newBlobberAllocation(addedBlobber.ID)
+	blobbers = append(blobbers, addBlobber)
+	ba := newBlobberAllocation(addBlobber.ID)
 
 	sa.BlobberAllocsMap[addId] = ba
 	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-	mld, err := sa.minLockDemand(addedBlobber.Terms, now)
+	mld, err := sa.minLockDemand(addBlobber.Terms, now)
 	if err != nil {
 		return nil, err
 	}
 	sa.Blobbers = append(sa.Blobbers, &AllocBlobber{
-		BlobberID:     addedBlobber.ID,
-		Terms:         addedBlobber.Terms,
+		BlobberID:     addBlobber.ID,
+		Terms:         addBlobber.Terms,
 		MinLockDemand: mld,
 	})
 
-	if err := bi.addOffer(getOffer(bs, addedBlobber.Terms)); err != nil {
+	if err := bi.addOffer(getOffer(bs, addBlobber.Terms)); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)
 	}
 

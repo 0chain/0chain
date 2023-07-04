@@ -757,6 +757,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 
 		if blobAlloc.Stats.UsedSize+commitConnection.WriteMarker.Size > alloc.BSize {
+			logging.Logger.Error("commit_connection_failed, write size exceed alloc bSize",
+				zap.Int64("used size", blobAlloc.Stats.UsedSize),
+				zap.Int64("wm size", commitConnection.WriteMarker.Size),
+				zap.Int64("alloc bSize", alloc.BSize))
 			return "", common.NewError("commit_connection_failed",
 				"Size for blobber allocation exceeded maximum")
 		}
