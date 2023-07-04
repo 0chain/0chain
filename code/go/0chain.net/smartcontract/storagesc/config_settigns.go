@@ -227,6 +227,7 @@ func initSettings() {
 		MaxMint.String():                          {MaxMint, smartcontract.CurrencyCoin},
 		MaxStake.String():                         {MaxStake, smartcontract.CurrencyCoin},
 		MinStake.String():                         {MinStake, smartcontract.CurrencyCoin},
+		MaxCharge.String():                        {MaxCharge, smartcontract.Float64},
 		TimeUnit.String():                         {TimeUnit, smartcontract.Duration},
 		MinAllocSize.String():                     {MinAllocSize, smartcontract.Int64},
 		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, smartcontract.Duration},
