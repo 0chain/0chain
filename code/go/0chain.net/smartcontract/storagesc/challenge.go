@@ -31,11 +31,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: add back after fixing the chain stuck
-//const blobberAllocationPartitionSize = 100
-
-const blobberAllocationPartitionSize = 5
-
 // completeChallenge complete the challenge
 func (sc *StorageSmartContract) completeChallenge(cab *challengeAllocBlobberPassResult) bool {
 	if !cab.allocChallenges.removeChallenge(cab.challenge) {
@@ -709,8 +704,8 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		ccr              = concurrentReader{}
 	)
 
-	for _, vt := range cr.ValidationTickets {
-		func(v *ValidationTicket) {
+	for i, vt := range cr.ValidationTickets {
+		func(idx int, v *ValidationTicket) {
 			ccr.add(func() error {
 				if err := v.Validate(challenge.ID, challenge.BlobberID); err != nil {
 					return fmt.Errorf("invalid validation ticket: %v", err)
@@ -719,7 +714,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 				if ok, err := v.VerifySign(balances); !ok || err != nil {
 					return fmt.Errorf("invalid validation ticket: %v", err)
 				}
-				validators = append(validators, v.ValidatorID)
+				validators[idx] = v.ValidatorID
 				if !v.Result {
 					atomic.AddInt32(&failure, 1)
 				} else {
@@ -727,7 +722,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 				}
 				return nil
 			})
-		}(vt)
+		}(i, vt)
 	}
 	if err := ccr.do(); err != nil {
 		return nil, err
