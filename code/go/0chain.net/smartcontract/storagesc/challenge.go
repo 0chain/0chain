@@ -884,7 +884,7 @@ func (sc *StorageSmartContract) challengeFailed(
 		return "", common.NewError("challenge_penalty_error", err.Error())
 	}
 
-	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
+	logging.Logger.Info("challenge failed", zap.String("challenge", cab.challenge.ID))
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 	err := sc.blobberPenalty(
 		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, validators,
