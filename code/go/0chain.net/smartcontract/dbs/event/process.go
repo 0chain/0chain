@@ -493,9 +493,14 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 	edb.updateSharderAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), s)
 	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), s)
-	s.update(events)
 
 	s.Round = round
+	err := edb.UpdateSnapshot(s, events)
+	if err != nil {
+		logging.Logger.Error("error updating snapshot", zap.Error(err))
+		return s, err
+	}
+
 	if err := edb.addSnapshot(*s); err != nil {
 		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", s, round), zap.Error(err))
 	}

@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -142,11 +143,24 @@ func TestValidatorAggregateAndSnapshot(t *testing.T) {
 	})
 }
 
+func buildMockValidator(t *testing.T, ownerId string, pid string, bucket int64) Validator {
+	var validator Validator
+	err := faker.FakeData(&validator)
+	require.NoError(t, err)
+
+	validator.ID = pid
+	validator.DelegateWallet = OwnerId
+	validator.BucketId = bucket
+	validator.IsKilled = false
+	validator.IsShutdown = false
+	validator.Rewards = ProviderRewards{}
+	return validator
+}
+
 func createMockValidators(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Validator) []string {
 	var (
 		ids          []string
 		curValidator Validator
-		err          error
 		validators   []Validator
 		i            = 0
 	)
@@ -161,12 +175,7 @@ func createMockValidators(t *testing.T, eventDb *EventDb, n int, targetBucket in
 	}
 
 	for ; i < n; i++ {
-		err = faker.FakeData(&curValidator)
-		require.NoError(t, err)
-		curValidator.DelegateWallet = OwnerId
-		curValidator.BucketId = int64((i % 2)) * targetBucket
-		curValidator.IsKilled = false
-		curValidator.IsShutdown = false
+		curValidator = buildMockValidator(t, OwnerId, fmt.Sprintf("validator%v", i), int64((i % 2)) * targetBucket)
 		validators = append(validators, curValidator)
 		ids = append(ids, curValidator.ID)
 	}

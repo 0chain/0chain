@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -146,11 +147,23 @@ func TestMinerAggregateAndSnapshot(t *testing.T) {
 	})
 }
 
+func buildMockMiner(t *testing.T, ownerId string, pid string, bucket int64) Miner {
+	var miner Miner
+	err := faker.FakeData(&miner)
+	require.NoError(t, err)
+	miner.ID = pid
+	miner.DelegateWallet = ownerId
+	miner.BucketId = bucket
+	miner.IsKilled = false
+	miner.IsShutdown = false
+	miner.Rewards = ProviderRewards{}
+	return miner
+}
+
 func createMockMiners(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Miner) []string {
 	var (
 		ids      []string
 		curMiner Miner
-		err      error
 		miners   []Miner
 		i        = 0
 	)
@@ -165,12 +178,7 @@ func createMockMiners(t *testing.T, eventDb *EventDb, n int, targetBucket int64,
 	}
 
 	for ; i < n; i++ {
-		err = faker.FakeData(&curMiner)
-		require.NoError(t, err)
-		curMiner.DelegateWallet = OwnerId
-		curMiner.BucketId = int64((i % 2)) * targetBucket
-		curMiner.IsKilled = false
-		curMiner.IsShutdown = false
+		curMiner = buildMockMiner(t, OwnerId, fmt.Sprintf("miner_%v", i), int64((i % 2)) * targetBucket)
 		miners = append(miners, curMiner)
 		ids = append(ids, curMiner.ID)
 	}

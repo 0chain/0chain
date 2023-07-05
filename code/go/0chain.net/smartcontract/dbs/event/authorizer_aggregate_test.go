@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -152,11 +153,24 @@ func TestAuthorizerAggregateAndSnapshot(t *testing.T) {
 	})
 }
 
+func buildMockAuthorizer(t *testing.T, ownerId string, pid string, bucket int64) Authorizer {
+	var authorizer Authorizer
+	err := faker.FakeData(&authorizer)
+	require.NoError(t, err)
+
+	authorizer.ID = pid
+	authorizer.DelegateWallet = ownerId
+	authorizer.BucketId = bucket
+	authorizer.IsKilled = false
+	authorizer.IsShutdown = false
+	authorizer.Rewards = ProviderRewards{}
+	return authorizer
+}
+
 func createAuthorizers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Authorizer) []string {
 	var (
 		ids           []string
 		curAuthorizer Authorizer
-		err           error
 		authorizers   []Authorizer
 		i             = 0
 	)
@@ -171,12 +185,7 @@ func createAuthorizers(t *testing.T, eventDb *EventDb, n int, targetBucket int64
 	}
 
 	for ; i < n; i++ {
-		err = faker.FakeData(&curAuthorizer)
-		require.NoError(t, err)
-		curAuthorizer.DelegateWallet = OwnerId
-		curAuthorizer.BucketId = int64((i % 2)) * targetBucket
-		curAuthorizer.IsKilled = false
-		curAuthorizer.IsShutdown = false
+		curAuthorizer = buildMockAuthorizer(t, OwnerId, fmt.Sprintf("authorizer%v", i), int64((i % 2)) * targetBucket)
 		authorizers = append(authorizers, curAuthorizer)
 		ids = append(ids, curAuthorizer.ID)
 	}

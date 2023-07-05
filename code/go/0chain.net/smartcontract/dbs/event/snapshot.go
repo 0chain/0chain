@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"reflect"
 
 	"0chain.net/chaincore/state"
@@ -8,7 +9,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
-	"gorm.io/gorm"
 
 	"go.uber.org/zap"
 )
@@ -90,16 +90,18 @@ const (
 const GB = float64(1024 * 1024 * 1024)
 
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
-
-
-func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snapshot, providers []dbs.ProviderID, round int64) (error) {
+//
+// Parameters:
+//	- diff: diff values of global snapshot fields
+//	- gs: current global snapshot.
+func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snapshot, providers []dbs.ProviderID) error {
 	var (
 		providersFromDB []P
 		snaphots []S
 		snapshotsMap = make(map[string]S)
 		ids []string
 		pModel P
-		ptypeName = ProviderTextMapping[reflect.TypeOf(pModel)]
+		ptypeName = ProviderTextMapping[reflect.TypeOf(pModel).Elem()]
 	)
 	for _, provider := range providers {
 		ids = append(ids, provider.GetID())
@@ -107,52 +109,34 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 
 	err := edb.Store.Get().Where("id IN (?)", ids).Find(&providersFromDB).Error;
 	if err != nil {
-		return err
+		return common.NewError("apply_providers_diff", "error getting providers from db")
 	}
 	
-	err = edb.Store.Get().Where("? IN (?)", gorm.Expr("?_id", ptypeName), ids).Find(&snaphots).Error;
+	err = edb.Store.Get().Where(fmt.Sprintf("%v_id IN (?)", ptypeName), ids).Find(&snaphots).Error;
 	if err != nil {
-		return err
+		return common.NewError("apply_providers_diff", "error getting providers snapshots from db")
 	}
 	for _, snapshot := range snaphots {
 		snapshotsMap[snapshot.GetID()] = snapshot
 	}
 
-	var (
-		snap S
-		ok bool
-	)
 	for _, provider := range providersFromDB {
-		snap, ok = snapshotsMap[provider.GetID()]
+		snap, ok := snapshotsMap[provider.GetID()]
 		if !ok {
 			snap = *new(S)
 			snap.SetID(provider.GetID())
-			snap.SetRound(round)
 		}
 
-		switch ptypeName {
-		case "blobber":
-			err = gs.ApplyDiffBlobber(provider, snap)
-		case "miner":
-			err = gs.ApplyDiffMiner(provider, snap)
-		case "sharder":
-			err = gs.ApplyDiffSharder(provider, snap)
-		case "validator":
-			err = gs.ApplyDiffValidator(provider, snap)
-		case "authorizer":
-			err = gs.ApplyDiffAuthorizer(provider, snap)
-		default:
-			continue
-		}
+		err = gs.ApplySingleProviderDiff(spenum.ToProviderType(ptypeName))(provider, snap)
 		if err != nil {
-			return err
+			logging.Logger.Error("error applying provider diff to global snapshot",
+				zap.String("provider_id", provider.GetID()), zap.String("provider_type", ptypeName), zap.Error(err))
+			return common.NewError("apply_providers_diff", fmt.Sprintf("error applying provider %v:%v diff to global snapshot", ptypeName, provider.GetID()))
 		}
 	}
 
 	return nil
 }
-
-func ApplyMixedProviderDiff()
 
 func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.TotalMint += diff.TotalMint
@@ -186,6 +170,24 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 
 	if s.StakedStorage > s.MaxCapacityStorage {
 		s.StakedStorage = s.MaxCapacityStorage
+	}
+}
+
+// Facade for provider-specific diff appliers.
+func (s *Snapshot) ApplySingleProviderDiff(ptype spenum.Provider) func(provider IProvider, snapshot IProviderSnapshot) error {
+	switch ptype {
+	case spenum.Blobber:
+		return s.ApplyDiffBlobber
+	case spenum.Miner:
+		return s.ApplyDiffMiner
+	case spenum.Sharder:
+		return s.ApplyDiffSharder
+	case spenum.Validator:
+		return s.ApplyDiffValidator
+	case spenum.Authorizer:
+		return s.ApplyDiffAuthorizer
+	default:
+		return nil
 	}
 }
 
@@ -308,7 +310,12 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 	return s, res.Error
 }
 
-func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
+// UpdateSnapshot updates the global snapshot
+//
+// Parameters:
+// gs: global globale snapshot
+// e: events to apply to the snapshot
+func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event) error {
 	providerIds := map[spenum.Provider]ProviderIDMap{
 		spenum.Blobber:    make(ProviderIDMap),
 		spenum.Miner:      make(ProviderIDMap),
@@ -321,6 +328,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 		logging.Logger.Debug("update snapshot",
 			zap.String("tag", event.Tag.String()),
 			zap.Int64("block_number", event.BlockNumber))
+		
 		switch event.Tag {
 		case TagAddBlobber,
 			TagUpdateBlobber,
@@ -334,7 +342,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, b := range *blobbers {
 				if _, ok := providerIds[spenum.Blobber][b.ID]; !ok {
@@ -348,7 +356,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, m := range *miners {
 				if _, ok := providerIds[spenum.Miner][m.ID]; !ok {
@@ -362,7 +370,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, s := range *sharders {
 				if _, ok := providerIds[spenum.Sharder][s.ID]; !ok {
@@ -376,7 +384,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, a := range *authorizers {
 				if _, ok := providerIds[spenum.Authorizer][a.ID]; !ok {
@@ -390,7 +398,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, v := range *validators {
 				if _, ok := providerIds[spenum.Validator][v.ID]; !ok {
@@ -402,7 +410,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			gs.TotalChallengePools += cp.Amount
 		case TagFromChallengePool:
@@ -410,7 +418,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			gs.TotalChallengePools -= cp.Amount
 		case TagAddMint:
@@ -418,7 +426,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			gs.TotalMint += int64(m.Amount)
 			gs.ZCNSupply += int64(m.Amount)
@@ -429,7 +437,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			gs.ZCNSupply -= int64(m.Amount)
 			logging.Logger.Info("snapshot update TagBurn",
@@ -439,7 +447,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
@@ -449,7 +457,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, d := range *ds {
 				gs.ClientLocks -= d.Amount
@@ -459,7 +467,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
@@ -470,7 +478,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, d := range *ds {
 				gs.ClientLocks -= d.Amount
@@ -481,7 +489,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, spu := range *spus {
 				for _, r := range spu.DelegateRewards {
@@ -495,7 +503,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 				}
 				idsMap, ok := providerIds[spu.ProviderID.Type]
 				if !ok {
-					continue
+					return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 				}
 				if _, ok := idsMap[spu.ProviderID.ID]; !ok {
 					idsMap[spu.ProviderID.ID] = spu.ProviderID
@@ -506,12 +514,12 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, spu := range *spus {
 				idsMap, ok := providerIds[spu.ProviderID.Type]
 				if !ok {
-					continue
+					return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 				}
 				if _, ok := idsMap[spu.ProviderID.ID]; !ok {
 					idsMap[spu.ProviderID.ID] = spu.ProviderID
@@ -526,7 +534,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			gs.TransactionsCount += int64(len(*txns))
 			totalFee := 0
@@ -546,7 +554,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			idMap := providerIds[spenum.Blobber]
 			for _, hcu := range *healthCheckUpdates {
@@ -559,7 +567,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			idMap := providerIds[spenum.Miner]
 			for _, hcu := range *healthCheckUpdates {
@@ -572,7 +580,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			idMap := providerIds[spenum.Sharder]
 			for _, hcu := range *healthCheckUpdates {
@@ -585,7 +593,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			idMap := providerIds[spenum.Authorizer]
 			for _, hcu := range *healthCheckUpdates {
@@ -598,7 +606,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Int("tag", event.Tag.Int()), zap.Any("data", event.Data), zap.Error(ErrInvalidEventData))
-				continue
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			idMap := providerIds[spenum.Validator]
 			for _, hcu := range *healthCheckUpdates {
@@ -636,36 +644,51 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event, round int64) error {
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	ApplyProvidersDiff[Blobber, *BlobberSnapshot](edb, gs, providers, round)
+	err := ApplyProvidersDiff[Blobber, *BlobberSnapshot](edb, gs, providers)
+	if err != nil {
+		return common.NewError("update_snapshot", fmt.Sprintf("error applying blobber snapshot: %v", err))
+	}
 
 	idMap = providerIds[spenum.Miner]
 	providers = make([]dbs.ProviderID, 0, len(idMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	ApplyProvidersDiff[Miner, *MinerSnapshot](edb, gs, providers, round)
+	err = ApplyProvidersDiff[Miner, *MinerSnapshot](edb, gs, providers)
+	if err != nil {
+		return common.NewError("update_snapshot", fmt.Sprintf("error applying miner snapshot: %v", err))
+	}
 
 	idMap = providerIds[spenum.Sharder]
 	providers = make([]dbs.ProviderID, 0, len(idMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	ApplyProvidersDiff[Sharder, *SharderSnapshot](edb, gs, providers, round)
+	err = ApplyProvidersDiff[Sharder, *SharderSnapshot](edb, gs, providers)
+	if err != nil {
+		return common.NewError("update_snapshot", fmt.Sprintf("error applying sharder snapshot: %v", err))
+	}
 
 	idMap = providerIds[spenum.Authorizer]
 	providers = make([]dbs.ProviderID, 0, len(idMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	ApplyProvidersDiff[Authorizer, *AuthorizerSnapshot](edb, gs, providers, round)
+	err = ApplyProvidersDiff[Authorizer, *AuthorizerSnapshot](edb, gs, providers)
+	if err != nil {
+		return common.NewError("update_snapshot", fmt.Sprintf("error applying authorizer snapshot: %v", err))
+	}
 
 	idMap = providerIds[spenum.Validator]
 	providers = make([]dbs.ProviderID, 0, len(idMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	ApplyProvidersDiff[Validator, *ValidatorSnapshot](edb, gs, providers, round)
-
+	err = ApplyProvidersDiff[Validator, *ValidatorSnapshot](edb, gs, providers)
+	if err != nil {
+		return common.NewError("update_snapshot", fmt.Sprintf("error applying validator snapshot: %v", err))
+	}
+	
 	return nil
 }
 

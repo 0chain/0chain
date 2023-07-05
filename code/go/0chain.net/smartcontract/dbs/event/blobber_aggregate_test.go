@@ -256,12 +256,27 @@ func TestBlobberAggregateAndSnapshot(t *testing.T) {
 	})
 }
 
+func buildMockBlobber(t *testing.T, pid string, bucket int64) Blobber {
+	var curBlobber Blobber
+	err := faker.FakeData(&curBlobber)
+	require.NoError(t, err)
+	curBlobber.ID = pid
+	curBlobber.DelegateWallet = OwnerId
+	curBlobber.BucketId = bucket
+	curBlobber.BaseURL = fmt.Sprintf("http://url-%v.com", pid)
+	curBlobber.WritePrice += 10
+	curBlobber.Capacity += int64(curBlobber.TotalStake) * int64(GB)
+	curBlobber.IsKilled = false
+	curBlobber.IsShutdown = false
+	curBlobber.Rewards = ProviderRewards{}
+	return curBlobber
+}
+
 func createBlobbers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Blobber) []string {
 	const GB = int64(1024 * 1024 * 1024)
 	var (
 		ids        []string
 		curBlobber Blobber
-		err        error
 		blobbers   []Blobber
 		i          = 0
 	)
@@ -276,16 +291,7 @@ func createBlobbers(t *testing.T, eventDb *EventDb, n int, targetBucket int64, s
 	}
 
 	for ; i < n; i++ {
-		err = faker.FakeData(&curBlobber)
-		require.NoError(t, err)
-		curBlobber.DelegateWallet = OwnerId
-		curBlobber.BucketId = int64((i % 2)) * targetBucket
-		curBlobber.BaseURL = fmt.Sprintf("http://url%v.com", i)
-		curBlobber.WritePrice += 10
-		curBlobber.Capacity += int64(curBlobber.TotalStake) * GB
-		curBlobber.IsKilled = false
-		curBlobber.IsShutdown = false
-		blobbers = append(blobbers, curBlobber)
+		blobbers = append(blobbers, buildMockBlobber(t, fmt.Sprintf("blobber%v", i), targetBucket))
 		ids = append(ids, curBlobber.ID)
 	}
 

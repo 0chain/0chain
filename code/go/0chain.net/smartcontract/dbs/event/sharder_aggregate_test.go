@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"0chain.net/chaincore/config"
@@ -152,11 +153,24 @@ func TestSharderAggregateAndSnapshot(t *testing.T) {
 	})
 }
 
+func buildMockSharder(t *testing.T, ownerId string, pid string, bucket int64) Sharder {
+	var sharder Sharder
+	err := faker.FakeData(&sharder)
+	require.NoError(t, err)
+
+	sharder.ID = pid
+	sharder.DelegateWallet = ownerId
+	sharder.BucketId = bucket
+	sharder.IsKilled = false
+	sharder.IsShutdown = false
+	sharder.Rewards = ProviderRewards{}
+	return sharder
+}
+
 func createMockSharders(t *testing.T, eventDb *EventDb, n int, targetBucket int64, seed ...Sharder) []string {
 	var (
 		ids        []string
 		curSharder Sharder
-		err        error
 		sharders   []Sharder
 		i          = 0
 	)
@@ -171,12 +185,7 @@ func createMockSharders(t *testing.T, eventDb *EventDb, n int, targetBucket int6
 	}
 
 	for ; i < n; i++ {
-		err = faker.FakeData(&curSharder)
-		require.NoError(t, err)
-		curSharder.DelegateWallet = OwnerId
-		curSharder.BucketId = int64((i % 2)) * targetBucket
-		curSharder.IsKilled = false
-		curSharder.IsShutdown = false
+		curSharder = buildMockSharder(t, OwnerId, fmt.Sprintf("sharder%d", i), targetBucket)
 		sharders = append(sharders, curSharder)
 		ids = append(ids, curSharder.ID)
 	}
