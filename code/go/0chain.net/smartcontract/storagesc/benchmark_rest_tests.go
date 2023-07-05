@@ -301,9 +301,9 @@ func BenchmarkRestTests(
 				Params: map[string]string{
 					"free_allocation_data": func() string {
 						var request = struct {
-							Recipient  string           `json:"recipient"`
-							FreeTokens float64          `json:"free_tokens"`
-							Timestamp  common.Timestamp `json:"timestamp"`
+							Recipient  string  `json:"recipient"`
+							FreeTokens float64 `json:"free_tokens"`
+							Nonce      int64   `json:"nonce"`
 						}{
 							data.Clients[0],
 							viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
@@ -326,7 +326,7 @@ func BenchmarkRestTests(
 							Assigner:   data.Clients[0],
 							Recipient:  request.Recipient,
 							FreeTokens: request.FreeTokens,
-							Timestamp:  request.Timestamp,
+							Nonce:      request.Nonce,
 							Signature:  signature,
 						})
 						var freeBlobbers []string
@@ -441,7 +441,7 @@ func BenchmarkRestTests(
 			{
 				FuncName: "get-blobber-allocations",
 				Params: map[string]string{
-					"blobber_id": getMockBlobberId(0),
+					"blobber_id":    getMockBlobberId(0),
 					"offset":        "",
 					"limit":         "",
 					"is_descending": "true",
