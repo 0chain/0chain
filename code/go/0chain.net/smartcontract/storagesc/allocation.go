@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -1891,7 +1892,8 @@ func (sc *StorageSmartContract) finishAllocation(
 		emitUpdateBlobberAllocatedSavedHealth(b.ID, b.LastHealthCheck, allocated, bil[b.Index].SavedData, balances)
 	}
 
-	if err := partitionsChallengeReadyAllocsRemove(balances, alloc.ID); err != nil {
+	err = partitionsChallengeReadyAllocsRemove(balances, alloc.ID)
+	if err != nil && !partitions.ErrItemNotFound(err) {
 		return fmt.Errorf("failed to remove alloc from challenge ready partitions: %v", err)
 	}
 
