@@ -654,13 +654,16 @@ func GetMockBlobberStakePools(
 				Pools:    make(map[string]*stakepool.DelegatePool),
 				Reward:   0,
 				Settings: getMockStakePoolSettings(bId),
+				Minter:   cstate.MinterStorage,
 			},
 			TotalOffers: currency.Coin(100000),
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates)-1; j++ {
 			id := getMockBlobberStakePoolId(i, j, clients)
 			clientIndex := (i&len(clients) + j) % len(clients)
-			sp.Pools[id] = &stakepool.DelegatePool{}
+			sp.Pools[id] = &stakepool.DelegatePool{
+				Reward: 10,
+			}
 			sp.Pools[id].Balance = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10 / 2)
 			sp.Pools[id].DelegateID = clients[clientIndex]
 
@@ -671,8 +674,8 @@ func GetMockBlobberStakePools(
 					ProviderID:   bId,
 					DelegateID:   sp.Pools[id].DelegateID,
 					Balance:      sp.Pools[id].Balance,
-					Reward:       0,
-					TotalReward:  0,
+					Reward:       10,
+					TotalReward:  10,
 					TotalPenalty: 0,
 					Status:       spenum.Active,
 					RoundCreated: 1,
