@@ -59,7 +59,7 @@ func partitionsChallengeReadyAllocsRemove(state state.StateContextI, allocID str
 	}
 
 	if err := part.Remove(state, allocID); err != nil {
-		return fmt.Errorf("remove challenge ready alloc failed: %v", err)
+		return err
 	}
 
 	return nil
