@@ -327,6 +327,13 @@ func runEventDatabaseSuite(
 	return benchmarkResult
 }
 
+func CleanDbName(name string, index int) string {
+	cleanName := strings.Replace("event_benchmark_"+name, ".", "_", -1) + "_" + strconv.Itoa(index)
+	cleanName = strings.Replace(cleanName, "-", "_", -1)
+	cleanName = strings.ToLower(cleanName)
+	return cleanName
+}
+
 func runEventDatabaseBenchmark(
 	b *testing.B,
 	edb *event.EventDb,
@@ -335,7 +342,7 @@ func runEventDatabaseBenchmark(
 	index int,
 ) (err error) {
 	b.StopTimer()
-	cleanName := strings.Replace("event_benchmark_"+bm.Name(), ".", "_", -1) + "_" + strconv.Itoa(index)
+	cleanName := CleanDbName(bm.Name(), index)
 	cloneEdb, err := edb.Clone(cleanName, pdb)
 	if err != nil {
 		fmt.Println("error cloning event database: " + err.Error())
@@ -364,10 +371,8 @@ func runEventDatabaseBenchmark(
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0
 	})
-	//log.Println("about to run test", bm.Name())
 	b.StartTimer()
 	err = bm.Run(timedBalance, b)
 	b.StopTimer()
-	//log.Println("finished test", bm.Name(), err)
 	return err
 }

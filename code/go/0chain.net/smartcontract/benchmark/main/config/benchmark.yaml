@@ -26,9 +26,9 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "storage"
+    #- "storage"
     #- "storage_rest"
-    #- "miner"
+    - "miner"
     #- "miner_rest"
     #- "faucet"
     #- "faucet_rest"
@@ -40,10 +40,7 @@ options:
   omitted_tests:
   save_path: # do not add a load_path key, this is read from command line options
   load_concurrency: 4
-  smart_contract_benchmarks: true
-  query_benchmarks: true
   event_database_benchmarks: true
-  mpt_enabled: true
   smart_contract_event_file: "edb_in.json"
   event_database_event_file: "edb_in.json"
 
