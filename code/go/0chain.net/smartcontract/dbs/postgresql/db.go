@@ -32,29 +32,25 @@ func NewPostgresDB(access config.DbAccess) (*PostgresDB, error) {
 }
 
 func (pdb PostgresDB) Drop(name string) error {
-	dropCommand := "DROP DATABASE " + name + " WITH (FORCE);"
-	err := pdb.db.Exec(dropCommand).Error
-	return err
+	dropCommand := "DROP DATABASE IF EXISTS " + name + " WITH (FORCE);"
+	return pdb.db.Exec(dropCommand).Error
 }
 
 func (pdb PostgresDB) Clone(access config.DbAccess, name, template string) (dbs.Store, error) {
-	err := pdb.db.Exec("DROP DATABASE IF EXISTS " + name + ";").Error
-	if err != nil {
-		fmt.Println("error dropping", name, err)
+	if err := pdb.Drop(name); err != nil {
+		return nil, fmt.Errorf("error dropping %s: %v", name, err)
 	}
 
 	createDatabaseCommand := fmt.Sprintf(
 		"CREATE DATABASE %s WITH TEMPLATE %s OWNER %s;",
 		name, template, access.User,
 	)
-	err = pdb.db.Exec(createDatabaseCommand).Error
-	if err != nil {
+	if err := pdb.db.Exec(createDatabaseCommand).Error; err != nil {
 		return nil, err
 	}
 
 	newStore := &PostgresStore{}
-	err = newStore.Open(access)
-	if err != nil {
+	if err := newStore.Open(access); err != nil {
 		return nil, err
 	}
 
