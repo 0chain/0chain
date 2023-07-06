@@ -8,6 +8,7 @@ import (
 	"math"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -381,6 +382,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		return nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, err: %v, block hash: %v, state hash: %v, root: %v, round: %d",
 			err, b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(bState.GetRoot()), b.Round)
+	}
+
+	if txn.Value > config.MaxTokenSupply {
+		return nil, errors.New("invalid transaction value, exceeds max token supply")
 	}
 
 	var (
