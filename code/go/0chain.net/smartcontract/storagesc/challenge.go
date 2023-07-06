@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"0chain.net/smartcontract/provider"
@@ -482,12 +481,14 @@ func (sc *StorageSmartContract) moveToValidators(
 }
 
 func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI) (resp string, err error) {
+	input []byte, balances cstate.StateContextI, timings map[string]time.Duration) (resp string, err error) {
 	var (
+		m         = Timings{timings: timings, start: common.ToTime(t.CreationDate)}
 		challResp ChallengeResponse
 		errCode   = "verify_challenge"
 	)
 
+	m.tick("vc: start")
 	if err := json.Unmarshal(input, &challResp); err != nil {
 		return "", common.NewErrorf(errCode, "failed to decode txn input: %v", err)
 	}
@@ -534,9 +535,14 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err := cr.do(); err != nil {
 		return "", err
 	}
+	m.tick("vc: first load")
+
+	result, err := getValidateTicketsResult(t, &challResp, challenge, conf.MaxChallengeCompletionTime)
+	if err != nil {
+		return "", err
+	}
 
 	var (
-		result          *verifyTicketsResult
 		allocChallenges *AllocationChallenges
 		alloc           *StorageAllocation
 		blobber         *StorageNode
@@ -544,15 +550,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		ongoingParts    *partitions.Partitions
 	)
 	cr = concurrentReader{}
-	cr.add(func() error {
-		result, err = verifyChallengeTickets(balances, t, challenge, &challResp, conf.MaxChallengeCompletionTime)
-		if err != nil {
-			return common.NewError(errCode, err.Error())
-		}
-
-		return nil
-	})
-
 	cr.add(func() error {
 		allocChallenges, err = sc.getAllocationChallenges(challenge.AllocationID, balances)
 		if err != nil {
@@ -600,6 +597,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err := cr.do(); err != nil {
 		return "", err
 	}
+	m.tick("vc: second load")
 
 	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
 	if !ok {
@@ -639,12 +637,35 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		ongoingParts:             ongoingParts,
 		latestCompletedChallTime: latestCompletedChallTime,
 	}
+	cr = concurrentReader{}
+	cr.add(func() error {
+		err = verifyChallengeTickets(balances, challenge, &challResp)
+		if err != nil {
+			return common.NewError(errCode, err.Error())
+		}
+
+		return nil
+	})
 
 	if !(result.pass && result.fresh) {
-		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
+		cr.add(func() error {
+			resp, err = sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
+			m.tick("vc: challenge failed")
+			return err
+		})
+	} else {
+		cr.add(func() error {
+			resp, err = sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
+			m.tick("vc: challenge passed")
+			return err
+		})
+	}
+	if err := cr.do(); err != nil {
+		return "", err
 	}
 
-	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
+	m.tick("vc: verify tickets and challenge")
+	return resp, nil
 }
 
 type verifyTicketsResult struct {
@@ -668,14 +689,15 @@ type challengeAllocBlobberPassResult struct {
 	latestCompletedChallTime common.Timestamp
 }
 
-func verifyChallengeTickets(balances cstate.StateContextI,
+func getValidateTicketsResult(
 	t *transaction.Transaction,
-	challenge *StorageChallenge,
 	cr *ChallengeResponse,
+	challenge *StorageChallenge,
 	maxChallengeCompletionTime time.Duration,
 ) (*verifyTicketsResult, error) {
-	// get unique validation tickets map
+	var success, failure int32
 	vtsMap := make(map[string]struct{}, len(cr.ValidationTickets))
+	validators := make([]string, 0, len(cr.ValidationTickets))
 	for _, vt := range cr.ValidationTickets {
 		if vt == nil {
 			return nil, errors.New("found nil validation tickets")
@@ -689,43 +711,20 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		if ok {
 			return nil, errors.New("found duplicate validation tickets")
 		}
+
 		vtsMap[vt.ValidatorID] = struct{}{}
+		if vt.Result {
+			success++
+		} else {
+			failure++
+		}
+		validators = append(validators, vt.ValidatorID)
 	}
 
 	tksNum := len(cr.ValidationTickets)
-	threshold := challenge.TotalValidators / 2
+	threshold := len(challenge.ValidatorIDs) / 2
 	if tksNum < threshold {
 		return nil, fmt.Errorf("validation tickets less than threshold: %d, tickets: %d", threshold, tksNum)
-	}
-
-	var (
-		success, failure int32
-		validators       = make([]string, len(cr.ValidationTickets)) // validators for rewards
-		ccr              = concurrentReader{}
-	)
-
-	for i, vt := range cr.ValidationTickets {
-		func(idx int, v *ValidationTicket) {
-			ccr.add(func() error {
-				if err := v.Validate(challenge.ID, challenge.BlobberID); err != nil {
-					return fmt.Errorf("invalid validation ticket: %v", err)
-				}
-
-				if ok, err := v.VerifySign(balances); !ok || err != nil {
-					return fmt.Errorf("invalid validation ticket: %v", err)
-				}
-				validators[idx] = v.ValidatorID
-				if !v.Result {
-					atomic.AddInt32(&failure, 1)
-				} else {
-					atomic.AddInt32(&success, 1)
-				}
-				return nil
-			})
-		}(i, vt)
-	}
-	if err := ccr.do(); err != nil {
-		return nil, err
 	}
 
 	var (
@@ -740,6 +739,63 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		success:    int(success),
 		validators: validators,
 	}, nil
+}
+
+func verifyChallengeTickets(balances cstate.StateContextI,
+	challenge *StorageChallenge,
+	cr *ChallengeResponse,
+) error {
+	//var success, failure int32
+	// get unique validation tickets map
+	//vtsMap := make(map[string]struct{}, len(cr.ValidationTickets))
+	//for _, vt := range cr.ValidationTickets {
+	//	if vt == nil {
+	//		return nil, errors.New("found nil validation tickets")
+	//	}
+	//
+	//	if _, ok := challenge.ValidatorIDMap[vt.ValidatorID]; !ok {
+	//		return nil, errors.New("found invalid validator id in validation ticket")
+	//	}
+	//
+	//	_, ok := vtsMap[vt.ValidatorID]
+	//	if ok {
+	//		return nil, errors.New("found duplicate validation tickets")
+	//	}
+	//	vtsMap[vt.ValidatorID] = struct{}{}
+	//	if vt.Result {
+	//		success++
+	//	} else {
+	//		failure++
+	//	}
+	//}
+
+	//tksNum := len(cr.ValidationTickets)
+	//threshold := challenge.TotalValidators / 2
+	//if tksNum < threshold {
+	//	return nil, fmt.Errorf("validation tickets less than threshold: %d, tickets: %d", threshold, tksNum)
+	//}
+
+	var (
+		//success, failure int32
+		//validators = make([]string, len(cr.ValidationTickets)) // validators for rewards
+		ccr = concurrentReader{}
+	)
+
+	for i, vt := range cr.ValidationTickets {
+		func(idx int, v *ValidationTicket) {
+			ccr.add(func() error {
+				if err := v.Validate(challenge.ID, challenge.BlobberID); err != nil {
+					return fmt.Errorf("invalid validation ticket: %v", err)
+				}
+
+				if ok, err := v.VerifySign(balances); !ok || err != nil {
+					return fmt.Errorf("invalid validation ticket: %v", err)
+				}
+				return nil
+			})
+		}(i, vt)
+	}
+	return ccr.do()
 }
 
 func (sc *StorageSmartContract) challengePassed(

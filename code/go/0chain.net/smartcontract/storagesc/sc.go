@@ -267,7 +267,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		return "OpenChallenges generated", nil
 
 	case "challenge_response":
-		resp, err = sc.verifyChallenge(t, input, balances)
+		resp, err = sc.verifyChallenge(t, input, balances, nil)
 
 	// configurations
 

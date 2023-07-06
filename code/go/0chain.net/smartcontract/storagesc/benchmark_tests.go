@@ -671,8 +671,10 @@ func BenchmarkTests(
 			txn: &transaction.Transaction{CreationDate: creationTime},
 		},
 		{
-			name:     "storage.challenge_response",
-			endpoint: ssc.verifyChallenge,
+			name: "storage.challenge_response",
+			endpoint: func(txn *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+				return ssc.verifyChallenge(txn, input, balances, timings)
+			},
 			txn: &transaction.Transaction{
 				ClientID:     getMockBlobberId(0),
 				CreationDate: creationTime,
@@ -705,6 +707,7 @@ func BenchmarkTests(
 				})
 				return bytes
 			}(),
+			timings: timings,
 		},
 		{
 			name:     "storage.commit_settings_changes",
