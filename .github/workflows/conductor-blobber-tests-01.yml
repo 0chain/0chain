@@ -140,6 +140,7 @@ jobs:
     - name: Build blobber base
       run: |
         cd blobber
+        git checkout fix/docker-compose-issue-with-conductor-test
         ./docker.local/bin/build.base.sh
 
     - name: Build blobber
