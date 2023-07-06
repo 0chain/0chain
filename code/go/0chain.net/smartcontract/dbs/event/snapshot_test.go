@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/stretchr/testify/require"
@@ -15,13 +16,14 @@ func TestSnapshotFunctions(t *testing.T) {
 	defer clean()
 	initialSnapshot := fillSnapshot(t, eventDb)
 
-
-
 	// Insert 3 blobbers and snapshots
 	blobbers := []Blobber{
 		buildMockBlobber(t, "blobber1", 0),
 		buildMockBlobber(t, "blobber2", 0),
 		buildMockBlobber(t, "blobber3", 0),
+		buildMockBlobber(t, "blobber4", 0),
+		buildMockBlobber(t, "blobber5", 0),
+		buildMockBlobber(t, "blobber6", 0),
 	}
 	err := eventDb.Store.Get().Omit(clause.Associations).Create(&blobbers).Error
 	require.NoError(t, err)
@@ -30,6 +32,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockBlobberSnapshot(t, "blobber1"),
 		buildMockBlobberSnapshot(t, "blobber2"),
 		buildMockBlobberSnapshot(t, "blobber3"),
+		buildMockBlobberSnapshot(t, "blobber4"),
+		buildMockBlobberSnapshot(t, "blobber5"),
+		buildMockBlobberSnapshot(t, "blobber6"),
 	}
 	err = eventDb.Store.Get().Create(&blobberSnapshots).Error
 
@@ -37,6 +42,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockMiner(t, OwnerId, "miner1", 0),
 		buildMockMiner(t, OwnerId, "miner2", 0),
 		buildMockMiner(t, OwnerId, "miner3", 0),
+		buildMockMiner(t, OwnerId, "miner4", 0),
+		buildMockMiner(t, OwnerId, "miner5", 0),
+		buildMockMiner(t, OwnerId, "miner6", 0),
 	}
 	err = eventDb.Store.Get().Omit(clause.Associations).Create(&miners).Error
 	require.NoError(t, err)
@@ -45,6 +53,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockMinerSnapshot(t, "miner1"),
 		buildMockMinerSnapshot(t, "miner2"),
 		buildMockMinerSnapshot(t, "miner3"),
+		buildMockMinerSnapshot(t, "miner4"),
+		buildMockMinerSnapshot(t, "miner5"),
+		buildMockMinerSnapshot(t, "miner6"),
 	}
 	err = eventDb.Store.Get().Create(&minerSnapshots).Error
 	require.NoError(t, err)
@@ -53,6 +64,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockSharder(t, OwnerId, "sharder1", 0),
 		buildMockSharder(t, OwnerId, "sharder2", 0),
 		buildMockSharder(t, OwnerId, "sharder3", 0),
+		buildMockSharder(t, OwnerId, "sharder4", 0),
+		buildMockSharder(t, OwnerId, "sharder5", 0),
+		buildMockSharder(t, OwnerId, "sharder6", 0),
 	}
 	err = eventDb.Store.Get().Omit(clause.Associations).Create(&sharders).Error
 	require.NoError(t, err)
@@ -61,14 +75,20 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockSharderSnapshot(t, "sharder1"),
 		buildMockSharderSnapshot(t, "sharder2"),
 		buildMockSharderSnapshot(t, "sharder3"),
+		buildMockSharderSnapshot(t, "sharder4"),
+		buildMockSharderSnapshot(t, "sharder5"),
+		buildMockSharderSnapshot(t, "sharder6"),
 	}
 	err = eventDb.Store.Get().Create(&sharderSnapshots).Error
-	require.NoError(t, err)
+	require.NoError(t, err)               
 
 	validators := []Validator{
 		buildMockValidator(t, OwnerId, "validator1", 0),
 		buildMockValidator(t, OwnerId, "validator2", 0),
 		buildMockValidator(t, OwnerId, "validator3", 0),
+		buildMockValidator(t, OwnerId, "validator4", 0),
+		buildMockValidator(t, OwnerId, "validator5", 0),
+		buildMockValidator(t, OwnerId, "validator6", 0),
 	}
 	err = eventDb.Store.Get().Omit(clause.Associations).Create(&validators).Error
 	require.NoError(t, err)
@@ -77,6 +97,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockValidatorSnapshot(t, "validator1"),
 		buildMockValidatorSnapshot(t, "validator2"),
 		buildMockValidatorSnapshot(t, "validator3"),
+		buildMockValidatorSnapshot(t, "validator4"),
+		buildMockValidatorSnapshot(t, "validator5"),
+		buildMockValidatorSnapshot(t, "validator6"),
 	}
 	err = eventDb.Store.Get().Create(&validatorSnapshots).Error
 	require.NoError(t, err)
@@ -85,6 +108,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockAuthorizer(t, OwnerId, "authorizer1", 0),
 		buildMockAuthorizer(t, OwnerId, "authorizer2", 0),
 		buildMockAuthorizer(t, OwnerId, "authorizer3", 0),
+		buildMockAuthorizer(t, OwnerId, "authorizer4", 0),
+		buildMockAuthorizer(t, OwnerId, "authorizer5", 0),
+		buildMockAuthorizer(t, OwnerId, "authorizer6", 0),
 	}
 	err = eventDb.Store.Get().Omit(clause.Associations).Create(&authorizers).Error
 	require.NoError(t, err)
@@ -93,6 +119,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockAuthorizerSnapshot(t, "authorizer1"),
 		buildMockAuthorizerSnapshot(t, "authorizer2"),
 		buildMockAuthorizerSnapshot(t, "authorizer3"),
+		buildMockAuthorizerSnapshot(t, "authorizer4"),
+		buildMockAuthorizerSnapshot(t, "authorizer5"),
+		buildMockAuthorizerSnapshot(t, "authorizer6"),
 	}
 	err = eventDb.Store.Get().Create(&authorizerSnapshots).Error
 	require.NoError(t, err)
@@ -162,6 +191,68 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.EqualValues(t, 1, newSnap.AuthorizerCount)
 	})
 
+	t.Run("test ApplyDiffOfflineBlobber", func(t *testing.T) {
+		newSnap := Snapshot{}
+		err := newSnap.ApplyDiffOfflineBlobber(&blobberSnapshots[0])
+		require.NoError(t, err)
+		require.EqualValues(t, -blobberSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, -blobberSnapshots[0].TotalStake, newSnap.StorageTokenStake)
+		require.EqualValues(t, -blobberSnapshots[0].Allocated, newSnap.AllocatedStorage)
+		require.EqualValues(t, -blobberSnapshots[0].Capacity, newSnap.MaxCapacityStorage)
+		require.EqualValues(t, -blobberSnapshots[0].SavedData, newSnap.UsedStorage)
+		require.EqualValues(t, -blobberSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, -blobberSnapshots[0].TotalRewards, newSnap.BlobberTotalRewards)
+		require.EqualValues(t, -blobberSnapshots[0].ChallengesCompleted, newSnap.TotalChallenges)
+		require.EqualValues(t, -blobberSnapshots[0].ChallengesPassed, newSnap.SuccessfulChallenges)
+		require.EqualValues(t, -1, newSnap.BlobberCount)
+
+		if blobberSnapshots[0].WritePrice > 0 {
+			ss := int64((float64(blobberSnapshots[0].TotalStake) / float64(blobberSnapshots[0].WritePrice)) * GB)
+			require.EqualValues(t, -ss, newSnap.StakedStorage)
+		} else {
+			require.EqualValues(t, -blobberSnapshots[0].Capacity, newSnap.StakedStorage)
+		}
+	})
+
+	t.Run("test ApplyDiffOfflineMiner", func(t *testing.T) {
+		newSnap := Snapshot{}
+		err := newSnap.ApplyDiffOfflineMiner(&minerSnapshots[0])
+		require.NoError(t, err)
+		require.EqualValues(t, -minerSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, -minerSnapshots[0].TotalRewards, newSnap.MinerTotalRewards)
+		require.EqualValues(t, -minerSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, -1, newSnap.MinerCount)
+	})
+
+	t.Run("test ApplyDiffOfflineSharder", func(t *testing.T) {
+		newSnap := Snapshot{}
+		err := newSnap.ApplyDiffOfflineSharder(&sharderSnapshots[0])
+		require.NoError(t, err)
+		require.EqualValues(t, -sharderSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, -sharderSnapshots[0].TotalRewards, newSnap.SharderTotalRewards)
+		require.EqualValues(t, -sharderSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, -1, newSnap.SharderCount)
+	})
+
+	t.Run("test ApplyDiffOfflineValidator", func(t *testing.T) {
+		newSnap := Snapshot{}
+		err := newSnap.ApplyDiffOfflineValidator(&validatorSnapshots[0])
+		require.NoError(t, err)
+		require.EqualValues(t, -validatorSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, -validatorSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, -1, newSnap.ValidatorCount)
+	})
+		
+	t.Run("test ApplyDiffOfflineAuthorizer", func(t *testing.T) {
+		newSnap := Snapshot{}
+		err := newSnap.ApplyDiffOfflineAuthorizer(&authorizerSnapshots[0])
+		require.NoError(t, err)
+		require.EqualValues(t, -authorizerSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, -authorizerSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, -authorizerSnapshots[0].TotalMint, newSnap.TotalMint)
+		require.EqualValues(t, -1, newSnap.AuthorizerCount)
+	})
+
 	t.Run("test ApplySingleProviderDiff", func(t *testing.T) {
 		s1 := Snapshot{}
 		s2 := Snapshot{}
@@ -187,6 +278,26 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, true, reflect.DeepEqual(s1, s2))
 	})
 
+	t.Run("test ApplySingleOfflineProviderDiff", func(t *testing.T) {
+		s1 := Snapshot{}
+		s2 := Snapshot{}
+
+		s1.ApplySingleOfflineProviderDiff(spenum.Miner)(&minerSnapshots[0])
+		s2.ApplyDiffOfflineMiner(&minerSnapshots[0])
+		require.Equal(t, true, reflect.DeepEqual(s1, s2))
+
+		s1.ApplySingleOfflineProviderDiff(spenum.Sharder)(&sharderSnapshots[0])
+		s2.ApplyDiffOfflineSharder(&sharderSnapshots[0])
+		require.Equal(t, true, reflect.DeepEqual(s1, s2))
+
+		s1.ApplySingleOfflineProviderDiff(spenum.Validator)(&validatorSnapshots[0])
+		s2.ApplyDiffOfflineValidator(&validatorSnapshots[0])
+		require.Equal(t, true, reflect.DeepEqual(s1, s2))
+
+		s1.ApplySingleOfflineProviderDiff(spenum.Authorizer)(&authorizerSnapshots[0])
+		s2.ApplyDiffOfflineAuthorizer(&authorizerSnapshots[0])
+		require.Equal(t, true, reflect.DeepEqual(s1, s2))
+	})
 
 	t.Run("test ApplyProvidersDiff", func(t *testing.T) {
 		s, err := eventDb.GetGlobal()
@@ -197,6 +308,8 @@ func TestSnapshotFunctions(t *testing.T) {
 		err = ApplyProvidersDiff[*Blobber, *BlobberSnapshot](eventDb, &s, []dbs.ProviderID{
 			{ID: "blobber1", Type: spenum.Blobber},
 			{ID: "blobber3", Type: spenum.Blobber},
+		}, []dbs.ProviderID{
+			{ID: "blobber4", Type: spenum.Blobber},
 		})
 		require.NoError(t, err)
 
@@ -204,6 +317,8 @@ func TestSnapshotFunctions(t *testing.T) {
 		err = snapDiff.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0])
 		require.NoError(t, err)
 		err = snapDiff.ApplyDiffBlobber(&blobbers[2], &blobberSnapshots[2])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffOfflineBlobber(&blobberSnapshots[3])
 		require.NoError(t, err)
 
 		snapsAfter := s
@@ -298,6 +413,399 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, s.MaxCapacityStorage, s.StakedStorage)
 	})
 
+	t.Run("test UpdateSnapshot based on direct snapshot updating events", func(t *testing.T) {
+		s, err := eventDb.GetGlobal()
+		require.NoError(t, err)
+
+		snapBefore := s
+
+		events := []Event{
+			{ // [0]
+				Tag: TagToChallengePool,
+				Data: ChallengePoolLock{
+					Amount: 200,
+				},
+			},
+			{ // [1]
+				Tag: TagFromChallengePool,
+				Data: ChallengePoolLock{
+					Amount: 100,
+				},
+			},
+			{ // [2]
+				Tag: TagAddMint,
+				Data: state.Mint{
+					Amount: 200,
+				},
+			},
+			{ // [3]
+				Tag: TagBurn,
+				Data: state.Burn{
+					Amount: 100,
+				},
+			},
+			{ // [4]
+				Tag: TagLockWritePool,
+				Data: []WritePoolLock{
+					{
+						Amount: 200,
+					},
+					{
+						Amount: 200,
+					},
+				},
+			},
+			{ // [5]
+				Tag: TagUnlockWritePool,
+				Data: []WritePoolLock{
+					{
+						Amount: 100,
+					},
+					{
+						Amount: 100,
+					},
+				},
+			},
+			{ // [6]
+				Tag: TagLockReadPool,
+				Data: []ReadPoolLock{
+					{
+						Amount: 200,
+					},
+					{
+						Amount: 200,
+					},
+				},
+			},
+			{ // [7]
+				Tag: TagUnlockReadPool,
+				Data: []ReadPoolLock{
+					{
+						Amount: 100,
+					},
+					{
+						Amount: 100,
+					},
+				},
+			},
+			{ // [8]
+				Tag: TagFinalizeBlock,
+			},
+			{ // [9]
+				Tag: TagFinalizeBlock,
+			},
+			{ // [10]
+				Tag: TagUniqueAddress,
+			},
+			{ // [11]
+				Tag: TagUniqueAddress,
+			},
+			{ // [12]
+				Tag: TagAddTransactions,
+				Data: []Transaction{
+					{
+						Fee: 100,
+					},
+					{
+						Fee: 100,
+					},
+				},
+			},
+		}
+		
+		snapDiff := Snapshot{
+			TotalChallengePools:
+				events[0].Data.(ChallengePoolLock).Amount -
+				events[1].Data.(ChallengePoolLock).Amount,
+			TotalMint: int64(events[2].Data.(state.Mint).Amount),
+			ZCNSupply: 
+				int64(events[2].Data.(state.Mint).Amount) -
+				int64(events[3].Data.(state.Burn).Amount),
+			ClientLocks: 
+				int64(events[4].Data.([]WritePoolLock)[0].Amount) +
+				int64(events[4].Data.([]WritePoolLock)[1].Amount) -
+				int64(events[5].Data.([]WritePoolLock)[0].Amount) - 
+				int64(events[5].Data.([]WritePoolLock)[1].Amount) +
+				int64(events[6].Data.([]ReadPoolLock)[0].Amount) +
+				int64(events[6].Data.([]ReadPoolLock)[1].Amount) -
+				int64(events[7].Data.([]ReadPoolLock)[0].Amount) -
+				int64(events[7].Data.([]ReadPoolLock)[1].Amount),
+			BlockCount: 2, // refers to event [8] and [9]
+			UniqueAddresses: 2, // refers to event [10] and [11] 
+			TransactionsCount: int64(len(events[12].Data.([]Transaction))),
+			TotalTxnFee: 
+				int64(events[12].Data.([]Transaction)[0].Fee) +
+				int64(events[12].Data.([]Transaction)[1].Fee),
+		}
+
+		err = eventDb.UpdateSnapshot(&s, events)
+		require.NoError(t, err)
+
+		snapAfter := s
+		require.Equal(t, snapBefore.TotalChallengePools + snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
+		require.Equal(t, snapBefore.TotalMint + snapDiff.TotalMint, snapAfter.TotalMint)
+		require.Equal(t, snapBefore.ZCNSupply + snapDiff.ZCNSupply, snapAfter.ZCNSupply)
+		require.Equal(t, snapBefore.ClientLocks + snapDiff.ClientLocks, snapAfter.ClientLocks)
+		require.Equal(t, snapBefore.BlockCount + snapDiff.BlockCount, snapAfter.BlockCount)
+		require.Equal(t, snapBefore.UniqueAddresses + snapDiff.UniqueAddresses, snapAfter.UniqueAddresses)
+		require.Equal(t, snapBefore.TransactionsCount + snapDiff.TransactionsCount, snapAfter.TransactionsCount)
+		require.Equal(t, snapBefore.TotalTxnFee + snapDiff.TotalTxnFee, snapAfter.TotalTxnFee)
+	})
+
+	t.Run("test UpdateSnapshot with provider-related events", func(t *testing.T) {
+		s, err := eventDb.GetGlobal()
+		require.NoError(t, err)
+
+		snapBefore := s
+
+		events := []Event{
+			{
+				Tag: TagUpdateBlobberAllocatedSavedHealth,
+				Data: []Blobber{
+					blobbers[1],
+					blobbers[2],
+				},
+			},
+			{
+				Tag: TagUpdateMiner,
+				Data: []Miner{
+					miners[1],
+					miners[2],
+				},
+			},
+			{
+				Tag: TagUpdateSharderTotalStake,
+				Data: []Sharder{
+					sharders[1],
+					sharders[2],
+				},
+			},
+			{
+				Tag: TagAddAuthorizer,
+				Data: []Authorizer{
+					authorizers[1],
+					authorizers[2],
+				},
+			},
+			{
+				Tag: TagAddOrOverwiteValidator,
+				Data: []Validator{
+					validators[1],
+					validators[2],
+				},
+			},
+			{
+				Tag: TagStakePoolReward,
+				Data: []dbs.StakePoolReward{
+					{
+						ProviderID: dbs.ProviderID{
+							ID: blobbers[0].ID,
+							Type: spenum.Blobber,
+						},
+					},
+					{
+						ProviderID: dbs.ProviderID{
+							ID: miners[0].ID,
+							Type: spenum.Miner,
+						},
+					},
+				},
+			},
+			{
+				Tag: TagStakePoolPenalty,
+				Data: []dbs.StakePoolReward{
+					{
+						ProviderID: dbs.ProviderID{
+							ID: miners[1].ID,
+							Type: spenum.Miner,
+						},
+					},
+					{
+						ProviderID: dbs.ProviderID{
+							ID: sharders[0].ID,
+							Type: spenum.Sharder,
+						},
+					},
+				},
+			},
+			{
+				Tag: TagCollectProviderReward,
+				Index: "not found",
+			},
+			{
+				Tag: TagCollectProviderReward,
+				Index: validators[4].ID,
+			},
+			{
+				Tag: TagBlobberHealthCheck,
+				Data: []dbs.DbHealthCheck{
+					{
+						ID: blobbers[3].ID,
+					},
+					{
+						ID: blobbers[4].ID,
+					},
+				},
+			},
+			{
+				Tag: TagMinerHealthCheck,
+				Data: []dbs.DbHealthCheck{
+					{
+						ID: miners[3].ID,
+					},
+					{
+						ID: miners[4].ID,
+					},
+				},
+			},
+			{
+				Tag: TagSharderHealthCheck,
+				Data: []dbs.DbHealthCheck{
+					{
+						ID: sharders[3].ID,
+					},
+					{
+						ID: sharders[4].ID,
+					},
+				},
+			},
+			{
+				Tag: TagAuthorizerHealthCheck,
+				Data: []dbs.DbHealthCheck{
+					{
+						ID: authorizers[3].ID,
+					},
+					{
+						ID: authorizers[4].ID,
+					},
+				},
+			},
+			{
+				Tag: TagValidatorHealthCheck,
+				Data: []dbs.DbHealthCheck{
+					{
+						ID: validators[3].ID,
+					},
+					{
+						ID: validators[0].ID,
+					},
+				},
+			},
+			{
+				Tag: TagKillProvider,
+				Data: []dbs.ProviderID{
+					{
+						ID: blobbers[5].ID,
+						Type: spenum.Blobber,
+					},
+					{
+						ID: validators[5].ID,
+						Type: spenum.Validator,
+					},
+				},
+			},
+			{
+				Tag: TagShutdownProvider,
+				Data: []dbs.ProviderID{
+					{
+						ID: miners[5].ID,
+						Type: spenum.Miner,
+					},
+					{
+						ID: sharders[5].ID,
+						Type: spenum.Sharder,
+					},
+				},
+			},
+		}
+
+		snapDiff := Snapshot{}
+		err = snapDiff.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffBlobber(&blobbers[1], &blobberSnapshots[1])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffBlobber(&blobbers[2], &blobberSnapshots[2])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffBlobber(&blobbers[3], &blobberSnapshots[3])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffBlobber(&blobbers[4], &blobberSnapshots[4])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffOfflineBlobber(&blobberSnapshots[5])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffMiner(&miners[0], &minerSnapshots[0])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffMiner(&miners[1], &minerSnapshots[1])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffMiner(&miners[2], &minerSnapshots[2])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffMiner(&miners[3], &minerSnapshots[3])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffMiner(&miners[4], &minerSnapshots[4])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffOfflineMiner(&minerSnapshots[5])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffSharder(&sharders[1], &sharderSnapshots[1])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffSharder(&sharders[2], &sharderSnapshots[2])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffSharder(&sharders[3], &sharderSnapshots[3])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffSharder(&sharders[4], &sharderSnapshots[4])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffOfflineSharder(&sharderSnapshots[5])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[1], &authorizerSnapshots[1])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[2], &authorizerSnapshots[2])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[3], &authorizerSnapshots[3])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[4], &authorizerSnapshots[4])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffValidator(&validators[0], &validatorSnapshots[0])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffValidator(&validators[1], &validatorSnapshots[1])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffValidator(&validators[2], &validatorSnapshots[2])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffValidator(&validators[3], &validatorSnapshots[3])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffValidator(&validators[4], &validatorSnapshots[4])
+		require.NoError(t, err)
+		err = snapDiff.ApplyDiffOfflineValidator(&validatorSnapshots[5])
+		require.NoError(t, err)
+
+		err = eventDb.UpdateSnapshot(&s, events)
+		require.NoError(t, err)
+
+		snapAfter := s
+
+		require.EqualValues(t, snapBefore.TotalMint + snapDiff.TotalMint, snapAfter.TotalMint)
+		require.EqualValues(t, snapBefore.TotalChallengePools + snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
+		require.EqualValues(t, snapBefore.ActiveAllocatedDelta + snapDiff.ActiveAllocatedDelta, snapAfter.ActiveAllocatedDelta)
+		require.EqualValues(t, snapBefore.ZCNSupply + snapDiff.ZCNSupply, snapAfter.ZCNSupply)
+		require.EqualValues(t, snapBefore.ClientLocks + snapDiff.ClientLocks, snapAfter.ClientLocks)
+		require.EqualValues(t, snapBefore.MinedTotal + snapDiff.MinedTotal, snapAfter.MinedTotal)
+		require.EqualValues(t, snapBefore.TotalStaked + snapDiff.TotalStaked, snapAfter.TotalStaked)
+		require.EqualValues(t, snapBefore.StorageTokenStake + snapDiff.StorageTokenStake, snapAfter.StorageTokenStake)
+		require.EqualValues(t, snapBefore.TotalRewards + snapDiff.TotalRewards, snapAfter.TotalRewards)
+		require.EqualValues(t, snapBefore.SuccessfulChallenges + snapDiff.SuccessfulChallenges, snapAfter.SuccessfulChallenges)
+		require.EqualValues(t, snapBefore.TotalChallenges + snapDiff.TotalChallenges, snapAfter.TotalChallenges)
+		require.EqualValues(t, snapBefore.AllocatedStorage + snapDiff.AllocatedStorage, snapAfter.AllocatedStorage)
+		require.EqualValues(t, snapBefore.MaxCapacityStorage + snapDiff.MaxCapacityStorage, snapAfter.MaxCapacityStorage)
+		require.EqualValues(t, snapBefore.StakedStorage + snapDiff.StakedStorage, snapAfter.StakedStorage)
+		require.EqualValues(t, snapBefore.UsedStorage + snapDiff.UsedStorage, snapAfter.UsedStorage)
+		require.EqualValues(t, snapBefore.BlobberCount + snapDiff.BlobberCount, snapAfter.BlobberCount)
+		require.EqualValues(t, snapBefore.MinerCount + snapDiff.MinerCount, snapAfter.MinerCount)
+		require.EqualValues(t, snapBefore.SharderCount + snapDiff.SharderCount, snapAfter.SharderCount)
+		require.EqualValues(t, snapBefore.AuthorizerCount + snapDiff.AuthorizerCount, snapAfter.AuthorizerCount)
+		require.EqualValues(t, snapBefore.ValidatorCount + snapDiff.ValidatorCount, snapAfter.ValidatorCount)
+		require.EqualValues(t, snapBefore.BlobberTotalRewards + snapDiff.BlobberTotalRewards, snapAfter.BlobberTotalRewards)
+		require.EqualValues(t, snapBefore.MinerTotalRewards + snapDiff.MinerTotalRewards, snapAfter.MinerTotalRewards)
+		require.EqualValues(t, snapBefore.SharderTotalRewards + snapDiff.SharderTotalRewards, snapAfter.SharderTotalRewards)
+	})
 }
 
 func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {

@@ -94,25 +94,30 @@ const GB = float64(1024 * 1024 * 1024)
 // Parameters:
 //	- diff: diff values of global snapshot fields
 //	- gs: current global snapshot.
-func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snapshot, providers []dbs.ProviderID) error {
+func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snapshot, activeProviders []dbs.ProviderID, offlineProviders []dbs.ProviderID) error {
 	var (
 		providersFromDB []P
 		snaphots []S
 		snapshotsMap = make(map[string]S)
-		ids []string
+		provIds = make([]string, 0, len(activeProviders))
+		snapIds = make([]string, 0, len(activeProviders) + len(offlineProviders))
 		pModel P
 		ptypeName = ProviderTextMapping[reflect.TypeOf(pModel).Elem()]
 	)
-	for _, provider := range providers {
-		ids = append(ids, provider.GetID())
+	for _, provider := range activeProviders {
+		provIds = append(provIds, provider.GetID())
+		snapIds = append(snapIds, provider.GetID())
+	}
+	for _, provider := range offlineProviders {
+		snapIds = append(snapIds, provider.GetID())
 	}
 
-	err := edb.Store.Get().Where("id IN (?)", ids).Find(&providersFromDB).Error;
+	err := edb.Store.Get().Where("id IN (?)", provIds).Find(&providersFromDB).Error;
 	if err != nil {
 		return common.NewError("apply_providers_diff", "error getting providers from db")
 	}
 	
-	err = edb.Store.Get().Where(fmt.Sprintf("%v_id IN (?)", ptypeName), ids).Find(&snaphots).Error;
+	err = edb.Store.Get().Where(fmt.Sprintf("%v_id IN (?)", ptypeName), snapIds).Find(&snaphots).Error;
 	if err != nil {
 		return common.NewError("apply_providers_diff", "error getting providers snapshots from db")
 	}
@@ -120,23 +125,44 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 		snapshotsMap[snapshot.GetID()] = snapshot
 	}
 
-	for _, provider := range providersFromDB {
-		snap, ok := snapshotsMap[provider.GetID()]
-		if !ok {
-			snap = *new(S)
-			snap.SetID(provider.GetID())
-		}
+	// Active providers
+	if len(activeProviders) > 0 {
+		for _, provider := range providersFromDB {
+			snap, ok := snapshotsMap[provider.GetID()]
+			if !ok {
+				snap = *new(S)
+				snap.SetID(provider.GetID())
+			}
+	
+			err = gs.ApplySingleProviderDiff(spenum.ToProviderType(ptypeName))(provider, snap)
+			if err != nil {
+				logging.Logger.Error("error applying provider diff to global snapshot",
+					zap.String("provider_id", provider.GetID()), zap.String("provider_type", ptypeName), zap.Error(err))
+				return common.NewError("apply_providers_diff", fmt.Sprintf("error applying provider %v:%v diff to global snapshot", ptypeName, provider.GetID()))
+			}
+		}	
+	}
 
-		err = gs.ApplySingleProviderDiff(spenum.ToProviderType(ptypeName))(provider, snap)
-		if err != nil {
-			logging.Logger.Error("error applying provider diff to global snapshot",
-				zap.String("provider_id", provider.GetID()), zap.String("provider_type", ptypeName), zap.Error(err))
-			return common.NewError("apply_providers_diff", fmt.Sprintf("error applying provider %v:%v diff to global snapshot", ptypeName, provider.GetID()))
+	// Offline providers
+	if len(offlineProviders) > 0 {
+		for _, provider := range offlineProviders {
+			snap, ok := snapshotsMap[provider.GetID()]
+			if !ok {
+				logging.Logger.Warn("offline provider snapshot not found in db", zap.String("provider_id", provider.GetID()), zap.String("provider_type", ptypeName))
+				continue
+			}
+			err = gs.ApplySingleOfflineProviderDiff(spenum.ToProviderType(ptypeName))(snap)
+			if err != nil {
+				logging.Logger.Error("error applying offline provider diff to global snapshot",
+					zap.String("provider_id", provider.GetID()), zap.String("provider_type", ptypeName), zap.Error(err))
+				return common.NewError("apply_providers_diff", fmt.Sprintf("error applying offline provider %v:%v diff to global snapshot", ptypeName, provider.GetID()))
+			}
 		}
 	}
 
 	return nil
 }
+
 
 func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.TotalMint += diff.TotalMint
@@ -186,6 +212,23 @@ func (s *Snapshot) ApplySingleProviderDiff(ptype spenum.Provider) func(provider 
 		return s.ApplyDiffValidator
 	case spenum.Authorizer:
 		return s.ApplyDiffAuthorizer
+	default:
+		return nil
+	}
+}
+
+func (s *Snapshot) ApplySingleOfflineProviderDiff(ptype spenum.Provider) func(snapshot IProviderSnapshot) error {
+	switch ptype {
+	case spenum.Blobber:
+		return s.ApplyDiffOfflineBlobber
+	case spenum.Miner:
+		return s.ApplyDiffOfflineMiner
+	case spenum.Sharder:
+		return s.ApplyDiffOfflineSharder
+	case spenum.Validator:
+		return s.ApplyDiffOfflineValidator
+	case spenum.Authorizer:
+		return s.ApplyDiffOfflineAuthorizer
 	default:
 		return nil
 	}
@@ -290,6 +333,79 @@ func (s *Snapshot) ApplyDiffAuthorizer(provider IProvider, snapshot IProviderSna
 	return nil
 }
 
+func (s *Snapshot) ApplyDiffOfflineBlobber(snapshot IProviderSnapshot) error {
+	previous, ok := snapshot.(*BlobberSnapshot)
+	if !ok {
+		return common.NewError("invalid_blobber_aggregate", "invalid blobber snapshot data")
+	}
+	s.SuccessfulChallenges += int64(-previous.ChallengesPassed)
+	s.TotalChallenges += int64(-previous.ChallengesCompleted)
+	s.AllocatedStorage += -previous.Allocated
+	s.MaxCapacityStorage += -previous.Capacity
+	s.UsedStorage += -previous.SavedData
+	s.TotalRewards += int64(-previous.TotalRewards)
+	s.TotalStaked += int64(-previous.TotalStake)
+	s.StorageTokenStake += int64(-previous.TotalStake)
+	s.BlobberTotalRewards += int64(-previous.TotalRewards)
+	s.BlobberCount -= 1
+
+	if previous.WritePrice > 0 {
+		ss := int64((float64(previous.TotalStake) / float64(previous.WritePrice)) * GB)
+		s.StakedStorage += -ss
+	} else {
+		s.StakedStorage += -previous.Capacity
+	}
+
+	return nil
+}
+
+func (s *Snapshot) ApplyDiffOfflineMiner(snapshot IProviderSnapshot) error {
+	previous, ok := snapshot.(*MinerSnapshot)
+	if !ok {
+		return common.NewError("invalid_miner_aggregate", "invalid miner snapshot data")
+	}
+	s.TotalRewards += int64(-previous.TotalRewards)
+	s.TotalStaked += int64(-previous.TotalStake)
+	s.MinerTotalRewards += int64(-previous.TotalRewards)
+	s.MinerCount -= 1
+	return nil
+}
+
+func (s *Snapshot) ApplyDiffOfflineSharder(snapshot IProviderSnapshot) error {
+	previous, ok := snapshot.(*SharderSnapshot)
+	if !ok {
+		return common.NewError("invalid_sharder_aggregate", "invalid sharder snapshot data")
+	}
+	s.TotalRewards += int64(-previous.TotalRewards)
+	s.TotalStaked += int64(-previous.TotalStake)
+	s.SharderTotalRewards += int64(-previous.TotalRewards)
+	s.SharderCount -= 1
+	return nil
+}
+
+func (s *Snapshot) ApplyDiffOfflineValidator(snapshot IProviderSnapshot) error {
+	previous, ok := snapshot.(*ValidatorSnapshot)
+	if !ok {
+		return common.NewError("invalid_validator_aggregate", "invalid validator snapshot data")
+	}
+	s.TotalRewards += int64(-previous.TotalRewards)
+	s.TotalStaked += int64(-previous.TotalStake)
+	s.ValidatorCount -= 1
+	return nil
+}
+
+func (s *Snapshot) ApplyDiffOfflineAuthorizer(snapshot IProviderSnapshot) error {
+	previous, ok := snapshot.(*AuthorizerSnapshot)
+	if !ok {
+		return common.NewError("invalid_authorizer_aggregate", "invalid authorizer snapshot data")
+	}
+	s.TotalRewards += int64(-previous.TotalRewards)
+	s.TotalStaked += int64(-previous.TotalStake)
+	s.TotalMint += int64(-previous.TotalMint)
+	s.AuthorizerCount -= 1
+	return nil
+}
+
 func (edb *EventDb) ReplicateSnapshots(round int64, limit int) ([]Snapshot, error) {
 	var snapshots []Snapshot
 	result := edb.Store.Get().
@@ -317,6 +433,14 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 // e: events to apply to the snapshot
 func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event) error {
 	providerIds := map[spenum.Provider]ProviderIDMap{
+		spenum.Blobber:    make(ProviderIDMap),
+		spenum.Miner:      make(ProviderIDMap),
+		spenum.Sharder:    make(ProviderIDMap),
+		spenum.Validator:  make(ProviderIDMap),
+		spenum.Authorizer: make(ProviderIDMap),
+	}
+
+	offlineProviderIds := map[spenum.Provider]ProviderIDMap{
 		spenum.Blobber:    make(ProviderIDMap),
 		spenum.Miner:      make(ProviderIDMap),
 		spenum.Sharder:    make(ProviderIDMap),
@@ -620,7 +744,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event) error {
 				return ErrInvalidEventData
 			}
 			for _, pid := range *pids {
-				idMap := providerIds[pid.Type]
+				idMap := offlineProviderIds[pid.Type]
 				if _, ok := idMap[pid.ID]; !ok {
 					idMap[pid.ID] = pid
 				}
@@ -631,7 +755,7 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event) error {
 				return ErrInvalidEventData
 			}
 			for _, pid := range *pids {
-				idMap := providerIds[pid.Type]
+				idMap := offlineProviderIds[pid.Type]
 				if _, ok := idMap[pid.ID]; !ok {
 					idMap[pid.ID] = pid
 				}
@@ -640,51 +764,77 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event) error {
 	}
 
 	idMap := providerIds[spenum.Blobber]
+	offlineIdMap := offlineProviderIds[spenum.Blobber]
 	providers := make([]dbs.ProviderID, 0, len(idMap))
+	offlineProviders := make([]dbs.ProviderID, 0, len(offlineIdMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	err := ApplyProvidersDiff[Blobber, *BlobberSnapshot](edb, gs, providers)
+	for _, pid := range offlineIdMap {
+		offlineProviders = append(offlineProviders, pid)
+	}
+	err := ApplyProvidersDiff[*Blobber, *BlobberSnapshot](edb, gs, providers, offlineProviders)
 	if err != nil {
 		return common.NewError("update_snapshot", fmt.Sprintf("error applying blobber snapshot: %v", err))
 	}
 
 	idMap = providerIds[spenum.Miner]
+	offlineIdMap = offlineProviderIds[spenum.Miner]
 	providers = make([]dbs.ProviderID, 0, len(idMap))
+	offlineProviders = make([]dbs.ProviderID, 0, len(offlineIdMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	err = ApplyProvidersDiff[Miner, *MinerSnapshot](edb, gs, providers)
+	for _, pid := range offlineIdMap {
+		offlineProviders = append(offlineProviders, pid)
+	}
+	err = ApplyProvidersDiff[*Miner, *MinerSnapshot](edb, gs, providers, offlineProviders)
 	if err != nil {
 		return common.NewError("update_snapshot", fmt.Sprintf("error applying miner snapshot: %v", err))
 	}
 
 	idMap = providerIds[spenum.Sharder]
+	offlineIdMap = offlineProviderIds[spenum.Sharder]
+	providers = make([]dbs.ProviderID, 0, len(idMap))
+	offlineProviders = make([]dbs.ProviderID, 0, len(offlineIdMap))
 	providers = make([]dbs.ProviderID, 0, len(idMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	err = ApplyProvidersDiff[Sharder, *SharderSnapshot](edb, gs, providers)
+	for _, pid := range offlineIdMap {
+		offlineProviders = append(offlineProviders, pid)
+	}
+	err = ApplyProvidersDiff[*Sharder, *SharderSnapshot](edb, gs, providers, offlineProviders)
 	if err != nil {
 		return common.NewError("update_snapshot", fmt.Sprintf("error applying sharder snapshot: %v", err))
 	}
 
 	idMap = providerIds[spenum.Authorizer]
+	offlineIdMap = offlineProviderIds[spenum.Authorizer]
 	providers = make([]dbs.ProviderID, 0, len(idMap))
+	offlineProviders = make([]dbs.ProviderID, 0, len(offlineIdMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	err = ApplyProvidersDiff[Authorizer, *AuthorizerSnapshot](edb, gs, providers)
+	for _, pid := range offlineIdMap {
+		offlineProviders = append(offlineProviders, pid)
+	}
+	err = ApplyProvidersDiff[*Authorizer, *AuthorizerSnapshot](edb, gs, providers, offlineProviders)
 	if err != nil {
 		return common.NewError("update_snapshot", fmt.Sprintf("error applying authorizer snapshot: %v", err))
 	}
 
 	idMap = providerIds[spenum.Validator]
+	offlineIdMap = offlineProviderIds[spenum.Validator]
 	providers = make([]dbs.ProviderID, 0, len(idMap))
+	offlineProviders = make([]dbs.ProviderID, 0, len(offlineIdMap))
 	for _, pid := range idMap {
 		providers = append(providers, pid)
 	}
-	err = ApplyProvidersDiff[Validator, *ValidatorSnapshot](edb, gs, providers)
+	for _, pid := range offlineIdMap {
+		offlineProviders = append(offlineProviders, pid)
+	}
+	err = ApplyProvidersDiff[*Validator, *ValidatorSnapshot](edb, gs, providers, offlineProviders)
 	if err != nil {
 		return common.NewError("update_snapshot", fmt.Sprintf("error applying validator snapshot: %v", err))
 	}
