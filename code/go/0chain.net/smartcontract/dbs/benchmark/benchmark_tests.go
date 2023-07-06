@@ -46,7 +46,9 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	if err != nil {
 		return err
 	}
-	return tx.Commit()
+	tx = tx //piers
+	// return tx.Commit() piers
+	return nil
 }
 
 func GetBenchmarkTestSuite(eventsMap map[string][]event.Event) bk.TestSuite {

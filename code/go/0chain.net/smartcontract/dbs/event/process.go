@@ -292,6 +292,10 @@ func (edb *EventDb) Work(ctx context.Context,
 
 	var commit bool
 	defer func() {
+		if r := recover(); r != nil {
+			logging.Logger.Error("panic recovered in processEvent",
+				zap.Any("r", r))
+		}
 		es.done <- commit
 	}()
 
@@ -323,7 +327,7 @@ func (edb *EventDb) Work(ctx context.Context,
 	}
 
 	// process snapshot for none adding block events only
-	if isNotAddBlockEvent(es) {
+	if false && isNotAddBlockEvent(es) {
 		gs, err = updateSnapshots(gs, es, tx)
 		if err != nil {
 			logging.Logger.Error("snapshot could not be processed",

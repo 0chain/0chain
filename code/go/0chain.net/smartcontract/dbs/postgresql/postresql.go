@@ -42,6 +42,11 @@ func ClonePostgresSqlDb(config config.DbAccess, dbName, tamplateName string) (db
 		return nil, err
 	}
 
+	piersError := postgresDBs.Exec("DROP DATABASE IF EXISTS " + dbName + ";")
+	if piersError.Error != nil {
+		fmt.Println("error dropping", dbName, piersError)
+	}
+
 	createDatabaseCommand := fmt.Sprintf(
 		"CREATE DATABASE %s WITH TEMPLATE %s OWNER %s;",
 		config.Name, tamplateName, config.User,

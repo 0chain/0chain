@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
@@ -104,8 +109,11 @@ func (edb *EventDb) Clone(dbName string) (*EventDb, error) {
 		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
 		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
 	}
+	//fmt.Println(fmt.Sprintf("clonning %s to %s", edb.dbConfig.Name, dbName))
 	clone, err := postgresql.ClonePostgresSqlDb(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
+		fmt.Println(fmt.Sprintf("clonning jof %s to %s failed %v",
+			edb.dbConfig.Name, dbName, err))
 		return nil, err
 	}
 
@@ -117,12 +125,38 @@ func (edb *EventDb) Clone(dbName string) (*EventDb, error) {
 	}, nil
 }
 
-func (edb *EventDb) Delete() error {
-	return edb.Get().Exec("DROP DATABASE " + edb.dbConfig.Name + ";").Error
+func (edb *EventDb) ForceDrop() error {
+	postgresDBs, err := gorm.Open(postgres.Open(fmt.Sprintf(
+		"host=%v port=%v  user=%v password=%v dbname=%s sslmode=disable",
+		edb.dbConfig.Host, edb.dbConfig.Port, edb.dbConfig.User, edb.dbConfig.Password, "postgres",
+	)),
+		&gorm.Config{
+			Logger:                 logger.Default.LogMode(logger.Silent),
+			SkipDefaultTransaction: true,
+			CreateBatchSize:        50,
+		})
+	if err != nil {
+		return err
+	}
+	time.Sleep(time.Second)
+
+	fmt.Println("dropping", edb.dbConfig.Name)
+	dropCommand := "DROP DATABASE " + edb.dbConfig.Name + " WITH (FORCE) ;"
+	fmt.Println("drop command", dropCommand)
+	err = postgresDBs.Exec(dropCommand).Error
+	if err != nil {
+		fmt.Println("drop err", err)
+	}
+	return err
+	//return edb.Get().Exec("DROP DATABASE IF EXISTS " + edb.dbConfig.Name + ";").Error
 }
 
 func (edb *EventDb) UpdateSettings(updates map[string]string) error {
 	return edb.settings.Update(updates)
+}
+
+func (edb *EventDb) Settings() config.DbSettings {
+	return edb.settings
 }
 
 func (edb *EventDb) AggregatePeriod() int64 {

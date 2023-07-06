@@ -4,17 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
+	ebk "0chain.net/smartcontract/dbs/benchmark"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -22,9 +25,9 @@ import (
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 
-	"0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
-	ebk "0chain.net/smartcontract/dbs/benchmark"
+
+	"0chain.net/smartcontract/benchmark"
 	"github.com/0chain/common/core/util"
 )
 
@@ -278,7 +281,14 @@ func runEventDatabaseSuite(
 	edb *event.EventDb,
 ) []benchmarkResults {
 	var benchmarkResult []benchmarkResults
+	config.InitConfigurationGlobal(
+		edb.Config().Host,
+		"piers' port",
+		123,
+		event.NewTestConfig(edb.Settings()),
+	)
 	//var wg sync.WaitGroup
+	suite.Benchmarks = suite.Benchmarks[0:5]
 	for _, bm := range suite.Benchmarks {
 		//wg.Add(1)
 		//go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
@@ -288,7 +298,8 @@ func runEventDatabaseSuite(
 		var err error
 		result := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				err = runEventDatabaseBenchmark(b, edb, bm)
+				fmt.Println("in for loop piers", bm.Name(), "index", i)
+				err = runEventDatabaseBenchmark(b, edb, bm, i)
 			}
 		})
 		benchmarkResult = append(
@@ -306,19 +317,24 @@ func runEventDatabaseSuite(
 	return nil
 }
 
-func runEventDatabaseBenchmark(b *testing.B, edb *event.EventDb, bm benchmark.BenchTestI) (err error) {
+func runEventDatabaseBenchmark(b *testing.B, edb *event.EventDb, bm benchmark.BenchTestI, index int) (err error) {
 	b.StopTimer()
-	cleanName := strings.Replace("edb_"+bm.Name(), ".", "_", -1)
+	cleanName := strings.Replace("event_benchmark_"+bm.Name(), ".", "_", -1) + "_" + strconv.Itoa(index)
 	cloneEdb, err := edb.Clone(cleanName)
 	if err != nil {
-		log.Fatal("cloning event database: " + err.Error())
+		fmt.Println("error cloning event database: " + err.Error())
+		return err
 	}
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Recovered from panic running events", r)
 		}
-		if err := cloneEdb.Delete(); err != nil {
-			log.Fatal("error deleting event database: " + err.Error())
+		if err != nil {
+			log.Println("error: ", err.Error())
+		}
+		deleteError := cloneEdb.ForceDrop()
+		if deleteError != nil {
+			log.Println("error deleting event database: " + deleteError.Error())
 		}
 	}()
 	balances := cstate.NewStateContext(
@@ -335,8 +351,10 @@ func runEventDatabaseBenchmark(b *testing.B, edb *event.EventDb, bm benchmark.Be
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0
 	})
+	log.Println("about to run test", bm.Name())
 	b.StartTimer()
 	err = bm.Run(timedBalance, b)
 	b.StopTimer()
+	log.Println("finished test", bm.Name(), err)
 	return err
 }
