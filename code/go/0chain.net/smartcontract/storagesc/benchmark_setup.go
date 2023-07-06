@@ -377,7 +377,7 @@ func AddMockBlobbers(
 			Allocated:         mockUsedData,
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
-			IsAvailable:       true,
+			NotAvailable:      false,
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
@@ -409,7 +409,7 @@ func AddMockBlobbers(
 				ChallengesPassed:    uint64(i),
 				ChallengesCompleted: uint64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
-				IsAvailable:         blobber.IsAvailable,
+				NotAvailable:        blobber.NotAvailable,
 			}
 			blobberDb.TotalStake, err = currency.ParseZCN(viper.GetFloat64(sc.StorageMaxStake) / 2)
 			if err != nil {
@@ -855,6 +855,8 @@ func SetMockConfig(
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
+	conf.NumValidatorsRewarded = viper.GetInt(sc.StorageNumValidatorsRewarded)
+	conf.ValidatorsPerChallenge = viper.GetInt(sc.StorageValidatorsPerChallenge)
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
 	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)

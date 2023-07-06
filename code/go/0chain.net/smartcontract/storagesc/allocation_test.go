@@ -398,7 +398,7 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:  mockReadPrice,
 					WritePrice: mockWritePrice,
 				},
-				IsAvailable: true,
+				NotAvailable: false,
 			}
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
@@ -872,12 +872,15 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	nar.Blobbers = []string{"one", "two"}
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 200}
-	var alloc = nar.storageAllocation()
+	balances := newTestBalances(t, false)
+	conf := setConfig(t, balances)
+	now := common.Timestamp(time.Now().Unix())
+	var alloc = nar.storageAllocation(conf, now)
 	require.Equal(t, alloc.DataShards, nar.DataShards)
 	require.Equal(t, alloc.ParityShards, nar.ParityShards)
 	require.Equal(t, alloc.Size, nar.Size)
-	require.Equal(t, alloc.Expiration, nar.Expiration)
 	require.Equal(t, alloc.Owner, nar.Owner)
+	require.Equal(t, alloc.Expiration, common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()))
 	require.Equal(t, alloc.OwnerPublicKey, nar.OwnerPublicKey)
 	require.True(t, isEqualStrings(alloc.PreferredBlobbers,
 		nar.Blobbers))
@@ -927,9 +930,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
-			Capacity:    25 * GB, // 20 GB
-			Allocated:   5 * GB,  //  5 GB
-			IsAvailable: true,
+			Capacity:     25 * GB, // 20 GB
+			Allocated:    5 * GB,  //  5 GB
+			NotAvailable: false,
 		},
 		{
 			Provider: provider.Provider{
@@ -942,9 +945,9 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				ReadPrice:  25,
 				WritePrice: 250,
 			},
-			Capacity:    20 * GB, // 20 GB
-			Allocated:   10 * GB, // 10 GB
-			IsAvailable: true,
+			Capacity:     20 * GB, // 20 GB
+			Allocated:    10 * GB, // 10 GB
+			NotAvailable: false,
 		},
 	}
 	return

@@ -330,7 +330,7 @@ type StorageNode struct {
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
-	IsAvailable       bool               `json:"is_available"`
+	NotAvailable      bool               `json:"not_available"`
 }
 
 // validate the blobber configurations
@@ -811,7 +811,7 @@ func (sa *StorageAllocation) isActive(
 		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
 	}
 
-	if !blobber.IsAvailable {
+	if blobber.NotAvailable {
 		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
 	}
 

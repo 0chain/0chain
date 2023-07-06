@@ -692,6 +692,7 @@ func TestAllocations(t *testing.T) {
 				NumWrites:        10,
 				MovedToChallenge: currency.Coin(100),
 				MovedBack:        currency.Coin(200),
+				WritePool:        currency.Coin(100),
 			},
 			{
 				AllocationID:     aid2,
@@ -699,6 +700,7 @@ func TestAllocations(t *testing.T) {
 				NumWrites:        20,
 				MovedToChallenge: currency.Coin(200),
 				MovedBack:        currency.Coin(400),
+				WritePool:        currency.Coin(200),
 			},
 		})
 
@@ -706,21 +708,22 @@ func TestAllocations(t *testing.T) {
 
 		// Test update was successful (1)
 		alloc, err = eventDb.GetAllocation(aid1)
+
 		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		require.Equal(t, alloc.UsedSize, int64(10000))
+		require.Equal(t, alloc.NumWrites, int64(10))
+		require.Equal(t, alloc.MovedToChallenge, currency.Coin(100))
+		require.Equal(t, alloc.MovedBack, currency.Coin(200))
+		require.Equal(t, alloc.WritePool, currency.Coin(100))
+
+		// Test update was successful (2)
+		alloc, err = eventDb.GetAllocation(aid2)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
 		require.Equal(t, alloc.UsedSize, int64(20000))
 		require.Equal(t, alloc.NumWrites, int64(20))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(200))
 		require.Equal(t, alloc.MovedBack, currency.Coin(400))
 		require.Equal(t, alloc.WritePool, currency.Coin(200))
-
-		// Test update was successful (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
-		require.Equal(t, alloc.UsedSize, int64(40000))
-		require.Equal(t, alloc.NumWrites, int64(40))
-		require.Equal(t, alloc.MovedToChallenge, currency.Coin(400))
-		require.Equal(t, alloc.MovedBack, currency.Coin(800))
-		require.Equal(t, alloc.WritePool, currency.Coin(400))
 	})
 
 	t.Run("test edb.updateAllocationChallenges", func(t *testing.T) {
