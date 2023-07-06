@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/postgresql"
+
 	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -133,7 +135,11 @@ func runSuites(
 					viper.GetString(benchmark.OptionsEventDatabaseEventFile), err))
 			}
 		}
-		runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap), data.EventDb)
+		suiteResult := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap), data.EventDb)
+		results = append(results, suiteResults{
+			name:    benchmark.SourceNames[benchmark.EventDatabase],
+			results: suiteResult,
+		})
 	}
 	return results
 }
@@ -289,17 +295,22 @@ func runEventDatabaseSuite(
 	)
 	//var wg sync.WaitGroup
 	suite.Benchmarks = suite.Benchmarks[0:5]
+	pdb, err := postgresql.NewPostgresDB(edb.Config())
+	if err != nil {
+		log.Fatal("creating parent postgres db:", err)
+	}
+
 	for _, bm := range suite.Benchmarks {
 		//wg.Add(1)
 		//go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 		//	defer wg.Done()
 		timer := time.Now()
-		log.Println("starting", bm.Name())
+		//log.Println("starting", bm.Name())
 		var err error
 		result := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				fmt.Println("in for loop piers", bm.Name(), "index", i)
-				err = runEventDatabaseBenchmark(b, edb, bm, i)
+				//fmt.Println("in for loop piers", bm.Name(), "index", i)
+				err = runEventDatabaseBenchmark(b, edb, pdb, bm, i)
 			}
 		})
 		benchmarkResult = append(
@@ -314,13 +325,19 @@ func runEventDatabaseSuite(
 		//}(bm, &wg)
 	}
 	//wg.Wait()
-	return nil
+	return benchmarkResult
 }
 
-func runEventDatabaseBenchmark(b *testing.B, edb *event.EventDb, bm benchmark.BenchTestI, index int) (err error) {
+func runEventDatabaseBenchmark(
+	b *testing.B,
+	edb *event.EventDb,
+	pdb *postgresql.PostgresDB,
+	bm benchmark.BenchTestI,
+	index int,
+) (err error) {
 	b.StopTimer()
 	cleanName := strings.Replace("event_benchmark_"+bm.Name(), ".", "_", -1) + "_" + strconv.Itoa(index)
-	cloneEdb, err := edb.Clone(cleanName)
+	cloneEdb, err := edb.Clone(cleanName, pdb)
 	if err != nil {
 		fmt.Println("error cloning event database: " + err.Error())
 		return err
@@ -332,7 +349,7 @@ func runEventDatabaseBenchmark(b *testing.B, edb *event.EventDb, bm benchmark.Be
 		if err != nil {
 			log.Println("error: ", err.Error())
 		}
-		deleteError := cloneEdb.ForceDrop()
+		deleteError := pdb.Drop(cleanName)
 		if deleteError != nil {
 			log.Println("error deleting event database: " + deleteError.Error())
 		}
@@ -351,10 +368,10 @@ func runEventDatabaseBenchmark(b *testing.B, edb *event.EventDb, bm benchmark.Be
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0
 	})
-	log.Println("about to run test", bm.Name())
+	//log.Println("about to run test", bm.Name())
 	b.StartTimer()
 	err = bm.Run(timedBalance, b)
 	b.StopTimer()
-	log.Println("finished test", bm.Name(), err)
+	//log.Println("finished test", bm.Name(), err)
 	return err
 }

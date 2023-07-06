@@ -807,7 +807,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.updateBlobberChallenges(*bs)
-
 	case TagUpdateAllocationChallenge:
 		as, ok := fromEvent[[]Allocation](event.Data)
 		if !ok {

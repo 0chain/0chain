@@ -28,44 +28,6 @@ func GetPostgresSqlDb(config config.DbAccess) (dbs.Store, error) {
 	return db, nil
 }
 
-func ClonePostgresSqlDb(config config.DbAccess, dbName, tamplateName string) (dbs.Store, error) {
-	postgresDBs, err := gorm.Open(postgres.Open(fmt.Sprintf(
-		"host=%v port=%v  user=%v password=%v dbname=%s sslmode=disable",
-		config.Host, config.Port, config.User, config.Password, "postgres",
-	)),
-		&gorm.Config{
-			Logger:                 logger.Default.LogMode(logger.Silent),
-			SkipDefaultTransaction: true,
-			CreateBatchSize:        50,
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	piersError := postgresDBs.Exec("DROP DATABASE IF EXISTS " + dbName + ";")
-	if piersError.Error != nil {
-		fmt.Println("error dropping", dbName, piersError)
-	}
-
-	createDatabaseCommand := fmt.Sprintf(
-		"CREATE DATABASE %s WITH TEMPLATE %s OWNER %s;",
-		config.Name, tamplateName, config.User,
-	)
-	result := postgresDBs.Exec(createDatabaseCommand)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	newStore := &PostgresStore{}
-	err = newStore.Open(config)
-	if err != nil {
-		return nil, err
-	}
-
-	//newStore.db = result
-	return newStore, nil
-}
-
 type PostgresStore struct {
 	db *gorm.DB
 }
@@ -131,7 +93,7 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
 	}
 
-	fmt.Println("made event sql database ok")
+	//fmt.Println("made event sql database ok")
 	return nil
 }
 
