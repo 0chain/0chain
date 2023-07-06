@@ -462,6 +462,8 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.StakePool.KillSlash = change
 	case BlobberSlash:
 		conf.BlobberSlash = change
+	case MaxCharge:
+		conf.MaxCharge = change
 	case BlockRewardGammaAlpha:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
