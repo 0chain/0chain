@@ -294,7 +294,6 @@ func runEventDatabaseSuite(
 		event.NewTestConfig(edb.Settings()),
 	)
 	//var wg sync.WaitGroup
-	suite.Benchmarks = suite.Benchmarks[0:5]
 	pdb, err := postgresql.NewPostgresDB(edb.Config())
 	if err != nil {
 		log.Fatal("creating parent postgres db:", err)
@@ -345,9 +344,6 @@ func runEventDatabaseBenchmark(
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Recovered from panic running events", r)
-		}
-		if err != nil {
-			log.Println("error: ", err.Error())
 		}
 		deleteError := pdb.Drop(cleanName)
 		if deleteError != nil {

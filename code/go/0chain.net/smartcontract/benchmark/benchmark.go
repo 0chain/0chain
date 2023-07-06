@@ -50,6 +50,7 @@ var (
 		"zcnscbridge",
 		"zcnscbridge_rest",
 		"control",
+		"event_db",
 	}
 
 	SourceCode = map[string]Source{
@@ -65,6 +66,7 @@ var (
 		SourceNames[ZCNSCBridge]:     ZCNSCBridge,
 		SourceNames[ZCNSCBridgeRest]: ZCNSCBridgeRest,
 		SourceNames[Control]:         Control,
+		SourceNames[EventDatabase]:   EventDatabase,
 	}
 )
 
