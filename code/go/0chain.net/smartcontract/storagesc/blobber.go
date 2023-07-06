@@ -176,8 +176,8 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 
 		if updateBlobberRequest.SavedData != nil && *updateBlobberRequest.SavedData < stakedCapacity {
-			return fmt.Errorf("write_price_change: staked capacity(%d) exceeding used_capacity(%d)",
-				stakedCapacity, updateBlobberRequest.Capacity)
+			return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than used capacity (%d)",
+				stakedCapacity, *updateBlobberRequest.SavedData)
 		}
 
 		_, err = balances.InsertTrieNode(provider.GetKey(updateBlobberRequest.ID), updateBlobberRequest)
