@@ -32,7 +32,7 @@ type BlobberAggregate struct {
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`
 	InactiveRounds      int64         `json:"InactiveRounds"`
-	RankMetric          float64       `json:"rank_metric" gorm:"index:idx_ba_rankmetric"`
+	RankMetric          float64       `json:"rank_metric"`
 	Downtime            uint64        `json:"downtime"`
 }
 

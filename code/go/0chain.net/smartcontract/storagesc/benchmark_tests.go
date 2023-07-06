@@ -303,9 +303,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				var request = struct {
-					Recipient  string           `json:"recipient"`
-					FreeTokens float64          `json:"free_tokens"`
-					Timestamp  common.Timestamp `json:"timestamp"`
+					Recipient  string  `json:"recipient"`
+					FreeTokens float64 `json:"free_tokens"`
+					Nonce      int64   `json:"nonce"`
 				}{
 					data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
@@ -328,7 +328,7 @@ func BenchmarkTests(
 					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 					Recipient:  request.Recipient,
 					FreeTokens: request.FreeTokens,
-					Timestamp:  request.Timestamp,
+					Nonce:      request.Nonce,
 					Signature:  signature,
 				})
 				bytes, _ := json.Marshal(&freeStorageAllocationInput{
@@ -353,9 +353,9 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				var request = struct {
-					Recipient  string           `json:"recipient"`
-					FreeTokens float64          `json:"free_tokens"`
-					Timestamp  common.Timestamp `json:"timestamp"`
+					Recipient  string  `json:"recipient"`
+					FreeTokens float64 `json:"free_tokens"`
+					Nonce      int64   `json:"nonce"`
 				}{
 					data.Clients[0],
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
@@ -369,7 +369,7 @@ func BenchmarkTests(
 					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 					Recipient:  request.Recipient,
 					FreeTokens: request.FreeTokens,
-					Timestamp:  request.Timestamp,
+					Nonce:      request.Nonce,
 					Signature:  signature,
 				})
 				bytes, _ := json.Marshal(&freeStorageUpgradeInput{
@@ -774,6 +774,7 @@ func BenchmarkTests(
 					"max_write_price":          "100",
 					"challenge_enabled":        "true",
 					"validators_per_challenge": "2",
+					"num_validators_rewarded":  "10",
 					"max_delegates":            "100",
 
 					"block_reward.block_reward":     "1000",
