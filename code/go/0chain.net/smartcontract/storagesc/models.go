@@ -201,12 +201,20 @@ type ValidationNode struct {
 
 // validate the validator configurations
 func (sn *ValidationNode) validate(_ *Config) (err error) {
-	if strings.Contains(sn.BaseURL, "localhost") &&
+	return validateBaseUrl(&sn.BaseURL)
+}
+
+func validateBaseUrl(baseUrl *string) error {
+	if baseUrl != nil && strings.Contains(*baseUrl, "localhost") &&
 		node.Self.Host != "localhost" {
 		return errors.New("invalid validator base url")
 	}
 
-	return
+	return nil
+}
+
+func GetValidatorUrlKey(globalKey, baseUrl string) datastore.Key {
+	return datastore.Key(globalKey + "validator:" + baseUrl)
 }
 
 func (sn *ValidationNode) GetKey(_ string) datastore.Key {
@@ -214,7 +222,7 @@ func (sn *ValidationNode) GetKey(_ string) datastore.Key {
 }
 
 func (sn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.BaseURL)
+	return GetValidatorUrlKey(globalKey, sn.BaseURL)
 }
 
 func (sn *ValidationNode) Encode() []byte {
@@ -333,6 +341,10 @@ type StorageNode struct {
 	NotAvailable      bool               `json:"not_available"`
 }
 
+func GetUrlKey(baseUrl, globalKey string) datastore.Key {
+	return datastore.Key(globalKey + baseUrl)
+}
+
 // validate the blobber configurations
 func (sn *StorageNode) validate(conf *Config) (err error) {
 	if err = sn.Terms.validate(conf); err != nil {
@@ -342,9 +354,8 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 		return errors.New("insufficient blobber capacity")
 	}
 
-	if strings.Contains(sn.BaseURL, "localhost") &&
-		node.Self.Host != "localhost" {
-		return errors.New("invalid blobber base url")
+	if err := validateBaseUrl(&sn.BaseURL); err != nil {
+		return err
 	}
 
 	if err := sn.Geolocation.validate(); err != nil {
@@ -359,7 +370,7 @@ func (sn *StorageNode) GetKey() datastore.Key {
 }
 
 func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.BaseURL)
+	return GetUrlKey(sn.BaseURL, globalKey)
 }
 
 func (sn *StorageNode) Encode() []byte {

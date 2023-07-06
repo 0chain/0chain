@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,6 +36,24 @@ func validateStakePoolSettings(
 	if sps.MaxNumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
 	}
+	return nil
+}
+
+func validateStakePoolSettingsForADtoNode(sps *dto.Settings, conf *Config) error {
+	if sps.ServiceChargeRatio != nil {
+		if *sps.ServiceChargeRatio < 0.0 {
+			return errors.New("negative service charge")
+		}
+		if *sps.ServiceChargeRatio > conf.MaxCharge {
+			return fmt.Errorf("service_charge (%f) is greater than"+
+				" max allowed by SC (%f)", *sps.ServiceChargeRatio, conf.MaxCharge)
+		}
+	}
+
+	if sps.MaxNumDelegates != nil && *sps.MaxNumDelegates <= 0 {
+		return errors.New("num_delegates <= 0")
+	}
+
 	return nil
 }
 

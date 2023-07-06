@@ -64,7 +64,7 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 
 	ab, err = ssc.getBlobber(b.ID, balances)
 	require.NoError(t, err)
-	require.Equal(t, ab.BaseURL, NEW_BASE_URL)
+	require.Equal(t, NEW_BASE_URL, ab.BaseURL)
 	require.Equal(t, ab.Capacity, b.Capacity)
 	// can update URL
 

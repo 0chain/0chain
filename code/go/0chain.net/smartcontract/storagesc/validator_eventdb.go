@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dto"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -40,8 +41,9 @@ func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode
 	return vNodes, nil
 }
 
-func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContextI) error {
-	staked, err := sp.stake()
+func emitUpdateValidationNode(validationNode *dto.ValidationDtoNode,
+	existingStakePool *stakePool, balances cstate.StateContextI) error {
+	staked, err := existingStakePool.stake()
 	if err != nil {
 		return err
 	}
@@ -49,18 +51,33 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 	logging.Logger.Info("emitting validator update event")
 
 	data := &event.Validator{
-		BaseUrl: vn.BaseURL,
 		Provider: event.Provider{
-			ID:              vn.ID,
-			TotalStake:      staked,
-			DelegateWallet:  vn.StakePoolSettings.DelegateWallet,
-			NumDelegates:    vn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
-			LastHealthCheck: vn.LastHealthCheck,
+			ID:         validationNode.ID,
+			TotalStake: staked,
 		},
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
+	if validationNode.BaseURL != nil {
+		data.BaseUrl = *validationNode.BaseURL
+	}
+
+	if validationNode.StakePoolSettings != nil {
+		if validationNode.StakePoolSettings.DelegateWallet != nil {
+			data.DelegateWallet = *validationNode.StakePoolSettings.DelegateWallet
+		}
+		if validationNode.StakePoolSettings.ServiceChargeRatio != nil {
+			data.ServiceCharge = *validationNode.StakePoolSettings.ServiceChargeRatio
+		}
+		if validationNode.StakePoolSettings.MaxNumDelegates != nil {
+			data.NumDelegates = *validationNode.StakePoolSettings.MaxNumDelegates
+		}
+	}
+
+	if validationNode.LastHealthCheck != nil {
+		data.LastHealthCheck = *validationNode.LastHealthCheck
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, validationNode.ID, data)
 	return nil
 }
 
