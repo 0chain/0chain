@@ -13,10 +13,6 @@ func emitUpdateBlobber(sn *dto.StorageDtoNode, sp *stakePool, balances cstate.St
 		return err
 	}
 	data := &event.Blobber{
-		BaseURL:   getString(sn.BaseURL),
-		Capacity:  getInt64(sn.Capacity),
-		Allocated: getInt64(sn.Allocated),
-		SavedData: getInt64(sn.SavedData),
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sp.Settings.DelegateWallet,
@@ -27,6 +23,22 @@ func emitUpdateBlobber(sn *dto.StorageDtoNode, sp *stakePool, balances cstate.St
 		},
 		OffersTotal: sp.TotalOffers,
 	}
+	if sn.BaseURL != nil && *sn.BaseURL != "" {
+		data.BaseURL = *sn.BaseURL
+	}
+
+	if sn.Capacity != nil && *sn.Capacity > 0 {
+		data.Capacity = *sn.Capacity
+	}
+
+	if sn.Allocated != nil {
+		data.Allocated = *sn.Allocated
+	}
+
+	if sn.SavedData != nil {
+		data.SavedData = *sn.SavedData
+	}
+
 	if sn.Geolocation != nil {
 		if sn.Geolocation.Latitude != nil {
 			data.Latitude = *sn.Geolocation.Latitude
@@ -52,20 +64,6 @@ func emitUpdateBlobber(sn *dto.StorageDtoNode, sp *stakePool, balances cstate.St
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
 	return nil
-}
-
-func getString(pointerValue *string) string {
-	if pointerValue != nil {
-		return *pointerValue
-	}
-	return ""
-}
-
-func getInt64(pointerValue *int64) int64 {
-	if pointerValue != nil {
-		return *pointerValue
-	}
-	return 0
 }
 
 func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {

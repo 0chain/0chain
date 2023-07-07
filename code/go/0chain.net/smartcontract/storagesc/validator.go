@@ -233,15 +233,15 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 		}
 	}
 
+	// update stake pool settings
+	var existingStakePool *stakePool
+	if existingStakePool, err = sc.getStakePool(spenum.Validator, inputValidator.ID, balances); err != nil {
+		return fmt.Errorf("can't get stake pool:  %v", err)
+	}
+
 	if inputValidator.StakePoolSettings != nil {
 		// update statistics
 		sc.statIncr(statUpdateValidator)
-
-		// update stake pool settings
-		var existingStakePool *stakePool
-		if existingStakePool, err = sc.getStakePool(spenum.Validator, inputValidator.ID, balances); err != nil {
-			return fmt.Errorf("can't get stake pool:  %v", err)
-		}
 
 		if err = validateStakePoolSettingsForADtoNode(inputValidator.StakePoolSettings, conf); err != nil {
 			return fmt.Errorf("invalid new stake pool settings:  %v", err)
@@ -261,12 +261,12 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 		if err = existingStakePool.Save(spenum.Validator, inputValidator.ID, balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
+	}
 
-		inputValidator.LastHealthCheck = &txn.CreationDate
+	inputValidator.LastHealthCheck = &txn.CreationDate
 
-		if err := emitUpdateValidationNode(inputValidator, existingStakePool, balances); err != nil {
-			return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
-		}
+	if err := emitUpdateValidationNode(inputValidator, existingStakePool, balances); err != nil {
+		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
 
 	return

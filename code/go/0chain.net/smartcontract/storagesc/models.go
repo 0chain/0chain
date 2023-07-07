@@ -271,17 +271,30 @@ func (t *Terms) minLockDemand(gbSize, rdtu, minLockDemand float64) (currency.Coi
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if t.ReadPrice > conf.MaxReadPrice {
+	if err = validateReadPriceTerms(t.ReadPrice, conf); err != nil {
+		return
+	}
+
+	return validateWritePriceTerms(t.WritePrice, conf)
+}
+
+func validateReadPriceTerms(readPrice currency.Coin, conf *Config) error {
+	if readPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
-	if t.WritePrice < conf.MinWritePrice {
+
+	return nil
+}
+
+func validateWritePriceTerms(writePrice currency.Coin, conf *Config) error {
+	if writePrice < conf.MinWritePrice {
 		return errors.New("write_price is less than min_write_price allowed")
 	}
-	if t.WritePrice > conf.MaxWritePrice {
+	if writePrice > conf.MaxWritePrice {
 		return errors.New("write_price is greater than max_write_price allowed")
 	}
 
-	return // nil
+	return nil
 }
 
 const (

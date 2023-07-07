@@ -110,12 +110,20 @@ func (sc *StorageSmartContract) updateBlobber(
 	balances cstate.StateContextI,
 ) (err error) {
 	// check terms
-	terms := getTermsFromDtoNode(updateBlobberRequest)
-	if terms != nil {
-		if err = terms.validate(conf); err != nil {
-			return fmt.Errorf("invalid blobber terms: %v", err)
+	if updateBlobberRequest.Terms != nil {
+		if updateBlobberRequest.Terms.ReadPrice != nil {
+			if err = validateReadPriceTerms(*updateBlobberRequest.Terms.ReadPrice, conf); err != nil {
+				return fmt.Errorf("invalid blobber terms: %v", err)
+			}
+			savedBlobber.Terms.ReadPrice = *updateBlobberRequest.Terms.ReadPrice
 		}
-		savedBlobber.Terms = *terms
+
+		if updateBlobberRequest.Terms.WritePrice != nil {
+			if err = validateWritePriceTerms(*updateBlobberRequest.Terms.WritePrice, conf); err != nil {
+				return fmt.Errorf("invalid blobber terms: %v", err)
+			}
+			savedBlobber.Terms.WritePrice = *updateBlobberRequest.Terms.WritePrice
+		}
 	}
 
 	if updateBlobberRequest.Capacity != nil && *updateBlobberRequest.Capacity <= 0 {
@@ -181,8 +189,9 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	// update stake pool settings
-	stakedCapacity, err := existingStakePool.stakedCapacity(terms.WritePrice)
+	// update stake pool settings.
+	// using WritePrice of savedBlobber is fine because that has been updated earlier.
+	stakedCapacity, err := existingStakePool.stakedCapacity(savedBlobber.Terms.WritePrice)
 	if err != nil {
 		return fmt.Errorf("error calculating staked capacity: %v", err)
 	}
@@ -345,21 +354,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 	}
 
 	return string(blobber.Encode()), nil
-}
-
-func getTermsFromDtoNode(dtoNode *dto.StorageDtoNode) *Terms {
-	terms := new(Terms)
-	if dtoNode.Terms == nil {
-		return terms
-	}
-	if dtoNode.Terms.WritePrice != nil {
-		terms.WritePrice = *dtoNode.Terms.WritePrice
-	}
-	if dtoNode.Terms.ReadPrice != nil {
-		terms.ReadPrice = *dtoNode.Terms.ReadPrice
-	}
-
-	return terms
 }
 
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
