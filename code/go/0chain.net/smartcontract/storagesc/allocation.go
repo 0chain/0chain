@@ -1272,7 +1272,7 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	return false
 }
 
-func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]float64, error) {
+func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation, balances chainstate.StateContextI) ([]float64, error) {
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
 	}
@@ -1304,10 +1304,14 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 		succesful += ba.Stats.SuccessChallenges
 		failed += ba.Stats.FailedChallenges
+
 	}
 	alloc.Stats.SuccessChallenges = succesful
 	alloc.Stats.FailedChallenges = failed
 	alloc.Stats.OpenChallenges = 0
+
+	emitUpdateAllocationAndBlobberStats(alloc, balances)
+
 	return passRates, nil
 }
 
@@ -1350,6 +1354,13 @@ func (sc *StorageSmartContract) canceledPassRates(
 			}
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
+
+			emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: alloc.ID,
+				BlobberID:    oc.BlobberID,
+			}, true, balances, alloc.Stats, ba.Stats)
+
 		}
 
 	default:
@@ -1372,10 +1383,22 @@ func (sc *StorageSmartContract) canceledPassRates(
 		}
 		// success rate for the blobber allocation
 		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
+
+		logging.Logger.Info("pass rate",
+			zap.Any("allocation_id", alloc.ID),
+			zap.Any("blobber_id", ba.BlobberID),
+			zap.Any("success", ba.Stats.SuccessChallenges),
+			zap.Any("failed", ba.Stats.FailedChallenges),
+			zap.Any("total", ba.Stats.TotalChallenges),
+		)
+
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 	}
 
 	alloc.Stats.OpenChallenges = 0
+
+	emitUpdateAllocationAndBlobberStats(alloc, balances)
+
 	return passRates, nil
 }
 
@@ -1503,7 +1526,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	var passRates []float64
-	passRates, err = sc.finalizedPassRates(alloc)
+	passRates, err = sc.finalizedPassRates(alloc, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1548,13 +1571,6 @@ func (sc *StorageSmartContract) finishAllocation(
 ) (err error) {
 	before := make([]currency.Coin, len(sps))
 	deductionFromWritePool := currency.Coin(0)
-
-	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return fmt.Errorf("could not get allocation challenges: %v", err)
-		}
-	}
 
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
@@ -1746,20 +1762,6 @@ func (sc *StorageSmartContract) finishAllocation(
 		AllocationId: alloc.ID,
 		Amount:       i,
 	})
-
-	if challenges != nil {
-		for _, challenge := range challenges.OpenChallenges {
-			ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
-
-			if ok {
-				emitUpdateChallenge(&StorageChallenge{
-					ID:           challenge.ID,
-					AllocationID: alloc.ID,
-					BlobberID:    challenge.BlobberID,
-				}, true, balances, alloc.Stats, ba.Stats)
-			}
-		}
-	}
 
 	alloc.Finalized = true
 	return nil
