@@ -170,22 +170,6 @@ func (sc *StorageSmartContract) updateBlobber(
 			return fmt.Errorf("invalid new stake pool settings:  %v", err)
 		}
 
-		// update stake pool settings
-		stakedCapacity, err := existingStakePool.stakedCapacity(terms.WritePrice)
-		if err != nil {
-			return fmt.Errorf("error calculating staked capacity: %v", err)
-		}
-
-		if updateBlobberRequest.SavedData != nil && *updateBlobberRequest.SavedData > stakedCapacity {
-			return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than used capacity (%d)",
-				stakedCapacity, *updateBlobberRequest.SavedData)
-		}
-
-		_, err = balances.InsertTrieNode(provider.GetKey(updateBlobberRequest.ID), updateBlobberRequest)
-		if err != nil {
-			return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
-		}
-
 		if updateBlobberRequest.StakePoolSettings.ServiceChargeRatio != nil {
 			existingStakePool.Settings.ServiceChargeRatio = *updateBlobberRequest.StakePoolSettings.ServiceChargeRatio
 			savedBlobber.StakePoolSettings.ServiceChargeRatio = *updateBlobberRequest.StakePoolSettings.ServiceChargeRatio
@@ -195,14 +179,30 @@ func (sc *StorageSmartContract) updateBlobber(
 			existingStakePool.Settings.MaxNumDelegates = *updateBlobberRequest.StakePoolSettings.MaxNumDelegates
 			savedBlobber.StakePoolSettings.MaxNumDelegates = *updateBlobberRequest.StakePoolSettings.MaxNumDelegates
 		}
+	}
 
-		// Save stake pool
-		if err = existingStakePool.Save(spenum.Blobber, updateBlobberRequest.ID, balances); err != nil {
-			return fmt.Errorf("saving stake pool: %v", err)
-		}
-		if err := emitUpdateBlobber(updateBlobberRequest, existingStakePool, balances); err != nil {
-			return fmt.Errorf("emmiting blobber %v: %v", updateBlobberRequest, err)
-		}
+	// update stake pool settings
+	stakedCapacity, err := existingStakePool.stakedCapacity(terms.WritePrice)
+	if err != nil {
+		return fmt.Errorf("error calculating staked capacity: %v", err)
+	}
+
+	if updateBlobberRequest.SavedData != nil && *updateBlobberRequest.SavedData > stakedCapacity {
+		return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than used capacity (%d)",
+			stakedCapacity, *updateBlobberRequest.SavedData)
+	}
+
+	_, err = balances.InsertTrieNode(provider.GetKey(updateBlobberRequest.ID), updateBlobberRequest)
+	if err != nil {
+		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
+	}
+
+	// Save stake pool
+	if err = existingStakePool.Save(spenum.Blobber, updateBlobberRequest.ID, balances); err != nil {
+		return fmt.Errorf("saving stake pool: %v", err)
+	}
+	if err := emitUpdateBlobber(updateBlobberRequest, existingStakePool, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", updateBlobberRequest, err)
 	}
 	return
 }
