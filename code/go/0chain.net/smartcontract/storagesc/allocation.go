@@ -1620,7 +1620,8 @@ func (sc *StorageSmartContract) finishAllocation(
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-			ratio := float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
+
+			ratio := float64(d.Stats.UsedSize) / (float64(alloc.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards))
 			cpBalance, err := cp.Balance.Float64()
 			if err != nil {
 				return err
@@ -1630,6 +1631,14 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
+
+			logging.Logger.Info("finishAllocation: passRates",
+				zap.Any("blobber_used_size", d.Stats.UsedSize),
+				zap.Any("alloc_used_size", alloc.UsedSize),
+				zap.Any("cp_balance", cpBalance),
+				zap.Any("ratio", ratio),
+				zap.Any("pass_rate", passRates[i]),
+			)
 
 			err = sps[i].DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
 			if err != nil {
