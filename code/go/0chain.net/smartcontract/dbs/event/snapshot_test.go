@@ -630,11 +630,10 @@ func TestSnapshotFunctions(t *testing.T) {
 			},
 			{
 				Tag: TagCollectProviderReward,
-				Index: "not found",
-			},
-			{
-				Tag: TagCollectProviderReward,
-				Index: validators[4].ID,
+				Data: dbs.ProviderID{
+					ID: validators[4].ID,
+					Type: spenum.Validator,
+				},
 			},
 			{
 				Tag: TagBlobberHealthCheck,

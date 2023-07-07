@@ -668,11 +668,16 @@ func (edb *EventDb) UpdateSnapshot(gs *Snapshot, e []Event) error {
 			gs.TotalTxnFee += int64(totalFee)
 		case TagCollectProviderReward:
 			// Since we don't know the type, we'll need to add it to all maps
-			providerIds[spenum.Blobber][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Blobber}
-			providerIds[spenum.Miner][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Miner}
-			providerIds[spenum.Sharder][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Sharder}
-			providerIds[spenum.Authorizer][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Authorizer}
-			providerIds[spenum.Validator][event.Index] = dbs.ProviderID{ID: event.Index, Type: spenum.Validator}
+			pid, ok := event.Data.(dbs.ProviderID)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
+			}
+			idMap := providerIds[pid.Type]
+			if _, ok := idMap[pid.ID]; !ok {
+				idMap[pid.ID] = pid
+			}
 		case TagBlobberHealthCheck:
 			healthCheckUpdates, ok := fromEvent[[]dbs.DbHealthCheck](event.Data)
 			if !ok {
