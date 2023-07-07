@@ -99,7 +99,7 @@ func runSuites(
 				suiteResult, events = runSuite(suite, mpt, root, data)
 				for key, value := range events {
 					if len(value) > 0 {
-						eventMap[suite.Name+"_"+key] = value
+						eventMap[key] = value
 					}
 				}
 			}
