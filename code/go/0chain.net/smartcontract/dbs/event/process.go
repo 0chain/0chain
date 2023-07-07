@@ -142,7 +142,7 @@ func (edb *EventDb) MergeEvents(
 	if err != nil {
 		return BlockEvents{}, nil, err
 	}
-	//tx, err := edb.Begin(ctx)
+	tx, err := edb.Begin(ctx)
 	if err != nil {
 		return BlockEvents{}, nil, err
 	}
@@ -153,7 +153,7 @@ func (edb *EventDb) MergeEvents(
 		blockSize: blockSize,
 		tx:        edb,
 		done:      make(chan bool, 1),
-	}, edb, nil
+	}, tx, nil //edb, nil
 }
 
 func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
