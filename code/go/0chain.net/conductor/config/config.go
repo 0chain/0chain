@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+type StopChallengeGeneration bool
+
 // common types
 type (
 	NodeName  string // node name used in configurations

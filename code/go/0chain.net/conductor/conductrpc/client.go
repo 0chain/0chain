@@ -232,3 +232,13 @@ func (c *client) magicBlock() (configFile *string, err error) {
 	}
 	return
 }
+
+func (c *client) challengeGenerated(blobberID string) (err error) {
+	err = c.client.Call("Server.ChallengeGenerated", blobberID, nil)
+	return
+}
+
+func (c *client) blobberCommitted(blobberID string) (err error) {
+	err = c.client.Call("Server.BlobberCommitted", blobberID, nil)
+	return
+}

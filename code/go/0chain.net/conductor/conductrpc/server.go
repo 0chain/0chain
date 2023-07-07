@@ -127,7 +127,8 @@ type Server struct {
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
 	// onChallengeGeneration will notify server that challenge has been generated
 	// May need to add fields in struct rather than only struct{}
-	onChallengeGeneration chan struct{}
+	onChallengeGeneration chan string
+	onBlobberCommit       chan string
 	CurrentTest           cases.TestCase
 
 	magicBlock string
@@ -161,7 +162,8 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		onRoundEvent:              make(chan *RoundEvent, 100),
 		onContributeMPKEvent:      make(chan *ContributeMPKEvent, 10),
 		onShareOrSignsSharesEvent: make(chan *ShareOrSignsSharesEvent, 10),
-		onChallengeGeneration:     make(chan struct{}, 1),
+		onChallengeGeneration:     make(chan string, 1),
+		onBlobberCommit:           make(chan string, 1),
 		nodes:                     make(map[NodeName]*nodeState),
 		address:                   address,
 		server:                    rpc.NewServer(),
@@ -322,8 +324,12 @@ func (s *Server) OnShareOrSignsShares() chan *ShareOrSignsSharesEvent {
 	return s.onShareOrSignsSharesEvent
 }
 
-func (s *Server) OnGenerateChallenge() chan struct{} {
+func (s *Server) OnGenerateChallenge() chan string {
 	return s.onChallengeGeneration
+}
+
+func (s *Server) OnBlobberCommit() chan string {
+	return s.onBlobberCommit
 }
 
 func (s *Server) Nodes() map[config.NodeName]*nodeState {
@@ -427,9 +433,17 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent, _ *struct{}) 
 	return
 }
 
-func (s *Server) ChallengeGeneration(_, _ *struct{}) error {
+func (s *Server) ChallengeGenerated(blobberID *string, _ *struct{}) error {
 	select {
-	case s.onChallengeGeneration <- struct{}{}:
+	case s.onChallengeGeneration <- *blobberID:
+	case <-s.quit:
+	}
+	return nil
+}
+
+func (s *Server) BlobberCommitted(blobberID *string, _ *struct{}) error {
+	select {
+	case s.onBlobberCommit <- *blobberID:
 	case <-s.quit:
 	}
 	return nil

@@ -173,17 +173,21 @@ type Runner struct {
 	}
 
 	// wait for
-	waitPhase              config.WaitPhase              //
-	waitViewChange         config.WaitViewChange         //
-	waitNodes              map[config.NodeName]struct{}  // (start a node)
-	waitRound              config.WaitRound              //
-	waitContributeMPK      config.WaitContributeMpk      //
-	waitShareSignsOrShares config.WaitShareSignsOrShares //
-	waitAdd                config.WaitAdd                // add_miner, add_sharder
-	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
-	waitNoProgress         config.WaitNoProgress         // no new rounds expected
-	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
-	waitCommand            chan error                    // wait a command
+	waitPhase                   config.WaitPhase              //
+	waitViewChange              config.WaitViewChange         //
+	waitNodes                   map[config.NodeName]struct{}  // (start a node)
+	waitRound                   config.WaitRound              //
+	waitContributeMPK           config.WaitContributeMpk      //
+	waitShareSignsOrShares      config.WaitShareSignsOrShares //
+	waitAdd                     config.WaitAdd                // add_miner, add_sharder
+	waitSharderKeep             config.WaitSharderKeep        // sharder_keep
+	waitNoProgress              config.WaitNoProgress         // no new rounds expected
+	waitNoViewChange            config.WaitNoViewChainge      // no VC expected
+	waitCommand                 chan error                    // wait a command
+	waitBlobberCommit           bool
+	expectedBlobberToCommit     string
+	waitOnChallengeGeneration   bool
+	expectedBlobberForChallenge string
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -231,6 +235,10 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		return tm, true
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
+		return tm, true
+	case r.waitBlobberCommit:
+		return tm, true
+	case r.waitOnChallengeGeneration:
 		return tm, true
 	}
 
@@ -761,6 +769,22 @@ func (r *Runner) acceptShareOrSignsShares(
 	return
 }
 
+func (r *Runner) onChallengeGeneration(blobberID string) {
+	if blobberID != r.expectedBlobberForChallenge {
+		return
+	}
+
+	r.waitOnChallengeGeneration = false
+}
+
+func (r *Runner) onBlobberCommit(blobberID string) {
+	if blobberID != r.expectedBlobberToCommit {
+		return
+	}
+
+	r.waitBlobberCommit = false
+}
+
 func (r *Runner) stopAll() {
 	log.Print("stop all nodes")
 	for _, n := range r.conf.Nodes {
@@ -796,7 +820,10 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
-		case <-r.server.OnGenerateChallenge():
+		case blobberID := <-r.server.OnBlobberCommit():
+			r.onBlobberCommit(blobberID)
+		case blobberID := <-r.server.OnGenerateChallenge():
+			r.onChallengeGeneration(blobberID)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)

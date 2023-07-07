@@ -105,7 +105,8 @@ func (n *BlobberDelete) Decode(val interface{}) error {
 }
 
 type GenerateChallege struct {
-	BlobberID string `json:"blobber_id" mapstructure:"blobber_id"`
+	BlobberID       string `json:"blobber_id" mapstructure:"blobber_id"`
+	TotalChallenges int    `json:"total_challenges" mapstructure:"total_challenges"`
 }
 
 func (g *GenerateChallege) Decode(val interface{}) error {

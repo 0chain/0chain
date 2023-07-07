@@ -724,7 +724,30 @@ func init() {
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
+		ex.WaitForChallengeGeneration()
+		return ex.SetServerState(cfg)
+	})
 
+	register("wait_blobber_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		m, ok := val.(map[string]string)
+		if !ok {
+			return fmt.Errorf("Expected type map[string]string but got %T", val)
+		}
+		ex.SetExpectedBlobberCommit(m["blobber_id"])
+		return nil
+	})
+
+	register("wait_challenge_generation", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		m, ok := val.(map[string]string)
+		if !ok {
+			return fmt.Errorf("Expected type map[string]string but got %T", val)
+		}
+		ex.SetExpectedChallengeGenerationBlobber(m["blobber_id"])
+		return nil
+	})
+
+	register("stop_chal_gen", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
+		cfg := StopChallengeGeneration(true)
 		return ex.SetServerState(cfg)
 	})
 }

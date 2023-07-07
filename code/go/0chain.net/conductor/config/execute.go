@@ -45,7 +45,8 @@ type Executor interface {
 	WaitNoProgress(wait time.Duration) (err error)
 	WaitNoViewChainge(wnvc WaitNoViewChainge, timeout time.Duration) (err error)
 	WaitSharderKeep(wsk WaitSharderKeep, timeout time.Duration) (err error)
-
+	WaitForChallengeGeneration()
+	WaitBlobberCommit()
 	// Byzantine: BC, sharders
 
 	FinalizedBlock(fb *Bad) (err error)
@@ -112,6 +113,8 @@ type Executor interface {
 
 	// SetServerState updates state.
 	SetServerState(interface{}) error
+	SetExpectedBlobberCommit(blobberID string)
+	SetExpectedChallengeGenerationBlobber(blobberID string)
 }
 
 //

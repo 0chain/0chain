@@ -350,6 +350,23 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 	return
 }
 
+func (r *Runner) WaitForChallengeGeneration() {
+	if r.verbose {
+		log.Print(" [INF] waiting for blockchain to generate challenge")
+	}
+
+	r.waitOnChallengeGeneration = true
+	return
+}
+
+func (r *Runner) WaitBlobberCommit() {
+	if r.verbose {
+		log.Print(" [INF] waiting for blobber to commit writemarker")
+	}
+	r.waitBlobberCommit = true
+	return
+}
+
 //
 // Byzantine blockchain miners.
 //
@@ -936,6 +953,13 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.CollectVerificationTicketsWhenMissedVRF = update
 		case *config.AdversarialAuthorizer:
 			state.AdversarialAuthorizer = update
+		case config.StopChallengeGeneration:
+			v := bool(update)
+			state.StopChallengeGeneration = &v
+		case *config.GenerateChallege:
+			v := false
+			state.StopChallengeGeneration = &v
+			state.GenerateChallenge = update
 		}
 	})
 
@@ -951,4 +975,12 @@ func (r *Runner) SetMagicBlock(configFile string) error {
 	r.server.SetMagicBlock(configFile)
 
 	return nil
+}
+
+func (r *Runner) SetExpectedBlobberCommit(blobberID string) {
+	r.expectedBlobberToCommit = blobberID
+}
+
+func (r *Runner) SetExpectedChallengeGenerationBlobber(blobberID string) {
+	r.expectedBlobberForChallenge = blobberID
 }
