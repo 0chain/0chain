@@ -140,7 +140,6 @@ jobs:
     - name: Build blobber base
       run: |
         cd blobber
-        git checkout fix/docker-compose-issue-with-conductor-test
         ./docker.local/bin/build.base.sh
 
     - name: Build blobber
@@ -187,26 +186,26 @@ jobs:
           0chain/docker.local/
           blobber/docker.local/
 
-  # notify_slack_on_failure:
-  #   runs-on: [self-hosted, arc-runner]
-  #   needs: [CONDUCTOR_BLOBBERS_01_TESTS]
-  #   if: always() && (needs.CONDUCTOR_BLOBBERS_01_TESTS.result == 'failure')
-  #   steps:
-  #     - name: "Notify Slack"
-  #       run: |
-  #         payload='{
-  #         "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-  #         "attachments": [
-  #             {
-  #             "text": "CONDUCTOR BLOBBER01 TEST FAILED ⚠️",
-  #             "color": "#ff0000"
-  #             }
-  #         ]
-  #         }'
-  #         curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-  #         # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+  notify_slack_on_failure:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_BLOBBERS_01_TESTS]
+    if: always() && (needs.CONDUCTOR_BLOBBERS_01_TESTS.result == 'failure')
+    steps:
+      - name: "Notify Slack"
+        run: |
+          payload='{
+          "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "attachments": [
+              {
+              "text": "CONDUCTOR BLOBBER01 TEST FAILED ⚠️",
+              "color": "#ff0000"
+              }
+          ]
+          }'
+          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
         
-  # notify_slack_on_success:
+  notify_slack_on_success:
   #   runs-on: [self-hosted, arc-runner]
   #   needs: [CONDUCTOR_BLOBBERS_01_TESTS]
   #   if: always() && (needs.CONDUCTOR_BLOBBERS_01_TESTS.result == 'success')
