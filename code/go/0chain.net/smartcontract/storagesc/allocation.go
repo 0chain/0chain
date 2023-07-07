@@ -1703,12 +1703,18 @@ func (sc *StorageSmartContract) finishAllocation(
 		Amount:       i,
 	})
 
-	reward, _, err := currency.DistributeCoin(cancellationCharge, int64(len(alloc.BlobberAllocs)))
-	if err != nil {
-		return fmt.Errorf("failed to distribute cancellation charge: %v", err)
+	totalWritePrice := currency.Coin(0)
+	for _, ba := range alloc.BlobberAllocs {
+		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
+		if err != nil {
+			return fmt.Errorf("failed to add write price: %v", err)
+		}
 	}
 
 	for i, ba := range alloc.BlobberAllocs {
+		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
+		reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight)
+
 		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
 		if err != nil {
 			return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
