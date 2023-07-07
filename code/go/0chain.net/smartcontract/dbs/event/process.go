@@ -327,7 +327,7 @@ func (edb *EventDb) Work(ctx context.Context,
 	}
 
 	// process snapshot for none adding block events only
-	if false && isNotAddBlockEvent(es) {
+	if isNotAddBlockEvent(es) {
 		gs, err = updateSnapshots(gs, es, tx)
 		if err != nil {
 			logging.Logger.Error("snapshot could not be processed",
