@@ -30,7 +30,7 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	if len(et.events) == 0 {
 		return nil
 	}
-	be, tx, err := sCtx.GetEventDB().MergeEvents(
+	be, _, err := sCtx.GetEventDB().MergeEvents(
 		et.ctx,
 		et.events,
 		et.events[0].BlockNumber,
@@ -46,9 +46,9 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	if err != nil {
 		return err
 	}
-	tx = tx           //piers
-	err = tx.Commit() //piers
-	return err
+	//tx = tx           //piers
+	//err = tx.Commit() //piers
+	return nil //err
 }
 
 func GetBenchmarkTestSuite(eventsMap map[string][]event.Event) bk.TestSuite {
