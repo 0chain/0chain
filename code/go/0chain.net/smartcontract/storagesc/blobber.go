@@ -115,6 +115,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		if err = terms.validate(conf); err != nil {
 			return fmt.Errorf("invalid blobber terms: %v", err)
 		}
+		savedBlobber.Terms = *terms
 	}
 
 	if updateBlobberRequest.Capacity != nil && *updateBlobberRequest.Capacity <= 0 {
@@ -334,13 +335,9 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 	if err = sc.updateBlobber(txn, conf, updatedBlobber, blobber, existingStakePool, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
+
 	if updatedBlobber.Capacity != nil {
 		blobber.Capacity = *updatedBlobber.Capacity
-	}
-
-	terms := getTermsFromDtoNode(updatedBlobber)
-	if terms != nil {
-		blobber.Terms = *terms
 	}
 
 	if updatedBlobber.NotAvailable != nil {
