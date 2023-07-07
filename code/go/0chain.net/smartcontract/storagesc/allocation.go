@@ -1522,7 +1522,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	// should be expired
 	if alloc.Until(conf.MaxChallengeCompletionTime) > t.CreationDate {
 		return "", common.NewError("fini_alloc_failed",
-			"allocation is not expired yet, or waiting a challenge completion")
+			"allocation is not expired yet")
 	}
 
 	var passRates []float64
@@ -1728,6 +1728,11 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 
 	for i, ba := range alloc.BlobberAllocs {
+
+		if err = sps[i].Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
+			return fmt.Errorf("failed to save stake pool: %s, err: %v", ba.BlobberID, err)
+		}
+
 		staked, err := sps[i].stake()
 		if err != nil {
 			return err
@@ -1741,8 +1746,8 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"can't get blobber "+ba.BlobberID+": "+err.Error())
 		}
-		blobber.SavedData += (-ba.Stats.UsedSize)
-		blobber.Allocated += (-ba.Size)
+		blobber.SavedData += -ba.Stats.UsedSize
+		blobber.Allocated += -ba.Size
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
