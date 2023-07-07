@@ -26,7 +26,7 @@ type WriteMarker struct {
 	Size                   int64  `json:"size"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
-	BlockNumber            int64  `json:"block_number" gorm:"index:idx_walloc_block,priority:2"` //used in alloc_written_size
+	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum;idx_walloc_block,priority:2"` //used in alloc_written_size
 
 	MovedTokens currency.Coin `json:"-" gorm:"-"`
 
