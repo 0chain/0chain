@@ -86,11 +86,12 @@ func (edb *EventDb) getValidatorSnapshots(limit, offset int64) (map[string]Valid
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addValidatorSnapshot(validators []Validator) error {
+func (edb *EventDb) addValidatorSnapshot(validators []*Validator, round int64) error {
 	var snapshots []ValidatorSnapshot
 	for _, validator := range validators {
 		snapshots = append(snapshots, ValidatorSnapshot{
 			ValidatorID:   validator.ID,
+			Round:         round,
 			BucketId:      validator.BucketId,
 			TotalStake:    validator.TotalStake,
 			ServiceCharge: validator.ServiceCharge,

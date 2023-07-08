@@ -93,7 +93,7 @@ func (edb *EventDb) calculateAuthorizerAggregate(gs *Snapshot, round, limit, off
 		return
 	}
 
-	var currentAuthorizers []Authorizer
+	var currentAuthorizers []*Authorizer
 	result := edb.Store.Get().Model(&Authorizer{}).
 		Where("authorizers.id in (select id from authorizer_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Joins("Rewards").
@@ -183,7 +183,7 @@ func handleOfflineAuthorizer(gs *Snapshot, old AuthorizerSnapshot) {
 	gs.TotalStaked -= int64(old.TotalStake)
 }
 
-func (edb *EventDb) CreateAuthorizerAggregates(authorizers []Authorizer, round int64) error {
+func (edb *EventDb) CreateAuthorizerAggregates(authorizers []*Authorizer, round int64) error {
 	var aggregates []AuthorizerAggregate
 	for _, v := range authorizers {
 		agg := AuthorizerAggregate{
@@ -191,7 +191,7 @@ func (edb *EventDb) CreateAuthorizerAggregates(authorizers []Authorizer, round i
 			AuthorizerID: v.ID,
 			BucketID:    v.BucketId,
 		}
-		recalculateProviderFields(&v, &agg)
+		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)
 	}
 

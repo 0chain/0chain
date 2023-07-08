@@ -9,6 +9,7 @@ import (
 // swagger:model BlobberSnapshot
 type BlobberSnapshot struct {
 	BlobberID           string        `json:"id" gorm:"index"`
+	Round 			 	int64         `json:"round"`
 	BucketId            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
@@ -74,11 +75,12 @@ func (edb *EventDb) getBlobberSnapshots(limit, offset int64) (map[string]Blobber
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addBlobberSnapshot(blobbers []Blobber) error {
+func (edb *EventDb) addBlobberSnapshot(blobbers []*Blobber, round int64) error {
 	var snapshots []BlobberSnapshot
 	for _, blobber := range blobbers {
 		snapshots = append(snapshots, BlobberSnapshot{
 			BlobberID:          blobber.ID,
+			Round: 				round,
 			BucketId:           blobber.BucketId,
 			WritePrice:         blobber.WritePrice,
 			Capacity:           blobber.Capacity,

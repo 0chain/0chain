@@ -89,7 +89,7 @@ func (edb *EventDb) getAuthorizerSnapshots(limit, offset int64) (map[string]Auth
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer, round int64) error {
+func (edb *EventDb) addAuthorizerSnapshot(authorizers []*Authorizer, round int64) error {
 	var snapshots []AuthorizerSnapshot
 	for _, authorizer := range authorizers {
 		snapshots = append(snapshots, AuthorizerSnapshot{

@@ -97,7 +97,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 		return
 	}
 
-	var currentBlobbers []Blobber
+	var currentBlobbers []*Blobber
 	result := edb.Store.Get().Model(&Blobber{}).
 		Where("blobbers.id in (select id from temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Joins("Rewards").
@@ -201,7 +201,7 @@ func (edb *EventDb) calculateBlobberAggregate(gs *Snapshot, round, limit, offset
 	}
 
 	if len(currentBlobbers) > 0 {
-		if err := edb.addBlobberSnapshot(currentBlobbers); err != nil {
+		if err := edb.addBlobberSnapshot(currentBlobbers, round); err != nil {
 			logging.Logger.Error("saving blobbers snapshots", zap.Error(err))
 		}
 	}
@@ -233,7 +233,7 @@ func handleOfflineBlobber(gsDiff *Snapshot, old BlobberSnapshot) {
 	}
 }
 
-func (edb *EventDb) CreateBlobberAggregates(blobbers []Blobber, round int64) error {
+func (edb *EventDb) CreateBlobberAggregates(blobbers []*Blobber, round int64) error {
 	var aggregates []BlobberAggregate
 	for _, blobber := range blobbers {
 		aggregate := BlobberAggregate{

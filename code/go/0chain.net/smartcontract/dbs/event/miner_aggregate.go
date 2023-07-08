@@ -89,7 +89,7 @@ func (edb *EventDb) calculateMinerAggregate(gs *Snapshot, round, limit, offset i
 		return
 	}
 
-	var currentMiners []Miner
+	var currentMiners []*Miner
 
 	result := edb.Store.Get().Model(&Miner{}).
 		Where("miners.id in (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
@@ -177,7 +177,7 @@ func handleOfflineMiner(gsDiff *Snapshot, old MinerSnapshot) {
 	gsDiff.TotalStaked -= int64(old.TotalStake)
 }
 
-func (edb *EventDb) CreateMinerAggregates(miners []Miner, round int64) error {
+func (edb *EventDb) CreateMinerAggregates(miners []*Miner, round int64) error {
 	var aggregates []MinerAggregate
 	for _, m := range miners {
 		aggregate := MinerAggregate{
@@ -185,7 +185,7 @@ func (edb *EventDb) CreateMinerAggregates(miners []Miner, round int64) error {
 			MinerID:  m.ID,
 			BucketID: m.BucketId,
 		}
-		recalculateProviderFields(&m, &aggregate)
+		recalculateProviderFields(m, &aggregate)
 		aggregate.Fees = m.Fees
 		aggregates = append(aggregates, aggregate)
 	}

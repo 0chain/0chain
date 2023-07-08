@@ -91,7 +91,7 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 		return
 	}
 
-	var currentValidators []Validator
+	var currentValidators []*Validator
 	result := edb.Store.Get().Model(&Validator{}).
 		Where("validators.id in (select id from validator_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
 		Joins("Rewards").
@@ -157,7 +157,7 @@ func (edb *EventDb) calculateValidatorAggregate(gs *Snapshot, round, limit, offs
 	}
 
 	if len(currentValidators) > 0 {
-		if err := edb.addValidatorSnapshot(currentValidators); err != nil {
+		if err := edb.addValidatorSnapshot(currentValidators, round); err != nil {
 			logging.Logger.Error("saving Validator snapshots", zap.Error(err))
 		}
 	}
@@ -176,7 +176,7 @@ func handleOfflineValidator(gs *Snapshot, old ValidatorSnapshot) {
 	gs.TotalStaked -= int64(old.TotalStake)
 }
 
-func (edb *EventDb) CreateValidatorAggregates(validators []Validator, round int64) error {
+func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int64) error {
 	var aggregates []ValidatorAggregate
 	for _, v := range validators {
 		agg := ValidatorAggregate{
@@ -184,7 +184,7 @@ func (edb *EventDb) CreateValidatorAggregates(validators []Validator, round int6
 			ValidatorID: v.ID,
 			BucketID:    v.BucketId,
 		}
-		recalculateProviderFields(&v, &agg)
+		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)
 	}
 

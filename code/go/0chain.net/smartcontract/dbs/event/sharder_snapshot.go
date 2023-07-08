@@ -87,7 +87,7 @@ func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]Sharder
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addSharderSnapshot(sharders []Sharder, round int64) error {
+func (edb *EventDb) addSharderSnapshot(sharders []*Sharder, round int64) error {
 	var snapshots []SharderSnapshot
 	for _, sharder := range sharders {
 		snapshots = append(snapshots, SharderSnapshot{

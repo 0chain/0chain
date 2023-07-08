@@ -87,7 +87,7 @@ func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnap
 	return mapSnapshots, result.Error
 }
 
-func (edb *EventDb) addMinerSnapshot(miners []Miner, round int64) error {
+func (edb *EventDb) addMinerSnapshot(miners []*Miner, round int64) error {
 	var snapshots []MinerSnapshot
 	for _, miner := range miners {
 		snapshots = append(snapshots, MinerSnapshot{

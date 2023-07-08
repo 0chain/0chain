@@ -92,7 +92,7 @@ func (edb *EventDb) calculateSharderAggregate(gs *Snapshot, round, limit, offset
 		return
 	}
 
-	var currentSharders []Sharder
+	var currentSharders []*Sharder
 
 	result := edb.Store.Get().Model(&Sharder{}).
 		Where("sharders.id in (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
@@ -179,7 +179,7 @@ func handleOfflineSharder(gsDiff *Snapshot, old SharderSnapshot) {
 	gsDiff.TotalRewards -= int64(old.TotalRewards)
 }
 
-func (edb *EventDb) CreateSharderAggregates(sharders []Sharder, round int64) error {
+func (edb *EventDb) CreateSharderAggregates(sharders []*Sharder, round int64) error {
 	var aggregates []SharderAggregate
 	for _, s := range sharders {
 		aggregate := SharderAggregate{
@@ -187,7 +187,7 @@ func (edb *EventDb) CreateSharderAggregates(sharders []Sharder, round int64) err
 			SharderID:  s.ID,
 			BucketID: s.BucketId,
 		}
-		recalculateProviderFields(&s, &aggregate)
+		recalculateProviderFields(s, &aggregate)
 		aggregate.Fees = s.Fees
 		aggregates = append(aggregates, aggregate)
 	}
