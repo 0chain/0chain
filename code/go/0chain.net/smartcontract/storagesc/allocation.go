@@ -1616,16 +1616,20 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
+	cpBalance, err := cp.Balance.Float64()
+	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime / conf.TimeUnit)
+	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
+
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
 			ratio := float64(d.Stats.UsedSize) / (float64(alloc.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards))
-			cpBalance, err := cp.Balance.Float64()
+
 			if err != nil {
 				return err
 			}
 
-			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
+			reward, err := currency.Float64ToCoin(adjustableChallengePoolTokens * ratio * passRates[i])
 			if err != nil {
 				return err
 			}
