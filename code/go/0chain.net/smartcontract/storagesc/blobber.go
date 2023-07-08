@@ -189,20 +189,17 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	writePrice := currency.Coin(0)
-	if updateBlobberRequest.Terms != nil && updateBlobberRequest.Terms.WritePrice != nil {
-		writePrice = *updateBlobberRequest.Terms.WritePrice
-	}
-
 	// update stake pool settings.
-	stakedCapacity, err := existingStakePool.stakedCapacity(writePrice)
-	if err != nil {
-		return fmt.Errorf("error calculating staked capacity: %v", err)
-	}
+	if updateBlobberRequest.Terms != nil && updateBlobberRequest.Terms.WritePrice != nil {
+		updatedStakedCapacity, err := existingStakePool.stakedCapacity(*updateBlobberRequest.Terms.WritePrice)
+		if err != nil {
+			return fmt.Errorf("error calculating staked capacity: %v", err)
+		}
 
-	if updateBlobberRequest.SavedData != nil && *updateBlobberRequest.SavedData > stakedCapacity {
-		return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than used capacity (%d)",
-			stakedCapacity, *updateBlobberRequest.SavedData)
+		if savedBlobber.Allocated > updatedStakedCapacity {
+			return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than allocated capacity (%d)",
+				updatedStakedCapacity, savedBlobber.Allocated)
+		}
 	}
 
 	_, err = balances.InsertTrieNode(provider.GetKey(updateBlobberRequest.ID), updateBlobberRequest)
