@@ -189,9 +189,13 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
+	writePrice := currency.Coin(0)
+	if updateBlobberRequest.Terms != nil && updateBlobberRequest.Terms.WritePrice != nil {
+		writePrice = *updateBlobberRequest.Terms.WritePrice
+	}
+
 	// update stake pool settings.
-	// using WritePrice of savedBlobber is fine because that has been updated earlier.
-	stakedCapacity, err := existingStakePool.stakedCapacity(savedBlobber.Terms.WritePrice)
+	stakedCapacity, err := existingStakePool.stakedCapacity(writePrice)
 	if err != nil {
 		return fmt.Errorf("error calculating staked capacity: %v", err)
 	}
