@@ -1296,7 +1296,7 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
 		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+			sn.UsedSize += blobberAllocation.Stats.UsedSize * int64(float64(sn.DataShards)/float64(sn.DataShards+sn.ParityShards)) // total used
 		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
@@ -1325,7 +1325,7 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
 		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+			sn.UsedSize += blobberAllocation.Stats.UsedSize * int64(float64(sn.DataShards)/float64(sn.DataShards+sn.ParityShards)) // total used
 		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}

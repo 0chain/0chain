@@ -115,6 +115,7 @@ const (
 	CostKillValidator
 	CostShutdownBlobber
 	CostShutdownValidator
+	MaxCharge
 	NumberOfSettings
 )
 
@@ -146,6 +147,7 @@ func initSettingName() {
 	SettingName[MinAllocSize] = "min_alloc_size"
 	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
+	SettingName[MaxCharge] = "max_charge"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
 	SettingName[WritePoolMinLock] = "writepool.min_lock"
 	SettingName[StakePoolKillSlash] = "stakepool.kill_slash"
@@ -225,6 +227,7 @@ func initSettings() {
 		MaxMint.String():                          {MaxMint, smartcontract.CurrencyCoin},
 		MaxStake.String():                         {MaxStake, smartcontract.CurrencyCoin},
 		MinStake.String():                         {MinStake, smartcontract.CurrencyCoin},
+		MaxCharge.String():                        {MaxCharge, smartcontract.Float64},
 		TimeUnit.String():                         {TimeUnit, smartcontract.Duration},
 		MinAllocSize.String():                     {MinAllocSize, smartcontract.Int64},
 		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, smartcontract.Duration},
@@ -459,6 +462,8 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.StakePool.KillSlash = change
 	case BlobberSlash:
 		conf.BlobberSlash = change
+	case MaxCharge:
+		conf.MaxCharge = change
 	case BlockRewardGammaAlpha:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
@@ -704,6 +709,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.BlockReward.Zeta.Mu
 	case OwnerId:
 		return conf.OwnerId
+	case MaxCharge:
+		return conf.MaxCharge
 	default:
 		panic("Setting not implemented")
 	}

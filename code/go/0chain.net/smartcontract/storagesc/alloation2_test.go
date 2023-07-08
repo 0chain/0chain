@@ -146,7 +146,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var stake = 100.0
 	var writePrice = blobberYaml.writePrice
 	var extraBlobbers = 0
-	var blobberUsedSize = allocation.UsedSize / int64(allocation.DataShards+allocation.ParityShards)
+	var blobberUsedSize = allocation.UsedSize / int64(allocation.DataShards)
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = StorageNode{
 			Provider: provider.Provider{
