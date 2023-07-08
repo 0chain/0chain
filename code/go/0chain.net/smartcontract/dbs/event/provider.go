@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 	"math/big"
+	"reflect"
 	"sort"
 	"time"
 
@@ -25,6 +26,13 @@ type IProvider interface {
 type ProviderIdsMap map[spenum.Provider]map[string]interface{}
 type ProvidersMap map[spenum.Provider]map[string]IProvider
 
+var ProviderTextMapping = map[reflect.Type]string{
+	reflect.TypeOf(Blobber{}): "blobber",
+	reflect.TypeOf(Sharder{}): "sharder",
+	reflect.TypeOf(Miner{}):  "miner",
+	reflect.TypeOf(Validator{}): "validator",
+	reflect.TypeOf(Authorizer{}): "authorizer",
+}
 
 type Provider struct {
 	ID              string `gorm:"primaryKey"`
@@ -150,12 +158,11 @@ func (edb *EventDb) BuildChangedProvidersMapFromEvents(events []Event) (Provider
 
 	providersLists := make(map[spenum.Provider][]IProvider)
 	for provider, ids := range idsLists {
-		providersLists[provider], err = edb.GetProvidersById(provider, ids)
+		providersLists[provider], err = edb.GetProvidersByIds(provider, ids)
 		if err != nil {
 			return nil, err
 		}
 	}
-
 	for ptype, providersList := range providersLists {
 		for _, provider := range providersList {
 			providers[ptype][provider.GetID()] = provider
@@ -165,7 +172,7 @@ func (edb *EventDb) BuildChangedProvidersMapFromEvents(events []Event) (Provider
 	return providers, nil
 }
 
-func (edb *EventDb) GetProvidersById(ptype spenum.Provider, ids []string) ([]IProvider, error) {
+func (edb *EventDb) GetProvidersByIds(ptype spenum.Provider, ids []string) ([]IProvider, error) {
 	switch ptype {
 	case spenum.Blobber:
 		return getProvidersById[*Blobber](edb, ids)
