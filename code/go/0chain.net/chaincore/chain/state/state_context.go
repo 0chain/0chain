@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -211,6 +212,10 @@ func (sc *StateContext) GetTransaction() *transaction.Transaction {
 func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
+	if !encryption.IsHash(t.ToClientID) {
+		return errors.New("invalid transaction to client ID")
+	}
+
 	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {
 		return state.ErrInvalidTransfer
 	}
@@ -401,6 +406,9 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
+		}
+		if er := sc.SetStateContext(s); er != nil {
+			return s, er
 		}
 		return s, err
 	}

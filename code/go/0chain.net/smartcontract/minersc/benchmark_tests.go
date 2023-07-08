@@ -394,7 +394,7 @@ func BenchmarkTests(
 			name:     "miner.deleteFromDelegatePool",
 			endpoint: msc.deleteFromDelegatePool,
 			txn: &transaction.Transaction{
-				ClientID:     getMinerDelegatePoolId(0, 0, spenum.Miner),
+				ClientID:     getMinerDelegatePoolId(0, 0, data.Clients),
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 			},

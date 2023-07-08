@@ -185,9 +185,10 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 				Value: func() currency.Coin {
-					v, err := currency.ParseZCN(100 * viper.GetFloat64(bk.StorageMaxWritePrice))
+					v, err := currency.ParseZCN(10 * viper.GetFloat64(bk.StorageMaxWritePrice))
 					if err != nil {
 						panic(err)
 					}
@@ -218,6 +219,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 				CreationDate: creationTime - 1,
 				Value:        updateAllocVal,
 			},
@@ -390,7 +392,7 @@ func BenchmarkTests(
 				},
 				CreationDate: creationTime + 1,
 				//ClientID:     "d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577",
-				ClientID:   "my_new_blobber",
+				ClientID:   encryption.Hash("my_new_blobber"),
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
@@ -591,6 +593,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[0],
 				Value:        spMinLock,
 				CreationDate: creationTime,
+				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakePoolRequest{

@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"log"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -9,7 +12,10 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
-func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI) {
+func mockUpdateState(
+	name string,
+	txn *transaction.Transaction,
+	balances cstate.StateContextI) {
 	_ = balances.AddTransfer(state.NewTransfer(
 		txn.ClientID, txn.ToClientID, txn.Value),
 	)
@@ -17,86 +23,97 @@ func mockUpdateState(txn *transaction.Transaction, balances cstate.StateContextI
 		txn.ClientID, minersc.ADDRESS, txn.Fee),
 	)
 
-	clientState := balances.GetState()
 	for _, transfer := range balances.GetTransfers() {
 		mockTransferAmount(
-			[]byte(transfer.ClientID),
-			[]byte(transfer.ToClientID),
+			name,
+			transfer.ClientID,
+			transfer.ToClientID,
 			transfer.Amount,
-			clientState,
 			balances,
 		)
 	}
 
 	for _, signedTransfer := range balances.GetSignedTransfers() {
 		mockTransferAmount(
-			[]byte(signedTransfer.ClientID),
-			[]byte(signedTransfer.ToClientID),
+			name,
+			signedTransfer.ClientID,
+			signedTransfer.ToClientID,
 			signedTransfer.Amount,
-			clientState,
 			balances,
 		)
 	}
 
 	for _, mint := range balances.GetMints() {
 		mockMint(
-			[]byte(mint.ToClientID),
+			mint.ToClientID,
 			mint.Amount,
-			clientState,
 			balances,
 		)
 	}
 }
 
 func mockMint(
-	to []byte,
+	to string,
 	amount currency.Coin,
-	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {
-	toState := state.State{}
-	err := clientState.GetNodeValue(util.Path(to), &toState)
-	if err != nil {
+	toState, err := balances.GetClientState(to)
+	if err != nil && err != util.ErrValueNotPresent {
+		log.Fatal(err)
 		return
 	}
-	_ = balances.SetStateContext(&toState)
 
 	newBal, err := currency.AddCoin(toState.Balance, amount)
 	if err != nil {
 		return
 	}
 	toState.Balance = newBal
-	_, _ = clientState.Insert(util.Path(to), &toState)
+	if _, err := balances.SetClientState(to, toState); err != nil {
+		log.Fatal(err)
+		return
+	}
 }
 
 func mockTransferAmount(
-	from, to []byte,
+	name, from, to string,
 	amount currency.Coin,
-	clientState util.MerklePatriciaTrieI,
 	balances cstate.StateContextI,
 ) {
-	fromState := state.State{}
-	err := clientState.GetNodeValue(util.Path(from), &fromState)
+	fromState, err := balances.GetClientState(from)
 	if err != nil && err != util.ErrValueNotPresent {
+		log.Fatal(err)
 		return
-	}
-	if err != util.ErrValueNotPresent {
-		_ = balances.SetStateContext(&fromState)
-		fromState.Balance -= amount
-		_, _ = clientState.Insert(util.Path(from), &fromState)
 	}
 
-	toState := state.State{}
-	err = clientState.GetNodeValue(util.Path(to), &toState)
+	v, err := currency.MinusCoin(fromState.Balance, amount)
 	if err != nil {
+		fmt.Printf("transfer: %v: from: %v, balance: %v, to: %v, amount: %v\n",
+			name, from, fromState.Balance, to, amount)
+		panic(err)
 		return
 	}
-	_ = balances.SetStateContext(&toState)
+
+	fromState.Balance = v
+	_, err = balances.SetClientState(from, fromState)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	toState, err := balances.GetClientState(to)
+	if err != nil && err != util.ErrValueNotPresent {
+		log.Fatal(err)
+		return
+	}
 
 	newBal, err := currency.AddCoin(toState.Balance, amount)
 	if err != nil {
 		return
 	}
 	toState.Balance = newBal
-	_, _ = clientState.Insert(util.Path(to), &toState)
+	_, err = balances.SetClientState(to, toState)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
 }

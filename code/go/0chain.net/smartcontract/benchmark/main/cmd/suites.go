@@ -10,14 +10,14 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/benchmark"
 	"github.com/0chain/common/core/util"
@@ -181,11 +181,28 @@ func runSuite(
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 						return data.Now
 					})
+
+					// get client balances and all delegate pools' balances before running the test
+					// compare it
+					var totalBalanceBefore currency.Coin
+					for _, c := range append(data.Clients,
+						minersc.ADDRESS,
+						storagesc.ADDRESS,
+						zcnsc.ADDRESS,
+						faucetsc.ADDRESS,
+					) {
+						bal, err := timedBalance.GetClientBalance(c)
+						if err != nil {
+							log.Fatal(err)
+						}
+						totalBalanceBefore += bal
+					}
+
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
-					if err != nil {
-						mockUpdateState(bm.Transaction(), balances)
+					if err == nil {
+						mockUpdateState(bm.Name(), bm.Transaction(), balances)
 					}
 					runCount++
 					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
@@ -196,6 +213,40 @@ func runSuite(
 						b.FailNow()
 					} else {
 						prevMptHashRoot = currMptHashRoot
+					}
+
+					// get balances after mints
+					var totalBalanceAfter currency.Coin
+					for _, c := range append(data.Clients,
+						minersc.ADDRESS,
+						storagesc.ADDRESS,
+						zcnsc.ADDRESS,
+						faucetsc.ADDRESS,
+					) {
+						bal, err := timedBalance.GetClientBalance(c)
+						if err != nil {
+							log.Fatal(err)
+						}
+						totalBalanceAfter += bal
+					}
+
+					// get total mints
+					var mintTokens currency.Coin
+					for _, m := range timedBalance.GetMints() {
+						mintTokens += m.Amount
+					}
+
+					if totalBalanceBefore != totalBalanceAfter-mintTokens {
+						log.Fatal(fmt.Sprintf("name:%s\ntokens mint or burned unexpected\nbefore:%v\nafter:-minted:%v\nminted:%v\n",
+							bm.Name(),
+							totalBalanceBefore,
+							totalBalanceAfter-mintTokens, mintTokens))
+
+					} else {
+						//log.Println("no tokens mint or burn unexpected\n",
+						//	"before", totalBalanceBefore,
+						//	"after", totalBalanceAfter,
+						//	"mint", mintTokens)
 					}
 				}
 			})
