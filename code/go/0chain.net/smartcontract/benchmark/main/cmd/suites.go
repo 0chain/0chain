@@ -182,20 +182,23 @@ func runSuite(
 						return data.Now
 					})
 
-					// get client balances and all delegate pools' balances before running the test
-					// compare it
+					// do the balances checking only once, otherwise it would slow down the tests too much
 					var totalBalanceBefore currency.Coin
-					for _, c := range append(data.Clients,
-						minersc.ADDRESS,
-						storagesc.ADDRESS,
-						zcnsc.ADDRESS,
-						faucetsc.ADDRESS,
-					) {
-						bal, err := timedBalance.GetClientBalance(c)
-						if err != nil {
-							log.Fatal(err)
+					if i == 0 {
+						// get client balances and all delegate pools' balances before running the test
+						// compare it
+						for _, c := range append(data.Clients,
+							minersc.ADDRESS,
+							storagesc.ADDRESS,
+							zcnsc.ADDRESS,
+							faucetsc.ADDRESS,
+						) {
+							bal, err := timedBalance.GetClientBalance(c)
+							if err != nil {
+								log.Fatal(err)
+							}
+							totalBalanceBefore += bal
 						}
-						totalBalanceBefore += bal
 					}
 
 					b.StartTimer()
@@ -215,38 +218,35 @@ func runSuite(
 						prevMptHashRoot = currMptHashRoot
 					}
 
-					// get balances after mints
-					var totalBalanceAfter currency.Coin
-					for _, c := range append(data.Clients,
-						minersc.ADDRESS,
-						storagesc.ADDRESS,
-						zcnsc.ADDRESS,
-						faucetsc.ADDRESS,
-					) {
-						bal, err := timedBalance.GetClientBalance(c)
-						if err != nil {
-							log.Fatal(err)
+					if i == 0 {
+						// get balances after mints
+						var totalBalanceAfter currency.Coin
+						for _, c := range append(data.Clients,
+							minersc.ADDRESS,
+							storagesc.ADDRESS,
+							zcnsc.ADDRESS,
+							faucetsc.ADDRESS,
+						) {
+							bal, err := timedBalance.GetClientBalance(c)
+							if err != nil {
+								log.Fatal(err)
+							}
+							totalBalanceAfter += bal
 						}
-						totalBalanceAfter += bal
-					}
 
-					// get total mints
-					var mintTokens currency.Coin
-					for _, m := range timedBalance.GetMints() {
-						mintTokens += m.Amount
-					}
+						// get total mints
+						var mintTokens currency.Coin
+						for _, m := range timedBalance.GetMints() {
+							mintTokens += m.Amount
+						}
 
-					if totalBalanceBefore != totalBalanceAfter-mintTokens {
-						log.Fatal(fmt.Sprintf("name:%s\ntokens mint or burned unexpected\nbefore:%v\nafter:-minted:%v\nminted:%v\n",
-							bm.Name(),
-							totalBalanceBefore,
-							totalBalanceAfter-mintTokens, mintTokens))
+						if totalBalanceBefore != totalBalanceAfter-mintTokens {
+							log.Fatal(fmt.Sprintf("name:%s\ntokens mint or burned unexpected\nbefore:%v\nafter:-minted:%v\nminted:%v\n",
+								bm.Name(),
+								totalBalanceBefore,
+								totalBalanceAfter-mintTokens, mintTokens))
 
-					} else {
-						//log.Println("no tokens mint or burn unexpected\n",
-						//	"before", totalBalanceBefore,
-						//	"after", totalBalanceAfter,
-						//	"mint", mintTokens)
+						}
 					}
 				}
 			})
