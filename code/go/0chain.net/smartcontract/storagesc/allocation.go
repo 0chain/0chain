@@ -1304,7 +1304,6 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation, bal
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 		succesful += ba.Stats.SuccessChallenges
 		failed += ba.Stats.FailedChallenges
-
 	}
 	alloc.Stats.SuccessChallenges = succesful
 	alloc.Stats.FailedChallenges = failed
@@ -1620,7 +1619,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-
 			ratio := float64(d.Stats.UsedSize) / (float64(alloc.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards))
 			cpBalance, err := cp.Balance.Float64()
 			if err != nil {
@@ -1674,60 +1672,51 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	if alloc.Until(conf.MaxChallengeCompletionTime) > t.CreationDate {
-		cancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
+	cancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
+	if err != nil {
+		return fmt.Errorf("failed to get cancellation charge: %v", err)
+	}
+
+	if alloc.WritePool < cancellationCharge {
+		cancellationCharge = alloc.WritePool
+		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
+	}
+
+	alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, cancellationCharge)
+	if err != nil {
+		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
+	}
+	// This event just decreases the cancelation charge from the write pool's reflection in global snapshot's total client locked tokens
+	deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, cancellationCharge)
+	if err != nil {
+		return fmt.Errorf("failed to add cancellation charge to deduction from write pool: %v", err)
+	}
+	i, err := deductionFromWritePool.Int64()
+	if err != nil {
+		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
+		Client:       t.ClientID,
+		AllocationId: alloc.ID,
+		Amount:       i,
+	})
+
+	totalWritePrice := currency.Coin(0)
+	for _, ba := range alloc.BlobberAllocs {
+		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
 		if err != nil {
-			return fmt.Errorf("failed to get cancellation charge: %v", err)
-		}
-
-		if alloc.WritePool < cancellationCharge {
-			cancellationCharge = alloc.WritePool
-			logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
-		}
-
-		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, cancellationCharge)
-		if err != nil {
-			return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
-		}
-		// This event just decreases the cancelation charge from the write pool's reflection in global snapshot's total client locked tokens
-		deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, cancellationCharge)
-		if err != nil {
-			return fmt.Errorf("failed to add cancellation charge to deduction from write pool: %v", err)
-		}
-		i, err := deductionFromWritePool.Int64()
-		if err != nil {
-			return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
-		}
-		balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
-			Client:       t.ClientID,
-			AllocationId: alloc.ID,
-			Amount:       i,
-		})
-
-		totalWritePrice := currency.Coin(0)
-		for _, ba := range alloc.BlobberAllocs {
-			totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
-			if err != nil {
-				return fmt.Errorf("failed to add write price: %v", err)
-			}
-		}
-
-		for i, ba := range alloc.BlobberAllocs {
-			blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
-			reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight)
-
-			err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
-			if err != nil {
-				return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
-			}
-
-			if err = sps[i].Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
-				return fmt.Errorf("failed to save stake pool: %s, err: %v", ba.BlobberID, err)
-			}
+			return fmt.Errorf("failed to add write price: %v", err)
 		}
 	}
 
 	for i, ba := range alloc.BlobberAllocs {
+		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
+		reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight)
+
+		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
+		if err != nil {
+			return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
+		}
 
 		if err = sps[i].Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
 			return fmt.Errorf("failed to save stake pool: %s, err: %v", ba.BlobberID, err)
@@ -1776,7 +1765,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := prevBal.Int64()
+	i, err = prevBal.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
