@@ -153,6 +153,10 @@ func runSuite(
 ) []benchmarkResults {
 	var benchmarkResult []benchmarkResults
 	var wg sync.WaitGroup
+	clientsMap := make(map[string]struct{}, len(data.Clients))
+	for _, c := range data.Clients {
+		clientsMap[c] = struct{}{}
+	}
 
 	for _, bm := range suite.Benchmarks {
 		wg.Add(1)
@@ -204,7 +208,21 @@ func runSuite(
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
+					// unknownMintClients are the clients that are not in the data.Clients list
+					// data.Clients is subset of all clients
+					var unknownMintClients []string
 					if err == nil {
+						ms := timedBalance.GetMints()
+						for _, m := range ms {
+							if _, ok := clientsMap[m.ToClientID]; !ok {
+								unknownMintClients = append(unknownMintClients, m.ToClientID)
+								b, err := balances.GetClientBalance(m.ToClientID)
+								if err != nil {
+									log.Fatal(err)
+								}
+								totalBalanceBefore += b
+							}
+						}
 						mockUpdateState(bm.Name(), bm.Transaction(), balances)
 					}
 					runCount++
@@ -221,12 +239,12 @@ func runSuite(
 					if i == 0 {
 						// get balances after mints
 						var totalBalanceAfter currency.Coin
-						for _, c := range append(data.Clients,
+						for _, c := range append(append(data.Clients,
 							minersc.ADDRESS,
 							storagesc.ADDRESS,
 							zcnsc.ADDRESS,
 							faucetsc.ADDRESS,
-						) {
+						), unknownMintClients...) {
 							bal, err := timedBalance.GetClientBalance(c)
 							if err != nil {
 								log.Fatal(err)

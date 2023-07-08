@@ -382,6 +382,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("transaction hash"),
 				},
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 				Value:        1e10,
 				CreationDate: creationTime,
 			},
