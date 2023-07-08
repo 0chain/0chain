@@ -22,11 +22,16 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
+const capacity = 10737418241
+
 func TestUpdateBlobber(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
+	// setUp blobbers with Id, Baseurl, and Capacity
 	ids := setUpBlobbers(t, edb, 10)
+
+	// Update Blobbers but do not update the capacity
 	var blobber1, blobber2 Blobber
 	blobber1.ID = ids[0]
 	blobber1.Latitude = 7
@@ -52,6 +57,8 @@ func TestUpdateBlobber(t *testing.T) {
 	require.NoError(t, err)
 	b2, err := edb.GetBlobber(blobber2.ID)
 	require.NoError(t, err)
+
+	// blobber
 	compareBlobbers(t, blobber1, *b1)
 	compareBlobbers(t, blobber2, *b2)
 
@@ -202,6 +209,7 @@ func compareBlobbers(t *testing.T, b1, b2 Blobber) {
 	require.Equal(t, b1.TotalStake, b2.TotalStake)
 	require.Equal(t, b1.NotAvailable, b2.NotAvailable)
 	require.Equal(t, b1.LastHealthCheck, b2.LastHealthCheck)
+	require.Equal(t, b1.Capacity, capacity)
 }
 
 func setUpBlobbers(t *testing.T, eventDb *EventDb, number int) []string {
@@ -212,6 +220,7 @@ func setUpBlobbers(t *testing.T, eventDb *EventDb, number int) []string {
 			Provider: Provider{ID: fmt.Sprintf("somethingNew_%v", i)},
 		}
 		blobber.BaseURL = blobber.ID + ".com"
+		blobber.Capacity = capacity
 		ids = append(ids, blobber.ID)
 		blobbers = append(blobbers, blobber)
 	}
