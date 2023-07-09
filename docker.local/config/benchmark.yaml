@@ -36,7 +36,7 @@ options:
 
 dbs:
   events:
-    enabled: false
+    enabled: true
     name: events_db
     user: postgres
     password: postgres
