@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ master,staging, sprint* ]
+    branches: [ master, staging, sprint* ]
     tags: [ "v*.*.*" ]
   pull_request:
   workflow_dispatch:
@@ -242,7 +242,6 @@ jobs:
         uses: 0chain/actions/run-system-tests@master
         with:
           repo_snapshots_branch: "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>"
-          system_tests_branch: master
           network: ${{ env.NETWORK_URL }}
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           deploy_report_page: false
