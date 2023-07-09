@@ -1,10 +1,14 @@
 name: Benchmark Tests
 
+concurrency:
+  group: "publish-${{ github.ref }}"
+  cancel-in-progress: true
+  
 on:
   push:
     branches: [ master, staging ]
   pull_request:
-    branches: [ master, staging ]
+  workflow_dispatch:
 
 jobs:
   build:
