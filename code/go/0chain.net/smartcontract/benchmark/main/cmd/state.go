@@ -91,7 +91,6 @@ func mockTransferAmount(
 		fmt.Printf("transfer: %v: from: %v, balance: %v, to: %v, amount: %v\n",
 			name, from, fromState.Balance, to, amount)
 		panic(err)
-		return
 	}
 
 	fromState.Balance = v
@@ -116,5 +115,4 @@ func mockTransferAmount(
 	if err != nil {
 		log.Fatal(err)
 	}
-	return
 }
