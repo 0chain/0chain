@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ master,staging ]
+    branches: [ master,staging, sprint* ]
     tags: [ "v*.*.*" ]
   pull_request:
   workflow_dispatch:
@@ -226,6 +226,8 @@ jobs:
       - name: "Deploy 0Chain"
         uses: 0chain/actions/deploy-0chain@master
         with:
+          miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
+          sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           repo_snapshots_branch: "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>"
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}

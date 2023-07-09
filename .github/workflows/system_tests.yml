@@ -23,6 +23,8 @@ jobs:
   system-tests:
     uses: 0chain/actions/.github/workflows/manual_system_tests.yml@master
     with:
+      miner_branch: ${{ github.ref_name }}
+      sharder_branch: ${{ github.ref_name }}
       repo_snapshots_branch: ${{ github.event.inputs.repo_snapshots_branch }}
       skip_tests: ${{ github.event.inputs.skip_tests }}
       run_smoke_tests: ${{ github.event.inputs.run_smoke_tests }}
