@@ -389,11 +389,11 @@ func isNotAddBlockEvent(es blockEvents) bool {
 
 func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, error) {
 	if gs != nil {
-		return tx.updateSnapshots(es, gs)
+		return tx.updateHistoricData(es, gs)
 	}
 
 	if es.round == 0 {
-		return tx.updateSnapshots(es, &Snapshot{Round: 0})
+		return tx.updateHistoricData(es, &Snapshot{Round: 0})
 	}
 
 	g, err := tx.GetGlobal()
@@ -402,7 +402,7 @@ func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, erro
 	}
 	gs = &g
 
-	return tx.updateSnapshots(es, gs)
+	return tx.updateHistoricData(es, gs)
 }
 
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
@@ -474,7 +474,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 	return tags, nil
 }
 
-func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, error) {
+func (edb *EventDb) updateHistoricData(e blockEvents, s *Snapshot) (*Snapshot, error) {
 	round := e.round
 	var events []Event
 	for _, ev := range e.events { //filter out round events

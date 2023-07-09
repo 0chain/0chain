@@ -4,11 +4,12 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model MinerSnapshot
 type MinerSnapshot struct {
-	MinerID  string `json:"id" gorm:"index"`
+	MinerID  string `json:"id" gorm:"uniqueIndex"`
 	BucketId int64  `json:"bucket_id"`
 	Round    int64  `json:"round"`
 
@@ -88,21 +89,28 @@ func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnap
 }
 
 func (edb *EventDb) addMinerSnapshot(miners []*Miner, round int64) error {
-	var snapshots []MinerSnapshot
+	var snapshots []*MinerSnapshot
 	for _, miner := range miners {
-		snapshots = append(snapshots, MinerSnapshot{
-			MinerID:       miner.ID,
-			Round:         round,
-			BucketId:      miner.BucketId,
-			Fees:          miner.Fees,
-			TotalStake:    miner.TotalStake,
-			ServiceCharge: miner.ServiceCharge,
-			CreationRound: miner.CreationRound,
-			TotalRewards:  miner.Rewards.TotalRewards,
-			IsKilled:      miner.IsKilled,
-			IsShutdown:    miner.IsShutdown,
-		})
+		snapshots = append(snapshots, createMinerSnapshotFromMiner(miner, round))
 	}
 
-	return edb.Store.Get().Create(&snapshots).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "miner_id"}},
+		UpdateAll: true,
+	}).Create(&snapshots).Error
+}
+
+func createMinerSnapshotFromMiner(m *Miner, round int64) *MinerSnapshot {
+	return &MinerSnapshot{
+		MinerID:       m.ID,
+		Round:         round,
+		BucketId:      m.BucketId,
+		Fees:          m.Fees,
+		TotalStake:    m.TotalStake,
+		ServiceCharge: m.ServiceCharge,
+		CreationRound: m.CreationRound,
+		TotalRewards:  m.Rewards.TotalRewards,
+		IsKilled:      m.IsKilled,
+		IsShutdown:    m.IsShutdown,
+	}
 }

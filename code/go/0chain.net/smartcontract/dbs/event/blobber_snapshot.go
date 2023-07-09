@@ -4,11 +4,12 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model BlobberSnapshot
 type BlobberSnapshot struct {
-	BlobberID           string        `json:"id" gorm:"index"`
+	BlobberID           string        `json:"id" gorm:"uniquIndex"`
 	Round 			 	int64         `json:"round"`
 	BucketId            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
@@ -76,34 +77,40 @@ func (edb *EventDb) getBlobberSnapshots(limit, offset int64) (map[string]Blobber
 }
 
 func (edb *EventDb) addBlobberSnapshot(blobbers []*Blobber, round int64) error {
-	var snapshots []BlobberSnapshot
+	var snapshots []*BlobberSnapshot
 	for _, blobber := range blobbers {
-		snapshots = append(snapshots, BlobberSnapshot{
-			BlobberID:          blobber.ID,
-			Round: 				round,
-			BucketId:           blobber.BucketId,
-			WritePrice:         blobber.WritePrice,
-			Capacity:           blobber.Capacity,
-			Allocated:          blobber.Allocated,
-			SavedData:          blobber.SavedData,
-			ReadData:           blobber.ReadData,
-			OffersTotal:        blobber.OffersTotal,
-			TotalRewards:       blobber.Rewards.TotalRewards,
-			TotalBlockRewards:  blobber.TotalBlockRewards,
-			TotalStorageIncome: blobber.TotalStorageIncome,
-			TotalReadIncome:    blobber.TotalReadIncome,
-			TotalSlashedStake:  blobber.TotalSlashedStake,
-			//TotalServiceCharge:  blobber.TotalServiceCharge,
-			TotalStake:          blobber.TotalStake,
-			ChallengesPassed:    blobber.ChallengesPassed,
-			ChallengesCompleted: blobber.ChallengesCompleted,
-			OpenChallenges:      blobber.OpenChallenges,
-			CreationRound:       blobber.CreationRound,
-			RankMetric:          blobber.RankMetric,
-			IsKilled:            blobber.IsKilled,
-			IsShutdown:          blobber.IsShutdown,
-		})
+		snapshots = append(snapshots, createBlobberSnapshotFromBlobber(blobber, round))
 	}
 
-	return edb.Store.Get().Create(&snapshots).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "blobber_id"}},
+		UpdateAll: true,
+	}).Create(&snapshots).Error
+}
+
+func createBlobberSnapshotFromBlobber(b *Blobber, round int64) *BlobberSnapshot {
+	return &BlobberSnapshot{
+		BlobberID:          b.ID,
+		Round: 				round,
+		BucketId:           b.BucketId,
+		WritePrice:         b.WritePrice,
+		Capacity:           b.Capacity,
+		Allocated:          b.Allocated,
+		SavedData:          b.SavedData,
+		ReadData:           b.ReadData,
+		OffersTotal:        b.OffersTotal,
+		TotalRewards:       b.Rewards.TotalRewards,
+		TotalBlockRewards:  b.TotalBlockRewards,
+		TotalStorageIncome: b.TotalStorageIncome,
+		TotalReadIncome:    b.TotalReadIncome,
+		TotalSlashedStake:  b.TotalSlashedStake,
+		TotalStake:          b.TotalStake,
+		ChallengesPassed:    b.ChallengesPassed,
+		ChallengesCompleted: b.ChallengesCompleted,
+		OpenChallenges:      b.OpenChallenges,
+		CreationRound:       b.CreationRound,
+		RankMetric:          b.RankMetric,
+		IsKilled:            b.IsKilled,
+		IsShutdown:          b.IsShutdown,
+	}
 }

@@ -4,11 +4,12 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model SharderSnapshot
 type SharderSnapshot struct {
-	SharderID string `json:"id" gorm:"index"`
+	SharderID string `json:"id" gorm:"uniqueIndex"`
 	BucketId  int64  `json:"bucket_id"`
 	Round     int64  `json:"round"`
 
@@ -88,21 +89,28 @@ func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]Sharder
 }
 
 func (edb *EventDb) addSharderSnapshot(sharders []*Sharder, round int64) error {
-	var snapshots []SharderSnapshot
+	var snapshots []*SharderSnapshot
 	for _, sharder := range sharders {
-		snapshots = append(snapshots, SharderSnapshot{
-			SharderID:     sharder.ID,
-			BucketId:      sharder.BucketId,
-			Round:         round,
-			Fees:          sharder.Fees,
-			TotalStake:    sharder.TotalStake,
-			ServiceCharge: sharder.ServiceCharge,
-			CreationRound: sharder.CreationRound,
-			TotalRewards:  sharder.Rewards.TotalRewards,
-			IsKilled:      sharder.IsKilled,
-			IsShutdown:    sharder.IsShutdown,
-		})
+		snapshots = append(snapshots, createSharderSnapshotFromSharder(sharder, round))
 	}
 
-	return edb.Store.Get().Create(&snapshots).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "sharder_id"}},
+		UpdateAll: true,
+	}).Create(&snapshots).Error
+}
+
+func createSharderSnapshotFromSharder(s *Sharder, round int64) *SharderSnapshot {
+	return &SharderSnapshot{
+		SharderID:     s.ID,
+		BucketId:      s.BucketId,
+		Round:         round,
+		Fees:          s.Fees,
+		TotalStake:    s.TotalStake,
+		ServiceCharge: s.ServiceCharge,
+		CreationRound: s.CreationRound,
+		TotalRewards:  s.Rewards.TotalRewards,
+		IsKilled:      s.IsKilled,
+		IsShutdown:    s.IsShutdown,
+	}
 }

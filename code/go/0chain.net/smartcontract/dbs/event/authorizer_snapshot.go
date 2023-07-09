@@ -4,11 +4,12 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model AuthorizerSnapshot
 type AuthorizerSnapshot struct {
-	AuthorizerID string `json:"id" gorm:"index"`
+	AuthorizerID string `json:"id" gorm:"uniquIndex"`
 	BucketId     int64  `json:"bucket_id"`
 	Round        int64  `json:"round"`
 
@@ -90,23 +91,30 @@ func (edb *EventDb) getAuthorizerSnapshots(limit, offset int64) (map[string]Auth
 }
 
 func (edb *EventDb) addAuthorizerSnapshot(authorizers []*Authorizer, round int64) error {
-	var snapshots []AuthorizerSnapshot
+	var snapshots []*AuthorizerSnapshot
 	for _, authorizer := range authorizers {
-		snapshots = append(snapshots, AuthorizerSnapshot{
-			AuthorizerID:  authorizer.ID,
-			Round:         round,
-			BucketId:      authorizer.BucketId,
-			Fee:           authorizer.Fee,
-			TotalStake:    authorizer.TotalStake,
-			ServiceCharge: authorizer.ServiceCharge,
-			CreationRound: authorizer.CreationRound,
-			TotalRewards:  authorizer.Rewards.TotalRewards,
-			TotalMint:     authorizer.TotalMint,
-			TotalBurn:     authorizer.TotalBurn,
-			IsKilled:      authorizer.IsKilled,
-			IsShutdown:    authorizer.IsShutdown,
-		})
+		snapshots = append(snapshots, createAuthorizerSnapshotFromAuthorizer(authorizer, round))
 	}
 
-	return edb.Store.Get().Create(&snapshots).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "authorizer_id"}},
+		UpdateAll: true,
+	}).Create(&snapshots).Error
+}
+
+func createAuthorizerSnapshotFromAuthorizer(authorizer *Authorizer, round int64) *AuthorizerSnapshot {
+	return &AuthorizerSnapshot{
+		AuthorizerID:  authorizer.ID,
+		Round:         round,
+		BucketId:      authorizer.BucketId,
+		Fee:           authorizer.Fee,
+		TotalStake:    authorizer.TotalStake,
+		ServiceCharge: authorizer.ServiceCharge,
+		CreationRound: authorizer.CreationRound,
+		TotalRewards:  authorizer.Rewards.TotalRewards,
+		TotalMint:     authorizer.TotalMint,
+		TotalBurn:     authorizer.TotalBurn,
+		IsKilled:      authorizer.IsKilled,
+		IsShutdown:    authorizer.IsShutdown,
+	}
 }
