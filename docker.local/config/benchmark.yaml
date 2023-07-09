@@ -28,7 +28,8 @@ options:
   test_suites:
     - "miner"
     - "storage"
-    # - "storage_rest"
+    - "faucet"
+    - "storage_rest"
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
