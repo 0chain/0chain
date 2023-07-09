@@ -209,6 +209,8 @@ func runSuite(
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
+					// data.Clients is subset of all clients, so we need to check if there are
+					// any unknown clients that minted to or transferred to
 					unknownMintTransferClients := make(map[string]struct{})
 					if err == nil {
 						ms := timedBalance.GetMints()
