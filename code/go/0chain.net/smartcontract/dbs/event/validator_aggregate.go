@@ -10,7 +10,6 @@ type ValidatorAggregate struct {
 
 	ValidatorID string `json:"validator_id" gorm:"index:idx_validator_aggregate,unique"`
 	Round       int64  `json:"round" gorm:"index:idx_validator_aggregate,unique"`
-	BucketID    int64  `json:"bucket_id"`
 
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
@@ -47,7 +46,6 @@ func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int
 		agg := ValidatorAggregate{
 			Round:       round,
 			ValidatorID: v.ID,
-			BucketID:    v.BucketId,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

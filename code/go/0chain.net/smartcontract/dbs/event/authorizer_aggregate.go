@@ -10,7 +10,6 @@ type AuthorizerAggregate struct {
 
 	AuthorizerID string `json:"authorizer_id" gorm:"index:idx_authorizer_aggregate,unique"`
 	Round        int64  `json:"round" gorm:"index:idx_authorizer_aggregate,unique"`
-	BucketID     int64  `json:"bucket_id"`
 
 	Fee           currency.Coin `json:"fee"`
 	TotalStake    currency.Coin `json:"total_stake"`
@@ -50,7 +49,6 @@ func (edb *EventDb) CreateAuthorizerAggregates(authorizers []*Authorizer, round 
 		agg := AuthorizerAggregate{
 			Round:       round,
 			AuthorizerID: v.ID,
-			BucketID:    v.BucketId,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

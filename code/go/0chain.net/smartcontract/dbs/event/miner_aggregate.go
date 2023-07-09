@@ -9,7 +9,6 @@ type MinerAggregate struct {
 	model.ImmutableModel
 	MinerID       string        `json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
 	Round         int64         `json:"round" gorm:"index:idx_miner_aggregate,unique"`
-	BucketID      int64         `json:"bucket_id"`
 	Fees          currency.Coin `json:"fees"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
@@ -46,7 +45,6 @@ func (edb *EventDb) CreateMinerAggregates(miners []*Miner, round int64) error {
 		aggregate := MinerAggregate{
 			Round:    round,
 			MinerID:  m.ID,
-			BucketID: m.BucketId,
 		}
 		recalculateProviderFields(m, &aggregate)
 		aggregate.Fees = m.Fees

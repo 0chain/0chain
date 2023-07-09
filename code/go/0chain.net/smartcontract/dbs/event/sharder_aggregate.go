@@ -10,7 +10,6 @@ type SharderAggregate struct {
 
 	SharderID string `json:"sharder_id" gorm:"index:idx_sharder_aggregate,unique"`
 	Round     int64  `json:"round" gorm:"index:idx_sharder_aggregate,unique"`
-	BucketID  int64  `json:"bucket_id"`
 
 	Fees          currency.Coin `json:"fees"`
 	TotalStake    currency.Coin `json:"total_stake"`
@@ -48,7 +47,6 @@ func (edb *EventDb) CreateSharderAggregates(sharders []*Sharder, round int64) er
 		aggregate := SharderAggregate{
 			Round:    round,
 			SharderID:  s.ID,
-			BucketID: s.BucketId,
 		}
 		recalculateProviderFields(s, &aggregate)
 		aggregate.Fees = s.Fees

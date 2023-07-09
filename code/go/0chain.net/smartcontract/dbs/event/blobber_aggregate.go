@@ -9,7 +9,6 @@ type BlobberAggregate struct {
 	model.ImmutableModel
 	BlobberID           string        `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
 	Round               int64         `json:"round" gorm:"index:idx_blobber_aggregate,priority:1,unique"`
-	BucketID            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
 	Allocated           int64         `json:"allocated"` // allocated capacity
@@ -37,7 +36,6 @@ func (edb *EventDb) CreateBlobberAggregates(blobbers []*Blobber, round int64) er
 		aggregate := BlobberAggregate{
 			Round:     round,
 			BlobberID: blobber.ID,
-			BucketID:  blobber.BucketId,
 		}
 		aggregate.WritePrice = blobber.WritePrice
 		aggregate.Capacity = blobber.Capacity
