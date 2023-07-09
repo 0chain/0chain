@@ -29,12 +29,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
 
-	err := txn.Validate(ctx)
-	if err != nil {
-		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
-		return nil, err
-	}
-
 	if txn.DebugTxn() {
 		logging.Logger.Info("put transaction", zap.Any("txn", txn))
 	} else {
@@ -46,7 +40,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return txn, nil
 	}
 
-	err = entity.GetEntityMetadata().GetStore().Write(ctx, txn)
+	err := entity.GetEntityMetadata().GetStore().Write(ctx, txn)
 	if err != nil {
 		logging.Logger.Error("put transaction", zap.Error(err), zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 		return nil, err
