@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
+	"github.com/go-faker/faker/v4"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -90,4 +91,18 @@ func TestValidatorNode(t *testing.T) {
 		require.Equal(t, vnUpdated.NumDelegates, vnFromDb.NumDelegates)
 		require.Equal(t, vnUpdated.ServiceCharge, vnFromDb.ServiceCharge)
 	})
+}
+
+func buildMockValidator(t *testing.T, ownerId string, pid string, bucket int64) Validator {
+	var validator Validator
+	err := faker.FakeData(&validator)
+	require.NoError(t, err)
+
+	validator.ID = pid
+	validator.DelegateWallet = OwnerId
+	validator.BucketId = bucket
+	validator.IsKilled = false
+	validator.IsShutdown = false
+	validator.Rewards = ProviderRewards{}
+	return validator
 }

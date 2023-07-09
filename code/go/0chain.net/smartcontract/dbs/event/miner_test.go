@@ -17,6 +17,7 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
+	"github.com/go-faker/faker/v4"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -779,4 +780,17 @@ func ReturnPointer() *Miner {
 		},
 
 		Active: true}
+}
+
+func buildMockMiner(t *testing.T, ownerId string, pid string, bucket int64) Miner {
+	var miner Miner
+	err := faker.FakeData(&miner)
+	require.NoError(t, err)
+	miner.ID = pid
+	miner.DelegateWallet = ownerId
+	miner.BucketId = bucket
+	miner.IsKilled = false
+	miner.IsShutdown = false
+	miner.Rewards = ProviderRewards{}
+	return miner
 }

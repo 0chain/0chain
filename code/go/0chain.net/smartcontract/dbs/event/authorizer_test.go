@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
+	"github.com/go-faker/faker/v4"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -156,4 +157,18 @@ func Test_authorizerMintAndBurn(t *testing.T) {
 	require.Equal(t, authorizersBefore[0].TotalBurn+5, authorizersAfter[0].TotalBurn)
 	require.Equal(t, authorizersBefore[1].TotalMint+200, authorizersAfter[1].TotalMint)
 	require.Equal(t, authorizersBefore[1].TotalBurn+50, authorizersAfter[1].TotalBurn)
+}
+
+func buildMockAuthorizer(t *testing.T, ownerId string, pid string, bucket int64) Authorizer {
+	var authorizer Authorizer
+	err := faker.FakeData(&authorizer)
+	require.NoError(t, err)
+
+	authorizer.ID = pid
+	authorizer.DelegateWallet = ownerId
+	authorizer.BucketId = bucket
+	authorizer.IsKilled = false
+	authorizer.IsShutdown = false
+	authorizer.Rewards = ProviderRewards{}
+	return authorizer
 }

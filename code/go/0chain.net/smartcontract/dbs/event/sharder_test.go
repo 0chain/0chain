@@ -16,6 +16,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
+	"github.com/go-faker/faker/v4"
 	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -406,4 +407,18 @@ func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 		err := eventDb.addSharders([]Sharder{s})
 		assert.NoError(t, err, "There should be no error")
 	}
+}
+
+func buildMockSharder(t *testing.T, ownerId string, pid string, bucket int64) Sharder {
+	var sharder Sharder
+	err := faker.FakeData(&sharder)
+	require.NoError(t, err)
+
+	sharder.ID = pid
+	sharder.DelegateWallet = ownerId
+	sharder.BucketId = bucket
+	sharder.IsKilled = false
+	sharder.IsShutdown = false
+	sharder.Rewards = ProviderRewards{}
+	return sharder
 }
