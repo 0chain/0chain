@@ -15,6 +15,10 @@ on:
         description: 'Run subset of system tests (smoke tests) for faster feedback (NOT FOR PRS POINTED TO STAGING)'
         default: 'false'
         required: false
+       test_file_filter:
+        description: 'Comma separated list of test files to run (eg. zwalletcli_register_wallet_test.go, zwalletcli_send_and_balance_test.go). If supplied, the PR will NOT be notified of the test result'
+        default: ''
+        required: false
        skip_tests:
         description: '(LAST RESORT ONLY) Skip system tests. This will allow a PR to merge without requiring a green test run.  *By using you certify that the code being merged is not causing system tests to fail*'
         default: 'FALSE'
@@ -23,7 +27,10 @@ jobs:
   system-tests:
     uses: 0chain/actions/.github/workflows/manual_system_tests.yml@master
     with:
+      miner_branch: ${{ github.ref_name }}
+      sharder_branch: ${{ github.ref_name }}
       repo_snapshots_branch: ${{ github.event.inputs.repo_snapshots_branch }}
+      test_file_filter: ${{ github.event.inputs.test_file_filter }}
       skip_tests: ${{ github.event.inputs.skip_tests }}
       run_smoke_tests: ${{ github.event.inputs.run_smoke_tests }}
     secrets:
