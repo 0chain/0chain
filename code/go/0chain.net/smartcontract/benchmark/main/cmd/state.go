@@ -67,6 +67,7 @@ func mockMint(
 	if err != nil {
 		return
 	}
+	//fmt.Printf("mint %v to %s, new balance: %v\n", amount, to, newBal)
 	toState.Balance = newBal
 	if _, err := balances.SetClientState(to, toState); err != nil {
 		log.Fatal(err)

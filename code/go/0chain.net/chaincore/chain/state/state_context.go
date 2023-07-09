@@ -213,7 +213,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	if !encryption.IsHash(t.ToClientID) {
-		return errors.New("invalid transaction to client ID")
+		return errors.New("invalid transaction ToClientID")
 	}
 
 	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {

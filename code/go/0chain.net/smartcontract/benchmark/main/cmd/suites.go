@@ -153,8 +153,14 @@ func runSuite(
 ) []benchmarkResults {
 	var benchmarkResult []benchmarkResults
 	var wg sync.WaitGroup
+	scAddresses := []string{
+		minersc.ADDRESS,
+		storagesc.ADDRESS,
+		faucetsc.ADDRESS,
+		zcnsc.ADDRESS,
+	}
 	clientsMap := make(map[string]struct{}, len(data.Clients))
-	for _, c := range data.Clients {
+	for _, c := range append(data.Clients, scAddresses...) {
 		clientsMap[c] = struct{}{}
 	}
 
@@ -191,12 +197,7 @@ func runSuite(
 					if i == 0 {
 						// get client balances and all delegate pools' balances before running the test
 						// compare it
-						for _, c := range append(data.Clients,
-							minersc.ADDRESS,
-							storagesc.ADDRESS,
-							zcnsc.ADDRESS,
-							faucetsc.ADDRESS,
-						) {
+						for _, c := range append(data.Clients, scAddresses...) {
 							bal, err := timedBalance.GetClientBalance(c)
 							if err != nil {
 								log.Fatal(err)
@@ -208,21 +209,30 @@ func runSuite(
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
-					// unknownMintClients are the clients that are not in the data.Clients list
-					// data.Clients is subset of all clients
-					var unknownMintClients []string
+					unknownMintTransferClients := make(map[string]struct{})
 					if err == nil {
 						ms := timedBalance.GetMints()
 						for _, m := range ms {
 							if _, ok := clientsMap[m.ToClientID]; !ok {
-								unknownMintClients = append(unknownMintClients, m.ToClientID)
-								b, err := balances.GetClientBalance(m.ToClientID)
-								if err != nil {
-									log.Fatal(err)
-								}
-								totalBalanceBefore += b
+								unknownMintTransferClients[m.ToClientID] = struct{}{}
+
 							}
 						}
+
+						for _, tt := range timedBalance.GetTransfers() {
+							if _, ok := clientsMap[tt.ToClientID]; !ok {
+								unknownMintTransferClients[tt.ToClientID] = struct{}{}
+							}
+						}
+
+						for c := range unknownMintTransferClients {
+							bl, err := balances.GetClientBalance(c)
+							if err != nil {
+								log.Fatal(err)
+							}
+							totalBalanceBefore += bl
+						}
+
 						mockUpdateState(bm.Name(), bm.Transaction(), balances)
 					}
 					runCount++
@@ -238,13 +248,13 @@ func runSuite(
 
 					if i == 0 {
 						// get balances after mints
+						unknownAddresses := make([]string, 0, len(unknownMintTransferClients))
+						for c := range unknownMintTransferClients {
+							unknownAddresses = append(unknownAddresses, c)
+						}
 						var totalBalanceAfter currency.Coin
-						for _, c := range append(append(data.Clients,
-							minersc.ADDRESS,
-							storagesc.ADDRESS,
-							zcnsc.ADDRESS,
-							faucetsc.ADDRESS,
-						), unknownMintClients...) {
+						for _, c := range append(append(data.Clients, scAddresses...),
+							unknownAddresses...) {
 							bal, err := timedBalance.GetClientBalance(c)
 							if err != nil {
 								log.Fatal(err)
