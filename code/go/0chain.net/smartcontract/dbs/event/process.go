@@ -486,8 +486,6 @@ func (edb *EventDb) updateHistoricData(e blockEvents, s *Snapshot) (*Snapshot, e
 		return s, nil
 	}
 
-	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", s))
-
 	providers, err := edb.BuildChangedProvidersMapFromEvents(events)
 	if err != nil {
 		logging.Logger.Error("error building changed providers map", zap.Error(err))

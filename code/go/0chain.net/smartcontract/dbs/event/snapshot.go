@@ -100,7 +100,10 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 		snapshotsMap = make(map[string]S)
 		snapIds = make([]string, 0, len(providers))
 		pModel P
-		ptypeName = ProviderTextMapping[reflect.TypeOf(pModel).Elem()]
+		sModel S
+		pReflectType = reflect.TypeOf(pModel).Elem()
+		sReflectType = reflect.TypeOf(sModel).Elem()
+		ptypeName = ProviderTextMapping[pReflectType]
 	)
 	for _, provider := range providers {
 		snapIds = append(snapIds, provider.GetID())
@@ -119,7 +122,7 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 		for _, provider := range providers {
 			snap, ok := snapshotsMap[provider.GetID()]
 			if !ok {
-				snap = *new(S)
+				snap = reflect.New(sReflectType).Interface().(S)
 				snap.SetID(provider.GetID())
 			}
 	
