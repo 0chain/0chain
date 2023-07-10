@@ -83,20 +83,6 @@ func validateBlobberUpdateSettings(updateBlobberRequest *dto.StorageDtoNode, con
 		return err
 	}
 
-	if updateBlobberRequest.Geolocation != nil {
-		geoLocation := &StorageNodeGeolocation{}
-		if updateBlobberRequest.Geolocation.Latitude != nil {
-			geoLocation.Latitude = *updateBlobberRequest.Geolocation.Latitude
-		}
-		if updateBlobberRequest.Geolocation.Longitude != nil {
-			geoLocation.Longitude = *updateBlobberRequest.Geolocation.Longitude
-		}
-
-		if err := geoLocation.validate(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -105,38 +91,39 @@ func (sc *StorageSmartContract) updateBlobber(
 	txn *transaction.Transaction,
 	conf *Config,
 	updateBlobberRequest *dto.StorageDtoNode,
-	savedBlobber *StorageNode,
+	existingBlobber *StorageNode,
 	existingStakePool *stakePool,
 	balances cstate.StateContextI,
 ) (err error) {
-	// check terms
-	if updateBlobberRequest.Terms != nil {
-		if updateBlobberRequest.Terms.ReadPrice != nil {
-			if err = validateReadPriceTerms(*updateBlobberRequest.Terms.ReadPrice, conf); err != nil {
-				return fmt.Errorf("invalid blobber terms: %v", err)
-			}
-			savedBlobber.Terms.ReadPrice = *updateBlobberRequest.Terms.ReadPrice
-		}
-
-		if updateBlobberRequest.Terms.WritePrice != nil {
-			if err = validateWritePriceTerms(*updateBlobberRequest.Terms.WritePrice, conf); err != nil {
-				return fmt.Errorf("invalid blobber terms: %v", err)
-			}
-			savedBlobber.Terms.WritePrice = *updateBlobberRequest.Terms.WritePrice
-		}
+	// validate the new terms and update the existing blobber's terms
+	if err = validateTermsInUpdatedRequestAndMergeInSavedBlobber(updateBlobberRequest, existingBlobber, conf); err != nil {
+		return err
 	}
 
-	if updateBlobberRequest.Capacity != nil && *updateBlobberRequest.Capacity <= 0 {
-		return sc.removeBlobber(txn, updateBlobberRequest, balances)
+	if err = validateGeolocationInUpdatedRequestAndMergeInSavedBlobber(updateBlobberRequest, existingBlobber); err != nil {
+		return err
 	}
 
-	// check params
+	if updateBlobberRequest.NotAvailable != nil {
+		existingBlobber.NotAvailable = *updateBlobberRequest.NotAvailable
+	}
+
+	// storing the current capacity because existing blobber's capacity is updated.
+	currentCapacity := existingBlobber.Capacity
+	if updateBlobberRequest.Capacity != nil {
+		if *updateBlobberRequest.Capacity <= 0 {
+			return sc.removeBlobber(txn, updateBlobberRequest, balances)
+		}
+
+		existingBlobber.Capacity = *updateBlobberRequest.Capacity
+	}
+
+	// validate other params like capacity and baseUrl
 	if err = validateBlobberUpdateSettings(updateBlobberRequest, conf); err != nil {
 		return fmt.Errorf("invalid blobber params: %v", err)
 	}
 
-	if updateBlobberRequest.BaseURL != nil && *updateBlobberRequest.BaseURL != savedBlobber.BaseURL {
-		//if updating url
+	if updateBlobberRequest.BaseURL != nil && *updateBlobberRequest.BaseURL != existingBlobber.BaseURL {
 		has, err := sc.hasBlobberUrl(*updateBlobberRequest.BaseURL, balances)
 		if err != nil {
 			return fmt.Errorf("could not check blobber url: %v", err)
@@ -146,75 +133,143 @@ func (sc *StorageSmartContract) updateBlobber(
 			return fmt.Errorf("blobber url update failed, %s already used", *updateBlobberRequest.BaseURL)
 		}
 
-		// Save updated url
-		if *updateBlobberRequest.BaseURL != "" {
-			_, err = balances.InsertTrieNode(GetUrlKey(*updateBlobberRequest.BaseURL, sc.ID), &datastore.NOIDField{})
-			if err != nil {
-				return fmt.Errorf("saving blobber url: " + err.Error())
-			}
-		}
-		// remove old url
-		if savedBlobber.BaseURL != "" {
-			_, err = balances.DeleteTrieNode(savedBlobber.GetUrlKey(sc.ID))
+		if existingBlobber.BaseURL != "" {
+			_, err = balances.DeleteTrieNode(existingBlobber.GetUrlKey(sc.ID))
 			if err != nil {
 				return fmt.Errorf("deleting blobber old url: " + err.Error())
 			}
 		}
+
+		if *updateBlobberRequest.BaseURL != "" {
+			existingBlobber.BaseURL = *updateBlobberRequest.BaseURL
+			_, err = balances.InsertTrieNode(existingBlobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+			if err != nil {
+				return fmt.Errorf("saving blobber url: " + err.Error())
+			}
+		}
 	}
 
-	updateBlobberRequest.LastHealthCheck = txn.CreationDate
-	updateBlobberRequest.Allocated = &savedBlobber.Allocated
-	updateBlobberRequest.SavedData = &savedBlobber.SavedData
+	existingBlobber.LastHealthCheck = txn.CreationDate
 
 	// update statistics
 	sc.statIncr(statUpdateBlobber)
 
-	if savedBlobber.Capacity == 0 {
+	if currentCapacity == 0 {
 		sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
 	}
 
-	if updateBlobberRequest.StakePoolSettings != nil {
-		if err = validateStakePoolSettingsForADtoNode(updateBlobberRequest.StakePoolSettings, conf); err != nil {
-			return fmt.Errorf("invalid new stake pool settings:  %v", err)
-		}
-
-		if updateBlobberRequest.StakePoolSettings.ServiceChargeRatio != nil {
-			existingStakePool.Settings.ServiceChargeRatio = *updateBlobberRequest.StakePoolSettings.ServiceChargeRatio
-			savedBlobber.StakePoolSettings.ServiceChargeRatio = *updateBlobberRequest.StakePoolSettings.ServiceChargeRatio
-		}
-
-		if updateBlobberRequest.StakePoolSettings.MaxNumDelegates != nil {
-			existingStakePool.Settings.MaxNumDelegates = *updateBlobberRequest.StakePoolSettings.MaxNumDelegates
-			savedBlobber.StakePoolSettings.MaxNumDelegates = *updateBlobberRequest.StakePoolSettings.MaxNumDelegates
-		}
+	if err = validateStakePoolSettingsInUpdatedRequestAndMergeInSavedBlobber(
+		updateBlobberRequest,
+		existingBlobber,
+		existingStakePool,
+		conf,
+	); err != nil {
+		return err
 	}
 
-	// update stake pool settings.
+	// update stake pool settings if write price has changed.
 	if updateBlobberRequest.Terms != nil && updateBlobberRequest.Terms.WritePrice != nil {
 		updatedStakedCapacity, err := existingStakePool.stakedCapacity(*updateBlobberRequest.Terms.WritePrice)
 		if err != nil {
 			return fmt.Errorf("error calculating staked capacity: %v", err)
 		}
 
-		if savedBlobber.Allocated > updatedStakedCapacity {
+		if existingBlobber.Allocated > updatedStakedCapacity {
 			return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than allocated capacity (%d)",
-				updatedStakedCapacity, savedBlobber.Allocated)
+				updatedStakedCapacity, existingBlobber.Allocated)
 		}
 	}
 
-	_, err = balances.InsertTrieNode(provider.GetKey(updateBlobberRequest.ID), updateBlobberRequest)
+	_, err = balances.InsertTrieNode(existingBlobber.GetKey(), existingBlobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
 
-	// Save stake pool
 	if err = existingStakePool.Save(spenum.Blobber, updateBlobberRequest.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
-	if err := emitUpdateBlobber(updateBlobberRequest, existingStakePool, balances); err != nil {
+
+	// existing blobber also contain the updated fields from the update blobber request
+	if err := emitUpdateBlobber(existingBlobber, existingStakePool, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", updateBlobberRequest, err)
 	}
+
 	return
+}
+
+func validateTermsInUpdatedRequestAndMergeInSavedBlobber(
+	updatedBlobberRequest *dto.StorageDtoNode,
+	existingBlobber *StorageNode,
+	conf *Config,
+) error {
+	if updatedBlobberRequest.Terms != nil {
+		if updatedBlobberRequest.Terms.ReadPrice != nil {
+			if err := validateReadPriceTerms(*updatedBlobberRequest.Terms.ReadPrice, conf); err != nil {
+				return fmt.Errorf("invalid blobber terms: %v", err)
+			}
+			existingBlobber.Terms.ReadPrice = *updatedBlobberRequest.Terms.ReadPrice
+		}
+
+		if updatedBlobberRequest.Terms.WritePrice != nil {
+			if err := validateWritePriceTerms(*updatedBlobberRequest.Terms.WritePrice, conf); err != nil {
+				return fmt.Errorf("invalid blobber terms: %v", err)
+			}
+			existingBlobber.Terms.WritePrice = *updatedBlobberRequest.Terms.WritePrice
+		}
+	}
+
+	return nil
+}
+
+func validateGeolocationInUpdatedRequestAndMergeInSavedBlobber(
+	updatedBlobberRequest *dto.StorageDtoNode,
+	existingBlobber *StorageNode,
+) error {
+	if updatedBlobberRequest.Geolocation != nil {
+		if updatedBlobberRequest.Geolocation.Latitude != nil {
+			existingBlobber.Geolocation.Latitude = *updatedBlobberRequest.Geolocation.Latitude
+		}
+
+		if updatedBlobberRequest.Geolocation.Longitude != nil {
+			existingBlobber.Geolocation.Longitude = *updatedBlobberRequest.Geolocation.Longitude
+		}
+	}
+
+	if err := existingBlobber.Geolocation.validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateStakePoolSettingsInUpdatedRequestAndMergeInSavedBlobber(
+	updateBlobberRequest *dto.StorageDtoNode,
+	existingBlobber *StorageNode,
+	existingStakePool *stakePool,
+	conf *Config,
+) error {
+	if updateBlobberRequest.StakePoolSettings != nil {
+		if updateBlobberRequest.StakePoolSettings.DelegateWallet != nil {
+			existingStakePool.Settings.DelegateWallet = *updateBlobberRequest.StakePoolSettings.DelegateWallet
+			existingBlobber.StakePoolSettings.DelegateWallet = *updateBlobberRequest.StakePoolSettings.DelegateWallet
+		}
+
+		if updateBlobberRequest.StakePoolSettings.ServiceChargeRatio != nil {
+			existingStakePool.Settings.ServiceChargeRatio = *updateBlobberRequest.StakePoolSettings.ServiceChargeRatio
+			existingBlobber.StakePoolSettings.ServiceChargeRatio = *updateBlobberRequest.StakePoolSettings.ServiceChargeRatio
+		}
+
+		if updateBlobberRequest.StakePoolSettings.MaxNumDelegates != nil {
+			existingStakePool.Settings.MaxNumDelegates = *updateBlobberRequest.StakePoolSettings.MaxNumDelegates
+			existingBlobber.StakePoolSettings.MaxNumDelegates = *updateBlobberRequest.StakePoolSettings.MaxNumDelegates
+		}
+
+		if err := validateStakePoolSettings(existingBlobber.StakePoolSettings, conf); err != nil {
+			return fmt.Errorf("invalid new stake pool settings:  %v", err)
+		}
+	}
+
+	return nil
 }
 
 // remove blobber (when a blobber provides capacity = 0)
@@ -342,16 +397,10 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 			"access denied, allowed for delegate_wallet owner only")
 	}
 
+	// merge the savedBlobber and updatedBlobber fields using the deltas from the updatedBlobber and
+	// emit the update blobber event to db.
 	if err = sc.updateBlobber(txn, conf, updatedBlobber, blobber, existingStakePool, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
-	}
-
-	if updatedBlobber.Capacity != nil {
-		blobber.Capacity = *updatedBlobber.Capacity
-	}
-
-	if updatedBlobber.NotAvailable != nil {
-		blobber.NotAvailable = *updatedBlobber.NotAvailable
 	}
 
 	return string(blobber.Encode()), nil

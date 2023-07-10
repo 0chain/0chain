@@ -6,8 +6,6 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
-//go:generate msgp -v -io=false -tests=false
-
 type PoolStatus int
 
 // StakePool holds delegate information for an 0chain providers

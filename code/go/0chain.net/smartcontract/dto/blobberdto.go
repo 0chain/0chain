@@ -6,8 +6,6 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
-//go:generate msgp -io=false -tests=false -unexported -v
-
 // StorageDtoNode represents Blobber configurations used as DTO.
 // This is just a DTO model which should be used in passing data to other service for ex, via HTTP call.
 // This should not be used in the application for any business logic.

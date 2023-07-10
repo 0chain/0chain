@@ -152,18 +152,18 @@ func (sc *StorageSmartContract) updateValidatorSettings(txn *transaction.Transac
 			"can't get the validator: "+err.Error())
 	}
 
-	var sp *stakePool
-	if sp, err = sc.getStakePool(spenum.Validator, updatedValidator.ID, balances); err != nil {
+	var existingStakePool *stakePool
+	if existingStakePool, err = sc.getStakePool(spenum.Validator, updatedValidator.ID, balances); err != nil {
 		return "", common.NewError("update_validator_settings_failed",
 			"can't get related stake pool: "+err.Error())
 	}
 
-	if sp.Settings.DelegateWallet == "" {
+	if existingStakePool.Settings.DelegateWallet == "" {
 		return "", common.NewError("update_validator_settings_failed",
 			"validator's delegate_wallet is not set")
 	}
 
-	if txn.ClientID != sp.Settings.DelegateWallet {
+	if txn.ClientID != existingStakePool.Settings.DelegateWallet {
 		return "", common.NewError("update_validator_settings_failed",
 			"access denied, allowed for delegate_wallet owner only")
 	}
@@ -172,7 +172,7 @@ func (sc *StorageSmartContract) updateValidatorSettings(txn *transaction.Transac
 		return "", common.NewError("update_validator_settings_failed", err.Error())
 	}
 
-	// Save validator
+	// save validator
 	_, err = balances.InsertTrieNode(existingValidator.GetKey(sc.ID), existingValidator)
 	if err != nil {
 		return "", common.NewError("update_validator_settings_failed",
@@ -208,7 +208,6 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 	}
 
 	if inputValidator.BaseURL != nil && savedValidator.BaseURL != *inputValidator.BaseURL {
-		//if updating url
 		has, err := sc.hasValidatorUrl(*inputValidator.BaseURL, balances)
 		if err != nil {
 			return fmt.Errorf("could not get validator of url: %s : %v", *inputValidator.BaseURL, err)
@@ -217,18 +216,21 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 		if has {
 			return fmt.Errorf("invalid validator url update, already used")
 		}
-		// Save url
-		if *inputValidator.BaseURL != "" {
-			_, err = balances.InsertTrieNode(GetValidatorUrlKey(sc.ID, *inputValidator.BaseURL), &datastore.NOIDField{})
-			if err != nil {
-				return fmt.Errorf("saving validator url: " + err.Error())
-			}
-		}
+
 		// remove old url
 		if savedValidator.BaseURL != "" {
 			_, err = balances.DeleteTrieNode(savedValidator.GetUrlKey(sc.ID))
 			if err != nil {
 				return fmt.Errorf("deleting validator old url: " + err.Error())
+			}
+		}
+
+		// save url
+		if *inputValidator.BaseURL != "" {
+			savedValidator.BaseURL = *inputValidator.BaseURL
+			_, err = balances.InsertTrieNode(savedValidator.GetUrlKey(sc.ID), &datastore.NOIDField{})
+			if err != nil {
+				return fmt.Errorf("saving validator url: " + err.Error())
 			}
 		}
 	}
@@ -243,10 +245,6 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 		// update statistics
 		sc.statIncr(statUpdateValidator)
 
-		if err = validateStakePoolSettingsForADtoNode(inputValidator.StakePoolSettings, conf); err != nil {
-			return fmt.Errorf("invalid new stake pool settings:  %v", err)
-		}
-
 		if inputValidator.StakePoolSettings.ServiceChargeRatio != nil {
 			existingStakePool.Settings.ServiceChargeRatio = *inputValidator.StakePoolSettings.ServiceChargeRatio
 			savedValidator.StakePoolSettings.ServiceChargeRatio = *inputValidator.StakePoolSettings.ServiceChargeRatio
@@ -257,15 +255,23 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 			savedValidator.StakePoolSettings.MaxNumDelegates = *inputValidator.StakePoolSettings.MaxNumDelegates
 		}
 
-		// Save stake pool
+		if inputValidator.StakePoolSettings.DelegateWallet != nil {
+			existingStakePool.Settings.DelegateWallet = *inputValidator.StakePoolSettings.DelegateWallet
+			savedValidator.StakePoolSettings.DelegateWallet = *inputValidator.StakePoolSettings.DelegateWallet
+		}
+
+		if err = validateStakePoolSettings(existingStakePool.StakePool.Settings, conf); err != nil {
+			return fmt.Errorf("invalid new stake pool settings:  %v", err)
+		}
+
+		// save stake pool
 		if err = existingStakePool.Save(spenum.Validator, inputValidator.ID, balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 	}
 
 	inputValidator.LastHealthCheck = &txn.CreationDate
-
-	if err := emitUpdateValidationNode(inputValidator, existingStakePool, balances); err != nil {
+	if err := savedValidator.emitUpdate(existingStakePool, balances); err != nil {
 		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
 
