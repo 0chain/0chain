@@ -1,33 +1,44 @@
 version: '3'
 services:
   redis:
+    container_name: miner-redis-${MINER}
     image: "redis:alpine"
     volumes:
       - ../config:/0chain/config
-      - ../miner${MINER}/data:/0chain/data
-    networks:
-      default:
+      - ${PROJECT_ROOT_SSD}/miner${MINER}/data:/0chain/data
+    # ports:
+    #   - "637${MINER}:6379"
     sysctls:
       net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/state.redis.conf
+    restart: always
+    networks:
+      testnet0:
+        ipv4_address: 198.18.5.${MINER}
 
   redis_txns:
+    container_name: miner-redis-txns-${MINER}
     image: "redis:alpine"
     volumes:
       - ../config:/0chain/config
-      - ../miner${MINER}/data:/0chain/data
-    networks:
-      default:
+      - ${PROJECT_ROOT_SSD}/miner${MINER}/data:/0chain/data
     sysctls:
       net.core.somaxconn: '511'
+    # ports:
+    #   - "638${MINER}:6379"
     command: redis-server /0chain/config/redis/transactions.redis.conf
+    restart: always
+    networks:
+      testnet0:
+        ipv4_address: 198.18.4.${MINER}
 
   miner:
-    image: 0chaindev/miner:latest
+    container_name: miner-${MINER}
+    image: 0chaindev/miner:staging
     environment:
       - DOCKER=true
-      - REDIS_HOST=redis
-      - REDIS_TXNS=redis_txns
+      - REDIS_HOST=miner-redis-${MINER}
+      - REDIS_TXNS=miner-redis-txns-${MINER}
     depends_on:
      - redis
      - redis_txns
@@ -36,19 +47,17 @@ services:
       - redis_txns:redis_txns
     volumes:
       - ../config:/0chain/config
-      - ../miner${MINER}/data:/0chain/data
-      - ../miner${MINER}/log:/0chain/log
+      - ${PROJECT_ROOT_SSD}/miner${MINER}/data:/0chain/data
+      - ${PROJECT_ROOT_SSD}/miner${MINER}/log:/0chain/log
     ports:
       - "707${MINER}:707${MINER}"
-    networks:
-      default:
-      testnet0:
-        ipv4_address: 198.18.0.7${MINER}
     command: ./bin/miner  --deployment_mode 0 --keys_file config/b0mnode${MINER}_keys.txt --dkg_file config/b0mnode${MINER}_dkg.json
+    restart: always
+    networks:
+      testnet0:
+        ipv4_address: 198.18.3.${MINER}
 
 networks:
-  default:
-    driver: bridge
   testnet0:
     external: true
 

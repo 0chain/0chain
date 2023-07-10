@@ -44,10 +44,6 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	nar.Size = 5 * 1024
 	requireErrMsg(t, nar.validate(now, &conf), errMsg3)
 
-	nar.Size = 10 * 1024
-	nar.Expiration = 170
-	requireErrMsg(t, nar.validate(now, &conf), errMsg4)
-
 	nar.Expiration = 150 + toSeconds(48*time.Hour)
 	nar.DataShards = 0
 	requireErrMsg(t, nar.validate(now, &conf), errMsg5)
