@@ -30,8 +30,8 @@ jobs:
     steps:
 
     - name: Get changed files using defaults
-        id: changed-files
-        uses: tj-actions/changed-files@v18.4
+      id: changed-files
+      uses: tj-actions/changed-files@v18.4
 
     - name: Set docker image tag
       id: get_info
