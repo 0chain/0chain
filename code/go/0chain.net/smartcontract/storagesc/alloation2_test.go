@@ -698,14 +698,18 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 	var totalUsed = float64(f.allocation.UsedSize)
 	var abdUsed int64 = 0
 	for _, d := range f.allocation.BlobberAllocs {
-		abdUsed += d.Stats.UsedSize
+		abdUsed += d.Stats.UsedSize * int64(float64(f.allocation.DataShards)/float64(f.allocation.DataShards+f.allocation.ParityShards))
 	}
 	require.InDelta(f.t, totalUsed, abdUsed, errDelta)
 
-	var ratio = used / totalUsed
 	var passRate = f._passRates[blobberIndex]
 
-	return challengePool*ratio*passRate + float64(cancellationCharge)
+	maxChallengeCompletionDTU := float64(MaxChallengeCompletionTime) / float64(TimeUnit)
+	adjustableChallengePoolTokens := challengePool * maxChallengeCompletionDTU
+
+	ratio := used / (totalUsed * float64(f.allocation.DataShards+f.allocation.ParityShards) / float64(f.allocation.DataShards))
+
+	return adjustableChallengePoolTokens*ratio*passRate + float64(cancellationCharge)
 }
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
