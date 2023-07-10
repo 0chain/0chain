@@ -1638,7 +1638,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				return err
 			}
 
-			logging.Logger.Info("finishAllocation: passRates",
+			logging.Logger.Info("finishAllocation: passRates : ",
 				zap.Any("blobber_used_size", d.Stats.UsedSize),
 				zap.Any("alloc_used_size", alloc.UsedSize),
 				zap.Any("cp_balance", cpBalance),
