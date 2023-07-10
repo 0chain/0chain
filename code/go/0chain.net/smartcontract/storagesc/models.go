@@ -199,11 +199,6 @@ type ValidationNode struct {
 	LastHealthCheck   common.Timestamp   `json:"last_health_check"`
 }
 
-// validate the validator configurations
-func (sn *ValidationNode) validate(_ *Config) (err error) {
-	return validateBaseUrl(&sn.BaseURL)
-}
-
 func validateBaseUrl(baseUrl *string) error {
 	if baseUrl != nil && strings.Contains(*baseUrl, "localhost") &&
 		node.Self.Host != "localhost" {

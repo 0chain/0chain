@@ -270,7 +270,7 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 		}
 	}
 
-	inputValidator.LastHealthCheck = &txn.CreationDate
+	savedValidator.LastHealthCheck = txn.CreationDate
 	if err := savedValidator.emitUpdate(existingStakePool, balances); err != nil {
 		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
