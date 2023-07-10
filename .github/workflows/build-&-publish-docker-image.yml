@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ master,staging ]
+    branches: [ master, staging, sprint* ]
     tags: [ "v*.*.*" ]
   pull_request:
   workflow_dispatch:
@@ -226,12 +226,12 @@ jobs:
       - name: "Deploy 0Chain"
         uses: 0chain/actions/deploy-0chain@master
         with:
+          miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
+          sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           repo_snapshots_branch: "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>"
+          svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
-          miner_image:  ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          custom_go_sdk_version: staging
           SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
           TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
           graphnode_sc: ${{ secrets.GRAPHNODE_SC }}
