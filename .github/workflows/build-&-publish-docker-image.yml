@@ -29,6 +29,10 @@ jobs:
     runs-on: [self-hosted, arc-runner]
     steps:
 
+    - name: Get changed files using defaults
+        id: changed-files
+        uses: tj-actions/changed-files@v18.4
+
     - name: Set docker image tag
       id: get_info
       run: |
@@ -60,6 +64,7 @@ jobs:
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
 
     - name: Build base images
+      if: (contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.build_base') || contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.run_base'))
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
 
