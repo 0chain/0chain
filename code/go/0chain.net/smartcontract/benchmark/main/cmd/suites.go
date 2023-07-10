@@ -135,11 +135,14 @@ func runSuites(
 					viper.GetString(benchmark.OptionsEventDatabaseEventFile), err))
 			}
 		}
+		timer := time.Now()
+		log.Println("starting benchmark tests")
 		suiteResult := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap), data.EventDb)
 		results = append(results, suiteResults{
 			name:    benchmark.SourceNames[benchmark.EventDatabase],
 			results: suiteResult,
 		})
+		log.Println("finished benchmark tests, took:", time.Since(timer))
 	}
 	return results
 }
@@ -242,10 +245,6 @@ func runSuite(
 						prevMptHashRoot = currMptHashRoot
 					}
 				}
-				events := balances.GetEvents()
-				name := bm.Name()
-				events = events
-				name = name
 				benchmarkEvents[bm.Name()] = balances.GetEvents()
 			})
 			log.Println(bm.Name(), "run count is:", runCount)
@@ -293,37 +292,36 @@ func runEventDatabaseSuite(
 		123,
 		event.NewTestConfig(edb.Settings()),
 	)
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 	pdb, err := postgresql.NewPostgresDB(edb.Config())
 	if err != nil {
 		log.Fatal("creating parent postgres db:", err)
 	}
 
 	for _, bm := range suite.Benchmarks {
-		wg.Add(1)
-		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
-			defer wg.Done()
-			timer := time.Now()
-			//log.Println("starting", bm.Name())
-			var err error
-			result := testing.Benchmark(func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					//fmt.Println("in for loop piers", bm.Name(), "index", i)
-					err = runEventDatabaseBenchmark(b, edb, pdb, bm, i)
-				}
-			})
-			benchmarkResult = append(
-				benchmarkResult,
-				benchmarkResults{
-					test:   bm,
-					result: result,
-					error:  err,
-				},
-			)
-			log.Println("test", bm.Name(), "done. took:", time.Since(timer))
-		}(bm, &wg)
+		//	wg.Add(1)
+		//	go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
+		//		defer wg.Done()
+		log.Println("start", bm.Name())
+		timer := time.Now()
+		var err error
+		result := testing.Benchmark(func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				err = runEventDatabaseBenchmark(b, edb, pdb, bm, i)
+			}
+		})
+		benchmarkResult = append(
+			benchmarkResult,
+			benchmarkResults{
+				test:   bm,
+				result: result,
+				error:  err,
+			},
+		)
+		log.Println("edb test", bm.Name(), "done. took:", time.Since(timer))
+		//	}(bm, &wg)
 	}
-	wg.Wait()
+	//wg.Wait()
 	return benchmarkResult
 }
 
