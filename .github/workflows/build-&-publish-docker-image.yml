@@ -41,7 +41,7 @@ jobs:
         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup go 1.20
       uses: actions/setup-go@v2
@@ -71,7 +71,7 @@ jobs:
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
 
-    - name: Build base images
+    - name: Build Base & Run Base images 
       if: (contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.build_base') || contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.run_base'))
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -161,7 +161,7 @@ jobs:
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
         
-    - name: Build base images
+    - name: Build Base & Run Base images
       if: (contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.build_base') || contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.run_base'))
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
