@@ -1,0 +1,16 @@
+name: Add Issue to Backend Issues Project Board
+
+on:
+  issues:
+    types:
+      - opened
+
+jobs:
+  add-to-project:
+    name: Add Issue to Backend Issues Project Board
+    runs-on: arc-runner
+    steps:
+      - uses: actions/add-to-project@v0.4.0
+        with:
+          project-url: https://github.com/orgs/0chain/projects/${{ secrets.PROJECT_NUMBER }}
+          github-token: ${{ secrets.ACCESS_TOKEN }}

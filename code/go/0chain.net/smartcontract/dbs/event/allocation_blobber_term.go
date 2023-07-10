@@ -9,11 +9,10 @@ import (
 
 type AllocationBlobberTerm struct {
 	gorm.Model
-	AllocationID  string  `json:"allocation_id" gorm:"uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
-	BlobberID     string  `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
-	ReadPrice     int64   `json:"read_price"`
-	WritePrice    int64   `json:"write_price"`
-	MinLockDemand float64 `json:"min_lock_demand"`
+	AllocationID string `json:"allocation_id" gorm:"uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
+	BlobberID    string `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
+	ReadPrice    int64  `json:"read_price"`
+	WritePrice   int64  `json:"write_price"`
 }
 
 func (edb *EventDb) GetAllocationBlobberTerm(allocationID string, blobberID string) (*AllocationBlobberTerm, error) {
@@ -81,11 +80,10 @@ func (edb *EventDb) deleteAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 
 func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
 	var (
-		allocationIdList  []string
-		blobberIdList     []string
-		readPriceList     []int64
-		writePriceList    []int64
-		minLockDemandList []float64
+		allocationIdList []string
+		blobberIdList    []string
+		readPriceList    []int64
+		writePriceList   []int64
 	)
 
 	for _, t := range terms {
@@ -93,14 +91,13 @@ func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 		blobberIdList = append(blobberIdList, t.BlobberID)
 		readPriceList = append(readPriceList, t.ReadPrice)
 		writePriceList = append(writePriceList, t.WritePrice)
-		minLockDemandList = append(minLockDemandList, t.MinLockDemand)
 	}
 
 	return CreateBuilder("allocation_blobber_terms", "allocation_id", allocationIdList).
 		AddCompositeId("blobber_id", blobberIdList).
 		AddUpdate("read_price", readPriceList).
 		AddUpdate("write_price", writePriceList).
-		AddUpdate("min_lock_demand", minLockDemandList).Exec(edb).Error
+		Exec(edb).Error
 }
 
 func (edb *EventDb) addOrOverwriteAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
