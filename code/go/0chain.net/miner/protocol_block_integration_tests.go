@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"strings"
@@ -201,6 +202,37 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, waitOver boo
 	return mc.generateBlockWorker.Run(ctx, func() error {
 		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
 	})
+}
+
+var numChalGen int
+
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
+	// get state from conductor
+	// if it says create challenge then create
+	// otherwise return nil,nil
+
+	s := crpc.Client().State()
+	if *s.StopChallengeGeneration {
+		return nil, nil
+	}
+
+	if numChalGen > s.GenerateChallenge.TotalChallenges {
+		return nil, nil
+	}
+
+	brTxn := transaction.Provider().(*transaction.Transaction)
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
+	brTxn.ToClientID = storagesc.ADDRESS
+	brTxn.CreationDate = b.CreationDate
+	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
+	brTxn.Fee = 0
+	if err := brTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	numChalGen++
+	return brTxn, nil
 }
 
 func isIgnoringGenerateBlock(rNum int64) bool {

@@ -841,7 +841,7 @@ const (
 )
 
 // selectBlobberForChallenge select blobber for challenge in random manner
-func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
+func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
 	r *rand.Rand, balances cstate.StateContextI) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
