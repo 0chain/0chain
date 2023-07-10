@@ -7,37 +7,17 @@ on:
         description: 'system_tests branch containing the tests you wish to run'
         default: 'master'
         required: true
-       zbox_cli_branch:
-        description: '0Box CLI branch which the tests will use'
-        default: 'staging'
-        required: true
-       zwallet_cli_branch:
-        description: '0Wallet CLI branch which the tests will use'
-        default: 'staging'
-        required: true
-       blobber_branch:
-        description: 'blobber/validator branch to deploy'
-        default: 'staging'
-        required: true
-       authorizer_branch:
-         description: 'authorizer branch to deploy'
-         default: 'staging'
-         required: true
-       gosdk_branch:
-         description: 'gosdk branch branch to notify PR on test success'
-         default: 'staging'
-         required: true
-       zs3server_branch:
-         description: '0s3server branch branch to deploy'
-         default: 'staging'
-         required: true
-       zbox_branch:
-        description: '0box branch to deploy'
-        default: 'staging'
+       repo_snapshots_branch:
+        description: 'branch of repo-snapshots to derive images and branches from.'
+        default: 'current-sprint'
         required: true
        run_smoke_tests:
         description: 'Run subset of system tests (smoke tests) for faster feedback (NOT FOR PRS POINTED TO STAGING)'
         default: 'false'
+        required: false
+       test_file_filter:
+        description: 'Comma separated list of test files to run (eg. zwalletcli_register_wallet_test.go, zwalletcli_send_and_balance_test.go). If supplied, the PR will NOT be notified of the test result'
+        default: ''
         required: false
        skip_tests:
         description: '(LAST RESORT ONLY) Skip system tests. This will allow a PR to merge without requiring a green test run.  *By using you certify that the code being merged is not causing system tests to fail*'
@@ -47,17 +27,10 @@ jobs:
   system-tests:
     uses: 0chain/actions/.github/workflows/manual_system_tests.yml@master
     with:
-      system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
       miner_branch: ${{ github.ref_name }}
       sharder_branch: ${{ github.ref_name }}
-      zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
-      zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
-      blobber_branch: ${{ github.event.inputs.blobber_branch }}
-      validator_branch: ${{ github.event.inputs.blobber_branch }}
-      zbox_branch: ${{ github.event.inputs.zbox_branch }}
-      authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
-      zs3server_branch: ${{ github.event.inputs.zs3server_branch }}
-      gosdk_branch: ${{ github.event.inputs.gosdk_branch }}
+      repo_snapshots_branch: ${{ github.event.inputs.repo_snapshots_branch }}
+      test_file_filter: ${{ github.event.inputs.test_file_filter }}
       skip_tests: ${{ github.event.inputs.skip_tests }}
       run_smoke_tests: ${{ github.event.inputs.run_smoke_tests }}
     secrets:
