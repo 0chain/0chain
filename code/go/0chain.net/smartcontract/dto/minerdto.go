@@ -6,8 +6,6 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
-//go:generate msgp -io=false -tests=false -unexported -v
-
 // NodeType used in pools statistic.
 type NodeType int
 

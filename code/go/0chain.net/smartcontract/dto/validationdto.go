@@ -5,8 +5,6 @@ import (
 	"0chain.net/smartcontract/provider"
 )
 
-//go:generate msgp -io=false -tests=false -unexported -v
-
 type ValidationDtoNode struct {
 	provider.Provider
 	BaseURL           *string           `json:"url"`
