@@ -113,22 +113,18 @@ func runSuites(
 		}(suite, &wg)
 	}
 	wg.Wait()
-	var evt2 event.Event
-	res2 := data.EventDb.Store.Get().Model(&event.Event{}).First(&evt2)
-	res2 = res2
-
 	data.EventDb.Close()
-	sqlDB, err := data.EventDb.Get().DB()
-	// Close
-	err = sqlDB.Close()
 
-	err = writeEvents(viper.GetString(benchmark.OptionsSmartContractEventFile), eventMap)
-	if err != nil {
-		log.Fatal("error writing out events: " + err.Error())
+	if viper.GetString(benchmark.OptionsSmartContractEventFile) != "" {
+		err := writeEvents(viper.GetString(benchmark.OptionsSmartContractEventFile), eventMap)
+		if err != nil {
+			log.Fatal("error writing out events: " + err.Error())
+		}
 	}
 
 	if viper.GetBool(benchmark.OptionsEventDatabaseBenchmarks) {
 		if viper.GetString(benchmark.OptionsSmartContractEventFile) != viper.GetString(benchmark.OptionsEventDatabaseEventFile) {
+			var err error
 			eventMap, err = readEventDbTests(viper.GetString(benchmark.OptionsEventDatabaseEventFile))
 			if err != nil {
 				log.Fatal(fmt.Sprintf("error reading event db benchmarks file %s: %v",

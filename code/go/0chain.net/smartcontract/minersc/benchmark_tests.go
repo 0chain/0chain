@@ -470,7 +470,6 @@ func BenchmarkTests(
 		testsI = append(testsI, test)
 	}
 	return bk.TestSuite{
-		Name:       "miner",
 		Source:     bk.Miner,
 		Benchmarks: testsI,
 	}

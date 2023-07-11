@@ -303,7 +303,6 @@ func createTestSuite(restTests []benchTest) benchmark.TestSuite {
 	}
 
 	return benchmark.TestSuite{
-		Name:       "zcn",
 		Source:     benchmark.ZCNSCBridge,
 		Benchmarks: tests,
 	}

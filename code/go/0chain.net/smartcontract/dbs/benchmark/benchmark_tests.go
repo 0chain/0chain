@@ -59,7 +59,6 @@ func GetBenchmarkTestSuite(eventsMap map[string][]event.Event) bk.TestSuite {
 		})
 	}
 	return bk.TestSuite{
-		Name:       "events",
 		Source:     bk.EventDatabase,
 		Benchmarks: edbTests,
 		ReadOnly:   true,

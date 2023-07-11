@@ -858,7 +858,6 @@ func BenchmarkTests(
 		testsI = append(testsI, test)
 	}
 	return bk.TestSuite{
-		Name:       "storage",
 		Source:     bk.Storage,
 		Benchmarks: testsI,
 	}

@@ -102,7 +102,6 @@ func GetRestTests(
 		testsI = append(testsI, newTest)
 	}
 	return TestSuite{
-		Name:       name,
 		Source:     source,
 		Benchmarks: testsI,
 	}

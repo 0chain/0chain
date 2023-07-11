@@ -317,7 +317,6 @@ type SignatureScheme interface {
 }
 
 type TestSuite struct {
-	Name       string
 	Source     Source
 	Benchmarks []BenchTestI
 	ReadOnly   bool

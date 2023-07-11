@@ -121,7 +121,6 @@ func BenchmarkTests(
 		testsI = append(testsI, test)
 	}
 	return bk.TestSuite{
-		Name:       "faucet",
 		Source:     bk.Faucet,
 		Benchmarks: testsI,
 	}
