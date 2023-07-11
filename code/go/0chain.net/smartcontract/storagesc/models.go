@@ -897,7 +897,6 @@ func bSize(size int64, dataShards int) int64 {
 func (sa *StorageAllocation) removeBlobber(
 	blobbers []*StorageNode,
 	blobberID string,
-	ssc *StorageSmartContract,
 	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	blobAlloc, found := sa.BlobberAllocsMap[blobberID]
@@ -950,13 +949,12 @@ func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
 	blobbers []*StorageNode,
 	addId, removeId string,
-	ssc *StorageSmartContract,
 	now common.Timestamp,
 	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
 	if len(removeId) > 0 {
-		if blobbers, err = sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
+		if blobbers, err = sa.removeBlobber(blobbers, removeId, balances); err != nil {
 			return nil, err
 		}
 	} else {
@@ -975,7 +973,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
+	if sp, err = getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
 	staked, err := sp.stake()

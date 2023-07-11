@@ -26,6 +26,7 @@ type InterfaceMap map[string]interface{}
 
 type QueryChainer interface {
 	GetQueryStateContext() state.TimedQueryStateContextI
+	GetStateContext() state.StateContextI
 	SetQueryStateContext(state.TimedQueryStateContextI)
 }
 

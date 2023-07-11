@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/config"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/transaction"
 
 	"0chain.net/smartcontract/provider"
 
@@ -64,6 +66,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/errors", common.UserRateLimit(srh.getErrors)),
 		rest.MakeEndpoint(storage+"/allocations", common.UserRateLimit(srh.getAllocations)),
 		rest.MakeEndpoint(storage+"/allocation_min_lock", common.UserRateLimit(srh.getAllocationMinLock)),
+		rest.MakeEndpoint(storage+"/allocation-update-min-lock", common.UserRateLimit(srh.getAllocationUpdateMinLock)),
 		rest.MakeEndpoint(storage+"/allocation", common.UserRateLimit(srh.getAllocation)),
 		rest.MakeEndpoint(storage+"/latestreadmarker", common.UserRateLimit(srh.getLatestReadMarker)),
 		rest.MakeEndpoint(storage+"/readmarkers", common.UserRateLimit(srh.getReadMarkers)),
@@ -1675,6 +1678,88 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
+	cost, err := sa.cost()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	cost64, err := cost.Float64()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	mld, err := sa.restMinLockDemand()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	mld64, err := mld.Float64()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	common.Respond(w, r, map[string]interface{}{
+		"min_lock_demand": math.Max(cost64, mld64+cost64*conf.CancellationCharge),
+	}, nil)
+}
+
+func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter, r *http.Request) {
+	balances := srh.GetStateContext()
+	edb := balances.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	data := r.URL.Query().Get("data")
+	var req updateAllocationRequest
+	if err := req.decode([]byte(data)); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
+		return
+	}
+
+	eAlloc, err := edb.GetAllocation(req.ID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+		return
+	}
+
+	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	sc := StorageSmartContract{
+		SmartContract: &sci.SmartContract{
+			ID: ADDRESS,
+		},
+	}
+
+	txn := &transaction.Transaction{
+		CreationDate: common.Now(),
+	}
+
+	blobbers := make([]*StorageNode, 0, len(alloc.Blobbers))
+	for _, br := range alloc.Blobbers {
+		b := StoragNodeResponseToStorageNode(*br)
+		blobbers = append(blobbers, &b)
+	}
+
+	_, err = sc.updateAllocationWithOwner(balances, txn, &req, conf, &alloc.StorageAllocation, blobbers)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+		return
+	}
+
+	sa := alloc.StorageAllocation
 	cost, err := sa.cost()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
