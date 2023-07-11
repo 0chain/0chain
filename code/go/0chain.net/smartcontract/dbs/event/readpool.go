@@ -33,13 +33,24 @@ func mergeUpdateReadPoolEvents() *eventsMergerImpl[Allocation] {
 }
 
 func (edb *EventDb) insertReadPool(rps []ReadPool) error {
-	return nil
+	return edb.Store.Get().Create(&rps).Error
 }
 
 func (edb *EventDb) updateReadPool(rps []ReadPool) error {
-	return nil
-}
+	var (
+		userIds  []string
+		balances []int64
+	)
+	for _, rp := range rps {
+		userIds = append(userIds, rp.UserID)
+		balance, err := rp.Balance.Int64()
+		if err != nil {
+			return err
+		}
+		balances = append(balances, balance)
+	}
 
-func (edb *EventDb) getReadPool(userId string) (*ReadPool, error) {
-	return nil, nil
+	return CreateBuilder("read_pools", "user_id", userIds).
+		AddUpdate("balance", balances).
+		Exec(edb).Error
 }
