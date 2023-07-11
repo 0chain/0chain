@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"0chain.net/chaincore/chain/state"
+	"github.com/0chain/common/core/util"
 )
 
 type Endpoint struct {
@@ -26,7 +27,7 @@ type InterfaceMap map[string]interface{}
 
 type QueryChainer interface {
 	GetQueryStateContext() state.TimedQueryStateContextI
-	GetStateContext() state.StateContextI
+	GetStateContextI() state.StateContextI
 	SetQueryStateContext(state.TimedQueryStateContextI)
 }
 
@@ -45,6 +46,31 @@ func (qc *TestQueryChainer) GetQueryStateContext() state.TimedQueryStateContextI
 
 func (qc *TestQueryChainer) SetQueryStateContext(sctx state.TimedQueryStateContextI) {
 	qc.sctx = sctx
+}
+
+func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	return tmpt
+}
+
+func (qc *TestQueryChainer) GetStateContextI() state.StateContextI {
+	lfb := qc.sctx.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		return nil
+	}
+	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
+	s := qc.sctx
+	return state.NewStateContext(
+		s.GetBlock(),
+		clientState,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		s.GetEventDB())
 }
 
 type RestHandler struct {

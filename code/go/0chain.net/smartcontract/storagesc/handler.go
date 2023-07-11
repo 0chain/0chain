@@ -1721,7 +1721,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter, r *http.Request) {
-	balances := srh.GetStateContext()
+	balances := srh.GetStateContextI()
 	edb := balances.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
