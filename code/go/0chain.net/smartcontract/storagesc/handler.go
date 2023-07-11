@@ -1704,6 +1704,22 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 	}, nil)
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-update-min-lock allocation-update-min-lock
+// Calculates the cost for updating an allocation.
+//
+// parameters:
+//
+//	+name: data
+//	 description: json marshall of update allocation request input data
+//	 in: query
+//	 type: string
+//	 required: true
+//
+// responses:
+//
+//	200: Int64Map
+//	400:
+//	500:
 func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter, r *http.Request) {
 	balances := srh.GetStateContext()
 	edb := balances.GetEventDB()
