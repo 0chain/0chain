@@ -27,7 +27,7 @@ func validatorTableToValidationNode(v event.Validator) *ValidationNode {
 	}
 }
 
-func getValidators(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode, error) {
+func getValidatorsEventDB(validatorIDs []string, edb *event.EventDb) ([]*ValidationNode, error) {
 	validators, err := edb.GetValidatorsByIDs(validatorIDs)
 	if err != nil {
 		return nil, err

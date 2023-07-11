@@ -81,6 +81,7 @@ burn_error.txt
 code/go/0chain.net/smartcontract/benchmark/main/dbname_dataDir/
 
 code/go/0chain.net/smartcontract/benchmark/main/main
+code/go/0chain.net/smartcontract/benchmark/main/cmd/saved_data/
 
 dev.*.sh
 ./dev.local/bin/build

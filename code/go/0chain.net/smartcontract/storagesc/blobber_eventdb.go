@@ -2,11 +2,12 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 )
 
-func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
+func emitUpdateBlobber(sn *StorageNode, bi *BlobberOfferStake, sp *stakePool, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
@@ -19,8 +20,8 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		WritePrice: sn.Terms.WritePrice,
 
 		Capacity:     sn.Capacity,
-		Allocated:    sn.Allocated,
-		SavedData:    sn.SavedData,
+		Allocated:    bi.Allocated,
+		SavedData:    bi.SavedData,
 		NotAvailable: sn.NotAvailable,
 		Provider: event.Provider{
 			ID:              sn.ID,
@@ -36,7 +37,7 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 	return nil
 }
 
-func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
+func emitAddBlobber(sn *StorageNode, idx int32, bi *BlobberOfferStake, sp *stakePool, balances cstate.StateContextI) error {
 	staked, err := sp.stake()
 	if err != nil {
 		return err
@@ -50,11 +51,12 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		WritePrice: sn.Terms.WritePrice,
 
 		Capacity:     sn.Capacity,
-		Allocated:    sn.Allocated,
-		SavedData:    sn.SavedData,
+		Allocated:    bi.Allocated,
+		SavedData:    bi.SavedData,
 		NotAvailable: false,
 		Provider: event.Provider{
 			ID:              sn.ID,
+			Index:           idx,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
 			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
 			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
@@ -67,7 +69,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			},
 		},
 
-		OffersTotal: sp.TotalOffers,
+		OffersTotal: bi.TotalOffers,
 
 		CreationRound: balances.GetBlock().Round,
 	}
@@ -76,14 +78,15 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	return nil
 }
 
-func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, sn.ID, event.Blobber{
+// func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI) {
+func emitUpdateBlobberAllocatedSavedHealth(id string, lhc common.Timestamp, alloced, savedData int64, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, id, event.Blobber{
 		Provider: event.Provider{
-			ID:              sn.ID,
-			LastHealthCheck: sn.LastHealthCheck,
+			ID:              id,
+			LastHealthCheck: lhc,
 		},
-		Allocated: sn.Allocated,
-		SavedData: sn.SavedData,
+		Allocated: alloced,
+		SavedData: savedData,
 	})
 }
 

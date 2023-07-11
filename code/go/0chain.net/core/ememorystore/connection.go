@@ -3,6 +3,7 @@ package ememorystore
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"0chain.net/core/common"
@@ -54,6 +55,11 @@ func defaultDBOptions() *grocksdb.Options {
 /*CreateDB - create a database */
 func CreateDB(dataDir string) (*grocksdb.TransactionDB, error) {
 	opts := defaultDBOptions()
+	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
+		if err = os.MkdirAll(dataDir, 0766); err != nil {
+			return nil, err
+		}
+	}
 	tdbopts := grocksdb.NewDefaultTransactionDBOptions()
 	return grocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 }

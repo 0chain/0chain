@@ -118,12 +118,23 @@ func BenchmarkTests(
 		return ssc.newAllocationRequest(t, r, b, timings)
 	}
 
+	freeAllocationRequestF := func(
+		txn *transaction.Transaction,
+		input []byte,
+		balances cstate.StateContextI,
+	) (string, error) {
+		return ssc.freeAllocationRequest(txn, input, balances, timings)
+	}
+
 	var tests = []BenchTest{
 		// read/write markers
 		{
 			name:     "storage.read_redeem",
 			endpoint: ssc.commitBlobberRead,
 			txn: &transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("read_redeem"),
+				},
 				ClientID:     data.Clients[0],
 				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
@@ -159,7 +170,7 @@ func BenchmarkTests(
 					AllocationRoot:         encryption.Hash("allocation root"),
 					PreviousAllocationRoot: encryption.Hash("allocation root"),
 					AllocationID:           getMockAllocationId(0),
-					Size:                   1024,
+					Size:                   100,
 					BlobberID:              getMockBlobberId(0),
 					Timestamp:              1,
 					ClientID:               data.Clients[0],
@@ -291,7 +302,7 @@ func BenchmarkTests(
 		},
 		{
 			name:     "storage.free_allocation_request",
-			endpoint: ssc.freeAllocationRequest,
+			endpoint: freeAllocationRequestF,
 			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -311,16 +322,17 @@ func BenchmarkTests(
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
-				responseBytes, err := json.Marshal(&request)
-				if err != nil {
-					panic(err)
-				}
+
+				marker := fmt.Sprintf("%s:%f:%d",
+					request.Recipient,
+					request.FreeTokens,
+					request.Nonce)
 				err = sigScheme.SetPublicKey(data.PublicKeys[0])
 				if err != nil {
 					panic(err)
 				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				signature, err := sigScheme.Sign(hex.EncodeToString(responseBytes))
+				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				if err != nil {
 					panic(err)
 				}
@@ -338,6 +350,7 @@ func BenchmarkTests(
 				})
 				return bytes
 			}(),
+			timings: timings,
 		},
 		{
 			name:     "storage.free_update_allocation",
@@ -361,10 +374,14 @@ func BenchmarkTests(
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
-				responseBytes, _ := json.Marshal(&request)
+
+				marker := fmt.Sprintf("%s:%f:%d",
+					request.Recipient,
+					request.FreeTokens,
+					request.Nonce)
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				signature, _ := sigScheme.Sign(hex.EncodeToString(responseBytes))
+				signature, _ := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				fsmBytes, _ := json.Marshal(&freeStorageMarker{
 					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 					Recipient:  request.Recipient,
@@ -654,8 +671,10 @@ func BenchmarkTests(
 			txn: &transaction.Transaction{CreationDate: creationTime},
 		},
 		{
-			name:     "storage.challenge_response",
-			endpoint: ssc.verifyChallenge,
+			name: "storage.challenge_response",
+			endpoint: func(txn *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+				return ssc.verifyChallenge(txn, input, balances, timings)
+			},
 			txn: &transaction.Transaction{
 				ClientID:     getMockBlobberId(0),
 				CreationDate: creationTime,
@@ -664,7 +683,7 @@ func BenchmarkTests(
 				var validationTickets []*ValidationTicket
 				//always use first NumBlobbersPerAllocation/2 validators the same we use for challenge creation.
 				//to randomize it we need to load challenge here, not sure if it's needed
-				for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation)/2; i++ {
+				for i := 0; i < viper.GetInt(bk.StorageValidatorsPerChallenge); i++ {
 					vt := &ValidationTicket{
 						ChallengeID:  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 						BlobberID:    getMockBlobberId(0),
@@ -688,6 +707,7 @@ func BenchmarkTests(
 				})
 				return bytes
 			}(),
+			timings: timings,
 		},
 		{
 			name:     "storage.commit_settings_changes",
@@ -854,9 +874,22 @@ func BenchmarkTests(
 		// todo "update_config" waiting for PR489
 	}
 	var testsI []bk.BenchTestI
+
+	runTests := viper.GetStringSlice(bk.OptionRunTests)
+	var rto bk.RunTestOption
+	bk.WithPartialRun(runTests...)(&rto)
+
+	fmt.Println("$$$$$$$$$ run storagesc tests...")
 	for _, test := range tests {
-		testsI = append(testsI, test)
+		if rto.RunAll() {
+			testsI = append(testsI, test)
+		} else {
+			if _, ok := rto.PartialMap[test.Name()]; ok {
+				testsI = append(testsI, test)
+			}
+		}
 	}
+
 	return bk.TestSuite{
 		Source:     bk.Storage,
 		Benchmarks: testsI,

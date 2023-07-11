@@ -166,7 +166,7 @@ func (zcn *ZCNSmartContract) AddToDelegatePool(t *transaction.Transaction,
 			"failed to get global node error: %v", err)
 	}
 
-	return stakepool.StakePoolLock(t, input, balances, stakepool.ValidationSettings{
+	return stakepool.StakePoolLock(balances, t, input, stakepool.ValidationSettings{
 		MinStake:        gn.MinStakeAmount,
 		MaxStake:        gn.MaxStakeAmount,
 		MaxNumDelegates: gn.MaxDelegates,
@@ -177,5 +177,5 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	return stakepool.StakePoolUnlock(t, inputData, balances, zcn.getStakePoolAdapter)
+	return stakepool.StakePoolUnlock(balances, t, inputData, zcn.getStakePoolAdapter)
 }

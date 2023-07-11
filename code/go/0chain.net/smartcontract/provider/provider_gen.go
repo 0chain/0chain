@@ -10,24 +10,24 @@ import (
 func (z *Provider) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 5
-	// string "ID"
-	o = append(o, 0x85, 0xa2, 0x49, 0x44)
+	// string "i"
+	o = append(o, 0x85, 0xa1, 0x69)
 	o = msgp.AppendString(o, z.ID)
-	// string "LastHealthCheck"
-	o = append(o, 0xaf, 0x4c, 0x61, 0x73, 0x74, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b)
+	// string "l"
+	o = append(o, 0xa1, 0x6c)
 	o, err = z.LastHealthCheck.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "LastHealthCheck")
 		return
 	}
-	// string "HasBeenShutDown"
-	o = append(o, 0xaf, 0x48, 0x61, 0x73, 0x42, 0x65, 0x65, 0x6e, 0x53, 0x68, 0x75, 0x74, 0x44, 0x6f, 0x77, 0x6e)
+	// string "s"
+	o = append(o, 0xa1, 0x73)
 	o = msgp.AppendBool(o, z.HasBeenShutDown)
-	// string "HasBeenKilled"
-	o = append(o, 0xad, 0x48, 0x61, 0x73, 0x42, 0x65, 0x65, 0x6e, 0x4b, 0x69, 0x6c, 0x6c, 0x65, 0x64)
+	// string "k"
+	o = append(o, 0xa1, 0x6b)
 	o = msgp.AppendBool(o, z.HasBeenKilled)
-	// string "ProviderType"
-	o = append(o, 0xac, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65)
+	// string "t"
+	o = append(o, 0xa1, 0x74)
 	o, err = z.ProviderType.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "ProviderType")
@@ -54,31 +54,31 @@ func (z *Provider) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "ID":
+		case "i":
 			z.ID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ID")
 				return
 			}
-		case "LastHealthCheck":
+		case "l":
 			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "LastHealthCheck")
 				return
 			}
-		case "HasBeenShutDown":
+		case "s":
 			z.HasBeenShutDown, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "HasBeenShutDown")
 				return
 			}
-		case "HasBeenKilled":
+		case "k":
 			z.HasBeenKilled, bts, err = msgp.ReadBoolBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "HasBeenKilled")
 				return
 			}
-		case "ProviderType":
+		case "t":
 			bts, err = z.ProviderType.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ProviderType")
@@ -98,6 +98,6 @@ func (z *Provider) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Provider) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 16 + z.LastHealthCheck.Msgsize() + 16 + msgp.BoolSize + 14 + msgp.BoolSize + 13 + z.ProviderType.Msgsize()
+	s = 1 + 2 + msgp.StringPrefixSize + len(z.ID) + 2 + z.LastHealthCheck.Msgsize() + 2 + msgp.BoolSize + 2 + msgp.BoolSize + 2 + z.ProviderType.Msgsize()
 	return
 }

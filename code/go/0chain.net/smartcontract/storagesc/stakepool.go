@@ -363,9 +363,50 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	if err != nil {
 		return "", err
 	}
-	return stakepool.StakePoolLock(t, input, balances,
-		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates},
-		ssc.getStakePoolAdapter)
+
+	st := stakepool.ValidationSettings{
+		MaxStake:        gn.MaxStake,
+		MinStake:        gn.MinStake,
+		MaxNumDelegates: gn.MaxDelegates}
+
+	return stakepool.StakePoolLock(
+		balances,
+		t,
+		input,
+		st,
+		ssc.getStakePoolAdapter,
+		func(req *stakepool.StakePoolRequest, sp stakepool.AbstractStakePool) error {
+			if req.ProviderType != spenum.Blobber {
+				return nil
+			}
+
+			return updateBlobberTotalStake(balances, req.ProviderID, sp)
+		})
+}
+
+func updateBlobberTotalStake(
+	balances chainstate.StateContextI,
+	blobberID string,
+	sp stakepool.AbstractStakePool) error {
+	bil, err := getBlobbersInfoList(balances)
+	if err != nil {
+		return err
+	}
+	if len(bil) == 0 {
+		return errors.New("no blobber found")
+	}
+
+	b, err := getBlobber(blobberID, balances)
+	if err != nil {
+		return fmt.Errorf("could not get blobber: %v", err)
+	}
+	s, err := sp.Stake()
+	if err != nil {
+		return fmt.Errorf("update blobber total stake failed: %v", err)
+	}
+
+	bil[b.Index].TotalStake = s
+	return bil.Save(balances)
 }
 
 // stake pool can return excess tokens from stake pool
@@ -374,5 +415,12 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	return stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter)
+	return stakepool.StakePoolUnlock(balances, t, input, ssc.getStakePoolAdapter,
+		func(req *stakepool.StakePoolRequest, sp stakepool.AbstractStakePool) error {
+			if req.ProviderType != spenum.Blobber {
+				return nil
+			}
+
+			return updateBlobberTotalStake(balances, req.ProviderID, sp)
+		})
 }

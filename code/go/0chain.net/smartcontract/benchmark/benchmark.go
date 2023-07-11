@@ -132,6 +132,7 @@ const (
 	OptionVerbose          = Options + "verbose"
 	OptionTestSuites       = Options + "test_suites"
 	OptionOmittedTests     = Options + "omitted_tests"
+	OptionRunTests         = Options + "run_tests"
 	OptionLoadPath         = Options + "load_path"
 	OptionSavePath         = Options + "save_path"
 	OptionsLoadConcurrency = Options + "load_concurrency"

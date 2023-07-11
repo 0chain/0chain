@@ -18,7 +18,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -374,7 +373,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
+		var thisChallenge = thisExpires + toSeconds(getMaxChallengeCompletionTime()) - toSeconds(1*time.Minute)
 
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
@@ -1003,16 +1002,13 @@ func testBlobberPenalty(
 		return err
 	}
 
-	newCP, err := ssc.getChallengePool(allocation.ID, ctx)
-	require.NoError(t, err)
-
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
 	require.NoError(t, err)
 
 	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
-	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, ctx)
+	confirmBlobberPenalty(t, f, allocation.ChallengePool, newVSp, *afterBlobber, ctx)
 	return nil
 }
 
@@ -1057,16 +1053,13 @@ func testBlobberReward(
 		return err
 	}
 
-	newCP, err := ssc.getChallengePool(allocation.ID, ctx)
-	require.NoError(t, err)
-
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
 	require.NoError(t, err)
 
 	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
-	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber, ctx)
+	confirmBlobberReward(t, f, allocation.ChallengePool, newVSp, *afterBlobber, ctx)
 	return nil
 }
 
@@ -1087,11 +1080,12 @@ func setupChallengeMocks(
 
 	var err error
 	var allocation = &StorageAllocation{
-		ID:         "alice",
-		Owner:      "owin",
-		Expiration: thisExpires,
-		TimeUnit:   scYaml.TimeUnit,
-		WritePool:  currency.Coin(wpBalance),
+		ID:            "alice",
+		Owner:         "owin",
+		Expiration:    thisExpires,
+		TimeUnit:      scYaml.TimeUnit,
+		WritePool:     currency.Coin(wpBalance),
+		ChallengePool: challengePoolBalance,
 	}
 
 	var details = &BlobberAllocation{
@@ -1135,16 +1129,6 @@ func setupChallengeMocks(
 		},
 	}
 	_, err = ctx.InsertTrieNode(allocation.GetKey(ADDRESS), allocation)
-
-	var cPool = challengePool{
-		ZcnPool: &tokenpool.ZcnPool{
-			TokenPool: tokenpool.TokenPool{
-				ID:      allocation.ID,
-				Balance: challengePoolBalance,
-			},
-		},
-	}
-	require.NoError(t, cPool.save(ssc.ID, allocation, ctx))
 
 	var sp = newStakePool()
 	sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
@@ -1291,12 +1275,12 @@ func (f formulaeBlobberReward) delegatePenalty(index int) int64 {
 func confirmBlobberPenalty(
 	t *testing.T,
 	f formulaeBlobberReward,
-	challengePool challengePool,
+	challengePool currency.Coin,
 	validatorsSPs []*stakePool,
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool), errDelta)
 
 	require.EqualValues(t, 0, int64(blobber.Reward))
 	require.EqualValues(t, 0, int64(blobber.Reward))
@@ -1329,12 +1313,12 @@ func confirmBlobberPenalty(
 func confirmBlobberReward(
 	t *testing.T,
 	f formulaeBlobberReward,
-	challengePool challengePool,
+	challengePool currency.Coin,
 	validatorsSPs []*stakePool,
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.blobberReward()-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.blobberReward()-f.rewardReturned()-f.validatorsReward(), int64(challengePool), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
 

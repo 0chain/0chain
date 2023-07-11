@@ -4,9 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,66 +44,6 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	nar.Expiration = 150 + toSeconds(48*time.Hour)
 	nar.DataShards = 0
 	requireErrMsg(t, nar.validate(now, &conf), errMsg5)
-}
-
-func TestStorageAllocation_filterBlobbers(t *testing.T) {
-
-	var (
-		alloc StorageAllocation
-		list  []*StorageNode
-		now   common.Timestamp = 150
-		size  int64            = 230
-	)
-
-	list = []*StorageNode{
-		{Terms: Terms{}},
-		{Terms: Terms{}},
-	}
-
-	// 1. filter all by max offer duration
-
-	alloc.Expiration = now + 10 // one second duration
-	bs, err := alloc.filterBlobbers(list, now, size)
-	require.NoError(t, err)
-	assert.Len(t, bs, 0)
-
-	// 2. filter all by read price range
-	alloc.Expiration = now + 5
-	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 40}
-
-	list[0].Terms.ReadPrice = 100
-	list[1].Terms.ReadPrice = 150
-	bs, err = alloc.filterBlobbers(list, now, size)
-	require.NoError(t, err)
-	assert.Len(t, bs, 0)
-
-	// 3. filter all by write price range
-	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 200}
-
-	alloc.WritePriceRange = PriceRange{Min: 10, Max: 40}
-	list[0].Terms.WritePrice = 100
-	list[1].Terms.WritePrice = 150
-	bs, err = alloc.filterBlobbers(list, now, size)
-	require.NoError(t, err)
-	assert.Len(t, bs, 0)
-
-	// 4. filter all by size
-	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
-	list[0].Capacity, list[0].Allocated = 100, 90
-	list[1].Capacity, list[1].Allocated = 100, 50
-	bs, err = alloc.filterBlobbers(list, now, size)
-	require.NoError(t, err)
-	assert.Len(t, bs, 0)
-
-	// accept one
-	list[0].Capacity, list[0].Allocated = 330, 100
-	bs, err = alloc.filterBlobbers(list, now, size)
-	assert.Len(t, bs, 1)
-
-	// accept all
-	list[1].Capacity, list[1].Allocated = 330, 100
-	bs, err = alloc.filterBlobbers(list, now, size)
-	assert.Len(t, bs, 2)
 }
 
 func TestVerifyClientID(t *testing.T) {

@@ -86,5 +86,5 @@ func (p *Partitions) loadLocations(idx int) {
 		p.locations[kid] = idx
 	}
 
-	logging.Logger.Debug("load cache locations", zap.Any("locations", p.locations))
+	//logging.Logger.Debug("load cache locations", zap.Any("locations", p.locations))
 }

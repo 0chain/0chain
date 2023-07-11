@@ -197,7 +197,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "add_free_storage_assigner":
 		resp, err = sc.addFreeStorageAssigner(t, input, balances)
 	case "free_allocation_request":
-		resp, err = sc.freeAllocationRequest(t, input, balances)
+		resp, err = sc.freeAllocationRequest(t, input, balances, nil)
 	case "free_update_allocation":
 		resp, err = sc.updateFreeStorageRequest(t, input, balances)
 
@@ -267,7 +267,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		return "OpenChallenges generated", nil
 
 	case "challenge_response":
-		resp, err = sc.verifyChallenge(t, input, balances)
+		resp, err = sc.verifyChallenge(t, input, balances, nil)
 
 	// configurations
 

@@ -3,29 +3,30 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
+	"runtime/pprof"
 	"sort"
 	"time"
 
+	_ "net/http/pprof"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
-	"0chain.net/core/common"
-	"github.com/spf13/pflag"
-
-	"0chain.net/smartcontract/zcnsc"
-
-	"0chain.net/smartcontract/benchmark/main/cmd/control"
-
 	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
 	bk "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/benchmark/main/cmd/control"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -90,10 +91,22 @@ var rootCmd = &cobra.Command{
 	Long:  `Benchmark 0chain smart-contract`,
 	Run: func(cmd *cobra.Command, args []string) {
 		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered in benchmark function", r)
-			}
+			//if r := recover(); r != nil {
+			//	fmt.Println("Recovered in benchmark function", r)
+			//}
 		}()
+		if cpuPprof != "" {
+			f, err := os.Create(cpuPprof)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+			if err := pprof.StartCPUProfile(f); err != nil {
+				log.Fatal(err)
+			}
+			defer pprof.StopCPUProfile()
+		}
+
 		totalTimer := time.Now()
 		// path to config file can only come from command line options
 
@@ -113,7 +126,7 @@ var rootCmd = &cobra.Command{
 		log.Println("read in command line options")
 
 		executor := common.NewWithContextFunc(viper.GetInt(bk.OptionsLoadConcurrency))
-		mpt, root, data := getMpt(loadPath, configPath, executor)
+		mpt, root, data, _ := getMpt(loadPath, configPath, executor)
 		log.Println("finished setting up blockchain", "root", string(root))
 
 		savePath := viper.GetString(bk.OptionSavePath)
@@ -131,6 +144,12 @@ var rootCmd = &cobra.Command{
 		printTimings(results)
 		printResults(results)
 	},
+}
+
+var cpuPprof string
+
+func init() {
+	rootCmd.PersistentFlags().StringVar(&cpuPprof, "cpup", "default", "description of my flag")
 }
 
 func printTimings(results []suiteResults) {

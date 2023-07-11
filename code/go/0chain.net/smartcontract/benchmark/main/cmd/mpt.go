@@ -118,7 +118,7 @@ func getBalances(
 	)
 }
 
-func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
+func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData, string) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in getMpt", r)
@@ -144,11 +144,13 @@ func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatri
 
 	if len(loadPath) == 0 {
 		log.Println("no database to load, build new one in", mptDir)
-		return setUpMpt(mptDir)
+		mpt, root, bd := setUpMpt(mptDir)
+		return mpt, root, bd, mptDir
 	}
 
 	log.Println("loading saved database", mptDir)
-	return openMpt(mptDir)
+	mpt, root, bd := openMpt(mptDir)
+	return mpt, root, bd, mptDir
 }
 
 func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
@@ -269,7 +271,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		blobbers = storagesc.AddMockBlobbers(eventDb, balances)
+		blobbers = storagesc.AddMockBlobbers(clients, eventDb, balances)
 		log.Println("added blobbers\t", time.Since(timer))
 	}()
 
@@ -356,13 +358,13 @@ func setUpMpt(
 		log.Println("added allocation read pools\t", time.Since(timer))
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
-		storagesc.AddMockChallengePools(eventDb, balances)
-		log.Println("added challenge pools\t", time.Since(timer))
-	}()
+	//wg.Add(1)
+	//go func() {
+	//	defer wg.Done()
+	//	timer := time.Now()
+	//	storagesc.AddMockChallengePools(eventDb, balances)
+	//	log.Println("added challenge pools\t", time.Since(timer))
+	//}()
 
 	wg.Add(1)
 	go func() {

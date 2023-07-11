@@ -10,7 +10,7 @@ simulation:
   num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
-  num_blobbers_per_Allocation: 4 # ideally make this even
+  num_blobbers_per_Allocation: 9 # ideally make this even
   num_blobber_delegates: 10
   num_miner_delegates: 10
   num_sharder_delegates: 10
@@ -26,15 +26,26 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "miner"
-    - "storage_rest"
+    - "storage"
+#    - "miner"
+#    - "storage_rest"
+  run_tests: # run selected tests, if omitted all tests are run
+#    - "storage.read_redeem"
+#    - "storage.free_allocation_request"
+#    - "storage.free_update_allocation"
+#    - "storage.update_allocation_request"
+#    - "storage.finalize_allocation"
+#    - "storage.cancel_allocation"
+#    - "storage.new_allocation_request"
+#    - "storage.generate_challenge"
+#    - "miner.payFees"
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
 
 dbs:
   events:
-    enabled: true
+    enabled: false
     name: events_db
     user: postgres
     password: postgres

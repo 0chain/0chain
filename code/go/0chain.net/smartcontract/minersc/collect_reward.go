@@ -26,9 +26,7 @@ func (ssc *MinerSmartContract) collectReward(
 	var req stakepool.CollectRewardRequest
 	minted, err := stakepool.CollectReward(
 		input,
-		func(
-			crr stakepool.CollectRewardRequest, balances cstate.StateContextI,
-		) (currency.Coin, error) {
+		func(crr stakepool.CollectRewardRequest, balances cstate.StateContextI) (currency.Coin, error) {
 			req = crr
 			var provider *MinerNode
 			var err error

@@ -10,39 +10,27 @@ import (
 func (z *freeStorageAssigner) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 6
-	// string "ClientId"
-	o = append(o, 0x86, 0xa8, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x64)
-	o = msgp.AppendString(o, z.ClientId)
-	// string "PublicKey"
-	o = append(o, 0xa9, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
-	o = msgp.AppendString(o, z.PublicKey)
-	// string "IndividualLimit"
-	o = append(o, 0xaf, 0x49, 0x6e, 0x64, 0x69, 0x76, 0x69, 0x64, 0x75, 0x61, 0x6c, 0x4c, 0x69, 0x6d, 0x69, 0x74)
-	o, err = z.IndividualLimit.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "IndividualLimit")
-		return
-	}
-	// string "TotalLimit"
-	o = append(o, 0xaa, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x4c, 0x69, 0x6d, 0x69, 0x74)
-	o, err = z.TotalLimit.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TotalLimit")
-		return
-	}
-	// string "CurrentRedeemed"
-	o = append(o, 0xaf, 0x43, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x64, 0x65, 0x65, 0x6d, 0x65, 0x64)
-	o, err = z.CurrentRedeemed.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "CurrentRedeemed")
-		return
-	}
-	// string "RedeemedNonces"
-	o = append(o, 0xae, 0x52, 0x65, 0x64, 0x65, 0x65, 0x6d, 0x65, 0x64, 0x4e, 0x6f, 0x6e, 0x63, 0x65, 0x73)
+	// string "i"
+	o = append(o, 0x86, 0xa1, 0x69)
+	o = msgp.AppendUint64(o, z.IndividualLimit)
+	// string "t"
+	o = append(o, 0xa1, 0x74)
+	o = msgp.AppendUint64(o, z.TotalLimit)
+	// string "r"
+	o = append(o, 0xa1, 0x72)
+	o = msgp.AppendUint64(o, z.CurrentRedeemed)
+	// string "n"
+	o = append(o, 0xa1, 0x6e)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.RedeemedNonces)))
 	for za0001 := range z.RedeemedNonces {
 		o = msgp.AppendInt64(o, z.RedeemedNonces[za0001])
 	}
+	// string "c"
+	o = append(o, 0xa1, 0x63)
+	o = msgp.AppendString(o, z.ClientId)
+	// string "p"
+	o = append(o, 0xa1, 0x70)
+	o = msgp.AppendString(o, z.PublicKey)
 	return
 }
 
@@ -64,37 +52,25 @@ func (z *freeStorageAssigner) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "ClientId":
-			z.ClientId, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ClientId")
-				return
-			}
-		case "PublicKey":
-			z.PublicKey, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "PublicKey")
-				return
-			}
-		case "IndividualLimit":
-			bts, err = z.IndividualLimit.UnmarshalMsg(bts)
+		case "i":
+			z.IndividualLimit, bts, err = msgp.ReadUint64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "IndividualLimit")
 				return
 			}
-		case "TotalLimit":
-			bts, err = z.TotalLimit.UnmarshalMsg(bts)
+		case "t":
+			z.TotalLimit, bts, err = msgp.ReadUint64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TotalLimit")
 				return
 			}
-		case "CurrentRedeemed":
-			bts, err = z.CurrentRedeemed.UnmarshalMsg(bts)
+		case "r":
+			z.CurrentRedeemed, bts, err = msgp.ReadUint64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "CurrentRedeemed")
 				return
 			}
-		case "RedeemedNonces":
+		case "n":
 			var zb0002 uint32
 			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
@@ -113,6 +89,18 @@ func (z *freeStorageAssigner) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "c":
+			z.ClientId, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ClientId")
+				return
+			}
+		case "p":
+			z.PublicKey, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "PublicKey")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -127,7 +115,7 @@ func (z *freeStorageAssigner) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *freeStorageAssigner) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.ClientId) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 16 + z.IndividualLimit.Msgsize() + 11 + z.TotalLimit.Msgsize() + 16 + z.CurrentRedeemed.Msgsize() + 15 + msgp.ArrayHeaderSize + (len(z.RedeemedNonces) * (msgp.Int64Size))
+	s = 1 + 2 + msgp.Uint64Size + 2 + msgp.Uint64Size + 2 + msgp.Uint64Size + 2 + msgp.ArrayHeaderSize + (len(z.RedeemedNonces) * (msgp.Int64Size)) + 2 + msgp.StringPrefixSize + len(z.ClientId) + 2 + msgp.StringPrefixSize + len(z.PublicKey)
 	return
 }
 

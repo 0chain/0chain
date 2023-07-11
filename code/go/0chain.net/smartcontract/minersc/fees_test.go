@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
-
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
@@ -594,4 +593,83 @@ func Test_payFees(t *testing.T) {
 		assert.True(t, gn.RewardRate < rr)
 	})
 
+}
+
+func Test_removeItemsFromSlice(t *testing.T) {
+	type args struct {
+		all   []string
+		items map[string]struct{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		// TODO: Add test cases.
+		{
+			name: "remove all items",
+			args: args{
+				all: []string{"a", "b", "c"},
+				items: map[string]struct{}{
+					"a": {},
+					"b": {},
+					"c": {},
+				},
+			},
+			want: []string{},
+		},
+		{
+			name: "remove first item",
+			args: args{
+				all: []string{"a", "b", "c"},
+				items: map[string]struct{}{
+					"a": {},
+				},
+			},
+			want: []string{
+				"b", "c",
+			},
+		},
+		{
+			name: "remove middle item",
+			args: args{
+				all: []string{"a", "b", "c"},
+				items: map[string]struct{}{
+					"b": {},
+				},
+			},
+			want: []string{
+				"a", "c",
+			},
+		},
+		{
+			name: "remove last item",
+			args: args{
+				all: []string{"a", "b", "c"},
+				items: map[string]struct{}{
+					"c": {},
+				},
+			},
+			want: []string{
+				"a", "b",
+			},
+		},
+		{
+			name: "remove no item",
+			args: args{
+				all: []string{"a", "b", "c"},
+				items: map[string]struct{}{
+					"d": {},
+				},
+			},
+			want: []string{
+				"a", "b", "c",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, removeItemsFromSlice(tt.args.all, tt.args.items), "removeItemsFromSlice(%v, %v)", tt.args.all, tt.args.items)
+		})
+	}
 }

@@ -3,6 +3,7 @@ package minersc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -322,6 +323,16 @@ func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, erro
 		return nil, fmt.Errorf("provider is %s should be %s", mn.ProviderType, spenum.Miner)
 	}
 	return mn, nil
+}
+
+func getNodeStakePool(id string, state cstate.CommonStateContextI) (*stakepool.NodeStakePool, error) {
+	n := stakepool.NewNodeStakePool()
+	n.ID = id
+	err := n.Get(state)
+	if err != nil {
+		return nil, err
+	}
+	return n, nil
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {

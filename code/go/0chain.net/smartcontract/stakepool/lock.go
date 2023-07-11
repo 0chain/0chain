@@ -125,7 +125,7 @@ func (sp *StakePool) LockPool(
 }
 
 func (sp *StakePool) EmitStakeEvent(providerType spenum.Provider, providerID string, balances cstate.StateContextI) error {
-	staked, err := sp.stake()
+	staked, err := sp.Stake()
 	if err != nil {
 		return err
 	}

@@ -436,12 +436,12 @@ func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs 
 	return setPartitionItems(its, vs)
 }
 
-func (p *Partitions) Size(state state.StateContextI) (int, error) {
+func (p *Partitions) Size() int {
 	if p.Last.length() == 0 {
-		return 0, nil
+		return 0
 	}
 
-	return p.Last.Loc*p.PartitionSize + p.Last.length(), nil
+	return p.Last.Loc*p.PartitionSize + p.Last.length()
 }
 
 func (p *Partitions) Exist(state state.StateContextI, id string) (bool, error) {

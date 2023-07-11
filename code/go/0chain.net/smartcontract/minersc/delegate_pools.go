@@ -13,7 +13,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	return stakepool.StakePoolLock(t, input, balances,
+	return stakepool.StakePoolLock(balances, t, input,
 		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter)
 }
 
@@ -54,5 +54,5 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	return stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter)
+	return stakepool.StakePoolUnlock(balances, t, inputData, msc.getStakePoolAdapter)
 }
