@@ -1,6 +1,10 @@
 package config
 
-import "github.com/mitchellh/mapstructure"
+import (
+	"fmt"
+
+	"github.com/mitchellh/mapstructure"
+)
 
 // AdversarialAuthorizer represents the adversarial_authorizer directive state.
 type AdversarialAuthorizer struct {
@@ -105,12 +109,25 @@ func (n *BlobberDelete) Decode(val interface{}) error {
 }
 
 type GenerateChallege struct {
-	BlobberID       string `json:"blobber_id" mapstructure:"blobber_id"`
-	TotalChallenges int    `json:"total_challenges" mapstructure:"total_challenges"`
+	BlobberID                 string `json:"blobber_id" mapstructure:"blobber_id"`
+	TotalChallenges           int    `json:"total_challenges" mapstructure:"total_challenges"`
+	ExpectedStatus            int    `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
+	WaitOnBlobberCommit       bool
+	WaitOnChallengeGeneration bool
+	WaitForChallengeStatus    bool
 }
 
 func (g *GenerateChallege) Decode(val interface{}) error {
-	return mapstructure.Decode(val, g)
+	err := mapstructure.Decode(val, g)
+	if err != nil {
+		return err
+	}
+
+	if g.ExpectedStatus == 0 || g.ExpectedStatus == 1 {
+		return nil
+	}
+
+	return fmt.Errorf("expected either '0' or '1', got: %d", g.ExpectedStatus)
 }
 
 func NewGenerateChallenge() *GenerateChallege {

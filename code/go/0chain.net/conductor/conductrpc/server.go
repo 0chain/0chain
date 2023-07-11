@@ -129,6 +129,7 @@ type Server struct {
 	// May need to add fields in struct rather than only struct{}
 	onChallengeGeneration chan string
 	onBlobberCommit       chan string
+	onChallengeStatus     chan map[string]interface{}
 	CurrentTest           cases.TestCase
 
 	magicBlock string
@@ -164,6 +165,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		onShareOrSignsSharesEvent: make(chan *ShareOrSignsSharesEvent, 10),
 		onChallengeGeneration:     make(chan string, 1),
 		onBlobberCommit:           make(chan string, 1),
+		onChallengeStatus:         make(chan map[string]interface{}, 1),
 		nodes:                     make(map[NodeName]*nodeState),
 		address:                   address,
 		server:                    rpc.NewServer(),
@@ -332,6 +334,10 @@ func (s *Server) OnBlobberCommit() chan string {
 	return s.onBlobberCommit
 }
 
+func (s *Server) OnChallengeStatus() chan map[string]interface{} {
+	return s.onChallengeStatus
+}
+
 func (s *Server) Nodes() map[config.NodeName]*nodeState {
 	return s.nodes
 }
@@ -446,6 +452,15 @@ func (s *Server) BlobberCommitted(blobberID *string, _ *struct{}) error {
 	case s.onBlobberCommit <- *blobberID:
 	case <-s.quit:
 	}
+	return nil
+}
+
+func (s *Server) SetChallengeStatus(m map[string]interface{}) error {
+	select {
+	case s.onChallengeStatus <- m:
+	case <-s.quit:
+	}
+
 	return nil
 }
 

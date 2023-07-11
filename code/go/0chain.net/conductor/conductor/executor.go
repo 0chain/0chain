@@ -355,15 +355,23 @@ func (r *Runner) WaitForChallengeGeneration() {
 		log.Print(" [INF] waiting for blockchain to generate challenge")
 	}
 
-	r.waitOnChallengeGeneration = true
+	r.chalConf.WaitOnChallengeGeneration = true
 	return
 }
 
-func (r *Runner) WaitBlobberCommit() {
+func (r *Runner) WaitOnBlobberCommit() {
 	if r.verbose {
 		log.Print(" [INF] waiting for blobber to commit writemarker")
 	}
-	r.waitBlobberCommit = true
+	r.chalConf.WaitOnBlobberCommit = true
+	return
+}
+
+func (r *Runner) WaitForChallengeStatus() {
+	if r.verbose {
+		log.Print(" [INF] waiting for blobber to commit writemarker")
+	}
+	r.chalConf.WaitForChallengeStatus = true
 	return
 }
 
@@ -975,12 +983,4 @@ func (r *Runner) SetMagicBlock(configFile string) error {
 	r.server.SetMagicBlock(configFile)
 
 	return nil
-}
-
-func (r *Runner) SetExpectedBlobberCommit(blobberID string) {
-	r.expectedBlobberToCommit = blobberID
-}
-
-func (r *Runner) SetExpectedChallengeGenerationBlobber(blobberID string) {
-	r.expectedBlobberForChallenge = blobberID
 }

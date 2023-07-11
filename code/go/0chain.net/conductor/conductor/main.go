@@ -14,6 +14,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -173,21 +174,18 @@ type Runner struct {
 	}
 
 	// wait for
-	waitPhase                   config.WaitPhase              //
-	waitViewChange              config.WaitViewChange         //
-	waitNodes                   map[config.NodeName]struct{}  // (start a node)
-	waitRound                   config.WaitRound              //
-	waitContributeMPK           config.WaitContributeMpk      //
-	waitShareSignsOrShares      config.WaitShareSignsOrShares //
-	waitAdd                     config.WaitAdd                // add_miner, add_sharder
-	waitSharderKeep             config.WaitSharderKeep        // sharder_keep
-	waitNoProgress              config.WaitNoProgress         // no new rounds expected
-	waitNoViewChange            config.WaitNoViewChainge      // no VC expected
-	waitCommand                 chan error                    // wait a command
-	waitBlobberCommit           bool
-	expectedBlobberToCommit     string
-	waitOnChallengeGeneration   bool
-	expectedBlobberForChallenge string
+	waitPhase              config.WaitPhase              //
+	waitViewChange         config.WaitViewChange         //
+	waitNodes              map[config.NodeName]struct{}  // (start a node)
+	waitRound              config.WaitRound              //
+	waitContributeMPK      config.WaitContributeMpk      //
+	waitShareSignsOrShares config.WaitShareSignsOrShares //
+	waitAdd                config.WaitAdd                // add_miner, add_sharder
+	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
+	waitNoProgress         config.WaitNoProgress         // no new rounds expected
+	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
+	waitCommand            chan error                    // wait a command
+	chalConf               *config.GenerateChallege
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -236,9 +234,11 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
 		return tm, true
-	case r.waitBlobberCommit:
+	case r.chalConf.WaitOnBlobberCommit:
 		return tm, true
-	case r.waitOnChallengeGeneration:
+	case r.chalConf.WaitOnChallengeGeneration:
+		return tm, true
+	case r.chalConf.WaitForChallengeStatus:
 		return tm, true
 	}
 
@@ -770,19 +770,39 @@ func (r *Runner) acceptShareOrSignsShares(
 }
 
 func (r *Runner) onChallengeGeneration(blobberID string) {
-	if blobberID != r.expectedBlobberForChallenge {
+	if blobberID != r.chalConf.BlobberID {
 		return
 	}
 
-	r.waitOnChallengeGeneration = false
+	r.chalConf.WaitOnChallengeGeneration = false
+}
+
+func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
+	blobberID, ok := m["blobber_id"].(string)
+	if !ok {
+		return errors.New("invalid map on challenge status")
+	}
+
+	if blobberID != r.chalConf.BlobberID {
+		return nil
+	}
+
+	r.chalConf.WaitForChallengeStatus = false
+
+	status, ok := m["status"].(int)
+	if r.chalConf.ExpectedStatus != status {
+		return fmt.Errorf("Expected status %d, got %d", r.chalConf.ExpectedStatus, status)
+	}
+
+	return nil
 }
 
 func (r *Runner) onBlobberCommit(blobberID string) {
-	if blobberID != r.expectedBlobberToCommit {
+	if blobberID != r.chalConf.BlobberID {
 		return
 	}
 
-	r.waitBlobberCommit = false
+	r.chalConf.WaitOnBlobberCommit = false
 }
 
 func (r *Runner) stopAll() {
@@ -824,6 +844,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			r.onBlobberCommit(blobberID)
 		case blobberID := <-r.server.OnGenerateChallenge():
 			r.onChallengeGeneration(blobberID)
+		case m := <-r.server.OnChallengeStatus():
+			err = r.onChallengeStatus(m)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)

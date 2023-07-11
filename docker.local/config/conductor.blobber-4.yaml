@@ -20,7 +20,7 @@ sets:
 tests:
   - name: "Challenge should pass with minority validator being adversarial"
     flow:
-      - set_monitor: "sharder-1"
+      # - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: "cleanup_blobbers"
@@ -33,7 +33,10 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2']
+      # Two blobbers would suffice but we need 3 validators and since docker-compose
+      # file raises blobber and validator together we are raising 3 blobbers here.
+      # We need to decouple this behavior later on.
+      - start: ['blobber-1', 'blobber-2', 'blobber-3']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
           timeout: '15m'
@@ -43,14 +46,12 @@ tests:
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           total_challenges: 1
+          expected_status: 1 # 1 --> pass, 0 --> fail
       - adversarial_validator:
           fail_valid_challenge: true
           id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
       - command:
           name: "upload"
-      - wait_blobber_commit:
-          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-      - wait_challenge_generation:
-          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-
-      
+      - wait_blobber_commit: {}
+      - wait_challenge_generation: {}
+      - wait_challenge_status: {}

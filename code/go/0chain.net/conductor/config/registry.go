@@ -728,24 +728,25 @@ func init() {
 		return ex.SetServerState(cfg)
 	})
 
-	register("wait_blobber_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		m, ok := val.(map[string]string)
-		if !ok {
-			return fmt.Errorf("Expected type map[string]string but got %T", val)
-		}
-		ex.SetExpectedBlobberCommit(m["blobber_id"])
+	register("wait_blobber_commit", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
+		ex.WaitOnBlobberCommit()
 		return nil
+
 	})
 
+	// waits for miner to generate challenge-generate transaction
 	register("wait_challenge_generation", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		m, ok := val.(map[string]string)
-		if !ok {
-			return fmt.Errorf("Expected type map[string]string but got %T", val)
-		}
-		ex.SetExpectedChallengeGenerationBlobber(m["blobber_id"])
+		ex.WaitForChallengeGeneration()
 		return nil
 	})
 
+	// waits for blobber to submit challenge and miner to send status of this challenge
+	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
+		ex.WaitForChallengeStatus()
+		return nil
+	})
+
+	// stop directs miner to stop generating challenge for any blobber
 	register("stop_chal_gen", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
 		cfg := StopChallengeGeneration(true)
 		return ex.SetServerState(cfg)
