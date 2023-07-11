@@ -1,7 +1,9 @@
 package zcnsc
 
 import (
+	"0chain.net/smartcontract/dto"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"0chain.net/core/encryption"
@@ -322,7 +324,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 }
 
 func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
-	t *transaction.Transaction,
+	txn *transaction.Transaction,
 	input []byte,
 	ctx cstate.StateContextI,
 ) (string, error) {
@@ -337,57 +339,81 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		Logger.Error("get global node", zap.Error(err))
 		return "", err
 	}
-	in := NewAuthorizerNode("")
-	if err = in.Decode(input); err != nil {
+	updatedAuthorizerNode := new(dto.AuthorizerDtoNode)
+	if err = json.Unmarshal(input, updatedAuthorizerNode); err != nil {
 		msg := fmt.Sprintf("decoding request: %v", err)
 		Logger.Error(msg, zap.Error(err))
 		err = common.NewError(code, msg)
 		return "", err
 	}
+	if updatedAuthorizerNode.Id() == "" {
+		err = common.NewErrorf(code, "authorizer id is not provided")
+		return "", err
+	}
 
-	if in.Config.Fee > gn.MaxFee {
-		msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", in.Config.Fee, gn.MaxFee)
+	if updatedAuthorizerNode.Config != nil &&
+		updatedAuthorizerNode.Config.Fee != nil &&
+		*updatedAuthorizerNode.Config.Fee > gn.MaxFee {
+		msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", updatedAuthorizerNode.Config.Fee, gn.MaxFee)
 		err = common.NewErrorf(code, msg)
 		Logger.Error(msg, zap.Error(err))
 		return "", err
 	}
 
-	authorizer, err := GetAuthorizerNode(in.ID, ctx)
+	existingAuthorizer, err := GetAuthorizerNode(updatedAuthorizerNode.ID, ctx)
 	if err != nil {
 		return "", common.NewError(code, err.Error())
 	}
 
-	var sp *StakePool
-	if sp, err = zcn.getStakePool(in.ID, ctx); err != nil {
+	var existingStakePool *StakePool
+	if existingStakePool, err = zcn.getStakePool(updatedAuthorizerNode.ID, ctx); err != nil {
 		return "", common.NewErrorf(code, "error occurred while getting stake pool: %v", err)
 
 	}
 
 	if err := smartcontractinterface.AuthorizeWithDelegate(code, func() bool {
-		return sp.Settings.DelegateWallet == t.ClientID
+		return existingStakePool.Settings.DelegateWallet == txn.ClientID
 	}); err != nil {
 		return "", err
 	}
 
-	err = authorizer.UpdateConfig(in.Config)
-	if err != nil {
-		msg := fmt.Sprintf("error updating config for authorizer(authorizerID: %v), err: %v", authorizer.ID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("updating settings", zap.Error(err))
-		return "", err
+	if updatedAuthorizerNode.Config != nil {
+		updatedAuthConf := new(AuthorizerConfig)
+		if updatedAuthorizerNode.Config.Fee != nil {
+			updatedAuthConf.Fee = *updatedAuthorizerNode.Config.Fee
+		}
+
+		err = existingAuthorizer.UpdateConfig(updatedAuthConf)
+		if err != nil {
+			msg := fmt.Sprintf("error updating config for authorizer(authorizerID: %v), err: %v", existingAuthorizer.ID, err)
+			err = common.NewError(code, msg)
+			Logger.Error("updating settings", zap.Error(err))
+			return "", err
+		}
 	}
 
-	err = authorizer.Save(ctx)
+	if updatedAuthorizerNode.URL != nil {
+		err = existingAuthorizer.Delete(ctx)
+		if err != nil {
+			msg := fmt.Sprintf("error deleting authorizer(authorizerID: %v), err: %v", existingAuthorizer.ID, err)
+			err = common.NewError(code, msg)
+			Logger.Error("deleting authorizer node", zap.Error(err))
+			return "", err
+		}
+		existingAuthorizer.URL = *updatedAuthorizerNode.URL
+	}
+
+	err = existingAuthorizer.Save(ctx)
 	if err != nil {
-		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizer.ID, err)
+		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", existingAuthorizer.ID, err)
 		err = common.NewError(code, msg)
 		Logger.Error("saving authorizer node", zap.Error(err))
 		return "", err
 	}
 
-	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, authorizer.ID, authorizer.ToEvent())
+	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, existingAuthorizer.ID, existingAuthorizer.ToEvent())
 
-	return string(authorizer.Encode()), nil
+	return string(existingAuthorizer.Encode()), nil
 }
 
 func (zcn *ZCNSmartContract) AuthorizerHealthCheck(
