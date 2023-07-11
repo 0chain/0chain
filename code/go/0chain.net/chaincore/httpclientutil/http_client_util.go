@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/gosdk/core/transaction"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -267,20 +268,14 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 	return // ok
 }
 
-func MakeClientBalanceRequest(ctx context.Context, clientID string, urls []string, consensus int) (currency.Coin, error) {
-	s, err := MakeClientStateRequest(ctx, clientID, urls, consensus)
-	if err != nil {
-		return 0, err
-	}
-	return s.Balance, nil
+func MakeClientBalanceRequest(clientID string, urls []string) (currency.Coin, error) {
+	balance, _, err := transaction.GetBalanceFieldFromSharders(clientID, "balance", urls)
+	return currency.Coin(balance), err
 }
 
-func MakeClientNonceRequest(ctx context.Context, clientID string, urls []string, consensus int) (int64, error) {
-	s, err := MakeClientStateRequest(ctx, clientID, urls, consensus)
-	if err != nil {
-		return 0, err
-	}
-	return s.Nonce, nil
+func MakeClientNonceRequest(clientID string, urls []string) (int64, error) {
+	nonce, _, err := transaction.GetBalanceFieldFromSharders(clientID, "nonce", urls)
+	return nonce, err
 }
 
 // MakeClientStateRequest to get a client's balance
@@ -750,9 +745,7 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 }
 
 func syncClientNonce(sharders []string) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
-	defer cancel()
-	return MakeClientNonceRequest(ctx, node.Self.Underlying().GetKey(), sharders, 33)
+	return MakeClientNonceRequest(node.Self.Underlying().GetKey(), sharders)
 }
 
 func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []string) error {

@@ -28,7 +28,7 @@ type Sharder struct {
 	Longitude float64
 	Latitude  float64
 
-	CreationRound int64 `json:"creation_round"`
+	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
 }
 
 func (s *Sharder) GetTotalStake() currency.Coin {
