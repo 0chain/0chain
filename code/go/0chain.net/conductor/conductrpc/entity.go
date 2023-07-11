@@ -204,6 +204,10 @@ func (e *Entity) BlobberCommitted(blobberID string) {
 	e.client.blobberCommitted(blobberID)
 }
 
+func (e *Entity) SendChallengeStatus(m map[string]interface{}) {
+	e.client.sendChallengeStatus(m)
+}
+
 //
 // global
 //

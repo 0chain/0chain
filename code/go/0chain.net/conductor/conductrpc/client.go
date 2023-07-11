@@ -242,3 +242,8 @@ func (c *client) blobberCommitted(blobberID string) (err error) {
 	err = c.client.Call("Server.BlobberCommitted", blobberID, nil)
 	return
 }
+
+func (c *client) sendChallengeStatus(m map[string]interface{}) (err error) {
+	err = c.client.Call("Server.SetChallengeStatus", m, nil)
+	return
+}
