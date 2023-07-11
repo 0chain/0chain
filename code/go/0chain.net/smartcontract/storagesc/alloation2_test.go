@@ -698,7 +698,7 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 	var totalUsed = float64(f.allocation.UsedSize)
 	var abdUsed int64 = 0
 	for _, d := range f.allocation.BlobberAllocs {
-		abdUsed += d.Stats.UsedSize * int64(float64(f.allocation.DataShards)/float64(f.allocation.DataShards+f.allocation.ParityShards))
+		abdUsed += int64(float64(d.Stats.UsedSize) * float64(f.allocation.DataShards) / float64(f.allocation.DataShards+f.allocation.ParityShards))
 	}
 	require.InDelta(f.t, totalUsed, abdUsed, errDelta)
 
