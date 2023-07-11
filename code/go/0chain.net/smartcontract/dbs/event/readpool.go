@@ -24,12 +24,12 @@ func (edb *EventDb) GetReadPool(userId string) (*ReadPool, error) {
 	return &rp, nil
 }
 
-func mergeInsertReadPoolEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagInsertReadpool)
+func mergeInsertReadPoolEvents() *eventsMergerImpl[ReadPool] {
+	return newEventsMerger[ReadPool](TagInsertReadpool, withUniqueEventOverwrite())
 }
 
-func mergeUpdateReadPoolEvents() *eventsMergerImpl[Allocation] {
-	return newEventsMerger[Allocation](TagUpdateReadpool)
+func mergeUpdateReadPoolEvents() *eventsMergerImpl[ReadPool] {
+	return newEventsMerger[ReadPool](TagUpdateReadpool, withUniqueEventOverwrite())
 }
 
 func (edb *EventDb) insertReadPool(rps []ReadPool) error {
