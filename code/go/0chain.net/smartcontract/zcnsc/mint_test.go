@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"0chain.net/chaincore/chain"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	. "0chain.net/smartcontract/zcnsc"
@@ -361,4 +363,91 @@ func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotEqual(t, rewardAfter, rewardBefore)
+}
+
+func TestZCNSmartContractMintNonce(t *testing.T) {
+	tt := []struct {
+		name         string
+		nonce        int64
+		initFunc     func(state cstate.StateContextI)
+		expectErrMsg string  // substring of expected error message
+		expectNonces []int64 // nonces should be saved to the partitions
+	}{
+		{
+			name:  "add nonce - ok",
+			nonce: 1,
+		},
+		{
+			name: "add new nonce - ok",
+			initFunc: func(state cstate.StateContextI) {
+				err := PartitionWZCNMintedNonceAdd(state, 1)
+				require.NoError(t, err)
+			},
+			nonce:        2,
+			expectErrMsg: "",
+		},
+		{
+			name: "add duplicate nonce - fail",
+			initFunc: func(state cstate.StateContextI) {
+				err := PartitionWZCNMintedNonceAdd(state, 1)
+				require.NoError(t, err)
+			},
+			nonce:        1,
+			expectErrMsg: "has already been minted",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := MakeMockStateContext()
+			ctx.globalNode.ZCNSConfig.MaxFee = 10
+			contract := CreateZCNSmartContract()
+			payload, err := CreateMintPayloadWithNonce(ctx, defaultClient, tc.nonce)
+			require.NoError(t, err)
+
+			transaction, err := CreateTransaction(defaultClient, "mint", payload.Encode(), ctx)
+			require.NoError(t, err)
+
+			eventDb, err := event.NewInMemoryEventDb(config.DbAccess{}, config.DbSettings{
+				Debug:                 true,
+				PartitionChangePeriod: 1,
+			})
+			require.NoError(t, err)
+
+			err = eventDb.Get().Model(&event.User{}).Create(&event.User{
+				UserID:    transaction.ClientID,
+				MintNonce: 0,
+			}).Error
+			require.NoError(t, err)
+
+			t.Cleanup(func() {
+				err = eventDb.Drop()
+				require.NoError(t, err)
+
+				eventDb.Close()
+			})
+
+			ctx.SetEventDb(eventDb)
+
+			if tc.initFunc != nil {
+				tc.initFunc(ctx)
+			}
+
+			_, err = contract.Mint(transaction, payload.Encode(), ctx)
+			if tc.expectErrMsg != "" {
+				require.ErrorContains(t, err, tc.expectErrMsg)
+			}
+			if err != nil {
+				return
+			}
+
+			mm := ctx.GetMints()
+			require.Equal(t, 1, len(mm))
+
+			// check that the nonce is saved to the partition by calling the Add and got
+			// error of item already exists
+			err = PartitionWZCNMintedNonceAdd(ctx, tc.nonce)
+			require.True(t, partitions.ErrItemExist(err))
+		})
+	}
 }

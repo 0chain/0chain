@@ -224,6 +224,19 @@ func CreateMintPayload(ctx *mockStateContext, receiverId string) (payload *MintP
 	return
 }
 
+func CreateMintPayloadWithNonce(ctx *mockStateContext, receiverId string, nonce int64) (payload *MintPayload, err error) {
+	payload = &MintPayload{
+		EthereumTxnID:     txHash,
+		Amount:            200,
+		Nonce:             nonce,
+		ReceivingClientID: receiverId,
+	}
+
+	payload.Signatures, err = createTransactionSignatures(ctx, payload)
+
+	return
+}
+
 func createTransactionSignatures(ctx *mockStateContext, m *MintPayload) ([]*AuthorizerSignature, error) {
 	var sigs []*AuthorizerSignature
 
