@@ -14,7 +14,6 @@ func BenchmarkRestTests(
 	rh := rest.NewRestHandler(&rest.TestQueryChainer{})
 	mrh := NewMinerRestHandler(rh)
 	return benchmark.GetRestTests(
-		"miner",
 		[]benchmark.TestParameters{
 			{
 				FuncName: "getNodepool",

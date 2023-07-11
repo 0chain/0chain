@@ -11,7 +11,6 @@ func BenchmarkRestTests(data benchmark.BenchData, _ benchmark.SignatureScheme) b
 	zrh := NewZcnRestHandler(rh)
 	common.ConfigRateLimits()
 	return benchmark.GetRestTests(
-		"zcn",
 		[]benchmark.TestParameters{
 			{
 				FuncName: "getAuthorizerNodes",
