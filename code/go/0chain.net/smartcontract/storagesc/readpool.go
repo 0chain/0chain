@@ -151,6 +151,11 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
+	balances.EmitEvent(event.TypeStats, event.TagInsertReadpool, t.ClientID, event.ReadPool{
+		UserID:  t.ClientID,
+		Balance: 0,
+	})
+
 	return string(rp.Encode()), nil
 }
 
@@ -225,10 +230,17 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 
 	i, _ := txn.Value.Int64()
 
+	// updates the snapshot table
 	balances.EmitEvent(event.TypeStats, event.TagLockReadPool, txn.ClientID, event.ReadPoolLock{
 		Client: txn.ClientID,
 		PoolId: targetId,
 		Amount: i,
+	})
+
+	// updates the readpool table
+	balances.EmitEvent(event.TypeStats, event.TagUpdateReadpool, txn.ClientID, event.ReadPool{
+		UserID:  txn.ClientID,
+		Balance: rp.Balance,
 	})
 
 	return "", nil
@@ -257,10 +269,17 @@ func (ssc *StorageSmartContract) readPoolUnlock(txn *transaction.Transaction, _ 
 	i, _ := balance.Int64()
 	key := readPoolKey(ssc.ID, txn.ClientID)
 
+	// updates the snapshot table
 	balances.EmitEvent(event.TypeStats, event.TagUnlockReadPool, key, event.ReadPoolLock{
 		Client: txn.ClientID,
 		PoolId: key,
 		Amount: i,
+	})
+
+	// updates the readpool table
+	balances.EmitEvent(event.TypeStats, event.TagUpdateReadpool, txn.ClientID, event.ReadPool{
+		UserID:  txn.ClientID,
+		Balance: rp.Balance,
 	})
 
 	return "", nil
