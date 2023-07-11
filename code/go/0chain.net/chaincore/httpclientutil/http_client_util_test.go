@@ -519,9 +519,8 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 
 	type (
 		args struct {
-			clientID  string
-			urls      []string
-			consensus int
+			clientID string
+			urls     []string
 		}
 		makeServer func() (URL string)
 	)
@@ -553,21 +552,9 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Consensus_ERR",
-			args: args{
-				urls:      []string{},
-				consensus: 200,
-			},
-			makeServers: []makeServer{
-				makeValidServer,
-			},
-			wantErr: true,
-		},
-		{
 			name: "OK",
 			args: args{
-				urls:      []string{},
-				consensus: 0,
+				urls: []string{},
 			},
 			makeServers: []makeServer{
 				makeValidServer,
@@ -585,7 +572,7 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 				tt.args.urls = append(tt.args.urls, URL)
 			}
 
-			got, err := MakeClientBalanceRequest(context.TODO(), tt.args.clientID, tt.args.urls, tt.args.consensus)
+			got, err := MakeClientBalanceRequest(tt.args.clientID, tt.args.urls)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MakeClientBalanceRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
