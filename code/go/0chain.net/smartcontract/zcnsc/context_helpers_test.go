@@ -43,6 +43,7 @@ type mockStateContext struct {
 	stakingPools map[string]*StakePool
 	authCount    *AuthCount
 	block        *block.Block
+	data         map[string][]byte
 	eventDb      *event.EventDb
 }
 
@@ -71,6 +72,7 @@ func MakeMockStateContext() *mockStateContext {
 func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 	ctx := &mockStateContext{
 		StateContextI: &mocks.StateContextI{},
+		data:          make(map[string][]byte),
 	}
 
 	// GetSignatureScheme
@@ -496,6 +498,14 @@ func (ctx *mockStateContext) GetTrieNode(key datastore.Key, node util.MPTSeriali
 		return nil
 	}
 
+	if v, ok := ctx.data[key]; ok {
+		if _, err := node.UnmarshalMsg(v); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	return util.ErrValueNotPresent
 }
 
@@ -544,7 +554,13 @@ func (ctx *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSeri
 		return key, fmt.Errorf("failed to convert key: %s to authCount: %v", key, node)
 	}
 
-	return "", fmt.Errorf("node with key: %s is not supported", key)
+	v, err := node.MarshalMsg(nil)
+	if err != nil {
+		return "", err
+	}
+
+	ctx.data[key] = v
+	return "", nil
 }
 
 var (
