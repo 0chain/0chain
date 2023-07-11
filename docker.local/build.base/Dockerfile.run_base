@@ -1,3 +1,4 @@
+# Run Base
 # docker.local
 FROM golang:1.18-alpine3.15
 RUN apk add bash
