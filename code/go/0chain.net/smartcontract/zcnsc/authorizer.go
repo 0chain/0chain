@@ -351,15 +351,6 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", err
 	}
 
-	if updatedAuthorizerNode.Config != nil &&
-		updatedAuthorizerNode.Config.Fee != nil &&
-		*updatedAuthorizerNode.Config.Fee > gn.MaxFee {
-		msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", updatedAuthorizerNode.Config.Fee, gn.MaxFee)
-		err = common.NewErrorf(code, msg)
-		Logger.Error(msg, zap.Error(err))
-		return "", err
-	}
-
 	existingAuthorizer, err := GetAuthorizerNode(updatedAuthorizerNode.ID, ctx)
 	if err != nil {
 		return "", common.NewError(code, err.Error())
@@ -380,6 +371,12 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 	if updatedAuthorizerNode.Config != nil {
 		updatedAuthConf := new(AuthorizerConfig)
 		if updatedAuthorizerNode.Config.Fee != nil {
+			if *updatedAuthorizerNode.Config.Fee > gn.MaxFee {
+				msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", updatedAuthorizerNode.Config.Fee, gn.MaxFee)
+				err = common.NewErrorf(code, msg)
+				Logger.Error(msg, zap.Error(err))
+				return "", err
+			}
 			updatedAuthConf.Fee = *updatedAuthorizerNode.Config.Fee
 		}
 
@@ -392,7 +389,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		}
 	}
 
-	if updatedAuthorizerNode.URL != nil {
+	if updatedAuthorizerNode.URL != nil && *updatedAuthorizerNode.URL != "" {
 		err = existingAuthorizer.Delete(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("error deleting authorizer(authorizerID: %v), err: %v", existingAuthorizer.ID, err)
