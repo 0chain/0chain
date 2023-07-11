@@ -31,7 +31,6 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 		return nil
 	}
 	be, _, err := sCtx.GetEventDB().MergeEvents(
-		et.ctx,
 		et.events,
 		et.events[0].BlockNumber,
 		"mock block hash"+et.name,

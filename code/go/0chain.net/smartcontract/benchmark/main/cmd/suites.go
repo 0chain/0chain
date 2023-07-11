@@ -286,10 +286,12 @@ func runEventDatabaseSuite(
 	edb *event.EventDb,
 ) []benchmarkResults {
 	var benchmarkResult []benchmarkResults
+	const dummyChainId = ""
+	const dummyPort = 1
 	config.InitConfigurationGlobal(
 		edb.Config().Host,
-		"piers' port",
-		123,
+		dummyChainId,
+		dummyPort,
 		event.NewTestConfig(edb.Settings()),
 	)
 	var wg sync.WaitGroup

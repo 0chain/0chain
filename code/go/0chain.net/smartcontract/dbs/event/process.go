@@ -132,7 +132,6 @@ func (edb *EventDb) ProcessEvents(
 }
 
 func (edb *EventDb) MergeEvents(
-	ctx context.Context,
 	events []Event,
 	round int64,
 	block string,
@@ -142,10 +141,6 @@ func (edb *EventDb) MergeEvents(
 	if err != nil {
 		return BlockEvents{}, nil, err
 	}
-	//tx, err := edb.Begin(ctx)
-	//if err != nil {
-	//	return BlockEvents{}, nil, err
-	//}
 	return BlockEvents{
 		events:    es,
 		round:     round,
@@ -153,7 +148,7 @@ func (edb *EventDb) MergeEvents(
 		blockSize: blockSize,
 		tx:        edb,
 		done:      make(chan bool, 1),
-	}, edb, nil //tx, nil
+	}, edb, nil
 }
 
 func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
@@ -292,10 +287,6 @@ func (edb *EventDb) Work(ctx context.Context,
 
 	var commit bool
 	defer func() {
-		if r := recover(); r != nil {
-			logging.Logger.Error("panic recovered in processEvent",
-				zap.Any("r", r))
-		}
 		es.done <- commit
 	}()
 
