@@ -2,8 +2,6 @@ package event
 
 import (
 	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
@@ -35,10 +33,7 @@ func mergeUpdateReadPoolEvents() *eventsMergerImpl[ReadPool] {
 }
 
 func (edb *EventDb) InsertReadPool(rps []ReadPool) error {
-	//return edb.Store.Get().Create(&rps).Error
-	err := edb.Store.Get().Create(&rps).Error
-	logging.Logger.Info("piers InsertReadPool", zap.Any("rps", rps), zap.Error(err))
-	return err
+	return edb.Store.Get().Create(&rps).Error
 }
 
 func (edb *EventDb) updateReadPool(rps []ReadPool) error {
@@ -54,14 +49,8 @@ func (edb *EventDb) updateReadPool(rps []ReadPool) error {
 		}
 		balances = append(balances, balance)
 	}
-	logging.Logger.Info("piers updateReadPool", zap.Any("rps", rps))
-	//return CreateBuilder("read_pools", "user_id", userIds).
-	//	AddUpdate("balance", balances).
-	//	Exec(edb).Error
 
-	err := CreateBuilder("read_pools", "user_id", userIds).
+	return CreateBuilder("read_pools", "user_id", userIds).
 		AddUpdate("balance", balances).
 		Exec(edb).Error
-	logging.Logger.Info("piers updateReadPool", zap.Any("rps", rps), zap.Error(err))
-	return err
 }
