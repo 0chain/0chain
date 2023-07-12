@@ -836,8 +836,11 @@ func (sc *StorageSmartContract) extendAllocation(
 	// adjust the expiration if changed, boundaries has already checked
 	var prevExpiration = alloc.Expiration
 
-	if req.Extend {
+	if req.Extend && time.Now().Add(2*conf.TimeUnit).After(common.ToTime(alloc.Expiration)) {
 		alloc.Expiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix()) // new expiration
+	} else if req.Extend {
+		return common.NewErrorf("allocation_extending_failed",
+			"allocation %s can't be extended more than time unit", alloc.ID)
 	}
 
 	alloc.Size += req.Size // new size
@@ -1107,8 +1110,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		// update allocation transaction hash
 		alloc.Tx = t.Hash
-
-		// close allocation now
 
 		var newSize = request.Size + alloc.Size
 		if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
