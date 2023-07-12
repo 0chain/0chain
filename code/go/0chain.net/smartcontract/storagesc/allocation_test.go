@@ -741,7 +741,7 @@ func TestExtendAllocation(t *testing.T) {
 
 				dtu := 0.0
 
-				if args.request.ExtendExpiry {
+				if args.request.Extend {
 					dtu = 1.0
 				}
 
@@ -1669,7 +1669,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	var uar updateAllocationRequest
 	uar.ID = alloc.ID
-	uar.ExtendExpiry = true
+	uar.Extend = true
 	uar.Size = alloc.Size
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 300*x10, tp, ssc, balances)
