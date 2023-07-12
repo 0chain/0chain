@@ -23,7 +23,6 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	)
 
 	var (
-		now  = time.Unix(150, 0)
 		nar  newAllocationRequest
 		conf Config
 	)
@@ -34,19 +33,19 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	nar.Blobbers = []string{"1", "2"}
 
 	nar.ReadPriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, nar.validate(now, &conf), errMsg1)
+	requireErrMsg(t, nar.validate(&conf), errMsg1)
 
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
 	nar.WritePriceRange = PriceRange{Min: 20, Max: 10}
-	requireErrMsg(t, nar.validate(now, &conf), errMsg2)
+	requireErrMsg(t, nar.validate(&conf), errMsg2)
 
 	nar.WritePriceRange = PriceRange{Min: 10, Max: 20}
 	nar.Size = 5 * 1024
-	requireErrMsg(t, nar.validate(now, &conf), errMsg3)
+	requireErrMsg(t, nar.validate(&conf), errMsg3)
 
 	nar.Expiration = 150 + toSeconds(48*time.Hour)
 	nar.DataShards = 0
-	requireErrMsg(t, nar.validate(now, &conf), errMsg5)
+	requireErrMsg(t, nar.validate(&conf), errMsg5)
 }
 
 func TestStorageAllocation_filterBlobbers(t *testing.T) {

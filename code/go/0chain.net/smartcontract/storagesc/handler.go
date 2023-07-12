@@ -1645,7 +1645,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-	if err := request.validate(common.ToTime(balances.Now()), conf); err != nil {
+	if err := request.validate(conf); err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
