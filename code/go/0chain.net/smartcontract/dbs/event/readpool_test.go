@@ -48,20 +48,66 @@ func TestReadPool(t *testing.T) {
 	}
 	mergedEvents, err := mergeEvents(3, "three", insertReadPoolEvents)
 	require.NoError(t, err, "merging readpoool inserts")
-	for _, event := range mergedEvents {
-		err = edb.addStat(event)
-		require.NoError(t, err)
-		//require.NoError(t, edb.addStat(event))
-	}
-	var rps ReadPool
+	require.Len(t, mergedEvents, 1)
+	err = edb.addStat(mergedEvents[0])
+	require.NoError(t, err)
+
+	var rps []ReadPool
 	result := edb.Get().Find(&rps)
 	fmt.Println("rps", rps)
 	result = result
-	/*
-		rp1, err := edb.GetReadPool("user1")
-		require.NoError(t, err)
-		require.EqualValues(t, rp1.Balance, 5)
-		rp2, err := edb.GetReadPool("uers2")
-		require.EqualValues(t, rp2.Balance, 11)
-	*/
+
+	rp1, err := edb.GetReadPool("user1")
+	require.NoError(t, err)
+	require.EqualValues(t, rp1.Balance, 5)
+	rp2, err := edb.GetReadPool("user2")
+	require.EqualValues(t, rp2.Balance, 11)
+
+	updateReadPoolEvent := []Event{
+		{
+			BlockNumber: 5,
+			TxHash:      "tx four",
+			Type:        TypeStats,
+			Tag:         TagUpdateReadpool,
+			Index:       "user1",
+			Data: ReadPool{
+				UserID:  "user1",
+				Balance: 17,
+			},
+		},
+		{
+			BlockNumber: 5,
+			TxHash:      "tx five",
+			Type:        TypeStats,
+			Tag:         TagUpdateReadpool,
+			Index:       "user1",
+			Data: ReadPool{
+				UserID:  "user1",
+				Balance: 19,
+			},
+		},
+		{
+			BlockNumber: 5,
+			TxHash:      "tx six",
+			Type:        TypeStats,
+			Tag:         TagUpdateReadpool,
+			Index:       "user2",
+			Data: ReadPool{
+				UserID:  "user2",
+				Balance: 23,
+			},
+		},
+	}
+
+	mergedEvents, err = mergeEvents(3, "three", updateReadPoolEvent)
+	require.NoError(t, err, "merging readpoool inserts")
+	require.Len(t, mergedEvents, 1)
+	err = edb.addStat(mergedEvents[0])
+	require.NoError(t, err)
+
+	rp3, err := edb.GetReadPool("user1")
+	require.NoError(t, err)
+	require.EqualValues(t, rp3.Balance, 19)
+	rp4, err := edb.GetReadPool("user2")
+	require.EqualValues(t, rp4.Balance, 23)
 }
