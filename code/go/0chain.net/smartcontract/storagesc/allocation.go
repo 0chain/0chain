@@ -476,7 +476,7 @@ type updateAllocationRequest struct {
 	OwnerID                 string `json:"owner_id"`         // Owner of the allocation
 	OwnerPublicKey          string `json:"owner_public_key"` // Owner Public Key of the allocation
 	Size                    int64  `json:"size"`             // difference
-	ExtendExpiry            bool   `json:"extend_expiry"`
+	Extend                  bool   `json:"extend"`
 	UpdateTerms             bool   `json:"update_terms"`
 	AddBlobberId            string `json:"add_blobber_id"`
 	RemoveBlobberId         string `json:"remove_blobber_id"`
@@ -495,6 +495,7 @@ func (uar *updateAllocationRequest) validate(
 	alloc *StorageAllocation,
 ) error {
 	if uar.Size == 0 &&
+		uar.Extend == false &&
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
 		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&
@@ -833,10 +834,13 @@ func (sc *StorageSmartContract) extendAllocation(
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
-
 	var prevExpiration = alloc.Expiration
-	alloc.Expiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix()) // new expiration
-	alloc.Size += req.Size                                                                         // new size
+
+	if req.Extend {
+		alloc.Expiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix()) // new expiration
+	}
+
+	alloc.Size += req.Size // new size
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
@@ -1104,12 +1108,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		// update allocation transaction hash
 		alloc.Tx = t.Hash
 
-		var newExpiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix())
 		// close allocation now
-
-		if newExpiration <= t.CreationDate {
-			return sc.closeAllocation(t, alloc, conf.MaxChallengeCompletionTime, balances) // update alloc tx, expir
-		}
 
 		var newSize = request.Size + alloc.Size
 		if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
