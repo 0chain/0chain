@@ -32,7 +32,7 @@ func mergeUpdateReadPoolEvents() *eventsMergerImpl[ReadPool] {
 	return newEventsMerger[ReadPool](TagUpdateReadpool, withUniqueEventOverwrite())
 }
 
-func (edb *EventDb) insertReadPool(rps []ReadPool) error {
+func (edb *EventDb) InsertReadPool(rps []ReadPool) error {
 	return edb.Store.Get().Create(&rps).Error
 }
 

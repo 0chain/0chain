@@ -830,7 +830,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.insertReadPool(*rps)
+		return edb.InsertReadPool(*rps)
 	case TagUpdateReadpool:
 		rps, ok := fromEvent[[]ReadPool](event.Data)
 		if !ok {

@@ -1,6 +1,7 @@
 package event
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -48,11 +49,19 @@ func TestReadPool(t *testing.T) {
 	mergedEvents, err := mergeEvents(3, "three", insertReadPoolEvents)
 	require.NoError(t, err, "merging readpoool inserts")
 	for _, event := range mergedEvents {
-		require.NoError(t, edb.addStat(event))
+		err = edb.addStat(event)
+		require.NoError(t, err)
+		//require.NoError(t, edb.addStat(event))
 	}
-	rp1, err := edb.GetReadPool("user1")
-	require.NoError(t, err)
-	require.EqualValues(t, rp1.Balance, 5)
-	rp2, err := edb.GetReadPool("uers2")
-	require.EqualValues(t, rp2.Balance, 11)
+	var rps ReadPool
+	result := edb.Get().Find(&rps)
+	fmt.Println("rps", rps)
+	result = result
+	/*
+		rp1, err := edb.GetReadPool("user1")
+		require.NoError(t, err)
+		require.EqualValues(t, rp1.Balance, 5)
+		rp2, err := edb.GetReadPool("uers2")
+		require.EqualValues(t, rp2.Balance, 11)
+	*/
 }

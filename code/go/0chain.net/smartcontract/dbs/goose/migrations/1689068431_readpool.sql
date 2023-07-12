@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE read_pools (
-    id bigint NOT NULL,
+    id bigint,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
 
@@ -19,4 +19,6 @@ CREATE SEQUENCE public.read_pools_id_seq
     CACHE 1;
 
 ALTER TABLE public.read_pools_id_seq OWNER TO zchain_user;
+
+ALTER SEQUENCE public.read_pools_id_seq OWNED BY public.read_pools.id;
 -- +goose StatementEnd
