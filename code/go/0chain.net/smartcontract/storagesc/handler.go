@@ -243,13 +243,10 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 			"can't get config: %v", err))
 		return
 	}
-	var creationDate = balances.Now()
-	dur := common.ToTime(creationDate).Add(conf.TimeUnit)
 	request := allocationBlobbersRequest{
 		DataShards:      conf.FreeAllocationSettings.DataShards,
 		ParityShards:    conf.FreeAllocationSettings.ParityShards,
 		Size:            conf.FreeAllocationSettings.Size,
-		Expiration:      common.Timestamp(dur.Unix()),
 		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
 	}
@@ -271,12 +268,11 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 }
 
 type allocationBlobbersRequest struct {
-	ParityShards    int              `json:"parity_shards"`
-	DataShards      int              `json:"data_shards"`
-	Expiration      common.Timestamp `json:"expiration_date"`
-	ReadPriceRange  PriceRange       `json:"read_price_range"`
-	WritePriceRange PriceRange       `json:"write_price_range"`
-	Size            int64            `json:"size"`
+	ParityShards    int        `json:"parity_shards"`
+	DataShards      int        `json:"data_shards"`
+	ReadPriceRange  PriceRange `json:"read_price_range"`
+	WritePriceRange PriceRange `json:"write_price_range"`
+	Size            int64      `json:"size"`
 }
 
 func (nar *allocationBlobbersRequest) decode(b []byte) error {
