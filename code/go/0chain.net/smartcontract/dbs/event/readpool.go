@@ -18,7 +18,7 @@ func (edb *EventDb) GetReadPool(userId string) (*ReadPool, error) {
 	var rp ReadPool
 	err := edb.Store.Get().Model(&ReadPool{}).Where("user_id = ?", userId).First(&rp).Error
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving allocation: %v, error: %v", userId, err)
+		return nil, fmt.Errorf("error retrieving readpool for user: %s, error: %v", userId, err)
 	}
 
 	return &rp, nil
