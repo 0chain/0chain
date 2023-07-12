@@ -22,7 +22,6 @@ const (
 	BlobberTable    ProviderTable = "blobbers"
 	AuthorizerTable ProviderTable = "authorizers"
 	ValidatorTable  ProviderTable = "validators"
-	UserTable       ProviderTable = "users"
 )
 
 func (t EventType) String() string {
@@ -110,6 +109,8 @@ const (
 	TagAddBridgeMint
 	TagKillProvider
 	TagShutdownProvider
+	TagInsertReadpool
+	TagUpdateReadpool
 	NumberOfTags
 )
 
@@ -202,6 +203,8 @@ func initTagString() {
 	TagString[TagAddBurnTicket] = "TagAddBurnTicket"
 	TagString[TagKillProvider] = "TagKillProvider"
 	TagString[TagShutdownProvider] = "TagShutdownProvider"
+	TagString[TagInsertReadpool] = "TagInsertReadpool"
+	TagString[TagUpdateReadpool] = "TagUpdateReadpool"
 	TagString[NumberOfTags] = "invalid"
 }
 

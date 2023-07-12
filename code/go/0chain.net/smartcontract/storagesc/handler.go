@@ -639,10 +639,10 @@ func (srh *StorageRestHandler) getChallengePoolStat(w http.ResponseWriter, r *ht
 //	200: readPool
 //	400:
 func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Request) {
-	rp := readPool{}
-
 	clientID := r.URL.Query().Get("client_id")
-	err := srh.GetQueryStateContext().GetTrieNode(readPoolKey(ADDRESS, clientID), &rp)
+	edb := srh.GetQueryStateContext().GetEventDB()
+
+	rp, err := edb.GetReadPool(clientID)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return
