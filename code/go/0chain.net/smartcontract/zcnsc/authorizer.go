@@ -339,25 +339,25 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		Logger.Error("get global node", zap.Error(err))
 		return "", err
 	}
-	updatedAuthorizerNode := new(dto.AuthorizerDtoNode)
-	if err = json.Unmarshal(input, updatedAuthorizerNode); err != nil {
+	updatedAuthorizer := new(dto.AuthorizerDtoNode)
+	if err = json.Unmarshal(input, updatedAuthorizer); err != nil {
 		msg := fmt.Sprintf("decoding request: %v", err)
 		Logger.Error(msg, zap.Error(err))
 		err = common.NewError(code, msg)
 		return "", err
 	}
-	if updatedAuthorizerNode.Id() == "" {
+	if updatedAuthorizer.Id() == "" {
 		err = common.NewErrorf(code, "authorizer id is not provided")
 		return "", err
 	}
 
-	existingAuthorizer, err := GetAuthorizerNode(updatedAuthorizerNode.ID, ctx)
+	existingAuthorizer, err := GetAuthorizerNode(updatedAuthorizer.ID, ctx)
 	if err != nil {
 		return "", common.NewError(code, err.Error())
 	}
 
 	var existingStakePool *StakePool
-	if existingStakePool, err = zcn.getStakePool(updatedAuthorizerNode.ID, ctx); err != nil {
+	if existingStakePool, err = zcn.getStakePool(updatedAuthorizer.ID, ctx); err != nil {
 		return "", common.NewErrorf(code, "error occurred while getting stake pool: %v", err)
 
 	}
@@ -368,16 +368,16 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", err
 	}
 
-	if updatedAuthorizerNode.Config != nil {
+	if updatedAuthorizer.Config != nil {
 		updatedAuthConf := new(AuthorizerConfig)
-		if updatedAuthorizerNode.Config.Fee != nil {
-			if *updatedAuthorizerNode.Config.Fee > gn.MaxFee {
-				msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", updatedAuthorizerNode.Config.Fee, gn.MaxFee)
+		if updatedAuthorizer.Config.Fee != nil {
+			if *updatedAuthorizer.Config.Fee > gn.MaxFee {
+				msg := fmt.Sprintf("authorizer fee (%v) is greater than allowed by SC (%v)", updatedAuthorizer.Config.Fee, gn.MaxFee)
 				err = common.NewErrorf(code, msg)
 				Logger.Error(msg, zap.Error(err))
 				return "", err
 			}
-			updatedAuthConf.Fee = *updatedAuthorizerNode.Config.Fee
+			updatedAuthConf.Fee = *updatedAuthorizer.Config.Fee
 		}
 
 		err = existingAuthorizer.UpdateConfig(updatedAuthConf)
@@ -389,15 +389,14 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		}
 	}
 
-	if updatedAuthorizerNode.URL != nil && *updatedAuthorizerNode.URL != "" {
-		err = existingAuthorizer.Delete(ctx)
+	if updatedAuthorizer.URL != nil && *updatedAuthorizer.URL != "" {
 		if err != nil {
 			msg := fmt.Sprintf("error deleting authorizer(authorizerID: %v), err: %v", existingAuthorizer.ID, err)
 			err = common.NewError(code, msg)
 			Logger.Error("deleting authorizer node", zap.Error(err))
 			return "", err
 		}
-		existingAuthorizer.URL = *updatedAuthorizerNode.URL
+		existingAuthorizer.URL = *updatedAuthorizer.URL
 	}
 
 	err = existingAuthorizer.Save(ctx)

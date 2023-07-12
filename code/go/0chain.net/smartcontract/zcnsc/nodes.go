@@ -339,15 +339,6 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	return nil
 }
 
-func (an *AuthorizerNode) Delete(ctx cstate.StateContextI) (err error) {
-	_, err = ctx.DeleteTrieNode(an.GetKey())
-	if err != nil {
-		return common.NewError("delete_auth_node_failed", "deleting authorizer node: "+err.Error())
-	}
-
-	return nil
-}
-
 func (an *AuthorizerNode) ToEvent() *event.Authorizer {
 	if an.Config == nil {
 		an.Config = new(AuthorizerConfig)
