@@ -22,7 +22,7 @@ const (
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
 	newValidator := newValidator("")
-	err := newValidator.Decode(input) //json.Unmarshal(input, &newValidator)
+	err := newValidator.Decode(input) // json.Unmarshal(input, &newValidator)
 	if err != nil {
 		return "", err
 	}
@@ -236,8 +236,8 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 	}
 
 	// update stake pool settings
-	var existingStakePool *stakePool
-	if existingStakePool, err = sc.getStakePool(spenum.Validator, inputValidator.ID, balances); err != nil {
+	var sp *stakePool
+	if sp, err = sc.getStakePool(spenum.Validator, inputValidator.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
@@ -246,32 +246,32 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 		sc.statIncr(statUpdateValidator)
 
 		if inputValidator.StakePoolSettings.ServiceChargeRatio != nil {
-			existingStakePool.Settings.ServiceChargeRatio = *inputValidator.StakePoolSettings.ServiceChargeRatio
+			sp.Settings.ServiceChargeRatio = *inputValidator.StakePoolSettings.ServiceChargeRatio
 			savedValidator.StakePoolSettings.ServiceChargeRatio = *inputValidator.StakePoolSettings.ServiceChargeRatio
 		}
 
 		if inputValidator.StakePoolSettings.MaxNumDelegates != nil {
-			existingStakePool.Settings.MaxNumDelegates = *inputValidator.StakePoolSettings.MaxNumDelegates
+			sp.Settings.MaxNumDelegates = *inputValidator.StakePoolSettings.MaxNumDelegates
 			savedValidator.StakePoolSettings.MaxNumDelegates = *inputValidator.StakePoolSettings.MaxNumDelegates
 		}
 
 		if inputValidator.StakePoolSettings.DelegateWallet != nil {
-			existingStakePool.Settings.DelegateWallet = *inputValidator.StakePoolSettings.DelegateWallet
+			sp.Settings.DelegateWallet = *inputValidator.StakePoolSettings.DelegateWallet
 			savedValidator.StakePoolSettings.DelegateWallet = *inputValidator.StakePoolSettings.DelegateWallet
 		}
 
-		if err = validateStakePoolSettings(existingStakePool.StakePool.Settings, conf); err != nil {
+		if err = validateStakePoolSettings(sp.StakePool.Settings, conf); err != nil {
 			return fmt.Errorf("invalid new stake pool settings:  %v", err)
 		}
 
 		// save stake pool
-		if err = existingStakePool.Save(spenum.Validator, inputValidator.ID, balances); err != nil {
+		if err = sp.Save(spenum.Validator, inputValidator.ID, balances); err != nil {
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 	}
 
 	savedValidator.LastHealthCheck = txn.CreationDate
-	if err := savedValidator.emitUpdate(existingStakePool, balances); err != nil {
+	if err := savedValidator.emitUpdate(sp, balances); err != nil {
 		return fmt.Errorf("emmiting validator %v: %v", inputValidator, err)
 	}
 

@@ -266,14 +266,14 @@ func (t *Terms) minLockDemand(gbSize, rdtu, minLockDemand float64) (currency.Coi
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if err = validateReadPriceTerms(t.ReadPrice, conf); err != nil {
+	if err = validateReadPrice(t.ReadPrice, conf); err != nil {
 		return
 	}
 
-	return validateWritePriceTerms(t.WritePrice, conf)
+	return validateWritePrice(t.WritePrice, conf)
 }
 
-func validateReadPriceTerms(readPrice currency.Coin, conf *Config) error {
+func validateReadPrice(readPrice currency.Coin, conf *Config) error {
 	if readPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
@@ -281,7 +281,7 @@ func validateReadPriceTerms(readPrice currency.Coin, conf *Config) error {
 	return nil
 }
 
-func validateWritePriceTerms(writePrice currency.Coin, conf *Config) error {
+func validateWritePrice(writePrice currency.Coin, conf *Config) error {
 	if writePrice < conf.MinWritePrice {
 		return errors.New("write_price is less than min_write_price allowed")
 	}
@@ -730,7 +730,7 @@ func (sa *StorageAllocation) addToWritePool(
 	balances cstate.StateContextI,
 	opts ...WithOption,
 ) error {
-	//default behaviour
+	// default behaviour
 	if len(opts) == 0 {
 		value, err := WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)(balances)
 		if err != nil {
