@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -51,11 +50,6 @@ func TestReadPool(t *testing.T) {
 	require.Len(t, mergedEvents, 1)
 	err = edb.addStat(mergedEvents[0])
 	require.NoError(t, err)
-
-	var rps []ReadPool
-	result := edb.Get().Find(&rps)
-	fmt.Println("rps", rps)
-	result = result
 
 	rp1, err := edb.GetReadPool("user1")
 	require.NoError(t, err)
