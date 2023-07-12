@@ -844,9 +844,10 @@ func (sc *StorageSmartContract) extendAllocation(
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
+
 	var prevExpiration = alloc.Expiration
-	alloc.Expiration += req.Expiration // new expiration
-	alloc.Size += req.Size             // new size
+	alloc.Expiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix()) // new expiration
+	alloc.Size += req.Size                                                                         // new size
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
