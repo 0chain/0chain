@@ -643,6 +643,10 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 	edb := srh.GetQueryStateContext().GetEventDB()
 
 	rp, err := edb.GetReadPool(clientID)
+	logging.Logger.Info("piers getReadPoolStat",
+		zap.String("client id", clientID),
+		zap.Any("rp", rp),
+		zap.Error(err))
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool"))
 		return

@@ -2,6 +2,8 @@ package event
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
@@ -11,7 +13,7 @@ import (
 type ReadPool struct {
 	model.UpdatableModel
 	UserID  string        `json:"user_id" gorm:"uniqueIndex"`
-	Balance currency.Coin `json:"amount"`
+	Balance currency.Coin `json:"balance"`
 }
 
 func (edb *EventDb) GetReadPool(userId string) (*ReadPool, error) {
@@ -33,7 +35,10 @@ func mergeUpdateReadPoolEvents() *eventsMergerImpl[ReadPool] {
 }
 
 func (edb *EventDb) InsertReadPool(rps []ReadPool) error {
-	return edb.Store.Get().Create(&rps).Error
+	//return edb.Store.Get().Create(&rps).Error
+	err := edb.Store.Get().Create(&rps).Error
+	logging.Logger.Info("piers InsertReadPool", zap.Any("rps", rps), zap.Error(err))
+	return err
 }
 
 func (edb *EventDb) updateReadPool(rps []ReadPool) error {
@@ -49,8 +54,14 @@ func (edb *EventDb) updateReadPool(rps []ReadPool) error {
 		}
 		balances = append(balances, balance)
 	}
+	logging.Logger.Info("piers updateReadPool", zap.Any("rps", rps))
+	//return CreateBuilder("read_pools", "user_id", userIds).
+	//	AddUpdate("balance", balances).
+	//	Exec(edb).Error
 
-	return CreateBuilder("read_pools", "user_id", userIds).
+	err := CreateBuilder("read_pools", "user_id", userIds).
 		AddUpdate("balance", balances).
 		Exec(edb).Error
+	logging.Logger.Info("piers updateReadPool", zap.Any("rps", rps), zap.Error(err))
+	return err
 }
