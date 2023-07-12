@@ -80,19 +80,18 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 }
 
 type newAllocationRequest struct {
-	Name                 string           `json:"name"`
-	DataShards           int              `json:"data_shards"`
-	ParityShards         int              `json:"parity_shards"`
-	Size                 int64            `json:"size"`
-	Expiration           common.Timestamp `json:"expiration_date"`
-	Owner                string           `json:"owner_id"`
-	OwnerPublicKey       string           `json:"owner_public_key"`
-	Blobbers             []string         `json:"blobbers"`
-	ReadPriceRange       PriceRange       `json:"read_price_range"`
-	WritePriceRange      PriceRange       `json:"write_price_range"`
-	ThirdPartyExtendable bool             `json:"third_party_extendable"`
-	FileOptionsChanged   bool             `json:"file_options_changed"`
-	FileOptions          uint16           `json:"file_options"`
+	Name                 string     `json:"name"`
+	DataShards           int        `json:"data_shards"`
+	ParityShards         int        `json:"parity_shards"`
+	Size                 int64      `json:"size"`
+	Owner                string     `json:"owner_id"`
+	OwnerPublicKey       string     `json:"owner_public_key"`
+	Blobbers             []string   `json:"blobbers"`
+	ReadPriceRange       PriceRange `json:"read_price_range"`
+	WritePriceRange      PriceRange `json:"write_price_range"`
+	ThirdPartyExtendable bool       `json:"third_party_extendable"`
+	FileOptionsChanged   bool       `json:"file_options_changed"`
+	FileOptions          uint16     `json:"file_options"`
 }
 
 // storageAllocation from the request
@@ -477,6 +476,7 @@ type updateAllocationRequest struct {
 	OwnerID                 string `json:"owner_id"`         // Owner of the allocation
 	OwnerPublicKey          string `json:"owner_public_key"` // Owner Public Key of the allocation
 	Size                    int64  `json:"size"`             // difference
+	ExtendExpiry            bool   `json:"extend_expiry"`
 	UpdateTerms             bool   `json:"update_terms"`
 	AddBlobberId            string `json:"add_blobber_id"`
 	RemoveBlobberId         string `json:"remove_blobber_id"`

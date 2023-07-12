@@ -344,7 +344,6 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	var nar = new(newAllocationRequest)
 	nar.DataShards = 10
 	nar.ParityShards = 10
-	nar.Expiration = common.Timestamp(exp)
 	nar.Owner = client.id
 	nar.OwnerPublicKey = client.pk
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
