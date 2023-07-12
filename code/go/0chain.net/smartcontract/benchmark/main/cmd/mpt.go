@@ -352,7 +352,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockReadPools(clients, balances)
+		storagesc.AddMockReadPools(clients, eventDb, balances)
 		log.Println("added allocation read pools\t", time.Since(timer))
 	}()
 
