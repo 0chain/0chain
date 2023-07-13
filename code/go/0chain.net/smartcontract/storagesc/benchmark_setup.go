@@ -237,15 +237,28 @@ func AddMockChallenges(
 	}
 }
 
-func AddMockReadPools(clients []string, balances cstate.StateContextI) {
+func AddMockReadPools(clients []string, eventDb *event.EventDb, balances cstate.StateContextI) {
 	rps := make([]*readPool, len(clients))
 	for i := range clients {
 		rps[i] = &readPool{
 			Balance: 10 * 1e10,
 		}
 	}
+	var edbRps []event.ReadPool
 	for i := 0; i < len(rps); i++ {
 		if _, err := balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i]); err != nil {
+			log.Fatal(err)
+		}
+		if viper.GetBool(sc.EventDbEnabled) {
+			edbRps = append(edbRps, event.ReadPool{
+				UserID:  clients[i],
+				Balance: rps[i].Balance,
+			})
+		}
+	}
+	if viper.GetBool(sc.EventDbEnabled) {
+		err := eventDb.InsertReadPool(edbRps)
+		if err != nil {
 			log.Fatal(err)
 		}
 	}
