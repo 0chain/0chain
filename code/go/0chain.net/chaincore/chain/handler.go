@@ -261,7 +261,7 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 }
 
 func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s *state.State) {
-	//Row start
+	// Row start
 	fmt.Fprintf(w, "<tr>")
 
 	fmt.Fprintf(w, "<td>")
@@ -297,7 +297,7 @@ func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s 
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "</tr>")
-	//Row end
+	// Row end
 }
 
 func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
@@ -784,7 +784,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner {
-		//ToDo: For sharders show who all can store the blocks
+		// ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
 	fmt.Fprintf(w, "<li><a href='_diagnostics/dkg_process'>/_diagnostics/dkg_process</a></li>")
@@ -1499,7 +1499,7 @@ func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 		fmt.Fprintf(w, "<h3>Round: %v</h3>", rn)
 		fmt.Fprintf(w, "<div>&nbsp;</div>")
 		if node.Self.Underlying().Type != node.NodeTypeMiner {
-			//ToDo: Add Sharder related round info
+			// ToDo: Add Sharder related round info
 			return
 		}
 

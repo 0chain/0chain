@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"errors"
@@ -851,7 +852,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"insufficient funds: %v", err)
 	}
 
-	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, uint64(blobber.SavedData)); err != nil {
+	sd, err := maths.ConvertToUint64(blobber.SavedData)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed", "savedData is negative: %v", err)
+	}
+	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, sd); err != nil {
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 

@@ -1387,12 +1387,15 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
 
-			emitUpdateChallenge(&StorageChallenge{
+			err := emitUpdateChallenge(&StorageChallenge{
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
 			}, false, balances, sa.Stats, ba.Stats)
 
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
