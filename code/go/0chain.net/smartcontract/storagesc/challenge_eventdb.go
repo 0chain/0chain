@@ -113,6 +113,26 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
 }
 
+func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
+		AllocationID:         alloc.ID,
+		OpenChallenges:       alloc.Stats.OpenChallenges,
+		TotalChallenges:      alloc.Stats.TotalChallenges,
+		SuccessfulChallenges: alloc.Stats.SuccessChallenges,
+		FailedChallenges:     alloc.Stats.FailedChallenges,
+	})
+
+	for _, ba := range alloc.BlobberAllocs {
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, ba.BlobberID, event.Blobber{
+			Provider:            event.Provider{ID: ba.BlobberID},
+			ChallengesCompleted: uint64(ba.Stats.TotalChallenges),
+			ChallengesPassed:    uint64(ba.Stats.SuccessChallenges),
+			OpenChallenges:      uint64(ba.Stats.OpenChallenges),
+		})
+	}
+
+}
+
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from,

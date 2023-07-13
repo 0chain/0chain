@@ -199,14 +199,17 @@ type ValidationNode struct {
 	LastHealthCheck   common.Timestamp   `json:"last_health_check"`
 }
 
-// validate the validator configurations
-func (sn *ValidationNode) validate(_ *Config) (err error) {
-	if strings.Contains(sn.BaseURL, "localhost") &&
+func validateBaseUrl(baseUrl *string) error {
+	if baseUrl != nil && strings.Contains(*baseUrl, "localhost") &&
 		node.Self.Host != "localhost" {
 		return errors.New("invalid validator base url")
 	}
 
-	return
+	return nil
+}
+
+func GetValidatorUrlKey(globalKey, baseUrl string) datastore.Key {
+	return datastore.Key(globalKey + "validator:" + baseUrl)
 }
 
 func (sn *ValidationNode) GetKey(_ string) datastore.Key {
@@ -214,7 +217,7 @@ func (sn *ValidationNode) GetKey(_ string) datastore.Key {
 }
 
 func (sn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.BaseURL)
+	return GetValidatorUrlKey(globalKey, sn.BaseURL)
 }
 
 func (sn *ValidationNode) Encode() []byte {
@@ -263,17 +266,30 @@ func (t *Terms) minLockDemand(gbSize, rdtu, minLockDemand float64) (currency.Coi
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if t.ReadPrice > conf.MaxReadPrice {
+	if err = validateReadPrice(t.ReadPrice, conf); err != nil {
+		return
+	}
+
+	return validateWritePrice(t.WritePrice, conf)
+}
+
+func validateReadPrice(readPrice currency.Coin, conf *Config) error {
+	if readPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
-	if t.WritePrice < conf.MinWritePrice {
+
+	return nil
+}
+
+func validateWritePrice(writePrice currency.Coin, conf *Config) error {
+	if writePrice < conf.MinWritePrice {
 		return errors.New("write_price is less than min_write_price allowed")
 	}
-	if t.WritePrice > conf.MaxWritePrice {
+	if writePrice > conf.MaxWritePrice {
 		return errors.New("write_price is greater than max_write_price allowed")
 	}
 
-	return // nil
+	return nil
 }
 
 const (
@@ -333,6 +349,10 @@ type StorageNode struct {
 	NotAvailable      bool               `json:"not_available"`
 }
 
+func GetUrlKey(baseUrl, globalKey string) datastore.Key {
+	return datastore.Key(globalKey + baseUrl)
+}
+
 // validate the blobber configurations
 func (sn *StorageNode) validate(conf *Config) (err error) {
 	if err = sn.Terms.validate(conf); err != nil {
@@ -342,9 +362,8 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 		return errors.New("insufficient blobber capacity")
 	}
 
-	if strings.Contains(sn.BaseURL, "localhost") &&
-		node.Self.Host != "localhost" {
-		return errors.New("invalid blobber base url")
+	if err := validateBaseUrl(&sn.BaseURL); err != nil {
+		return err
 	}
 
 	if err := sn.Geolocation.validate(); err != nil {
@@ -359,7 +378,7 @@ func (sn *StorageNode) GetKey() datastore.Key {
 }
 
 func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.BaseURL)
+	return GetUrlKey(sn.BaseURL, globalKey)
 }
 
 func (sn *StorageNode) Encode() []byte {
@@ -711,7 +730,7 @@ func (sa *StorageAllocation) addToWritePool(
 	balances cstate.StateContextI,
 	opts ...WithOption,
 ) error {
-	//default behaviour
+	// default behaviour
 	if len(opts) == 0 {
 		value, err := WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)(balances)
 		if err != nil {
@@ -1296,7 +1315,7 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
 		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+			sn.UsedSize += blobberAllocation.Stats.UsedSize * int64(float64(sn.DataShards)/float64(sn.DataShards+sn.ParityShards)) // total used
 		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
@@ -1325,7 +1344,7 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
 		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+			sn.UsedSize += blobberAllocation.Stats.UsedSize * int64(float64(sn.DataShards)/float64(sn.DataShards+sn.ParityShards)) // total used
 		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}

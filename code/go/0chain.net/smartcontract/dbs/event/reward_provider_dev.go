@@ -164,36 +164,38 @@ func (edb *EventDb) GetAllocationCancellationRewards(allocationID string) (map[s
 	return result, nil
 }
 
-func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error) {
+func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) (map[string]int64, error) {
 
-	var result []int64
-	var totals []int64
+	var result map[string]int64
+	result = make(map[string]int64)
+	//var totals []int64
 
 	var blockRewards []BlockReward
 
-	err := edb.Get().Table("reward_providers").Select("provider_id, sum(amount) as amount").Where("block_number >= ? AND block_number <= ?", startBlock, endBlock).Group("provider_id").Scan(&blockRewards).Error
+	err := edb.Get().Table("reward_providers").Select("provider_id, sum(amount) as amount").Where("reward_type = ? AND block_number >= ? AND block_number <= ?", spenum.BlockRewardBlobber, startBlock, endBlock).Group("provider_id").Order("provider_id").Scan(&blockRewards).Error
 	if err != nil {
 		return nil, err
 	}
 
 	for _, br := range blockRewards {
-		result = append(result, br.Amount)
+		result[br.ProviderID] = br.Amount
 	}
 
 	for _, br := range blockRewards {
 
-		var delegateRewards BlockReward
-		err = edb.Get().Table("reward_delegates").Select("provider_id, sum(amount) as amount").Where("block_number >= ? AND block_number <= ?", startBlock, endBlock).Group("provider_id").Scan(&delegateRewards).Error
+		var delegateReward int64
+
+		err = edb.Get().Table("reward_delegates").Select("sum(amount) as amount").Where("reward_type = ? AND provider_id = ? AND block_number >= ? AND block_number <= ?", spenum.BlockRewardBlobber, br.ProviderID, startBlock, endBlock).Scan(&delegateReward).Error
 		if err != nil {
 			return nil, err
 		}
 
-		result = append(result, delegateRewards.Amount)
+		result[br.ProviderID] += delegateReward
 
-		totals = append(totals, br.Amount+delegateRewards.Amount)
+		//totals = append(totals, br.Amount+delegateReward)
 	}
 
-	result = append(result, totals...)
+	//result = append(result, totals...)
 
 	return result, err
 }

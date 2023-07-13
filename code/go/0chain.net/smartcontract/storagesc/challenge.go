@@ -813,7 +813,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	_ *transaction.Transaction,
 	allocID string,
 	blobberID string,
-	balances cstate.StateContextI) (alloc *StorageAllocation, err error) {
+	balances cstate.StateContextI, options ...int64) (alloc *StorageAllocation, err error) {
 
 	alloc, err = sc.getAllocation(allocID, balances)
 	switch err {
@@ -833,12 +833,31 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"found empty allocation stats")
 	}
 
+	if len(options) > 0 {
+		logging.Logger.Info("getAllocationForChallenge 1",
+			zap.Any("uniqueIdForLogging", "Round : "+strconv.Itoa(int(options[0]))),
+			zap.Any("alloc", alloc),
+			zap.Any("blobberID", blobberID))
+	} else {
+		logging.Logger.Info("options are not here")
+	}
+
 	//we check that this allocation do have write-commits and can be challenged.
 	//We can't check only allocation to be written, because blobbers can commit in different order,
 	//so we check particular blobber's allocation to be written
 	if alloc.Stats.NumWrites > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
+		if len(options) > 0 {
+			logging.Logger.Info("getAllocationForChallenge 2",
+				zap.Any("uniqueIdForLogging", "Round : "+strconv.Itoa(int(options[0]))),
+				zap.Any("alloc", alloc),
+				zap.Any("blobberID", blobberID))
+		} else {
+			logging.Logger.Info("2 options are not here")
+		}
+
 		return alloc, nil // found
 	}
+
 	return nil, nil
 }
 
@@ -910,7 +929,9 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	balances cstate.StateContextI,
 	needValidNum int,
 	conf *Config,
+	options ...int64,
 ) (*challengeOutput, error) {
+
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(1) // challengeBlobberSelection(r.Intn(2))
 	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
@@ -938,6 +959,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
+	uniqueIdForLogging := "Round : " + strconv.Itoa(int(options[0]))
+
 	var findValidAllocRetries = 5 // avoid retry for debugging
 	var (
 		alloc                       *StorageAllocation
@@ -950,23 +973,58 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		findValidAllocRetries = blobberAllocPartitionLength
 	}
 
-	if findValidAllocRetries == 0 {
-		logging.Logger.Debug("empty blobber")
-	}
+	logging.Logger.Info("populateGenerateChallenge",
+		zap.String("uniqueIdForLogging", uniqueIdForLogging),
+		zap.Any("len(randBlobberAllocs)", len(randBlobberAllocs)),
+
+		zap.Any("findValidAllocRetries", findValidAllocRetries),
+		zap.Any("randBlobberAllocs", randBlobberAllocs),
+
+		zap.Any("blobberAllocPartitionLength", blobberAllocPartitionLength),
+		zap.Any("randPerm", randPerm),
+
+		zap.Any("blobberID", blobberID),
+		zap.Any("challengeID", challengeID),
+	)
 
 	for i := 0; i < findValidAllocRetries; i++ {
 		// get a random allocation
 		allocID := randBlobberAllocs[randPerm[i%blobberAllocPartitionLength]].ID
 
+		logging.Logger.Info("populateGenerateChallenge",
+			zap.String("uniqueIdForLogging", uniqueIdForLogging),
+			zap.Any("i", i),
+			zap.Any("allocID", allocID),
+		)
+
 		// get the storage allocation from MPT
-		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances)
+		alloc, err = sc.getAllocationForChallenge(txn, allocID, blobberID, balances, options...)
 		if err != nil {
+			logging.Logger.Error("populateGenerateChallenge",
+				zap.String("uniqueIdForLogging", uniqueIdForLogging),
+				zap.Any("i", i),
+				zap.Any("allocID", allocID),
+				zap.Any("blobberID", blobberID),
+				zap.Any("error", err),
+			)
 			return nil, err
 		}
+
+		logging.Logger.Info("populateGenerateChallenge",
+			zap.String("uniqueIdForLogging", uniqueIdForLogging),
+			zap.Any("i", i),
+			zap.Any("alloc", alloc),
+		)
 
 		if alloc == nil {
 			logging.Logger.Debug("allocation not found for blobber", zap.String("blobber_id", blobberID),
 				zap.String("alloc_id", allocID))
+			logging.Logger.Info("populateGenerateChallenge",
+				zap.String("uniqueIdForLogging", uniqueIdForLogging),
+				zap.Any("i", i),
+				zap.Any("alloc", "NULL"),
+				zap.Any("blobberID", blobberID),
+			)
 			continue
 		}
 
@@ -998,7 +1056,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	if !foundAllocation {
 		logging.Logger.Error("populate_generate_challenge: couldn't find appropriate allocation for a blobber",
-			zap.String("blobberId", blobberID))
+			zap.String("blobberId", blobberID),
+			zap.Any("round", options))
 		return nil, nil
 	}
 
@@ -1132,6 +1191,10 @@ func (sc *StorageSmartContract) generateChallenge(
 	conf *Config,
 	balances cstate.StateContextI,
 ) (err error) {
+	uniqueIdForLogging := t.Hash
+	logging.Logger.Info("generate_challenge : "+uniqueIdForLogging,
+		zap.Any("round", b.Round))
+
 	inputRound := GenerateChallengeInput{}
 	if err := json.Unmarshal(input, &inputRound); err != nil {
 		return err
@@ -1169,6 +1232,10 @@ func (sc *StorageSmartContract) generateChallenge(
 			"error getting the blobber challenge list: %v", err)
 	}
 
+	logging.Logger.Info("generate_challenge : "+uniqueIdForLogging,
+		zap.Any("challengeReadyParts", challengeReadyParts),
+	)
+
 	bcNum, err := challengeReadyParts.Size(balances)
 	if err != nil {
 		return common.NewErrorf("generate_challenge", "error getting blobber challenge size: %v", err)
@@ -1199,13 +1266,15 @@ func (sc *StorageSmartContract) generateChallenge(
 		balances,
 		needValidNum,
 		conf,
+		b.Round,
 	)
 	if err != nil {
 		return common.NewErrorf("generate_challenge", err.Error())
 	}
 
 	if result == nil {
-		logging.Logger.Error("received empty data for challenge generation. Skipping challenge generation")
+		logging.Logger.Error("received empty data for challenge generation. Skipping challenge generation : "+uniqueIdForLogging,
+			zap.Any("block_round", b.Round))
 		return nil
 	}
 
@@ -1221,6 +1290,9 @@ func (sc *StorageSmartContract) generateChallenge(
 	}
 
 	afterAddChallenge(result.challInfo.ID, result.challInfo.ValidatorIDs)
+
+	logging.Logger.Info(
+		"generate_challenge :     "+uniqueIdForLogging, zap.Any("challenge", result.challInfo))
 
 	return nil
 }

@@ -243,6 +243,11 @@ func setUpMpt(
 		nil,
 	)
 
+	initSCTokens := currency.Coin(viper.GetInt64(benchmark.StartTokens))
+	mustAddMockSCBalances(balances, storagesc.ADDRESS, initSCTokens)
+	mustAddMockSCBalances(balances, minersc.ADDRESS, initSCTokens)
+	mustAddMockSCBalances(balances, zcnsc.ADDRESS, initSCTokens)
+
 	log.Println("created balances\t", time.Since(timer))
 
 	var eventDb *event.EventDb
@@ -352,7 +357,7 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockReadPools(clients, balances)
+		storagesc.AddMockReadPools(clients, eventDb, balances)
 		log.Println("added allocation read pools\t", time.Since(timer))
 	}()
 
@@ -571,6 +576,18 @@ func setUpMpt(
 	log.Println("mpt generation took:", time.Since(mptGenTime))
 
 	return pMpt, balances.GetState().GetRoot(), &benchData
+}
+
+func mustAddMockSCBalances(balances cstate.StateContextI, scAddress string, amount currency.Coin) {
+	s, err := balances.GetClientState(scAddress)
+	if err != nil && err != util.ErrValueNotPresent {
+		panic(err)
+	}
+	s.Balance = amount
+	_, err = balances.SetClientState(scAddress, s)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func getMockIdKeyPair() (string, string, error) {
