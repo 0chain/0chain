@@ -185,9 +185,10 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 				CreationDate: creationTime,
 				Value: func() currency.Coin {
-					v, err := currency.ParseZCN(100 * viper.GetFloat64(bk.StorageMaxWritePrice))
+					v, err := currency.ParseZCN(10 * viper.GetFloat64(bk.StorageMaxWritePrice))
 					if err != nil {
 						panic(err)
 					}
@@ -218,6 +219,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 				CreationDate: creationTime - 1,
 				Value:        updateAllocVal,
 			},
@@ -311,16 +313,16 @@ func BenchmarkTests(
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
-				responseBytes, err := json.Marshal(&request)
-				if err != nil {
-					panic(err)
-				}
 				err = sigScheme.SetPublicKey(data.PublicKeys[0])
 				if err != nil {
 					panic(err)
 				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				signature, err := sigScheme.Sign(hex.EncodeToString(responseBytes))
+				marker := fmt.Sprintf("%s:%f:%d",
+					request.Recipient,
+					request.FreeTokens,
+					request.Nonce)
+				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				if err != nil {
 					panic(err)
 				}
@@ -361,10 +363,13 @@ func BenchmarkTests(
 					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
 					1,
 				}
-				responseBytes, _ := json.Marshal(&request)
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				signature, _ := sigScheme.Sign(hex.EncodeToString(responseBytes))
+				marker := fmt.Sprintf("%s:%f:%d",
+					request.Recipient,
+					request.FreeTokens,
+					request.Nonce)
+				signature, _ := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				fsmBytes, _ := json.Marshal(&freeStorageMarker{
 					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 					Recipient:  request.Recipient,
@@ -390,7 +395,7 @@ func BenchmarkTests(
 				},
 				CreationDate: creationTime + 1,
 				//ClientID:     "d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577",
-				ClientID:   "my_new_blobber",
+				ClientID:   encryption.Hash("my_new_blobber"),
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
@@ -591,6 +596,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[0],
 				Value:        spMinLock,
 				CreationDate: creationTime,
+				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakePoolRequest{

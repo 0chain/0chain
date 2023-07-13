@@ -523,6 +523,9 @@ func (sp *StakePool) DistributeRewards(
 	balances cstate.StateContextI,
 	options ...string,
 ) (err error) {
+
+	logging.Logger.Info("DistributeRewards", zap.String("providerId", providerId), zap.String("providerType", providerType.String()), zap.String("rewardType", rewardType.String()), zap.Any("value", value), zap.Any("options", options))
+
 	if value == 0 || sp.HasBeenKilled {
 		return nil // nothing to move
 	}

@@ -114,7 +114,7 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 }
 
 func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, event.Allocation{
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
 		AllocationID:         alloc.ID,
 		OpenChallenges:       alloc.Stats.OpenChallenges,
 		TotalChallenges:      alloc.Stats.TotalChallenges,
@@ -123,7 +123,7 @@ func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances csta
 	})
 
 	for _, ba := range alloc.BlobberAllocs {
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, ba.BlobberID, event.Blobber{
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, ba.BlobberID, event.Blobber{
 			Provider:            event.Provider{ID: ba.BlobberID},
 			ChallengesCompleted: uint64(ba.Stats.TotalChallenges),
 			ChallengesPassed:    uint64(ba.Stats.SuccessChallenges),

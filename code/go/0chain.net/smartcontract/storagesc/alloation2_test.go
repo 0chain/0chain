@@ -408,8 +408,28 @@ func testCancelAllocation(
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
+
+	var cancellationCharges []int64
 	totalCancellationCharge := 952500
-	confirmFinalizeAllocation(t, f, *newCp, sps, int64(totalCancellationCharge/len(blobbers)))
+
+	totalWritePrice := currency.Coin(0)
+	for _, ba := range f.allocation.BlobberAllocs {
+		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
+		if err != nil {
+			return fmt.Errorf("failed to add write price: %v", err)
+		}
+
+		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
+		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight)
+
+		if err != nil {
+			return fmt.Errorf("failed to convert float to coin: %v", err)
+		}
+
+		cancellationCharges = append(cancellationCharges, int64(reward))
+	}
+
+	confirmFinalizeAllocation(t, f, *newCp, sps, cancellationCharges)
 
 	var req lockRequest
 	req.decode(input)
@@ -477,7 +497,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newCp, sps, 0)
+	confirmFinalizeAllocation(t, f, *newCp, sps, []int64{0, 0, 0, 0})
 	return nil
 }
 
@@ -486,7 +506,7 @@ func confirmFinalizeAllocation(
 	f formulaeFinalizeAllocation,
 	challengePool challengePool,
 	sps []*stakePool,
-	cancellationCharge int64,
+	cancellationCharge []int64,
 ) {
 	require.EqualValues(t, 0, challengePool.Balance)
 
@@ -509,7 +529,7 @@ func confirmFinalizeAllocation(
 	f.minLockDelegatePayment(0, 0)
 
 	for i, sp := range sps {
-		serviceCharge := f.blobberServiceCharge(i, cancellationCharge) + f.minLockServiceCharge(i)
+		serviceCharge := f.blobberServiceCharge(i, cancellationCharge[i]) + f.minLockServiceCharge(i)
 		require.Equal(t, serviceCharge, int64(sp.Reward))
 		orderedPoolIds := sp.OrderedPoolIds()
 		for _, poolId := range orderedPoolIds {
@@ -517,7 +537,7 @@ func confirmFinalizeAllocation(
 			wSplit := strings.Split(poolId, " ")
 			dId, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
-			reward := f.blobberDelegateReward(i, dId, cancellationCharge) + f.minLockDelegatePayment(i, dId)
+			reward := f.blobberDelegateReward(i, dId, cancellationCharge[i]) + f.minLockDelegatePayment(i, dId)
 			require.InDelta(t, reward, int64(dp.Reward), errDelta)
 		}
 	}
@@ -698,14 +718,18 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 	var totalUsed = float64(f.allocation.UsedSize)
 	var abdUsed int64 = 0
 	for _, d := range f.allocation.BlobberAllocs {
-		abdUsed += d.Stats.UsedSize
+		abdUsed += int64(float64(d.Stats.UsedSize) * float64(f.allocation.DataShards) / float64(f.allocation.DataShards+f.allocation.ParityShards))
 	}
 	require.InDelta(f.t, totalUsed, abdUsed, errDelta)
 
-	var ratio = used / totalUsed
 	var passRate = f._passRates[blobberIndex]
 
-	return challengePool*ratio*passRate + float64(cancellationCharge)
+	maxChallengeCompletionDTU := float64(MaxChallengeCompletionTime) / float64(TimeUnit)
+	adjustableChallengePoolTokens := challengePool * maxChallengeCompletionDTU
+
+	ratio := used / (totalUsed * float64(f.allocation.DataShards+f.allocation.ParityShards) / float64(f.allocation.DataShards))
+
+	return adjustableChallengePoolTokens*ratio*passRate + float64(cancellationCharge)
 }
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
