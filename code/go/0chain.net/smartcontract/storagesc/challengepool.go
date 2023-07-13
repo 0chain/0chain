@@ -139,8 +139,6 @@ func (cp *challengePool) moveToBlobbers(sscKey string, reward currency.Coin,
 	allocationID string,
 ) error {
 
-	logging.Logger.Info("moveToBlobbers", zap.Any("reward", reward), zap.Any("blobberId", blobberId), zap.Any("sp", sp), zap.Any("balances", balances), zap.Any("allocationID", allocationID))
-
 	if reward == 0 {
 		return nil // nothing to move, or nothing to move to
 	}
