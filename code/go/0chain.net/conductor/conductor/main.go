@@ -77,6 +77,7 @@ func main() {
 	log.Print("create worker instance")
 	r.conf = conf
 	r.verbose = verbose
+	r.chalConf = config.NewGenerateChallenge()
 	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
 	if err != nil {
 		log.Fatal("[ERR]", err)

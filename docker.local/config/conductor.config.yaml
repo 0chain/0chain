@@ -192,6 +192,9 @@ commands:
   init_allocation:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation.sh"
+  init_allocation_only:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation_only.sh"
   list:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list.sh"

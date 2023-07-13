@@ -350,13 +350,21 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 	return
 }
 
+func (r *Runner) GenerateChallenge(c *config.GenerateChallege) error {
+	if r.verbose {
+		log.Print(" [INF] setting generate challenge info")
+	}
+
+	r.chalConf = c
+	return nil
+}
+
 func (r *Runner) WaitForChallengeGeneration() {
 	if r.verbose {
 		log.Print(" [INF] waiting for blockchain to generate challenge")
 	}
 
 	r.chalConf.WaitOnChallengeGeneration = true
-	return
 }
 
 func (r *Runner) WaitOnBlobberCommit() {
@@ -364,7 +372,6 @@ func (r *Runner) WaitOnBlobberCommit() {
 		log.Print(" [INF] waiting for blobber to commit writemarker")
 	}
 	r.chalConf.WaitOnBlobberCommit = true
-	return
 }
 
 func (r *Runner) WaitForChallengeStatus() {
@@ -372,7 +379,6 @@ func (r *Runner) WaitForChallengeStatus() {
 		log.Print(" [INF] waiting for blobber to commit writemarker")
 	}
 	r.chalConf.WaitForChallengeStatus = true
-	return
 }
 
 //

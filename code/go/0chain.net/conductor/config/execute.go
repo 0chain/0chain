@@ -115,6 +115,7 @@ type Executor interface {
 
 	// SetServerState updates state.
 	SetServerState(interface{}) error
+	GenerateChallenge(c *GenerateChallege) error
 }
 
 //

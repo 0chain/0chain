@@ -724,8 +724,8 @@ func init() {
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		ex.WaitForChallengeGeneration()
-		return ex.SetServerState(cfg)
+
+		return ex.GenerateChallenge(cfg)
 	})
 
 	register("wait_blobber_commit", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {

@@ -212,11 +212,11 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 	// otherwise return nil,nil
 
 	s := crpc.Client().State()
-	if *s.StopChallengeGeneration {
+	if s.StopChallengeGeneration != nil && *s.StopChallengeGeneration {
 		return nil, nil
 	}
 
-	if numChalGen > s.GenerateChallenge.TotalChallenges {
+	if s.GenerateChallenge != nil && numChalGen > s.GenerateChallenge.TotalChallenges {
 		return nil, nil
 	}
 
