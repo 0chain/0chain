@@ -10,14 +10,14 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/benchmark"
 	"github.com/0chain/common/core/util"
@@ -153,6 +153,16 @@ func runSuite(
 ) []benchmarkResults {
 	var benchmarkResult []benchmarkResults
 	var wg sync.WaitGroup
+	scAddresses := []string{
+		minersc.ADDRESS,
+		storagesc.ADDRESS,
+		faucetsc.ADDRESS,
+		zcnsc.ADDRESS,
+	}
+	clientsMap := make(map[string]struct{}, len(data.Clients))
+	for _, c := range append(data.Clients, scAddresses...) {
+		clientsMap[c] = struct{}{}
+	}
 
 	for _, bm := range suite.Benchmarks {
 		wg.Add(1)
@@ -181,11 +191,51 @@ func runSuite(
 					timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 						return data.Now
 					})
+
+					// do the balances checking only once, otherwise it would slow down the tests too much
+					var totalBalanceBefore currency.Coin
+					if i == 0 {
+						// get client balances and all delegate pools' balances before running the test
+						// compare it
+						for _, c := range append(data.Clients, scAddresses...) {
+							bal, err := timedBalance.GetClientBalance(c)
+							if err != nil {
+								log.Fatal(err)
+							}
+							totalBalanceBefore += bal
+						}
+					}
+
 					b.StartTimer()
 					err = bm.Run(timedBalance, b)
 					b.StopTimer()
-					if err != nil {
-						mockUpdateState(bm.Transaction(), balances)
+					// data.Clients is subset of all clients, so we need to check if there are
+					// any unknown clients that minted to or transferred to
+					unknownMintTransferClients := make(map[string]struct{})
+					if err == nil {
+						ms := timedBalance.GetMints()
+						for _, m := range ms {
+							if _, ok := clientsMap[m.ToClientID]; !ok {
+								unknownMintTransferClients[m.ToClientID] = struct{}{}
+
+							}
+						}
+
+						for _, tt := range timedBalance.GetTransfers() {
+							if _, ok := clientsMap[tt.ToClientID]; !ok {
+								unknownMintTransferClients[tt.ToClientID] = struct{}{}
+							}
+						}
+
+						for c := range unknownMintTransferClients {
+							bl, err := balances.GetClientBalance(c)
+							if err != nil {
+								log.Fatal(err)
+							}
+							totalBalanceBefore += bl
+						}
+
+						mockUpdateState(bm.Name(), bm.Transaction(), balances)
 					}
 					runCount++
 					currMptHashRoot := util.ToHex(timedBalance.GetState().GetRoot())
@@ -196,6 +246,37 @@ func runSuite(
 						b.FailNow()
 					} else {
 						prevMptHashRoot = currMptHashRoot
+					}
+
+					if i == 0 {
+						// get balances after mints
+						unknownAddresses := make([]string, 0, len(unknownMintTransferClients))
+						for c := range unknownMintTransferClients {
+							unknownAddresses = append(unknownAddresses, c)
+						}
+						var totalBalanceAfter currency.Coin
+						for _, c := range append(append(data.Clients, scAddresses...),
+							unknownAddresses...) {
+							bal, err := timedBalance.GetClientBalance(c)
+							if err != nil {
+								log.Fatal(err)
+							}
+							totalBalanceAfter += bal
+						}
+
+						// get total mints
+						var mintTokens currency.Coin
+						for _, m := range timedBalance.GetMints() {
+							mintTokens += m.Amount
+						}
+
+						if totalBalanceBefore != totalBalanceAfter-mintTokens {
+							log.Fatal(fmt.Sprintf("name:%s\ntokens mint or burned unexpected\nbefore:%v\nafter:-minted:%v\nminted:%v\n",
+								bm.Name(),
+								totalBalanceBefore,
+								totalBalanceAfter-mintTokens, mintTokens))
+
+						}
 					}
 				}
 			})
