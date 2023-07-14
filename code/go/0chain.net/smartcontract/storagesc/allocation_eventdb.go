@@ -117,6 +117,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
+		MinLockDemand:     alloc.MinLockDemand,
 	}
 
 	return &StorageAllocationBlobbers{
