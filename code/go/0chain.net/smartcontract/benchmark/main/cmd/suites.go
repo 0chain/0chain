@@ -47,6 +47,10 @@ func (ch *chainer) SetQueryStateContext(qsc cstate.TimedQueryStateContextI) {
 	ch.qsc = qsc
 }
 
+func (ch *chainer) GetStateContextI() cstate.StateContextI {
+	return ch.qsc.(cstate.StateContextI)
+}
+
 func runSuites(
 	suites []benchmark.TestSuite,
 	mpt *util.MerklePatriciaTrie,
