@@ -737,15 +737,20 @@ func AddMockFreeStorageAssigners(
 	}
 }
 
-func AddMockWriteRedeems(
+func AddMockReadMarkers(
 	clients, publicKeys []string,
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	numWriteRedeemAllocation := viper.GetInt(sc.NumWriteRedeemAllocation)
+	numReadMarkers := viper.GetInt(sc.NumReadMarkersAllocation)
 	numAllocations := viper.GetInt(sc.NumAllocations)
 	for i := 0; i < numAllocations; i++ {
-		for j := 0; j < numWriteRedeemAllocation; j++ {
+		var rms []event.ReadMarker
+		for j := 0; j < numReadMarkers; j++ {
+			round := getMockReadMarkerRound(i, j)
+			if round >= viper.GetInt64(sc.NumBlocks) {
+				break
+			}
 			client := getMockOwnerFromAllocationIndex(i, len(clients))
 			rm := ReadMarker{
 				ClientID:        clients[client],
@@ -753,7 +758,7 @@ func AddMockWriteRedeems(
 				BlobberID:       getMockBlobberId(getMockBlobberBlockFromAllocationIndex(i)),
 				AllocationID:    getMockAllocationId(i),
 				OwnerID:         clients[client],
-				ReadCounter:     viper.GetInt64(sc.NumWriteRedeemAllocation),
+				ReadCounter:     viper.GetInt64(sc.NumReadMarkersAllocation),
 			}
 			commitRead := &ReadConnection{
 				ReadMarker: &rm,
@@ -762,39 +767,74 @@ func AddMockWriteRedeems(
 			if err != nil {
 				panic(err)
 			}
+
 			if viper.GetBool(sc.EventDbEnabled) {
-				numBlocks := viper.GetInt(sc.NumBlocks)
-				mockBlockNumber := int64(i%(numBlocks-1)) + 1
-				txnNum := i*numWriteRedeemAllocation + j
+				mockRound := getMockReadMarkerRound(i, j)
 				readMarker := event.ReadMarker{
 					ClientID:      rm.ClientID,
 					BlobberID:     rm.BlobberID,
 					AllocationID:  rm.AllocationID,
-					TransactionID: benchmark.GetMockTransactionHash(mockBlockNumber, txnNum),
+					TransactionID: benchmark.GetMockTransactionHash(mockRound, j),
 					OwnerID:       rm.OwnerID,
 					ReadCounter:   rm.ReadCounter,
 					ReadSize:      100,
-					BlockNumber:   mockBlockNumber,
+					BlockNumber:   mockRound,
 				}
-				if err := eventDb.Store.Get().Create(&readMarker).Error; err != nil {
-					log.Fatal(err)
+				rms = append(rms, readMarker)
+			}
+			if err := eventDb.Store.Get().Create(&rms).Error; err != nil {
+				log.Fatal(err)
+			}
+		}
+		if err := eventDb.Store.Get().Create(&rms).Error; err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func AddMockWriteMarkers(
+	clients []string,
+	eventDb *event.EventDb,
+) {
+	numWriteRedeemAllocation := viper.GetInt(sc.NumWriteRedeemAllocation)
+	numAllocations := viper.GetInt(sc.NumAllocations)
+	for i := 0; i < numAllocations; i++ {
+		var wms []event.WriteMarker
+		for j := 0; j < numWriteRedeemAllocation; j++ {
+			client := getMockOwnerFromAllocationIndex(i, len(clients))
+			if viper.GetBool(sc.EventDbEnabled) {
+				mockRound := getMockWriteMarkerRound(i, j)
+				if mockRound >= viper.GetInt64(sc.NumBlocks) {
+					break
 				}
-				txnNum += numAllocations * numWriteRedeemAllocation
 				writeMarker := event.WriteMarker{
-					ClientID:       rm.ClientID,
-					BlobberID:      rm.BlobberID,
-					AllocationID:   rm.AllocationID,
-					TransactionID:  benchmark.GetMockTransactionHash(mockBlockNumber, txnNum),
+					ClientID:       clients[client],
+					BlobberID:      getMockBlobberId(getMockBlobberBlockFromAllocationIndex(i)),
+					AllocationID:   getMockAllocationId(i),
+					TransactionID:  benchmark.GetMockTransactionHash(mockRound, j),
 					AllocationRoot: "mock allocation root",
-					BlockNumber:    mockBlockNumber,
+					BlockNumber:    mockRound,
 					Size:           100,
 				}
-				if err := eventDb.Store.Get().Create(&writeMarker).Error; err != nil {
-					log.Fatal(err)
-				}
+				wms = append(wms, writeMarker)
+			}
+		}
+		if viper.GetBool(sc.EventDbEnabled) {
+			if err := eventDb.Store.Get().Create(&wms).Error; err != nil {
+				log.Fatal(err)
 			}
 		}
 	}
+}
+
+func getMockWriteMarkerRound(allocationIndex, writeMarkerIndex int) int64 {
+	return int64(allocationIndex + writeMarkerIndex*viper.GetInt(sc.NumRoundsBetweenWrites) +
+		viper.GetInt(sc.NumRoundsBetweenWrites))
+}
+
+func getMockReadMarkerRound(allocationIndex, readMarkerIndex int) int64 {
+	return int64(allocationIndex + readMarkerIndex*viper.GetInt(sc.NumRoundsBetweenReads) +
+		2*viper.GetInt(sc.NumRoundsBetweenWrites))
 }
 
 func getMockBlobberTerms() Terms {

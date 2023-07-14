@@ -19,7 +19,6 @@ simulation:
   num_transactions_per_block: 10
   num_validators: 10
   num_vesting_destinations_client: 1
-  num_write_redeem_allocation: 1
   nun_active_sharders: 20
   nun_sharders: 20
 
