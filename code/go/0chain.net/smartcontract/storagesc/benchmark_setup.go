@@ -752,13 +752,14 @@ func AddMockReadMarkers(
 				break
 			}
 			client := getMockOwnerFromAllocationIndex(i, len(clients))
+			mockReadCounter := int64(2)
 			rm := ReadMarker{
 				ClientID:        clients[client],
 				ClientPublicKey: publicKeys[client],
 				BlobberID:       getMockBlobberId(getMockBlobberBlockFromAllocationIndex(i)),
 				AllocationID:    getMockAllocationId(i),
 				OwnerID:         clients[client],
-				ReadCounter:     viper.GetInt64(sc.NumReadMarkersAllocation),
+				ReadCounter:     mockReadCounter,
 			}
 			commitRead := &ReadConnection{
 				ReadMarker: &rm,
