@@ -1798,7 +1798,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	}
 
 	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": math.Max(cost64, mld64+cost64*conf.CancellationCharge),
+		"min_lock_demand": currency.Float64ToCoin(math.Max(cost64, mld64+cost64*conf.CancellationCharge)),
 	}, nil)
 }
 
