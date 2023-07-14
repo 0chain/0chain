@@ -413,12 +413,12 @@ func testCancelAllocation(
 	totalCancellationCharge := 952500
 
 	totalWritePrice := currency.Coin(0)
+
 	for _, ba := range f.allocation.BlobberAllocs {
 		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
-		if err != nil {
-			return fmt.Errorf("failed to add write price: %v", err)
-		}
+	}
 
+	for _, ba := range f.allocation.BlobberAllocs {
 		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
 		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight)
 
@@ -529,7 +529,8 @@ func confirmFinalizeAllocation(
 	f.minLockDelegatePayment(0, 0)
 
 	for i, sp := range sps {
-		serviceCharge := f.blobberServiceCharge(i, cancellationCharge[i]) + f.minLockServiceCharge(i)
+		minLockServiceCharge := f.minLockServiceCharge(i)
+		serviceCharge := f.blobberServiceCharge(i, cancellationCharge[i]) + minLockServiceCharge
 		require.Equal(t, serviceCharge, int64(sp.Reward))
 		orderedPoolIds := sp.OrderedPoolIds()
 		for _, poolId := range orderedPoolIds {
