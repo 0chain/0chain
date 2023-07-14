@@ -782,9 +782,6 @@ func AddMockReadMarkers(
 				}
 				rms = append(rms, readMarker)
 			}
-			if err := eventDb.Store.Get().Create(&rms).Error; err != nil {
-				log.Fatal(err)
-			}
 		}
 		if err := eventDb.Store.Get().Create(&rms).Error; err != nil {
 			log.Fatal(err)
