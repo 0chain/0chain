@@ -151,6 +151,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		WritePool:            sa.WritePool,
 		ThirdPartyExtendable: sa.ThirdPartyExtendable,
 		FileOptions:          sa.FileOptions,
+		MinLockDemand:        sa.MinLockDemand,
 	}
 
 	if sa.Stats != nil {
