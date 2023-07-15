@@ -696,10 +696,6 @@ func (sc *StorageSmartContract) challengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	logging.Logger.Info("ROUND LOGGING 3 ",
-		zap.Any("round", balances.GetBlock().Round),
-		zap.Any("block", balances.GetBlock()))
-
 	err = emitUpdateChallenge(cab.challenge, true, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 	if err != nil {
 		return "", err
@@ -769,10 +765,6 @@ func (sc *StorageSmartContract) challengeFailed(
 	cab.blobAlloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
-
-	logging.Logger.Info("ROUND LOGGING 3",
-		zap.Any("round", balances.GetBlock().Round),
-		zap.Any("block", balances.GetBlock()))
 
 	err := emitUpdateChallenge(cab.challenge, false, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 	if err != nil {

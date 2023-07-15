@@ -3,7 +3,6 @@ package storagesc
 import (
 	"0chain.net/core/maths"
 	"errors"
-	"go.uber.org/zap"
 	"strings"
 	"time"
 
@@ -98,10 +97,6 @@ func emitUpdateChallenge(
 	balances cstate.StateContextI,
 	allocStats, blobberStats *StorageAllocationStats,
 ) error {
-
-	logging.Logger.Info("ROUND LOGGING 4",
-		zap.Any("round", balances.GetBlock().Round),
-		zap.Any("block", balances.GetBlock()))
 
 	clg := event.Challenge{
 		ChallengeID:    sc.ID,
