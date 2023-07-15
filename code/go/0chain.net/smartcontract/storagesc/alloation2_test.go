@@ -527,13 +527,6 @@ func confirmFinalizeAllocation(
 		}
 	}
 
-	//f.blobberServiceCharge(0, 0, scYaml)
-	//f.minLockServiceCharge(0)
-	//f.blobberDelegateReward(0, 0, 0, scYaml)
-	//f.minLockDelegatePayment(0, 0)
-
-	fmt.Println("Sps:", sps)
-
 	for i, sp := range sps {
 		minLockServiceCharge := f.minLockServiceCharge(i)
 		serviceCharge := f.blobberServiceCharge(i, cancellationCharge[i], scYaml) + minLockServiceCharge
