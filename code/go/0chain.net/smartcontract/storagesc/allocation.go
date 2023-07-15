@@ -1350,11 +1350,18 @@ func (sc *StorageSmartContract) canceledPassRates(
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
-			emitUpdateChallenge(&StorageChallenge{
+			logging.Logger.Info("ROUND LOGGING 3",
+				zap.Any("round", balances.GetBlock().Round),
+				zap.Any("block", balances.GetBlock()))
+
+			err := emitUpdateChallenge(&StorageChallenge{
 				ID:           oc.ID,
 				AllocationID: alloc.ID,
 				BlobberID:    oc.BlobberID,
 			}, true, balances, alloc.Stats, ba.Stats)
+			if err != nil {
+				return nil, err
+			}
 
 		}
 
@@ -1422,6 +1429,10 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("alloc_cancel_failed",
 			"trying to cancel expired allocation")
 	}
+
+	logging.Logger.Info("ROUND LOGGING",
+		zap.Any("round", balances.GetBlock().Round),
+		zap.Any("block", balances.GetBlock()))
 
 	conf, err := getConfig(balances)
 	if err != nil {

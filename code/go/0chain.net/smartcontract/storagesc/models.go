@@ -1379,6 +1379,10 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
 
+			logging.Logger.Info("ROUND LOGGING 3",
+				zap.Any("round", balances.GetBlock().Round),
+				zap.Any("block", balances.GetBlock()))
+
 			err := emitUpdateChallenge(&StorageChallenge{
 				ID:           oc.ID,
 				AllocationID: sa.ID,
