@@ -136,9 +136,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
 		Expiration:    now,
-		Stats:         &StorageAllocationStats{},
+		Stats: &StorageAllocationStats{
+			UsedSize: 456,
+		},
 		Size:          4560,
-		UsedSize:      456,
 		WritePool:     77777,
 		MinLockDemand: scYaml.MinLockDemand,
 	}
@@ -146,7 +147,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var stake = 100.0
 	var writePrice = blobberYaml.writePrice
 	var extraBlobbers = 0
-	var blobberUsedSize = allocation.UsedSize / int64(allocation.DataShards)
+	var blobberUsedSize = allocation.Stats.UsedSize / int64(allocation.DataShards)
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = StorageNode{
 			Provider: provider.Provider{
@@ -261,16 +262,16 @@ func TestFinalizeAllocation(t *testing.T) {
 		Owner:         ownerId,
 		Expiration:    now - toSeconds(100),
 		Stats: &StorageAllocationStats{
+			UsedSize:       205,
 			OpenChallenges: 3,
 		},
 		Size: 4560,
 	}
-	allocation.UsedSize = 41 * int64(allocation.DataShards)
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
 	var writePrice = blobberYaml.writePrice
 	var extraBlobbers = 0
-	var blobberUsedSize = int64(float64(allocation.UsedSize) / float64(allocation.DataShards))
+	var blobberUsedSize = int64(float64(allocation.Stats.UsedSize) / float64(allocation.DataShards))
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
 		var nextBlobber = StorageNode{
 			Capacity: 536870912,
@@ -719,7 +720,7 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 	var challengePool = float64(f._challengePool())
 
 	var used = float64(f.allocation.BlobberAllocs[blobberIndex].Stats.UsedSize)
-	var totalUsed = float64(f.allocation.UsedSize)
+	var totalUsed = float64(f.allocation.Stats.UsedSize)
 	var abdUsed int64 = 0
 	for _, d := range f.allocation.BlobberAllocs {
 		abdUsed += int64(float64(d.Stats.UsedSize) * float64(f.allocation.DataShards) / float64(f.allocation.DataShards+f.allocation.ParityShards))

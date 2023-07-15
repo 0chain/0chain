@@ -1129,7 +1129,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 
 		var newSize = request.Size + alloc.Size
-		if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
+		if newSize < conf.MinAllocSize || newSize < alloc.Stats.UsedSize {
 			return "", common.NewError("allocation_updating_failed",
 				"allocation size becomes too small")
 		}
@@ -1618,16 +1618,10 @@ func (sc *StorageSmartContract) finishAllocation(
 	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime / conf.TimeUnit)
 	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
 
-	logging.Logger.Info("Outer Loop finishAllocation : ",
-		zap.Any("blobber_used_size", alloc.Stats.UsedSize),
-		zap.Any("alloc_used_size", alloc.UsedSize),
-		zap.Any("cp_balance", cpBalance),
-	)
-
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
-		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-			ratio := float64(d.Stats.UsedSize) / (float64(alloc.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards))
+		if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
+			ratio := float64(d.Stats.UsedSize) / (float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards))
 
 			if err != nil {
 				return err
@@ -1640,7 +1634,7 @@ func (sc *StorageSmartContract) finishAllocation(
 
 			logging.Logger.Info("finishAllocation: passRates : ",
 				zap.Any("blobber_used_size", d.Stats.UsedSize),
-				zap.Any("alloc_used_size", alloc.UsedSize),
+				zap.Any("alloc_used_size", alloc.Stats.UsedSize),
 				zap.Any("cp_balance", cpBalance),
 				zap.Any("ratio", ratio),
 				zap.Any("pass_rate", passRates[i]),
