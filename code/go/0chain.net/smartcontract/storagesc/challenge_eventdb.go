@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/maths"
 	"errors"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge { //nolint
+func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge { // nolint
 	var validators = make([]string, 0, len(ch.Validators))
 	for _, v := range ch.Validators {
 		validators = append(validators, v.ID)
@@ -57,7 +58,13 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 	}, nil
 }
 
-func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]int, expiredN int, balances cstate.StateContextI, allocStats, blobberStats *StorageAllocationStats) {
+func emitAddChallenge(
+	ch *StorageChallengeResponse,
+	expiredCountMap map[string]int,
+	expiredN int,
+	balances cstate.StateContextI,
+	allocStats, blobberStats *StorageAllocationStats,
+) error {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
 		AllocationID:         ch.AllocationID,
@@ -68,17 +75,28 @@ func emitAddChallenge(ch *StorageChallengeResponse, expiredCountMap map[string]i
 	})
 
 	// Update open challenges count of challenge blobber
+	converted, err := maths.ConvertUInt64sToInts(blobberStats.OpenChallenges, blobberStats.TotalChallenges, blobberStats.SuccessChallenges)
+	if err != nil {
+		return err
+	}
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.Blobber{
 		Provider:            event.Provider{ID: ch.BlobberID},
-		OpenChallenges:      uint64(blobberStats.OpenChallenges),
-		ChallengesCompleted: uint64(blobberStats.TotalChallenges),
-		ChallengesPassed:    uint64(blobberStats.SuccessChallenges),
+		OpenChallenges:      converted[0],
+		ChallengesCompleted: converted[1],
+		ChallengesPassed:    converted[2],
 	})
 
 	logging.Logger.Debug("emitted add_challenge")
+	return nil
 }
 
-func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.StateContextI, allocStats, blobberStats *StorageAllocationStats) {
+func emitUpdateChallenge(
+	sc *StorageChallenge,
+	passed bool,
+	balances cstate.StateContextI,
+	allocStats, blobberStats *StorageAllocationStats,
+) error {
 	clg := event.Challenge{
 		ChallengeID:    sc.ID,
 		AllocationID:   sc.AllocationID,
@@ -101,16 +119,22 @@ func emitUpdateChallenge(sc *StorageChallenge, passed bool, balances cstate.Stat
 		LatestClosedChallengeTxn: sc.ID,
 	}
 
+	converted, err := maths.ConvertUInt64sToInts(blobberStats.OpenChallenges, blobberStats.TotalChallenges, blobberStats.SuccessChallenges)
+	if err != nil {
+		return err
+	}
+
 	b := event.Blobber{
 		Provider:            event.Provider{ID: sc.BlobberID},
-		ChallengesCompleted: uint64(blobberStats.TotalChallenges),
-		ChallengesPassed:    uint64(blobberStats.SuccessChallenges),
-		OpenChallenges:      uint64(blobberStats.OpenChallenges),
+		OpenChallenges:      converted[0],
+		ChallengesCompleted: converted[1],
+		ChallengesPassed:    converted[2],
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, sc.AllocationID, a)
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, sc.BlobberID, b)
+	return nil
 }
 
 func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances cstate.StateContextI) {
