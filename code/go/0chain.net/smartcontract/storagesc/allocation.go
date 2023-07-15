@@ -1062,6 +1062,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
+	logging.Logger.Info("updateAllocationRequestInternal", zap.Any("request", request))
+
 	if request.OwnerID == "" {
 		request.OwnerID = t.ClientID
 	}
