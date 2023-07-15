@@ -967,6 +967,13 @@ func (sc *StorageSmartContract) reduceAllocation(
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
+	if req.Extend && time.Now().Add(2*conf.TimeUnit).After(common.ToTime(alloc.Expiration)) {
+		alloc.Expiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix()) // new expiration
+	} else if req.Extend {
+		return common.NewErrorf("allocation_extending_failed",
+			"allocation %s can't be extended more than time unit", alloc.ID)
+	}
+
 	alloc.Size += req.Size
 
 	// 1. update terms
@@ -1098,7 +1105,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
 	if t.ClientID != alloc.Owner /* Third-party actions */ {
-		if request.Size < 0 {
+		if request.Size <= 0 {
 			return "", common.NewError("allocation_updating_failed", "third party can only extend the allocation")
 		}
 

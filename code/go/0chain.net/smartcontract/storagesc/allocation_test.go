@@ -1683,8 +1683,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	require.EqualValues(t, alloc, &deco)
 
-	assert.Equal(t, alloc.Size, cp.Size*2)
-	assert.Equal(t, alloc.Expiration, cp.Expiration*3)
+	assert.Equal(t, cp.Size*2, alloc.Size)
+	assert.Equal(t, common.Timestamp(7300), alloc.Expiration)
 
 	var tbs, mld int64
 	for i, d := range alloc.BlobberAllocs {
@@ -1703,8 +1703,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Owner can extend regardless of the value of `third_party_extendable`
 	req := updateAllocationRequest{
-		ID:   alloc.ID,
-		Size: 100,
+		ID:     alloc.ID,
+		Size:   100,
+		Extend: true,
 	}
 	tp += 100
 	resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
@@ -1712,8 +1713,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// Others cannot extend the allocation if `third_party_extendable` = false
 	req = updateAllocationRequest{
-		ID:   alloc.ID,
-		Size: 100,
+		ID:     alloc.ID,
+		Size:   100,
+		Extend: true,
 	}
 	tp += 100
 	resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
@@ -1733,12 +1735,13 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 	req = updateAllocationRequest{
-		ID:   alloc.ID,
-		Size: 100,
+		ID:     alloc.ID,
+		Size:   100,
+		Extend: true,
 	}
 	tp += 100
 	expectedSize := alloc.Size + 100
-	expectedExpiration := alloc.Expiration + 100
+	expectedExpiration := alloc.Expiration + 3600
 	resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
 	require.NoError(t, err)
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -1760,15 +1763,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 	assert.Equal(t, expectedFileOptions, alloc.FileOptions)
-
-	// expiration date cannot be decreased
-	req = updateAllocationRequest{
-		ID: alloc.ID,
-	}
-	tp += 100
-	resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
-	require.Error(t, err)
-	assert.Equal(t, "allocation_updating_failed: duration of an allocation cannot be reduced", err.Error())
 
 	//
 	// add blobber
@@ -1905,6 +1899,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	uar.ID = alloc.ID
 	uar.Size = -(alloc.Size / 2)
+	uar.Extend = true
 
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
@@ -1916,8 +1911,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	require.EqualValues(t, alloc, &deco)
 
-	assert.Equal(t, alloc.Size, cp.Size/2)
-	assert.Equal(t, alloc.Expiration, cp.Expiration*2)
+	assert.Equal(t, cp.Size/2, alloc.Size)
+	assert.Equal(t, cp.Expiration+3600, alloc.Expiration)
 
 	tbs, mld = 0, 0
 	for i, detail := range alloc.BlobberAllocs {
