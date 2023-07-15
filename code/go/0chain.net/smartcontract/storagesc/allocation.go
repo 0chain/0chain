@@ -134,10 +134,6 @@ func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
 		return errors.New("insufficient allocation size")
 	}
 
-	//dur := common.ToTime(nar.Expiration).Sub(now)
-	//if dur < conf.TimeUnit {
-	//	return errors.New("insufficient allocation duration")
-	//}
 	return nil
 }
 
@@ -386,7 +382,7 @@ func setupNewAllocation(
 			"Blobbers provided are not enough to honour the allocation")
 	}
 
-	//if more than limit blobbers sent, just cut them
+	// if more than limit blobbers sent, just cut them
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
 		logging.Logger.Error("new_allocation_request_failed: request blobbers more than max_blobbers_per_allocation",
 			zap.Int("requested blobbers", len(request.Blobbers)),
@@ -1381,8 +1377,6 @@ func (sc *StorageSmartContract) canceledPassRates(
 			continue
 		}
 		// success rate for the blobber allocation
-		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
-
 		logging.Logger.Info("pass rate",
 			zap.Any("allocation_id", alloc.ID),
 			zap.Any("blobber_id", ba.BlobberID),
@@ -1623,6 +1617,12 @@ func (sc *StorageSmartContract) finishAllocation(
 	cpBalance, err := cp.Balance.Float64()
 	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime / conf.TimeUnit)
 	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
+
+	logging.Logger.Info("Outer Loop finishAllocation : ",
+		zap.Any("blobber_used_size", alloc.Stats.UsedSize),
+		zap.Any("alloc_used_size", alloc.UsedSize),
+		zap.Any("cp_balance", cpBalance),
+	)
 
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {

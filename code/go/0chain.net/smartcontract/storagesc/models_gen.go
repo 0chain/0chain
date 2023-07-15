@@ -1076,9 +1076,9 @@ func (z *RewardRound) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 25
+	// map header, size 26
 	// string "ID"
-	o = append(o, 0xde, 0x0, 0x19, 0xa2, 0x49, 0x44)
+	o = append(o, 0xde, 0x0, 0x1a, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Tx"
 	o = append(o, 0xa2, 0x54, 0x78)
@@ -1199,6 +1199,9 @@ func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Canceled"
 	o = append(o, 0xa8, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x65, 0x64)
 	o = msgp.AppendBool(o, z.Canceled)
+	// string "UsedSize"
+	o = append(o, 0xa8, 0x55, 0x73, 0x65, 0x64, 0x53, 0x69, 0x7a, 0x65)
+	o = msgp.AppendInt64(o, z.UsedSize)
 	// string "MinLockDemand"
 	o = append(o, 0xad, 0x4d, 0x69, 0x6e, 0x4c, 0x6f, 0x63, 0x6b, 0x44, 0x65, 0x6d, 0x61, 0x6e, 0x64)
 	o = msgp.AppendFloat64(o, z.MinLockDemand)
@@ -1473,6 +1476,12 @@ func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error)
 				err = msgp.WrapError(err, "Canceled")
 				return
 			}
+		case "UsedSize":
+			z.UsedSize, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "UsedSize")
+				return
+			}
 		case "MinLockDemand":
 			z.MinLockDemand, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
@@ -1535,7 +1544,7 @@ func (z *StorageAllocationDecode) Msgsize() (s int) {
 			s += z.BlobberAllocs[za0002].Msgsize()
 		}
 	}
-	s += 21 + msgp.BoolSize + 12 + msgp.Uint16Size + 10 + z.WritePool.Msgsize() + 15 + 1 + 4 + z.ReadPriceRange.Min.Msgsize() + 4 + z.ReadPriceRange.Max.Msgsize() + 16 + 1 + 4 + z.WritePriceRange.Min.Msgsize() + 4 + z.WritePriceRange.Max.Msgsize() + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 14 + msgp.Float64Size + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize
+	s += 21 + msgp.BoolSize + 12 + msgp.Uint16Size + 10 + z.WritePool.Msgsize() + 15 + 1 + 4 + z.ReadPriceRange.Min.Msgsize() + 4 + z.ReadPriceRange.Max.Msgsize() + 16 + 1 + 4 + z.WritePriceRange.Min.Msgsize() + 4 + z.WritePriceRange.Max.Msgsize() + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 9 + msgp.Int64Size + 14 + msgp.Float64Size + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize
 	return
 }
 
