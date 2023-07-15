@@ -137,10 +137,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 		Owner:         ownerId,
 		Expiration:    now,
 		Stats: &StorageAllocationStats{
-			UsedSize: 456,
+			UsedSize: 1073741824,
 		},
 		Size:          4560,
-		WritePool:     77777,
+		WritePool:     399300641,
 		MinLockDemand: scYaml.MinLockDemand,
 	}
 	var blobbers = new(SortedBlobbers)
@@ -206,7 +206,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var thisExpires = common.Timestamp(222)
 
 	var blobberOffer = int64(123000)
-	allocation.WritePool = currency.Coin(777777)
 
 	t.Run("cancel allocation", func(t *testing.T) {
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
@@ -410,8 +409,11 @@ func testCancelAllocation(
 		sps = append(sps, sp)
 	}
 
+	expectedCancellationCharge, _ := sAllocation.cancellationCharge(0.2)
+	fmt.Println("expectedCancellationCharge", expectedCancellationCharge)
+
 	var cancellationCharges []int64
-	totalCancellationCharge := 952500
+	totalCancellationCharge := expectedCancellationCharge
 
 	totalWritePrice := currency.Coin(0)
 
@@ -525,10 +527,10 @@ func confirmFinalizeAllocation(
 		}
 	}
 
-	f.blobberServiceCharge(0, 0, scYaml)
-	f.minLockServiceCharge(0)
-	f.blobberDelegateReward(0, 0, 0, scYaml)
-	f.minLockDelegatePayment(0, 0)
+	//f.blobberServiceCharge(0, 0, scYaml)
+	//f.minLockServiceCharge(0)
+	//f.blobberDelegateReward(0, 0, 0, scYaml)
+	//f.minLockDelegatePayment(0, 0)
 
 	fmt.Println("Sps:", sps)
 

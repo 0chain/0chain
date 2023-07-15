@@ -1618,7 +1618,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 
 	cpBalance, err := cp.Balance.Float64()
-	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime / conf.TimeUnit)
+	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime) / float64(conf.TimeUnit)
 	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
 
 	var passPayments currency.Coin
