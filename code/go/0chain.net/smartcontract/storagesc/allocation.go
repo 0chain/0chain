@@ -1735,11 +1735,14 @@ func (sc *StorageSmartContract) finishAllocation(
 			ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
 
 			if ok {
-				emitUpdateChallenge(&StorageChallenge{
+				err := emitUpdateChallenge(&StorageChallenge{
 					ID:           challenge.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    challenge.BlobberID,
 				}, true, balances, alloc.Stats, ba.Stats)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
