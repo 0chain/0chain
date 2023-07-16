@@ -968,8 +968,13 @@ func (r *Runner) SetServerState(update interface{}) error {
 		case *config.AdversarialAuthorizer:
 			state.AdversarialAuthorizer = update
 		case config.StopChallengeGeneration:
-			v := bool(update)
+			v := true
 			state.StopChallengeGeneration = &v
+			f := false
+			state.BlobberCommittedWM = &f
+		case config.BlobberCommittedWM:
+			v := true
+			state.BlobberCommittedWM = &v
 		case *config.GenerateChallege:
 			v := false
 			state.StopChallengeGeneration = &v

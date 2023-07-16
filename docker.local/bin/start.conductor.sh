@@ -1,8 +1,8 @@
 #!/bin/sh
 
+docker stop $(docker ps -q)
 set -e
 
-docker stop $(docker ps -q)
 
 ./docker.local/bin/clean.sh
 

@@ -81,6 +81,7 @@ type State struct {
 	BlobberDelete           *config.BlobberDelete
 	GenerateChallenge       *config.GenerateChallege
 	StopChallengeGeneration *bool
+	BlobberCommittedWM      *bool
 
 	// Validators related states
 	CheckChallengeIsValid *cases.CheckChallengeIsValid

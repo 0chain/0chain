@@ -204,7 +204,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, waitOver boo
 	})
 }
 
-var numChalGen int
+// var numChalGen int
 
 func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
 	// get state from conductor
@@ -213,12 +213,26 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 
 	s := crpc.Client().State()
 	if s.StopChallengeGeneration != nil && *s.StopChallengeGeneration {
+		// numChalGen = 0
+		logging.Logger.Info("Challenge generation has been stopped")
 		return nil, nil
 	}
 
-	if s.GenerateChallenge != nil && numChalGen > s.GenerateChallenge.TotalChallenges {
-		return nil, nil
+	if s.GenerateChallenge != nil {
+		if s.BlobberCommittedWM != nil && !*s.BlobberCommittedWM {
+			logging.Logger.Info("Blobber committed and making numChalGen 0")
+			// numChalGen = 0
+			return nil, nil
+		}
+
+		// if numChalGen >= s.GenerateChallenge.TotalChallenges {
+		// 	logging.Logger.Info("Challenge generation execeed total challenge to generate",
+		// 		zap.Any("numChalGen", numChalGen), zap.Any("Total Challenges", s.GenerateChallenge.TotalChallenges))
+		// 	return nil, nil
+		// }
 	}
+
+	logging.Logger.Info("Creating generate_challenge transaction")
 
 	brTxn := transaction.Provider().(*transaction.Transaction)
 	brTxn.ClientID = node.Self.ID
@@ -231,7 +245,7 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 	if err := brTxn.ComputeProperties(); err != nil {
 		return nil, err
 	}
-	numChalGen++
+	// numChalGen++
 	return brTxn, nil
 }
 

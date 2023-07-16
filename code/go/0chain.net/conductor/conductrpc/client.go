@@ -234,7 +234,7 @@ func (c *client) magicBlock() (configFile *string, err error) {
 }
 
 func (c *client) challengeGenerated(blobberID string) (err error) {
-	err = c.client.Call("Server.ChallengeGenerated", blobberID, nil)
+	err = c.client.Call("Server.ChallengeGenerated", &blobberID, nil)
 	return
 }
 

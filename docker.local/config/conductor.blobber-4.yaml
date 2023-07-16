@@ -20,7 +20,7 @@ sets:
 tests:
   - name: "Challenge should pass with minority validator being adversarial"
     flow:
-      # - set_monitor: "sharder-1"
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: "cleanup_blobbers"

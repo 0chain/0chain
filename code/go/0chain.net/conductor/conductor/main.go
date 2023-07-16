@@ -76,6 +76,7 @@ func main() {
 
 	log.Print("create worker instance")
 	r.conf = conf
+	r.chalConf = config.NewGenerateChallenge()
 	r.verbose = verbose
 	r.chalConf = config.NewGenerateChallenge()
 	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
@@ -790,9 +791,9 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 
 	r.chalConf.WaitForChallengeStatus = false
 
-	status, ok := m["status"].(int)
+	status := m["status"].(int)
 	if r.chalConf.ExpectedStatus != status {
-		return fmt.Errorf("Expected status %d, got %d", r.chalConf.ExpectedStatus, status)
+		return fmt.Errorf("expected status %d, got %d", r.chalConf.ExpectedStatus, status)
 	}
 
 	return nil
@@ -800,9 +801,11 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 
 func (r *Runner) onBlobberCommit(blobberID string) {
 	if blobberID != r.chalConf.BlobberID {
+		log.Printf("Ignoring blobber: %s\n", blobberID)
 		return
 	}
-
+	r.SetServerState(config.BlobberCommittedWM(true))
+	log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
 	r.chalConf.WaitOnBlobberCommit = false
 }
 
