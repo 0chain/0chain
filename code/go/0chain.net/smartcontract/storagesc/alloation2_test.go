@@ -246,6 +246,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		ValidatorReward:            0.025,
 		MaxChallengeCompletionTime: 0,
 		TimeUnit:                   720 * time.Hour,
+		CancellationCharge:         0.2,
 		MaxStake:                   zcnToBalance(100.0),
 	}
 	var blobberYaml = mockBlobberYaml{
@@ -300,7 +301,10 @@ func TestFinalizeAllocation(t *testing.T) {
 			ba := &BlobberAllocation{
 				AllocationID: allocation.ID,
 				BlobberID:    nextBlobber.ID,
-				Terms:        Terms{},
+				Terms: Terms{
+					WritePrice: 1e9,
+					ReadPrice:  0,
+				},
 				Stats: &StorageAllocationStats{
 					UsedSize:        blobberUsedSize,
 					OpenChallenges:  int64(i + 1),
@@ -497,7 +501,28 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 		sps = append(sps, sp)
 	}
 
-	confirmFinalizeAllocation(t, f, *newCp, sps, []int64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, scYaml)
+	var cancellationCharges []int64
+	totalCancellationCharge, _ := sAllocation.cancellationCharge(0.2)
+
+	totalWritePrice := currency.Coin(0)
+
+	for _, ba := range f.allocation.BlobberAllocs {
+		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
+	}
+
+	for _, ba := range f.allocation.BlobberAllocs {
+		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
+		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight)
+
+		if err != nil {
+			return fmt.Errorf("failed to convert float to coin: %v", err)
+		}
+
+		cancellationCharges = append(cancellationCharges, int64(reward))
+	}
+
+	confirmFinalizeAllocation(t, f, *newCp, sps, cancellationCharges, scYaml)
+
 	return nil
 }
 
