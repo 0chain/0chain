@@ -409,11 +409,8 @@ func testCancelAllocation(
 		sps = append(sps, sp)
 	}
 
-	expectedCancellationCharge, _ := sAllocation.cancellationCharge(0.2)
-	fmt.Println("expectedCancellationCharge", expectedCancellationCharge)
-
 	var cancellationCharges []int64
-	totalCancellationCharge := expectedCancellationCharge
+	totalCancellationCharge, _ := sAllocation.cancellationCharge(0.2)
 
 	totalWritePrice := currency.Coin(0)
 

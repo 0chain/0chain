@@ -527,6 +527,8 @@ func (sp *StakePool) DistributeRewards(
 		return nil // nothing to move
 	}
 
+	fmt.Println("DistributeRewards", value, providerId, providerType, rewardType, options)
+
 	var spUpdate *StakePoolReward
 	if len(options) > 0 {
 		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
