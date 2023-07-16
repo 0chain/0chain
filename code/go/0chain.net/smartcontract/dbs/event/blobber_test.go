@@ -18,6 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testBlobberSavedData = 1000
+const testBlobberUsed = 1000
+
 func init() {
 	logging.Logger = zap.NewNop()
 }
@@ -26,7 +29,7 @@ func TestUpdateBlobber(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
-	ids := setUpBlobbers(t, edb, 10)
+	ids := setUpBlobbers(t, edb, 10, false)
 	var blobber1, blobber2 Blobber
 	blobber1.ID = ids[0]
 	blobber1.Latitude = 7
@@ -55,6 +58,33 @@ func TestUpdateBlobber(t *testing.T) {
 	compareBlobbers(t, blobber1, *b1)
 	compareBlobbers(t, blobber2, *b2)
 
+}
+
+func TestUpdateBlobberStats(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	ids := setUpBlobbers(t, edb, 10, true)
+	var blobber1, blobber2 Blobber
+	blobber1.ID = ids[0]
+	blobber1.Used = -100 // reduce the used by 100 units
+	blobber1.SavedData = -100
+
+	blobber2.ID = ids[1]
+	blobber2.Used = 200
+	blobber2.SavedData = 200 // increase the savedData by 200 units
+
+	require.NoError(t, edb.updateBlobbersStats([]Blobber{blobber1, blobber2}))
+
+	b1, err := edb.GetBlobber(blobber1.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(testBlobberUsed-100), b1.Used)
+	require.Equal(t, int64(testBlobberSavedData-100), b1.SavedData)
+
+	b2, err := edb.GetBlobber(blobber2.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(testBlobberUsed+200), b2.Used)
+	require.Equal(t, int64(testBlobberSavedData+200), b2.SavedData)
 }
 
 func TestEventDb_blobberSpecificRevenue(t *testing.T) {
@@ -204,7 +234,7 @@ func compareBlobbers(t *testing.T, b1, b2 Blobber) {
 	require.Equal(t, b1.LastHealthCheck, b2.LastHealthCheck)
 }
 
-func setUpBlobbers(t *testing.T, eventDb *EventDb, number int) []string {
+func setUpBlobbers(t *testing.T, eventDb *EventDb, number int, withStats bool) []string {
 	var ids []string
 	var blobbers []Blobber
 	for i := 0; i < number; i++ {
@@ -212,6 +242,11 @@ func setUpBlobbers(t *testing.T, eventDb *EventDb, number int) []string {
 			Provider: Provider{ID: fmt.Sprintf("somethingNew_%v", i)},
 		}
 		blobber.BaseURL = blobber.ID + ".com"
+		if withStats {
+			blobber.Used = testBlobberUsed
+			blobber.SavedData = testBlobberSavedData
+		}
+
 		ids = append(ids, blobber.ID)
 		blobbers = append(blobbers, blobber)
 	}
