@@ -328,7 +328,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	}
 	var challengePoolBalance = int64(700000)
 
-	allocation.WritePool = currency.Coin(777777)
+	allocation.WritePool = currency.Coin(10000000000000000000)
 
 	t.Run("finalize allocation", func(t *testing.T) {
 		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml, challengePoolBalance, now, challenges)
