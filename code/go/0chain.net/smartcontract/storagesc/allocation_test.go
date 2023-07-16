@@ -1685,7 +1685,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.EqualValues(t, alloc, &deco)
 
 	assert.Equal(t, cp.Size*2, alloc.Size)
-	assert.Equal(t, common.Timestamp(7300), alloc.Expiration)
+	assert.Equal(t, common.Timestamp(tp+3600), alloc.Expiration)
 
 	var tbs, mld int64
 	for i, d := range alloc.BlobberAllocs {
@@ -1742,13 +1742,12 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	}
 	tp += 100
 	expectedSize := alloc.Size + 100
-	expectedExpiration := alloc.Expiration + 3600
 	resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
 	require.NoError(t, err)
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 	assert.Equal(t, expectedSize, alloc.Size)
-	assert.Equal(t, expectedExpiration, alloc.Expiration)
+	assert.Equal(t, common.Timestamp(tp+3600), alloc.Expiration)
 
 	// Other cannot perform any other action than extending.
 	req = updateAllocationRequest{
@@ -1913,7 +1912,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.EqualValues(t, alloc, &deco)
 
 	assert.Equal(t, cp.Size/2, alloc.Size)
-	assert.Equal(t, cp.Expiration+3600, alloc.Expiration)
+	assert.Equal(t, common.Timestamp(tp+3600), alloc.Expiration)
 
 	tbs, mld = 0, 0
 	for i, detail := range alloc.BlobberAllocs {
