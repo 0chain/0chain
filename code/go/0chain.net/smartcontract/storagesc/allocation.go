@@ -836,11 +836,8 @@ func (sc *StorageSmartContract) extendAllocation(
 	// adjust the expiration if changed, boundaries has already checked
 	var prevExpiration = alloc.Expiration
 
-	if req.Extend && time.Now().Add(2*conf.TimeUnit).After(common.ToTime(alloc.Expiration)) {
-		alloc.Expiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix()) // new expiration
-	} else if req.Extend {
-		return common.NewErrorf("allocation_extending_failed",
-			"allocation %s can't be extended more than time unit", alloc.ID)
+	if req.Extend {
+		alloc.Expiration = common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()) // new expiration
 	}
 
 	alloc.Size += req.Size // new size
@@ -967,11 +964,8 @@ func (sc *StorageSmartContract) reduceAllocation(
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
-	if req.Extend && time.Now().Add(2*conf.TimeUnit).After(common.ToTime(alloc.Expiration)) {
-		alloc.Expiration = common.Timestamp(common.ToTime(alloc.Expiration).Add(conf.TimeUnit).Unix()) // new expiration
-	} else if req.Extend {
-		return common.NewErrorf("allocation_extending_failed",
-			"allocation %s can't be extended more than time unit", alloc.ID)
+	if req.Extend {
+		alloc.Expiration = common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()) // new expiration // new expiration
 	}
 
 	alloc.Size += req.Size

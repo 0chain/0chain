@@ -788,7 +788,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 23283064363",
+				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 2328306436",
 			},
 		},
 	}
