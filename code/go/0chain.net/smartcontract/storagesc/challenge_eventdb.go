@@ -97,7 +97,6 @@ func emitUpdateChallenge(
 	balances cstate.StateContextI,
 	allocStats, blobberStats *StorageAllocationStats,
 ) error {
-
 	clg := event.Challenge{
 		ChallengeID:    sc.ID,
 		AllocationID:   sc.AllocationID,

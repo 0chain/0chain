@@ -1380,14 +1380,6 @@ func (sc *StorageSmartContract) canceledPassRates(
 			continue
 		}
 		// success rate for the blobber allocation
-		logging.Logger.Info("pass rate",
-			zap.Any("allocation_id", alloc.ID),
-			zap.Any("blobber_id", ba.BlobberID),
-			zap.Any("success", ba.Stats.SuccessChallenges),
-			zap.Any("failed", ba.Stats.FailedChallenges),
-			zap.Any("total", ba.Stats.TotalChallenges),
-		)
-
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 	}
 
@@ -1634,14 +1626,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			if err != nil {
 				return err
 			}
-
-			logging.Logger.Info("finishAllocation: passRates : ",
-				zap.Any("blobber_used_size", d.Stats.UsedSize),
-				zap.Any("alloc_used_size", alloc.Stats.UsedSize),
-				zap.Any("cp_balance", cpBalance),
-				zap.Any("ratio", ratio),
-				zap.Any("pass_rate", passRates[i]),
-			)
 
 			err = sps[i].DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
 			if err != nil {
