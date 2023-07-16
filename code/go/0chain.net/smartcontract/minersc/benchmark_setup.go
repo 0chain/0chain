@@ -1,8 +1,6 @@
 package minersc
 
 import (
-	"strconv"
-
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"github.com/0chain/common/core/currency"
@@ -16,7 +14,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
-	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
@@ -81,7 +78,7 @@ func AddMockMiners(
 		publickKeys = append(publickKeys, newNode.PublicKey)
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
-			poolId := getMinerDelegatePoolId(i, dId, spenum.Miner)
+			poolId := getMinerDelegatePoolId(i, dId, clients)
 			pool := stakepool.DelegatePool{
 				Balance:      delegatePoolBalance,
 				Reward:       delegateReward,
@@ -244,7 +241,7 @@ func AddMockSharders(
 		publickKeys = append(publickKeys, newNode.PublicKey)
 		for j := 0; j < numDelegates; j++ {
 			dId := (i + j) % numNodes
-			poolId := getMinerDelegatePoolId(i, dId, spenum.Sharder)
+			poolId := getMinerDelegatePoolId(i, dId, clients)
 			pool := stakepool.DelegatePool{
 				Balance:      delegatePoolBalance,
 				Reward:       delegateReward,
@@ -490,7 +487,7 @@ func AddPhaseNode(balances cstate.StateContextI) {
 	}
 }
 
-func getMinerDelegatePoolId(miner, delegate int, nodeType spenum.Provider) string {
-	return encryption.Hash("delegate pool" +
-		strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType)))
+func getMinerDelegatePoolId(miner, delegate int, clients []string) string {
+	index := viper.GetInt(benchmark.NumBlobberDelegates)*miner + delegate
+	return clients[index%len(clients)]
 }

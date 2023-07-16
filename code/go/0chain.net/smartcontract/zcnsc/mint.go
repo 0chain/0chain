@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -96,13 +97,17 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	_, exists := gn.WZCNNonceMinted[payload.Nonce]
-	if exists { // global nonce from ETH SC has already been minted
-		err = common.NewError(
-			code,
-			fmt.Sprintf(
-				"nonce given (%v) for receiving client (%s) has alredy been minted for Node.ID: '%s', %s",
-				payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
+	if err = PartitionWZCNMintedNonceAdd(ctx, payload.Nonce); err != nil {
+		if partitions.ErrItemExist(err) {
+			err = common.NewError(
+				code,
+				fmt.Sprintf(
+					"nonce given (%v) for receiving client (%s) has already been minted for Node.ID: '%s', %s",
+					payload.Nonce, payload.ReceivingClientID, trans.ClientID, info))
+			return
+		}
+
+		err = common.NewError(code, err.Error())
 		return
 	}
 
@@ -123,9 +128,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		)
 		return
 	}
-
-	// record the global nonce from solidity smart contract
-	gn.WZCNNonceMinted[payload.Nonce] = true
 
 	var (
 		amount currency.Coin

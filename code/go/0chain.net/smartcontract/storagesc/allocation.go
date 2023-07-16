@@ -134,10 +134,10 @@ func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
 		return errors.New("insufficient allocation size")
 	}
 
-	//dur := common.ToTime(nar.Expiration).Sub(now)
-	//if dur < conf.TimeUnit {
+	// dur := common.ToTime(nar.Expiration).Sub(now)
+	// if dur < conf.TimeUnit {
 	//	return errors.New("insufficient allocation duration")
-	//}
+	// }
 	return nil
 }
 
@@ -386,7 +386,7 @@ func setupNewAllocation(
 			"Blobbers provided are not enough to honour the allocation")
 	}
 
-	//if more than limit blobbers sent, just cut them
+	// if more than limit blobbers sent, just cut them
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
 		logging.Logger.Error("new_allocation_request_failed: request blobbers more than max_blobbers_per_allocation",
 			zap.Int("requested blobbers", len(request.Blobbers)),
@@ -1371,7 +1371,7 @@ func (sc *StorageSmartContract) canceledPassRates(
 			continue
 		}
 		// success rate for the blobber allocation
-		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
+		// fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 	}
 
@@ -1515,6 +1515,10 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		if sp, err = sc.getStakePool(spenum.Blobber, d.BlobberID, balances); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		if err := sp.reduceOffer(d.Offer()); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"error removing offer: "+err.Error())
 		}
 		sps = append(sps, sp)
 	}
@@ -1752,11 +1756,15 @@ func (sc *StorageSmartContract) finishAllocation(
 			ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
 
 			if ok {
-				emitUpdateChallenge(&StorageChallenge{
+				err := emitUpdateChallenge(&StorageChallenge{
 					ID:           challenge.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    challenge.BlobberID,
 				}, true, balances, alloc.Stats, ba.Stats)
+
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

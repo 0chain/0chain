@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract/dto"
+	"encoding/json"
 	"fmt"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -252,24 +254,24 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	var update = NewMinerNode()
-	if err = update.Decode(inputData); err != nil {
+	requiredUpdateInMinerNode := dto.NewMinerDtoNode()
+	if err = json.Unmarshal(inputData, &requiredUpdateInMinerNode); err != nil {
 		return "", common.NewErrorf("update_miner_settings",
 			"decoding request: %v", err)
 	}
 
-	err = validateNodeSettings(update, gn, "update_miner_settings")
+	err = validateNodeUpdateSettings(requiredUpdateInMinerNode, gn, "update_miner_settings")
 	if err != nil {
 		return "", err
 	}
 
 	var mn *MinerNode
-	mn, err = getMinerNode(update.ID, balances)
+	mn, err = getMinerNode(requiredUpdateInMinerNode.ID, balances)
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
 		mn = NewMinerNode()
-		mn.ID = update.ID
+		mn.ID = requiredUpdateInMinerNode.ID
 	default:
 		return "", common.NewError("update_miner_settings", err.Error())
 	}
@@ -287,8 +289,14 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewError("update_miner_settings", "access denied")
 	}
 
-	mn.Settings.ServiceChargeRatio = update.Settings.ServiceChargeRatio
-	mn.Settings.MaxNumDelegates = update.Settings.MaxNumDelegates
+	// only update when there were values sent
+	if requiredUpdateInMinerNode.StakePool.StakePoolSettings.ServiceChargeRatio != nil {
+		mn.Settings.ServiceChargeRatio = *requiredUpdateInMinerNode.StakePoolSettings.ServiceChargeRatio
+	}
+
+	if requiredUpdateInMinerNode.StakePool.StakePoolSettings.MaxNumDelegates != nil {
+		mn.Settings.MaxNumDelegates = *requiredUpdateInMinerNode.StakePoolSettings.MaxNumDelegates
+	}
 
 	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
@@ -345,6 +353,38 @@ func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error 
 		return common.NewErrorf(opcode,
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			node.Settings.MaxNumDelegates, gn.MaxDelegates)
+	}
+
+	return nil
+}
+
+func validateNodeUpdateSettings(update *dto.MinerDtoNode, gn *GlobalNode, opcode string) error {
+	if update.StakePoolSettings.ServiceChargeRatio != nil {
+		serviceChargeValue := *update.StakePoolSettings.ServiceChargeRatio
+		if serviceChargeValue < 0 {
+			return common.NewErrorf(opcode,
+				"invalid negative service charge: %v", serviceChargeValue)
+		}
+
+		if serviceChargeValue > gn.MaxCharge {
+			return common.NewErrorf(opcode,
+				"max_charge is greater than allowed by SC: %v > %v",
+				serviceChargeValue, gn.MaxCharge)
+		}
+	}
+
+	if update.StakePoolSettings.MaxNumDelegates != nil {
+		maxDelegateValue := *update.StakePoolSettings.MaxNumDelegates
+		if maxDelegateValue <= 0 {
+			return common.NewErrorf(opcode,
+				"invalid non-positive number_of_delegates: %v", maxDelegateValue)
+		}
+
+		if maxDelegateValue > gn.MaxDelegates {
+			return common.NewErrorf(opcode,
+				"number_of_delegates greater than max_delegates of SC: %v > %v",
+				maxDelegateValue, gn.MaxDelegates)
+		}
 	}
 
 	return nil

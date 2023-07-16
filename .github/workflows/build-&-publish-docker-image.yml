@@ -41,7 +41,7 @@ jobs:
         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup go 1.20
       uses: actions/setup-go@v2
@@ -58,21 +58,30 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+    
+    - name: Get changed files using defaults
+      id: changed-files
+      uses: tj-actions/changed-files@v18.4
 
-    - name: Build base images
+    - name: Pull Build Base & Run Base
+      run: |
+        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+
+        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
+
+    - name: Build Base & Run Base images 
+      if: (contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.build_base') || contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.run_base'))
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
 
-        docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
-        docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
         docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
         docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
         docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
 
-        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
-        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
         docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
         docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
@@ -121,7 +130,7 @@ jobs:
         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Setup go 1.20
       uses: actions/setup-go@v2
@@ -139,21 +148,29 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
-
-    - name: Build base images
+    
+    - name: Get changed files using defaults
+      id: changed-files
+      uses: tj-actions/changed-files@v18.4
+    
+    - name: Pull Build Base & Run Base
       run: |
-        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
-
         docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_BASE_REGISTRY:staging $ZCHAIN_BUILDBASE
+
+        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
+        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
+        
+    - name: Build Base & Run Base images
+      if: (contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.build_base') || contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.run_base'))
+      run: |
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
         docker tag $ZCHAIN_BUILDBASE $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
         docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG
         docker push $ZCHAIN_BUILD_BASE_REGISTRY:$TAG-$SHORT_SHA
 
-        docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
-        docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
         docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
         docker tag $ZCHAIN_BUILDRUN $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA

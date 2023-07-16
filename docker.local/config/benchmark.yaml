@@ -27,6 +27,8 @@ options:
   verbose: true
   test_suites:
     - "miner"
+    - "storage"
+    - "faucet"
     - "storage_rest"
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options

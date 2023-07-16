@@ -31,7 +31,7 @@ import (
 )
 
 // TODO: add back after fixing the chain stuck
-//const blobberAllocationPartitionSize = 100
+// const blobberAllocationPartitionSize = 100
 
 const blobberAllocationPartitionSize = 10
 
@@ -260,13 +260,13 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 		}
 
 		// TODO: add code below back after validators staking are supported
-		//staked, err := sp.stake()
-		//if err != nil {
+		// staked, err := sp.stake()
+		// if err != nil {
 		//	return fmt.Errorf("can't get stake: %v", err)
-		//}
-		//vid := validators[i]
-		//tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
-		//balances.EmitEvent(event.TypeStats, tag, vid, data)
+		// }
+		// vid := validators[i]
+		// tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
+		// balances.EmitEvent(event.TypeStats, tag, vid, data)
 	}
 	return
 }
@@ -696,7 +696,10 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	emitUpdateChallenge(cab.challenge, true, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err = emitUpdateChallenge(cab.challenge, true, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	if err != nil {
+		return "", err
+	}
 
 	err = ongoingParts.UpdateItem(balances, &brStats)
 	if err != nil {
@@ -763,7 +766,10 @@ func (sc *StorageSmartContract) processChallengeFailed(
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	emitUpdateChallenge(cab.challenge, false, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err := emitUpdateChallenge(cab.challenge, false, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	if err != nil {
+		return "", err
+	}
 
 	if err := cab.allocChallenges.Save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_penalty_error", err.Error())
@@ -771,7 +777,7 @@ func (sc *StorageSmartContract) processChallengeFailed(
 
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
-	err := sc.blobberPenalty(
+	err = sc.blobberPenalty(
 		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, validators,
 		maxChallengeCompletionTime,
 		balances,
@@ -787,7 +793,7 @@ func (sc *StorageSmartContract) processChallengeFailed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 	if cab.pass && !cab.fresh {
 		return "late challenge (failed)", nil
 	}
@@ -833,9 +839,9 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"found empty allocation stats")
 	}
 
-	//we check that this allocation do have write-commits and can be challenged.
-	//We can't check only allocation to be written, because blobbers can commit in different order,
-	//so we check particular blobber's allocation to be written
+	// we check that this allocation do have write-commits and can be challenged.
+	// We can't check only allocation to be written, because blobbers can commit in different order,
+	// so we check particular blobber's allocation to be written
 	if alloc.Stats.NumWrites > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
 		return alloc, nil // found
 	}
@@ -1299,12 +1305,10 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing allocation: %v", err)
 	}
 
-	//balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
+	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
 
 	beforeEmitAddChallenge(challInfo)
-
-	emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances, alloc.Stats, blobAlloc.Stats)
-	return nil
+	return emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances, alloc.Stats, blobAlloc.Stats)
 }
 
 func isChallengeExpired(now, createdAt common.Timestamp, challengeCompletionTime time.Duration) bool {
