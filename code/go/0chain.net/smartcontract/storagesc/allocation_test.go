@@ -778,8 +778,9 @@ func TestExtendAllocation(t *testing.T) {
 				request: updateAllocationRequest{
 					ID:          mockAllocationId,
 					OwnerID:     mockOwner,
-					Size:        zcnToInt64(31),
+					Size:        zcnToInt64(61),
 					FileOptions: 63,
+					Extend:      true,
 				},
 				expiration: mockExpiration,
 				value:      0.0,
@@ -787,7 +788,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 6287864",
+				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 23283064363",
 			},
 		},
 	}
