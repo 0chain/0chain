@@ -1738,7 +1738,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			Provider: event.Provider{
 				ID: blobber.ID,
 			},
-			Used: -ba.Stats.UsedSize,
+			Used: -ba.Stats.UsedSize, // reduce the `Used` of blobber by this amount.
 		})
 	}
 
