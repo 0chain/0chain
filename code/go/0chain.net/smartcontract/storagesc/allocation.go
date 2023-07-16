@@ -1056,8 +1056,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
-	logging.Logger.Info("updateAllocationRequestInternal", zap.Any("request", request))
-
 	if request.OwnerID == "" {
 		request.OwnerID = t.ClientID
 	}
@@ -1073,7 +1071,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if t.ClientID != alloc.Owner {
-		if !alloc.ThirdPartyExtendable {
+		if !alloc.ThirdPartyExtendable || (request.Size <= 0 && request.Extend == false) {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
 		}
@@ -1101,7 +1099,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
 	if t.ClientID != alloc.Owner /* Third-party actions */ {
-		if request.Size <= 0 {
+		if request.Size <= 0 && request.Extend == false {
 			return "", common.NewError("allocation_updating_failed", "third party can only extend the allocation")
 		}
 
@@ -1147,7 +1145,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		// if size or expiration increased, then we use new terms
 		// otherwise, we use the same terms
-		if request.Size > 0 {
+		if request.Size > 0 || request.Extend {
 			err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
 		} else if request.Size < 0 {
 			err = sc.reduceAllocation(t, conf, alloc, blobbers, &request, balances)
@@ -1353,7 +1351,6 @@ func (sc *StorageSmartContract) canceledPassRates(
 			continue
 		}
 		// success rate for the blobber allocation
-		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 	}
 
@@ -1743,6 +1740,7 @@ func (sc *StorageSmartContract) finishAllocation(
 					AllocationID: alloc.ID,
 					BlobberID:    challenge.BlobberID,
 				}, true, balances, alloc.Stats, ba.Stats)
+
 				if err != nil {
 					return err
 				}
