@@ -170,6 +170,9 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddOrOverwriteAllocBlobbersTermsEvents(),
 			mergeDeleteAllocBlobbersTermsEvents(),
 
+			mergeInsertReadPoolEvents(),
+			mergeUpdateReadPoolEvents(),
+
 			mergeAddChallengesEvents(),
 			mergeAddChallengesToAllocsEvents(),
 
@@ -841,6 +844,18 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addOrUpdateChallengePools(*cps)
+	case TagInsertReadpool:
+		rps, ok := fromEvent[[]ReadPool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.InsertReadPool(*rps)
+	case TagUpdateReadpool:
+		rps, ok := fromEvent[[]ReadPool](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateReadPool(*rps)
 	case TagCollectProviderReward:
 		return edb.collectRewards(event.Index)
 	case TagMinerHealthCheck:
