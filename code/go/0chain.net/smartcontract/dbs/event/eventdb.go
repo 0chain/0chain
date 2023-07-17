@@ -106,8 +106,7 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("clonning of %s to %s failed %v",
-			edb.dbConfig.Name, dbName, err))
+		fmt.Printf("clonning of %s to %s failed %v\n", edb.dbConfig.Name, dbName, err)
 		return nil, err
 	}
 
