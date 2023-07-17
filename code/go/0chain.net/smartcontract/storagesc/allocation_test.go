@@ -766,6 +766,7 @@ func TestExtendAllocation(t *testing.T) {
 					OwnerID:     mockOwner,
 					Size:        zcnToInt64(31),
 					FileOptions: 63,
+					Extend:      true,
 				},
 				expiration: mockExpiration,
 				value:      0.1e10,
