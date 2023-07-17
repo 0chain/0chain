@@ -1,13 +1,12 @@
 package event
 
 import (
-	"fmt"
-	"testing"
-
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 	"gorm.io/gorm/clause"
+	"testing"
 
 	"go.uber.org/zap"
 
@@ -221,6 +220,38 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	assert.Equal(t, blobbersBefore[3].TotalStorageIncome, blobbersAfter[3].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[3].TotalReadIncome, blobbersAfter[3].TotalReadIncome)
 	assert.Equal(t, blobbersBefore[3].TotalSlashedStake+60, blobbersAfter[3].TotalSlashedStake)
+}
+
+func TestEventDb_updateBlobbersAllocatedSavedAndHealth(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	ids := setUpBlobbers(t, edb, 10, true)
+	var blobber1, blobber2 Blobber
+	now := common.Now()
+	blobber1.ID = ids[0]
+	blobber1.LastHealthCheck = now
+	blobber1.Used = 300
+	blobber1.SavedData = 300
+
+	blobber2.ID = ids[1]
+	blobber2.LastHealthCheck = now
+	blobber2.Used = 200
+	blobber2.SavedData = 200
+
+	require.NoError(t, edb.updateBlobbersAllocatedSavedAndHealth([]Blobber{blobber1, blobber2}))
+
+	b1, err := edb.GetBlobber(blobber1.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(300), b1.Used)
+	require.Equal(t, int64(300), b1.SavedData)
+	require.Equal(t, now, b1.LastHealthCheck)
+
+	b2, err := edb.GetBlobber(blobber2.ID)
+	require.NoError(t, err)
+	require.Equal(t, int64(200), b2.Used)
+	require.Equal(t, int64(200), b2.SavedData)
+	require.Equal(t, now, b2.LastHealthCheck)
 }
 
 func compareBlobbers(t *testing.T, b1, b2 Blobber) {

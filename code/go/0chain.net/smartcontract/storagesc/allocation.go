@@ -1734,12 +1734,6 @@ func (sc *StorageSmartContract) finishAllocation(
 
 		// Update saved data on events_db
 		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, ba.BlobberID, event.Blobber{
-			Provider: event.Provider{
-				ID: blobber.ID,
-			},
-			Used: -ba.Stats.UsedSize, // reduce the `Used` of blobber by this amount.
-		})
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
