@@ -592,7 +592,7 @@ func TestExtendAllocation(t *testing.T) {
 		mockDataShards     = 2
 		mockParityShards   = 2
 		mockNumAllBlobbers = 2 + mockDataShards + mockParityShards
-		mockExpiration     = common.Timestamp(17000)
+		mockExpiration     = common.Timestamp(3600)
 		mockStake          = 3
 		mockMinLockDemand  = 0.1
 		mockTimeUnit       = 1 * time.Hour
@@ -602,7 +602,7 @@ func TestExtendAllocation(t *testing.T) {
 	var mockMaxPrice = zcnToBalance(100.0)
 	var mockReadPrice = zcnToBalance(0.01)
 	var mockWritePrice = zcnToBalance(0.10)
-	var now = common.Timestamp(1000000)
+	var now = common.Timestamp(1000)
 
 	type args struct {
 		request    updateAllocationRequest
@@ -648,7 +648,7 @@ func TestExtendAllocation(t *testing.T) {
 		var txn = transaction.Transaction{
 			ClientID:     mockOwner,
 			ToClientID:   ADDRESS,
-			CreationDate: now,
+			CreationDate: now + 1000,
 			Value:        args.value,
 		}
 		txn.Hash = mockHash
@@ -739,13 +739,14 @@ func TestExtendAllocation(t *testing.T) {
 					size += blobber.Stats.UsedSize
 				}
 
-				dtu := 0.0
-
-				if args.request.Extend {
-					dtu = 1.0
+				oldExpirationDiff := common.Timestamp(2600)
+				ordtu, err := sa.durationInTimeUnits(oldExpirationDiff, 2592000000000000)
+				if err != nil {
+					require.NoError(t, err)
 				}
+				nrdtu := 1.0
 
-				newFunds := sizeInGB(size) * float64(mockWritePrice) * dtu
+				newFunds := sizeInGB(size) * float64(mockWritePrice) * (nrdtu - ordtu)
 				return cp.Balance/10 == currency.Coin(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
@@ -801,6 +802,22 @@ func TestExtendAllocation(t *testing.T) {
 			conf := &Config{
 				TimeUnit: confTimeUnit,
 			}
+
+			//cp, err := ssc.getChallengePool(allocationId, balances)
+			//if err != nil {
+			//	t.Fatal(err)
+			//}
+			//
+			//initialChallengePoolBalance, err := currency.Float64ToCoin(15270528.32606398 * 4)
+			//if err != nil {
+			//	t.Fatal(err)
+			//}
+			//
+			//err = sa.moveToChallengePool(cp, initialChallengePoolBalance)
+			//if err != nil {
+			//	t.Fatal(err)
+			//}
+
 			err := ssc.extendAllocation(
 				txn,
 				conf,
