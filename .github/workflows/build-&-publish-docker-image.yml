@@ -42,6 +42,8 @@ jobs:
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v3
+      with:
+          fetch-depth: 0
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -140,6 +142,8 @@ jobs:
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v3
+      with:
+          fetch-depth: 0
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
