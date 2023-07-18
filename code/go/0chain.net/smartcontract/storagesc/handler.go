@@ -403,7 +403,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	}
 
 	if len(blobberIDs) < numberOfBlobbers {
-		return nil, errors.New("not enough blobbers to honor the allocation")
+		return nil, errors.New(fmt.Sprintf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers))
 	}
 	return blobberIDs, nil
 }
