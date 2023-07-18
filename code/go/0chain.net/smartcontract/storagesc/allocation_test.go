@@ -739,8 +739,7 @@ func TestExtendAllocation(t *testing.T) {
 					size += blobber.Stats.UsedSize
 				}
 
-				oldExpirationDiff := common.Timestamp(2600)
-				ordtu, err := sa.durationInTimeUnits(oldExpirationDiff, 2592000000000000)
+				ordtu, err := sa.durationInTimeUnits(sa.Expiration-txn.CreationDate, 2592000000000000)
 				if err != nil {
 					require.NoError(t, err)
 				}
