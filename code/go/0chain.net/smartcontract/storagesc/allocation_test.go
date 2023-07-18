@@ -592,7 +592,7 @@ func TestExtendAllocation(t *testing.T) {
 		mockDataShards     = 2
 		mockParityShards   = 2
 		mockNumAllBlobbers = 2 + mockDataShards + mockParityShards
-		mockExpiration     = common.Timestamp(3600)
+		mockExpiration     = common.Timestamp(2592000)
 		mockStake          = 3
 		mockMinLockDemand  = 0.1
 		mockTimeUnit       = 1 * time.Hour
@@ -648,7 +648,7 @@ func TestExtendAllocation(t *testing.T) {
 		var txn = transaction.Transaction{
 			ClientID:     mockOwner,
 			ToClientID:   ADDRESS,
-			CreationDate: now + 1000,
+			CreationDate: now * 10,
 			Value:        args.value,
 		}
 		txn.Hash = mockHash
@@ -789,7 +789,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 2325970943",
+				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 8084397",
 			},
 		},
 	}
