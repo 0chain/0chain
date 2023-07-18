@@ -913,6 +913,28 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
+func (sa *StorageAllocation) removeBlobberNoMPT(blobberID string) error {
+	_, ok := sa.BlobberAllocsMap[blobberID]
+	if !ok {
+		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+	}
+	delete(sa.BlobberAllocsMap, blobberID)
+
+	var found bool
+	for i, d := range sa.BlobberAllocs {
+		if d.BlobberID == blobberID {
+			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
+			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+	}
+	return nil
+}
+
 func (sa *StorageAllocation) removeBlobber(
 	blobbers []*StorageNode,
 	blobberID string,
@@ -962,6 +984,50 @@ func (sa *StorageAllocation) removeBlobber(
 	}
 
 	return blobbers, nil
+}
+
+func (sa *StorageAllocation) changeBlobbersEventDB(
+	edb *event.EventDb,
+	conf *Config,
+	addID, removeID string,
+	now common.Timestamp) error {
+	if len(removeID) > 0 {
+		if err := sa.removeBlobberNoMPT(removeID); err != nil {
+			return err
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+	}
+	_, ok := sa.BlobberAllocsMap[addID]
+	if ok {
+		return fmt.Errorf("allocation already has blobber %s", addID)
+	}
+
+	addBlobberE, err := edb.GetBlobber(addID)
+	if err != nil {
+		return fmt.Errorf("could not load blobber from event db: %v", err)
+	}
+
+	addBlobber := &StorageNode{
+		Provider: provider.Provider{
+			ID:           addID,
+			ProviderType: spenum.Blobber,
+		},
+		Terms: Terms{
+			ReadPrice:  addBlobberE.ReadPrice,
+			WritePrice: addBlobberE.WritePrice,
+		},
+	}
+
+	ba, err := newBlobberAllocation(sa.bSize(), sa, addBlobber, now, conf.TimeUnit)
+	if err != nil {
+		return err
+	}
+	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+	sa.BlobberAllocsMap[addID] = ba
+
+	return nil
 }
 
 func (sa *StorageAllocation) changeBlobbers(
