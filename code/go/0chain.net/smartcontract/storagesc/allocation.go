@@ -1616,8 +1616,8 @@ func (sc *StorageSmartContract) finishAllocation(
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
 		if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-			ratio := float64(d.Stats.UsedSize) / (float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards))
-
+			allocationRealUsedSize := float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards)
+			ratio := float64(d.Stats.UsedSize) / allocationRealUsedSize
 			if err != nil {
 				return err
 			}
