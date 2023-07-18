@@ -101,6 +101,10 @@ jobs:
 
     - name: Build & Push
       run: |
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        export HOME="/root"
+
         make install-mockery
         make build-mocks
 
@@ -204,6 +208,10 @@ jobs:
 
     - name: Build & Push
       run: |
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        export HOME="/root"
+        
         make install-mockery
         make build-mocks
 
