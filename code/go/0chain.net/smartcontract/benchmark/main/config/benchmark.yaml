@@ -43,6 +43,7 @@ options:
   event_database_benchmarks: true
   smart_contract_event_file: "edb_in.json"
   event_database_event_file: "edb_in.json"
+  verify_burned_tokens: false
 
 dbs:
   events:
