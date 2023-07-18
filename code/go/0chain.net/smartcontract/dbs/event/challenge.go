@@ -83,7 +83,9 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "created_at"},
-			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "challenge_id"},
 		})
 
 	result := query.Find(&chs)
