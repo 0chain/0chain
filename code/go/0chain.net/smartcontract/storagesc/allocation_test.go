@@ -1486,6 +1486,7 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 		tx       transaction.Transaction
 
 		alloc *StorageAllocation
+		resp  string
 		err   error
 	)
 
@@ -1506,15 +1507,15 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 		MaxChallengeCompletionTime: 30 * time.Minute,
 	}
 
-	err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
+	_, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
 	requireErrMsg(t, err, errMsg1)
 
 	// 2. close (all related pools has created)
 	alloc.Expiration = tx.CreationDate +
 		toSeconds(conf.MaxChallengeCompletionTime) + 20
-	err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
+	resp, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
 	require.NoError(t, err)
-
+	assert.NotZero(t, resp)
 	// checking out
 
 	alloc, err = ssc.getAllocation(alloc.ID, balances)
