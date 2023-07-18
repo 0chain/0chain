@@ -674,8 +674,6 @@ type StorageAllocation struct {
 	// Canceled set to true where allocation finalized by cancel_allocation
 	// transaction.
 	Canceled bool `json:"canceled,omitempty"`
-	// UsedSize used to calculate blobber reward ratio.
-	UsedSize int64 `json:"-" msg:"-"`
 
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
@@ -1314,9 +1312,6 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	}
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
-		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
-		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return nil
@@ -1343,9 +1338,6 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
-		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
-		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return o, nil

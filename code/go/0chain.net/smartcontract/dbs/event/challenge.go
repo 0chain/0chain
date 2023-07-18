@@ -105,19 +105,22 @@ func (edb *EventDb) addChallenges(chlgs []Challenge) error {
 
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
 	var (
-		challengeIdList []string
-		respondedList   []int64
-		passedList      []bool
+		challengeIdList    []string
+		respondedList      []int64
+		roundRespondedList []int64
+		passedList         []bool
 	)
 
 	for _, ch := range chs {
 		challengeIdList = append(challengeIdList, ch.ChallengeID)
 		respondedList = append(respondedList, ch.Responded)
+		roundRespondedList = append(roundRespondedList, ch.RoundResponded)
 		passedList = append(passedList, ch.Passed)
 	}
 
 	return CreateBuilder("challenges", "challenge_id", challengeIdList).
 		AddUpdate("responded", respondedList).
+		AddUpdate("round_responded", roundRespondedList).
 		AddUpdate("passed", passedList).Exec(edb).Error
 }
 
