@@ -143,7 +143,7 @@ const (
 	OptionsEventDatabaseBenchmarks = Options + "event_database_benchmarks"
 	OptionsSmartContractEventFile  = Options + "smart_contract_event_file"
 	OptionsEventDatabaseEventFile  = Options + "event_database_event_file"
-	OptionVerifyBurnedTokens = Options + "verify_burned_tokens"
+	OptionVerifyBurnedTokens       = Options + "verify_burned_tokens"
 
 	MinerMOwner       = SmartContract + MinerSc + "owner_id"
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
