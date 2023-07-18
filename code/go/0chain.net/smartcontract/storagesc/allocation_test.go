@@ -789,7 +789,7 @@ func TestExtendAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 2313035908",
+				errMsg: "allocation_extending_failed: adjust_challenge_pool: insufficient funds 0 in write pool to pay 2325970943",
 			},
 		},
 	}
@@ -801,21 +801,6 @@ func TestExtendAllocation(t *testing.T) {
 			conf := &Config{
 				TimeUnit: confTimeUnit,
 			}
-
-			//cp, err := ssc.getChallengePool(allocationId, balances)
-			//if err != nil {
-			//	t.Fatal(err)
-			//}
-			//
-			//initialChallengePoolBalance, err := currency.Float64ToCoin(15270528.32606398 * 4)
-			//if err != nil {
-			//	t.Fatal(err)
-			//}
-			//
-			//err = sa.moveToChallengePool(cp, initialChallengePoolBalance)
-			//if err != nil {
-			//	t.Fatal(err)
-			//}
 
 			err := ssc.extendAllocation(
 				txn,
