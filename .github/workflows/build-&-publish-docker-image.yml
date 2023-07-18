@@ -65,10 +65,10 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Install Dependencies
-      run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+#     - name: Install Dependencies
+#       run: |
+#         sudo apt update -y
+#         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
     
     - name: Get changed files using defaults
       id: changed-files
@@ -170,10 +170,10 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Install Dependencies
-      run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+#     - name: Install Dependencies
+#       run: |
+#         sudo apt update -y
+#         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
     
     - name: Get changed files using defaults
       id: changed-files
