@@ -64,7 +64,6 @@ func TestNewAllocation(t *testing.T) {
 		Size:            scYaml.MinAllocSize,
 		DataShards:      3,
 		ParityShards:    5,
-		Expiration:      common.Timestamp(scYaml.TimeUnit.Seconds()) + now,
 		ReadPriceRange:  PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
 		WritePriceRange: PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		Blobbers: []string{"0", "1", "2", "3",
