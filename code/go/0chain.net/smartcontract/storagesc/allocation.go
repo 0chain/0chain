@@ -134,10 +134,6 @@ func (nar *newAllocationRequest) validate(now time.Time, conf *Config) error {
 		return errors.New("insufficient allocation size")
 	}
 
-	// dur := common.ToTime(nar.Expiration).Sub(now)
-	// if dur < conf.TimeUnit {
-	//	return errors.New("insufficient allocation duration")
-	// }
 	return nil
 }
 
@@ -1133,7 +1129,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 
 		var newSize = request.Size + alloc.Size
-		if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
+		if newSize < conf.MinAllocSize || newSize < alloc.Stats.UsedSize {
 			return "", common.NewError("allocation_updating_failed",
 				"allocation size becomes too small")
 		}
@@ -1272,7 +1268,7 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	return false
 }
 
-func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]float64, error) {
+func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation, balances chainstate.StateContextI) ([]float64, error) {
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
 	}
@@ -1308,6 +1304,9 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]
 	alloc.Stats.SuccessChallenges = succesful
 	alloc.Stats.FailedChallenges = failed
 	alloc.Stats.OpenChallenges = 0
+
+	emitUpdateAllocationAndBlobberStats(alloc, balances)
+
 	return passRates, nil
 }
 
@@ -1350,6 +1349,16 @@ func (sc *StorageSmartContract) canceledPassRates(
 			}
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
+
+			err := emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: alloc.ID,
+				BlobberID:    oc.BlobberID,
+			}, true, balances, alloc.Stats, ba.Stats)
+			if err != nil {
+				return nil, err
+			}
+
 		}
 
 	default:
@@ -1371,11 +1380,13 @@ func (sc *StorageSmartContract) canceledPassRates(
 			continue
 		}
 		// success rate for the blobber allocation
-		// fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
 	}
 
 	alloc.Stats.OpenChallenges = 0
+
+	emitUpdateAllocationAndBlobberStats(alloc, balances)
+
 	return passRates, nil
 }
 
@@ -1499,11 +1510,11 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	// should be expired
 	if alloc.Until(conf.MaxChallengeCompletionTime) > t.CreationDate {
 		return "", common.NewError("fini_alloc_failed",
-			"allocation is not expired yet, or waiting a challenge completion")
+			"allocation is not expired yet")
 	}
 
 	var passRates []float64
-	passRates, err = sc.finalizedPassRates(alloc)
+	passRates, err = sc.finalizedPassRates(alloc, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1553,13 +1564,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	before := make([]currency.Coin, len(sps))
 	deductionFromWritePool := currency.Coin(0)
 
-	challenges, err := sc.getAllocationChallenges(alloc.ID, balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return fmt.Errorf("could not get allocation challenges: %v", err)
-		}
-	}
-
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
 	// passRates list above because of algorithm of the adjustChallenges
@@ -1605,16 +1609,20 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
+	cpBalance, err := cp.Balance.Float64()
+	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime) / float64(conf.TimeUnit)
+	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
+
 	var passPayments currency.Coin
 	for i, d := range alloc.BlobberAllocs {
-		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-			ratio := float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-			cpBalance, err := cp.Balance.Float64()
+		if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
+			allocationRealUsedSize := float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards)
+			ratio := float64(d.Stats.UsedSize) / allocationRealUsedSize
 			if err != nil {
 				return err
 			}
 
-			reward, err := currency.Float64ToCoin(cpBalance * ratio * passRates[i])
+			reward, err := currency.Float64ToCoin(adjustableChallengePoolTokens * ratio * passRates[i])
 			if err != nil {
 				return err
 			}
@@ -1682,12 +1690,18 @@ func (sc *StorageSmartContract) finishAllocation(
 		Amount:       i,
 	})
 
-	reward, _, err := currency.DistributeCoin(cancellationCharge, int64(len(alloc.BlobberAllocs)))
-	if err != nil {
-		return fmt.Errorf("failed to distribute cancellation charge: %v", err)
+	totalWritePrice := currency.Coin(0)
+	for _, ba := range alloc.BlobberAllocs {
+		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
+		if err != nil {
+			return fmt.Errorf("failed to add write price: %v", err)
+		}
 	}
 
 	for i, ba := range alloc.BlobberAllocs {
+		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
+		reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight)
+
 		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
 		if err != nil {
 			return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
@@ -1710,8 +1724,8 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"can't get blobber "+ba.BlobberID+": "+err.Error())
 		}
-		blobber.SavedData += (-ba.Stats.UsedSize)
-		blobber.Allocated += (-ba.Size)
+		blobber.SavedData += -ba.Stats.UsedSize
+		blobber.Allocated += -ba.Size
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
@@ -1750,24 +1764,6 @@ func (sc *StorageSmartContract) finishAllocation(
 		AllocationId: alloc.ID,
 		Amount:       i,
 	})
-
-	if challenges != nil {
-		for _, challenge := range challenges.OpenChallenges {
-			ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
-
-			if ok {
-				err := emitUpdateChallenge(&StorageChallenge{
-					ID:           challenge.ID,
-					AllocationID: alloc.ID,
-					BlobberID:    challenge.BlobberID,
-				}, true, balances, alloc.Stats, ba.Stats)
-
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
 
 	alloc.Finalized = true
 	return nil
