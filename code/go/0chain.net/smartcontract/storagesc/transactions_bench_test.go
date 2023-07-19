@@ -11,7 +11,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
 
@@ -141,7 +140,6 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 					var nar = new(newAllocationRequest)
 					nar.DataShards = 10
 					nar.ParityShards = 10
-					nar.Expiration = common.Timestamp(exp)
 					nar.Owner = client.id
 					nar.OwnerPublicKey = client.pk
 					nar.ReadPriceRange = PriceRange{1e10, 10e10}
@@ -217,7 +215,6 @@ func Benchmark_generateChallenges(b *testing.B) {
 		var nar = new(newAllocationRequest)
 		nar.DataShards = 10
 		nar.ParityShards = 10
-		nar.Expiration = common.Timestamp(exp)
 		nar.Owner = client.id
 		nar.OwnerPublicKey = client.pk
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
@@ -350,7 +347,6 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		var nar = new(newAllocationRequest)
 		nar.DataShards = 10
 		nar.ParityShards = 10
-		nar.Expiration = common.Timestamp(exp)
 		nar.Owner = client.id
 		nar.OwnerPublicKey = client.pk
 		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}

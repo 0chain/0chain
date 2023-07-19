@@ -143,7 +143,7 @@ func addMockAllocation(
 			Expiration:               int64(sa.Expiration),
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
-			UsedSize:                 sa.UsedSize,
+			UsedSize:                 sa.Stats.UsedSize,
 			NumWrites:                sa.Stats.NumWrites,
 			NumReads:                 sa.Stats.NumReads,
 			TotalChallenges:          sa.Stats.TotalChallenges,
