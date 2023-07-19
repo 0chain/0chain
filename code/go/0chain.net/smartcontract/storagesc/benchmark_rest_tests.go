@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/benchmark"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -157,14 +156,13 @@ func BenchmarkRestTests(
 					"data": func() string {
 						var (
 							size         = int64(100000)
-							expiry       = common.Timestamp(1680408725)
 							allocationId = getMockAllocationId(0)
 						)
 
 						req := &updateAllocationRequest{
-							ID:         allocationId,
-							Size:       size,
-							Expiration: expiry,
+							ID:     allocationId,
+							Size:   size,
+							Extend: true,
 						}
 
 						v, err := json.Marshal(req)

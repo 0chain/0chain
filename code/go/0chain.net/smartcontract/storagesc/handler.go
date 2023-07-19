@@ -1747,9 +1747,17 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	var newExpiration = alloc.Expiration + req.Expiration
-	now := common.Now()
-	if newExpiration < now {
+	var (
+		now            = common.Now()
+		prevExpiration = alloc.Expiration
+	)
+
+	if req.Extend {
+		alloc.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()) // new expiration
+	}
+
+	if alloc.Expiration < now {
+		// allocation is expired, return the current rest min lock demand
 		rmld, err := getRestMinLockDemand(&alloc.StorageAllocation, conf.CancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
@@ -1762,22 +1770,13 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	// an allocation can't be shorter than configured in SC
-	// (prevent allocation shortening for entire period)
-	if req.Expiration > 0 {
-		if newExpiration-now < toSeconds(conf.TimeUnit) {
-			common.Respond(w, r, nil, common.NewErrBadRequest("allocation duration becomes too short"))
-			return
-		}
-	}
-
-	var newSize = req.Size + alloc.Size
-	if newSize < conf.MinAllocSize || newSize < alloc.UsedSize {
+	alloc.Size += req.Size
+	if alloc.Size < conf.MinAllocSize || alloc.Size < alloc.Stats.UsedSize {
 		common.Respond(w, r, nil, common.NewErrBadRequest("allocation size becomes too small"))
 		return
 	}
 
-	if err := updateAllocBlobberTerms(edb, now, &req, &alloc.StorageAllocation); err != nil {
+	if err := updateAllocBlobberTerms(edb, now, &req, &alloc.StorageAllocation, prevExpiration); err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -1911,7 +1910,8 @@ func updateAllocBlobberTerms(
 	edb *event.EventDb,
 	now common.Timestamp,
 	req *updateAllocationRequest,
-	alloc *StorageAllocation) error {
+	alloc *StorageAllocation,
+	prevExpiration common.Timestamp) error {
 	bIDs := make([]string, 0, len(alloc.BlobberAllocs))
 	for _, ba := range alloc.BlobberAllocs {
 		bIDs = append(bIDs, ba.BlobberID)
@@ -1935,20 +1935,16 @@ func updateAllocBlobberTerms(
 			alloc.BlobberAllocs[i].Terms = bTerms[i]
 		}
 	} else {
-		if req.Size > 0 || req.Expiration > 0 || len(req.AddBlobberId) > 0 {
+		if req.Size > 0 || req.Extend || len(req.AddBlobberId) > 0 {
 			// use average terms
-			var (
-				prevExpiration = alloc.Expiration
-				diff           = req.getBlobbersSizeDiff(alloc) // size difference
-			)
-
+			diff := req.getBlobbersSizeDiff(alloc) // size difference
 			for i, ba := range alloc.BlobberAllocs {
 				alloc.BlobberAllocs[i].Terms, err = weightedAverage(
 					&ba.Terms,
 					&bTerms[i],
 					now,
 					prevExpiration,
-					alloc.Expiration+req.Expiration,
+					alloc.Expiration,
 					ba.Size,
 					diff)
 				if err != nil {
