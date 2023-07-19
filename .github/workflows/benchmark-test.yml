@@ -26,7 +26,9 @@ jobs:
           ./docker.local/bin/init.setup.sh
 
       - name: Build Base
-        run: ./docker.local/bin/build.base.sh
+        run: |
+          export HOME="/root"
+          ./docker.local/bin/build.base.sh
 
       - name: Install Docker Compose
         run: |
