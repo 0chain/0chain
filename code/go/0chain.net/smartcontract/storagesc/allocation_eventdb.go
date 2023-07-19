@@ -40,8 +40,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
 
-	var dpsSze = alloc.DataShards + alloc.ParityShards
-	var gbSize = sizeInGB((alloc.Size + int64(dpsSze-1)) / int64(dpsSze))
+	var gbSize = sizeInGB(bSize(alloc.Size, alloc.DataShards))
 	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
 
 	for _, b := range blobbers {
@@ -116,6 +115,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
+		MinLockDemand:     alloc.MinLockDemand,
 	}
 
 	return &StorageAllocationBlobbers{
@@ -150,6 +150,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		WritePool:            sa.WritePool,
 		ThirdPartyExtendable: sa.ThirdPartyExtendable,
 		FileOptions:          sa.FileOptions,
+		MinLockDemand:        sa.MinLockDemand,
 	}
 
 	if sa.Stats != nil {
