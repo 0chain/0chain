@@ -913,7 +913,7 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) removeBlobberNoMPT(blobberID string) error {
+func (sa *StorageAllocation) removeBlobber(blobberID string) error {
 	_, ok := sa.BlobberAllocsMap[blobberID]
 	if !ok {
 		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
@@ -935,19 +935,17 @@ func (sa *StorageAllocation) removeBlobberNoMPT(blobberID string) error {
 	return nil
 }
 
-func (sa *StorageAllocation) removeBlobber(
+func removeBlobber(
+	sa *StorageAllocation,
 	blobbers []*StorageNode,
 	blobberID string,
-	balances cstate.StateContextI,
-) ([]*StorageNode, error) {
-	blobAlloc, found := sa.BlobberAllocsMap[blobberID]
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+	balances cstate.StateContextI) ([]*StorageNode, error) {
+	if err := sa.removeBlobber(blobberID); err != nil {
+		return nil, err
 	}
-	delete(sa.BlobberAllocsMap, blobberID)
 
 	var removedBlobber *StorageNode
-	found = false
+	var found bool
 	for i, d := range blobbers {
 		if d.ID == blobberID {
 			removedBlobber = blobbers[i]
@@ -958,25 +956,11 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
-	found = false
-	for i, d := range sa.BlobberAllocs {
-		if d.BlobberID == blobberID {
-			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
-			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
-
-			if err := removeAllocationFromBlobber(balances, d); err != nil {
-				return nil, err
-			}
-
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
+	if err := removeAllocationFromBlobber(balances, sa.ID, blobberID); err != nil {
+		return nil, err
 	}
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
@@ -984,50 +968,6 @@ func (sa *StorageAllocation) removeBlobber(
 	}
 
 	return blobbers, nil
-}
-
-func (sa *StorageAllocation) changeBlobbersEventDB(
-	edb *event.EventDb,
-	conf *Config,
-	addID, removeID string,
-	now common.Timestamp) error {
-	if len(removeID) > 0 {
-		if err := sa.removeBlobberNoMPT(removeID); err != nil {
-			return err
-		}
-	} else {
-		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
-	}
-	_, ok := sa.BlobberAllocsMap[addID]
-	if ok {
-		return fmt.Errorf("allocation already has blobber %s", addID)
-	}
-
-	addBlobberE, err := edb.GetBlobber(addID)
-	if err != nil {
-		return fmt.Errorf("could not load blobber from event db: %v", err)
-	}
-
-	addBlobber := &StorageNode{
-		Provider: provider.Provider{
-			ID:           addID,
-			ProviderType: spenum.Blobber,
-		},
-		Terms: Terms{
-			ReadPrice:  addBlobberE.ReadPrice,
-			WritePrice: addBlobberE.WritePrice,
-		},
-	}
-
-	ba, err := newBlobberAllocation(sa.bSize(), sa, addBlobber, now, conf.TimeUnit)
-	if err != nil {
-		return err
-	}
-	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-	sa.BlobberAllocsMap[addID] = ba
-
-	return nil
 }
 
 func (sa *StorageAllocation) changeBlobbers(
@@ -1039,7 +979,7 @@ func (sa *StorageAllocation) changeBlobbers(
 ) ([]*StorageNode, error) {
 	var err error
 	if len(removeId) > 0 {
-		if blobbers, err = sa.removeBlobber(blobbers, removeId, balances); err != nil {
+		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances); err != nil {
 			return nil, err
 		}
 	} else {
@@ -1103,12 +1043,7 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 }
 
 // removeAllocationFromBlobber removes the allocation from blobber
-func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *BlobberAllocation) error {
-	var (
-		blobberID = blobAlloc.BlobberID
-		allocID   = blobAlloc.AllocationID
-	)
-
+func removeAllocationFromBlobber(balances cstate.StateContextI, allocID, blobberID string) error {
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)

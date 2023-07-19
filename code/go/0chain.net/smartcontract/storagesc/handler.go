@@ -1786,16 +1786,15 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	if len(req.AddBlobberId) > 0 {
-		if err = alloc.changeBlobbersEventDB(
-			edb,
-			conf,
-			req.RemoveBlobberId,
-			req.AddBlobberId,
-			common.Now()); err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
-			return
-		}
+	if err = changeBlobbersEventDB(
+		edb,
+		&alloc.StorageAllocation,
+		conf,
+		req.RemoveBlobberId,
+		req.AddBlobberId,
+		common.Now()); err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+		return
 	}
 
 	if err := updateAllocRestMinLockDemand(&req, &alloc.StorageAllocation, conf); err != nil {
@@ -1812,6 +1811,59 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	common.Respond(w, r, map[string]interface{}{
 		"min_lock_demand": rmld,
 	}, nil)
+}
+
+func changeBlobbersEventDB(
+	edb *event.EventDb,
+	sa *StorageAllocation,
+	conf *Config,
+	addID, removeID string,
+	now common.Timestamp) error {
+	if len(addID) == 0 {
+		if len(removeID) > 0 {
+			return fmt.Errorf("could not remove blobber without adding a new one")
+		}
+
+		return nil
+	}
+
+	if len(removeID) > 0 {
+		if err := sa.removeBlobber(removeID); err != nil {
+			return err
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+	}
+	_, ok := sa.BlobberAllocsMap[addID]
+	if ok {
+		return fmt.Errorf("allocation already has blobber %s", addID)
+	}
+
+	addBlobberE, err := edb.GetBlobber(addID)
+	if err != nil {
+		return fmt.Errorf("could not load blobber from event db: %v", err)
+	}
+
+	addBlobber := &StorageNode{
+		Provider: provider.Provider{
+			ID:           addID,
+			ProviderType: spenum.Blobber,
+		},
+		Terms: Terms{
+			ReadPrice:  addBlobberE.ReadPrice,
+			WritePrice: addBlobberE.WritePrice,
+		},
+	}
+
+	ba, err := newBlobberAllocation(sa.bSize(), sa, addBlobber, now, conf.TimeUnit)
+	if err != nil {
+		return err
+	}
+	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+	sa.BlobberAllocsMap[addID] = ba
+
+	return nil
 }
 
 func updateAllocRestMinLockDemand(req *updateAllocationRequest, alloc *StorageAllocation, conf *Config) error {
