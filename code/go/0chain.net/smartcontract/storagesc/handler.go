@@ -243,13 +243,10 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 			"can't get config: %v", err))
 		return
 	}
-	var creationDate = balances.Now()
-	dur := common.ToTime(creationDate).Add(conf.TimeUnit)
 	request := allocationBlobbersRequest{
 		DataShards:      conf.FreeAllocationSettings.DataShards,
 		ParityShards:    conf.FreeAllocationSettings.ParityShards,
 		Size:            conf.FreeAllocationSettings.Size,
-		Expiration:      common.Timestamp(dur.Unix()),
 		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
 	}
@@ -271,12 +268,11 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 }
 
 type allocationBlobbersRequest struct {
-	ParityShards    int              `json:"parity_shards"`
-	DataShards      int              `json:"data_shards"`
-	Expiration      common.Timestamp `json:"expiration_date"`
-	ReadPriceRange  PriceRange       `json:"read_price_range"`
-	WritePriceRange PriceRange       `json:"write_price_range"`
-	Size            int64            `json:"size"`
+	ParityShards    int        `json:"parity_shards"`
+	DataShards      int        `json:"data_shards"`
+	ReadPriceRange  PriceRange `json:"read_price_range"`
+	WritePriceRange PriceRange `json:"write_price_range"`
+	Size            int64      `json:"size"`
 }
 
 func (nar *allocationBlobbersRequest) decode(b []byte) error {
@@ -407,7 +403,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	}
 
 	if len(blobberIDs) < numberOfBlobbers {
-		return nil, errors.New("not enough blobbers to honor the allocation")
+		return nil, errors.New(fmt.Sprintf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers))
 	}
 	return blobberIDs, nil
 }
@@ -1645,7 +1641,7 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
-	if err := request.validate(common.ToTime(balances.Now()), conf); err != nil {
+	if err := request.validate(conf); err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
