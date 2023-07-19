@@ -1785,8 +1785,8 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		edb,
 		&alloc.StorageAllocation,
 		conf,
-		req.RemoveBlobberId,
 		req.AddBlobberId,
+		req.RemoveBlobberId,
 		common.Now()); err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
