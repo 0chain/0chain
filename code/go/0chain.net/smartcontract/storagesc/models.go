@@ -674,8 +674,6 @@ type StorageAllocation struct {
 	// Canceled set to true where allocation finalized by cancel_allocation
 	// transaction.
 	Canceled bool `json:"canceled,omitempty"`
-	// UsedSize used to calculate blobber reward ratio.
-	UsedSize int64 `json:"-" msg:"-"`
 
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
@@ -913,20 +911,39 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) removeBlobber(
-	blobbers []*StorageNode,
-	blobberID string,
-	ssc *StorageSmartContract,
-	balances cstate.StateContextI,
-) ([]*StorageNode, error) {
-	blobAlloc, found := sa.BlobberAllocsMap[blobberID]
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+func (sa *StorageAllocation) removeBlobber(blobberID string) error {
+	_, ok := sa.BlobberAllocsMap[blobberID]
+	if !ok {
+		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 	delete(sa.BlobberAllocsMap, blobberID)
 
+	var found bool
+	for i, d := range sa.BlobberAllocs {
+		if d.BlobberID == blobberID {
+			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
+			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+	}
+	return nil
+}
+
+func removeBlobber(
+	sa *StorageAllocation,
+	blobbers []*StorageNode,
+	blobberID string,
+	balances cstate.StateContextI) ([]*StorageNode, error) {
+	if err := sa.removeBlobber(blobberID); err != nil {
+		return nil, err
+	}
+
 	var removedBlobber *StorageNode
-	found = false
+	var found bool
 	for i, d := range blobbers {
 		if d.ID == blobberID {
 			removedBlobber = blobbers[i]
@@ -937,25 +954,11 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
-	found = false
-	for i, d := range sa.BlobberAllocs {
-		if d.BlobberID == blobberID {
-			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
-			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
-
-			if err := removeAllocationFromBlobber(balances, d); err != nil {
-				return nil, err
-			}
-
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
+	if err := removeAllocationFromBlobber(balances, sa.ID, blobberID); err != nil {
+		return nil, err
 	}
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
@@ -969,13 +972,12 @@ func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
 	blobbers []*StorageNode,
 	addId, removeId string,
-	ssc *StorageSmartContract,
 	now common.Timestamp,
 	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
 	if len(removeId) > 0 {
-		if blobbers, err = sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
+		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances); err != nil {
 			return nil, err
 		}
 	} else {
@@ -994,7 +996,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
+	if sp, err = getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
 	staked, err := sp.stake()
@@ -1039,12 +1041,7 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 }
 
 // removeAllocationFromBlobber removes the allocation from blobber
-func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *BlobberAllocation) error {
-	var (
-		blobberID = blobAlloc.BlobberID
-		allocID   = blobAlloc.AllocationID
-	)
-
+func removeAllocationFromBlobber(balances cstate.StateContextI, allocID, blobberID string) error {
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)
@@ -1314,9 +1311,6 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	}
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
-		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
-		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return nil
@@ -1343,9 +1337,6 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
-		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
-		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return o, nil

@@ -231,7 +231,7 @@ func (c *Chain) estimateTxnFee(txn *httpclientutil.Transaction) (currency.Coin, 
 	}
 
 	lfb := c.GetLatestFinalizedBlock()
-	if lfb == nil {
+	if lfb == nil || lfb.ClientState == nil {
 		err := errors.New("could not get latest finalized block")
 		logging.Logger.Error("could not register miner", zap.Error(err))
 		return 0, err
