@@ -82,7 +82,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 
 	query := edb.Store.Get().Model(&Challenge{}).
 		Where("blobber_id = ? AND responded = ?",
-			from, blobberID, 0).
+			blobberID, 0).
 		Limit(limit.Limit).
 		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
