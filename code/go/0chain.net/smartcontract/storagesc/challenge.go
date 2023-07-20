@@ -1255,6 +1255,13 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}
 
+	logging.Logger.Info("add_challenge",
+		zap.String("allocation", alloc.ID),
+		zap.String("blobber", challenge.BlobberID),
+		zap.String("challenge", challenge.ID),
+		zap.Any("expired", expiredIDsMap),
+	)
+
 	var expChalIDs []string
 	for challengeID := range expiredIDsMap {
 		expChalIDs = append(expChalIDs, challengeID)
@@ -1277,6 +1284,13 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		}
 		expiredCountMap[blobberID]++
 	}
+
+	logging.Logger.Info("2 add_challenge 2",
+		zap.String("allocation", alloc.ID),
+		zap.String("blobber", challenge.BlobberID),
+		zap.String("challenge", challenge.ID),
+		zap.Any("expired", expiredCountMap),
+	)
 
 	// add the generated challenge to the open challenges list in the allocation
 	if !allocChallenges.addChallenge(challenge) {

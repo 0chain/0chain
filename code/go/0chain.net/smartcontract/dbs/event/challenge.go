@@ -81,15 +81,17 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	logging.Logger.Info("limit Check", zap.Any("limit", limit), zap.Any("from", from), zap.Any("expiry", expiry), zap.Any("now", now), zap.Any("cct", cct), zap.Any("blobberID", blobberID))
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("blobber_id = ? AND responded = ?",
-			blobberID, 0).
+		Where("created_at > ? AND blobber_id = ? AND responded = ?",
+			from, blobberID, 0).
 		Limit(limit.Limit).
 		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "created_at"},
+			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "challenge_id"},
+			Desc:   limit.IsDescending,
 		})
 
 	result := query.Find(&chs)

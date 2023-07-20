@@ -1388,6 +1388,14 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			if err != nil {
 				return nil, err
 			}
+
+			logging.Logger.Info("removeExpiredChallenges challenge expired",
+				zap.String("challengeID", oc.ID), zap.String("blobberID", oc.BlobberID))
+
+		} else {
+			logging.Logger.Error("removeExpiredChallenges found open challenge with unknown blobber",
+				zap.String("challengeID", oc.ID), zap.String("blobberID", oc.BlobberID))
+			return nil, common.NewError("removeExpiredChallenges", "found open challenge with unknown blobber")
 		}
 	}
 
