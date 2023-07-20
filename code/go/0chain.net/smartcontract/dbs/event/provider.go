@@ -21,6 +21,7 @@ import (
 
 type IProvider interface {
 	GetID() string
+	TableName() string
 }
 
 type ProviderIdsMap map[spenum.Provider]map[string]interface{}
@@ -190,8 +191,16 @@ func (edb *EventDb) GetProvidersByIds(ptype spenum.Provider, ids []string) ([]IP
 }
 
 func getProvidersById[P IProvider](edb *EventDb, ids []string) ([]IProvider, error) {
-	var providers []P
-	err := edb.Get().Where("id IN (?)", ids).Find(&providers).Error
+	var (
+		model P
+		providers []P
+		tableName = model.TableName()
+	)
+	err := edb.Get().
+		Model(&model).
+		Where(fmt.Sprintf("%v.id IN (?)", tableName), ids).
+		Joins("Rewards").
+		Find(&providers).Error
 	if err != nil {
 		return nil, err
 	}

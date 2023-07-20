@@ -66,6 +66,10 @@ type BlobberPriceRange struct {
 	Max null.Int `json:"max"`
 }
 
+func (m *Blobber) TableName() string {
+	return "blobbers"
+}
+
 func (b Blobber) GetID() string {
 	return b.ID
 }

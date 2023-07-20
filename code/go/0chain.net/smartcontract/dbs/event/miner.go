@@ -119,6 +119,10 @@ type MinerQuery struct {
 	IsKilled          null.Bool
 }
 
+func (m *Miner) TableName() string {
+	return "miners"
+}
+
 func (m *Miner) GetTotalStake() currency.Coin {
 	return m.TotalStake
 }
