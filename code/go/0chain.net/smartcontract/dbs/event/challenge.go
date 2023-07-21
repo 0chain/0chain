@@ -1,16 +1,10 @@
 package event
 
 import (
-	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-	"strconv"
-
+	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
-	"gorm.io/gorm/clause"
-
-	"0chain.net/core/common"
+	"fmt"
 )
 
 // swagger:model Challenges
@@ -88,28 +82,43 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 		}
 	}
 
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("challengeID", challengeID), zap.Any("challengeWithChallengeID", challengeWithChallengeID), zap.Any("createAt", strconv.FormatInt(int64(challengeWithChallengeID.CreatedAt), 10)))
+	rawQuery := `
+        SELECT *
+        FROM challenges
+        WHERE created_at >= (
+            SELECT created_at
+            FROM challenges
+            WHERE challenge_id = ?
+        )
+        ORDER BY created_at ASC
+    `
 
-	query := edb.Store.Get().Model(&Challenge{}).
-		Where("created_at >= ? AND challenge_id > ?", challengeWithChallengeID.CreatedAt, challengeID).
-		Limit(limit.Limit).
-		Offset(limit.Offset).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
-			Desc:   false,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "challenge_id"},
-			Desc:   false,
-		})
+	query := edb.Store.Get().Raw(rawQuery, challengeID)
 
 	result := query.Find(&chs)
+
+	//logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("challengeID", challengeID), zap.Any("challengeWithChallengeID", challengeWithChallengeID), zap.Any("createAt", strconv.FormatInt(int64(challengeWithChallengeID.CreatedAt), 10)))
+	//
+	//query = edb.Store.Get().Model(&Challenge{}).
+	//	Where("created_at >= ? AND challenge_id > ?", challengeWithChallengeID.CreatedAt, challengeID).
+	//	Limit(limit.Limit).
+	//	Offset(limit.Offset).
+	//	Order(clause.OrderByColumn{
+	//		Column: clause.Column{Name: "created_at"},
+	//		Desc:   false,
+	//	}).
+	//	Order(clause.OrderByColumn{
+	//		Column: clause.Column{Name: "challenge_id"},
+	//		Desc:   false,
+	//	})
+	//
+	//result = query.Find(&chs)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
-
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
+	//
+	//logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
 
 	return chs, nil
 }
