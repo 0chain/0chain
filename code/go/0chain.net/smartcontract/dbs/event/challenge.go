@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"strconv"
 
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -86,7 +87,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	}
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("created_at >= ? AND challenge_id > ", challengeWithChallengeID.CreatedAt, challengeID).
+		Where("created_at >= ? AND challenge_id > ", strconv.FormatInt(int64(challengeWithChallengeID.CreatedAt), 10), challengeID).
 		Limit(50).
 		Offset(0).
 		Order(clause.OrderByColumn{
