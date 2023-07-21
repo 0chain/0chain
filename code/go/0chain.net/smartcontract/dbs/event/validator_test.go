@@ -93,14 +93,13 @@ func TestValidatorNode(t *testing.T) {
 	})
 }
 
-func buildMockValidator(t *testing.T, ownerId string, pid string, bucket int64) Validator {
+func buildMockValidator(t *testing.T, ownerId string, pid string) Validator {
 	var validator Validator
 	err := faker.FakeData(&validator)
 	require.NoError(t, err)
 
 	validator.ID = pid
 	validator.DelegateWallet = OwnerId
-	validator.BucketId = bucket
 	validator.IsKilled = false
 	validator.IsShutdown = false
 	validator.Rewards = ProviderRewards{}

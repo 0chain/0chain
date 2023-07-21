@@ -159,14 +159,13 @@ func Test_authorizerMintAndBurn(t *testing.T) {
 	require.Equal(t, authorizersBefore[1].TotalBurn+50, authorizersAfter[1].TotalBurn)
 }
 
-func buildMockAuthorizer(t *testing.T, ownerId string, pid string, bucket int64) Authorizer {
+func buildMockAuthorizer(t *testing.T, ownerId string, pid string) Authorizer {
 	var authorizer Authorizer
 	err := faker.FakeData(&authorizer)
 	require.NoError(t, err)
 
 	authorizer.ID = pid
 	authorizer.DelegateWallet = ownerId
-	authorizer.BucketId = bucket
 	authorizer.IsKilled = false
 	authorizer.IsShutdown = false
 	authorizer.Rewards = ProviderRewards{}

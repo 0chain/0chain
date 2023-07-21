@@ -409,14 +409,13 @@ func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	}
 }
 
-func buildMockSharder(t *testing.T, ownerId string, pid string, bucket int64) Sharder {
+func buildMockSharder(t *testing.T, ownerId string, pid string) Sharder {
 	var sharder Sharder
 	err := faker.FakeData(&sharder)
 	require.NoError(t, err)
 
 	sharder.ID = pid
 	sharder.DelegateWallet = ownerId
-	sharder.BucketId = bucket
 	sharder.IsKilled = false
 	sharder.IsShutdown = false
 	sharder.Rewards = ProviderRewards{}

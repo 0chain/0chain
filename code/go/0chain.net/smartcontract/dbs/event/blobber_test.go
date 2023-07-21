@@ -286,13 +286,12 @@ func setUpBlobbers(t *testing.T, eventDb *EventDb, number int, withStats bool) [
 	return ids
 }
 
-func buildMockBlobber(t *testing.T, pid string, bucket int64) Blobber {
+func buildMockBlobber(t *testing.T, pid string) Blobber {
 	var curBlobber Blobber
 	err := faker.FakeData(&curBlobber)
 	require.NoError(t, err)
 	curBlobber.ID = pid
 	curBlobber.DelegateWallet = OwnerId
-	curBlobber.BucketId = bucket
 	curBlobber.BaseURL = fmt.Sprintf("http://url-%v.com", pid)
 	curBlobber.WritePrice += 10
 	curBlobber.Capacity += int64(curBlobber.TotalStake) * int64(GB)

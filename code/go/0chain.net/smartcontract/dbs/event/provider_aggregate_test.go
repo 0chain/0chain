@@ -15,56 +15,56 @@ func TestCreateNewProviderAggregates(t *testing.T) {
 	defer rb()
 
 	blobbers := []Blobber{
-		buildMockBlobber(t, "blobber1", 0),
-		buildMockBlobber(t, "blobber2", 0),
-		buildMockBlobber(t, "blobber3", 0),
-		buildMockBlobber(t, "blobber4", 0),
-		buildMockBlobber(t, "blobber5", 0),
-		buildMockBlobber(t, "blobber6", 0),
+		buildMockBlobber(t, "blobber1"),
+		buildMockBlobber(t, "blobber2"),
+		buildMockBlobber(t, "blobber3"),
+		buildMockBlobber(t, "blobber4"),
+		buildMockBlobber(t, "blobber5"),
+		buildMockBlobber(t, "blobber6"),
 	}
 	err := edb.Store.Get().Omit(clause.Associations).Create(&blobbers).Error
 	require.NoError(t, err)
 
 	miners := []Miner{
-		buildMockMiner(t, OwnerId, "miner1", 0),
-		buildMockMiner(t, OwnerId, "miner2", 0),
-		buildMockMiner(t, OwnerId, "miner3", 0),
-		buildMockMiner(t, OwnerId, "miner4", 0),
-		buildMockMiner(t, OwnerId, "miner5", 0),
-		buildMockMiner(t, OwnerId, "miner6", 0),
+		buildMockMiner(t, OwnerId, "miner1"),
+		buildMockMiner(t, OwnerId, "miner2"),
+		buildMockMiner(t, OwnerId, "miner3"),
+		buildMockMiner(t, OwnerId, "miner4"),
+		buildMockMiner(t, OwnerId, "miner5"),
+		buildMockMiner(t, OwnerId, "miner6"),
 	}
 	err = edb.Store.Get().Omit(clause.Associations).Create(&miners).Error
 	require.NoError(t, err)
 
 	sharders := []Sharder{
-		buildMockSharder(t, OwnerId, "sharder1", 0),
-		buildMockSharder(t, OwnerId, "sharder2", 0),
-		buildMockSharder(t, OwnerId, "sharder3", 0),
-		buildMockSharder(t, OwnerId, "sharder4", 0),
-		buildMockSharder(t, OwnerId, "sharder5", 0),
-		buildMockSharder(t, OwnerId, "sharder6", 0),
+		buildMockSharder(t, OwnerId, "sharder1"),
+		buildMockSharder(t, OwnerId, "sharder2"),
+		buildMockSharder(t, OwnerId, "sharder3"),
+		buildMockSharder(t, OwnerId, "sharder4"),
+		buildMockSharder(t, OwnerId, "sharder5"),
+		buildMockSharder(t, OwnerId, "sharder6"),
 	}
 	err = edb.Store.Get().Omit(clause.Associations).Create(&sharders).Error
 	require.NoError(t, err)
 
 	validators := []Validator{
-		buildMockValidator(t, OwnerId, "validator1", 0),
-		buildMockValidator(t, OwnerId, "validator2", 0),
-		buildMockValidator(t, OwnerId, "validator3", 0),
-		buildMockValidator(t, OwnerId, "validator4", 0),
-		buildMockValidator(t, OwnerId, "validator5", 0),
-		buildMockValidator(t, OwnerId, "validator6", 0),
+		buildMockValidator(t, OwnerId, "validator1"),
+		buildMockValidator(t, OwnerId, "validator2"),
+		buildMockValidator(t, OwnerId, "validator3"),
+		buildMockValidator(t, OwnerId, "validator4"),
+		buildMockValidator(t, OwnerId, "validator5"),
+		buildMockValidator(t, OwnerId, "validator6"),
 	}
 	err = edb.Store.Get().Omit(clause.Associations).Create(&validators).Error
 	require.NoError(t, err)
 
 	authorizers := []Authorizer{
-		buildMockAuthorizer(t, OwnerId, "authorizer1", 0),
-		buildMockAuthorizer(t, OwnerId, "authorizer2", 0),
-		buildMockAuthorizer(t, OwnerId, "authorizer3", 0),
-		buildMockAuthorizer(t, OwnerId, "authorizer4", 0),
-		buildMockAuthorizer(t, OwnerId, "authorizer5", 0),
-		buildMockAuthorizer(t, OwnerId, "authorizer6", 0),
+		buildMockAuthorizer(t, OwnerId, "authorizer1"),
+		buildMockAuthorizer(t, OwnerId, "authorizer2"),
+		buildMockAuthorizer(t, OwnerId, "authorizer3"),
+		buildMockAuthorizer(t, OwnerId, "authorizer4"),
+		buildMockAuthorizer(t, OwnerId, "authorizer5"),
+		buildMockAuthorizer(t, OwnerId, "authorizer6"),
 	}
 	err = edb.Store.Get().Omit(clause.Associations).Create(&authorizers).Error
 	require.NoError(t, err)
