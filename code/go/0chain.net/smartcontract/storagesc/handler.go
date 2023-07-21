@@ -1163,9 +1163,10 @@ type ChallengesResponse struct {
 //	500:
 func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.Request) {
 	var (
-		blobberID  = r.URL.Query().Get("blobber")
-		fromString = r.URL.Query().Get("from")
-		from       common.Timestamp
+		blobberID   = r.URL.Query().Get("blobber")
+		fromString  = r.URL.Query().Get("from")
+		challengeId = r.URL.Query().Get("last_challenge_id")
+		from        common.Timestamp
 	)
 
 	if fromString != "" {
@@ -1197,7 +1198,7 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 	}
 
 	challenges, err := getOpenChallengesForBlobber(
-		blobberID, from, common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), limit, sctx.GetEventDB(),
+		blobberID, from, common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), limit, sctx.GetEventDB(), challengeId,
 	)
 	if err != nil {
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))

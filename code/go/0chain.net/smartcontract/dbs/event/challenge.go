@@ -69,25 +69,33 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 }
 
 func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct common.Timestamp,
-	limit common2.Pagination) ([]*Challenge, error) {
+	limit common2.Pagination, challengeID string) ([]*Challenge, error) {
 	var chs []*Challenge
 	expiry := now - cct
 	if from < expiry {
 		from = expiry
 	}
 
+	var challengeWithChallengeID *Challenge
+	if challengeID != "" {
+		challengeWithChallengeID = &Challenge{}
+		result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{ChallengeID: challengeID}).First(&challengeWithChallengeID)
+		if result.Error != nil {
+			return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
+		}
+	}
+
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			from, blobberID, 0).
-		Limit(limit.Limit).
-		Offset(limit.Offset).
+		Where("created_at >= ? AND challenge_id > ", challengeWithChallengeID.CreatedAt, challengeID).
+		Limit(50).
+		Offset(0).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "created_at"},
-			Desc:   limit.IsDescending,
+			Desc:   false,
 		}).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "challenge_id"},
-			Desc:   limit.IsDescending,
+			Desc:   false,
 		})
 
 	result := query.Find(&chs)
