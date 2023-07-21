@@ -8,7 +8,6 @@ import (
 // swagger:model AuthorizerSnapshot
 type AuthorizerSnapshot struct {
 	AuthorizerID string `json:"id" gorm:"uniquIndex"`
-	BucketId     int64  `json:"bucket_id"`
 	Round        int64  `json:"round"`
 
 	Fee           currency.Coin `json:"fee"`
@@ -82,7 +81,6 @@ func createAuthorizerSnapshotFromAuthorizer(authorizer *Authorizer, round int64)
 	return &AuthorizerSnapshot{
 		AuthorizerID:  authorizer.ID,
 		Round:         round,
-		BucketId:      authorizer.BucketId,
 		Fee:           authorizer.Fee,
 		TotalStake:    authorizer.TotalStake,
 		ServiceCharge: authorizer.ServiceCharge,

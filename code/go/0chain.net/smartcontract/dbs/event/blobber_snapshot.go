@@ -9,7 +9,6 @@ import (
 type BlobberSnapshot struct {
 	BlobberID           string        `json:"id" gorm:"uniquIndex"`
 	Round 			 	int64         `json:"round"`
-	BucketId            int64         `json:"bucket_id"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
 	Allocated           int64         `json:"allocated"` // allocated capacity
@@ -68,7 +67,6 @@ func createBlobberSnapshotFromBlobber(b *Blobber, round int64) *BlobberSnapshot 
 	return &BlobberSnapshot{
 		BlobberID:          b.ID,
 		Round: 				round,
-		BucketId:           b.BucketId,
 		WritePrice:         b.WritePrice,
 		Capacity:           b.Capacity,
 		Allocated:          b.Allocated,

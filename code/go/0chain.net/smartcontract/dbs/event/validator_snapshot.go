@@ -8,7 +8,6 @@ import (
 // swagger:model ValidatorSnapshot
 type ValidatorSnapshot struct {
 	ValidatorID string `json:"id" gorm:"uniqueIndex"`
-	BucketId    int64  `json:"bucket_id"`
 
 	Round		  int64         `json:"round"`
 	TotalStake    currency.Coin `json:"total_stake"`
@@ -79,7 +78,6 @@ func createValidatorSnapshotFromValidator(validator *Validator, round int64) *Va
 	return &ValidatorSnapshot{
 		ValidatorID:   validator.ID,
 		Round:         round,
-		BucketId:      validator.BucketId,
 		TotalStake:    validator.TotalStake,
 		ServiceCharge: validator.ServiceCharge,
 		CreationRound: validator.CreationRound,

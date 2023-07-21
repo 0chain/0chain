@@ -8,7 +8,6 @@ import (
 // swagger:model MinerSnapshot
 type MinerSnapshot struct {
 	MinerID  string `json:"id" gorm:"uniqueIndex"`
-	BucketId int64  `json:"bucket_id"`
 	Round    int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
@@ -80,7 +79,6 @@ func createMinerSnapshotFromMiner(m *Miner, round int64) *MinerSnapshot {
 	return &MinerSnapshot{
 		MinerID:       m.ID,
 		Round:         round,
-		BucketId:      m.BucketId,
 		Fees:          m.Fees,
 		TotalStake:    m.TotalStake,
 		ServiceCharge: m.ServiceCharge,

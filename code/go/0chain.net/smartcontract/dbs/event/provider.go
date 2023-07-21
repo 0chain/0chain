@@ -12,7 +12,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/currency"
@@ -39,7 +38,6 @@ type Provider struct {
 	ID              string `gorm:"primaryKey"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	BucketId        int64            `gorm:"not null,default:0"`
 	DelegateWallet  string           `json:"delegate_wallet"`
 	NumDelegates    int              `json:"num_delegates"`
 	ServiceCharge   float64          `json:"service_charge"`
@@ -78,11 +76,6 @@ func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {
 	intID := new(big.Int)
 	intID.SetString(p.ID, 16)
 
-	period := config.Configuration().ChainConfig.DbSettings().AggregatePeriod
-	p.BucketId = 0
-	if period != 0 {
-		p.BucketId = big.NewInt(0).Mod(intID, big.NewInt(period)).Int64()
-	}
 	return
 }
 

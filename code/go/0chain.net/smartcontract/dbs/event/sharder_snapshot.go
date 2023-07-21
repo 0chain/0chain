@@ -8,7 +8,6 @@ import (
 // swagger:model SharderSnapshot
 type SharderSnapshot struct {
 	SharderID string `json:"id" gorm:"uniqueIndex"`
-	BucketId  int64  `json:"bucket_id"`
 	Round     int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
@@ -79,7 +78,6 @@ func (edb *EventDb) addSharderSnapshot(sharders []*Sharder, round int64) error {
 func createSharderSnapshotFromSharder(s *Sharder, round int64) *SharderSnapshot {
 	return &SharderSnapshot{
 		SharderID:     s.ID,
-		BucketId:      s.BucketId,
 		Round:         round,
 		Fees:          s.Fees,
 		TotalStake:    s.TotalStake,
