@@ -74,6 +74,8 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	var chs []*Challenge
 	expiry := now - cct
 
+	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("blobberID", blobberID), zap.Any("from", from), zap.Any("now", now), zap.Any("cct", cct), zap.Any("limit", limit), zap.Any("challengeID", challengeID))
+
 	var challengeWithChallengeID *Challenge
 	if challengeID != "" {
 		challengeWithChallengeID = &Challenge{}
