@@ -73,14 +73,14 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 		from = expiry
 	}
 
-	var challengeWithChallengeID *Challenge
-	if challengeID != "" {
-		challengeWithChallengeID = &Challenge{}
-		result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{ChallengeID: challengeID}).First(&challengeWithChallengeID)
-		if result.Error != nil {
-			return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
-		}
-	}
+	//var challengeWithChallengeID *Challenge
+	//if challengeID != "" {
+	//	challengeWithChallengeID = &Challenge{}
+	//	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{ChallengeID: challengeID}).First(&challengeWithChallengeID)
+	//	if result.Error != nil {
+	//		return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
+	//	}
+	//}
 
 	rawQuery := `
         SELECT *
