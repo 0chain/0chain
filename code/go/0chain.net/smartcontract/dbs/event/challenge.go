@@ -2,6 +2,8 @@ package event
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"strconv"
 
 	common2 "0chain.net/smartcontract/common"
@@ -86,10 +88,12 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 		}
 	}
 
+	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("challengeID", challengeID), zap.Any("challengeWithChallengeID", challengeWithChallengeID))
+
 	query := edb.Store.Get().Model(&Challenge{}).
 		Where("created_at >= ? AND challenge_id > ", strconv.FormatInt(int64(challengeWithChallengeID.CreatedAt), 10), challengeID).
-		Limit(50).
-		Offset(0).
+		Limit(limit.Limit).
+		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "created_at"},
 			Desc:   false,
@@ -104,6 +108,8 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
+
+	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
 
 	return chs, nil
 }
