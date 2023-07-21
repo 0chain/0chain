@@ -3,6 +3,7 @@ package storagesc
 import (
 	"0chain.net/core/maths"
 	"errors"
+	"go.uber.org/zap"
 	"strings"
 	"time"
 
@@ -158,6 +159,8 @@ func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances csta
 }
 
 func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb, challengeId string) ([]*StorageChallengeResponse, error) {
+	logging.Logger.Info("getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Any("from", from), zap.Any("cct", cct), zap.Any("limit", limit))
+
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from,
 		common.Timestamp(time.Now().Unix()), cct, limit, challengeId)

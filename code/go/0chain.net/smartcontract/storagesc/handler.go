@@ -1197,6 +1197,8 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		return
 	}
 
+	logging.Logger.Info("getOpenChallenges", zap.Any("conf", conf))
+
 	challenges, err := getOpenChallengesForBlobber(
 		blobberID, from, common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), limit, sctx.GetEventDB(), challengeId,
 	)
