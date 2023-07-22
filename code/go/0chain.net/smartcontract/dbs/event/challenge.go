@@ -83,6 +83,12 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 		if result.Error != nil {
 			return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
 		}
+	} else {
+		challengeWithChallengeID = &Challenge{}
+		result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{BlobberID: blobberID}).First(&challengeWithChallengeID)
+		if result.Error != nil {
+			return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
+		}
 	}
 
 	if challengeWithChallengeID.CreatedAt < expiry {
