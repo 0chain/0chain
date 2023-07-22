@@ -1353,11 +1353,13 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 ) (map[string]string, error) {
 	var expiredChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
+	logging.Logger.Info("removeExpiredChallenges found open challenges",
+		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
 		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
-		logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
+		//logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
 		if _, ok := expiredChallengeBlobberMap[oc.ID]; ok {
 			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ID))
 			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
@@ -1370,6 +1372,8 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 
 		// expired
 		expiredChallengeBlobberMap[oc.ID] = oc.BlobberID
+		logging.Logger.Info("removeExpiredChallenges found expired challenge",
+			zap.String("challengeID", oc.ID), zap.String("blobberID", oc.BlobberID))
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
