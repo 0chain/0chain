@@ -49,6 +49,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 			AllocationID:    ch.AllocationID,
 			BlobberID:       ch.BlobberID,
 			Responded:       ch.Responded,
+			RoundCreatedAt:  ch.RoundCreatedAt,
 		},
 		Seed:           ch.Seed,
 		AllocationRoot: ch.AllocationRoot,
