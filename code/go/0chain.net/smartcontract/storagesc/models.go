@@ -1553,7 +1553,6 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances cstate.StateContextI) 
 
 	if prevRM != nil {
 		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID ||
-			rm.Timestamp < prevRM.Timestamp ||
 			rm.ReadCounter < prevRM.ReadCounter {
 
 			return common.NewError("invalid_read_marker",

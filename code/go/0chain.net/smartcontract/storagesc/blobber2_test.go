@@ -136,18 +136,6 @@ func TestCommitBlobberRead(t *testing.T) {
 		require.True(t, strings.Contains(err.Error(), errFieldLength))
 	})
 
-	t.Run(errPreviousMarker+" -> timestamp", func(t *testing.T) {
-		var faultyLastRead = lastRead
-		faultyLastRead.timestamp = read.timestamp + 1
-		var err = testCommitBlobberRead(
-			t, blobberYaml, faultyLastRead, read, allocation, stakes, rPool,
-		)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), errCommitBlobber))
-		require.True(t, strings.Contains(err.Error(), errReadMarker))
-		require.True(t, strings.Contains(err.Error(), errPreviousMarker))
-	})
-
 	t.Run(errEarlyAllocation, func(t *testing.T) {
 		var faultyLastRead = lastRead
 		faultyLastRead.readCounter = read.readCounter + 1
