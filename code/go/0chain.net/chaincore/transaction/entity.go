@@ -204,6 +204,9 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 
 /*Validate - Entity implementation */
 func (t *Transaction) Validate(ctx context.Context) error {
+	if !encryption.IsHash(t.ToClientID) {
+		return errors.New("invalid to client id")
+	}
 	return t.ValidateWrtTime(ctx, common.Now())
 }
 

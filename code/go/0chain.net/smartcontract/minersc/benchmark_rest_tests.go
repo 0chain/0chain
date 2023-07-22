@@ -121,7 +121,7 @@ func BenchmarkRestTests(
 				FuncName: "nodePoolStat",
 				Params: map[string]string{
 					"id":      data.Miners[0],
-					"pool_id": getMinerDelegatePoolId(0, 0, spenum.Miner),
+					"pool_id": getMinerDelegatePoolId(0, 0, data.Clients),
 				},
 				Endpoint: mrh.getNodePoolStat,
 			},
