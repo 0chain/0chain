@@ -116,7 +116,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
 
 	query = edb.Store.Get().Model(&Challenge{}).
-		Where("created_at = ? AND blobber_id = ? AND responded = 0", challengeWithChallengeID.CreatedAt, blobberID).
+		Where("created_at = ? AND blobber_id = ? AND responded = 0 AND challenge_id > ?", challengeWithChallengeID.CreatedAt, blobberID, challengeID).
 		Limit(50).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "created_at"},
