@@ -145,4 +145,9 @@ func validateConfig() {
 			multisigsc.MaxSigners, viper.GetInt(bk.BenchDataListLength)))
 	}
 
+	if viper.GetInt64(bk.NumAllocations) > viper.GetInt64(bk.NumBlocks) {
+		log.Fatal(fmt.Errorf("number of allocations %d can't exceed the numebr of blocks %d",
+			viper.GetInt64(bk.NumAllocations), viper.GetInt64(bk.NumBlocks)))
+	}
+
 }
