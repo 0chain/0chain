@@ -71,7 +71,7 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 
 func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct common.Timestamp,
 	limit common2.Pagination, challengeID string) ([]*Challenge, error) {
-	var chs []*Challenge
+	var chs, chsSame []*Challenge
 	expiry := now - cct
 
 	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("blobberID", blobberID), zap.Any("from", from), zap.Any("now", now), zap.Any("cct", cct), zap.Any("limit", limit), zap.Any("challengeID", challengeID))
@@ -98,7 +98,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("challengeWithChallengeID", challengeWithChallengeID), zap.Any("from", from), zap.Any("now", now), zap.Any("cct", cct), zap.Any("limit", limit), zap.Any("challengeID", challengeID))
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("created_at >= ? AND blobber_id = ? AND responded = 0 AND challenge_id > ?", challengeWithChallengeID.CreatedAt, blobberID, challengeID).
+		Where("created_at > ? AND blobber_id = ? AND responded = 0", challengeWithChallengeID.CreatedAt, blobberID).
 		Limit(50).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "created_at"},
@@ -114,6 +114,26 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 	}
 
 	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
+
+	query = edb.Store.Get().Model(&Challenge{}).
+		Where("created_at = ? AND blobber_id = ? AND responded = 0", challengeWithChallengeID.CreatedAt, blobberID).
+		Limit(50).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "created_at"},
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "challenge_id"},
+		})
+
+	result = query.Find(&chsSame)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
+			blobberID, result.Error)
+	}
+
+	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chsSame", chsSame))
+
+	chs = append(chs, chsSame...)
 
 	return chs, nil
 }
