@@ -26,6 +26,7 @@ type Challenge struct {
 	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded"`
+	RoundCreatedAt int64            `json:"round_created_at"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
@@ -69,39 +70,17 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 	return chs, result.Error
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct common.Timestamp,
-	limit common2.Pagination, challengeID string) ([]*Challenge, error) {
-	var chs, chsSame []*Challenge
-	expiry := now - cct
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination) ([]*Challenge, error) {
 
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("blobberID", blobberID), zap.Any("from", from), zap.Any("now", now), zap.Any("cct", cct), zap.Any("limit", limit), zap.Any("challengeID", challengeID))
+	logging.Logger.Info("1 GetOpenChallengesForBlobber", zap.Any("blobberID", blobberID), zap.Any("from", from), zap.Any("limit", limit))
 
-	var challengeWithChallengeID *Challenge
-	if challengeID != "" {
-		challengeWithChallengeID = &Challenge{}
-		result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{ChallengeID: challengeID}).First(&challengeWithChallengeID)
-		if result.Error != nil {
-			return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
-		}
-	} else {
-		challengeWithChallengeID = &Challenge{}
-		result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{BlobberID: blobberID}).First(&challengeWithChallengeID)
-		if result.Error != nil {
-			return nil, fmt.Errorf("error retriving Challenge node with ID %v; error: %v", challengeID, result.Error)
-		}
-	}
-
-	if challengeWithChallengeID.CreatedAt < expiry {
-		challengeWithChallengeID.CreatedAt = expiry
-	}
-
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("challengeWithChallengeID", challengeWithChallengeID), zap.Any("from", from), zap.Any("now", now), zap.Any("cct", cct), zap.Any("limit", limit), zap.Any("challengeID", challengeID))
+	var chs []*Challenge
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("created_at > ? AND blobber_id = ? AND responded = 0", challengeWithChallengeID.CreatedAt, blobberID).
-		Limit(50).
+		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, 0).
+		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
+			Column: clause.Column{Name: "round_created_at"},
 		}).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "challenge_id"},
@@ -113,27 +92,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 			blobberID, result.Error)
 	}
 
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
-
-	query = edb.Store.Get().Model(&Challenge{}).
-		Where("created_at = ? AND blobber_id = ? AND responded = 0 AND challenge_id > ?", challengeWithChallengeID.CreatedAt, blobberID, challengeID).
-		Limit(50).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "challenge_id"},
-		})
-
-	result = query.Find(&chsSame)
-	if result.Error != nil {
-		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
-			blobberID, result.Error)
-	}
-
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chsSame", chsSame))
-
-	chs = append(chs, chsSame...)
+	logging.Logger.Info("2 GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
 
 	return chs, nil
 }

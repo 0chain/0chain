@@ -1,17 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/core/maths"
-	"errors"
-	"go.uber.org/zap"
-	"strings"
-	"time"
-
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
+	"0chain.net/core/maths"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
+	"errors"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+	"strings"
 )
 
 func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int) *event.Challenge { // nolint
@@ -31,6 +28,7 @@ func storageChallengeToChallengeTable(ch *StorageChallengeResponse, expiredN int
 		Responded:      ch.Responded,
 		ExpiredN:       expiredN,
 		Timestamp:      ch.Timestamp,
+		RoundCreatedAt: ch.RoundCreatedAt,
 	}
 }
 
@@ -158,12 +156,11 @@ func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances csta
 
 }
 
-func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, limit common2.Pagination, edb *event.EventDb, challengeId string) ([]*StorageChallengeResponse, error) {
-	logging.Logger.Info("getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Any("from", from), zap.Any("cct", cct), zap.Any("limit", limit))
+func getOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
+	logging.Logger.Info("1 getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Int64("from", from), zap.Any("limit", limit))
 
 	var chs []*StorageChallengeResponse
-	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from,
-		common.Timestamp(time.Now().Unix()), cct, limit, challengeId)
+	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +172,8 @@ func getOpenChallengesForBlobber(blobberID string, from, cct common.Timestamp, l
 		}
 		chs = append(chs, challInfo)
 	}
+
+	logging.Logger.Info("2 getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Int64("from", from), zap.Any("limit", limit), zap.Any("chs", chs))
 	return chs, nil
 }
 
