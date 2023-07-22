@@ -26,9 +26,9 @@ type providerPenaltiesDelegates struct {
 
 func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDelegates, error) {
 	var (
-		rewardsMap   = make(map[string]currency.Coin)
+		rewardsMap      = make(map[string]currency.Coin)
 		totalRewardsMap = make(map[string]currency.Coin)
-		dpRewardsMap = make(map[string]map[string]currency.Coin)
+		dpRewardsMap    = make(map[string]map[string]currency.Coin)
 	)
 	for i, sp := range spus {
 		if sp.Reward != 0 {

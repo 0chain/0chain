@@ -199,14 +199,17 @@ type ValidationNode struct {
 	LastHealthCheck   common.Timestamp   `json:"last_health_check"`
 }
 
-// validate the validator configurations
-func (sn *ValidationNode) validate(_ *Config) (err error) {
-	if strings.Contains(sn.BaseURL, "localhost") &&
+func validateBaseUrl(baseUrl *string) error {
+	if baseUrl != nil && strings.Contains(*baseUrl, "localhost") &&
 		node.Self.Host != "localhost" {
 		return errors.New("invalid validator base url")
 	}
 
-	return
+	return nil
+}
+
+func GetValidatorUrlKey(globalKey, baseUrl string) datastore.Key {
+	return datastore.Key(globalKey + "validator:" + baseUrl)
 }
 
 func (sn *ValidationNode) GetKey(_ string) datastore.Key {
@@ -214,7 +217,7 @@ func (sn *ValidationNode) GetKey(_ string) datastore.Key {
 }
 
 func (sn *ValidationNode) GetUrlKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.BaseURL)
+	return GetValidatorUrlKey(globalKey, sn.BaseURL)
 }
 
 func (sn *ValidationNode) Encode() []byte {
@@ -263,17 +266,30 @@ func (t *Terms) minLockDemand(gbSize, rdtu, minLockDemand float64) (currency.Coi
 
 // validate a received terms
 func (t *Terms) validate(conf *Config) (err error) {
-	if t.ReadPrice > conf.MaxReadPrice {
+	if err = validateReadPrice(t.ReadPrice, conf); err != nil {
+		return
+	}
+
+	return validateWritePrice(t.WritePrice, conf)
+}
+
+func validateReadPrice(readPrice currency.Coin, conf *Config) error {
+	if readPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
-	if t.WritePrice < conf.MinWritePrice {
+
+	return nil
+}
+
+func validateWritePrice(writePrice currency.Coin, conf *Config) error {
+	if writePrice < conf.MinWritePrice {
 		return errors.New("write_price is less than min_write_price allowed")
 	}
-	if t.WritePrice > conf.MaxWritePrice {
+	if writePrice > conf.MaxWritePrice {
 		return errors.New("write_price is greater than max_write_price allowed")
 	}
 
-	return // nil
+	return nil
 }
 
 const (
@@ -333,6 +349,10 @@ type StorageNode struct {
 	NotAvailable      bool               `json:"not_available"`
 }
 
+func GetUrlKey(baseUrl, globalKey string) datastore.Key {
+	return datastore.Key(globalKey + baseUrl)
+}
+
 // validate the blobber configurations
 func (sn *StorageNode) validate(conf *Config) (err error) {
 	if err = sn.Terms.validate(conf); err != nil {
@@ -342,9 +362,8 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 		return errors.New("insufficient blobber capacity")
 	}
 
-	if strings.Contains(sn.BaseURL, "localhost") &&
-		node.Self.Host != "localhost" {
-		return errors.New("invalid blobber base url")
+	if err := validateBaseUrl(&sn.BaseURL); err != nil {
+		return err
 	}
 
 	if err := sn.Geolocation.validate(); err != nil {
@@ -359,7 +378,7 @@ func (sn *StorageNode) GetKey() datastore.Key {
 }
 
 func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.BaseURL)
+	return GetUrlKey(sn.BaseURL, globalKey)
 }
 
 func (sn *StorageNode) Encode() []byte {
@@ -655,8 +674,6 @@ type StorageAllocation struct {
 	// Canceled set to true where allocation finalized by cancel_allocation
 	// transaction.
 	Canceled bool `json:"canceled,omitempty"`
-	// UsedSize used to calculate blobber reward ratio.
-	UsedSize int64 `json:"-" msg:"-"`
 
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
@@ -711,7 +728,7 @@ func (sa *StorageAllocation) addToWritePool(
 	balances cstate.StateContextI,
 	opts ...WithOption,
 ) error {
-	//default behaviour
+	// default behaviour
 	if len(opts) == 0 {
 		value, err := WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)(balances)
 		if err != nil {
@@ -894,20 +911,39 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) removeBlobber(
-	blobbers []*StorageNode,
-	blobberID string,
-	ssc *StorageSmartContract,
-	balances cstate.StateContextI,
-) ([]*StorageNode, error) {
-	blobAlloc, found := sa.BlobberAllocsMap[blobberID]
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+func (sa *StorageAllocation) removeBlobber(blobberID string) error {
+	_, ok := sa.BlobberAllocsMap[blobberID]
+	if !ok {
+		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 	delete(sa.BlobberAllocsMap, blobberID)
 
+	var found bool
+	for i, d := range sa.BlobberAllocs {
+		if d.BlobberID == blobberID {
+			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
+			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+	}
+	return nil
+}
+
+func removeBlobber(
+	sa *StorageAllocation,
+	blobbers []*StorageNode,
+	blobberID string,
+	balances cstate.StateContextI) ([]*StorageNode, error) {
+	if err := sa.removeBlobber(blobberID); err != nil {
+		return nil, err
+	}
+
 	var removedBlobber *StorageNode
-	found = false
+	var found bool
 	for i, d := range blobbers {
 		if d.ID == blobberID {
 			removedBlobber = blobbers[i]
@@ -918,25 +954,11 @@ func (sa *StorageAllocation) removeBlobber(
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
+		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
-	found = false
-	for i, d := range sa.BlobberAllocs {
-		if d.BlobberID == blobberID {
-			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
-			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
-
-			if err := removeAllocationFromBlobber(balances, d); err != nil {
-				return nil, err
-			}
-
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobAlloc.BlobberID)
+	if err := removeAllocationFromBlobber(balances, sa.ID, blobberID); err != nil {
+		return nil, err
 	}
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
@@ -950,13 +972,12 @@ func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
 	blobbers []*StorageNode,
 	addId, removeId string,
-	ssc *StorageSmartContract,
 	now common.Timestamp,
 	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
 	if len(removeId) > 0 {
-		if blobbers, err = sa.removeBlobber(blobbers, removeId, ssc, balances); err != nil {
+		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances); err != nil {
 			return nil, err
 		}
 	} else {
@@ -975,7 +996,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
+	if sp, err = getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
 	staked, err := sp.stake()
@@ -1020,12 +1041,7 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 }
 
 // removeAllocationFromBlobber removes the allocation from blobber
-func removeAllocationFromBlobber(balances cstate.StateContextI, blobAlloc *BlobberAllocation) error {
-	var (
-		blobberID = blobAlloc.BlobberID
-		allocID   = blobAlloc.AllocationID
-	)
-
+func removeAllocationFromBlobber(balances cstate.StateContextI, allocID, blobberID string) error {
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)
@@ -1295,9 +1311,6 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	}
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
-		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
-		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return nil
@@ -1324,9 +1337,6 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberAllocs {
-		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
-		}
 		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return o, nil
@@ -1368,12 +1378,15 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
 
-			emitUpdateChallenge(&StorageChallenge{
+			err := emitUpdateChallenge(&StorageChallenge{
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
 			}, false, balances, sa.Stats, ba.Stats)
 
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
