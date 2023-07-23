@@ -31,6 +31,14 @@ type Sharder struct {
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
 }
 
+func (m *Sharder) TableName() string {
+	return "sharders"
+}
+
+func (s Sharder) GetID() string {
+	return s.ID
+}
+
 func (s *Sharder) GetTotalStake() currency.Coin {
 	return s.TotalStake
 }
