@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/0chain/common/core/logging"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -144,8 +145,8 @@ func (edb *EventDb) BuildChangedProvidersMapFromEvents(events []Event) (Provider
 		spenum.Validator:  make([]string, 0, len(ids[spenum.Validator])),
 	}
 	
-	for provider, ids := range ids {
-		for id := range ids {
+	for provider, pids := range ids {
+		for id := range pids {
 			idsLists[provider] = append(idsLists[provider], id)
 		}
 	}
@@ -189,11 +190,13 @@ func getProvidersById[P IProvider](edb *EventDb, ids []string) ([]IProvider, err
 		providers []P
 		tableName = model.TableName()
 	)
+
+	
 	err := edb.Get().
 		Model(&model).
-		Where(fmt.Sprintf("%v.id IN (?)", tableName), ids).
 		Joins("Rewards").
-		Find(&providers).Error
+		Joins(fmt.Sprintf("INNER JOIN unnest(?::text[]) as ids(id) on ids.id = %v.id", tableName), pq.Array(ids)).
+		Find(&providers).Debug().Error
 	if err != nil {
 		return nil, err
 	}
