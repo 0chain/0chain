@@ -34,9 +34,10 @@ import (
 )
 
 type benchmarkResults struct {
-	test    benchmark.BenchTestI
-	result  testing.BenchmarkResult
-	timings map[string]time.Duration
+	test      benchmark.BenchTestI
+	result    testing.BenchmarkResult
+	timings   map[string]time.Duration
+	numEvents int
 	error
 }
 
@@ -342,10 +343,11 @@ func runSuite(
 			benchmarkResult = append(
 				benchmarkResult,
 				benchmarkResults{
-					test:    bm,
-					result:  result,
-					error:   err,
-					timings: resTimings,
+					test:      bm,
+					result:    result,
+					error:     err,
+					timings:   resTimings,
+					numEvents: len(benchmarkEvents[bm.Name()]),
 				},
 			)
 
