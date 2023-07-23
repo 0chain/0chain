@@ -239,9 +239,11 @@ func printResults(results []suiteResults) {
 	if viper.GetBool(bk.OptionsEventDatabaseBenchmarks) && viper.GetBool(bk.EventDbEnabled) &&
 		viper.GetString(bk.OptionsSmartContractEventFile) == viper.GetString(bk.OptionsEventDatabaseEventFile) {
 		fmt.Printf("\nCombined smartcontract and event processing times")
-		fmt.Printf("\n%s,%s,%s,%s,%ss\n", "name", "sc/ms", "events/ms", "num events", "ms/event\n")
-		for _, edbResult := range mapResults["event_db"] {
+		fmt.Printf("\n%s,%s,%s,%s,%s,%s,%s\n", "name", "sc/ms", "events/ms", "num events", "ms/event", "event", "aggreates")
+		for i, edbResult := range mapResults[bk.SourceNames[bk.EventDatabase]] {
 			name := edbResult.test.Name()
+			edbEventsResult := mapResults[bk.SourceNames[bk.EventDatabaseEvents]][i]
+			edbEventsAggregates := mapResults[bk.SourceNames[bk.EventDatabaseAggregates]][i]
 			splitName := strings.Split(name, ".")
 			if len(splitName) != 2 {
 				log.Println("bad name", name, "should be exactly one period.")
@@ -250,12 +252,16 @@ func printResults(results []suiteResults) {
 				if smartContractRestult.test.Name() == name {
 					takenSC := float64(smartContractRestult.result.T.Milliseconds()) / float64(smartContractRestult.result.N)
 					takenEdb := float64(edbResult.result.T.Milliseconds()) / float64(edbResult.result.N)
-					fmt.Printf("%s,%f,%f,%d,%f\n",
+					takenEvents := float64(edbEventsResult.result.T.Milliseconds()) / float64(edbEventsResult.result.N)
+					takenAggregates := float64(edbEventsAggregates.result.T.Milliseconds()) / float64(edbEventsAggregates.result.N)
+					fmt.Printf("%s,%f,%f,%d,%f,%f,%f\n",
 						name,
 						takenSC,
 						takenEdb,
 						smartContractRestult.numEvents,
 						takenEdb/float64(smartContractRestult.numEvents),
+						takenEvents,
+						takenAggregates,
 					)
 				}
 			}

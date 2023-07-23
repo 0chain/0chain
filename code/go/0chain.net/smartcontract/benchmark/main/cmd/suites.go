@@ -134,11 +134,26 @@ func runSuites(
 		}
 		timer := time.Now()
 		log.Println("starting benchmark tests")
-		suiteResult := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap), data.EventDb)
+		suiteResult := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap, benchmark.EventDatabase), data.EventDb)
 		results = append(results, suiteResults{
 			name:    benchmark.SourceNames[benchmark.EventDatabase],
 			results: suiteResult,
 		})
+
+		log.Println("starting benchmark event tests")
+		suiteResultEvents := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap, benchmark.EventDatabaseEvents), data.EventDb)
+		results = append(results, suiteResults{
+			name:    benchmark.SourceNames[benchmark.EventDatabaseEvents],
+			results: suiteResultEvents,
+		})
+
+		log.Println("starting benchmark aggregate tests")
+		suiteResultAggregates := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap, benchmark.EventDatabaseAggregates), data.EventDb)
+		results = append(results, suiteResults{
+			name:    benchmark.SourceNames[benchmark.EventDatabaseAggregates],
+			results: suiteResultAggregates,
+		})
+
 		log.Println("finished benchmark tests, took:", time.Since(timer))
 	}
 	return results
