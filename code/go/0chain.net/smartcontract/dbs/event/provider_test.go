@@ -1,6 +1,7 @@
 package event
 
 import (
+	"sort"
 	"testing"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -455,6 +456,9 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 		}
 
 		assert.Equal(t, 2, len(blobbersFromDB))
+		sort.Slice(blobbersFromDB, func(i, j int) bool {
+			return blobbersFromDB[i].ID < blobbersFromDB[j].ID
+		})
 		assert.Equal(t, blobbers[0].ID, blobbersFromDB[0].ID)
 		assert.Equal(t, blobbers[0].TotalServiceCharge, blobbersFromDB[0].TotalServiceCharge)
 		assert.Equal(t, blobbers[0].LastHealthCheck, blobbersFromDB[0].LastHealthCheck)
