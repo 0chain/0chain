@@ -544,6 +544,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			DataShards:   conf.FreeAllocationSettings.DataShards,
 			ParityShards: conf.FreeAllocationSettings.ParityShards,
 			TimeUnit:     mockTimeUnit,
+			Stats:        &StorageAllocationStats{},
 		}
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(

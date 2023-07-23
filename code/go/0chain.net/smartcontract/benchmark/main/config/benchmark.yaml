@@ -16,12 +16,15 @@ simulation:
   num_sharder_delegates: 10
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
-  num_write_redeem_allocation: 1
   num_challenges_blobber: 1
   num_authorizers: 2
   num_reward_partition_blobber: 5
-  num_blocks: 200
+  num_blocks: 320
   num_transactions_per_block: 10
+  num_write_redeem_allocation: 2
+  num_read_markers_allocation: 10
+  num_rounds_between_writes: 5
+  num_rounds_between_reads: 10
 
 options:
   verbose: true
