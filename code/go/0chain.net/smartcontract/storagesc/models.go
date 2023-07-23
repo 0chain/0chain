@@ -175,6 +175,7 @@ type StorageChallenge struct {
 	AllocationID    string              `json:"allocation_id"`
 	BlobberID       string              `json:"blobber_id"`
 	Responded       int64               `json:"responded"`
+	RoundCreatedAt  int64               `json:"round_created_at"`
 }
 
 func (sc *StorageChallenge) GetKey(globalKey string) datastore.Key {

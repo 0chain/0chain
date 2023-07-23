@@ -409,6 +409,7 @@ CREATE TABLE public.challenges (
                                    allocation_root text,
                                    responded bigint,
                                    passed boolean,
+                                   round_created_at bigint,
                                    round_responded bigint
 );
 

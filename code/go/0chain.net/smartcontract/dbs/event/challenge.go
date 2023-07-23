@@ -1,10 +1,11 @@
 package event
 
 import (
-	"fmt"
-
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
+	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
@@ -25,6 +26,7 @@ type Challenge struct {
 	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded"`
+	RoundCreatedAt int64            `json:"round_created_at"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
@@ -68,26 +70,20 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 	return chs, result.Error
 }
 
-func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct common.Timestamp,
-	limit common2.Pagination) ([]*Challenge, error) {
+func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination) ([]*Challenge, error) {
+
+	logging.Logger.Info("1 GetOpenChallengesForBlobber", zap.Any("blobberID", blobberID), zap.Any("from", from), zap.Any("limit", limit))
+
 	var chs []*Challenge
-	expiry := now - cct
-	if from < expiry {
-		from = expiry
-	}
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("created_at > ? AND blobber_id = ? AND responded = ?",
-			from, blobberID, 0).
+		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, 0).
 		Limit(limit.Limit).
-		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "created_at"},
-			Desc:   limit.IsDescending,
+			Column: clause.Column{Name: "round_created_at"},
 		}).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "challenge_id"},
-			Desc:   limit.IsDescending,
 		})
 
 	result := query.Find(&chs)
@@ -95,6 +91,8 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from, now, cct
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
+
+	logging.Logger.Info("2 GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
 
 	return chs, nil
 }
