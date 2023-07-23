@@ -2,14 +2,12 @@ package event
 
 import (
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model MinerSnapshot
 type MinerSnapshot struct {
-	MinerID  string `json:"id" gorm:"index"`
-	BucketId int64  `json:"bucket_id"`
+	MinerID  string `json:"id" gorm:"uniqueIndex"`
 	Round    int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
@@ -19,6 +17,22 @@ type MinerSnapshot struct {
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
 	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (ms *MinerSnapshot) GetID() string {
+	return ms.MinerID
+}
+
+func (ms *MinerSnapshot) GetRound() int64 {
+	return ms.Round
+}
+
+func (ms *MinerSnapshot) SetID(id string) {
+	ms.MinerID = id
+}
+
+func (ms *MinerSnapshot) SetRound(round int64) {
+	ms.Round = round
 }
 
 func (m *MinerSnapshot) IsOffline() bool {
@@ -49,44 +63,28 @@ func (m *MinerSnapshot) SetTotalRewards(value currency.Coin) {
 	m.TotalRewards = value
 }
 
-func (edb *EventDb) getMinerSnapshots(limit, offset int64) (map[string]MinerSnapshot, error) {
-	var snapshots []MinerSnapshot
-	result := edb.Store.Get().
-		Raw("SELECT * FROM miner_snapshots WHERE miner_id in (select id from miner_old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&snapshots)
-	if result.Error != nil {
-		return nil, result.Error
+func (edb *EventDb) addMinerSnapshot(miners []*Miner, round int64) error {
+	var snapshots []*MinerSnapshot
+	for _, miner := range miners {
+		snapshots = append(snapshots, createMinerSnapshotFromMiner(miner, round))
 	}
 
-	var mapSnapshots = make(map[string]MinerSnapshot, len(snapshots))
-	logging.Logger.Debug("get_miner_snapshot", zap.Int("snapshots selected", len(snapshots)))
-	logging.Logger.Debug("get_miner_snapshot", zap.Int64("snapshots rows selected", result.RowsAffected))
-
-	for _, snapshot := range snapshots {
-		mapSnapshots[snapshot.MinerID] = snapshot
-	}
-
-	result = edb.Store.Get().Where("miner_id IN (select id from miner_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&MinerSnapshot{})
-	logging.Logger.Debug("get_miner_snapshot", zap.Int64("deleted rows", result.RowsAffected))
-	return mapSnapshots, result.Error
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "miner_id"}},
+		UpdateAll: true,
+	}).Create(&snapshots).Error
 }
 
-func (edb *EventDb) addMinerSnapshot(miners []Miner, round int64) error {
-	var snapshots []MinerSnapshot
-	for _, miner := range miners {
-		snapshots = append(snapshots, MinerSnapshot{
-			MinerID:       miner.ID,
-			Round:         round,
-			BucketId:      miner.BucketId,
-			Fees:          miner.Fees,
-			TotalStake:    miner.TotalStake,
-			ServiceCharge: miner.ServiceCharge,
-			CreationRound: miner.CreationRound,
-			TotalRewards:  miner.Rewards.TotalRewards,
-			IsKilled:      miner.IsKilled,
-			IsShutdown:    miner.IsShutdown,
-		})
+func createMinerSnapshotFromMiner(m *Miner, round int64) *MinerSnapshot {
+	return &MinerSnapshot{
+		MinerID:       m.ID,
+		Round:         round,
+		Fees:          m.Fees,
+		TotalStake:    m.TotalStake,
+		ServiceCharge: m.ServiceCharge,
+		CreationRound: m.CreationRound,
+		TotalRewards:  m.Rewards.TotalRewards,
+		IsKilled:      m.IsKilled,
+		IsShutdown:    m.IsShutdown,
 	}
-
-	return edb.Store.Get().Create(&snapshots).Error
 }

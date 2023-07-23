@@ -12,6 +12,7 @@ import (
 
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
+	"github.com/go-faker/faker/v4"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -283,4 +284,19 @@ func setUpBlobbers(t *testing.T, eventDb *EventDb, number int, withStats bool) [
 	}
 	require.NoError(t, eventDb.addBlobbers(blobbers))
 	return ids
+}
+
+func buildMockBlobber(t *testing.T, pid string) Blobber {
+	var curBlobber Blobber
+	err := faker.FakeData(&curBlobber)
+	require.NoError(t, err)
+	curBlobber.ID = pid
+	curBlobber.DelegateWallet = OwnerId
+	curBlobber.BaseURL = fmt.Sprintf("http://url-%v.com", pid)
+	curBlobber.WritePrice += 10
+	curBlobber.Capacity += int64(curBlobber.TotalStake) * int64(GB)
+	curBlobber.IsKilled = false
+	curBlobber.IsShutdown = false
+	curBlobber.Rewards = ProviderRewards{}
+	return curBlobber
 }
