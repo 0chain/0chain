@@ -33,6 +33,8 @@ const (
 	ZCNSCBridgeRest
 	Control
 	EventDatabase
+	EventDatabaseEvents
+	EventDatabaseAggregates
 	NumberOdfBenchmarkSources
 )
 
@@ -51,22 +53,26 @@ var (
 		"zcnscbridge_rest",
 		"control",
 		"event_db",
+		"event_db_events",
+		"event_db_aggregates",
 	}
 
 	SourceCode = map[string]Source{
-		SourceNames[Storage]:         Storage,
-		SourceNames[StorageRest]:     StorageRest,
-		SourceNames[Miner]:           Miner,
-		SourceNames[MinerRest]:       MinerRest,
-		SourceNames[Faucet]:          Faucet,
-		SourceNames[FaucetRest]:      FaucetRest,
-		SourceNames[Vesting]:         Vesting,
-		SourceNames[VestingRest]:     VestingRest,
-		SourceNames[MultiSig]:        MultiSig,
-		SourceNames[ZCNSCBridge]:     ZCNSCBridge,
-		SourceNames[ZCNSCBridgeRest]: ZCNSCBridgeRest,
-		SourceNames[Control]:         Control,
-		SourceNames[EventDatabase]:   EventDatabase,
+		SourceNames[Storage]:                 Storage,
+		SourceNames[StorageRest]:             StorageRest,
+		SourceNames[Miner]:                   Miner,
+		SourceNames[MinerRest]:               MinerRest,
+		SourceNames[Faucet]:                  Faucet,
+		SourceNames[FaucetRest]:              FaucetRest,
+		SourceNames[Vesting]:                 Vesting,
+		SourceNames[VestingRest]:             VestingRest,
+		SourceNames[MultiSig]:                MultiSig,
+		SourceNames[ZCNSCBridge]:             ZCNSCBridge,
+		SourceNames[ZCNSCBridgeRest]:         ZCNSCBridgeRest,
+		SourceNames[Control]:                 Control,
+		SourceNames[EventDatabase]:           EventDatabase,
+		SourceNames[EventDatabaseEvents]:     EventDatabaseEvents,
+		SourceNames[EventDatabaseAggregates]: EventDatabaseAggregates,
 	}
 )
 

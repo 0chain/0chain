@@ -239,7 +239,7 @@ func printResults(results []suiteResults) {
 	if viper.GetBool(bk.OptionsEventDatabaseBenchmarks) && viper.GetBool(bk.EventDbEnabled) &&
 		viper.GetString(bk.OptionsSmartContractEventFile) == viper.GetString(bk.OptionsEventDatabaseEventFile) {
 		fmt.Printf("\nCombined smartcontract and event processing times")
-		fmt.Printf("\n%s,%s,%s,%s,%s,%s,%s\n", "name", "sc/ms", "events/ms", "num events", "ms/event", "event", "aggreates")
+		fmt.Printf("\n%s,%s,%s,%s,%s,%s,%s,%s\n", "name", "sc/ms", "events/ms", "num events", "ms/event", "event", "aggreates", "differnece")
 		for i, edbResult := range mapResults[bk.SourceNames[bk.EventDatabase]] {
 			name := edbResult.test.Name()
 			edbEventsResult := mapResults[bk.SourceNames[bk.EventDatabaseEvents]][i]
@@ -254,7 +254,7 @@ func printResults(results []suiteResults) {
 					takenEdb := float64(edbResult.result.T.Milliseconds()) / float64(edbResult.result.N)
 					takenEvents := float64(edbEventsResult.result.T.Milliseconds()) / float64(edbEventsResult.result.N)
 					takenAggregates := float64(edbEventsAggregates.result.T.Milliseconds()) / float64(edbEventsAggregates.result.N)
-					fmt.Printf("%s,%f,%f,%d,%f,%f,%f\n",
+					fmt.Printf("%s,%f,%f,%d,%f,%f,%f,%f\n",
 						name,
 						takenSC,
 						takenEdb,
@@ -262,6 +262,7 @@ func printResults(results []suiteResults) {
 						takenEdb/float64(smartContractRestult.numEvents),
 						takenEvents,
 						takenAggregates,
+						takenEvents+takenAggregates-takenEdb,
 					)
 				}
 			}
