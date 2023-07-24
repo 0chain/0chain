@@ -2,14 +2,12 @@ package event
 
 import (
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model AuthorizerSnapshot
 type AuthorizerSnapshot struct {
-	AuthorizerID string `json:"id" gorm:"index"`
-	BucketId     int64  `json:"bucket_id"`
+	AuthorizerID string `json:"id" gorm:"uniquIndex"`
 	Round        int64  `json:"round"`
 
 	Fee           currency.Coin `json:"fee"`
@@ -21,6 +19,22 @@ type AuthorizerSnapshot struct {
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
 	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (as *AuthorizerSnapshot) GetID() string {
+	return as.AuthorizerID
+}
+
+func (as *AuthorizerSnapshot) GetRound() int64 {
+	return as.Round
+}
+
+func (as *AuthorizerSnapshot) SetID(id string) {
+	as.AuthorizerID = id
+}
+
+func (as *AuthorizerSnapshot) SetRound(round int64) {
+	as.Round = round
 }
 
 func (a *AuthorizerSnapshot) IsOffline() bool {
@@ -51,46 +65,30 @@ func (a *AuthorizerSnapshot) SetTotalRewards(value currency.Coin) {
 	a.TotalRewards = value
 }
 
-func (edb *EventDb) getAuthorizerSnapshots(limit, offset int64) (map[string]AuthorizerSnapshot, error) {
-	var snapshots []AuthorizerSnapshot
-	result := edb.Store.Get().
-		Raw("SELECT * FROM authorizer_snapshots WHERE authorizer_id in (select id from authorizer_old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&snapshots)
-	if result.Error != nil {
-		return nil, result.Error
+func (edb *EventDb) addAuthorizerSnapshot(authorizers []*Authorizer, round int64) error {
+	var snapshots []*AuthorizerSnapshot
+	for _, authorizer := range authorizers {
+		snapshots = append(snapshots, createAuthorizerSnapshotFromAuthorizer(authorizer, round))
 	}
 
-	var mapSnapshots = make(map[string]AuthorizerSnapshot, len(snapshots))
-	logging.Logger.Debug("get_authorizer_snapshot", zap.Int("snapshots selected", len(snapshots)))
-	logging.Logger.Debug("get_authorizer_snapshot", zap.Int64("snapshots rows selected", result.RowsAffected))
-
-	for _, snapshot := range snapshots {
-		mapSnapshots[snapshot.AuthorizerID] = snapshot
-	}
-
-	result = edb.Store.Get().Where("authorizer_id IN (select id from authorizer_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&AuthorizerSnapshot{})
-	logging.Logger.Debug("get_authorizer_snapshot", zap.Int64("deleted rows", result.RowsAffected))
-	return mapSnapshots, result.Error
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "authorizer_id"}},
+		UpdateAll: true,
+	}).Create(&snapshots).Error
 }
 
-func (edb *EventDb) addAuthorizerSnapshot(authorizers []Authorizer, round int64) error {
-	var snapshots []AuthorizerSnapshot
-	for _, authorizer := range authorizers {
-		snapshots = append(snapshots, AuthorizerSnapshot{
-			AuthorizerID:  authorizer.ID,
-			Round:         round,
-			BucketId:      authorizer.BucketId,
-			Fee:           authorizer.Fee,
-			TotalStake:    authorizer.TotalStake,
-			ServiceCharge: authorizer.ServiceCharge,
-			CreationRound: authorizer.CreationRound,
-			TotalRewards:  authorizer.Rewards.TotalRewards,
-			TotalMint:     authorizer.TotalMint,
-			TotalBurn:     authorizer.TotalBurn,
-			IsKilled:      authorizer.IsKilled,
-			IsShutdown:    authorizer.IsShutdown,
-		})
+func createAuthorizerSnapshotFromAuthorizer(authorizer *Authorizer, round int64) *AuthorizerSnapshot {
+	return &AuthorizerSnapshot{
+		AuthorizerID:  authorizer.ID,
+		Round:         round,
+		Fee:           authorizer.Fee,
+		TotalStake:    authorizer.TotalStake,
+		ServiceCharge: authorizer.ServiceCharge,
+		CreationRound: authorizer.CreationRound,
+		TotalRewards:  authorizer.Rewards.TotalRewards,
+		TotalMint:     authorizer.TotalMint,
+		TotalBurn:     authorizer.TotalBurn,
+		IsKilled:      authorizer.IsKilled,
+		IsShutdown:    authorizer.IsShutdown,
 	}
-
-	return edb.Store.Get().Create(&snapshots).Error
 }

@@ -40,8 +40,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
 
-	var dpsSze = alloc.DataShards + alloc.ParityShards
-	var gbSize = sizeInGB((alloc.Size + int64(dpsSze-1)) / int64(dpsSze))
+	var gbSize = sizeInGB(bSize(alloc.Size, alloc.DataShards))
 	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
 
 	for _, b := range blobbers {
@@ -112,11 +111,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		StartTime:         common.Timestamp(alloc.StartTime),
 		Finalized:         alloc.Finalized,
 		Canceled:          alloc.Cancelled,
-		UsedSize:          alloc.UsedSize,
 		MovedToChallenge:  alloc.MovedToChallenge,
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
+		MinLockDemand:     alloc.MinLockDemand,
 	}
 
 	return &StorageAllocationBlobbers{
@@ -143,7 +142,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		StartTime:            int64(sa.StartTime),
 		Finalized:            sa.Finalized,
 		Cancelled:            sa.Canceled,
-		UsedSize:             sa.UsedSize,
+		UsedSize:             sa.Stats.UsedSize,
 		MovedToChallenge:     sa.MovedToChallenge,
 		MovedBack:            sa.MovedBack,
 		MovedToValidators:    sa.MovedToValidators,
@@ -151,6 +150,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		WritePool:            sa.WritePool,
 		ThirdPartyExtendable: sa.ThirdPartyExtendable,
 		FileOptions:          sa.FileOptions,
+		MinLockDemand:        sa.MinLockDemand,
 	}
 
 	if sa.Stats != nil {
@@ -197,7 +197,7 @@ func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 		StartTime:            int64(sa.StartTime),
 		Finalized:            sa.Finalized,
 		Cancelled:            sa.Canceled,
-		UsedSize:             sa.UsedSize,
+		UsedSize:             sa.Stats.UsedSize,
 		MovedToChallenge:     sa.MovedToChallenge,
 		MovedBack:            sa.MovedBack,
 		MovedToValidators:    sa.MovedToValidators,

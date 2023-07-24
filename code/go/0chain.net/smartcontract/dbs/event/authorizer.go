@@ -31,6 +31,14 @@ type Authorizer struct {
 	CreationRound int64 `json:"creation_round"`
 }
 
+func (m *Authorizer) TableName() string {
+	return "authorizers"
+}
+
+func (a Authorizer) GetID() string {
+	return a.ID
+}
+
 func (a *Authorizer) GetTotalStake() currency.Coin {
 	return a.TotalStake
 }

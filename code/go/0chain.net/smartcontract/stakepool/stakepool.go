@@ -14,6 +14,7 @@ import (
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -266,7 +267,10 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId, nil)
+		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId, dbs.ProviderID{
+			ID: providerId,
+			Type: providerType,
+		})
 
 	}
 
