@@ -455,7 +455,7 @@ func (s *Server) BlobberCommitted(blobberID *string, _ *struct{}) error {
 	return nil
 }
 
-func (s *Server) SetChallengeStatus(m map[string]interface{}) error {
+func (s *Server) SetChallengeStatus(m map[string]interface{}, _ *struct{}) error {
 	select {
 	case s.onChallengeStatus <- m:
 	case <-s.quit:
