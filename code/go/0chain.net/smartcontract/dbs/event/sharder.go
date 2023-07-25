@@ -99,7 +99,7 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 		Table("sharders").
 		Joins("left join provider_rewards on sharders.id = provider_rewards.provider_id").
 		Joins("left join delegate_pools on sharders.id = delegate_pools.provider_id").
-		Where("sharders.id = ?", id).
+		Where("sharders.id = ? AND (delegate_pools.status IS NULL OR delegate_pools.status = 0)", id).
 		Scan(&sharderDps)
 	if result.Error != nil {
 		return s, nil, result.Error
