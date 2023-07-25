@@ -979,7 +979,6 @@ func SetMockConfig(
 		"cost.add_validator":             mockCost,
 		"cost.update_validator_settings": mockCost,
 		"cost.add_blobber":               mockCost,
-		"cost.new_read_pool":             mockCost,
 		"cost.read_pool_lock":            mockCost,
 		"cost.read_pool_unlock":          mockCost,
 		"cost.write_pool_lock":           mockCost,

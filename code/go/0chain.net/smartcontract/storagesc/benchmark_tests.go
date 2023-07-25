@@ -509,12 +509,6 @@ func BenchmarkTests(
 		},
 		// read_pool
 		{
-			name:     "storage.new_read_pool",
-			endpoint: ssc.newReadPool,
-			txn:      &transaction.Transaction{CreationDate: creationTime},
-			input:    []byte{},
-		},
-		{
 			name:     "storage.read_pool_lock",
 			endpoint: ssc.readPoolLock,
 			txn: &transaction.Transaction{
@@ -808,7 +802,6 @@ func BenchmarkTests(
 					"cost.add_validator":             "105",
 					"cost.update_validator_settings": "105",
 					"cost.add_blobber":               "105",
-					"cost.new_read_pool":             "105",
 					"cost.read_pool_lock":            "105",
 					"cost.read_pool_unlock":          "105",
 					"cost.write_pool_lock":           "105",

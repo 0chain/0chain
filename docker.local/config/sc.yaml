@@ -194,7 +194,6 @@ smart_contracts:
       challenge_response: 728
       add_validator: 348
       add_blobber: 266
-      new_read_pool: 100
       read_pool_lock: 170
       read_pool_unlock: 104
       write_pool_lock: 186

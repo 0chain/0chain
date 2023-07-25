@@ -101,7 +101,6 @@ const (
 	CostAddValidator
 	CostUpdateValidatorSettings
 	CostAddBlobber
-	CostNewReadPool
 	CostReadPoolLock
 	CostReadPoolUnlock
 	CostWritePoolLock
@@ -203,7 +202,6 @@ func initSettingName() {
 	SettingName[CostAddValidator] = "cost.add_validator"
 	SettingName[CostUpdateValidatorSettings] = "cost.update_validator_settings"
 	SettingName[CostAddBlobber] = "cost.add_blobber"
-	SettingName[CostNewReadPool] = "cost.new_read_pool"
 	SettingName[CostReadPoolLock] = "cost.read_pool_lock"
 	SettingName[CostReadPoolUnlock] = "cost.read_pool_unlock"
 	SettingName[CostWritePoolLock] = "cost.write_pool_lock"
@@ -287,7 +285,6 @@ func initSettings() {
 		CostAddValidator.String():                 {CostAddValidator, smartcontract.Cost},
 		CostUpdateValidatorSettings.String():      {CostUpdateValidatorSettings, smartcontract.Cost},
 		CostAddBlobber.String():                   {CostAddBlobber, smartcontract.Cost},
-		CostNewReadPool.String():                  {CostNewReadPool, smartcontract.Cost},
 		CostReadPoolLock.String():                 {CostReadPoolLock, smartcontract.Cost},
 		CostReadPoolUnlock.String():               {CostReadPoolUnlock, smartcontract.Cost},
 		CostWritePoolLock.String():                {CostWritePoolLock, smartcontract.Cost},
