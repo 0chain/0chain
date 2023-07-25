@@ -64,6 +64,7 @@ func SetupSharderStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
+	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
 }
 
 /*SetupStateHandlers - setup handlers to manage state */
@@ -93,6 +94,24 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
+}
+
+func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
+	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
+	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
+	if len(pathParams) < 2 {
+		return
+	}
+
+	if len(pathParams) == 2 {
+		scRestRE = regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
+		pathParams = scRestRE.FindStringSubmatch(r.URL.Path)
+		if len(pathParams) == 3 {
+			return
+		} else {
+			c.GetSCRestPoints(w, r)
+		}
+	}
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -195,7 +214,7 @@ func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Type</td><td>ID</td><td>Link</td><td>RestAPIs</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Type</td><td>ID</td><td>Link</td></tr>")
 	re := regexp.MustCompile(`\*.*\.`)
 	keys := make([]string, 0, len(smartcontract.ContractMap))
 	for k := range smartcontract.ContractMap {
@@ -231,4 +250,28 @@ func GetFunctionNames(address string) []string {
 		names = append(names, endpoint.URI)
 	}
 	return names
+}
+
+func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
+	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
+	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
+	if len(pathParams) < 2 {
+		return
+	}
+
+	PrintCSS(w)
+	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
+
+	key := pathParams[1]                     // same as the smart contract adress
+	names := GetFunctionNames(pathParams[1]) // fill link of endpoint: /v1/screst/ADDRESS/getAuthorizer
+
+	sort.Strings(names)
+	for _, funcName := range names {
+		friendlyName := strings.TrimLeft(funcName, "/")
+		paths := strings.Split(funcName, "/")
+		route := "/" + paths[len(paths)-1]
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+route, "/v1/screst/*"+funcName+"*")
+	}
+	fmt.Fprintf(w, "</table>")
 }
