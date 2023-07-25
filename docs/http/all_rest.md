@@ -236,7 +236,6 @@ File: 0Chain/code/go/0chain.net/smartcontract/storagesc/sc.go
 | ------ | ------ |
 | stake_pool_lock | metrics.GetOrRegisterTimer |
 | stake_pool_unlock | metrics.GetOrRegisterTimer |
-| stake_pool_pay_interests | metrics.GetOrRegisterTimer |
 
 
 > challenge pool

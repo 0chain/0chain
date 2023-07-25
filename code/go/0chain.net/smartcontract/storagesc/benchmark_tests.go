@@ -808,7 +808,6 @@ func BenchmarkTests(
 					"cost.write_pool_unlock":         "105",
 					"cost.stake_pool_lock":           "105",
 					"cost.stake_pool_unlock":         "105",
-					"cost.stake_pool_pay_interests":  "105",
 					"cost.commit_settings_changes":   "105",
 					"cost.collect_reward":            "105",
 				},

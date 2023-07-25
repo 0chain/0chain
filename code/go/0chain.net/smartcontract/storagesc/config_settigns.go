@@ -208,7 +208,6 @@ func initSettingName() {
 	SettingName[CostWritePoolUnlock] = "cost.write_pool_unlock"
 	SettingName[CostStakePoolLock] = "cost.stake_pool_lock"
 	SettingName[CostStakePoolUnlock] = "cost.stake_pool_unlock"
-	SettingName[CostStakePoolPayInterests] = "cost.stake_pool_pay_interests"
 	SettingName[CostCommitSettingsChanges] = "cost.commit_settings_changes"
 	SettingName[CostCollectReward] = "cost.collect_reward"
 	SettingName[CostKillBlobber] = "cost.kill_blobber"

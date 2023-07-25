@@ -200,7 +200,6 @@ smart_contracts:
       write_pool_unlock: 121
       stake_pool_lock: 187
       stake_pool_unlock: 119
-      stake_pool_pay_interests: 100 #todo
       commit_settings_changes: 56
       generate_challenge: 600
       blobber_block_rewards: 794
