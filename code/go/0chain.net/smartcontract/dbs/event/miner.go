@@ -64,7 +64,7 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		Table("miners").
 		Joins("left join provider_rewards on miners.id = provider_rewards.provider_id").
 		Joins("left join delegate_pools on miners.id = delegate_pools.provider_id").
-		Where("miners.id = ? AND (delegate_pools IS NULL OR delegate_pools.status = 0)", id).
+		Where("miners.id = ? AND (delegate_pools.status IS NULL OR delegate_pools.status = 0)", id).
 		Scan(&minerDps)
 	if result.Error != nil {
 		return m, nil, result.Error
