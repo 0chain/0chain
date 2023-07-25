@@ -775,6 +775,7 @@ func (r *Runner) onChallengeGeneration(blobberID string) {
 	if blobberID != r.chalConf.BlobberID {
 		return
 	}
+	log.Println("Challenge has been generated for blobber ", blobberID)
 
 	r.chalConf.WaitOnChallengeGeneration = false
 }

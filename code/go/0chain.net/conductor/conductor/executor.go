@@ -376,7 +376,7 @@ func (r *Runner) WaitOnBlobberCommit() {
 
 func (r *Runner) WaitForChallengeStatus() {
 	if r.verbose {
-		log.Print(" [INF] waiting for blobber to commit writemarker")
+		log.Print(" [INF] waiting for challenge status from chain")
 	}
 	r.chalConf.WaitForChallengeStatus = true
 }
