@@ -6,7 +6,6 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/viper"
-	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
@@ -45,7 +44,7 @@ var (
 	}
 )
 
-//SetupSmartContracts initializes smart contract addresses
+// SetupSmartContracts initializes smart contract addresses
 func SetupSmartContracts() {
 	for _, name := range SCNames {
 		if viper.GetBool(fmt.Sprintf("server_chain.smart_contract.%v", name)) {
@@ -61,8 +60,6 @@ func newSmartContract(name string) sci.SmartContractInterface {
 		return nil
 	}
 	switch code {
-	case Faucet:
-		return faucetsc.NewFaucetSmartContract()
 	case Storage:
 		return storagesc.NewStorageSmartContract()
 	case Multisig:
