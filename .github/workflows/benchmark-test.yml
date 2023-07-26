@@ -38,10 +38,15 @@ jobs:
       - name: Run Init
         run: |
           sudo apt update && sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+          detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+          detected_ARCH := $(shell sh -c 'uname -m 2>/dev/null || echo Unknown')
+          curl -L -o ./tmp/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.28.1/mockery_2.28.1_$(detected_OS)_$(detected_ARCH).tar.gz
+          tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery
+          cp ./tmp/mockery/mockery /usr/bin /usr/sbin
           ./docker.local/bin/init.setup.sh
 
-#       - name: Build Base
-#         run: ./docker.local/bin/build.base.sh
+      - name: Build Base
+        run: ./docker.local/bin/build.base.sh
         
       - name: Docker Build Image
         run: |
