@@ -310,7 +310,6 @@ File: 0Chain/code/go/0chain.net/chaincore/chain/handler.go
 | /v1/block/get/fee_stats | LatestBlockFeeStatsHandler |
 | / | HomePageHandler |
 | /_diagnostics | DiagnosticsHomepageHandler |
-| /_diagnostics/dkg_process | DiagnosticsDKGHandler |
 | /_diagnostics/round_info | RoundInfoHandler |
 | /v1/transaction/put | PutTransaction |
 | /_diagnostics/state_dump | StateDumpHandler |
