@@ -42,9 +42,7 @@ func TestInfo_GetKey(t *testing.T) {
 				NotarizedBlocksCount:      tt.fields.NotarizedBlocksCount,
 				ZeroNotarizedBlocksCount:  tt.fields.ZeroNotarizedBlocksCount,
 				MultiNotarizedBlocksCount: tt.fields.MultiNotarizedBlocksCount,
-				MissedBlocks:              tt.fields.MissedBlocks,
 				RollbackCount:             tt.fields.RollbackCount,
-				LongestRollbackLength:     tt.fields.LongestRollbackLength,
 			}
 			if got := info.GetKey(); got != tt.want {
 				t.Errorf("GetKey() = %v, want %v", got, tt.want)
@@ -90,9 +88,7 @@ func TestInfo_GetTime(t *testing.T) {
 				NotarizedBlocksCount:      tt.fields.NotarizedBlocksCount,
 				ZeroNotarizedBlocksCount:  tt.fields.ZeroNotarizedBlocksCount,
 				MultiNotarizedBlocksCount: tt.fields.MultiNotarizedBlocksCount,
-				MissedBlocks:              tt.fields.MissedBlocks,
 				RollbackCount:             tt.fields.RollbackCount,
-				LongestRollbackLength:     tt.fields.LongestRollbackLength,
 			}
 			if got := info.GetTime(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetTime() = %v, want %v", got, tt.want)
