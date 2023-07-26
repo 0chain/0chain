@@ -224,11 +224,6 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	for _, k := range keys {
 		sc := smartcontract.ContractMap[k]
 		scType := re.ReplaceAllString(reflect.TypeOf(sc).String(), "")
-
-		if scType == "FaucetSmartContract" {
-			continue
-		}
-
 		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType)
 	}
 	fmt.Fprintf(w, "</table>")
