@@ -1099,6 +1099,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	storageChallenge.BlobberID = blobberID
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.Created = txn.CreationDate
+	storageChallenge.RoundCreatedAt = balances.GetBlock().Round
 
 	challInfo := &StorageChallengeResponse{
 		StorageChallenge: storageChallenge,

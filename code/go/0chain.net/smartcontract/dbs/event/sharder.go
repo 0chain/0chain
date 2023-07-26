@@ -31,6 +31,14 @@ type Sharder struct {
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
 }
 
+func (m *Sharder) TableName() string {
+	return "sharders"
+}
+
+func (s Sharder) GetID() string {
+	return s.ID
+}
+
 func (s *Sharder) GetTotalStake() currency.Coin {
 	return s.TotalStake
 }
@@ -111,6 +119,9 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 		return s, nil, nil
 	}
 	for i := range sharderDps {
+		if sharderDps[i].DelegatePool.Status != 0 {
+			continue
+		}
 		dps = append(dps, sharderDps[i].DelegatePool)
 		if id != sharderDps[i].DelegatePool.ProviderID {
 			return s, nil, fmt.Errorf("mismatched sharder id in delegate pool;"+

@@ -1,7 +1,7 @@
 name: Benchmark Tests
 
 concurrency:
-  group: "publish-${{ github.ref }}"
+  group: "publish-benchmark-${{ github.ref }}"
   cancel-in-progress: true
   
 on:

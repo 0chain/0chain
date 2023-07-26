@@ -1657,9 +1657,9 @@ func (z *StorageAllocationStats) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 7
+	// map header, size 8
 	// string "Created"
-	o = append(o, 0x87, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
+	o = append(o, 0x88, 0xa7, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o, err = z.Created.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Created")
@@ -1686,6 +1686,9 @@ func (z *StorageChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Responded"
 	o = append(o, 0xa9, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x64, 0x65, 0x64)
 	o = msgp.AppendInt64(o, z.Responded)
+	// string "RoundCreatedAt"
+	o = append(o, 0xae, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74)
+	o = msgp.AppendInt64(o, z.RoundCreatedAt)
 	return
 }
 
@@ -1762,6 +1765,12 @@ func (z *StorageChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Responded")
 				return
 			}
+		case "RoundCreatedAt":
+			z.RoundCreatedAt, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "RoundCreatedAt")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -1780,7 +1789,7 @@ func (z *StorageChallenge) Msgsize() (s int) {
 	for za0001 := range z.ValidatorIDs {
 		s += msgp.StringPrefixSize + len(z.ValidatorIDs[za0001])
 	}
-	s += 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.Int64Size
+	s += 13 + msgp.StringPrefixSize + len(z.AllocationID) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + msgp.Int64Size + 15 + msgp.Int64Size
 	return
 }
 

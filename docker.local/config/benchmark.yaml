@@ -16,7 +16,6 @@ simulation:
   num_sharder_delegates: 10
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
-  num_write_redeem_allocation: 1
   num_challenges_blobber: 1
   num_authorizers: 12
   num_reward_partition_blobber: 5
