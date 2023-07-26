@@ -8,6 +8,8 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
+	"0chain.net/chaincore/smartcontract"
+
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -27,6 +29,14 @@ const (
 
 type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
+	var fcCopy = &FaucetSmartContract{
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
+	}
+	fcCopy.setSC(fcCopy.SmartContract, &smartcontract.BCContext{})
+	return fcCopy
 }
 
 func (ipsc *FaucetSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
@@ -54,6 +64,15 @@ func (fc *FaucetSmartContract) GetCostTable(balances c_state.StateContextI) (map
 		return map[string]int{}, err
 	}
 	return node.Cost, nil
+}
+
+func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
+	fc.SmartContract = sc
+	fc.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "update-settings"), nil)
+	fc.SmartContractExecutionStats["pour"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "pour"), nil)
+	fc.SmartContractExecutionStats["refill"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "refill"), nil)
+	fc.SmartContractExecutionStats["tokens Poured"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", fc.ID, "tokens Poured"), nil, metrics.NewUniformSample(1024))
+	fc.SmartContractExecutionStats["token refills"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", fc.ID, "token refills"), nil, metrics.NewUniformSample(1024))
 }
 
 func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
