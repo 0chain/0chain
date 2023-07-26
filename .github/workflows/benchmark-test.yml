@@ -26,6 +26,7 @@ jobs:
       - name: "Setup Go"
         shell: 'script --return --quiet --command "bash {0}"'
         run: |
+          sudo apt update && sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
           [ -d /usr/local/go ] &&  sudo rm -rf /usr/local/go
           [ -f /usr/local/bin/go ] &&  sudo rm -rf /usr/local/bin/go
@@ -49,7 +50,6 @@ jobs:
 
       - name: Run Init
         run: |
-          sudo apt update && sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           mkdir -p ./tmp/mockery
           curl -L -o ./tmp/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.28.1/mockery_2.28.1_Linux_x86_64.tar.gz
           tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery
