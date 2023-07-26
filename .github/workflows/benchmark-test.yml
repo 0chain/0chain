@@ -26,12 +26,6 @@ jobs:
       - name: "Setup Go"
         shell: 'script --return --quiet --command "bash {0}"'
         run: |
-          echo "GOMODCACHE=/root/actions-runner/_work/_tool/go/pkg/mod" >> $GITHUB_ENV
-          echo "GOCACHE=/root/actions-runner/_work/_tool/.cache/go-build" >> $GITHUB_ENV
-          echo "HOME=/root" >> $GITHUB_ENV
-          export GOMODCACHE="/root/actions-runner/_work/_tool/go/pkg/mod"
-          export GOCACHE="/root/actions-runner/_work/_tool/.cache/go-build"
-          export HOME="/root"
           [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
           [ -d /usr/local/go ] &&  sudo rm -rf /usr/local/go
           [ -f /usr/local/bin/go ] &&  sudo rm -rf /usr/local/bin/go
@@ -61,6 +55,7 @@ jobs:
           tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery
           sudo cp -r ./tmp/mockery/mockery $HOME/bin
           sudo cp -r ./tmp/mockery/mockery /usr/bin
+          sudo cp -r ./tmp/mockery/mockery /usr/local/bin/
           sudo bash docker.local/bin/init.setup.sh
 
       - name: Build Base
