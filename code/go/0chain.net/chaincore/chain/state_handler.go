@@ -214,7 +214,7 @@ func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Type</td><td>ID</td><td>Link</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'> <td>Type</td><td>ID</td><td>Link</td></tr>")
 	re := regexp.MustCompile(`\*.*\.`)
 	keys := make([]string, 0, len(smartcontract.ContractMap))
 	for k := range smartcontract.ContractMap {
