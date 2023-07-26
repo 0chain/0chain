@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  benchmark:
     runs-on: [self-hosted, arc-runner]
     steps:
       - name: Actions checkout
@@ -37,7 +37,7 @@ jobs:
 
       - name: Run Init
         run: |
-          # sudo apt update && sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+          sudo apt update && sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           ./docker.local/bin/init.setup.sh
 
 #       - name: Build Base
