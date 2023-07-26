@@ -18,10 +18,28 @@ jobs:
       - name: Actions checkout
         uses: actions/checkout@v2
 
-      - name: Setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.20'
+#       - name: Setup go
+#         uses: actions/setup-go@v2
+#         with:
+#           go-version: '1.20'
+
+      - name: "Setup Go"
+        shell: 'script --return --quiet --command "bash {0}"'
+        run: |
+          echo "GOMODCACHE=/root/actions-runner/_work/_tool/go/pkg/mod" >> $GITHUB_ENV
+          echo "GOCACHE=/root/actions-runner/_work/_tool/.cache/go-build" >> $GITHUB_ENV
+          echo "HOME=/root" >> $GITHUB_ENV
+          export GOMODCACHE="/root/actions-runner/_work/_tool/go/pkg/mod"
+          export GOCACHE="/root/actions-runner/_work/_tool/.cache/go-build"
+          export HOME="/root"
+          [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
+          [ -d /usr/local/go ] &&  sudo rm -rf /usr/local/go
+          [ -f /usr/local/bin/go ] &&  sudo rm -rf /usr/local/bin/go
+          sudo tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
+          echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+          export PATH=$PATH:/usr/local/go/bin
+          which go
+          go env
 
       - name: Install Docker Compose
         run: |
