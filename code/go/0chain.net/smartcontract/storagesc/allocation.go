@@ -1118,7 +1118,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, t.CreationDate, balances,
+				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, t.CreationDate, balances, sc, t,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1543,7 +1543,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	conf *Config,
 ) (err error) {
 
-	if alloc.payMinLockDemand(sps, balances, t) != nil {
+	if err = alloc.payMinLockDemand(sps, balances, t); err != nil {
 		return fmt.Errorf("error paying min lock demand: %v", err)
 	}
 
@@ -1552,11 +1552,11 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
-	if alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc) != nil {
+	if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc); err != nil {
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
-	if alloc.payCancellationCharge(sps, balances, passRates, conf, sc, t) != nil {
+	if err = alloc.payCancellationCharge(sps, balances, passRates, conf, sc, t); err != nil {
 		return fmt.Errorf("error paying cancellation charge: %v", err)
 	}
 
