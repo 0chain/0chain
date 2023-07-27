@@ -13,7 +13,22 @@ import (
 	"0chain.net/smartcontract/dbs/sqlite"
 )
 
-func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+	eventDb, err := NewEventDbWithoutWorker(config, settings)
+	if err != nil {
+		return nil, err
+	}
+	sqldb, err := eventDb.Store.Get().DB()
+	if err != nil {
+		return nil, err
+	}
+	goose.Migrate(sqldb)
+	go eventDb.addEventsWorker(common.GetRootContext())
+
+	return eventDb, nil
+}
+
+func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
 	goose.Init()
 	db, err := postgresql.GetPostgresSqlDb(config)
 	if err != nil {
@@ -26,12 +41,6 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
-	go eventDb.addEventsWorker(common.GetRootContext())
-	sqldb, err := eventDb.Store.Get().DB()
-	if err != nil {
-		return nil, err
-	}
-	goose.Migrate(sqldb)
 
 	return eventDb, nil
 }
