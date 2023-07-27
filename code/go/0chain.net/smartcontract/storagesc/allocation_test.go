@@ -1625,7 +1625,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, balances, removeBlobberID, allocationID := setup(tt.args)
-			err := removeAllocationFromBlobber(balances,
+			err := removeAllocationFromBlobberPartitions(balances,
 				allocationID, removeBlobberID)
 			require.NoError(t, err)
 			validate(tt.want, balances)

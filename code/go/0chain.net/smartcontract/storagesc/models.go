@@ -958,14 +958,17 @@ func removeBlobber(
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
-	if err := removeAllocationFromBlobber(balances, sa.ID, blobberID); err != nil {
+	if err := removeAllocationFromBlobberPartitions(balances, sa.ID, blobberID); err != nil {
 		return nil, err
 	}
+
+	// emit event for stats update
+	// update blobber stats
+	// finalize blobber rewards
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
 		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
-
 	return blobbers, nil
 }
 
@@ -1041,8 +1044,8 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 	return err
 }
 
-// removeAllocationFromBlobber removes the allocation from blobber
-func removeAllocationFromBlobber(balances cstate.StateContextI, allocID, blobberID string) error {
+// removeAllocationFromBlobberPartitions removes the allocation from blobber
+func removeAllocationFromBlobberPartitions(balances cstate.StateContextI, allocID, blobberID string) error {
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
 	if err != nil {
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)

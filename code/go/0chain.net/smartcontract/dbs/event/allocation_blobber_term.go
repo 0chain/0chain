@@ -49,7 +49,7 @@ func deleteAllocationBlobberTerms(edb *EventDb, allocBlobbers map[string][]strin
 			db = db.Where("allocation_id = ?", allocationID)
 		}
 
-		err := db.Delete(&AllocationBlobberTerm{}).Error
+		err := db.Unscoped().Delete(&AllocationBlobberTerm{}).Error
 		if err != nil {
 			return err
 		}
