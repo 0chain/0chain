@@ -24,6 +24,14 @@ type Validator struct {
 	CreationRound int64 `json:"creation_round"`
 }
 
+func (m *Validator) TableName() string {
+	return "validators"
+}
+
+func (v Validator) GetID() string {
+	return v.ID
+}
+
 func (v *Validator) GetTotalStake() currency.Coin {
 	return v.TotalStake
 }

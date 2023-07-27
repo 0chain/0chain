@@ -37,6 +37,10 @@ type MinerGeolocation struct {
 	Longitude float64 `json:"longitude"`
 }
 
+func (m Miner) GetID() string {
+	return m.ID
+}
+
 func (edb *EventDb) GetMiner(id string) (Miner, error) {
 	var miner Miner
 	return miner, edb.Store.Get().
@@ -81,6 +85,9 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		return m, nil, nil
 	}
 	for i := range minerDps {
+		if minerDps[i].DelegatePool.Status != 0 {
+			continue
+		}
 		dps = append(dps, minerDps[i].DelegatePool)
 		if id != minerDps[i].DelegatePool.ProviderID {
 			return m, nil, fmt.Errorf("mismatched miner id in delegate pool;"+
@@ -113,6 +120,10 @@ type MinerQuery struct {
 	Longitude         null.Float
 	Latitude          null.Float
 	IsKilled          null.Bool
+}
+
+func (m *Miner) TableName() string {
+	return "miners"
 }
 
 func (m *Miner) GetTotalStake() currency.Coin {

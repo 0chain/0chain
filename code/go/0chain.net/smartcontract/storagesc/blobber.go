@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/core/maths"
-	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"math/big"
+
+	"0chain.net/core/maths"
+	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
@@ -608,6 +609,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't Save read pool: %v", err)
 	}
+
+	// updates the readpool table
+	balances.EmitEvent(event.TypeStats, event.TagUpdateReadpool, commitRead.ReadMarker.ClientID, event.ReadPool{
+		UserID:  commitRead.ReadMarker.ClientID,
+		Balance: rp.Balance,
+	})
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {

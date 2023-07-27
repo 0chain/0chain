@@ -37,7 +37,7 @@ type Blobber struct {
 	NotAvailable bool  `json:"not_available"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
-	//todo update
+	// todo update
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 
 	Name        string `json:"name" gorm:"name"`
@@ -64,6 +64,14 @@ type Blobber struct {
 type BlobberPriceRange struct {
 	Min null.Int `json:"min"`
 	Max null.Int `json:"max"`
+}
+
+func (m *Blobber) TableName() string {
+	return "blobbers"
+}
+
+func (b Blobber) GetID() string {
+	return b.ID
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
@@ -182,17 +190,20 @@ func (edb *EventDb) updateBlobbersAllocatedSavedAndHealth(blobbers []Blobber) er
 	var allocated []int64
 	var savedData []int64
 	var lastHealthCheck []int64
+	var used []int64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		allocated = append(allocated, m.Allocated)
 		savedData = append(savedData, m.SavedData)
 		lastHealthCheck = append(lastHealthCheck, int64(m.LastHealthCheck))
+		used = append(used, m.Used)
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
 		AddUpdate("allocated", allocated).
 		AddUpdate("last_health_check", lastHealthCheck).
 		AddUpdate("saved_data", savedData).
+		AddUpdate("used", used).
 		Exec(edb).Error
 
 }

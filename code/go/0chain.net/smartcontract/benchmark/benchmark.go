@@ -2,6 +2,7 @@ package benchmark
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -81,19 +82,26 @@ const (
 	SimulationNumBlobbersPerAllocation
 	SimulationNumBlobbers
 	SimulationNumAllocationPayerPools
+
 	SimulationNumAllocationPayer
 	SimulationNumBlobberDelegates
 	SimulationNumValidators
 	SimulationNumFreeStorageAssigners
 	SimulationNumMinerDelegates
+
 	SimulationNumSharderDelegates
 	SimulationNumVestingDestinationsClient
-	SimulationNumWriteRedeemAllocation
 	SimulationNumChallengesBlobber
 	SimulationNumAuthorizers
 	SimulationNumRewardPartitionBlobber
+
 	SimulationNumBlocks
 	SimulationNumTransactionsPerBlock
+	SimulationNumWriteRedeemAllocation
+	SimulationNumReadMarkersAllocation
+	SimulationNumRoundsBetweenWrites
+	SimulationNumRoundsBetweenReads
+
 	NumberSimulationParameters
 )
 
@@ -238,61 +246,112 @@ func (s Source) String() string {
 	}
 }
 
-var parameterName = []string{
-	"num_clients",
-	"num_active_clients",
-	"num_miners",
-	"num_active_miners",
-	"nun_sharders",
-	"nun_active_sharders",
-	"num_allocations",
-	"num_blobbers_per_Allocation",
-	"num_blobbers",
-	"num_allocation_payers_pools",
-	"num_allocation_payers",
-	"num_blobber_delegates",
-	"num_validators",
-	"num_free_storage_assigners",
-	"num_miner_delegates",
-	"num_sharder_delegates",
-	"num_vesting_destinations_client",
-	"num_write_redeem_allocation",
-	"num_challenges_blobber",
-	"num_authorizers",
-	"num_reward_partition_blobber",
-	"num_blocks",
-	"num_transactions_per_block",
+var parameterName []string
+
+func init() {
+	initParameterNames()
+	initParameterConstants()
+}
+
+func initParameterNames() {
+	parameterName = make([]string, NumberSimulationParameters)
+	parameterName[SimulationNumClients] = "num_clients"
+	parameterName[SimulationActiveNumClients] = "num_active_clients"
+	parameterName[SimulationNumMiners] = "num_miners"
+	parameterName[SimulationNumActiveMiners] = "num_active_miners"
+	parameterName[SimulationNumSharders] = "nun_sharders"
+	parameterName[SimulationNumActiveSharders] = "nun_active_sharders"
+	parameterName[SimulationNumAllocations] = "num_allocations"
+	parameterName[SimulationNumBlobbersPerAllocation] = "num_blobbers_per_Allocation"
+	parameterName[SimulationNumBlobbers] = "num_blobbers"
+	parameterName[SimulationNumAllocationPayerPools] = "num_allocation_payers_pools"
+
+	parameterName[SimulationNumAllocationPayer] = "num_allocation_payers"
+	parameterName[SimulationNumBlobberDelegates] = "num_blobber_delegates"
+	parameterName[SimulationNumValidators] = "num_validators"
+	parameterName[SimulationNumFreeStorageAssigners] = "num_free_storage_assigners"
+	parameterName[SimulationNumMinerDelegates] = "num_miner_delegates"
+
+	parameterName[SimulationNumSharderDelegates] = "num_sharder_delegates"
+	parameterName[SimulationNumVestingDestinationsClient] = "num_vesting_destinations_client"
+	parameterName[SimulationNumChallengesBlobber] = "num_challenges_blobber"
+	parameterName[SimulationNumAuthorizers] = "num_authorizers"
+	parameterName[SimulationNumRewardPartitionBlobber] = "num_reward_partition_blobber"
+
+	parameterName[SimulationNumBlocks] = "num_blocks"
+	parameterName[SimulationNumTransactionsPerBlock] = "num_transactions_per_block"
+	parameterName[SimulationNumWriteRedeemAllocation] = "num_write_redeem_allocation"
+	parameterName[SimulationNumReadMarkersAllocation] = "num_read_markers_allocation"
+	parameterName[SimulationNumRoundsBetweenWrites] = "num_rounds_between_writes"
+	parameterName[SimulationNumRoundsBetweenReads] = "num_rounds_between_reads"
 }
 
 func (w SimulatorParameter) String() string {
+	if w < 0 || w >= NumberSimulationParameters {
+		return fmt.Sprintf("unrecognised paramter %d", w)
+	}
+
 	return parameterName[w]
 }
 
 var (
-	NumClients                   = Simulation + SimulationNumClients.String()
-	NumActiveClients             = Simulation + SimulationActiveNumClients.String()
-	NumMiners                    = Simulation + SimulationNumMiners.String()
-	NumActiveMiners              = Simulation + SimulationNumActiveMiners.String()
-	NumSharders                  = Simulation + SimulationNumSharders.String()
-	NumActiveSharders            = Simulation + SimulationNumActiveSharders.String()
-	NumAllocations               = Simulation + SimulationNumAllocations.String()
-	NumBlobbersPerAllocation     = Simulation + SimulationNumBlobbersPerAllocation.String()
-	NumBlobbers                  = Simulation + SimulationNumBlobbers.String()
-	NumAllocationPayerPools      = Simulation + SimulationNumAllocationPayerPools.String()
-	NumAllocationPayer           = Simulation + SimulationNumAllocationPayer.String()
-	NumBlobberDelegates          = Simulation + SimulationNumBlobberDelegates.String()
-	NumValidators                = Simulation + SimulationNumValidators.String()
-	NumFreeStorageAssigners      = Simulation + SimulationNumFreeStorageAssigners.String()
-	NumMinerDelegates            = Simulation + SimulationNumMinerDelegates.String()
-	NumSharderDelegates          = Simulation + SimulationNumSharderDelegates.String()
-	NumVestingDestinationsClient = Simulation + SimulationNumVestingDestinationsClient.String()
-	NumWriteRedeemAllocation     = Simulation + SimulationNumWriteRedeemAllocation.String()
-	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
-	NumAuthorizers               = Simulation + SimulationNumAuthorizers.String()
-	NumRewardPartitionBlobber    = Simulation + SimulationNumRewardPartitionBlobber.String()
-	NumBlocks                    = Simulation + SimulationNumBlocks.String()
-	NumTransactionPerBlock       = Simulation + SimulationNumTransactionsPerBlock.String()
+	NumClients                   string
+	NumActiveClients             string
+	NumMiners                    string
+	NumActiveMiners              string
+	NumSharders                  string
+	NumActiveSharders            string
+	NumAllocations               string
+	NumBlobbersPerAllocation     string
+	NumBlobbers                  string
+	NumAllocationPayerPools      string
+	NumAllocationPayer           string
+	NumBlobberDelegates          string
+	NumValidators                string
+	NumFreeStorageAssigners      string
+	NumMinerDelegates            string
+	NumSharderDelegates          string
+	NumVestingDestinationsClient string
+	NumChallengesBlobber         string
+	NumAuthorizers               string
+	NumRewardPartitionBlobber    string
+	NumBlocks                    string
+	NumWriteRedeemAllocation     string
+	NumReadMarkersAllocation     string
+	NumRoundsBetweenWrites       string
+	NumRoundsBetweenReads        string
+	NumTransactionPerBlock       string
 )
+
+func initParameterConstants() {
+	NumClients = Simulation + SimulationNumClients.String()
+	NumActiveClients = Simulation + SimulationActiveNumClients.String()
+	NumMiners = Simulation + SimulationNumMiners.String()
+	NumActiveMiners = Simulation + SimulationNumActiveMiners.String()
+	NumSharders = Simulation + SimulationNumSharders.String()
+	NumActiveSharders = Simulation + SimulationNumActiveSharders.String()
+	NumAllocations = Simulation + SimulationNumAllocations.String()
+	NumBlobbersPerAllocation = Simulation + SimulationNumBlobbersPerAllocation.String()
+	NumBlobbers = Simulation + SimulationNumBlobbers.String()
+	NumAllocationPayerPools = Simulation + SimulationNumAllocationPayerPools.String()
+	NumAllocationPayer = Simulation + SimulationNumAllocationPayer.String()
+	NumBlobberDelegates = Simulation + SimulationNumBlobberDelegates.String()
+	NumValidators = Simulation + SimulationNumValidators.String()
+	NumFreeStorageAssigners = Simulation + SimulationNumFreeStorageAssigners.String()
+	NumMinerDelegates = Simulation + SimulationNumMinerDelegates.String()
+	NumSharderDelegates = Simulation + SimulationNumSharderDelegates.String()
+	NumVestingDestinationsClient = Simulation + SimulationNumVestingDestinationsClient.String()
+	NumChallengesBlobber = Simulation + SimulationNumChallengesBlobber.String()
+	NumAuthorizers = Simulation + SimulationNumAuthorizers.String()
+	NumRewardPartitionBlobber = Simulation + SimulationNumRewardPartitionBlobber.String()
+	NumBlocks = Simulation + SimulationNumBlocks.String()
+	NumWriteRedeemAllocation = Simulation + SimulationNumWriteRedeemAllocation.String()
+	NumReadMarkersAllocation = Simulation + SimulationNumReadMarkersAllocation.String()
+	NumRoundsBetweenWrites = Simulation + SimulationNumRoundsBetweenWrites.String()
+	NumRoundsBetweenReads = Simulation + SimulationNumRoundsBetweenReads.String()
+	NumTransactionPerBlock = Simulation + SimulationNumTransactionsPerBlock.String()
+
+}
 
 type BenchTestI interface {
 	Name() string

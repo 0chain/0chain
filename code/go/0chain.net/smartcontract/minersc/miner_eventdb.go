@@ -7,7 +7,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 )
@@ -96,7 +95,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 			DelegatePool: stakepool.DelegatePool{
 				Balance:      delegate.Balance,
 				Reward:       delegate.Reward,
-				Status:       spenum.PoolStatus(delegate.Status),
+				Status:       delegate.Status,
 				RoundCreated: delegate.RoundCreated,
 				DelegateID:   delegate.DelegateID,
 				StakedAt:     delegate.StakedAt,

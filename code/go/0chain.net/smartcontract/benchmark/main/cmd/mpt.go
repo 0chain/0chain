@@ -429,8 +429,15 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockWriteRedeems(clients, publicKeys, eventDb, balances)
-		log.Println("added read redeems\t", time.Since(timer))
+		storagesc.AddMockReadMarkers(clients, publicKeys, eventDb, balances)
+		log.Println("added read markers\t", time.Since(timer))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		timer := time.Now()
+		storagesc.AddMockWriteMarkers(clients, eventDb)
+		log.Println("added write redeems\t", time.Since(timer))
 	}()
 	wg.Add(1)
 	go func() {
