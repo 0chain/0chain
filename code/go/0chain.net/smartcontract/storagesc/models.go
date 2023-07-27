@@ -19,6 +19,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 
+	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/threshold/bls"
 	"github.com/0chain/common/core/currency"
 
@@ -571,6 +572,121 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	return
 }
 
+func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI) (currency.Coin, error) {
+
+	if d.MinLockDemand > d.Spent {
+		delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
+		if err != nil {
+			return 0, err
+		}
+		if alloc.WritePool < delta {
+			return 0, fmt.Errorf("paying min_lock for blobber %v"+
+				"ammount was short by %v", d.BlobberID, delta)
+		}
+		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, delta)
+		if err != nil {
+			return 0, err
+		}
+
+		err = sp.DistributeRewards(delta, d.BlobberID, spenum.Blobber, spenum.MinLockDemandReward, balances, alloc.ID)
+		if err != nil {
+			return 0, fmt.Errorf("distribute rewards failed, paying min_lock %v for blobber "+
+				"%v from write pool %v, minlock demand %v spent %v error %v",
+				delta, d.BlobberID, alloc.WritePool, d.MinLockDemand, d.Spent, err.Error())
+		}
+		d.Spent, err = currency.AddCoin(d.Spent, delta)
+		if err != nil {
+			return 0, err
+		}
+
+		return delta, nil
+	}
+
+	return currency.Coin(0), nil
+}
+
+func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config) (currency.Coin, error) {
+	payment := currency.Coin(0)
+	cpBalance, err := cp.Balance.Float64()
+	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime) / float64(conf.TimeUnit)
+	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
+
+	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {
+		allocationRealUsedSize := float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards)
+		ratio := float64(d.Stats.UsedSize) / allocationRealUsedSize
+		if err != nil {
+			return payment, err
+		}
+
+		reward, err := currency.Float64ToCoin(adjustableChallengePoolTokens * ratio * passRate)
+		if err != nil {
+			return payment, err
+		}
+
+		err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
+		if err != nil {
+			return payment, fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", d.BlobberID, err)
+		}
+
+		d.Spent, err = currency.AddCoin(d.Spent, reward)
+		if err != nil {
+			return payment, fmt.Errorf("blobber alloc spent: %v", err)
+		}
+		payment, err = currency.AddCoin(payment, reward)
+		if err != nil {
+			return payment, fmt.Errorf("pass payments: %v", err)
+		}
+	}
+
+	return payment, nil
+}
+
+func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI, sc *StorageSmartContract, passRate float64, totalWritePrice, cancellationCharge currency.Coin) (currency.Coin, error) {
+	blobberWritePriceWeight := float64(d.Terms.WritePrice) / float64(totalWritePrice)
+	reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight * passRate)
+
+	err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", d.BlobberID, err)
+	}
+
+	if err = sp.Save(spenum.Blobber, d.BlobberID, balances); err != nil {
+		return reward, fmt.Errorf("failed to save stake pool: %s, err: %v", d.BlobberID, err)
+	}
+
+	blobber, err := sc.getBlobber(d.BlobberID, balances)
+	if err != nil {
+		return reward, common.NewError("fini_alloc_failed",
+			"can't get blobber "+d.BlobberID+": "+err.Error())
+	}
+	blobber.SavedData += -d.Stats.UsedSize
+	blobber.Allocated += -d.Size
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return reward, common.NewError("fini_alloc_failed",
+			"saving blobber "+d.BlobberID+": "+err.Error())
+	}
+
+	// get blobber allocations partitions
+	blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
+	if err != nil {
+		return reward, common.NewErrorf("fini_alloc_failed",
+			"error getting blobber_challenge_allocation list: %v", err)
+	}
+	if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+		return reward, err
+	}
+	if err := blobberAllocParts.Save(balances); err != nil {
+		return reward, common.NewErrorf("fini_alloc_failed",
+			"error saving blobber allocation partitions: %v", err)
+	}
+
+	// Update saved data on events_db
+	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+
+	return reward, nil
+}
+
 func (d *BlobberAllocation) Offer() currency.Coin {
 	return currency.Coin(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
 }
@@ -815,6 +931,155 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	} else {
 		sa.WritePool = writePool
 	}
+	return nil
+}
+
+func (sa *StorageAllocation) payMinLockDemand(sps []*stakePool, balances chainstate.StateContextI, t *transaction.Transaction) error {
+	deductionFromWritePool := currency.Coin(0)
+
+	for i, d := range sa.BlobberAllocs {
+		// min lock demand rest
+		minLockDeductionFromWritePool, err := d.payMinLockDemand(sa, sps[i], balances)
+		if err != nil {
+			return fmt.Errorf("error paying min lock demand: %v", err)
+		}
+
+		deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, minLockDeductionFromWritePool)
+		if err != nil {
+			return fmt.Errorf("error adding min lock demand to deductionFromWritePool: %v", err)
+		}
+	}
+
+	i, err := deductionFromWritePool.Int64()
+	if err != nil {
+		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
+		Client:       t.ClientID,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
+
+	return nil
+}
+
+func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract) error {
+	prevBal := cp.Balance
+
+	var passPayments currency.Coin
+	for i, d := range sa.BlobberAllocs {
+		blobberPassPayment, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf)
+		if err != nil {
+			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+		}
+
+		passPayments, err = currency.AddCoin(passPayments, blobberPassPayment)
+		if err != nil {
+			return fmt.Errorf("error adding blobber pass payment to passPayments: %v", err)
+		}
+	}
+
+	var err error
+	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
+	if err != nil {
+		return err
+	}
+
+	if cp.Balance > 0 {
+		sa.MovedBack, err = currency.AddCoin(sa.MovedBack, cp.Balance)
+		if err != nil {
+			return err
+		}
+
+		err = sa.moveFromChallengePool(cp, cp.Balance)
+		if err != nil {
+			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+		}
+	}
+
+	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
+	if err != nil {
+		return err
+	}
+
+	if cp.Balance > 0 {
+		sa.MovedBack, err = currency.AddCoin(sa.MovedBack, cp.Balance)
+		if err != nil {
+			return err
+		}
+
+		err = sa.moveFromChallengePool(cp, cp.Balance)
+		if err != nil {
+			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+		}
+	}
+
+	if err = cp.save(sc.ID, sa, balances); err != nil {
+		return fmt.Errorf("failed to save challenge pool: %v", err)
+	}
+
+	i, err := prevBal.Int64()
+	if err != nil {
+		return fmt.Errorf("failed to convert balance: %v", err)
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		Client:       sa.Owner,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
+
+	return nil
+}
+
+func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances chainstate.StateContextI, passRates []float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction) error {
+	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
+	if err != nil {
+		return fmt.Errorf("failed to get cancellation charge: %v", err)
+	}
+
+	if sa.WritePool < cancellationCharge {
+		cancellationCharge = sa.WritePool
+		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
+	}
+
+	totalWritePrice := currency.Coin(0)
+	for _, ba := range sa.BlobberAllocs {
+		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
+		if err != nil {
+			return fmt.Errorf("failed to add write price: %v", err)
+		}
+	}
+
+	totalCancellationChargePaid := currency.Coin(0)
+
+	for i, ba := range sa.BlobberAllocs {
+		blobberCancellationChargePaid, err := ba.payCancellationCharge(sa, sps[i], balances, sc, passRates[i], totalWritePrice, cancellationCharge)
+		if err != nil {
+			return fmt.Errorf("error paying cancellation charge: %v", err)
+		}
+
+		totalCancellationChargePaid, err = currency.AddCoin(totalCancellationChargePaid, blobberCancellationChargePaid)
+		if err != nil {
+			return fmt.Errorf("error adding blobber cancellation charge paid to totalCancellationChargePaid: %v", err)
+		}
+	}
+
+	sa.WritePool, err = currency.MinusCoin(sa.WritePool, totalCancellationChargePaid)
+	if err != nil {
+		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
+	}
+
+	i, err := totalCancellationChargePaid.Int64()
+	if err != nil {
+		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
+		Client:       t.ClientID,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
+
 	return nil
 }
 
