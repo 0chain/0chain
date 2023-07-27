@@ -1102,7 +1102,7 @@ func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances ch
 	for i, ba := range sa.BlobberAllocs {
 		blobberCancellationChargePaid, err := ba.payCancellationCharge(sa, sps[i], balances, sc, passRates[i], totalWritePrice, cancellationCharge)
 		if err != nil {
-			return fmt.Errorf("error paying cancellation charge: %v", err)
+			return fmt.Errorf("1 error paying cancellation charge: %v", err)
 		}
 
 		totalCancellationChargePaid, err = currency.AddCoin(totalCancellationChargePaid, blobberCancellationChargePaid)
@@ -1135,10 +1135,14 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
+	logging.Logger.Info("Jayash 1", zap.Any("cancellationCharge", cancellationCharge), zap.Any("sa", sa), zap.Any("passRate", passRate), zap.Any("ba", ba), zap.Any("conf.CancellationCharge", conf.CancellationCharge), zap.Any("sa.BlobberAllocs", sa.BlobberAllocs))
+
 	if sa.WritePool < cancellationCharge {
 		cancellationCharge = sa.WritePool
 		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
 	}
+
+	logging.Logger.Info("Jayash 2", zap.Any("cancellationCharge", cancellationCharge), zap.Any("sa", sa), zap.Any("passRate", passRate), zap.Any("ba", ba), zap.Any("conf.CancellationCharge", conf.CancellationCharge), zap.Any("sa.BlobberAllocs", sa.BlobberAllocs))
 
 	totalWritePrice := currency.Coin(0)
 	for _, ba := range sa.BlobberAllocs {
@@ -1148,25 +1152,37 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 		}
 	}
 
+	logging.Logger.Info("Jayash 3", zap.Any("totalPrice", totalWritePrice))
+
 	totalCancellationChargePaid, err := ba.payCancellationCharge(sa, sp, balances, sc, passRate, totalWritePrice, cancellationCharge)
 	if err != nil {
-		return fmt.Errorf("error paying cancellation charge: %v", err)
+		return fmt.Errorf("2 error paying cancellation charge: %v", err)
 	}
+
+	logging.Logger.Info("Jayash 4", zap.Any("totalCancellationChargePaid", totalCancellationChargePaid))
+	logging.Logger.Info("Jayash 4", zap.Any("totalCancellationChargePaid", totalCancellationChargePaid))
 
 	sa.WritePool, err = currency.MinusCoin(sa.WritePool, totalCancellationChargePaid)
 	if err != nil {
 		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
 	}
 
+	logging.Logger.Info("Jayash 5", zap.Any("sa.WritePool", sa.WritePool))
+
 	i, err := totalCancellationChargePaid.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
 	}
+
+	logging.Logger.Info("Jayash 6", zap.Any("i", i))
+
 	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
 		Client:       t.ClientID,
 		AllocationId: sa.ID,
 		Amount:       i,
 	})
+
+	logging.Logger.Info("Jayash 7", zap.Any("i", i))
 
 	return nil
 }
@@ -1306,8 +1322,8 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 				return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 			}
 
-			if sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, t, d) != nil {
-				return fmt.Errorf("error paying cancellation charge: %v", err)
+			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, t, d); err != nil {
+				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
 			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]

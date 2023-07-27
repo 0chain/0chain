@@ -1557,7 +1557,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	}
 
 	if err = alloc.payCancellationCharge(sps, balances, passRates, conf, sc, t); err != nil {
-		return fmt.Errorf("error paying cancellation charge: %v", err)
+		return fmt.Errorf("4 error paying cancellation charge: %v", err)
 	}
 
 	alloc.Finalized = true
