@@ -46,7 +46,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
 	github.com/ory/dockertest/v3 v3.10.0
-	github.com/pressly/goose/v3 v3.13.1
+	github.com/pressly/goose/v3 v3.14.0
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 	golang.org/x/sys v0.10.0
 	gorm.io/driver/sqlite v1.5.2
@@ -100,7 +100,7 @@ require (
 	github.com/moby/term v0.5.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/opencontainers/runc v1.1.7 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
@@ -117,7 +117,7 @@ require (
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/mod v0.11.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.10.0 // indirect
