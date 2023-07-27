@@ -45,7 +45,7 @@ VALIDATOR3=86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation \
     --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 \
-    --data 1 --parity 2 --expire 721h
+    --data 1 --parity 2
 
 # add to read pools
 ./zboxcli/zbox --wallet testing.json rp-lock --tokens 4.0
