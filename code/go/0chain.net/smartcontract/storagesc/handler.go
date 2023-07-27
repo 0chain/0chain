@@ -1826,8 +1826,23 @@ func changeBlobbersEventDB(
 	}
 
 	if len(removeID) > 0 {
-		if err := sa.removeBlobber(removeID); err != nil {
-			return err
+		_, ok := sa.BlobberAllocsMap[removeID]
+		if !ok {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
+		}
+		delete(sa.BlobberAllocsMap, removeID)
+
+		var found bool
+		for i, d := range sa.BlobberAllocs {
+			if d.BlobberID == removeID {
+				sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
+				sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.

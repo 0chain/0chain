@@ -1348,14 +1348,6 @@ func removeBlobber(
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
-	if err := removeAllocationFromBlobberPartitions(balances, sa.ID, blobberID); err != nil {
-		return nil, err
-	}
-
-	// emit event for stats update
-	// update blobber stats
-	// finalize blobber rewards
-
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
 		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
