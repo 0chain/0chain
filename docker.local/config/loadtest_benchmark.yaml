@@ -8,7 +8,7 @@ simulation:
   num_blobber_delegates: 10
   num_blobbers: 10000
   num_blobbers_per_allocation: 4
-  num_blocks: 100
+  num_blocks: 2000000
   num_challenges_blobber: 1
   num_clients: 1000000
   num_free_storage_assigners: 1
@@ -19,9 +19,12 @@ simulation:
   num_transactions_per_block: 10
   num_validators: 10
   num_vesting_destinations_client: 1
-  num_write_redeem_allocation: 1
   nun_active_sharders: 20
   nun_sharders: 20
+  num_write_redeem_allocation: 2
+  num_read_markers_allocation: 10
+  num_rounds_between_writes: 50
+  num_rounds_between_reads: 100
 
 options:
   verbose: true

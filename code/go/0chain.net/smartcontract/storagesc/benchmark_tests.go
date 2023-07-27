@@ -25,7 +25,6 @@ import (
 
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
 
@@ -200,7 +199,6 @@ func BenchmarkTests(
 					DataShards:      len(blobbers) / 2,
 					ParityShards:    len(blobbers) / 2,
 					Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:      common.Timestamp(viper.GetDuration(bk.TimeUnit).Seconds()) + creationTime,
 					Owner:           data.Clients[0],
 					OwnerPublicKey:  data.PublicKeys[0],
 					Blobbers:        blobbers,
@@ -228,7 +226,6 @@ func BenchmarkTests(
 					ID:              getMockAllocationId(0),
 					OwnerID:         data.Clients[0],
 					Size:            10000000,
-					Expiration:      common.Timestamp(50 * 60 * 60),
 					RemoveBlobberId: getMockBlobberId(0),
 					AddBlobberId:    getMockBlobberId(viper.GetInt(bk.NumBlobbers) - 1),
 					FileOptions:     63,
