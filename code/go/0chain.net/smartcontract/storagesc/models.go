@@ -1408,15 +1408,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	clientID string,
 ) ([]*StorageNode, error) {
 	var err error
-	removeIdx := -1
-	if len(removeId) > 0 {
-		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, clientID, &removeIdx); err != nil {
-			return nil, err
-		}
-	} else {
-		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
-	}
 
 	_, found := sa.BlobberAllocsMap[addId]
 	if found {
@@ -1439,6 +1430,16 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
 		return nil, err
+	}
+
+	removeIdx := -1
+	if len(removeId) > 0 {
+		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, clientID, &removeIdx); err != nil {
+			return nil, err
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
 	}
 
 	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
