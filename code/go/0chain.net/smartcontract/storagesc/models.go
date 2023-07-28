@@ -572,6 +572,80 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	return
 }
 
+func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now common.Timestamp, maxChallengeCompletionTime time.Duration, balances chainstate.StateContextI, sc *StorageSmartContract, ba *BlobberAllocation) (float64, error) {
+
+	if alloc.Stats == nil {
+		alloc.Stats = &StorageAllocationStats{}
+	}
+
+	passRate := 0.0
+
+	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	switch err {
+	case util.ErrValueNotPresent:
+	case nil:
+		for _, oc := range allocChallenges.OpenChallenges {
+			if oc.BlobberID != ba.BlobberID {
+				continue
+			}
+
+			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
+			if !ok {
+				continue
+			}
+
+			if ba.Stats == nil {
+				ba.Stats = new(StorageAllocationStats) // make sure
+			}
+
+			var expire = oc.CreatedAt + toSeconds(maxChallengeCompletionTime)
+			if expire < now {
+				ba.Stats.FailedChallenges++
+				alloc.Stats.FailedChallenges++
+			} else {
+				ba.Stats.SuccessChallenges++
+				alloc.Stats.SuccessChallenges++
+			}
+			ba.Stats.OpenChallenges--
+			alloc.Stats.OpenChallenges--
+
+			err := emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: alloc.ID,
+				BlobberID:    oc.BlobberID,
+			}, true, balances, alloc.Stats, ba.Stats)
+			if err != nil {
+				return 0.0, err
+			}
+
+		}
+
+	default:
+		return 0.0, fmt.Errorf("getting allocation challenge: %v", err)
+	}
+
+	if ba.Stats.OpenChallenges > 0 {
+		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
+
+		ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
+		alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
+
+		ba.Stats.OpenChallenges = 0
+	}
+
+	if ba.Stats.TotalChallenges == 0 {
+		passRate = 1
+	} else {
+		passRate = float64(ba.Stats.SuccessChallenges) / float64(ba.Stats.TotalChallenges)
+	}
+
+	alloc.Stats.OpenChallenges = 0
+
+	emitUpdateAllocationAndBlobberStats(alloc, balances)
+
+	return passRate, nil
+}
+
 func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI) (currency.Coin, error) {
 
 	if d.MinLockDemand > d.Spent {
@@ -1270,10 +1344,7 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 	var found bool
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
-			passRate := 1.0
-			if d.Stats.TotalChallenges != 0 {
-				passRate = float64(d.Stats.SuccessChallenges+d.Stats.OpenChallenges) / float64(d.Stats.TotalChallenges)
-			}
+			passRate, err := d.removeBlobberPassRates(sa, common.Now(), conf.MaxChallengeCompletionTime, balances, sc, d)
 
 			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
 			if err != nil {
