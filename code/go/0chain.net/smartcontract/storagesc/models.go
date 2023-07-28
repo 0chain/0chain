@@ -1445,15 +1445,13 @@ func (sa *StorageAllocation) changeBlobbers(
 		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, clientID, &removeIdx); err != nil {
 			return nil, err
 		}
-	} else {
-		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
-	}
 
-	if removeIdx != -1 {
 		blobbers[removeIdx] = addedBlobber
 		sa.BlobberAllocs[removeIdx] = ba
 	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+
 		blobbers = append(blobbers, addedBlobber)
 		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 	}
