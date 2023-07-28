@@ -1058,8 +1058,6 @@ func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, bala
 }
 
 func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract) error {
-	prevBal := cp.Balance
-
 	var passPayments currency.Coin
 	for i, d := range sa.BlobberAllocs {
 		blobberPassPayment, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf)
@@ -1095,7 +1093,7 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := prevBal.Int64()
+	i, err := passPayments.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
