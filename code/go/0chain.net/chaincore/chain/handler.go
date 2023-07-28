@@ -825,8 +825,12 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 
 	for _, nd := range nodes {
 
-		logging.Logger.Info("4 printNodePool", zap.Any("nd", nd), zap.Any("nd.GetStatus()", nd.GetStatus()), zap.Any("node.NodeStatusInactive", node.NodeStatusInactive), zap.Any("NodeType", nd.Type),
-			zap.Any("node.Self.IsEqual(nd)", node.Self.IsEqual(nd)), zap.Any("c.GetCurrentRound()", c.GetCurrentRound()), zap.Any("lfb.Round", lfb.Round))
+		logging.Logger.Info("4 printNodePool", zap.Any("nd", nd), zap.Any("nd.Info", nd.Info), zap.Any("nd.GetStatus()", nd.GetStatus()), zap.Any("node.NodeStatusInactive", node.NodeStatusInactive), zap.Any("NodeType", nd.Type),
+			zap.Any("node.Self.IsEqual(nd)", node.Self.IsEqual(nd)), zap.Any("c.GetCurrentRound()", c.GetCurrentRound()), zap.Any("lfb.Round", lfb.Round),
+			zap.Any("c.IsRoundGenerator(r, nd)", c.IsRoundGenerator(r, nd)), zap.Any("r.GetMinerRank(nd)", r.GetMinerRank(nd)), zap.Any("c.IsBlockSharder(lfb, nd)", c.IsBlockSharder(lfb, nd)),
+			zap.Any("nd.SetIndex", nd.SetIndex), zap.Any("hasRanks", hasRanks), zap.Any("c.GetCurrentRound()", c.GetCurrentRound()), zap.Any("lfb.Round", lfb.Round),
+			zap.Any("GetSent()", nd.GetSent()), zap.Any("GetSendErrors()", nd.GetSendErrors()), zap.Any("GetReceived()", nd.GetReceived()), zap.Any("GetLastActive()", nd.GetLastActiveTime()),
+			zap.Any("GetSmallMessageTime()", nd.GetSmallMessageSendTimeSec()), zap.Any("GetLargeMessageTime()", nd.GetLargeMessageSendTimeSec()), zap.Any("GetLargeMessageOptimalTime()", nd.GetOptimalLargeMessageSendTime()))
 
 		if nd.GetStatus() == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
