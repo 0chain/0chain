@@ -365,8 +365,8 @@ func (edb *EventDb) WorkAggregates(
 	gSnapshot *Snapshot,
 	blockEvents BlockEvents,
 ) (*Snapshot, error) {
-	var err error
 	if isNotAddBlockEvent(blockEvents) {
+		var err error
 		gSnapshot, err = updateSnapshots(gSnapshot, blockEvents, edb)
 		if err != nil {
 			logging.Logger.Error("snapshot could not be processed",
