@@ -603,6 +603,7 @@ func setupMocksFinishAllocation(
 		clientBalance: zcnToBalance(3.1),
 		store:         make(map[string]util.MPTSerializable),
 	}
+
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
 			ID: storageScId,

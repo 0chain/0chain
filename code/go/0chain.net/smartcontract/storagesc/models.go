@@ -583,7 +583,9 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	switch err {
 	case util.ErrValueNotPresent:
+		return 1, nil
 	case nil:
+		fmt.Println("foervfd")
 		for _, oc := range allocChallenges.OpenChallenges {
 			if oc.BlobberID != ba.BlobberID {
 				continue
@@ -629,6 +631,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 
 		ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
 		alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
+		alloc.Stats.OpenChallenges -= ba.Stats.OpenChallenges
 
 		ba.Stats.OpenChallenges = 0
 	}
@@ -638,8 +641,6 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 	} else {
 		passRate = float64(ba.Stats.SuccessChallenges) / float64(ba.Stats.TotalChallenges)
 	}
-
-	alloc.Stats.OpenChallenges = 0
 
 	emitUpdateAllocationAndBlobberStats(alloc, balances)
 
@@ -1325,7 +1326,6 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 		return common.NewError("can't get config", err.Error())
 	}
 
-	var found bool
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
 			passRate, err := d.removeBlobberPassRates(sa, common.Now(), conf.MaxChallengeCompletionTime, balances, sc, d)
@@ -1359,13 +1359,10 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 
 			sa.BlobberAllocs[i] = sa.BlobberAllocs[len(sa.BlobberAllocs)-1]
 			sa.BlobberAllocs = sa.BlobberAllocs[:len(sa.BlobberAllocs)-1]
-			found = true
 			break
 		}
 	}
-	if !found {
-		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
-	}
+
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/tokenpool"
 	"errors"
 	"fmt"
 	"math"
@@ -282,6 +283,7 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 }
 
 func TestChangeBlobbers(t *testing.T) {
+
 	const (
 		confMinAllocSize    = 1024
 		mockOwner           = "mock owner"
@@ -291,7 +293,7 @@ func TestChangeBlobbers(t *testing.T) {
 		mockPoolId          = "mock pool id"
 		confTimeUnit        = 720 * time.Hour
 		mockMaxOffDuration  = 744 * time.Hour
-		mockBlobberCapacity = 20 * confMinAllocSize
+		mockBlobberCapacity = 200000000 * confMinAllocSize
 		mockMinPrice        = 0
 	)
 
@@ -362,6 +364,13 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:  mockReadPrice,
 					WritePrice: mockWritePrice,
 				},
+				Stats: &StorageAllocationStats{
+					UsedSize:          mockBlobberCapacity / 2,
+					SuccessChallenges: 100,
+					FailedChallenges:  2,
+					TotalChallenges:   102,
+					OpenChallenges:    0,
+				},
 			}
 			if i < arg.blobberInChallenge {
 				err := bcPart.Add(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
@@ -399,7 +408,23 @@ func TestChangeBlobbers(t *testing.T) {
 					WritePrice: mockWritePrice,
 				},
 				NotAvailable: false,
+				Allocated:    49268107,
+				SavedData:    298934,
 			}
+
+			var id = strconv.Itoa(i)
+			var sp = newStakePool()
+			sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
+			sp.TotalOffers = currency.Coin(200000000000)
+			var delegatePool = &stakepool.DelegatePool{}
+			delegatePool.Balance = zcnToBalance(10000000000.0)
+			delegatePool.DelegateID = encryption.Hash("delegate " + id)
+			//delegatePool.MintAt = stake.MintAt
+			sp.Pools["paula "+id] = delegatePool
+			sp.Pools["paula "+id] = delegatePool
+			sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
+			require.NoError(t, sp.Save(spenum.Blobber, blobber.ID, balances))
+
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
 			blobbers = append(blobbers, blobber)
@@ -416,6 +441,7 @@ func TestChangeBlobbers(t *testing.T) {
 			WritePriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
 			DataShards:       arg.dataShards,
 			ParityShards:     arg.parityShards,
+			WritePool:        100000000000,
 		}
 
 		if len(arg.addBlobberID) > 0 {
@@ -431,6 +457,16 @@ func TestChangeBlobbers(t *testing.T) {
 			_, err := balances.InsertTrieNode(stakePoolKey(spenum.Blobber, arg.addBlobberID), &sp)
 			require.NoError(t, err)
 		}
+
+		var cPool = challengePool{
+			ZcnPool: &tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					ID:      alloc.ID,
+					Balance: 100000000,
+				},
+			},
+		}
+		require.NoError(t, cPool.save(sc.ID, alloc, balances))
 
 		return blobbers, arg.addBlobberID, arg.removeBlobberID, sc, alloc, now, balances
 
