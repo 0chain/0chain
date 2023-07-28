@@ -530,8 +530,8 @@ func TestChangeBlobbers(t *testing.T) {
 			name: "remove_blobber_doesnt_exist",
 			args: args{
 				numBlobbers:          6,
-				blobbersInAllocation: 6,
-				addBlobberID:         "add_blobber_id",
+				blobbersInAllocation: 4,
+				addBlobberID:         "blobber_5",
 				removeBlobberID:      "blobber_non_existent",
 				dataShards:           5,
 			},

@@ -1416,7 +1416,7 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	addedBlobber, err := getBlobber(addId, balances)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't get blobber %s to add : %v", addId, err)
 	}
 
 	var sp *stakePool
