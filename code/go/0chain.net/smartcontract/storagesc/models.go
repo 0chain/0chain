@@ -963,7 +963,7 @@ func (sa *StorageAllocation) payMinLockDemand(sps []*stakePool, balances chainst
 	return nil
 }
 
-func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, t *transaction.Transaction, ba *BlobberAllocation) error {
+func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, clientID string, ba *BlobberAllocation) error {
 	// min lock demand rest
 	minLockDeductionFromWritePool, err := ba.payMinLockDemand(sa, sp, balances)
 	if err != nil {
@@ -975,7 +975,7 @@ func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, bala
 		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
 	}
 	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
-		Client:       t.ClientID,
+		Client:       clientID,
 		AllocationId: sa.ID,
 		Amount:       i,
 	})
@@ -1129,7 +1129,7 @@ func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances ch
 	return nil
 }
 
-func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, passRate float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction, ba *BlobberAllocation) error {
+func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, passRate float64, conf *Config, sc *StorageSmartContract, clientID string, ba *BlobberAllocation) error {
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
@@ -1177,7 +1177,7 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 	logging.Logger.Info("Jayash 6", zap.Any("i", i))
 
 	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
-		Client:       t.ClientID,
+		Client:       clientID,
 		AllocationId: sa.ID,
 		Amount:       i,
 	})
@@ -1281,7 +1281,7 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, t *transaction.Transaction) error {
+func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string) error {
 	_, ok := sa.BlobberAllocsMap[blobberID]
 	if !ok {
 		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
@@ -1309,7 +1309,7 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 					"error removing offer: "+err.Error())
 			}
 
-			if err := sa.payMinLockDemandToRemoveBlobber(sp, balances, t, d); err != nil {
+			if err := sa.payMinLockDemandToRemoveBlobber(sp, balances, clientID, d); err != nil {
 				return fmt.Errorf("error paying min lock demand: %v", err)
 			}
 
@@ -1322,7 +1322,7 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 				return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 			}
 
-			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, t, d); err != nil {
+			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
@@ -1344,8 +1344,8 @@ func removeBlobber(
 	blobberID string,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
-	t *transaction.Transaction) ([]*StorageNode, error) {
-	if err := sa.removeBlobber(blobberID, sc, balances, t); err != nil {
+	clientID string) ([]*StorageNode, error) {
+	if err := sa.removeBlobber(blobberID, sc, balances, clientID); err != nil {
 		return nil, err
 	}
 
@@ -1377,11 +1377,11 @@ func (sa *StorageAllocation) changeBlobbers(
 	now common.Timestamp,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
-	t *transaction.Transaction,
+	clientID string,
 ) ([]*StorageNode, error) {
 	var err error
 	if len(removeId) > 0 {
-		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, t); err != nil {
+		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, clientID); err != nil {
 			return nil, err
 		}
 	} else {
