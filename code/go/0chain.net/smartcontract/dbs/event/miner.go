@@ -39,7 +39,7 @@ type MinerGeolocation struct {
 
 func (m Miner) GetID() string {
 	return m.ID
-}	
+}
 
 func (edb *EventDb) GetMiner(id string) (Miner, error) {
 	var miner Miner
@@ -85,6 +85,9 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		return m, nil, nil
 	}
 	for i := range minerDps {
+		if minerDps[i].DelegatePool.Status != 0 {
+			continue
+		}
 		dps = append(dps, minerDps[i].DelegatePool)
 		if id != minerDps[i].DelegatePool.ProviderID {
 			return m, nil, fmt.Errorf("mismatched miner id in delegate pool;"+
