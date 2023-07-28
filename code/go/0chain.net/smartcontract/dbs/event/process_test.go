@@ -25,7 +25,7 @@ func TestAddEvents(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
@@ -116,7 +116,7 @@ func TestUpdateHistoricData(t *testing.T) {
 		buildMockSharderSnapshot(t, "sharder6"),
 	}
 	err = eventDb.Store.Get().Create(&sharderSnapshots).Error
-	require.NoError(t, err)               
+	require.NoError(t, err)
 
 	validators := []Validator{
 		buildMockValidator(t, OwnerId, "validator1"),
@@ -166,60 +166,60 @@ func TestUpdateHistoricData(t *testing.T) {
 		// Events changing blobbers
 		{
 			Type: TypeStats,
-			Tag: TagUpdateBlobber,
+			Tag:  TagUpdateBlobber,
 			Data: []Blobber{
-				{ Provider: Provider{ ID: "blobber1" } },
-				{ Provider: Provider{ ID: "blobber2" } },
+				{Provider: Provider{ID: "blobber1"}},
+				{Provider: Provider{ID: "blobber2"}},
 			},
 		},
 		// Events changing miners
 		{
 			Type: TypeStats,
-			Tag: TagUpdateMiner,
+			Tag:  TagUpdateMiner,
 			Data: []Miner{
-				{ Provider: Provider{ ID: "miner2" } },
-				{ Provider: Provider{ ID: "miner3" } },
+				{Provider: Provider{ID: "miner2"}},
+				{Provider: Provider{ID: "miner3"}},
 			},
 		},
 		// Events changing sharders
 		{
 			Type: TypeStats,
-			Tag: TagUpdateSharderTotalStake,
+			Tag:  TagUpdateSharderTotalStake,
 			Data: []Sharder{
-				{ Provider: Provider{ ID: "sharder3" } },
-				{ Provider: Provider{ ID: "sharder4" } },
+				{Provider: Provider{ID: "sharder3"}},
+				{Provider: Provider{ID: "sharder4"}},
 			},
 		},
 		// Events changing validators
 		{
 			Type: TypeStats,
-			Tag: TagUpdateValidatorStakeTotal,
+			Tag:  TagUpdateValidatorStakeTotal,
 			Data: []Validator{
-				{ Provider: Provider{ ID: "validator4" } },
-				{ Provider: Provider{ ID: "validator5" } },
+				{Provider: Provider{ID: "validator4"}},
+				{Provider: Provider{ID: "validator5"}},
 			},
 		},
 		// Events changing authorizers
 		{
 			Type: TypeStats,
-			Tag: TagUpdateAuthorizerTotalStake,
+			Tag:  TagUpdateAuthorizerTotalStake,
 			Data: []Authorizer{
-				{ Provider: Provider{ ID: "authorizer2" } },
-				{ Provider: Provider{ ID: "authorizer4" } },
+				{Provider: Provider{ID: "authorizer2"}},
+				{Provider: Provider{ID: "authorizer4"}},
 			},
 		},
 		// Events changing global snapshot values
 		{
 			Type: TypeStats,
-			Tag: TagLockReadPool,
+			Tag:  TagLockReadPool,
 			Data: []ReadPoolLock{
-				{ Amount: 100 },
-				{ Amount: 100 },
+				{Amount: 100},
+				{Amount: 100},
 			},
 		},
 		{
 			Type: TypeStats,
-			Tag: TagFromChallengePool,
+			Tag:  TagFromChallengePool,
 			Data: ChallengePoolLock{
 				Amount: 100,
 			},
@@ -227,9 +227,9 @@ func TestUpdateHistoricData(t *testing.T) {
 		// Events that does nothing
 		{
 			Type: TypeStats,
-			Tag: TagAddChallenge,
+			Tag:  TagAddChallenge,
 			Data: []Challenge{
-				{ ChallengeID: "challenge1" },
+				{ChallengeID: "challenge1"},
 			},
 		},
 	}
@@ -239,7 +239,7 @@ func TestUpdateHistoricData(t *testing.T) {
 
 	sAfter, err := eventDb.updateHistoricData(blockEvents{
 		events: events,
-		round: 50,
+		round:  50,
 	}, s)
 	require.NoError(t, err)
 
@@ -415,16 +415,16 @@ func TestUpdateHistoricData(t *testing.T) {
 	var blobberSnapshotsAfter []BlobberSnapshot
 	err = eventDb.Store.Get().Find(&blobberSnapshotsAfter).Error
 	require.NoError(t, err)
-	
+
 	assert.Len(t, blobberSnapshotsAfter, 6)
-	unchangedSnapshots := map[int]string{ 2: "blobber3", 3: "blobber4", 4: "blobber5", 5: "blobber6" }
+	unchangedSnapshots := map[int]string{2: "blobber3", 3: "blobber4", 4: "blobber5", 5: "blobber6"}
 	for i, bid := range unchangedSnapshots {
 		var blobberSnapshotFromDb BlobberSnapshot
 		err := eventDb.Store.Get().Where("blobber_id = ?", bid).First(&blobberSnapshotFromDb).Error
 		require.NoError(t, err)
 		assert.Equal(t, blobberSnapshots[i], blobberSnapshotFromDb)
 	}
-	changedSnapshots := map[int]string{ 0: "blobber1", 1: "blobber2" }
+	changedSnapshots := map[int]string{0: "blobber1", 1: "blobber2"}
 	for i, bid := range changedSnapshots {
 		var blobberSnapshotFromDb BlobberSnapshot
 		err := eventDb.Store.Get().Where("blobber_id = ?", bid).First(&blobberSnapshotFromDb).Error
@@ -439,14 +439,14 @@ func TestUpdateHistoricData(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, minerSnapshotsAfter, 6)
-	unchangedSnapshots = map[int]string{ 0: "miner1", 3: "miner4", 4: "miner5", 5: "miner6" }
+	unchangedSnapshots = map[int]string{0: "miner1", 3: "miner4", 4: "miner5", 5: "miner6"}
 	for i, mid := range unchangedSnapshots {
 		var minerSnapshotFromDb MinerSnapshot
 		err := eventDb.Store.Get().Where("miner_id = ?", mid).First(&minerSnapshotFromDb).Error
 		require.NoError(t, err)
 		assert.Equal(t, minerSnapshots[i], minerSnapshotFromDb)
 	}
-	changedSnapshots = map[int]string{ 1: "miner2", 2: "miner3" }
+	changedSnapshots = map[int]string{1: "miner2", 2: "miner3"}
 	for i, mid := range changedSnapshots {
 		var minerSnapshotFromDb MinerSnapshot
 		err := eventDb.Store.Get().Where("miner_id = ?", mid).First(&minerSnapshotFromDb).Error
@@ -461,14 +461,14 @@ func TestUpdateHistoricData(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, sharderSnapshotsAfter, 6)
-	unchangedSnapshots = map[int]string{ 0: "sharder1", 1: "sharder2", 4: "sharder5", 5: "sharder6" }
+	unchangedSnapshots = map[int]string{0: "sharder1", 1: "sharder2", 4: "sharder5", 5: "sharder6"}
 	for i, sid := range unchangedSnapshots {
 		var sharderSnapshotFromDb SharderSnapshot
 		err := eventDb.Store.Get().Where("sharder_id = ?", sid).First(&sharderSnapshotFromDb).Error
 		require.NoError(t, err)
 		assert.Equal(t, sharderSnapshots[i], sharderSnapshotFromDb)
 	}
-	changedSnapshots = map[int]string{ 2: "sharder3", 3: "sharder4" }
+	changedSnapshots = map[int]string{2: "sharder3", 3: "sharder4"}
 	for i, sid := range changedSnapshots {
 		var sharderSnapshotFromDb SharderSnapshot
 		err := eventDb.Store.Get().Where("sharder_id = ?", sid).First(&sharderSnapshotFromDb).Error
@@ -483,14 +483,14 @@ func TestUpdateHistoricData(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, validatorSnapshotsAfter, 6)
-	unchangedSnapshots = map[int]string{ 0: "validator1", 1: "validator2", 2: "validator3", 5: "validator6" }
+	unchangedSnapshots = map[int]string{0: "validator1", 1: "validator2", 2: "validator3", 5: "validator6"}
 	for i, vid := range unchangedSnapshots {
 		var validatorSnapshotFromDb ValidatorSnapshot
 		err := eventDb.Store.Get().Where("validator_id = ?", vid).First(&validatorSnapshotFromDb).Error
 		require.NoError(t, err)
 		assert.Equal(t, validatorSnapshots[i], validatorSnapshotFromDb)
 	}
-	changedSnapshots = map[int]string{ 3: "validator4", 4: "validator5" }
+	changedSnapshots = map[int]string{3: "validator4", 4: "validator5"}
 	for i, vid := range changedSnapshots {
 		var validatorSnapshotFromDb ValidatorSnapshot
 		err := eventDb.Store.Get().Where("validator_id = ?", vid).First(&validatorSnapshotFromDb).Error
@@ -505,14 +505,14 @@ func TestUpdateHistoricData(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, authorizerSnapshotsAfter, 6)
-	unchangedSnapshots = map[int]string{ 0: "authorizer1", 2: "authorizer3", 4: "authorizer5", 5: "authorizer6" }
+	unchangedSnapshots = map[int]string{0: "authorizer1", 2: "authorizer3", 4: "authorizer5", 5: "authorizer6"}
 	for i, aid := range unchangedSnapshots {
 		var authorizerSnapshotFromDb AuthorizerSnapshot
 		err := eventDb.Store.Get().Where("authorizer_id = ?", aid).First(&authorizerSnapshotFromDb).Error
 		require.NoError(t, err)
 		assert.Equal(t, authorizerSnapshots[i], authorizerSnapshotFromDb)
 	}
-	changedSnapshots = map[int]string{ 1: "authorizer2", 3: "authorizer4" }
+	changedSnapshots = map[int]string{1: "authorizer2", 3: "authorizer4"}
 	for i, aid := range changedSnapshots {
 		var authorizerSnapshotFromDb AuthorizerSnapshot
 		err := eventDb.Store.Get().Where("authorizer_id = ?", aid).First(&authorizerSnapshotFromDb).Error
