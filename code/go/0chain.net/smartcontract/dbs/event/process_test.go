@@ -237,7 +237,7 @@ func TestUpdateHistoricData(t *testing.T) {
 	sBefore := *s
 	sBefore.Round = 50
 
-	sAfter, err := eventDb.updateHistoricData(blockEvents{
+	sAfter, err := eventDb.updateHistoricData(BlockEvents{
 		events: events,
 		round:  50,
 	}, s)
