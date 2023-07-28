@@ -422,8 +422,13 @@ func testCancelAllocation(
 	}
 
 	for _, ba := range f.allocation.BlobberAllocs {
+		passRate := 1.0
+		if ba.Stats.TotalChallenges != 0 {
+			passRate = float64(ba.Stats.SuccessChallenges+ba.Stats.OpenChallenges) / float64(ba.Stats.TotalChallenges)
+		}
+
 		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
-		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight)
+		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight * passRate)
 
 		if err != nil {
 			return fmt.Errorf("failed to convert float to coin: %v", err)

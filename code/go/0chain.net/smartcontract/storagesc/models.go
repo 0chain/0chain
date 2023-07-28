@@ -1036,8 +1036,6 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 }
 
 func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, cp *challengePool, passRate float64, conf *Config, sc *StorageSmartContract, ba *BlobberAllocation) error {
-	prevBal := cp.Balance
-
 	passPayments, err := ba.payChallengePoolPassPayments(sa, sp, cp, passRate, balances, conf)
 	if err != nil {
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
@@ -1048,32 +1046,9 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 		return err
 	}
 
-	if cp.Balance > 0 {
-		sa.MovedBack, err = currency.AddCoin(sa.MovedBack, cp.Balance)
-		if err != nil {
-			return err
-		}
-
-		err = sa.moveFromChallengePool(cp, cp.Balance)
-		if err != nil {
-			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
-		}
-	}
-
 	if err = cp.save(sc.ID, sa, balances); err != nil {
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
-
-	i, err := prevBal.Int64()
-	if err != nil {
-		return fmt.Errorf("failed to convert balance: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
-		Client:       sa.Owner,
-		AllocationId: sa.ID,
-		Amount:       i,
-	})
 
 	return nil
 }

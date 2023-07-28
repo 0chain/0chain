@@ -1278,7 +1278,7 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation, bal
 			return nil, errors.New("empty total challenges")
 		}
 
-		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
+		passRates = append(passRates, float64(ba.Stats.SuccessChallenges+ba.Stats.OpenChallenges)/float64(ba.Stats.TotalChallenges))
 		succesful += ba.Stats.SuccessChallenges
 		failed += ba.Stats.FailedChallenges
 	}
@@ -1350,8 +1350,8 @@ func (sc *StorageSmartContract) canceledPassRates(
 		if ba.Stats.OpenChallenges > 0 {
 			logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
 
-			ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
-			alloc.Stats.FailedChallenges += ba.Stats.OpenChallenges
+			ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
+			alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
 
 			ba.Stats.OpenChallenges = 0
 		}
