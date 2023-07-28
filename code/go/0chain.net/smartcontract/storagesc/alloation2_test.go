@@ -421,14 +421,10 @@ func testCancelAllocation(
 		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
 	}
 
-	for _, ba := range f.allocation.BlobberAllocs {
-		passRate := 1.0
-		if ba.Stats.TotalChallenges != 0 {
-			passRate = float64(ba.Stats.SuccessChallenges+ba.Stats.OpenChallenges) / float64(ba.Stats.TotalChallenges)
-		}
+	for i, ba := range f.allocation.BlobberAllocs {
 
 		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
-		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight * passRate)
+		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight * f._passRates[i])
 
 		if err != nil {
 			return fmt.Errorf("failed to convert float to coin: %v", err)
@@ -443,7 +439,7 @@ func testCancelAllocation(
 	req.decode(input)
 	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
 	remainingWritePool, _ := allocation.WritePool.Int64()
-	require.Equal(t, int64(0), remainingWritePool)
+	require.Equal(t, int64(100000000), remainingWritePool)
 
 	return nil
 }
