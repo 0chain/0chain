@@ -1160,7 +1160,6 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 	}
 
 	logging.Logger.Info("Jayash 4", zap.Any("totalCancellationChargePaid", totalCancellationChargePaid))
-	logging.Logger.Info("Jayash 4", zap.Any("totalCancellationChargePaid", totalCancellationChargePaid))
 
 	sa.WritePool, err = currency.MinusCoin(sa.WritePool, totalCancellationChargePaid)
 	if err != nil {
@@ -1296,8 +1295,10 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 	var found bool
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
-
-			passRate := float64(d.Stats.SuccessChallenges+d.Stats.OpenChallenges) / float64(d.Stats.TotalChallenges)
+			passRate := 1.0
+			if d.Stats.TotalChallenges != 0 {
+				passRate = float64(d.Stats.SuccessChallenges+d.Stats.OpenChallenges) / float64(d.Stats.TotalChallenges)
+			}
 
 			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
 			if err != nil {
