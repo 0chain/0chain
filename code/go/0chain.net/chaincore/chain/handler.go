@@ -811,11 +811,23 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td rowspan='2'>Set Index</td><td rowspan='2'>Node</td><td rowspan='2'>Sent</td><td rowspan='2'>Send Errors</td><td rowspan='2'>Received</td><td rowspan='2'>Last Active</td><td colspan='3' style='text-align:center'>Message Time</td><td rowspan='2'>Description</td><td colspan='4' style='text-align:center'>Remote Data</td></tr>")
 	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
+
+	logging.Logger.Info("1 printNodePool", zap.Any("np", np))
 	nodes := np.CopyNodes()
+
+	logging.Logger.Info("2 printNodePool", zap.Any("nodes", nodes))
+
 	sort.SliceStable(nodes, func(i, j int) bool {
 		return nodes[i].SetIndex < nodes[j].SetIndex
 	})
+
+	logging.Logger.Info("3 printNodePool", zap.Any("nodes", nodes))
+
 	for _, nd := range nodes {
+
+		logging.Logger.Info("4 printNodePool", zap.Any("nd", nd), zap.Any("nd.GetStatus()", nd.GetStatus()), zap.Any("node.NodeStatusInactive", node.NodeStatusInactive), zap.Any("NodeType", nd.Type),
+			zap.Any("node.Self.IsEqual(nd)", node.Self.IsEqual(nd)), zap.Any("c.GetCurrentRound()", c.GetCurrentRound()), zap.Any("lfb.Round", lfb.Round))
+
 		if nd.GetStatus() == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
