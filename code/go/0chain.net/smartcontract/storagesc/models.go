@@ -1432,6 +1432,14 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
+	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
+	afterSize := sa.bSize()
+
+	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now, conf.TimeUnit)
+	if err != nil {
+		return nil, fmt.Errorf("can't allocate blobber: %v", err)
+	}
+
 	removeIdx := -1
 	if len(removeId) > 0 {
 		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, clientID, &removeIdx); err != nil {
@@ -1442,26 +1450,15 @@ func (sa *StorageAllocation) changeBlobbers(
 		sa.ParityShards++
 	}
 
-	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
-	afterSize := sa.bSize()
-
 	if removeIdx != -1 {
 		blobbers[removeIdx] = addedBlobber
+		sa.BlobberAllocs[removeIdx] = ba
 	} else {
 		blobbers = append(blobbers, addedBlobber)
-	}
-	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now, conf.TimeUnit)
-	if err != nil {
-		return nil, fmt.Errorf("can't allocate blobber: %v", err)
+		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 	}
 
 	sa.BlobberAllocsMap[addId] = ba
-
-	if removeIdx != -1 {
-		sa.BlobberAllocs[removeIdx] = ba
-	} else {
-		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-	}
 
 	err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
 	if err != nil {
