@@ -938,35 +938,37 @@ func removeBlobber(
 	sa *StorageAllocation,
 	blobbers []*StorageNode,
 	blobberID string,
-	balances cstate.StateContextI) ([]*StorageNode, error) {
+	balances cstate.StateContextI) ([]*StorageNode, int, error) {
 	if err := sa.removeBlobber(blobberID); err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 
 	var removedBlobber *StorageNode
 	var found bool
+	var idx int
 	for i, d := range blobbers {
 		if d.ID == blobberID {
 			removedBlobber = blobbers[i]
 			blobbers[i] = blobbers[len(blobbers)-1]
 			blobbers = blobbers[:len(blobbers)-1]
 			found = true
+			idx = i
 			break
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
+		return nil, -1, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
 	if err := removeAllocationFromBlobber(balances, sa.ID, blobberID); err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 
 	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
+		return nil, -1, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
 	}
 
-	return blobbers, nil
+	return blobbers, idx, nil
 }
 
 func (sa *StorageAllocation) changeBlobbers(
@@ -977,8 +979,9 @@ func (sa *StorageAllocation) changeBlobbers(
 	balances cstate.StateContextI,
 ) ([]*StorageNode, error) {
 	var err error
+	var removeIdx int
 	if len(removeId) > 0 {
-		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances); err != nil {
+		if blobbers, removeIdx, err = removeBlobber(sa, blobbers, removeId, balances); err != nil {
 			return nil, err
 		}
 	} else {
@@ -1011,8 +1014,12 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 	afterSize := sa.bSize()
-
-	blobbers = append(blobbers, addedBlobber)
+	if len(removeId) > 0 {
+		blobbers = append(blobbers[:removeIdx+1], blobbers[removeIdx:]...)
+		blobbers[removeIdx] = addedBlobber
+	} else {
+		blobbers = append(blobbers, addedBlobber)
+	}
 	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now, conf.TimeUnit)
 	if err != nil {
 		return nil, fmt.Errorf("can't allocate blobber: %v", err)
