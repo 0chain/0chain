@@ -63,7 +63,6 @@ func SetupScRestApiHandlers() {
 func SetupSharderStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
-	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
 	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
 }
 
@@ -74,8 +73,9 @@ func SetupDebugStateHandlers() {
 }
 
 func SetupStateHandlers() {
+	c := GetServerChain()
 	http.HandleFunc("/_smart_contract_stats", common.WithCORS(common.UserRateLimit(GetServerChain().SCStats)))
-	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(GetServerChain().GetSCStats)))
+	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
 }
 
 func (c *Chain) GetQueryStateContext() state.TimedQueryStateContextI {
