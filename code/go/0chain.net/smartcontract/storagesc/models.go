@@ -1314,7 +1314,7 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string, removeIdx *int) error {
+func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string) error {
 	_, ok := sa.BlobberAllocsMap[blobberID]
 	if !ok {
 		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
@@ -1358,8 +1358,6 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 			}
 
 			sa.BlobberAllocs[i] = nil
-
-			*removeIdx = i
 			break
 		}
 	}
@@ -1375,7 +1373,7 @@ func removeBlobber(
 	sc *StorageSmartContract,
 	clientID string, removeIdx *int) ([]*StorageNode, error) {
 
-	if err := sa.removeBlobber(blobberID, sc, balances, clientID, removeIdx); err != nil {
+	if err := sa.removeBlobber(blobberID, sc, balances, clientID); err != nil {
 		return nil, err
 	}
 
@@ -1386,6 +1384,7 @@ func removeBlobber(
 			removedBlobber = blobbers[i]
 			blobbers[i] = nil
 			found = true
+			*removeIdx = i
 			break
 		}
 	}
