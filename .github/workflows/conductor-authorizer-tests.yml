@@ -151,7 +151,7 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
-        ethereum_node_url:https://polygon-mumbai.g.alchemy.com/v2/94MznalgOkINSqTNiS65FNMnkn8vLUpv
+        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/94MznalgOkINSqTNiS65FNMnkn8vLUpv
         bridge:
           bridge_address: 0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
           token_address: 0xC79aD1e07f790d0Cf6AA3D09FeC393A09DC53d64
