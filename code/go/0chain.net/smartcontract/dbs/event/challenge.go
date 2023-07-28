@@ -31,6 +31,51 @@ type Challenge struct {
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
 
+func (edb *EventDb) GetChallengesCountBetweenBlocks(start, end int64) (map[string]int64, error) {
+	var count int64
+	response := make(map[string]int64)
+
+	result := edb.Store.Get().
+		Model(&Challenge{}).
+		Where("round_created_at >= ? AND round_created_at < ?", start, end).
+		Count(&count)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting challenges count", zap.Error(result.Error))
+		return response, result.Error
+	}
+
+	passed, err := edb.GetChallengesCountBetweenBlocksByPassed(start, end, true)
+	if err != nil {
+		return response, fmt.Errorf("error getting passed challenges count: %v", err)
+	}
+
+	failed, err := edb.GetChallengesCountBetweenBlocksByPassed(start, end, false)
+	if err != nil {
+		return response, fmt.Errorf("error getting failed challenges count: %v", err)
+	}
+
+	response["total"] = count
+	response["passed"] = passed
+	response["failed"] = failed
+
+	return response, nil
+}
+
+func (edb *EventDb) GetChallengesCountBetweenBlocksByPassed(start, end int64, passed bool) (int64, error) {
+	var count int64
+
+	result := edb.Store.Get().
+		Model(&Challenge{}).
+		Where("round_created_at >= ? AND round_created_at < ? AND passed = ?", start, end, passed).
+		Count(&count)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting challenges count", zap.Error(result.Error))
+		return 0, result.Error
+	}
+
+	return count, nil
+}
+
 func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
 	var chs Challenges
 	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{AllocationID: allocationID}).Find(&chs)
