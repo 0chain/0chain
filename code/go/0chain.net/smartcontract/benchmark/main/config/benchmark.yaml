@@ -60,8 +60,8 @@ dbs:
   settings:
     debug: false
     aggregate_period: 10
-    partition_change_period: 100
-    partition_keep_count: 10
+    partition_change_period: 20
+    partition_keep_count: 3
     page_limit: 50
 
 smart_contracts:

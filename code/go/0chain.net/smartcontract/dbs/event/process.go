@@ -336,50 +336,58 @@ func (edb *EventDb) work(ctx context.Context,
 
 func (edb *EventDb) managePartitions(round int64) {
 	logging.Logger.Info("managing partitions", zap.Int64("round", round))
+	edb.AddPartitions(round)
+	edb.dropPartitions(round)
+}
+
+func (edb *EventDb) AddPartitions(round int64) {
 	if err := edb.addPartition(round, "events"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
-	}
-	if err := edb.dropPartition(round, "events"); err != nil {
-		logging.Logger.Error("error dropping partition", zap.Error(err))
 	}
 	if err := edb.addPartition(round, "snapshots"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
-	if err := edb.dropPartition(round, "snapshots"); err != nil {
-		logging.Logger.Error("error dropping partition", zap.Error(err))
-	}
 	if err := edb.addPartition(round, "blobber_aggregates"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
-	}
-	if err := edb.dropPartition(round, "blobber_aggregates"); err != nil {
-		logging.Logger.Error("error dropping partition", zap.Error(err))
 	}
 	if err := edb.addPartition(round, "miner_aggregates"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
-	if err := edb.dropPartition(round, "miner_aggregates"); err != nil {
-		logging.Logger.Error("error dropping partition", zap.Error(err))
-	}
 	if err := edb.addPartition(round, "sharder_aggregates"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
-	}
-	if err := edb.dropPartition(round, "sharder_aggregates"); err != nil {
-		logging.Logger.Error("error dropping partition", zap.Error(err))
 	}
 	if err := edb.addPartition(round, "validator_aggregates"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
-	if err := edb.dropPartition(round, "validator_aggregates"); err != nil {
-		logging.Logger.Error("error dropping partition", zap.Error(err))
-	}
 	if err := edb.addPartition(round, "authorizer_aggregates"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
-	if err := edb.dropPartition(round, "authorizer_aggregates"); err != nil {
-		logging.Logger.Error("error dropping partition", zap.Error(err))
-	}
 	if err := edb.addPartition(round, "user_aggregates"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+}
+
+func (edb *EventDb) dropPartitions(round int64) {
+	if err := edb.dropPartition(round, "events"); err != nil {
+		logging.Logger.Error("error dropping partition", zap.Error(err))
+	}
+	if err := edb.dropPartition(round, "snapshots"); err != nil {
+		logging.Logger.Error("error dropping partition", zap.Error(err))
+	}
+	if err := edb.dropPartition(round, "blobber_aggregates"); err != nil {
+		logging.Logger.Error("error dropping partition", zap.Error(err))
+	}
+	if err := edb.dropPartition(round, "miner_aggregates"); err != nil {
+		logging.Logger.Error("error dropping partition", zap.Error(err))
+	}
+	if err := edb.dropPartition(round, "sharder_aggregates"); err != nil {
+		logging.Logger.Error("error dropping partition", zap.Error(err))
+	}
+	if err := edb.dropPartition(round, "validator_aggregates"); err != nil {
+		logging.Logger.Error("error dropping partition", zap.Error(err))
+	}
+	if err := edb.dropPartition(round, "authorizer_aggregates"); err != nil {
+		logging.Logger.Error("error dropping partition", zap.Error(err))
 	}
 	if err := edb.dropPartition(round, "user_aggregates"); err != nil {
 		logging.Logger.Error("error dropping partition", zap.Error(err))

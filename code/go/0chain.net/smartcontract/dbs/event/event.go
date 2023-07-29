@@ -233,5 +233,45 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
+	err = edb.Store.Get().Migrator().DropTable(&Authorizer{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&AuthorizerSnapshot{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&AuthorizerAggregate{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&BurnTicket{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&ReadPool{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&TransactionErrors{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&UserSnapshot{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&GooseDbVersion{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
