@@ -442,6 +442,13 @@ func TestChangeBlobbers(t *testing.T) {
 			DataShards:       arg.dataShards,
 			ParityShards:     arg.parityShards,
 			WritePool:        100000000000,
+			Stats: &StorageAllocationStats{
+				UsedSize:          int64(arg.dataShards+arg.parityShards) * mockBlobberCapacity / 2,
+				SuccessChallenges: int64(arg.dataShards+arg.parityShards) * 100,
+				FailedChallenges:  int64(arg.dataShards+arg.parityShards) * 2,
+				TotalChallenges:   int64(arg.dataShards+arg.parityShards) * 102,
+				OpenChallenges:    0,
+			},
 		}
 
 		if len(arg.addBlobberID) > 0 {
