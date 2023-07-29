@@ -1324,6 +1324,22 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
+			if d.Stats.UsedSize > 0 {
+				// get blobber allocations partitions
+				blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
+				if err != nil {
+					return common.NewErrorf("fini_alloc_failed",
+						"error getting blobber_challenge_allocation list: %v", err)
+				}
+				if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+					return err
+				}
+				if err := blobberAllocParts.Save(balances); err != nil {
+					return common.NewErrorf("fini_alloc_failed",
+						"error saving blobber allocation partitions: %v", err)
+				}
+			}
+
 			passRate, err := d.removeBlobberPassRates(sa, common.Now(), conf.MaxChallengeCompletionTime, balances, sc, d)
 
 			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
@@ -1351,22 +1367,6 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 
 			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
-			}
-
-			if d.Stats.UsedSize > 0 {
-				// get blobber allocations partitions
-				blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
-				if err != nil {
-					return common.NewErrorf("fini_alloc_failed",
-						"error getting blobber_challenge_allocation list: %v", err)
-				}
-				if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
-					return err
-				}
-				if err := blobberAllocParts.Save(balances); err != nil {
-					return common.NewErrorf("fini_alloc_failed",
-						"error saving blobber allocation partitions: %v", err)
-				}
 			}
 
 			sa.BlobberAllocs[i] = nil
@@ -1451,6 +1451,8 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err != nil {
 		return nil, fmt.Errorf("can't allocate blobber: %v", err)
 	}
+
+	ba.Stats.UsedSize = sa.Stats.UsedSize / int64(sa.DataShards)
 
 	if len(removeId) > 0 {
 		removeIdx := -1
