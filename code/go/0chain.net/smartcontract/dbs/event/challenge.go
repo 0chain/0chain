@@ -32,41 +32,61 @@ type Challenge struct {
 }
 
 func (edb *EventDb) GetChallengesCountBetweenBlocks(start, end int64) (map[string]int64, error) {
-	var count int64
 	response := make(map[string]int64)
 
-	result := edb.Store.Get().
-		Model(&Challenge{}).
-		Where("round_created_at >= ? AND round_created_at < ?", start, end).
-		Count(&count)
-	if result.Error != nil {
-		logging.Logger.Error("Error getting challenges count", zap.Error(result.Error))
-		return response, result.Error
+	total, err := edb.GetChallengesCountByQuery(fmt.Sprintf("round_created_at >= %d AND round_created_at < %d", start, end))
+	if err != nil {
+		return response, fmt.Errorf("error getting total challenges count: %v", err)
 	}
 
-	passed, err := edb.GetChallengesCountBetweenBlocksByPassed(start, end, true)
+	passed, err := edb.GetChallengesCountByQuery(fmt.Sprintf("round_created_at >= %d AND round_created_at < %d AND passed = 't'", start, end))
 	if err != nil {
 		return response, fmt.Errorf("error getting passed challenges count: %v", err)
 	}
 
-	failed, err := edb.GetChallengesCountBetweenBlocksByPassed(start, end, false)
+	failed, err := edb.GetChallengesCountByQuery(fmt.Sprintf("round_created_at >= %d AND round_created_at < %d AND passed = 'f'", start, end))
 	if err != nil {
 		return response, fmt.Errorf("error getting failed challenges count: %v", err)
 	}
 
-	response["total"] = count
+	response["total"] = total
 	response["passed"] = passed
 	response["failed"] = failed
 
 	return response, nil
 }
 
-func (edb *EventDb) GetChallengesCountBetweenBlocksByPassed(start, end int64, passed bool) (int64, error) {
+func (edb *EventDb) GetChallengesCountForAllocation(allocationID string) (map[string]int64, error) {
+	response := make(map[string]int64)
+
+	total, err := edb.GetChallengesCountByQuery(fmt.Sprintf("allocation_id = %s", allocationID))
+	if err != nil {
+		return response, fmt.Errorf("error getting total challenges count: %v", err)
+	}
+
+	passed, err := edb.GetChallengesCountByQuery(fmt.Sprintf("allocation_id = %s AND passed = 't'", allocationID))
+	if err != nil {
+		return response, fmt.Errorf("error getting passed challenges count: %v", err)
+	}
+
+	failed, err := edb.GetChallengesCountByQuery(fmt.Sprintf("allocation_id = %s AND passed = 'f'", allocationID))
+	if err != nil {
+		return response, fmt.Errorf("error getting failed challenges count: %v", err)
+	}
+
+	response["total"] = total
+	response["passed"] = passed
+	response["failed"] = failed
+
+	return response, nil
+}
+
+func (edb *EventDb) GetChallengesCountByQuery(whereQuery string) (int64, error) {
 	var count int64
 
 	result := edb.Store.Get().
 		Model(&Challenge{}).
-		Where("round_created_at >= ? AND round_created_at < ? AND passed = ?", start, end, passed).
+		Where(whereQuery).
 		Count(&count)
 	if result.Error != nil {
 		logging.Logger.Error("Error getting challenges count", zap.Error(result.Error))

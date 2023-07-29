@@ -186,3 +186,20 @@ func (srh *StorageRestHandler) getChallengesCountBetweenBlocks(w http.ResponseWr
 
 	common.Respond(w, r, result, err)
 }
+
+func (srh *StorageRestHandler) getChallengesForAllocation(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	allocationID := r.URL.Query().Get("allocation_id")
+
+	result, err := edb.GetChallengesCountForAllocation(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, err)
+}
