@@ -12,6 +12,12 @@ type TestConfig struct {
 	conf *TestConfigData
 }
 
+func NewTestConfig(dbSettings config.DbSettings) *TestConfig {
+	return &TestConfig{&TestConfigData{
+		DbsSettings: dbSettings,
+	}}
+}
+
 type TestConfigData struct {
 	IsStateEnabled        bool          `json:"state"`
 	IsDkgEnabled          bool          `json:"dkg"`

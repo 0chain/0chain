@@ -196,7 +196,7 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 	return mappedAggrs, nil
 }
 
-func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
+func (edb *EventDb) updateUserAggregates(e *BlockEvents) error {
 	logging.Logger.Debug("calculating user_aggregates", zap.Int64("round", e.round))
 	var updatedAggrs []UserAggregate
 	for _, ev := range e.events {
@@ -215,7 +215,7 @@ func (edb *EventDb) updateUserAggregates(e *blockEvents) error {
 		uniqueIds = append(uniqueIds, id)
 	}
 
-	// load user snapshots  
+	// load user snapshots
 	snaps, err := edb.GetUserSnapshotsByIds(uniqueIds)
 	if err != nil {
 		logging.Logger.Error("can't load latest snapshots", zap.Error(err))

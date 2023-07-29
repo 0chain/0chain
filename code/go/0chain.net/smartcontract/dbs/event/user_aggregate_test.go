@@ -32,7 +32,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 		t.Error(err)
 	}
 	type args struct {
-		e *blockEvents
+		e *BlockEvents
 	}
 	tests := []struct {
 		name    string
@@ -41,7 +41,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 	}{
 		{
 			name: "single event",
-			args: args{e: &blockEvents{events: []Event{{
+			args: args{e: &BlockEvents{events: []Event{{
 				BlockNumber: 1,
 				TxHash:      "qwerty",
 				Tag:         TagLockReadPool,
@@ -55,7 +55,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 			wantErr: assert.NoError,
 		}, {
 			name: "two event",
-			args: args{e: &blockEvents{events: []Event{{
+			args: args{e: &BlockEvents{events: []Event{{
 				BlockNumber: 2,
 				TxHash:      "qwerty21",
 				Tag:         TagLockReadPool,
@@ -78,7 +78,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 			wantErr: assert.NoError,
 		}, {
 			name: "two event with aggr",
-			args: args{e: &blockEvents{events: []Event{{
+			args: args{e: &BlockEvents{events: []Event{{
 				BlockNumber: 4,
 				TxHash:      "qwerty31",
 				Tag:         TagLockReadPool,
@@ -149,7 +149,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 		t.Error(err)
 	}
 
-	events := &blockEvents{
+	events := &BlockEvents{
 		events: []Event{
 			{
 				BlockNumber: 10,
