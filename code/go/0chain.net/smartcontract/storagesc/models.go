@@ -742,22 +742,6 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 			"saving blobber "+d.BlobberID+": "+err.Error())
 	}
 
-	if d.Stats.UsedSize > 0 {
-		// get blobber allocations partitions
-		blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
-		if err != nil {
-			return reward, common.NewErrorf("fini_alloc_failed",
-				"error getting blobber_challenge_allocation list: %v", err)
-		}
-		if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
-			return reward, err
-		}
-		if err := blobberAllocParts.Save(balances); err != nil {
-			return reward, common.NewErrorf("fini_alloc_failed",
-				"error saving blobber allocation partitions: %v", err)
-		}
-	}
-
 	// Update saved data on events_db
 	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
@@ -1357,6 +1341,22 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 
 			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
+			}
+
+			if d.Stats.UsedSize > 0 {
+				// get blobber allocations partitions
+				blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
+				if err != nil {
+					return common.NewErrorf("fini_alloc_failed",
+						"error getting blobber_challenge_allocation list: %v", err)
+				}
+				if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+					return err
+				}
+				if err := blobberAllocParts.Save(balances); err != nil {
+					return common.NewErrorf("fini_alloc_failed",
+						"error saving blobber allocation partitions: %v", err)
+				}
 			}
 
 			sa.BlobberAllocs[i] = nil
