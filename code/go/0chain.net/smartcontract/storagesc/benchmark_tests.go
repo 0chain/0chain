@@ -796,7 +796,6 @@ func BenchmarkTests(
 					"cost.blobber_health_check":      "105",
 					"cost.update_blobber_settings":   "105",
 					"cost.pay_blobber_block_rewards": "105",
-					"cost.challenge_request":         "105",
 					"cost.challenge_response":        "105",
 					"cost.generate_challenge":        "105",
 					"cost.add_validator":             "105",

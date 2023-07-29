@@ -190,7 +190,6 @@ smart_contracts:
       update_blobber_settings: 338
       update_validator_settings: 247
       pay_blobber_block_rewards: 100 #todo
-      challenge_request: 100 #todo
       challenge_response: 728
       add_validator: 348
       add_blobber: 266
