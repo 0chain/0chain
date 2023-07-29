@@ -1853,6 +1853,19 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	nblobAlloc, ok := alloc.BlobberAllocsMap[nb.id]
 	require.True(t, ok)
 
+	alloc.BlobberAllocsMap[nb.id].Stats = &StorageAllocationStats{
+		UsedSize:          int64(mockBlobberCapacity) / 2,
+		SuccessChallenges: 100,
+		FailedChallenges:  2,
+		TotalChallenges:   102,
+		OpenChallenges:    0,
+	}
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
+	if err != nil {
+		return
+	}
+
 	nsp, err := ssc.getStakePool(spenum.Blobber, nb.id, balances)
 	require.NoError(t, err)
 	require.Equal(t, nsp.TotalOffers, nblobAlloc.Offer())

@@ -1452,8 +1452,6 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("can't allocate blobber: %v", err)
 	}
 
-	ba.Stats.UsedSize = sa.Stats.UsedSize / int64(sa.DataShards)
-
 	if len(removeId) > 0 {
 		removeIdx := -1
 		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, clientID, &removeIdx); err != nil {
