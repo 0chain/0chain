@@ -93,7 +93,6 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
 	}
 
-	fmt.Println("made event sql database ok")
 	return nil
 }
 

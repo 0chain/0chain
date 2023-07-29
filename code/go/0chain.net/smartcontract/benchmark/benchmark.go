@@ -34,6 +34,9 @@ const (
 	ZCNSCBridge
 	ZCNSCBridgeRest
 	Control
+	EventDatabase
+	EventDatabaseEvents
+	EventDatabaseAggregates
 	NumberOdfBenchmarkSources
 )
 
@@ -51,21 +54,27 @@ var (
 		"zcnscbridge",
 		"zcnscbridge_rest",
 		"control",
+		"event_db",
+		"event_db_events",
+		"event_db_aggregates",
 	}
 
 	SourceCode = map[string]Source{
-		SourceNames[Storage]:         Storage,
-		SourceNames[StorageRest]:     StorageRest,
-		SourceNames[Miner]:           Miner,
-		SourceNames[MinerRest]:       MinerRest,
-		SourceNames[Faucet]:          Faucet,
-		SourceNames[FaucetRest]:      FaucetRest,
-		SourceNames[Vesting]:         Vesting,
-		SourceNames[VestingRest]:     VestingRest,
-		SourceNames[MultiSig]:        MultiSig,
-		SourceNames[ZCNSCBridge]:     ZCNSCBridge,
-		SourceNames[ZCNSCBridgeRest]: ZCNSCBridgeRest,
-		SourceNames[Control]:         Control,
+		SourceNames[Storage]:                 Storage,
+		SourceNames[StorageRest]:             StorageRest,
+		SourceNames[Miner]:                   Miner,
+		SourceNames[MinerRest]:               MinerRest,
+		SourceNames[Faucet]:                  Faucet,
+		SourceNames[FaucetRest]:              FaucetRest,
+		SourceNames[Vesting]:                 Vesting,
+		SourceNames[VestingRest]:             VestingRest,
+		SourceNames[MultiSig]:                MultiSig,
+		SourceNames[ZCNSCBridge]:             ZCNSCBridge,
+		SourceNames[ZCNSCBridgeRest]:         ZCNSCBridgeRest,
+		SourceNames[Control]:                 Control,
+		SourceNames[EventDatabase]:           EventDatabase,
+		SourceNames[EventDatabaseEvents]:     EventDatabaseEvents,
+		SourceNames[EventDatabaseAggregates]: EventDatabaseAggregates,
 	}
 )
 
@@ -138,13 +147,18 @@ const (
 	MptCreationTime         = Internal + "mpt_creation_time"
 	BenchDataListLength     = Internal + "bench_data_list_length"
 
-	OptionVerbose            = Options + "verbose"
-	OptionTestSuites         = Options + "test_suites"
-	OptionOmittedTests       = Options + "omitted_tests"
-	OptionLoadPath           = Options + "load_path"
-	OptionSavePath           = Options + "save_path"
-	OptionsLoadConcurrency   = Options + "load_concurrency"
-	OptionVerifyBurnedTokens = Options + "verify_burned_tokens"
+	OptionVerbose                  = Options + "verbose"
+	OptionTestSuites               = Options + "test_suites"
+	OptionOmittedTests             = Options + "omitted_tests"
+	OptionLoadPath                 = Options + "load_path"
+	OptionSavePath                 = Options + "save_path"
+	OptionsLoadConcurrency         = Options + "load_concurrency"
+	OptionsSmartContractBenchmarks = Options + "smart_contract_benchmarks"
+	OptionsQueryBenchmarks         = Options + "query_benchmarks"
+	OptionsEventDatabaseBenchmarks = Options + "event_database_benchmarks"
+	OptionsSmartContractEventFile  = Options + "smart_contract_event_file"
+	OptionsEventDatabaseEventFile  = Options + "event_database_event_file"
+	OptionVerifyBurnedTokens       = Options + "verify_burned_tokens"
 
 	MinerMOwner       = SmartContract + MinerSc + "owner_id"
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
