@@ -1105,6 +1105,16 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 		return err
 	}
 
+	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, passPayments)
+	if err != nil {
+		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+	}
+
+	err = sa.moveFromChallengePool(cp, passPayments)
+	if err != nil {
+		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+	}
+
 	if err = cp.save(sc.ID, sa, balances); err != nil {
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
