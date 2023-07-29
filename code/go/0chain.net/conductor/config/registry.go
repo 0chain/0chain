@@ -752,8 +752,18 @@ func init() {
 	})
 
 	// stop directs miner to stop generating challenge for any blobber
-	register("stop_chal_gen", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
+	register("stop_challenge_generation", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
 		cfg := StopChallengeGeneration(true)
+		return ex.SetServerState(cfg)
+	})
+
+	register("stop_wm_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := StopWMCommit(true)
+		return ex.SetServerState(cfg)
+	})
+
+	register("resume_wm_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := StopWMCommit(false)
 		return ex.SetServerState(cfg)
 	})
 }

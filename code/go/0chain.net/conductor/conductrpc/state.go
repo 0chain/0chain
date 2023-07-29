@@ -80,6 +80,7 @@ type State struct {
 	BlobberUpload           *config.BlobberUpload
 	BlobberDelete           *config.BlobberDelete
 	GenerateChallenge       *config.GenerateChallege
+	StopWMCommit            *bool
 	StopChallengeGeneration *bool
 	BlobberCommittedWM      *bool
 

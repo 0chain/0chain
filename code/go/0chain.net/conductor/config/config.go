@@ -11,6 +11,7 @@ import (
 )
 
 type StopChallengeGeneration bool
+type StopWMCommit bool
 type BlobberCommittedWM bool
 
 // common types

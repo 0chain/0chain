@@ -972,6 +972,9 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.StopChallengeGeneration = &v
 			f := false
 			state.BlobberCommittedWM = &f
+		case config.StopWMCommit:
+			v := true
+			state.StopWMCommit = &v
 		case config.BlobberCommittedWM:
 			v := true
 			state.BlobberCommittedWM = &v

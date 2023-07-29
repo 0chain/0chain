@@ -1,7 +1,6 @@
 # enabled test cases sets
 enable:
   - "Adversarial validator"
-  - "Challenge failing blobber"
   - "Client Operation"
 
 # sets of test cases
@@ -9,12 +8,9 @@ sets:
   - name: "Adversarial validator"
     tests:
       - "Challenge should pass with minority validator being adversarial"
-  - name: "Challenge failing blobber"
-    tests:
-      - ""
   - name: "Client Operation"
     tests:
-      - ""
+      - "Blobber should pass challenge for a file which is deleted but WM is not committed"
 
 # test cases
 tests:
@@ -29,7 +25,7 @@ tests:
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
-      - stop_chal_gen: {}
+      - stop_challenge_generation: {}
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
@@ -53,5 +49,48 @@ tests:
       - command:
           name: "upload"
       - wait_blobber_commit: {}
+      - wait_challenge_generation: {}
+      - wait_challenge_status: {}
+
+  - name: "Blobber should pass challenge for a file which is deleted but WM is not committed"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - stop_challenge_generation: {}
+      - start: ['0dns']
+      # wait the 0dns starts
+      - sleep: "20s"
+      # Two blobbers would suffice but we need 3 validators and since docker-compose
+      # file raises blobber and validator together we are raising 3 blobbers here.
+      # We need to decouple this behavior later on.
+      - start: ['blobber-1', 'blobber-2', 'blobber-3']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2']
+          timeout: '15m'
+      - generate_challenge:
+          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          total_challenges: 1
+          expected_status: 1 # 1 --> pass, 0 --> fail
+      - command:
+          name: 'init_allocation'
+      - wait_blobber_commit: {}
+      - wait_challenge_generation: {}
+      - wait_challenge_status: {}
+      - stop_challenge_generation: {}
+      - stop_wm_commit: {}
+      - sleep: "10s"
+      - command:
+          name: "delete"
+      - generate_challenge:
+          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          total_challenges: 1
+          expected_status: 1 # 1 --> pass, 0 --> fail
       - wait_challenge_generation: {}
       - wait_challenge_status: {}
