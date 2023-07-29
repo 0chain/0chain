@@ -742,18 +742,20 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 			"saving blobber "+d.BlobberID+": "+err.Error())
 	}
 
-	// get blobber allocations partitions
-	blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
-	if err != nil {
-		return reward, common.NewErrorf("fini_alloc_failed",
-			"error getting blobber_challenge_allocation list: %v", err)
-	}
-	if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
-		return reward, err
-	}
-	if err := blobberAllocParts.Save(balances); err != nil {
-		return reward, common.NewErrorf("fini_alloc_failed",
-			"error saving blobber allocation partitions: %v", err)
+	if d.Stats.UsedSize > 0 {
+		// get blobber allocations partitions
+		blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
+		if err != nil {
+			return reward, common.NewErrorf("fini_alloc_failed",
+				"error getting blobber_challenge_allocation list: %v", err)
+		}
+		if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+			return reward, err
+		}
+		if err := blobberAllocParts.Save(balances); err != nil {
+			return reward, common.NewErrorf("fini_alloc_failed",
+				"error saving blobber allocation partitions: %v", err)
+		}
 	}
 
 	// Update saved data on events_db
@@ -1458,9 +1460,11 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	sa.BlobberAllocsMap[addId] = ba
 
-	err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
+	if sa.Stats.UsedSize > 0 {
+		err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
+		}
 	}
 
 	if err := sp.addOffer(ba.Offer()); err != nil {
