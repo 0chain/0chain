@@ -5,12 +5,9 @@ package miner
 
 import (
 	"context"
-	"fmt"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract/storagesc"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -41,19 +38,4 @@ func (mc *Chain) GenerateBlock(ctx context.Context,
 	return mc.generateBlockWorker.Run(ctx, func() error {
 		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
 	})
-}
-
-func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
-	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = node.Self.ID
-	brTxn.PublicKey = node.Self.PublicKey
-	brTxn.ToClientID = storagesc.ADDRESS
-	brTxn.CreationDate = b.CreationDate
-	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
-	brTxn.Fee = 0
-	if err := brTxn.ComputeProperties(); err != nil {
-		return nil, err
-	}
-	return brTxn, nil
 }

@@ -1386,3 +1386,18 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 
 	return txns, cost, nil
 }
+
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
+	brTxn := transaction.Provider().(*transaction.Transaction)
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
+	brTxn.ToClientID = storagesc.ADDRESS
+	brTxn.CreationDate = b.CreationDate
+	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
+	brTxn.Fee = 0
+	if err := brTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return brTxn, nil
+}

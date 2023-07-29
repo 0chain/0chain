@@ -4,14 +4,52 @@
 package storagesc
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 
+	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/smartcontract/partitions"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
+
+var numChalGen int
+
+func (sc *StorageSmartContract) generateChallenge(
+	t *transaction.Transaction,
+	b *block.Block,
+	input []byte,
+	conf *Config,
+	balances cstate.StateContextI,
+) (err error) {
+
+	s := crpc.Client().State()
+	if s.StopChallengeGeneration != nil && *s.StopChallengeGeneration {
+		numChalGen = 0
+		logging.Logger.Info("Challenge generation has been stopped")
+		return errors.New("challenge generation stopped by conductor")
+	}
+
+	if s.GenerateChallenge != nil {
+		if s.BlobberCommittedWM != nil && !*s.BlobberCommittedWM {
+			logging.Logger.Info("Selected blobber has not committed WM yet")
+			return errors.New("challenge generation stopped by conductor because selected blobber has not committed any writemarker")
+		}
+
+		if numChalGen >= s.GenerateChallenge.TotalChallenges {
+			logging.Logger.Info("Challenge generation execeed total challenge to generate",
+				zap.Any("numChalGen", numChalGen), zap.Any("Total Challenges", s.GenerateChallenge.TotalChallenges))
+			return errors.New("challenge generation stopped by conductor because total challenges required is already generated")
+		}
+	}
+
+	numChalGen++
+	return sc.genChal(t, b, input, conf, balances)
+}
 
 // selectBlobberForChallenge select blobber for challenge in random manner
 func selectBlobberForChallenge(

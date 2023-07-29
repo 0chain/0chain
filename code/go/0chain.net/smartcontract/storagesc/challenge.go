@@ -1132,7 +1132,7 @@ type GenerateChallengeInput struct {
 	Round int64 `json:"round,omitempty"`
 }
 
-func (sc *StorageSmartContract) generateChallenge(
+func (sc *StorageSmartContract) genChal(
 	t *transaction.Transaction,
 	b *block.Block,
 	input []byte,
