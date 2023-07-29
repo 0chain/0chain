@@ -466,7 +466,7 @@ func addMockBlobberSnapshots(blobbers []event.Blobber, edb *event.EventDb) {
 	const mockInactiveRounds = 17
 	var aggregates []event.BlobberAggregate
 	for _, blobber := range blobbers {
-		for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
+		for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 			aggregate := event.BlobberAggregate{
 				Round:               int64(i),
 				BlobberID:           blobber.ID,
@@ -498,7 +498,7 @@ func addMockValidatorSnapshots(validators []event.Validator, edb *event.EventDb)
 	}
 	var aggregates []event.ValidatorAggregate
 	for _, validator := range validators {
-		for i := 1; i <= viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
+		for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 			aggregate := event.ValidatorAggregate{
 				Round:         int64(i),
 				ValidatorID:   validator.ID,
@@ -521,20 +521,20 @@ func AddMockSnapshots(edb *event.EventDb) {
 		return
 	}
 	var snapshots []event.Snapshot
-	for i := 1; i < viper.GetInt(sc.NumBlocks); i += viper.GetInt(sc.EventDbAggregatePeriod) {
+	for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 		snapshot := event.Snapshot{
-			Round:                int64(i),
-			TotalMint:            int64(i + 10),
+			Round:                i,
+			TotalMint:            i + 10,
 			TotalChallengePools:  int64(currency.Coin(i + (1 * 1e10))),
-			ActiveAllocatedDelta: int64(i),
+			ActiveAllocatedDelta: i,
 			TotalStaked:          int64(currency.Coin(i * (0.001 * 1e10))),
-			SuccessfulChallenges: int64(i-1) / 2,
-			TotalChallenges:      int64(i - 1),
+			SuccessfulChallenges: i - 1/2,
+			TotalChallenges:      i - 1,
 			ZCNSupply:            100000 * int64(i+10),
-			AllocatedStorage:     int64(i * 1024),
-			MaxCapacityStorage:   int64(i * 10240),
-			StakedStorage:        int64(i * 512),
-			UsedStorage:          int64(i * 256),
+			AllocatedStorage:     i * 1024,
+			MaxCapacityStorage:   i * 10240,
+			StakedStorage:        i * 512,
+			UsedStorage:          i * 256,
 			ClientLocks:          int64(currency.Coin(i * (0.0001 * 1e10))),
 		}
 		snapshots = append(snapshots, snapshot)
