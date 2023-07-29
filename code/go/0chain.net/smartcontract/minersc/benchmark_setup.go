@@ -348,9 +348,9 @@ func addMockMinersSnapshots(miners []event.Miner, edb *event.EventDb) {
 	}
 	var aggregates []event.MinerAggregate
 	for _, miner := range miners {
-		for i := 1; i <= viper.GetInt(benchmark.NumBlocks); i += viper.GetInt(benchmark.EventDbAggregatePeriod) {
+		for i := benchmark.GetOldestAggregateRound(); i < viper.GetInt64(benchmark.NumBlocks); i++ {
 			aggregate := event.MinerAggregate{
-				Round:         int64(i),
+				Round:         i,
 				MinerID:       miner.ID,
 				Fees:          miner.Fees,
 				TotalStake:    miner.TotalStake,
@@ -373,7 +373,7 @@ func addMockSharderSnapshots(sharders []event.Sharder, edb *event.EventDb) {
 	}
 	var aggregates []event.SharderAggregate
 	for _, sharder := range sharders {
-		for i := 1; i <= viper.GetInt(benchmark.NumBlocks); i += viper.GetInt(benchmark.EventDbAggregatePeriod) {
+		for i := benchmark.GetOldestAggregateRound(); i < viper.GetInt64(benchmark.NumBlocks); i++ {
 			aggregate := event.SharderAggregate{
 				SharderID:     sharder.ID,
 				Round:         int64(i),
