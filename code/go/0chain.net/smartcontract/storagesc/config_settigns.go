@@ -95,7 +95,6 @@ const (
 	CostBlobberHealthCheck
 	CostUpdateBlobberSettings
 	CostPayBlobberBlockRewards
-	CostChallengeRequest
 	CostChallengeResponse
 	CostGenerateChallenges
 	CostAddValidator
@@ -107,7 +106,6 @@ const (
 	CostWritePoolUnlock
 	CostStakePoolLock
 	CostStakePoolUnlock
-	CostStakePoolPayInterests
 	CostCommitSettingsChanges
 	CostCollectReward
 	CostKillBlobber
@@ -196,7 +194,6 @@ func initSettingName() {
 	SettingName[CostBlobberHealthCheck] = "cost.blobber_health_check"
 	SettingName[CostUpdateBlobberSettings] = "cost.update_blobber_settings"
 	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
-	SettingName[CostChallengeRequest] = "cost.challenge_request"
 	SettingName[CostChallengeResponse] = "cost.challenge_response"
 	SettingName[CostGenerateChallenges] = "cost.generate_challenge"
 	SettingName[CostAddValidator] = "cost.add_validator"
@@ -278,7 +275,6 @@ func initSettings() {
 		CostBlobberHealthCheck.String():           {CostBlobberHealthCheck, smartcontract.Cost},
 		CostUpdateBlobberSettings.String():        {CostUpdateBlobberSettings, smartcontract.Cost},
 		CostPayBlobberBlockRewards.String():       {CostPayBlobberBlockRewards, smartcontract.Cost},
-		CostChallengeRequest.String():             {CostChallengeRequest, smartcontract.Cost},
 		CostChallengeResponse.String():            {CostChallengeResponse, smartcontract.Cost},
 		CostGenerateChallenges.String():           {CostGenerateChallenges, smartcontract.Cost},
 		CostAddValidator.String():                 {CostAddValidator, smartcontract.Cost},
@@ -290,7 +286,6 @@ func initSettings() {
 		CostWritePoolUnlock.String():              {CostWritePoolUnlock, smartcontract.Cost},
 		CostStakePoolLock.String():                {CostStakePoolLock, smartcontract.Cost},
 		CostStakePoolUnlock.String():              {CostStakePoolUnlock, smartcontract.Cost},
-		CostStakePoolPayInterests.String():        {CostStakePoolPayInterests, smartcontract.Cost},
 		CostCommitSettingsChanges.String():        {CostCommitSettingsChanges, smartcontract.Cost},
 		CostCollectReward.String():                {CostCollectReward, smartcontract.Cost},
 		CostKillBlobber.String():                  {CostKillBlobber, smartcontract.Cost},
