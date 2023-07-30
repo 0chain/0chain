@@ -172,13 +172,17 @@ func (edb *EventDb) GeBlobberByLatLong(
 }
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
-	var blobbers []Blobber
-	result := edb.Store.Get().Preload("Rewards").
-		Model(&Blobber{}).
-		Order("id").
-		Where("id IN ?", ids).
-		Find(&blobbers)
-	return blobbers, result.Error
+	blobbers := make([]Blobber, 0, len(ids))
+
+	for _, id := range ids {
+		b, err := edb.GetBlobber(id)
+		if err != nil {
+			return nil, err
+		}
+		blobbers = append(blobbers, *b)
+	}
+
+	return blobbers, nil
 }
 
 func (edb *EventDb) deleteBlobber(id string) error {

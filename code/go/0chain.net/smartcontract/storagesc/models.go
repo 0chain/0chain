@@ -585,7 +585,6 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 	case util.ErrValueNotPresent:
 		return 1, nil
 	case nil:
-		fmt.Println("foervfd")
 		for _, oc := range allocChallenges.OpenChallenges {
 			if oc.BlobberID != ba.BlobberID {
 				continue
@@ -1064,23 +1063,21 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 		return err
 	}
 
-	if cp.Balance > 0 {
-		sa.MovedBack, err = currency.AddCoin(sa.MovedBack, cp.Balance)
-		if err != nil {
-			return err
-		}
+	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, cp.Balance)
+	if err != nil {
+		return err
+	}
 
-		err = sa.moveFromChallengePool(cp, cp.Balance)
-		if err != nil {
-			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
-		}
+	err = sa.moveFromChallengePool(cp, cp.Balance)
+	if err != nil {
+		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
 	}
 
 	if err = cp.save(sc.ID, sa, balances); err != nil {
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := passPayments.Int64()
+	i, err := cp.Balance.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
@@ -1100,23 +1097,25 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
-	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
-	if err != nil {
-		return err
-	}
+	if passPayments > 0 {
+		cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
+		if err != nil {
+			return err
+		}
 
-	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, passPayments)
-	if err != nil {
-		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
-	}
+		sa.MovedBack, err = currency.AddCoin(sa.MovedBack, passPayments)
+		if err != nil {
+			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+		}
 
-	err = sa.moveFromChallengePool(cp, passPayments)
-	if err != nil {
-		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
-	}
+		err = sa.moveFromChallengePool(cp, passPayments)
+		if err != nil {
+			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+		}
 
-	if err = cp.save(sc.ID, sa, balances); err != nil {
-		return fmt.Errorf("failed to save challenge pool: %v", err)
+		if err = cp.save(sc.ID, sa, balances); err != nil {
+			return fmt.Errorf("failed to save challenge pool: %v", err)
+		}
 	}
 
 	return nil
