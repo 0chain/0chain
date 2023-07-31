@@ -1,8 +1,9 @@
 package faucetsc
 
 import (
-	"0chain.net/core/common"
 	"testing"
+
+	"0chain.net/core/common"
 
 	"0chain.net/core/viper"
 

@@ -9,10 +9,11 @@ import (
 
 type AllocationBlobberTerm struct {
 	gorm.Model
-	AllocationID string `json:"allocation_id" gorm:"uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
-	BlobberID    string `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
-	ReadPrice    int64  `json:"read_price"`
-	WritePrice   int64  `json:"write_price"`
+	AllocationID    string `json:"allocation_id" gorm:"uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
+	BlobberID       string `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
+	ReadPrice       int64  `json:"read_price"`
+	WritePrice      int64  `json:"write_price"`
+	AllocBlobberIdx int64  `json:"alloc_blobber_idx"`
 }
 
 func (edb *EventDb) GetAllocationBlobberTerm(allocationID string, blobberID string) (*AllocationBlobberTerm, error) {
@@ -29,14 +30,7 @@ func (edb *EventDb) GetAllocationBlobberTerms(allocationID string, limit common2
 		Where(AllocationBlobberTerm{AllocationID: allocationID}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "allocation_id"},
-			Desc:   limit.IsDescending,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "blobber_id"},
-			Desc:   limit.IsDescending,
-		}).
+		Order("alloc_blobber_idx").
 		Find(&terms).Error
 }
 
@@ -49,7 +43,7 @@ func deleteAllocationBlobberTerms(edb *EventDb, allocBlobbers map[string][]strin
 			db = db.Where("allocation_id = ?", allocationID)
 		}
 
-		err := db.Delete(&AllocationBlobberTerm{}).Error
+		err := db.Unscoped().Delete(&AllocationBlobberTerm{}).Error
 		if err != nil {
 			return err
 		}

@@ -107,6 +107,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/total-challenge-rewards", srh.getTotalChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/alloc-challenge-rewards", srh.getAllocationChallengeRewards))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/count-challenges", srh.getChallengesCountByFilter))
 	}
 
 	return restEndpoints
@@ -1828,14 +1829,6 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	if len(removeID) > 0 {
-		if err := sa.removeBlobber(removeID); err != nil {
-			return err
-		}
-	} else {
-		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
-	}
 	_, ok := sa.BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
@@ -1861,9 +1854,35 @@ func changeBlobbersEventDB(
 	if err != nil {
 		return err
 	}
-	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-	sa.BlobberAllocsMap[addID] = ba
 
+	removedIdx := 0
+
+	if len(removeID) > 0 {
+		_, ok := sa.BlobberAllocsMap[removeID]
+		if !ok {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
+		}
+		delete(sa.BlobberAllocsMap, removeID)
+
+		var found bool
+		for i, d := range sa.BlobberAllocs {
+			if d.BlobberID == removeID {
+				sa.BlobberAllocs[i] = nil
+				found = true
+				removedIdx = i
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+	}
+
+	sa.BlobberAllocs[removedIdx] = ba
+	sa.BlobberAllocsMap[addID] = ba
 	return nil
 }
 
