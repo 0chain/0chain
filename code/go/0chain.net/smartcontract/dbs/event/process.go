@@ -375,12 +375,14 @@ func (edb *EventDb) WorkAggregates(
 				zap.Int("block size", blockEvents.blockSize),
 				zap.Error(err),
 			)
+			return nil, err
 		}
 		err = edb.updateUserAggregates(&blockEvents)
 		if err != nil {
 			logging.Logger.Error("user aggregate could not be processed",
 				zap.Error(err),
 			)
+			return nil, err
 		}
 	}
 	return gSnapshot, nil
