@@ -1309,7 +1309,7 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string) error {
+func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string, addedBlobberAllocation *BlobberAllocation) error {
 	_, ok := sa.BlobberAllocsMap[blobberID]
 	if !ok {
 		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
@@ -1368,7 +1368,7 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
-			sa.BlobberAllocs[i] = nil
+			sa.BlobberAllocs[i] = addedBlobberAllocation
 			break
 		}
 	}
@@ -1376,15 +1376,16 @@ func (sa *StorageAllocation) removeBlobber(blobberID string, sc *StorageSmartCon
 	return nil
 }
 
-func removeBlobber(
+func replaceBlobber(
 	sa *StorageAllocation,
 	blobbers []*StorageNode,
 	blobberID string,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
-	clientID string, removeIdx *int) ([]*StorageNode, error) {
+	clientID string,
+	addedBlobber *StorageNode, addedBlobberAllocation *BlobberAllocation) ([]*StorageNode, error) {
 
-	if err := sa.removeBlobber(blobberID, sc, balances, clientID); err != nil {
+	if err := sa.replaceBlobber(blobberID, sc, balances, clientID, addedBlobberAllocation); err != nil {
 		return nil, err
 	}
 
@@ -1393,9 +1394,8 @@ func removeBlobber(
 	for i, d := range blobbers {
 		if d.ID == blobberID {
 			removedBlobber = blobbers[i]
-			blobbers[i] = nil
+			blobbers[i] = addedBlobber
 			found = true
-			*removeIdx = i
 			break
 		}
 	}
@@ -1452,13 +1452,9 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	if len(removeId) > 0 {
-		removeIdx := -1
-		if blobbers, err = removeBlobber(sa, blobbers, removeId, balances, sc, clientID, &removeIdx); err != nil {
+		if blobbers, err = replaceBlobber(sa, blobbers, removeId, balances, sc, clientID, addedBlobber, ba); err != nil {
 			return nil, err
 		}
-
-		blobbers[removeIdx] = addedBlobber
-		sa.BlobberAllocs[removeIdx] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
 		sa.ParityShards++
