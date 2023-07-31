@@ -42,9 +42,8 @@ func (e *Entity) MagicBlock() string {
 // SetState sets current state.
 func (e *Entity) SetState(state *State) {
 	e.stateMu.Lock()
-	defer e.stateMu.Unlock()
-
 	e.state = state
+	e.stateMu.Unlock()
 }
 
 // Register registers node in conductor server

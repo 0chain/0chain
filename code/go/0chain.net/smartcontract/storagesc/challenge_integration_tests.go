@@ -28,16 +28,15 @@ func (sc *StorageSmartContract) generateChallenge(
 ) (err error) {
 
 	s := crpc.Client().State()
-	if s.StopChallengeGeneration != nil && *s.StopChallengeGeneration {
+	if s.StopChallengeGeneration != nil {
 		numChalGen = 0
-		logging.Logger.Info("Challenge generation has been stopped")
+		logging.Logger.Info("Challenge generation has been stopped", zap.Bool("stopChalGen", *s.StopChallengeGeneration))
 		return errors.New("challenge generation stopped by conductor")
 	}
 
 	if s.GenerateChallenge != nil {
-		if s.BlobberCommittedWM != nil && !*s.BlobberCommittedWM {
-			logging.Logger.Info("Selected blobber has not committed WM yet")
-			return errors.New("challenge generation stopped by conductor because selected blobber has not committed any writemarker")
+		if s.BlobberCommittedWM == nil {
+			return errors.New("conductor is waiting for selected blobber to commit")
 		}
 
 		if numChalGen >= s.GenerateChallenge.TotalChallenges {
@@ -45,10 +44,17 @@ func (sc *StorageSmartContract) generateChallenge(
 				zap.Any("numChalGen", numChalGen), zap.Any("Total Challenges", s.GenerateChallenge.TotalChallenges))
 			return errors.New("challenge generation stopped by conductor because total challenges required is already generated")
 		}
+	} else {
+		return errors.New("No conductor instruction to generate challenge")
 	}
 
+	err = sc.genChal(t, b, input, conf, balances)
+	if err != nil {
+		return
+	}
 	numChalGen++
-	return sc.genChal(t, b, input, conf, balances)
+	crpc.Client().ChallengeGenerated(s.GenerateChallenge.BlobberID)
+	return
 }
 
 // selectBlobberForChallenge select blobber for challenge in random manner
@@ -61,7 +67,6 @@ func selectBlobberForChallenge(
 
 	s := crpc.Client().State()
 	if s.GenerateChallenge != nil {
-		crpc.Client().ChallengeGenerated(s.GenerateChallenge.BlobberID)
 		return s.GenerateChallenge.BlobberID, nil
 	}
 	return selectRandomBlobber(selection, challengeBlobbersPartition, r, balances)

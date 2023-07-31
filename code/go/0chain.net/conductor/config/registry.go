@@ -751,9 +751,13 @@ func init() {
 		return nil
 	})
 
-	// stop directs miner to stop generating challenge for any blobber
-	register("stop_challenge_generation", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
-		cfg := StopChallengeGeneration(true)
+	// stop_challenge_generation directs miner to stop/resume generating challenge for any blobber
+	register("stop_challenge_generation", func(_ string, ex Executor, val interface{}, _ time.Duration) (err error) {
+		stopChalGen, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type bool, got %T", val)
+		}
+		cfg := StopChallengeGeneration(stopChalGen)
 		return ex.SetServerState(cfg)
 	})
 

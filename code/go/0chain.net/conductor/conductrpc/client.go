@@ -1,6 +1,7 @@
 package conductrpc
 
 import (
+	"log"
 	"net/rpc"
 
 	"0chain.net/conductor/conductrpc/stats"
@@ -165,6 +166,7 @@ func (c *client) shareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) 
 func (c *client) state(me NodeID) (state *State, err error) {
 	err = c.client.Call("Server.State", me, &state)
 	for err == rpc.ErrShutdown {
+		log.Printf("Rpc shutdown. error: %s\n", err.Error())
 		err = c.client.Call("Server.State", me, &state)
 	}
 	return
