@@ -280,3 +280,4 @@ smart_contracts:
       add-authorizer: 100
       authorizer-health-check: 100
       delete-authorizer: 100
+      update-global-config: 100
