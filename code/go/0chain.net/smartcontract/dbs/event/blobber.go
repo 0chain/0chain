@@ -2,7 +2,6 @@ package event
 
 import (
 	"fmt"
-	"github.com/lib/pq"
 	"time"
 
 	"github.com/0chain/common/core/logging"
@@ -173,11 +172,14 @@ func (edb *EventDb) GeBlobberByLatLong(
 }
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
-	blobbers := make([]Blobber, 0, len(ids))
-
-	err := edb.Store.Get().Exec(`SELECT * FROM blobbers WHERE id IN (SELECT t.id FROM UNNEST(?::text[]) AS t(id))`, pq.StringArray(ids)).Scan(&blobbers).Error
-	if err != nil {
-		return nil, err
+	var blobbers []Blobber
+	result := edb.Store.Get().Preload("Rewards").
+		Model(&Blobber{}).
+		Order("id").
+		Where("id IN ?", ids).
+		Find(&blobbers)
+	if result.Error != nil {
+		return nil, result.Error
 	}
 
 	resultBlobbers := make([]Blobber, 0, len(ids))
