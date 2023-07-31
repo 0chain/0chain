@@ -31,6 +31,58 @@ type Challenge struct {
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
 
+func (edb *EventDb) GetChallengesCountByQuery(whereQuery string) (map[string]int64, error) {
+	var total, passed, failed, open int64
+
+	response := make(map[string]int64)
+
+	result := edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Count(&total)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	result = edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Where("responded = 1").
+		Count(&passed)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting passed challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	result = edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Where("responded = 2").
+		Count(&failed)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting failed challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	result = edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Where("responded = 0").
+		Count(&open)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting open challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	response["total"] = total
+	response["passed"] = passed
+	response["failed"] = failed
+	response["open"] = open
+
+	return response, nil
+}
+
 func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
 	var chs Challenges
 	result := edb.Store.Get().Model(&Challenge{}).Where(&Challenge{AllocationID: allocationID}).Find(&chs)
