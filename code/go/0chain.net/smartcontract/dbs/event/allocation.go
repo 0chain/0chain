@@ -88,6 +88,11 @@ func (edb *EventDb) GetClientsAllocation(clientID string, limit common.Paginatio
 		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, err)
 	}
 
+	for _, alloc := range allocs {
+		if len(alloc.Terms) > 0 {
+			sort.Sort(ByIndex(alloc.Terms))
+		}
+	}
 	return allocs, nil
 }
 
