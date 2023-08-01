@@ -64,7 +64,8 @@ func (a *Authorizer) SetTotalRewards(value currency.Coin) {
 }
 
 func (edb *EventDb) AddAuthorizer(authorizers *[]Authorizer) error {
-	for _, a := range *authorizers {
+	auths := *authorizers
+	for _, a := range auths {
 		exists, err := a.exists(edb)
 		if err != nil {
 			return err
@@ -74,7 +75,7 @@ func (edb *EventDb) AddAuthorizer(authorizers *[]Authorizer) error {
 			return errors.New("authorizer already exists")
 		}
 
-		result := edb.Store.Get().Create(a)
+		result := edb.Store.Get().Create(&a)
 
 		if result.Error != nil {
 			return result.Error
