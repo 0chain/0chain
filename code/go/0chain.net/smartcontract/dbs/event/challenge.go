@@ -3,6 +3,7 @@ package event
 import (
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
+	"0chain.net/smartcontract/storagesc"
 	"fmt"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -129,7 +130,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 	var chs []*Challenge
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, 0).
+		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, storagesc.ChallengeNotResponded).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round_created_at"},
