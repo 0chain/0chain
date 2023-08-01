@@ -156,7 +156,7 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 		mergers = []eventsMerger{
 			mergeAddUsersEvents(),
 			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite()),
-			mergeAddProviderEvents[Miner](TagUpdateMiner, withUniqueEventOverwrite()),
+			//mergeAddProviderEvents[Miner](TagUpdateMiner, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Sharder](TagAddSharder, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
@@ -636,7 +636,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.deleteBlobber(*blobberID)
 	// authorizer
 	case TagAddAuthorizer:
-		auth, ok := fromEvent[Authorizer](event.Data)
+		auth, ok := fromEvent[[]Authorizer](event.Data)
 
 		if !ok {
 			return ErrInvalidEventData
