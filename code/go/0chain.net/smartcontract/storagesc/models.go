@@ -1058,6 +1058,7 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 	}
 
 	var err error
+	prevBal := cp.Balance
 	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
 	if err != nil {
 		return err
@@ -1077,7 +1078,7 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := cp.Balance.Int64()
+	i, err := prevBal.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
