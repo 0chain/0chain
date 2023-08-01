@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	corecommon "0chain.net/core/common"
@@ -59,6 +60,9 @@ func (edb *EventDb) GetAllocation(id string) (*Allocation, error) {
 		return nil, fmt.Errorf("error retrieving allocation: %v, error: %v", id, err)
 	}
 
+	if len(alloc.Terms) > 0 {
+		sort.Sort(ByIndex(alloc.Terms))
+	}
 	return &alloc, nil
 }
 
