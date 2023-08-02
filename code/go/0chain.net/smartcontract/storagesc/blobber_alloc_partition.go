@@ -2,11 +2,11 @@ package storagesc
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	state "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -47,34 +47,46 @@ func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, alloc
 	return nil
 }
 
-func partitionsBlobberAllocationsRemove(state state.StateContextI, blobberID, allocID string, blobAllocsParts *partitions.Partitions) error {
-	err := blobAllocsParts.Remove(state, allocID)
+// removeAllocationFromBlobberPartitions removes the allocation from blobber
+func removeAllocationFromBlobberPartitions(balances state.StateContextI, allocID, blobberID string) error {
+	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
+	if err != nil {
+		return fmt.Errorf("could not get blobber allocations partition: %v", err)
+	}
+
+	err = blobAllocsParts.Remove(balances, allocID)
 	if err != nil && !partitions.ErrItemNotFound(err) {
 		logging.Logger.Error("could not remove allocation from blobber",
 			zap.Error(err),
 			zap.String("blobber", blobberID),
 			zap.String("allocation", allocID))
 		return fmt.Errorf("could not remove allocation from blobber: %v", err)
-	}
-	if partitions.ErrItemNotFound(err) {
+	} else if partitions.ErrItemNotFound(err) {
 		logging.Logger.Error("allocation is not in partition",
 			zap.Error(err),
 			zap.String("blobber", blobberID),
 			zap.String("allocation", allocID))
+	} else if err == nil {
+		if err := blobAllocsParts.Save(balances); err != nil {
+			return fmt.Errorf("could not update blobber allocation partitions: %v", err)
+		}
 	}
 
-	allocNum, err := blobAllocsParts.Size(state)
+	allocNum, err := blobAllocsParts.Size(balances)
 	if err != nil {
 		return fmt.Errorf("could not get challenge partition size: %v", err)
 	}
 
-	if allocNum == 0 {
-		// remove blobber from challenge ready partition when there's no allocation bind to it
-		err = partitionsChallengeReadyBlobbersRemove(state, blobberID)
-		if err != nil && !partitions.ErrItemNotFound(err) {
-			// it could be empty if we finalize the allocation before committing any read or write
-			return fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
-		}
+	if allocNum > 0 {
+		return nil
 	}
+
+	// remove blobber from challenge ready partition when there's no allocation bind to it
+	err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
+	if err != nil && !partitions.ErrItemNotFound(err) {
+		// it could be empty if we finalize the allocation before committing any read or write
+		return fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
+	}
+
 	return nil
 }

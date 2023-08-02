@@ -878,11 +878,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			}
 		}
 	} else if alloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
-		blobAllocsParts, err := partitionsBlobberAllocations(blobber.ID, balances)
-		if err != nil {
-			return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
-		}
-		if err := partitionsBlobberAllocationsRemove(balances, blobber.ID, alloc.ID, blobAllocsParts); err != nil {
+		if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
 			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
 				zap.String("blobber", blobber.ID),
 				zap.String("allocation", alloc.ID),
