@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -109,9 +110,9 @@ func (n *BlobberDelete) Decode(val interface{}) error {
 }
 
 type GenerateChallege struct {
-	BlobberID                 string `json:"blobber_id" mapstructure:"blobber_id"`
-	TotalChallenges           int    `json:"total_challenges" mapstructure:"total_challenges"`
-	ExpectedStatus            int    `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
+	BlobberID                 string        `json:"blobber_id" mapstructure:"blobber_id"`
+	ChallengeDuration         time.Duration `json:"chal_dur" mapstructure:"chal_dur"`
+	ExpectedStatus            int           `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
 	WaitOnBlobberCommit       bool
 	WaitOnChallengeGeneration bool
 	WaitForChallengeStatus    bool

@@ -5,6 +5,7 @@ package storagesc
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var numChalGen int
+var curTime = time.Now()
 
 func (sc *StorageSmartContract) generateChallenge(
 	t *transaction.Transaction,
@@ -28,31 +29,28 @@ func (sc *StorageSmartContract) generateChallenge(
 ) (err error) {
 
 	s := crpc.Client().State()
-	if s.StopChallengeGeneration != nil {
-		numChalGen = 0
+	if s.GenerateChallenge == nil {
+		return errors.New("No conductor instruction to generate challenge")
+	}
+
+	if !(time.Since(curTime) > s.GenerateChallenge.ChallengeDuration) {
+		return fmt.Errorf("waiting %v to pass", s.GenerateChallenge.ChallengeDuration)
+	}
+
+	if s.StopChallengeGeneration {
 		logging.Logger.Info("Challenge generation has been stopped", zap.Bool("stopChalGen", *s.StopChallengeGeneration))
 		return errors.New("challenge generation stopped by conductor")
 	}
 
-	if s.GenerateChallenge != nil {
-		if s.BlobberCommittedWM == nil {
-			return errors.New("conductor is waiting for selected blobber to commit")
-		}
-
-		if numChalGen >= s.GenerateChallenge.TotalChallenges {
-			logging.Logger.Info("Challenge generation execeed total challenge to generate",
-				zap.Any("numChalGen", numChalGen), zap.Any("Total Challenges", s.GenerateChallenge.TotalChallenges))
-			return errors.New("challenge generation stopped by conductor because total challenges required is already generated")
-		}
-	} else {
-		return errors.New("No conductor instruction to generate challenge")
+	if !s.BlobberCommittedWM {
+		return errors.New("conductor is waiting for selected blobber to commit")
 	}
 
 	err = sc.genChal(t, b, input, conf, balances)
 	if err != nil {
 		return
 	}
-	numChalGen++
+
 	crpc.Client().ChallengeGenerated(s.GenerateChallenge.BlobberID)
 	return
 }

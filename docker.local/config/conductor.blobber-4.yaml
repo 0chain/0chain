@@ -41,7 +41,7 @@ tests:
           name: 'init_allocation_only'
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          total_challenges: 1
+          chal_dur: "40s" # one challenge shall be generated in each 40 seconds 
           expected_status: 1 # 1 --> pass, 0 --> fail
       - adversarial_validator:
           fail_valid_challenge: true
@@ -76,21 +76,18 @@ tests:
           timeout: '15m'
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          total_challenges: 1
+          chal_dur: "40s"
           expected_status: 1 # 1 --> pass, 0 --> fail
       - command:
           name: 'init_allocation'
       - wait_blobber_commit: {}
       - wait_challenge_generation: {}
       - wait_challenge_status: {}
-      - stop_challenge_generation: {}
+      - stop_challenge_generation: true
       - stop_wm_commit: {}
       - sleep: "10s"
       - command:
           name: "delete"
-      - generate_challenge:
-          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          total_challenges: 1
-          expected_status: 1 # 1 --> pass, 0 --> fail
+      - stop_challenge_generation: false
       - wait_challenge_generation: {}
       - wait_challenge_status: {}
