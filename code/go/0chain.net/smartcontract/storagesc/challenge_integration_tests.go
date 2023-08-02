@@ -38,7 +38,7 @@ func (sc *StorageSmartContract) generateChallenge(
 	}
 
 	if s.StopChallengeGeneration {
-		logging.Logger.Info("Challenge generation has been stopped", zap.Bool("stopChalGen", *s.StopChallengeGeneration))
+		logging.Logger.Info("Challenge generation has been stopped", zap.Bool("stopChalGen", s.StopChallengeGeneration))
 		return errors.New("challenge generation stopped by conductor")
 	}
 
