@@ -3,13 +3,21 @@ package event
 import (
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
-	"0chain.net/smartcontract/storagesc"
 	"fmt"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"
+)
+
+type BlobberChallengeResponded int
+
+const (
+	ChallengeNotResponded BlobberChallengeResponded = iota
+	ChallengeResponded
+	ChallengeRespondedLate
+	ChallengeRespondedInvalid
 )
 
 // swagger:model Challenges
@@ -130,7 +138,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 	var chs []*Challenge
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, storagesc.ChallengeNotResponded).
+		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, ChallengeNotResponded).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round_created_at"},
