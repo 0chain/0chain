@@ -1440,6 +1440,12 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"saving allocation: "+err.Error())
 	}
 
+	for _, d := range alloc.BlobberAllocs {
+		// get blobber allocations partitions
+		blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
+		logging.Logger.Info("1.2 cancelAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
+	}
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	emitDeleteAllocationBlobberTerms(alloc, balances, t)
@@ -1589,6 +1595,26 @@ func (sc *StorageSmartContract) finishAllocation(
 			}
 
 			logging.Logger.Info("6 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
+
+			// get blobber allocations partitions
+			blobberAllocParts, err = partitionsBlobberAllocations(d.BlobberID, balances)
+
+			logging.Logger.Info("7 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
+			if err != nil {
+				return common.NewErrorf("fini_alloc_failed",
+					"error getting blobber_challenge_allocation list: %v", err)
+			}
+		}
+	}
+
+	for _, d := range alloc.BlobberAllocs {
+		// get blobber allocations partitions
+		blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
+
+		logging.Logger.Info("1.2 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
+		if err != nil {
+			return common.NewErrorf("fini_alloc_failed",
+				"error getting blobber_challenge_allocation list: %v", err)
 		}
 	}
 

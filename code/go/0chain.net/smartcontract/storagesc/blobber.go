@@ -923,6 +923,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
+	blobAllocsParts, err := partitionsBlobberAllocations(blobber.ID, balances)
+	if err != nil {
+		return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+	}
+
+	logging.Logger.Info("Jayash 1",
+		zap.Any("baParts", blobAllocsParts))
+
 	if blobber.RewardRound.StartRound >= startRound && blobber.RewardRound.Timestamp > 0 {
 		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
@@ -951,6 +959,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 	}
 
+	blobAllocsParts, err = partitionsBlobberAllocations(blobber.ID, balances)
+	if err != nil {
+		return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+	}
+
+	logging.Logger.Info("Jayash 2",
+		zap.Any("baParts", blobAllocsParts))
+
 	// Save allocation object
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
@@ -958,12 +974,28 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving allocation object: %v", err)
 	}
 
+	blobAllocsParts, err = partitionsBlobberAllocations(blobber.ID, balances)
+	if err != nil {
+		return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+	}
+
+	logging.Logger.Info("Jayash 3",
+		zap.Any("baParts", blobAllocsParts))
+
 	// Save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving blobber object: %v", err)
 	}
+
+	blobAllocsParts, err = partitionsBlobberAllocations(blobber.ID, balances)
+	if err != nil {
+		return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+	}
+
+	logging.Logger.Info("Jayash 4",
+		zap.Any("baParts", blobAllocsParts))
 
 	emitAddWriteMarker(t, commitConnection.WriteMarker, &StorageAllocation{
 		ID: alloc.ID,
