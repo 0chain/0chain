@@ -51,6 +51,8 @@ func (sc *StorageSmartContract) generateChallenge(
 		return
 	}
 
+	curTime = time.Now()
+	logging.Logger.Info("Challenge has been generated")
 	crpc.Client().ChallengeGenerated(s.GenerateChallenge.BlobberID)
 	return
 }
