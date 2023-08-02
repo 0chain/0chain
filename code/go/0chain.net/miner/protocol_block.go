@@ -1387,7 +1387,7 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 	return txns, cost, nil
 }
 
-func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
+func (mc *Chain) createGenChalTxn(b *block.Block) (*transaction.Transaction, error) {
 	brTxn := transaction.Provider().(*transaction.Transaction)
 	brTxn.ClientID = node.Self.ID
 	brTxn.PublicKey = node.Self.PublicKey

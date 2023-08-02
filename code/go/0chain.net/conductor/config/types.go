@@ -110,9 +110,11 @@ func (n *BlobberDelete) Decode(val interface{}) error {
 }
 
 type GenerateChallege struct {
-	BlobberID                 string        `json:"blobber_id" mapstructure:"blobber_id"`
-	ChallengeDuration         time.Duration `json:"chal_dur" mapstructure:"chal_dur"`
-	ExpectedStatus            int           `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
+	BlobberID         string        `json:"blobber_id" mapstructure:"blobber_id"`
+	ChallengeDuration time.Duration `json:"chal_dur" mapstructure:"chal_dur"`
+	ExpectedStatus    int           `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
+	// Id of a miner so that only this miner will generate challenge
+	MinerID                   string `json:"miner" mapstructure:"miner"`
 	WaitOnBlobberCommit       bool
 	WaitOnChallengeGeneration bool
 	WaitForChallengeStatus    bool

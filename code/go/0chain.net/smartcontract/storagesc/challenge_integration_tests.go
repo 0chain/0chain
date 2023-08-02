@@ -11,6 +11,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/smartcontract/partitions"
@@ -33,8 +34,8 @@ func (sc *StorageSmartContract) generateChallenge(
 		return errors.New("No conductor instruction to generate challenge")
 	}
 
-	if !(time.Since(curTime) > s.GenerateChallenge.ChallengeDuration) {
-		return fmt.Errorf("waiting %v to pass", s.GenerateChallenge.ChallengeDuration)
+	if t.ClientID != s.GenerateChallenge.MinerID {
+		return fmt.Errorf("only miner %s can generate challenge", s.GenerateChallenge.MinerID)
 	}
 
 	if s.StopChallengeGeneration {
@@ -46,14 +47,19 @@ func (sc *StorageSmartContract) generateChallenge(
 		return errors.New("conductor is waiting for selected blobber to commit")
 	}
 
+	if node.Self.ID == s.GenerateChallenge.MinerID && !(time.Since(curTime) > s.GenerateChallenge.ChallengeDuration) {
+		return fmt.Errorf("waiting %v to pass", s.GenerateChallenge.ChallengeDuration)
+	}
+
 	err = sc.genChal(t, b, input, conf, balances)
 	if err != nil {
 		return
 	}
-
-	curTime = time.Now()
-	logging.Logger.Info("Challenge has been generated")
-	crpc.Client().ChallengeGenerated(s.GenerateChallenge.BlobberID)
+	if node.Self.ID == s.GenerateChallenge.MinerID {
+		curTime = time.Now()
+		logging.Logger.Info("Challenge has been generated", zap.String("client_id", t.ClientID))
+		crpc.Client().ChallengeGenerated(s.GenerateChallenge.BlobberID)
+	}
 	return
 }
 
