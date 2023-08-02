@@ -119,7 +119,16 @@ type GenerateChallege struct {
 }
 
 func (g *GenerateChallege) Decode(val interface{}) error {
-	err := mapstructure.Decode(val, g)
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+		WeaklyTypedInput: true,
+		Result:           g,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = dec.Decode(val)
 	if err != nil {
 		return err
 	}
