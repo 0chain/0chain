@@ -41,7 +41,7 @@ tests:
           name: 'init_allocation_only'
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          chal_dur: "40s" # one challenge shall be generated in each 40 seconds 
+          chal_dur: "20s" # one challenge shall be generated in each 40 seconds 
           expected_status: 1 # 1 --> pass, 0 --> fail
           miner: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929" # generate challenge by this miner
       - adversarial_validator:
