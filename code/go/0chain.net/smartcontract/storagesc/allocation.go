@@ -1562,19 +1562,33 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	for _, d := range alloc.BlobberAllocs {
 		if d.Stats.UsedSize > 0 {
+			logging.Logger.Info("1 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID))
+
 			// get blobber allocations partitions
 			blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
+
+			logging.Logger.Info("2 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
 			if err != nil {
 				return common.NewErrorf("fini_alloc_failed",
 					"error getting blobber_challenge_allocation list: %v", err)
 			}
+
+			logging.Logger.Info("3 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
 			if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+				logging.Logger.Info("3.1 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
 				return err
 			}
+
+			logging.Logger.Info("4 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
 			if err := blobberAllocParts.Save(balances); err != nil {
+
+				logging.Logger.Info("5 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
+
 				return common.NewErrorf("fini_alloc_failed",
 					"error saving blobber allocation partitions: %v", err)
 			}
+
+			logging.Logger.Info("6 finishAllocation", zap.Any("blobberID", d.BlobberID), zap.Any("allocID", d.AllocationID), zap.Any("blobberAllocParts", blobberAllocParts), zap.Any("err", err))
 		}
 	}
 
