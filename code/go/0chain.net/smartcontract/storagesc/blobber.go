@@ -867,6 +867,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 
+	logging.Logger.Info("commit_connection_success",
+		zap.String("allocation", alloc.ID),
+		zap.String("blobber", blobber.ID),
+		zap.String("client", alloc.Owner),
+		zap.String("blobber", blobber.ID),
+		zap.String("allocation_root", commitConnection.AllocationRoot),
+		zap.String("prev_allocation_root", commitConnection.PrevAllocationRoot),
+		zap.Int64("size", commitConnection.WriteMarker.Size),
+		zap.Int64("used_size_before", allocSizeBefore),
+		zap.Int64("used_size_after", alloc.Stats.UsedSize),
+		zap.Int64("saved_data", blobber.SavedData))
+
 	if allocSizeBefore == 0 && commitConnection.WriteMarker.Size > 0 {
 		for _, ba := range alloc.BlobberAllocs {
 			if err := partitionsBlobberAllocationsAdd(balances, ba.BlobberID, ba.AllocationID); err != nil {
@@ -878,10 +890,20 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			}
 		}
 	} else if alloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
+		logging.Logger.Info("2, used size is 0, removing blobber allocation from partitions",
+			zap.String("allocation", alloc.ID),
+			zap.String("blobber", blobber.ID))
+
 		blobAllocsParts, err := partitionsBlobberAllocations(blobber.ID, balances)
+		logging.Logger.Info("2, used size is 0, removing blobber allocation from partitions",
+			zap.Any("baParts", blobAllocsParts))
 		if err != nil {
 			return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
 		}
+
+		logging.Logger.Info("2, used size is 0, removing blobber allocation from partitions",
+			zap.Any("baParts", blobAllocsParts))
+
 		if err := partitionsBlobberAllocationsRemove(balances, blobber.ID, alloc.ID, blobAllocsParts); err != nil {
 			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
 				zap.String("blobber", blobber.ID),
@@ -889,6 +911,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				zap.Error(err))
 			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
 		}
+
+		blobAllocsParts, err = partitionsBlobberAllocations(blobber.ID, balances)
+		if err != nil {
+			return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
+		}
+
+		logging.Logger.Info("2, used size is 0, removing blobber allocation from partitions",
+			zap.Any("baParts", blobAllocsParts))
 	}
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
