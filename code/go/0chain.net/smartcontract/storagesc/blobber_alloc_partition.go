@@ -48,13 +48,13 @@ func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, alloc
 }
 
 // removeAllocationFromBlobberPartitions removes the allocation from blobber
-func removeAllocationFromBlobberPartitions(balances state.StateContextI, allocID, blobberID string) error {
-	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
+func removeAllocationFromBlobberPartitions(state state.StateContextI, blobberID, allocID string) error {
+	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, state)
 	if err != nil {
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)
 	}
 
-	err = blobAllocsParts.Remove(balances, allocID)
+	err = blobAllocsParts.Remove(state, allocID)
 	if err != nil && !partitions.ErrItemNotFound(err) {
 		logging.Logger.Error("could not remove allocation from blobber",
 			zap.Error(err),
@@ -67,12 +67,12 @@ func removeAllocationFromBlobberPartitions(balances state.StateContextI, allocID
 			zap.String("blobber", blobberID),
 			zap.String("allocation", allocID))
 	} else if err == nil {
-		if err := blobAllocsParts.Save(balances); err != nil {
+		if err := blobAllocsParts.Save(state); err != nil {
 			return fmt.Errorf("could not update blobber allocation partitions: %v", err)
 		}
 	}
 
-	allocNum, err := blobAllocsParts.Size(balances)
+	allocNum, err := blobAllocsParts.Size(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge partition size: %v", err)
 	}
@@ -82,7 +82,7 @@ func removeAllocationFromBlobberPartitions(balances state.StateContextI, allocID
 	}
 
 	// remove blobber from challenge ready partition when there's no allocation bind to it
-	err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
+	err = partitionsChallengeReadyBlobbersRemove(state, blobberID)
 	if err != nil && !partitions.ErrItemNotFound(err) {
 		// it could be empty if we finalize the allocation before committing any read or write
 		return fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
