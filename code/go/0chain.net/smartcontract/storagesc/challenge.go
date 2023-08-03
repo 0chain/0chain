@@ -839,10 +839,10 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"found empty allocation stats")
 	}
 
-	// we check that this allocation do have write-commits and can be challenged.
+	// we check that this allocation do have written data and can be challenged.
 	// We can't check only allocation to be written, because blobbers can commit in different order,
 	// so we check particular blobber's allocation to be written
-	if alloc.Stats.NumWrites > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
+	if alloc.Stats.UsedSize > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
 		return alloc, nil // found
 	}
 	return nil, nil
@@ -937,12 +937,18 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting blobber_challenge_allocation list: %v", err)
 	}
 
+	uniqueIdForLogging := fmt.Sprintf("%v-%v", txn.Hash, challengeID)
+
+	logging.Logger.Info("Jayash 1 "+uniqueIdForLogging, zap.Any("blobberAllocParts", blobberAllocParts))
+
 	// get random allocations from the partitions
 	var randBlobberAllocs []BlobberAllocationNode
 	if err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs); err != nil {
 		return nil, common.NewErrorf("generate_challenge",
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
+
+	logging.Logger.Info("Jayash 2 "+uniqueIdForLogging, zap.Any("randBlobberAllocs", randBlobberAllocs))
 
 	var findValidAllocRetries = 5 // avoid retry for debugging
 	var (
@@ -995,11 +1001,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			return nil, common.NewErrorf("populate_challenge",
 				"error saving expired allocation: %v", err)
 		}
-	}
-
-	if err := blobberAllocParts.Save(balances); err != nil {
-		return nil, common.NewErrorf("populate_challenge",
-			"error saving blobber allocation partitions: %v", err)
 	}
 
 	if !foundAllocation {
