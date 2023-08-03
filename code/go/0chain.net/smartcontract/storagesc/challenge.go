@@ -977,7 +977,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 
 		if alloc.Finalized {
-			if err := partitionsBlobberAllocationsRemove(balances, blobberID, allocID, blobberAllocParts); err != nil {
+			if err := removeAllocationFromBlobberPartitions(balances, blobberID, allocID); err != nil {
 				return nil, err
 			}
 			continue
