@@ -22,7 +22,7 @@ CREATE TABLE public.allocation_blobber_terms (
                                                  blobber_id text NOT NULL,
                                                  read_price bigint,
                                                  write_price bigint,
-                                                 min_lock_demand numeric,
+                                                 alloc_blobber_idx numeric,
                                                  max_offer_duration bigint
 );
 

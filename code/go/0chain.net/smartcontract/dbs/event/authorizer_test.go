@@ -35,7 +35,7 @@ func TestAuthorizers(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -69,14 +69,7 @@ func TestAuthorizers(t *testing.T) {
 		},
 	}
 
-	err = eventDb.AddAuthorizer(&authorizer_1)
-	require.NoError(t, err, "Error while inserting Authorizer to event Database")
-
-	var count int64
-	eventDb.Get().Table("authorizers").Count(&count)
-	require.Equal(t, int64(1), count, "Authorizer not getting inserted")
-
-	err = eventDb.AddAuthorizer(&authorizer_2)
+	err = eventDb.AddAuthorizer(&[]Authorizer{authorizer_1, authorizer_1})
 	require.NoError(t, err, "Error while inserting Authorizer to event Database")
 
 	eventDb.Get().Table("authorizers").Count(&count)
