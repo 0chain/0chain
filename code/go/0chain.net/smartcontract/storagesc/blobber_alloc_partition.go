@@ -74,6 +74,11 @@ func removeAllocationFromBlobberPartitions(state state.StateContextI, blobberID,
 		if err := blobAllocsParts.Save(state); err != nil {
 			return fmt.Errorf("could not update blobber allocation partitions: %v", err)
 		}
+	} else {
+		logging.Logger.Error("unknown error",
+			zap.Error(err),
+			zap.String("blobber", blobberID),
+			zap.String("allocation", allocID))
 	}
 
 	allocNum, err := blobAllocsParts.Size(state)
