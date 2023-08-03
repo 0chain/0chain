@@ -196,15 +196,24 @@ func (e *Entity) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (
 }
 
 func (e *Entity) ChallengeGenerated(blobberID string) {
-	e.client.challengeGenerated(blobberID)
+	err := e.client.challengeGenerated(blobberID)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
 }
 
 func (e *Entity) BlobberCommitted(blobberID string) {
-	e.client.blobberCommitted(blobberID)
+	err := e.client.blobberCommitted(blobberID)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
 }
 
 func (e *Entity) SendChallengeStatus(m map[string]interface{}) {
-	e.client.sendChallengeStatus(m)
+	err := e.client.sendChallengeStatus(m)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
 }
 
 //

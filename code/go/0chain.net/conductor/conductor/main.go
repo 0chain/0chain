@@ -805,7 +805,10 @@ func (r *Runner) onBlobberCommit(blobberID string) {
 		log.Printf("Ignoring blobber: %s\n", blobberID)
 		return
 	}
-	r.SetServerState(config.BlobberCommittedWM(true))
+	err := r.SetServerState(config.BlobberCommittedWM(true))
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
 	log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
 	r.chalConf.WaitOnBlobberCommit = false
 }
