@@ -611,9 +611,7 @@ func (sc *StorageSmartContract) closeAllocation(
 	alloc *StorageAllocation,
 	maxChallengeCompletionTime time.Duration,
 	balances chainstate.StateContextI,
-) (
-	resp string, err error) {
-
+) (resp string, err error) {
 	if alloc.Expiration-t.CreationDate <
 		toSeconds(maxChallengeCompletionTime) {
 		return "", common.NewError("allocation_closing_failed",
@@ -624,8 +622,8 @@ func (sc *StorageSmartContract) closeAllocation(
 	alloc.Expiration = t.CreationDate
 
 	for _, ba := range alloc.BlobberAllocs {
-		var sp *stakePool
-		if sp, err = sc.getStakePool(spenum.Blobber, ba.BlobberID, balances); err != nil {
+		sp, err := sc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
+		if err != nil {
 			return "", fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
 				err)
 		}
@@ -634,7 +632,7 @@ func (sc *StorageSmartContract) closeAllocation(
 				"error removing offer: "+err.Error())
 		}
 		if err = sp.Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
-			return "", fmt.Errorf("can't Save stake pool of %s: %v", ba.BlobberID,
+			return "", fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
 				err)
 		}
 	}
@@ -644,7 +642,7 @@ func (sc *StorageSmartContract) closeAllocation(
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("allocation_closing_failed",
-			"can't Save allocation: "+err.Error())
+			"can't save allocation: "+err.Error())
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
@@ -1120,7 +1118,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, sc, t.CreationDate, balances,
+				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, t.CreationDate, balances,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1184,7 +1182,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			}
 			alloc.OwnerPublicKey = request.OwnerPublicKey
 		}
-
 	}
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)

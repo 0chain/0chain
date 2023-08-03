@@ -4,9 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/smartcontract/stakepool/spenum"
-
 	"0chain.net/smartcontract/dbs/benchmark"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
 
@@ -150,6 +149,31 @@ func BenchmarkRestTests(
 					}(),
 				},
 				Endpoint: srh.getAllocationMinLock,
+			},
+			{
+				FuncName: "allocation-update-min-lock",
+				Params: map[string]string{
+					"data": func() string {
+						var (
+							size         = int64(100000)
+							allocationId = getMockAllocationId(0)
+						)
+
+						req := &updateAllocationRequest{
+							ID:     allocationId,
+							Size:   size,
+							Extend: true,
+						}
+
+						v, err := json.Marshal(req)
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						return string(v)
+					}(),
+				},
+				Endpoint: srh.getAllocationUpdateMinLock,
 			},
 			{
 				FuncName: "openchallenges",

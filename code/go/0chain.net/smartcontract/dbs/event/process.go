@@ -392,11 +392,11 @@ func isNotAddBlockEvent(es blockEvents) bool {
 
 func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, error) {
 	if gs != nil {
-		return tx.updateSnapshots(es, gs)
+		return tx.updateHistoricData(es, gs)
 	}
 
 	if es.round == 0 {
-		return tx.updateSnapshots(es, &Snapshot{Round: 0})
+		return tx.updateHistoricData(es, &Snapshot{Round: 0})
 	}
 
 	g, err := tx.GetGlobal()
@@ -405,7 +405,7 @@ func updateSnapshots(gs *Snapshot, es blockEvents, tx *EventDb) (*Snapshot, erro
 	}
 	gs = &g
 
-	return tx.updateSnapshots(es, gs)
+	return tx.updateHistoricData(es, gs)
 }
 
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
@@ -477,7 +477,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 	return tags, nil
 }
 
-func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, error) {
+func (edb *EventDb) updateHistoricData(e blockEvents, s *Snapshot) (*Snapshot, error) {
 	round := e.round
 	var events []Event
 	for _, ev := range e.events { //filter out round events
@@ -489,18 +489,39 @@ func (edb *EventDb) updateSnapshots(e blockEvents, s *Snapshot) (*Snapshot, erro
 		return s, nil
 	}
 
-	logging.Logger.Debug("getting blobber aggregate ids", zap.Any("snapshot_before", s))
-
-	edb.updateBlobberAggregate(round, edb.AggregatePeriod(), s)
-	edb.updateMinerAggregate(round, edb.AggregatePeriod(), s)
-	edb.updateSharderAggregate(round, edb.AggregatePeriod(), s)
-	edb.updateAuthorizerAggregate(round, edb.AggregatePeriod(), s)
-	edb.updateValidatorAggregate(round, edb.AggregatePeriod(), s)
-	s.update(events)
+	providers, err := edb.BuildChangedProvidersMapFromEvents(events)
+	if err != nil {
+		logging.Logger.Error("error building changed providers map", zap.Error(err))
+		return s, err
+	}
 
 	s.Round = round
+	err = edb.UpdateSnapshotFromEvents(s, events)
+	if err != nil {
+		logging.Logger.Error("error updating snapshot", zap.Error(err))
+		return s, err
+	}
+
+	err = edb.UpdateSnapshotFromProviders(s, providers)
+	if err != nil {
+		logging.Logger.Error("error updating snapshot from providers", zap.Error(err))
+		return s, err
+	}
+
 	if err := edb.addSnapshot(*s); err != nil {
 		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", s, round), zap.Error(err))
+	}
+
+	err = edb.CreateNewProviderAggregates(providers, round)
+	if err != nil {
+		logging.Logger.Error("error creating new provider aggregates", zap.Error(err))
+		return s, err
+	}
+
+	err = edb.CreateNewProviderSnapshots(providers, round)
+	if err != nil {
+		logging.Logger.Error("error creating new provider snapshots", zap.Error(err))
+		return s, err
 	}
 
 	return s, nil

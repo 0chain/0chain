@@ -565,7 +565,7 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, sc, now, balances)
+			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, now, balances)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -1504,7 +1504,6 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	resp, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
-
 	// checking out
 
 	alloc, err = ssc.getAllocation(alloc.ID, balances)
@@ -1627,7 +1626,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, balances, removeBlobberID, allocationID := setup(tt.args)
 			err := removeAllocationFromBlobber(balances,
-				&BlobberAllocation{BlobberID: removeBlobberID, AllocationID: allocationID})
+				allocationID, removeBlobberID)
 			require.NoError(t, err)
 			validate(tt.want, balances)
 		})

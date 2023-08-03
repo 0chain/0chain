@@ -38,6 +38,10 @@ type ProviderID struct {
 	Type spenum.Provider `json:"provider_type"`
 }
 
+func (p *ProviderID) GetID() string {
+	return p.ID
+}
+
 type StakePoolReward struct {
 	ProviderID
 	Reward     currency.Coin `json:"reward"`

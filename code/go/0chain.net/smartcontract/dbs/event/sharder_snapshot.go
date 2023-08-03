@@ -2,14 +2,12 @@ package event
 
 import (
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model SharderSnapshot
 type SharderSnapshot struct {
-	SharderID string `json:"id" gorm:"index"`
-	BucketId  int64  `json:"bucket_id"`
+	SharderID string `json:"id" gorm:"uniqueIndex"`
 	Round     int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
@@ -19,6 +17,22 @@ type SharderSnapshot struct {
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
 	IsShutdown    bool          `json:"is_shutdown"`
+}
+
+func (ss *SharderSnapshot) GetID() string {
+	return ss.SharderID
+}
+
+func (ss *SharderSnapshot) GetRound() int64 {
+	return ss.Round
+}
+
+func (ss *SharderSnapshot) SetID(id string) {
+	ss.SharderID = id
+}
+
+func (ss *SharderSnapshot) SetRound(round int64) {
+	ss.Round = round
 }
 
 func (s *SharderSnapshot) IsOffline() bool {
@@ -49,44 +63,28 @@ func (s *SharderSnapshot) SetTotalRewards(value currency.Coin) {
 	s.TotalRewards = value
 }
 
-func (edb *EventDb) getSharderSnapshots(limit, offset int64) (map[string]SharderSnapshot, error) {
-	var snapshots []SharderSnapshot
-	result := edb.Store.Get().
-		Raw("SELECT * FROM sharder_snapshots WHERE sharder_id in (select id from sharder_old_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).
-		Scan(&snapshots)
-	if result.Error != nil {
-		return nil, result.Error
+func (edb *EventDb) addSharderSnapshot(sharders []*Sharder, round int64) error {
+	var snapshots []*SharderSnapshot
+	for _, sharder := range sharders {
+		snapshots = append(snapshots, createSharderSnapshotFromSharder(sharder, round))
 	}
 
-	var mapSnapshots = make(map[string]SharderSnapshot, len(snapshots))
-	logging.Logger.Debug("get_sharder_snapshot", zap.Int("snapshots selected", len(snapshots)))
-	logging.Logger.Debug("get_sharder_snapshot", zap.Int64("snapshots rows selected", result.RowsAffected))
-
-	for _, snapshot := range snapshots {
-		mapSnapshots[snapshot.SharderID] = snapshot
-	}
-
-	result = edb.Store.Get().Where("sharder_id IN (select id from sharder_temp_ids ORDER BY ID limit ? offset ?)", limit, offset).Delete(&SharderSnapshot{})
-	logging.Logger.Debug("get_sharder_snapshot", zap.Int64("deleted rows", result.RowsAffected))
-	return mapSnapshots, result.Error
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "sharder_id"}},
+		UpdateAll: true,
+	}).Create(&snapshots).Error
 }
 
-func (edb *EventDb) addSharderSnapshot(sharders []Sharder, round int64) error {
-	var snapshots []SharderSnapshot
-	for _, sharder := range sharders {
-		snapshots = append(snapshots, SharderSnapshot{
-			SharderID:     sharder.ID,
-			BucketId:      sharder.BucketId,
-			Round:         round,
-			Fees:          sharder.Fees,
-			TotalStake:    sharder.TotalStake,
-			ServiceCharge: sharder.ServiceCharge,
-			CreationRound: sharder.CreationRound,
-			TotalRewards:  sharder.Rewards.TotalRewards,
-			IsKilled:      sharder.IsKilled,
-			IsShutdown:    sharder.IsShutdown,
-		})
+func createSharderSnapshotFromSharder(s *Sharder, round int64) *SharderSnapshot {
+	return &SharderSnapshot{
+		SharderID:     s.ID,
+		Round:         round,
+		Fees:          s.Fees,
+		TotalStake:    s.TotalStake,
+		ServiceCharge: s.ServiceCharge,
+		CreationRound: s.CreationRound,
+		TotalRewards:  s.Rewards.TotalRewards,
+		IsKilled:      s.IsKilled,
+		IsShutdown:    s.IsShutdown,
 	}
-
-	return edb.Store.Get().Create(&snapshots).Error
 }
