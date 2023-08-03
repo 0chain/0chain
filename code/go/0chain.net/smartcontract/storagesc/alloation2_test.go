@@ -421,9 +421,10 @@ func testCancelAllocation(
 		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
 	}
 
-	for _, ba := range f.allocation.BlobberAllocs {
+	for i, ba := range f.allocation.BlobberAllocs {
+
 		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
-		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight)
+		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight * f._passRates[i])
 
 		if err != nil {
 			return fmt.Errorf("failed to convert float to coin: %v", err)
@@ -438,7 +439,7 @@ func testCancelAllocation(
 	req.decode(input)
 	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
 	remainingWritePool, _ := allocation.WritePool.Int64()
-	require.Equal(t, int64(0), remainingWritePool)
+	require.Equal(t, int64(100000000), remainingWritePool)
 
 	return nil
 }
@@ -602,6 +603,7 @@ func setupMocksFinishAllocation(
 		clientBalance: zcnToBalance(3.1),
 		store:         make(map[string]util.MPTSerializable),
 	}
+
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
 			ID: storageScId,
@@ -833,7 +835,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := event.NewEventDb(access, config.DbSettings{})
+	eventDb, err := event.NewEventDbWithoutWorker(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

@@ -154,3 +154,20 @@ func (srh *StorageRestHandler) getPassedChallengesForBlobberAllocation(w http.Re
 
 	common.Respond(w, r, result, err)
 }
+
+func (srh *StorageRestHandler) getChallengesCountByFilter(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	query := r.URL.Query().Get("query")
+
+	result, err := edb.GetChallengesCountByQuery(query)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, err)
+}
