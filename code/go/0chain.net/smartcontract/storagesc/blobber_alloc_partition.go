@@ -49,6 +49,10 @@ func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, alloc
 
 // removeAllocationFromBlobberPartitions removes the allocation from blobber
 func removeAllocationFromBlobberPartitions(state state.StateContextI, blobberID, allocID string) error {
+	logging.Logger.Info("remove allocation from blobber partitions",
+		zap.String("blobber", blobberID),
+		zap.String("allocation", allocID))
+
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, state)
 	if err != nil {
 		return fmt.Errorf("could not get blobber allocations partition: %v", err)
