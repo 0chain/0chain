@@ -83,7 +83,7 @@ func removeAllocationFromBlobberPartitions(state state.StateContextI, blobberID,
 
 		return nil
 	} else {
-		if !partitions.ErrItemNotFound(err) {
+		if partitions.ErrItemNotFound(err) {
 			logging.Logger.Error("allocation is not in partition",
 				zap.Error(err),
 				zap.String("blobber", blobberID),
