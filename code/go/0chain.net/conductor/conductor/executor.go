@@ -120,6 +120,15 @@ func (r *Runner) SetEnv(env map[string]string) (err error) {
 // control nodes
 //
 
+func (r *Runner) GetNodes() map[config.NodeName]config.NodeID {
+	m := make(map[config.NodeName]config.NodeID)
+	for _, n := range r.conf.Nodes {
+		m[n.Name] = n.ID
+	}
+
+	return m
+}
+
 // Start nodes, or start and lock them.
 func (r *Runner) Start(names []NodeName, lock bool,
 	tm time.Duration) (err error) {

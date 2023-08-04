@@ -777,12 +777,17 @@ func init() {
 			return fmt.Errorf("required type slice but got %T", val)
 		}
 
-		var nodes []NodeID
-		for _, id := range s {
-			nodes = append(nodes, NodeID(id))
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[NodeName(name)]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
 		}
 
-		return ex.SetServerState(nodes)
+		return ex.SetServerState(nodeIds)
 	})
 
 	register("wait_for_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
