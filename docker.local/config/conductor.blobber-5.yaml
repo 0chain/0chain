@@ -6,11 +6,11 @@ enable:
 sets:
   - name: "Minority Cases"
     tests:
-      - "Allocation state should be same after rollback/repair"
+      - "Allocation state should be same after rollback"
 
 # test cases
 tests:
-  - name: "Allocation state should be same after rollback/repair"
+  - name: "Allocation state should be same after rollback"
     flow:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
@@ -24,10 +24,10 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
           timeout: '15m'
+          start: true
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_allocation_only'
