@@ -28,10 +28,18 @@ func partitionsBlobberAllocations(blobberID string, balances state.StateContextI
 }
 
 func partitionsBlobberAllocationsAdd(state state.StateContextI, blobberID, allocID string) error {
+	logging.Logger.Info("add allocation to blobber partitions",
+		zap.String("blobber", blobberID),
+		zap.String("allocation", allocID))
+
 	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, state)
 	if err != nil {
 		return fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
 	}
+
+	logging.Logger.Info("add allocation to blobber partitions",
+		zap.Any("baParts", blobAllocsParts),
+		zap.String("allocation", allocID))
 
 	err = blobAllocsParts.Add(state, &BlobberAllocationNode{ID: allocID})
 	if err != nil && !partitions.ErrItemExist(err) {

@@ -939,7 +939,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	uniqueIdForLogging := fmt.Sprintf("%v-%v", txn.Hash, challengeID)
 
-	logging.Logger.Info("Jayash 1 "+uniqueIdForLogging, zap.Any("blobberAllocParts", blobberAllocParts))
+	logging.Logger.Info("JS 1 "+uniqueIdForLogging, zap.Any("blobberAllocParts", blobberAllocParts))
 
 	// get random allocations from the partitions
 	var randBlobberAllocs []BlobberAllocationNode
@@ -948,7 +948,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
-	logging.Logger.Info("Jayash 2 "+uniqueIdForLogging, zap.Any("randBlobberAllocs", randBlobberAllocs))
+	logging.Logger.Info("JS 2 "+uniqueIdForLogging, zap.Any("randBlobberAllocs", randBlobberAllocs))
 
 	var findValidAllocRetries = 5 // avoid retry for debugging
 	var (
