@@ -48,6 +48,8 @@ type Executor interface {
 	WaitForChallengeGeneration()
 	WaitOnBlobberCommit()
 	WaitForChallengeStatus()
+	WaitForFileMetaRoot()
+	CheckFileMetaRoot(cfg *CheckFileMetaRoot) error
 
 	// Byzantine: BC, sharders
 

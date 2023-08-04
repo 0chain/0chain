@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -144,6 +145,21 @@ func (g *GenerateChallege) Decode(val interface{}) error {
 
 func NewGenerateChallenge() *GenerateChallege {
 	return &GenerateChallege{}
+}
+
+type CheckFileMetaRoot struct {
+	RequireSameRoot bool `mapstructure:"require_same_root"`
+}
+
+func (c *CheckFileMetaRoot) Decode(val interface{}) error {
+	if c == nil {
+		return errors.New("cannot decode into nil pointer")
+	}
+	return mapstructure.Decode(val, c)
+}
+
+func NewCheckFileMetaRoot() *CheckFileMetaRoot {
+	return &CheckFileMetaRoot{}
 }
 
 // AdversarialValidator represents the blobber_delete directive state.

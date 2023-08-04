@@ -1,0 +1,43 @@
+# enabled test cases sets
+enable:
+  - "Minority Cases"
+
+# sets of test cases
+sets:
+  - name: "Minority Cases"
+    tests:
+      - "Allocation state should be same after rollback/repair"
+
+# test cases
+tests:
+  - name: "Allocation state should be same after rollback/repair"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - sleep: "20s"
+      - start: ['blobber-1', 'blobber-2', 'blobber-3']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          timeout: '15m'
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'init_allocation_only'
+      - command:
+          name: "upload"
+      - fail_rename_commit: ['blobber-1', 'blobber-2']
+      - command:
+          name: 'rename'
+      - command:
+          name: 'update'
+      - wait_for_file_meta_root: {}
+      - check_file_meta_root:
+          require_same_root: true

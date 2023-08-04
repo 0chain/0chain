@@ -14,6 +14,8 @@ type StopChallengeGeneration bool
 type WaitOnChallengeGeneration bool
 type StopWMCommit bool
 type BlobberCommittedWM bool
+type GetFileMetaRoot bool
+type FailRenameCommit []NodeID
 
 // common types
 type (

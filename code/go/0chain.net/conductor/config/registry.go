@@ -770,4 +770,32 @@ func init() {
 		cfg := StopWMCommit(false)
 		return ex.SetServerState(cfg)
 	})
+
+	register("fail_rename_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := val.([]string)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		var nodes []NodeID
+		for _, id := range s {
+			nodes = append(nodes, NodeID(id))
+		}
+
+		ex.SetServerState(nodes)
+		return nil
+	})
+
+	register("wait_for_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		ex.WaitForFileMetaRoot()
+		cfg := GetFileMetaRoot(true)
+		ex.SetServerState(cfg)
+		return nil
+	})
+
+	register("check_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewCheckFileMetaRoot()
+		return ex.CheckFileMetaRoot(cfg)
+	})
+
 }

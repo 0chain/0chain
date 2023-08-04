@@ -381,6 +381,51 @@ func (r *Runner) WaitForChallengeStatus() {
 	r.chalConf.WaitForChallengeStatus = true
 }
 
+func (r *Runner) WaitForFileMetaRoot() {
+	if r.verbose {
+		log.Print(" [INF] waiting for challenge status from chain")
+	}
+	count := 0
+	for name := range r.server.Nodes() {
+		if strings.Contains(string(name), "blobber") {
+			count++
+		}
+	}
+
+	f := fileMetaRoot{
+		shouldWait:   true,
+		totalBlobers: count,
+	}
+	r.fileMetaRoot = f
+}
+
+func (r *Runner) CheckFileMetaRoot(cfg *config.CheckFileMetaRoot) error {
+	if r.verbose {
+		log.Print(" [INF] checking file meta root")
+	}
+
+	var fmrs []string
+	for _, fmr := range r.fileMetaRoot.fmrs {
+		fmrs = append(fmrs, fmr)
+	}
+
+	curFmr := fmrs[0]
+	allEqual := true
+	for i := 1; i < len(fmrs); i++ {
+		allEqual = allEqual && curFmr == fmrs[i]
+		curFmr = fmrs[i]
+	}
+
+	if allEqual != cfg.RequireSameRoot {
+		if cfg.RequireSameRoot {
+			return fmt.Errorf("required all file meta root to be same")
+		}
+		return fmt.Errorf("required some file meta root to be different")
+	}
+
+	return nil
+}
+
 //
 // Byzantine blockchain miners.
 //
@@ -975,6 +1020,10 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.BlobberCommittedWM = true
 		case *config.GenerateChallege:
 			state.GenerateChallenge = update
+		case config.GetFileMetaRoot:
+			state.GetFileMetaRoot = bool(update)
+		case []config.NodeID:
+			state.FailRenameCommit = update
 		}
 	})
 
