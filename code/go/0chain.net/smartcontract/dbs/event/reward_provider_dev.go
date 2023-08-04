@@ -2,6 +2,7 @@ package event
 
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 	"github.com/pkg/errors"
 )
 
@@ -199,6 +200,70 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 	return result, err
 }
 
+func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
+	var result QueryReward
+
+	var providerRewards []ProviderAllocationReward
+
+	err := edb.Get().Table("reward_providers").Select("sum(amount) as amount").Where(query).Scan(&providerRewards).Error
+	if err != nil {
+		return result, err
+	}
+
+	for _, pr := range providerRewards {
+		result.TotalProviderReward += pr.Amount
+	}
+
+	var delegateRewards []DelegateAllocationReward
+
+	err = edb.Get().Table("reward_delegates").Select("sum(amount) as amount").Where(query).Scan(&delegateRewards).Error
+	if err != nil {
+		return result, err
+	}
+
+	for _, dr := range delegateRewards {
+		result.TotalDelegateReward += dr.Amount
+	}
+
+	result.TotalReward = result.TotalProviderReward + result.TotalDelegateReward
+
+	return result, nil
+}
+
+func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[int]int, error) {
+	query := fmt.Sprintf(
+		`SELECT cnt, COUNT(*) AS frequency
+		FROM (
+			SELECT COUNT(*) AS cnt
+			FROM reward_providers
+			WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s
+			GROUP BY block_number
+		) subquery
+		GROUP BY cnt;
+	`, startBlock, endBlock)
+
+	var result = make(map[int]int)
+
+	err := edb.Get().Raw(query).Scan(&result).Error
+
+	return result, err
+}
+
+func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock string) (map[string]int, error) {
+	query := fmt.Sprintf(
+		`SELECT provider_id, COUNT(*) AS frequency
+		FROM reward_providers
+		WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s
+		GROUP BY provider_id;
+	`, startBlock, endBlock)
+
+	var result = make(map[string]int)
+
+	err := edb.Get().Raw(query).Scan(&result).Error
+
+	return result, err
+}
+
 type ProviderAllocationRewards struct {
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 	Amount          int64            `json:"amount"`
@@ -220,4 +285,10 @@ type ProviderAllocationReward struct {
 	ProviderId string `json:"provider_id"`
 	Amount     int64  `json:"amount"`
 	RewardType int64  `json:"reward_type"`
+}
+
+type QueryReward struct {
+	TotalProviderReward int64 `json:"total_provider_reward"`
+	TotalDelegateReward int64 `json:"total_delegate_reward"`
+	TotalReward         int64 `json:"total_reward"`
 }
