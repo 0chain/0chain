@@ -889,15 +889,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
 			}
 		}
-	} else if alloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
-		for _, ba := range alloc.BlobberAllocs {
-			if err := removeAllocationFromBlobberPartitions(balances, ba.BlobberID, alloc.ID); err != nil {
-				logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
-					zap.String("blobber", blobber.ID),
-					zap.String("allocation", alloc.ID),
-					zap.Error(err))
-				return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
-			}
+	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
+		if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
+			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
+				zap.String("blobber", blobber.ID),
+				zap.String("allocation", alloc.ID),
+				zap.Error(err))
+			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
 		}
 
 		blobAllocsParts, err := partitionsBlobberAllocations(blobber.ID, balances)
