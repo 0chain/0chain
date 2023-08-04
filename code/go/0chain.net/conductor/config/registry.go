@@ -782,15 +782,13 @@ func init() {
 			nodes = append(nodes, NodeID(id))
 		}
 
-		ex.SetServerState(nodes)
-		return nil
+		return ex.SetServerState(nodes)
 	})
 
 	register("wait_for_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		ex.WaitForFileMetaRoot()
 		cfg := GetFileMetaRoot(true)
-		ex.SetServerState(cfg)
-		return nil
+		return ex.SetServerState(cfg)
 	})
 
 	register("check_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {

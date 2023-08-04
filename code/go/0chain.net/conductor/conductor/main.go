@@ -823,7 +823,7 @@ func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {
 	if len(r.fileMetaRoot.fmrs) >= r.fileMetaRoot.totalBlobers {
 		r.fileMetaRoot.shouldWait = false
 		cfg := config.GetFileMetaRoot(false)
-		r.SetServerState(cfg)
+		return r.SetServerState(cfg)
 	}
 	return nil
 }
@@ -883,7 +883,7 @@ func (r *Runner) proceedWaiting() (err error) {
 		case m := <-r.server.OnChallengeStatus():
 			err = r.onChallengeStatus(m)
 		case m := <-r.server.OnGettingFileMetaRoot():
-			r.onGettingFileMetaRoot(m)
+			err = r.onGettingFileMetaRoot(m)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)
