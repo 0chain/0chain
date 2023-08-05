@@ -203,27 +203,21 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 	var result QueryReward
 
-	var providerRewards []ProviderAllocationReward
+	amount := 0
 
-	err := edb.Get().Table("reward_providers").Select("sum(amount) as amount").Where(query).Scan(&providerRewards).Error
+	err := edb.Get().Table("reward_providers").Select("sum(amount) as amount").Where(query).Scan(&amount).Error
 	if err != nil {
 		return result, err
 	}
 
-	for _, pr := range providerRewards {
-		result.TotalProviderReward += pr.Amount
-	}
+	result.TotalProviderReward = int64(amount)
 
-	var delegateRewards []DelegateAllocationReward
-
-	err = edb.Get().Table("reward_delegates").Select("sum(amount) as amount").Where(query).Scan(&delegateRewards).Error
+	err = edb.Get().Table("reward_delegates").Select("sum(amount) as amount").Where(query).Scan(&amount).Error
 	if err != nil {
 		return result, err
 	}
 
-	for _, dr := range delegateRewards {
-		result.TotalDelegateReward += dr.Amount
-	}
+	result.TotalDelegateReward += int64(amount)
 
 	result.TotalReward = result.TotalProviderReward + result.TotalDelegateReward
 
