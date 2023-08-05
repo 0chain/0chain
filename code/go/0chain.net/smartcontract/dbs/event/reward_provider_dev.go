@@ -205,14 +205,14 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 
 	amount := 0
 
-	err := edb.Get().Table("reward_providers").Select("sum(amount) as amount").Where(query).Scan(&amount).Error
+	err := edb.Get().Raw("SELECT sum(amount) as amount FROM reward_providers WHERE " + query).Scan(&amount).Error
 	if err != nil {
 		return result, err
 	}
 
 	result.TotalProviderReward = int64(amount)
 
-	err = edb.Get().Table("reward_delegates").Select("sum(amount) as amount").Where(query).Scan(&amount).Error
+	err = edb.Get().Raw("SELECT sum(amount) as amount FROM reward_delegates WHERE " + query).Scan(&amount).Error
 	if err != nil {
 		return result, err
 	}
