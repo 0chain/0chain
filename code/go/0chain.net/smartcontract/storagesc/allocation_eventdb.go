@@ -2,8 +2,6 @@ package storagesc
 
 import (
 	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/chaincore/transaction"
@@ -119,9 +117,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		TimeUnit:          time.Duration(alloc.TimeUnit),
 		MinLockDemand:     alloc.MinLockDemand,
 	}
-
-	logging.Logger.Info("allocationTableToStorageAllocationBlobbers", zap.Any("sa", sa), zap.Any("alloc", alloc),
-		zap.Any("blobberDetails", blobberDetails), zap.Any("storageNodes", storageNodes), zap.Any("blobberMap", blobberMap))
 
 	return &StorageAllocationBlobbers{
 		StorageAllocation: *sa,
