@@ -3,7 +3,9 @@ package event
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
+	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
@@ -202,6 +204,8 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 
 func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 	var result QueryReward
+
+	logging.Logger.Info("Jayash 1", zap.Any("query", query))
 
 	amount := 0
 
