@@ -225,6 +225,8 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 
 	result.TotalReward = result.TotalProviderReward + result.TotalDelegateReward
 
+	logging.Logger.Info("Jayash 6", zap.Any("result", result))
+
 	return result, nil
 }
 
@@ -240,9 +242,13 @@ func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[
 		GROUP BY cnt;
 	`, startBlock, endBlock)
 
+	logging.Logger.Info("Jayash 2", zap.Any("query", query))
+
 	var result = make(map[int]int)
 
 	err := edb.Get().Raw(query).Scan(&result).Error
+
+	logging.Logger.Info("Jayash 3", zap.Any("result", result))
 
 	return result, err
 }
@@ -255,9 +261,13 @@ func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock s
 		GROUP BY provider_id;
 	`, startBlock, endBlock)
 
+	logging.Logger.Info("Jayash 4", zap.Any("query", query))
+
 	var result = make(map[string]int)
 
 	err := edb.Get().Raw(query).Scan(&result).Error
+
+	logging.Logger.Info("Jayash 5", zap.Any("result", result))
 
 	return result, err
 }
