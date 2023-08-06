@@ -206,8 +206,6 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 	var result QueryReward
 
-	logging.Logger.Info("Jayash 1", zap.Any("query", query))
-
 	amount := 0
 
 	whereQuery, err := url.QueryUnescape(query)
@@ -215,7 +213,9 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 		return result, err
 	}
 
-	err = edb.Get().Raw("SELECT COALESCE(SUM(amount), 0) as amount, 0) FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
+	logging.Logger.Info("Jayash 1", zap.Any("query", "SELECT COALESCE(SUM(amount), 0) FROM reward_providers WHERE "+whereQuery))
+
+	err = edb.Get().Raw("SELECT COALESCE(SUM(amount), 0) FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
 	if err != nil {
 		logging.Logger.Info("Jayash 1.1", zap.Any("err", err))
 		return result, err
