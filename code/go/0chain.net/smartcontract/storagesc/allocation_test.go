@@ -371,6 +371,10 @@ func TestChangeBlobbers(t *testing.T) {
 					TotalChallenges:   102,
 					OpenChallenges:    0,
 				},
+				LatestCompletedChallenge: &StorageChallenge{
+					Created: mockAllocationExpiry,
+				},
+				ChallengePoolIntegralValue: 0,
 			}
 			if i < arg.blobberInChallenge {
 				err := bcPart.Add(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
