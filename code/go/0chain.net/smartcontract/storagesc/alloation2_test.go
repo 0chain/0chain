@@ -317,6 +317,10 @@ func TestFinalizeAllocation(t *testing.T) {
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
 				Size:          1 * GB,
+				LatestCompletedChallenge: &StorageChallenge{
+					Created: allocation.Expiration,
+				},
+				ChallengePoolIntegralValue: 0,
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
