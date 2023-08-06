@@ -201,6 +201,8 @@ func (sc *StorageSmartContract) blobberReward(
 		return err
 	}
 
+	logging.Logger.Info("Jayash Validator", zap.Any("reward", validatorsReward), zap.Any("conf.ValidatorReward", conf.ValidatorReward))
+
 	err = cp.moveToValidators(validatorsReward, validators, vsps, balances, allocationID)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
