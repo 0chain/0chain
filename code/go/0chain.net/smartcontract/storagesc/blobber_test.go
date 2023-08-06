@@ -1093,25 +1093,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	confMinAllocSize := 1024
-	mockBlobberCapacity := 2000 * confMinAllocSize
-
-	alloc.Stats = &StorageAllocationStats{
-		UsedSize:          int64(alloc.DataShards+alloc.ParityShards) * int64(mockBlobberCapacity) / 2,
-		SuccessChallenges: int64(alloc.DataShards+alloc.ParityShards) * 100,
-		FailedChallenges:  int64(alloc.DataShards+alloc.ParityShards) * 2,
-		TotalChallenges:   int64(alloc.DataShards+alloc.ParityShards) * 102,
-		OpenChallenges:    0,
-	}
-
 	for _, ba := range alloc.BlobberAllocs {
-		ba.Stats = &StorageAllocationStats{
-			UsedSize:          int64(mockBlobberCapacity) / 2,
-			SuccessChallenges: 100,
-			FailedChallenges:  2,
-			TotalChallenges:   102,
-			OpenChallenges:    0,
-		}
 
 		ba.LatestCompletedChallenge = &StorageChallenge{
 			Created: 0,
