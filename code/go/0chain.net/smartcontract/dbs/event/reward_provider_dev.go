@@ -243,7 +243,7 @@ func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[
 		Cnt       int
 		Frequency int
 	}
-	query := fmt.Sprintf(`SELECT cnt, COUNT(*) AS frequency FROM (SELECT COUNT(*) AS cnt FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s GROUP BY block_number) subquery GROUP BY cnt`, startBlock, endBlock)
+	query := fmt.Sprintf(`SELECT cnt, COUNT(*) AS frequency FROM (SELECT COUNT(*) AS cnt FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number < %s GROUP BY block_number) subquery GROUP BY cnt`, startBlock, endBlock)
 
 	logging.Logger.Info("Jayash 2", zap.Any("query", query))
 
@@ -275,7 +275,7 @@ func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock s
 		Frequency  int    `gorm:"column:frequency"`
 	}
 
-	query := fmt.Sprintf(`SELECT provider_id, COUNT(*) AS frequency FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s GROUP BY provider_id`, startBlock, endBlock)
+	query := fmt.Sprintf(`SELECT provider_id, COUNT(*) AS frequency FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number < %s GROUP BY provider_id`, startBlock, endBlock)
 
 	logging.Logger.Info("Jayash 4", zap.Any("query", query))
 
