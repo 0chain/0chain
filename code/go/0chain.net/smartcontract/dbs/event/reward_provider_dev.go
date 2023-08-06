@@ -215,7 +215,7 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 		return result, err
 	}
 
-	err = edb.Get().Raw("SELECT IFNULL(SUM(amount), 0) as amount, 0) FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
+	err = edb.Get().Raw("SELECT COALESCE(SUM(amount), 0) as amount, 0) FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
 	if err != nil {
 		logging.Logger.Info("Jayash 1.1", zap.Any("err", err))
 		return result, err
@@ -223,7 +223,7 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 
 	result.TotalProviderReward = int64(amount)
 
-	err = edb.Get().Raw("SELECT IFNULL(SUM(amount), 0) FROM reward_delegates WHERE " + whereQuery).Scan(&amount).Error
+	err = edb.Get().Raw("SELECT COALESCE(SUM(amount), 0) FROM reward_delegates WHERE " + whereQuery).Scan(&amount).Error
 	if err != nil {
 		logging.Logger.Info("Jayash 1.2", zap.Any("err", err))
 		return result, err
@@ -239,31 +239,64 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 }
 
 func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[int]int, error) {
+	type CountFrequency struct {
+		Cnt       int
+		Frequency int
+	}
 	query := fmt.Sprintf(`SELECT cnt, COUNT(*) AS frequency FROM (SELECT COUNT(*) AS cnt FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s GROUP BY block_number) subquery GROUP BY cnt`, startBlock, endBlock)
 
 	logging.Logger.Info("Jayash 2", zap.Any("query", query))
 
-	var result = make(map[int]int)
+	// Create an empty slice to store the results
+	var results []CountFrequency
 
-	err := edb.Get().Raw(query).Scan(&result).Error
+	// Execute the query and directly scan the results into the slice
+	err := edb.Get().Raw(query).Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a map to store the result
+	result := make(map[int]int)
+
+	// Populate the map based on the results
+	for _, cf := range results {
+		result[cf.Cnt] = cf.Frequency
+	}
 
 	logging.Logger.Info("Jayash 3", zap.Any("result", result), zap.Any("error", err))
 
-	return result, err
+	return result, nil
 }
 
 func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock string) (map[string]int, error) {
+	type ProviderFrequency struct {
+		ProviderID string `gorm:"column:provider_id"`
+		Frequency  int    `gorm:"column:frequency"`
+	}
+
 	query := fmt.Sprintf(`SELECT provider_id, COUNT(*) AS frequency FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s GROUP BY provider_id`, startBlock, endBlock)
 
 	logging.Logger.Info("Jayash 4", zap.Any("query", query))
 
-	var result = make(map[string]int)
+	// Create an empty slice to store the results
+	var result []ProviderFrequency
 
+	// Execute the query and directly scan the results into the slice of ProviderFrequency
 	err := edb.Get().Raw(query).Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
 
-	logging.Logger.Info("Jayash 5", zap.Any("result", result), zap.Any("err", err))
+	// Convert the slice to a map
+	frequencyMap := make(map[string]int)
+	for _, pf := range result {
+		frequencyMap[pf.ProviderID] = pf.Frequency
+	}
 
-	return result, err
+	logging.Logger.Info("Jayash 5", zap.Any("result", frequencyMap), zap.Error(err))
+
+	return frequencyMap, nil
 }
 
 type ProviderAllocationRewards struct {
