@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"net/url"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
@@ -209,15 +210,22 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 
 	amount := 0
 
-	err := edb.Get().Raw("SELECT sum(amount) as amount FROM reward_providers WHERE " + query).Scan(&amount).Error
+	whereQuery, err := url.QueryUnescape(query)
 	if err != nil {
+		return result, err
+	}
+
+	err = edb.Get().Raw("SELECT sum(amount) as amount FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
+	if err != nil {
+		logging.Logger.Info("Jayash 1.1", zap.Any("err", err))
 		return result, err
 	}
 
 	result.TotalProviderReward = int64(amount)
 
-	err = edb.Get().Raw("SELECT sum(amount) as amount FROM reward_delegates WHERE " + query).Scan(&amount).Error
+	err = edb.Get().Raw("SELECT sum(amount) as amount FROM reward_delegates WHERE " + whereQuery).Scan(&amount).Error
 	if err != nil {
+		logging.Logger.Info("Jayash 1.2", zap.Any("err", err))
 		return result, err
 	}
 
@@ -231,16 +239,7 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 }
 
 func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[int]int, error) {
-	query := fmt.Sprintf(
-		`SELECT cnt, COUNT(*) AS frequency
-		FROM (
-			SELECT COUNT(*) AS cnt
-			FROM reward_providers
-			WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s
-			GROUP BY block_number
-		) subquery
-		GROUP BY cnt;
-	`, startBlock, endBlock)
+	query := fmt.Sprintf(`SELECT cnt, COUNT(*) AS frequency FROM (SELECT COUNT(*) AS cnt FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s GROUP BY block_number) subquery GROUP BY cnt`, startBlock, endBlock)
 
 	logging.Logger.Info("Jayash 2", zap.Any("query", query))
 
@@ -248,18 +247,13 @@ func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[
 
 	err := edb.Get().Raw(query).Scan(&result).Error
 
-	logging.Logger.Info("Jayash 3", zap.Any("result", result))
+	logging.Logger.Info("Jayash 3", zap.Any("result", result), zap.Any("error", err))
 
 	return result, err
 }
 
 func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock string) (map[string]int, error) {
-	query := fmt.Sprintf(
-		`SELECT provider_id, COUNT(*) AS frequency
-		FROM reward_providers
-		WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s
-		GROUP BY provider_id;
-	`, startBlock, endBlock)
+	query := fmt.Sprintf(`SELECT provider_id, COUNT(*) AS frequency FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number <= %s GROUP BY provider_id`, startBlock, endBlock)
 
 	logging.Logger.Info("Jayash 4", zap.Any("query", query))
 
@@ -267,7 +261,7 @@ func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock s
 
 	err := edb.Get().Raw(query).Scan(&result).Error
 
-	logging.Logger.Info("Jayash 5", zap.Any("result", result))
+	logging.Logger.Info("Jayash 5", zap.Any("result", result), zap.Any("err", err))
 
 	return result, err
 }
