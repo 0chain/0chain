@@ -215,7 +215,7 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 		return result, err
 	}
 
-	err = edb.Get().Raw("SELECT sum(amount) as amount FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
+	err = edb.Get().Raw("SELECT IFNULL(SUM(amount), 0) as amount, 0) FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
 	if err != nil {
 		logging.Logger.Info("Jayash 1.1", zap.Any("err", err))
 		return result, err
@@ -223,7 +223,7 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 
 	result.TotalProviderReward = int64(amount)
 
-	err = edb.Get().Raw("SELECT sum(amount) as amount FROM reward_delegates WHERE " + whereQuery).Scan(&amount).Error
+	err = edb.Get().Raw("SELECT IFNULL(SUM(amount), 0) FROM reward_delegates WHERE " + whereQuery).Scan(&amount).Error
 	if err != nil {
 		logging.Logger.Info("Jayash 1.2", zap.Any("err", err))
 		return result, err
