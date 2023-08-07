@@ -95,20 +95,17 @@ const (
 	CostBlobberHealthCheck
 	CostUpdateBlobberSettings
 	CostPayBlobberBlockRewards
-	CostChallengeRequest
 	CostChallengeResponse
 	CostGenerateChallenges
 	CostAddValidator
 	CostUpdateValidatorSettings
 	CostAddBlobber
-	CostNewReadPool
 	CostReadPoolLock
 	CostReadPoolUnlock
 	CostWritePoolLock
 	CostWritePoolUnlock
 	CostStakePoolLock
 	CostStakePoolUnlock
-	CostStakePoolPayInterests
 	CostCommitSettingsChanges
 	CostCollectReward
 	CostKillBlobber
@@ -197,20 +194,17 @@ func initSettingName() {
 	SettingName[CostBlobberHealthCheck] = "cost.blobber_health_check"
 	SettingName[CostUpdateBlobberSettings] = "cost.update_blobber_settings"
 	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
-	SettingName[CostChallengeRequest] = "cost.challenge_request"
 	SettingName[CostChallengeResponse] = "cost.challenge_response"
 	SettingName[CostGenerateChallenges] = "cost.generate_challenge"
 	SettingName[CostAddValidator] = "cost.add_validator"
 	SettingName[CostUpdateValidatorSettings] = "cost.update_validator_settings"
 	SettingName[CostAddBlobber] = "cost.add_blobber"
-	SettingName[CostNewReadPool] = "cost.new_read_pool"
 	SettingName[CostReadPoolLock] = "cost.read_pool_lock"
 	SettingName[CostReadPoolUnlock] = "cost.read_pool_unlock"
 	SettingName[CostWritePoolLock] = "cost.write_pool_lock"
 	SettingName[CostWritePoolUnlock] = "cost.write_pool_unlock"
 	SettingName[CostStakePoolLock] = "cost.stake_pool_lock"
 	SettingName[CostStakePoolUnlock] = "cost.stake_pool_unlock"
-	SettingName[CostStakePoolPayInterests] = "cost.stake_pool_pay_interests"
 	SettingName[CostCommitSettingsChanges] = "cost.commit_settings_changes"
 	SettingName[CostCollectReward] = "cost.collect_reward"
 	SettingName[CostKillBlobber] = "cost.kill_blobber"
@@ -281,20 +275,17 @@ func initSettings() {
 		CostBlobberHealthCheck.String():           {CostBlobberHealthCheck, smartcontract.Cost},
 		CostUpdateBlobberSettings.String():        {CostUpdateBlobberSettings, smartcontract.Cost},
 		CostPayBlobberBlockRewards.String():       {CostPayBlobberBlockRewards, smartcontract.Cost},
-		CostChallengeRequest.String():             {CostChallengeRequest, smartcontract.Cost},
 		CostChallengeResponse.String():            {CostChallengeResponse, smartcontract.Cost},
 		CostGenerateChallenges.String():           {CostGenerateChallenges, smartcontract.Cost},
 		CostAddValidator.String():                 {CostAddValidator, smartcontract.Cost},
 		CostUpdateValidatorSettings.String():      {CostUpdateValidatorSettings, smartcontract.Cost},
 		CostAddBlobber.String():                   {CostAddBlobber, smartcontract.Cost},
-		CostNewReadPool.String():                  {CostNewReadPool, smartcontract.Cost},
 		CostReadPoolLock.String():                 {CostReadPoolLock, smartcontract.Cost},
 		CostReadPoolUnlock.String():               {CostReadPoolUnlock, smartcontract.Cost},
 		CostWritePoolLock.String():                {CostWritePoolLock, smartcontract.Cost},
 		CostWritePoolUnlock.String():              {CostWritePoolUnlock, smartcontract.Cost},
 		CostStakePoolLock.String():                {CostStakePoolLock, smartcontract.Cost},
 		CostStakePoolUnlock.String():              {CostStakePoolUnlock, smartcontract.Cost},
-		CostStakePoolPayInterests.String():        {CostStakePoolPayInterests, smartcontract.Cost},
 		CostCommitSettingsChanges.String():        {CostCommitSettingsChanges, smartcontract.Cost},
 		CostCollectReward.String():                {CostCollectReward, smartcontract.Cost},
 		CostKillBlobber.String():                  {CostKillBlobber, smartcontract.Cost},
