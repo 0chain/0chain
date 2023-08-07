@@ -16,6 +16,13 @@ type AllocationBlobberTerm struct {
 	AllocBlobberIdx int64  `json:"alloc_blobber_idx"`
 }
 
+// ByAge implements sort.Interface based on the Age field.
+type ByIndex []AllocationBlobberTerm
+
+func (a ByIndex) Len() int           { return len(a) }
+func (a ByIndex) Less(i, j int) bool { return a[i].AllocBlobberIdx < a[j].AllocBlobberIdx }
+func (a ByIndex) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
 func (edb *EventDb) GetAllocationBlobberTerm(allocationID string, blobberID string) (*AllocationBlobberTerm, error) {
 	var term AllocationBlobberTerm
 	return &term, edb.Store.Get().Model(&AllocationBlobberTerm{}).

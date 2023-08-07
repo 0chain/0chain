@@ -11,7 +11,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/provider"
 
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -1058,6 +1057,7 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 	}
 
 	var err error
+	prevBal := cp.Balance
 	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
 	if err != nil {
 		return err
@@ -1077,7 +1077,7 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := cp.Balance.Int64()
+	i, err := prevBal.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
@@ -1324,18 +1324,8 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
 			if d.Stats.UsedSize > 0 {
-				// get blobber allocations partitions
-				blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
-				if err != nil {
-					return common.NewErrorf("fini_alloc_failed",
-						"error getting blobber_challenge_allocation list: %v", err)
-				}
-				if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+				if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 					return err
-				}
-				if err := blobberAllocParts.Save(balances); err != nil {
-					return common.NewErrorf("fini_alloc_failed",
-						"error saving blobber allocation partitions: %v", err)
 				}
 			}
 
@@ -1486,50 +1476,6 @@ func (sa *StorageAllocation) changeBlobbers(
 func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) error {
 	_, err := state.InsertTrieNode(sa.GetKey(scAddress), sa)
 	return err
-}
-
-// removeAllocationFromBlobberPartitions removes the allocation from blobber
-func removeAllocationFromBlobberPartitions(balances cstate.StateContextI, allocID, blobberID string) error {
-	blobAllocsParts, err := partitionsBlobberAllocations(blobberID, balances)
-	if err != nil {
-		return fmt.Errorf("could not get blobber allocations partition: %v", err)
-	}
-
-	err = blobAllocsParts.Remove(balances, allocID)
-	if err != nil && !partitions.ErrItemNotFound(err) {
-		logging.Logger.Error("could not remove allocation from blobber",
-			zap.Error(err),
-			zap.String("blobber", blobberID),
-			zap.String("allocation", allocID))
-		return fmt.Errorf("could not remove allocation from blobber: %v", err)
-	} else if partitions.ErrItemNotFound(err) {
-		logging.Logger.Error("allocation is not in partition",
-			zap.Error(err),
-			zap.String("blobber", blobberID),
-			zap.String("allocation", allocID))
-	} else if err == nil {
-		if err := blobAllocsParts.Save(balances); err != nil {
-			return fmt.Errorf("could not update blobber allocation partitions: %v", err)
-		}
-	}
-
-	allocNum, err := blobAllocsParts.Size(balances)
-	if err != nil {
-		return fmt.Errorf("could not get challenge partition size: %v", err)
-	}
-
-	if allocNum > 0 {
-		return nil
-	}
-
-	// remove blobber from challenge ready partition when there's no allocation bind to it
-	err = partitionsChallengeReadyBlobbersRemove(balances, blobberID)
-	if err != nil && !partitions.ErrItemNotFound(err) {
-		// it could be empty if we finalize the allocation before committing any read or write
-		return fmt.Errorf("failed to remove blobber from challenge ready partitions: %v", err)
-	}
-
-	return nil
 }
 
 type StorageAllocationDecode StorageAllocation
