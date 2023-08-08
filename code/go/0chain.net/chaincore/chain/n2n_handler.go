@@ -20,6 +20,7 @@ import (
 /*SetupNodeHandlers - setup the handlers for the chain */
 func (c *Chain) SetupMinerNodeHandlers() {
 	http.HandleFunc("/_nh/list/m", common.Recover(c.GetMinersHandler))
+	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
 }
 
 func (c *Chain) SetupSharderNodeHandlers() {
@@ -82,7 +83,7 @@ func SetupX2XResponders(c *Chain) {
 	http.HandleFunc("/v1/_x2x/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(c.BlockStateChangeHandler)))
 }
 
-//StateNodesHandler - return a list of state nodes
+// StateNodesHandler - return a list of state nodes
 func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	// this is needed as we get multiple values for the same key
 	if err := r.ParseForm(); err != nil {
