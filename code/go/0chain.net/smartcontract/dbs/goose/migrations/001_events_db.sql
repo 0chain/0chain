@@ -2026,7 +2026,7 @@ CREATE UNIQUE INDEX ppp ON public.delegate_pools USING btree (pool_id, provider_
 --
 
 ALTER TABLE ONLY public.allocation_blobber_terms
-    ADD CONSTRAINT fk_allocations_terms FOREIGN KEY (allocation_id) REFERENCES public.allocations(id);
+    ADD CONSTRAINT fk_allocations_terms FOREIGN KEY (alloc_id) REFERENCES public.allocations(id);
 
 
 --
