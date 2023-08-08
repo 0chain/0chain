@@ -681,17 +681,7 @@ func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stake
 func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config) (currency.Coin, error) {
 	payment := currency.Coin(0)
 
-	var timeDiffForLastCompletedChallenge common.Timestamp
-
-	if d.LatestCompletedChallenge != nil {
-		timeDiffForLastCompletedChallenge = alloc.Expiration - d.LatestCompletedChallenge.Created
-	} else {
-		timeDiffForLastCompletedChallenge = 0
-	}
-
-	allocExpiryDuration := timeDiffForLastCompletedChallenge.Duration()
-
-	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime+allocExpiryDuration) / float64(conf.TimeUnit)
+	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime) / float64(conf.TimeUnit)
 	adjustableChallengePoolTokens := float64(d.ChallengePoolIntegralValue) * maxChallengeCompletionDTU
 
 	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {
