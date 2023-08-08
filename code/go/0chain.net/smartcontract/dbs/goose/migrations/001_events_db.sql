@@ -18,7 +18,7 @@ CREATE TABLE public.allocation_blobber_terms (
                                                  created_at timestamp with time zone,
                                                  updated_at timestamp with time zone,
                                                  deleted_at timestamp with time zone,
-                                                 allocation_id text NOT NULL,
+                                                 alloc_id bigint NOT NULL,
                                                  blobber_id text NOT NULL,
                                                  read_price bigint,
                                                  write_price bigint,
@@ -2026,7 +2026,7 @@ CREATE UNIQUE INDEX ppp ON public.delegate_pools USING btree (pool_id, provider_
 --
 
 ALTER TABLE ONLY public.allocation_blobber_terms
-    ADD CONSTRAINT fk_allocations_terms FOREIGN KEY (allocation_id) REFERENCES public.allocations(allocation_id);
+    ADD CONSTRAINT fk_allocations_terms FOREIGN KEY (allocation_id) REFERENCES public.allocations(id);
 
 
 --
