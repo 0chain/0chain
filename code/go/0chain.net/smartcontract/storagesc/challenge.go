@@ -842,7 +842,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	// we check that this allocation do have write-commits and can be challenged.
 	// We can't check only allocation to be written, because blobbers can commit in different order,
 	// so we check particular blobber's allocation to be written
-	if alloc.Stats.NumWrites > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
+	if alloc.Stats.UsedSize > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
 		return alloc, nil // found
 	}
 	return nil, nil
@@ -977,7 +977,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 
 		if alloc.Finalized {
-			if err := partitionsBlobberAllocationsRemove(balances, blobberID, allocID, blobberAllocParts); err != nil {
+			if err := removeAllocationFromBlobberPartitions(balances, blobberID, allocID); err != nil {
 				return nil, err
 			}
 			continue

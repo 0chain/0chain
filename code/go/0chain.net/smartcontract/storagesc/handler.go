@@ -905,7 +905,10 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		var dps = stakepool.DelegatePoolStat{
 			ID:           pool.PoolID,
 			DelegateID:   pool.DelegateID,
-			Status:       spenum.PoolStatus(pool.Status).String(),
+			UnStake:      false,
+			ProviderId:   pool.ProviderID,
+			ProviderType: pool.ProviderType,
+			Status:       pool.Status.String(),
 			RoundCreated: pool.RoundCreated,
 			StakedAt:     pool.StakedAt,
 		}
@@ -1191,14 +1194,6 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
-	conf, err := getConfig(sctx)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	logging.Logger.Info("getOpenChallenges", zap.Any("conf", conf))
 
 	challenges, err := getOpenChallengesForBlobber(
 		blobberID, from, limit, sctx.GetEventDB(),
