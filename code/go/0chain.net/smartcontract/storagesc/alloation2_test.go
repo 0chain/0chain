@@ -312,7 +312,7 @@ func TestFinalizeAllocation(t *testing.T) {
 				Stats: &StorageAllocationStats{
 					UsedSize:        blobberUsedSize,
 					OpenChallenges:  int64(i + 1),
-					TotalChallenges: int64(i + 1), // add open challenges and success challenges
+					TotalChallenges: int64(i + 1), // add open challenges and success  challenges
 				},
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
