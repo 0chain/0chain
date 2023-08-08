@@ -101,7 +101,7 @@ func main() {
 		}
 		go func() {
 			rootContext := common.GetRootContext()
-			ctx, cancel := context.WithTimeout(rootContext, 30*time.Second)
+			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
 
 			if _, err := serverChain.GetEventDb().ProcessEvents(

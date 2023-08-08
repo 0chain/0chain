@@ -521,8 +521,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if config.Development() {
-		ts := time.Now()
 		for _, txn := range fb.Txns {
+			ts := time.Now()
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
 	}

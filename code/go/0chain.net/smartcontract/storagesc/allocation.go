@@ -1562,18 +1562,8 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	for _, d := range alloc.BlobberAllocs {
 		if d.Stats.UsedSize > 0 {
-			// get blobber allocations partitions
-			blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
-			if err != nil {
-				return common.NewErrorf("fini_alloc_failed",
-					"error getting blobber_challenge_allocation list: %v", err)
-			}
-			if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+			if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 				return err
-			}
-			if err := blobberAllocParts.Save(balances); err != nil {
-				return common.NewErrorf("fini_alloc_failed",
-					"error saving blobber allocation partitions: %v", err)
 			}
 		}
 	}
