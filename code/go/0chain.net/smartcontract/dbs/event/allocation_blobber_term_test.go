@@ -28,7 +28,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
-		allocId := createMockAllocations(t, eventDb, 1)[0]
+		alloc := createMockAllocations(t, eventDb, 1)[0]
 		blobber1Id := encryption.Hash("mockBlobber_" + strconv.Itoa(0))
 		blobber2Id := encryption.Hash("mockBlobber_" + strconv.Itoa(1))
 
@@ -51,13 +51,13 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationIdHash: allocId,
+				AllocationIdHash: alloc.AllocationID,
 				BlobberID:        blobber1Id,
 				ReadPrice:        int64(currency.Coin(29)),
 				WritePrice:       int64(currency.Coin(31)),
 			},
 			{
-				AllocationIdHash: allocId,
+				AllocationIdHash: alloc.AllocationID,
 				BlobberID:        blobber2Id,
 				ReadPrice:        int64(currency.Coin(41)),
 				WritePrice:       int64(currency.Coin(43)),
@@ -90,7 +90,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
-		allocId := createMockAllocations(t, eventDb, 1)[0]
+		alloc := createMockAllocations(t, eventDb, 1)[0]
 		blobber1Id := encryption.Hash("mockBlobber_" + strconv.Itoa(0))
 		blobber2Id := encryption.Hash("mockBlobber_" + strconv.Itoa(1))
 
@@ -113,13 +113,13 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationIdHash: allocId,
+				AllocationIdHash: alloc.AllocationID,
 				BlobberID:        blobber1Id,
 				ReadPrice:        int64(currency.Coin(29)),
 				WritePrice:       int64(currency.Coin(31)),
 			},
 			{
-				AllocationIdHash: allocId,
+				AllocationIdHash: alloc.AllocationID,
 				BlobberID:        blobber2Id,
 				ReadPrice:        int64(currency.Coin(41)),
 				WritePrice:       int64(currency.Coin(43)),
@@ -131,12 +131,12 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		err = eventDb.updateAllocationBlobberTerms([]AllocationBlobberTerm{
 			{
-				AllocationIdHash: allocId,
+				AllocationIdHash: alloc.AllocationID,
 				BlobberID:        blobber1Id,
 				ReadPrice:        int64(currency.Coin(59)),
 				WritePrice:       int64(currency.Coin(61)),
 			}, {
-				AllocationIdHash: allocId,
+				AllocationIdHash: alloc.AllocationID,
 				BlobberID:        blobber2Id,
 				ReadPrice:        int64(currency.Coin(61)),
 				WritePrice:       int64(currency.Coin(63)),
@@ -144,13 +144,13 @@ func TestAllocationBlobberTerms(t *testing.T) {
 		})
 		require.NoError(t, err, "Error while updating Allocation's Blobber's AllocationBlobberTerm to event database")
 
-		term, err := eventDb.GetAllocationBlobberTerm(allocId, blobber1Id)
+		term, err := eventDb.GetAllocationBlobberTerm(alloc.AllocationID, blobber1Id)
 		require.NoError(t, err, "Error while reading Allocation Blobber Terms")
 
 		require.Equal(t, int64(currency.Coin(59)), term.ReadPrice)
 		require.Equal(t, int64(currency.Coin(61)), term.WritePrice)
 
-		term, err = eventDb.GetAllocationBlobberTerm(allocId, blobber2Id)
+		term, err = eventDb.GetAllocationBlobberTerm(alloc.AllocationID, blobber2Id)
 		require.NoError(t, err, "Error while reading Allocation Blobber Terms")
 
 		require.Equal(t, int64(currency.Coin(61)), term.ReadPrice)
@@ -198,24 +198,24 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 	require.NoError(t, err, "Error while inserting blobbers to event database")
 
 	// Add 5 allocations
-	allocationIds := createMockAllocations(t, edb, 5)
+	allocs := createMockAllocations(t, edb, 5)
 
-	for i, alloc := range allocationIds {
-		fmt.Printf("Allocation %d: %s\n", i, alloc)
+	for i, alloc := range allocs {
+		fmt.Printf("Allocation %d: %s\n", i, alloc.AllocationID)
 	}
 
 	// Add 10 allocation blobber terms, B1 => A1, A3, A5, B2 => A2, A3, A5, B3 => A1, A2, A4, A5
 	terms := []AllocationBlobberTerm{
-		mockAllocationBlobberTerm(allocationIds[0], blobbers[0].ID),
-		mockAllocationBlobberTerm(allocationIds[2], blobbers[0].ID),
-		mockAllocationBlobberTerm(allocationIds[4], blobbers[0].ID),
-		mockAllocationBlobberTerm(allocationIds[1], blobbers[1].ID),
-		mockAllocationBlobberTerm(allocationIds[2], blobbers[1].ID),
-		mockAllocationBlobberTerm(allocationIds[4], blobbers[1].ID),
-		mockAllocationBlobberTerm(allocationIds[0], blobbers[2].ID),
-		mockAllocationBlobberTerm(allocationIds[1], blobbers[2].ID),
-		mockAllocationBlobberTerm(allocationIds[3], blobbers[2].ID),
-		mockAllocationBlobberTerm(allocationIds[4], blobbers[2].ID),
+		mockAllocationBlobberTerm(0, blobbers[0].ID),
+		mockAllocationBlobberTerm(2, blobbers[0].ID),
+		mockAllocationBlobberTerm(4, blobbers[0].ID),
+		mockAllocationBlobberTerm(1, blobbers[1].ID),
+		mockAllocationBlobberTerm(2, blobbers[1].ID),
+		mockAllocationBlobberTerm(4, blobbers[1].ID),
+		mockAllocationBlobberTerm(0, blobbers[2].ID),
+		mockAllocationBlobberTerm(1, blobbers[2].ID),
+		mockAllocationBlobberTerm(3, blobbers[2].ID),
+		mockAllocationBlobberTerm(4, blobbers[2].ID),
 	}
 	err = edb.Get().Model(&AllocationBlobberTerm{}).Create(&terms).Error
 	require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
@@ -237,7 +237,7 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 					IsDescending: false,
 				},
 			},
-			want:    []string{allocationIds[0], allocationIds[2], allocationIds[4]},
+			want:    []string{allocs[0].AllocationID, allocs[2].AllocationID, allocs[4].AllocationID},
 			wantErr: false,
 		},
 		{
@@ -250,7 +250,7 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 					IsDescending: true,
 				},
 			},
-			want:    []string{allocationIds[3], allocationIds[1]},
+			want:    []string{allocs[3].AllocationID, allocs[1].AllocationID},
 			wantErr: false,
 		},
 		{
@@ -263,7 +263,7 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 					IsDescending: false,
 				},
 			},
-			want:    []string{allocationIds[3], allocationIds[4]},
+			want:    []string{allocs[3].AllocationID, allocs[4].AllocationID},
 			wantErr: false,
 		},
 	}
@@ -285,11 +285,11 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 	}
 }
 
-func mockAllocationBlobberTerm(allocationId string, blobberId string) AllocationBlobberTerm {
+func mockAllocationBlobberTerm(allocationId int64, blobberId string) AllocationBlobberTerm {
 	return AllocationBlobberTerm{
-		AllocationIdHash: allocationId,
-		BlobberID:        blobberId,
-		ReadPrice:        int64(currency.Coin(41)),
-		WritePrice:       int64(currency.Coin(43)),
+		AllocationID: allocationId,
+		BlobberID:    blobberId,
+		ReadPrice:    int64(currency.Coin(41)),
+		WritePrice:   int64(currency.Coin(43)),
 	}
 }

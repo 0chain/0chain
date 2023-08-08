@@ -27,7 +27,7 @@ const (
 
 // createMockAllocations - Creates "count" mock allocations and overwrites the first "len(presetAllocs)" of them with
 // allocation entered optionally by the user.
-func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs ...*Allocation) []string {
+func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs ...*Allocation) []Allocation {
 	var (
 		ids    []string
 		allocs []Allocation
@@ -96,7 +96,7 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 	}
 	err := edb.addAllocations(allocs)
 	assert.NoError(t, err, "inserting allocations failed")
-	return ids
+	return allocs
 }
 
 func TestAllocations(t *testing.T) {
@@ -422,13 +422,13 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err, "owner couldn't be created")
 
 		// Create the allocations
-		allocIds := createMockAllocations(t, eventDb, 2)
+		allocs := createMockAllocations(t, eventDb, 2)
 
 		// Assert allocation entered successfuylly (1)
-		alloc1, err := eventDb.GetAllocation(allocIds[0])
+		alloc1, err := eventDb.GetAllocation(allocs[0].AllocationID)
 		require.NoError(t, err)
 
-		alloc2, err := eventDb.GetAllocation(allocIds[1])
+		alloc2, err := eventDb.GetAllocation(allocs[1].AllocationID)
 		require.NoError(t, err)
 
 		// Update the allocations
@@ -498,10 +498,10 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err, "update allocations failed")
 
 		// Assert allocations updated successfuylly (1)
-		alloc1, err = eventDb.GetAllocation(allocIds[0])
+		alloc1, err = eventDb.GetAllocation(allocs[0].AllocationID)
 		require.NoError(t, err)
 
-		alloc2, err = eventDb.GetAllocation(allocIds[1])
+		alloc2, err = eventDb.GetAllocation(allocs[1].AllocationID)
 		require.NoError(t, err)
 
 		// Check values updated successfully
@@ -567,7 +567,7 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err, "owner couldn't be created")
 
 		// Create 2 allocations
-		allocIds := createMockAllocations(t, eventDb, 2,
+		allocs := createMockAllocations(t, eventDb, 2,
 			&Allocation{
 				WritePool:         currency.Coin(10),
 				MovedToChallenge:  currency.Coin(10),
@@ -582,19 +582,19 @@ func TestAllocations(t *testing.T) {
 			},
 		)
 
-		aid1, aid2 := allocIds[0], allocIds[1]
+		a1, a2 := allocs[0], allocs[1]
 
 		// Assert allocation entered successfuylly (1)
-		alloc, err := eventDb.GetAllocation(aid1)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		alloc, err := eventDb.GetAllocation(a1.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a1.AllocationID))
 		require.Equal(t, alloc.WritePool, currency.Coin(10))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(10))
 		require.Equal(t, alloc.MovedBack, currency.Coin(10))
 		require.Equal(t, alloc.MovedToValidators, currency.Coin(10))
 
 		// Assert allocation entered successfuylly (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a2.AllocationID))
 		require.Equal(t, alloc.WritePool, currency.Coin(20))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(20))
 		require.Equal(t, alloc.MovedBack, currency.Coin(20))
@@ -603,14 +603,14 @@ func TestAllocations(t *testing.T) {
 		// Update the 2 allocations doubling the amounts
 		err = eventDb.updateAllocationStakes([]Allocation{
 			{
-				AllocationID:      aid1,
+				AllocationID:      a1.AllocationID,
 				WritePool:         currency.Coin(20),
 				MovedToChallenge:  currency.Coin(20),
 				MovedBack:         currency.Coin(20),
 				MovedToValidators: currency.Coin(20),
 			},
 			{
-				AllocationID:      aid2,
+				AllocationID:      a2.AllocationID,
 				WritePool:         currency.Coin(40),
 				MovedToChallenge:  currency.Coin(40),
 				MovedBack:         currency.Coin(40),
@@ -621,16 +621,16 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err, "couldn't update allocation stakes")
 
 		// Test update was successful (1)
-		alloc, err = eventDb.GetAllocation(aid1)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		alloc, err = eventDb.GetAllocation(a1.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a1.AllocationID))
 		require.Equal(t, alloc.WritePool, currency.Coin(20))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(20))
 		require.Equal(t, alloc.MovedBack, currency.Coin(20))
 		require.Equal(t, alloc.MovedToValidators, currency.Coin(20))
 
 		// Test update was successful (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a2.AllocationID))
 		require.Equal(t, alloc.WritePool, currency.Coin(40))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(40))
 		require.Equal(t, alloc.MovedBack, currency.Coin(40))
@@ -647,7 +647,7 @@ func TestAllocations(t *testing.T) {
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
-		allocIds := createMockAllocations(t, eventDb, 2,
+		allocs := createMockAllocations(t, eventDb, 2,
 			&Allocation{
 				UsedSize:         10000,
 				NumWrites:        10,
@@ -664,11 +664,11 @@ func TestAllocations(t *testing.T) {
 			},
 		)
 
-		aid1, aid2 := allocIds[0], allocIds[1]
+		a1, a2 := allocs[0], allocs[1]
 
 		// Assert allocation entered successfuylly (1)
-		alloc, err := eventDb.GetAllocation(aid1)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		alloc, err := eventDb.GetAllocation(a1.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a1.AllocationID))
 		require.Equal(t, alloc.UsedSize, int64(10000))
 		require.Equal(t, alloc.NumWrites, int64(10))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(100))
@@ -676,8 +676,8 @@ func TestAllocations(t *testing.T) {
 		require.Equal(t, alloc.WritePool, currency.Coin(100))
 
 		// Assert allocation entered successfuylly (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a2.AllocationID))
 		require.Equal(t, alloc.UsedSize, int64(20000))
 		require.Equal(t, alloc.NumWrites, int64(20))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(200))
@@ -687,7 +687,7 @@ func TestAllocations(t *testing.T) {
 		// Update the 2 allocations doubling the amounts
 		err = eventDb.updateAllocationsStats([]Allocation{
 			{
-				AllocationID:     aid1,
+				AllocationID:     a1.AllocationID,
 				UsedSize:         10000,
 				NumWrites:        10,
 				MovedToChallenge: currency.Coin(100),
@@ -695,7 +695,7 @@ func TestAllocations(t *testing.T) {
 				WritePool:        currency.Coin(100),
 			},
 			{
-				AllocationID:     aid2,
+				AllocationID:     a2.AllocationID,
 				UsedSize:         20000,
 				NumWrites:        20,
 				MovedToChallenge: currency.Coin(200),
@@ -707,9 +707,9 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err, "couldn't update allocation stats")
 
 		// Test update was successful (1)
-		alloc, err = eventDb.GetAllocation(aid1)
+		alloc, err = eventDb.GetAllocation(a1.AllocationID)
 
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a1.AllocationID))
 		require.Equal(t, alloc.UsedSize, int64(10000))
 		require.Equal(t, alloc.NumWrites, int64(10))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(100))
@@ -717,8 +717,8 @@ func TestAllocations(t *testing.T) {
 		require.Equal(t, alloc.WritePool, currency.Coin(100))
 
 		// Test update was successful (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a2.AllocationID))
 		require.Equal(t, alloc.UsedSize, int64(20000))
 		require.Equal(t, alloc.NumWrites, int64(20))
 		require.Equal(t, alloc.MovedToChallenge, currency.Coin(200))
@@ -736,7 +736,7 @@ func TestAllocations(t *testing.T) {
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
-		allocIds := createMockAllocations(t, eventDb, 2,
+		allocs := createMockAllocations(t, eventDb, 2,
 			&Allocation{
 				OpenChallenges:           20,
 				LatestClosedChallengeTxn: "1001",
@@ -751,19 +751,19 @@ func TestAllocations(t *testing.T) {
 			},
 		)
 
-		aid1, aid2 := allocIds[0], allocIds[1]
+		a1, a2 := allocs[0], allocs[1]
 
 		// Assert allocation entered successfuylly (1)
-		alloc, err := eventDb.GetAllocation(aid1)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		alloc, err := eventDb.GetAllocation(a1.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a1.AllocationID))
 		require.Equal(t, alloc.OpenChallenges, int64(20))
 		require.Equal(t, alloc.LatestClosedChallengeTxn, "1001")
 		require.Equal(t, alloc.SuccessfulChallenges, int64(10))
 		require.Equal(t, alloc.FailedChallenges, int64(10))
 
 		// Assert allocation entered successfuylly (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a2.AllocationID))
 		require.Equal(t, alloc.OpenChallenges, int64(40))
 		require.Equal(t, alloc.LatestClosedChallengeTxn, "2001")
 		require.Equal(t, alloc.SuccessfulChallenges, int64(20))
@@ -772,14 +772,14 @@ func TestAllocations(t *testing.T) {
 		// Update the 2 allocations changing the amounts
 		err = eventDb.updateAllocationChallenges([]Allocation{
 			{
-				AllocationID:             aid1,
+				AllocationID:             a1.AllocationID,
 				OpenChallenges:           10,
 				LatestClosedChallengeTxn: "1002",
 				SuccessfulChallenges:     15,
 				FailedChallenges:         15,
 			},
 			{
-				AllocationID:             aid2,
+				AllocationID:             a2.AllocationID,
 				OpenChallenges:           20,
 				LatestClosedChallengeTxn: "2002",
 				SuccessfulChallenges:     30,
@@ -790,16 +790,16 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err, "couldn't update allocation stats")
 
 		// Test update was successful (1)
-		alloc, err = eventDb.GetAllocation(aid1)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		alloc, err = eventDb.GetAllocation(a1.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a1))
 		require.Equal(t, alloc.OpenChallenges, int64(10))
 		require.Equal(t, alloc.LatestClosedChallengeTxn, "1002")
 		require.Equal(t, alloc.SuccessfulChallenges, int64(15))
 		require.Equal(t, alloc.FailedChallenges, int64(15))
 
 		// Test update was successful (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a2))
 		require.Equal(t, alloc.OpenChallenges, int64(20))
 		require.Equal(t, alloc.LatestClosedChallengeTxn, "2002")
 		require.Equal(t, alloc.SuccessfulChallenges, int64(30))
@@ -816,7 +816,7 @@ func TestAllocations(t *testing.T) {
 		}).Error
 		require.NoError(t, err, "owner couldn't be created")
 
-		allocIds := createMockAllocations(t, eventDb, 2,
+		allocs := createMockAllocations(t, eventDb, 2,
 			&Allocation{
 				TotalChallenges: 20,
 				OpenChallenges:  10,
@@ -827,29 +827,29 @@ func TestAllocations(t *testing.T) {
 			},
 		)
 
-		aid1, aid2 := allocIds[0], allocIds[1]
+		a1, a2 := allocs[0], allocs[1]
 
 		// Assert allocation entered successfuylly (1)
-		alloc, err := eventDb.GetAllocation(aid1)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid1))
+		alloc, err := eventDb.GetAllocation(a1.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a1))
 		require.Equal(t, alloc.TotalChallenges, int64(20))
 		require.Equal(t, alloc.OpenChallenges, int64(10))
 
 		// Assert allocation entered successfuylly (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted"))
 		require.Equal(t, alloc.TotalChallenges, int64(40))
 		require.Equal(t, alloc.OpenChallenges, int64(20))
 
 		// Update the 2 allocations doubling the amounts
 		err = eventDb.addChallengesToAllocations([]Allocation{
 			{
-				AllocationID:    aid1,
+				AllocationID:    a1.AllocationID,
 				TotalChallenges: 20,
 				OpenChallenges:  10,
 			},
 			{
-				AllocationID:    aid2,
+				AllocationID:    a2.AllocationID,
 				TotalChallenges: 40,
 				OpenChallenges:  20,
 			},
@@ -858,14 +858,14 @@ func TestAllocations(t *testing.T) {
 		require.NoError(t, err, "couldn't update allocation stats")
 
 		// Test update was successful (1)
-		alloc, err = eventDb.GetAllocation(aid1)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid1))
+		alloc, err = eventDb.GetAllocation(a1.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a1))
 		require.Equal(t, alloc.TotalChallenges, int64(20))
 		require.Equal(t, alloc.OpenChallenges, int64(10))
 
 		// Test update was successful (2)
-		alloc, err = eventDb.GetAllocation(aid2)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", aid2))
+		alloc, err = eventDb.GetAllocation(a2.AllocationID)
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update"))
 		require.Equal(t, alloc.TotalChallenges, int64(40))
 		require.Equal(t, alloc.OpenChallenges, int64(20))
 	})
