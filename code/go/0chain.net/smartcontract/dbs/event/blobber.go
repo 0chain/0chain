@@ -178,7 +178,22 @@ func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 		Order("id").
 		Where("id IN ?", ids).
 		Find(&blobbers)
-	return blobbers, result.Error
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	resultBlobbers := make([]Blobber, 0, len(ids))
+
+	for _, id := range ids {
+		for _, blobber := range blobbers {
+			if blobber.ID == id {
+				resultBlobbers = append(resultBlobbers, blobber)
+				break
+			}
+		}
+	}
+
+	return resultBlobbers, nil
 }
 
 func (edb *EventDb) deleteBlobber(id string) error {

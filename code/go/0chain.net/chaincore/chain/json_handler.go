@@ -281,7 +281,6 @@ func (c *Chain) getChainHealth() ChainHealth {
 	return ChainHealth{
 		LatestFinalizedRound:        c.GetLatestFinalizedBlock().Round,
 		DeterministicFinalizedRound: c.LatestDeterministicBlock.Round,
-		Rollbacks:                   c.RollbackCount,
 		Timeouts:                    c.RoundTimeoutsCount,
 		RoundTimeoutCount:           rtoc,
 		RelatedMB:                   mb.StartingRound,

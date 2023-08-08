@@ -1118,7 +1118,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, t.CreationDate, balances,
+				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, t.CreationDate, balances, sc, t.ClientID,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1261,7 +1261,7 @@ func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation, bal
 			passRates = append(passRates, 1.0)
 			continue
 		}
-		ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
+		ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
 		ba.Stats.OpenChallenges = 0
 
 		baTotal := ba.Stats.FailedChallenges + ba.Stats.SuccessChallenges
@@ -1350,8 +1350,8 @@ func (sc *StorageSmartContract) canceledPassRates(
 		if ba.Stats.OpenChallenges > 0 {
 			logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
 
-			ba.Stats.FailedChallenges += ba.Stats.OpenChallenges
-			alloc.Stats.FailedChallenges += ba.Stats.OpenChallenges
+			ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
+			alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
 
 			ba.Stats.OpenChallenges = 0
 		}
@@ -1542,47 +1542,9 @@ func (sc *StorageSmartContract) finishAllocation(
 	balances chainstate.StateContextI,
 	conf *Config,
 ) (err error) {
-	before := make([]currency.Coin, len(sps))
-	deductionFromWritePool := currency.Coin(0)
 
-	// we can use the i for the blobbers list above because of algorithm
-	// of the getAllocationBlobbers method; also, we can use the i in the
-	// passRates list above because of algorithm of the adjustChallenges
-	for i, d := range alloc.BlobberAllocs {
-		// min lock demand rest
-		if d.MinLockDemand > d.Spent {
-			delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
-			if err != nil {
-				return err
-			}
-			if alloc.WritePool < delta {
-				return fmt.Errorf("paying min_lock for blobber %v"+
-					"ammount was short by %v", d.BlobberID, delta)
-			}
-			alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, delta)
-			if err != nil {
-				return err
-			}
-			deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, delta)
-			if err != nil {
-				return err
-			}
-			before[i], err = sps[i].stake()
-			if err != nil {
-				return err
-			}
-
-			err = sps[i].DistributeRewards(delta, d.BlobberID, spenum.Blobber, spenum.MinLockDemandReward, balances, alloc.ID)
-			if err != nil {
-				return fmt.Errorf("distribute rewards failed, paying min_lock %v for blobber "+
-					"%v from write pool %v, minlock demand %v spent %v error %v",
-					delta, d.BlobberID, alloc.WritePool, d.MinLockDemand, d.Spent, err.Error())
-			}
-			d.Spent, err = currency.AddCoin(d.Spent, delta)
-			if err != nil {
-				return err
-			}
-		}
+	if err = alloc.payMinLockDemand(sps, balances, t); err != nil {
+		return fmt.Errorf("error paying min lock demand: %v", err)
 	}
 
 	var cp *challengePool
@@ -1590,161 +1552,21 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
-	cpBalance, err := cp.Balance.Float64()
-	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime) / float64(conf.TimeUnit)
-	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
+	if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc); err != nil {
+		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+	}
 
-	var passPayments currency.Coin
-	for i, d := range alloc.BlobberAllocs {
-		if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
-			allocationRealUsedSize := float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards)
-			ratio := float64(d.Stats.UsedSize) / allocationRealUsedSize
-			if err != nil {
+	if err = alloc.payCancellationCharge(sps, balances, passRates, conf, sc, t); err != nil {
+		return fmt.Errorf("4 error paying cancellation charge: %v", err)
+	}
+
+	for _, d := range alloc.BlobberAllocs {
+		if d.Stats.UsedSize > 0 {
+			if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 				return err
 			}
-
-			reward, err := currency.Float64ToCoin(adjustableChallengePoolTokens * ratio * passRates[i])
-			if err != nil {
-				return err
-			}
-
-			err = sps[i].DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
-			if err != nil {
-				return fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", d.BlobberID, err)
-			}
-
-			d.Spent, err = currency.AddCoin(d.Spent, reward)
-			if err != nil {
-				return fmt.Errorf("blobber alloc spent: %v", err)
-			}
-			passPayments, err = currency.AddCoin(passPayments, reward)
-			if err != nil {
-				return fmt.Errorf("pass payments: %v", err)
-			}
 		}
 	}
-
-	prevBal := cp.Balance
-	cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
-	if err != nil {
-		return err
-	}
-
-	if cp.Balance > 0 {
-		alloc.MovedBack, err = currency.AddCoin(alloc.MovedBack, cp.Balance)
-		if err != nil {
-			return err
-		}
-
-		err = alloc.moveFromChallengePool(cp, cp.Balance)
-		if err != nil {
-			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
-		}
-	}
-
-	cancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
-	if err != nil {
-		return fmt.Errorf("failed to get cancellation charge: %v", err)
-	}
-
-	if alloc.WritePool < cancellationCharge {
-		cancellationCharge = alloc.WritePool
-		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
-	}
-
-	alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, cancellationCharge)
-	if err != nil {
-		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
-	}
-	// This event just decreases the cancelation charge from the write pool's reflection in global snapshot's total client locked tokens
-	deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, cancellationCharge)
-	if err != nil {
-		return fmt.Errorf("failed to add cancellation charge to deduction from write pool: %v", err)
-	}
-	i, err := deductionFromWritePool.Int64()
-	if err != nil {
-		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
-		Client:       t.ClientID,
-		AllocationId: alloc.ID,
-		Amount:       i,
-	})
-
-	totalWritePrice := currency.Coin(0)
-	for _, ba := range alloc.BlobberAllocs {
-		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
-		if err != nil {
-			return fmt.Errorf("failed to add write price: %v", err)
-		}
-	}
-
-	for i, ba := range alloc.BlobberAllocs {
-		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
-		reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight)
-
-		err = sps[i].DistributeRewards(reward, ba.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
-		if err != nil {
-			return fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", ba.BlobberID, err)
-		}
-
-		if err = sps[i].Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
-			return fmt.Errorf("failed to save stake pool: %s, err: %v", ba.BlobberID, err)
-		}
-
-		staked, err := sps[i].stake()
-		if err != nil {
-			return err
-		}
-
-		tag, data := event.NewUpdateBlobberTotalStakeEvent(ba.BlobberID, staked)
-		balances.EmitEvent(event.TypeStats, tag, ba.BlobberID, data)
-
-		blobber, err := sc.getBlobber(ba.BlobberID, balances)
-		if err != nil {
-			return common.NewError("fini_alloc_failed",
-				"can't get blobber "+ba.BlobberID+": "+err.Error())
-		}
-		blobber.SavedData += -ba.Stats.UsedSize
-		blobber.Allocated += -ba.Size
-		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-		if err != nil {
-			return common.NewError("fini_alloc_failed",
-				"saving blobber "+ba.BlobberID+": "+err.Error())
-		}
-
-		// get blobber allocations partitions
-		blobberAllocParts, err := partitionsBlobberAllocations(ba.BlobberID, balances)
-		if err != nil {
-			return common.NewErrorf("fini_alloc_failed",
-				"error getting blobber_challenge_allocation list: %v", err)
-		}
-		if err := partitionsBlobberAllocationsRemove(balances, ba.BlobberID, ba.AllocationID, blobberAllocParts); err != nil {
-			return err
-		}
-		if err := blobberAllocParts.Save(balances); err != nil {
-			return common.NewErrorf("fini_alloc_failed",
-				"error saving blobber allocation partitions: %v", err)
-		}
-
-		// Update saved data on events_db
-		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
-	}
-
-	if err = cp.save(sc.ID, alloc, balances); err != nil {
-		return fmt.Errorf("failed to save challenge pool: %v", err)
-	}
-
-	i, err = prevBal.Int64()
-	if err != nil {
-		return fmt.Errorf("failed to convert balance: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
-		Client:       alloc.Owner,
-		AllocationId: alloc.ID,
-		Amount:       i,
-	})
 
 	alloc.Finalized = true
 	return nil

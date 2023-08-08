@@ -136,29 +136,6 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 // smart contract methods
 //
 
-// lock tokens for read pool of transaction's client
-func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
-	_ []byte, balances cstate.StateContextI) (resp string, err error) {
-	_, err = ssc.getReadPool(t.ClientID, balances)
-	if err == nil {
-		return "", common.NewError("new_read_pool_failed", "already exist")
-	} else if err != util.ErrValueNotPresent {
-		return "", common.NewError("new_read_pool_failed", err.Error())
-	}
-
-	rp := new(readPool)
-	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("new_read_pool_failed", err.Error())
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagInsertReadpool, t.ClientID, event.ReadPool{
-		UserID:  t.ClientID,
-		Balance: rp.Balance,
-	})
-
-	return string(rp.Encode()), nil
-}
-
 func (ssc *StorageSmartContract) readPoolLock(txn *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
 	conf, err := ssc.getReadPoolConfig(balances, true)
 	if err != nil {
