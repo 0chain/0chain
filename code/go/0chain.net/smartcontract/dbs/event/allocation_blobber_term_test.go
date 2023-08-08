@@ -51,16 +51,16 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationID: allocId,
-				BlobberID:    blobber1Id,
-				ReadPrice:    int64(currency.Coin(29)),
-				WritePrice:   int64(currency.Coin(31)),
+				AllocationIdHash: allocId,
+				BlobberID:        blobber1Id,
+				ReadPrice:        int64(currency.Coin(29)),
+				WritePrice:       int64(currency.Coin(31)),
 			},
 			{
-				AllocationID: allocId,
-				BlobberID:    blobber2Id,
-				ReadPrice:    int64(currency.Coin(41)),
-				WritePrice:   int64(currency.Coin(43)),
+				AllocationIdHash: allocId,
+				BlobberID:        blobber2Id,
+				ReadPrice:        int64(currency.Coin(41)),
+				WritePrice:       int64(currency.Coin(43)),
 			},
 		}
 
@@ -73,7 +73,7 @@ func TestAllocationBlobberTerms(t *testing.T) {
 			Limit:        20,
 			IsDescending: true,
 		}
-		res, err = eventDb.GetAllocationBlobberTerms(terms[0].AllocationID, limit)
+		res, err = eventDb.GetAllocationBlobberTerms(terms[0].AllocationIdHash, limit)
 		require.Equal(t, 2, len(res), "AllocationBlobberTerm not getting inserted")
 
 		err = eventDb.addOrOverwriteAllocationBlobberTerms(terms)
@@ -113,16 +113,16 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		terms := []AllocationBlobberTerm{
 			{
-				AllocationID: allocId,
-				BlobberID:    blobber1Id,
-				ReadPrice:    int64(currency.Coin(29)),
-				WritePrice:   int64(currency.Coin(31)),
+				AllocationIdHash: allocId,
+				BlobberID:        blobber1Id,
+				ReadPrice:        int64(currency.Coin(29)),
+				WritePrice:       int64(currency.Coin(31)),
 			},
 			{
-				AllocationID: allocId,
-				BlobberID:    blobber2Id,
-				ReadPrice:    int64(currency.Coin(41)),
-				WritePrice:   int64(currency.Coin(43)),
+				AllocationIdHash: allocId,
+				BlobberID:        blobber2Id,
+				ReadPrice:        int64(currency.Coin(41)),
+				WritePrice:       int64(currency.Coin(43)),
 			},
 		}
 
@@ -131,15 +131,15 @@ func TestAllocationBlobberTerms(t *testing.T) {
 
 		err = eventDb.updateAllocationBlobberTerms([]AllocationBlobberTerm{
 			{
-				AllocationID: allocId,
-				BlobberID:    blobber1Id,
-				ReadPrice:    int64(currency.Coin(59)),
-				WritePrice:   int64(currency.Coin(61)),
+				AllocationIdHash: allocId,
+				BlobberID:        blobber1Id,
+				ReadPrice:        int64(currency.Coin(59)),
+				WritePrice:       int64(currency.Coin(61)),
 			}, {
-				AllocationID: allocId,
-				BlobberID:    blobber2Id,
-				ReadPrice:    int64(currency.Coin(61)),
-				WritePrice:   int64(currency.Coin(63)),
+				AllocationIdHash: allocId,
+				BlobberID:        blobber2Id,
+				ReadPrice:        int64(currency.Coin(61)),
+				WritePrice:       int64(currency.Coin(63)),
 			},
 		})
 		require.NoError(t, err, "Error while updating Allocation's Blobber's AllocationBlobberTerm to event database")
@@ -287,9 +287,9 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 
 func mockAllocationBlobberTerm(allocationId string, blobberId string) AllocationBlobberTerm {
 	return AllocationBlobberTerm{
-		AllocationID: allocationId,
-		BlobberID:    blobberId,
-		ReadPrice:    int64(currency.Coin(41)),
-		WritePrice:   int64(currency.Coin(43)),
+		AllocationIdHash: allocationId,
+		BlobberID:        blobberId,
+		ReadPrice:        int64(currency.Coin(41)),
+		WritePrice:       int64(currency.Coin(43)),
 	}
 }

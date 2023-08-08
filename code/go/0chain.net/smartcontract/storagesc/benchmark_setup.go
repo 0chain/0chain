@@ -128,10 +128,10 @@ func addMockAllocation(
 		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for _, b := range sa.BlobberAllocs {
 			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
-				BlobberID:    b.BlobberID,
-				AllocationID: b.AllocationID,
-				ReadPrice:    int64(b.Terms.ReadPrice),
-				WritePrice:   int64(b.Terms.WritePrice),
+				BlobberID:        b.BlobberID,
+				AllocationIdHash: b.AllocationID,
+				ReadPrice:        int64(b.Terms.ReadPrice),
+				WritePrice:       int64(b.Terms.WritePrice),
 			})
 		}
 

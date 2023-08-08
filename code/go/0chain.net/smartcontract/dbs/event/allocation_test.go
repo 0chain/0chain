@@ -250,10 +250,10 @@ func TestAllocations(t *testing.T) {
 		var allocationTerms []AllocationBlobberTerm
 		for _, b := range sa.BlobberDetails {
 			allocationTerms = append(allocationTerms, AllocationBlobberTerm{
-				BlobberID:    b.BlobberID,
-				AllocationID: b.AllocationID,
-				ReadPrice:    int64(b.Terms.ReadPrice),
-				WritePrice:   int64(b.Terms.WritePrice),
+				BlobberID:        b.BlobberID,
+				AllocationIdHash: b.AllocationID,
+				ReadPrice:        int64(b.Terms.ReadPrice),
+				WritePrice:       int64(b.Terms.WritePrice),
 			})
 		}
 
