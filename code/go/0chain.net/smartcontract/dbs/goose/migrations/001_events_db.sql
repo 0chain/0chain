@@ -1612,7 +1612,7 @@ ALTER TABLE ONLY public.write_markers
 -- Name: idx_alloc_blob; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE UNIQUE INDEX idx_alloc_blob ON public.allocation_blobber_terms USING btree (allocation_id, blobber_id);
+CREATE UNIQUE INDEX idx_alloc_blob ON public.allocation_blobber_terms USING btree (alloc_id, blobber_id);
 
 
 --
