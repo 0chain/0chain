@@ -1169,8 +1169,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if len(request.RemoveBlobberId) > 0 {
 			balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, []event.AllocationBlobberTerm{
 				{
-					AllocationID: alloc.ID,
-					BlobberID:    request.RemoveBlobberId,
+					AllocationIdHash: alloc.ID,
+					BlobberID:        request.RemoveBlobberId,
 				},
 			})
 		}
@@ -1442,8 +1442,6 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	emitDeleteAllocationBlobberTerms(alloc, balances, t)
-
 	return "canceled", nil
 }
 
@@ -1528,8 +1526,6 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-
-	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 
 	return "finalized", nil
 }
