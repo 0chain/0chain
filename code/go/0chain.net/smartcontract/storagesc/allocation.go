@@ -1256,6 +1256,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	now common.Timestamp,
 	maxChallengeCompletionTime time.Duration,
 	balances chainstate.StateContextI,
+	cancelled bool,
 ) (
 	passRates []float64, err error) {
 
@@ -1283,7 +1284,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
-			if expire < now {
+			if expire < now && cancelled {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
 
@@ -1373,7 +1374,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("can't get config", err.Error())
 	}
 	var passRates []float64
-	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances, true)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1462,7 +1463,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	var passRates []float64
-	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances, false)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
