@@ -206,16 +206,16 @@ func TestEventDb_GetAllocationsByBlobberId(t *testing.T) {
 
 	// Add 10 allocation blobber terms, B1 => A1, A3, A5, B2 => A2, A3, A5, B3 => A1, A2, A4, A5
 	terms := []AllocationBlobberTerm{
-		mockAllocationBlobberTerm(0, blobbers[0].ID),
-		mockAllocationBlobberTerm(2, blobbers[0].ID),
-		mockAllocationBlobberTerm(4, blobbers[0].ID),
-		mockAllocationBlobberTerm(1, blobbers[1].ID),
-		mockAllocationBlobberTerm(2, blobbers[1].ID),
-		mockAllocationBlobberTerm(4, blobbers[1].ID),
-		mockAllocationBlobberTerm(0, blobbers[2].ID),
-		mockAllocationBlobberTerm(1, blobbers[2].ID),
-		mockAllocationBlobberTerm(3, blobbers[2].ID),
-		mockAllocationBlobberTerm(4, blobbers[2].ID),
+		mockAllocationBlobberTerm(int64(allocs[0].ID), blobbers[0].ID),
+		mockAllocationBlobberTerm(int64(allocs[2].ID), blobbers[0].ID),
+		mockAllocationBlobberTerm(int64(allocs[4].ID), blobbers[0].ID),
+		mockAllocationBlobberTerm(int64(allocs[1].ID), blobbers[1].ID),
+		mockAllocationBlobberTerm(int64(allocs[2].ID), blobbers[1].ID),
+		mockAllocationBlobberTerm(int64(allocs[4].ID), blobbers[1].ID),
+		mockAllocationBlobberTerm(int64(allocs[0].ID), blobbers[2].ID),
+		mockAllocationBlobberTerm(int64(allocs[1].ID), blobbers[2].ID),
+		mockAllocationBlobberTerm(int64(allocs[3].ID), blobbers[2].ID),
+		mockAllocationBlobberTerm(int64(allocs[4].ID), blobbers[2].ID),
 	}
 	err = edb.Get().Model(&AllocationBlobberTerm{}).Create(&terms).Error
 	require.NoError(t, err, "Error while inserting Allocation's Blobber's AllocationBlobberTerm to event database")
