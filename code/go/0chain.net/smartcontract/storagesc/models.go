@@ -613,7 +613,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 				ID:           oc.ID,
 				AllocationID: alloc.ID,
 				BlobberID:    oc.BlobberID,
-			}, true, balances, alloc.Stats, ba.Stats)
+			}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
 			if err != nil {
 				return 0.0, err
 			}
@@ -1777,7 +1777,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
 
 			if err != nil {
 				return nil, err

@@ -93,6 +93,7 @@ func emitAddChallenge(
 func emitUpdateChallenge(
 	sc *StorageChallenge,
 	passed bool,
+	responded BlobberChallengeResponded,
 	balances cstate.StateContextI,
 	allocStats, blobberStats *StorageAllocationStats,
 ) error {
@@ -102,11 +103,7 @@ func emitUpdateChallenge(
 		BlobberID:      sc.BlobberID,
 		RoundResponded: balances.GetBlock().Round,
 		Passed:         passed,
-	}
-	if passed {
-		clg.Responded = int64(1) // Passed challenge
-	} else {
-		clg.Responded = int64(2) // Failed challenge
+		Responded:      int64(responded),
 	}
 
 	a := event.Allocation{

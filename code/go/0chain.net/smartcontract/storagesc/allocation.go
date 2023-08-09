@@ -1335,7 +1335,7 @@ func (sc *StorageSmartContract) canceledPassRates(
 				ID:           oc.ID,
 				AllocationID: alloc.ID,
 				BlobberID:    oc.BlobberID,
-			}, true, balances, alloc.Stats, ba.Stats)
+			}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
 			if err != nil {
 				return nil, err
 			}

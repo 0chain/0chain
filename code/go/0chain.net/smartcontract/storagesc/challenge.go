@@ -33,6 +33,15 @@ import (
 // TODO: add back after fixing the chain stuck
 // const blobberAllocationPartitionSize = 100
 
+type BlobberChallengeResponded int
+
+const (
+	ChallengeNotResponded BlobberChallengeResponded = iota
+	ChallengeResponded
+	ChallengeRespondedLate
+	ChallengeRespondedInvalid
+)
+
 const blobberAllocationPartitionSize = 10
 
 // completeChallenge complete the challenge
@@ -696,7 +705,7 @@ func (sc *StorageSmartContract) challengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	err = emitUpdateChallenge(cab.challenge, true, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -766,7 +775,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	err := emitUpdateChallenge(cab.challenge, false, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 	if err != nil {
 		return "", err
 	}
