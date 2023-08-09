@@ -79,7 +79,8 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int("block size", blockSize))
 		err := tx.Rollback()
 		if err != nil {
-			return nil, err
+			logging.Logger.Error("can't rollback", zap.Error(err))
+			return nil, ctx.Err()
 		}
 		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
@@ -125,7 +126,8 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int("block size", blockSize))
 		err := tx.Rollback()
 		if err != nil {
-			return nil, err
+			logging.Logger.Error("can't rollback", zap.Error(err))
+			return nil, ctx.Err()
 		}
 		return nil, ctx.Err()
 	}
@@ -156,9 +158,12 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 		mergers = []eventsMerger{
 			mergeAddUsersEvents(),
 			mergeAddProviderEvents[Miner](TagAddMiner, withUniqueEventOverwrite()),
+			//mergeAddProviderEvents[Miner](TagUpdateMiner, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Sharder](TagAddSharder, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagAddBlobber, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Blobber](TagUpdateBlobber, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Authorizer](TagAddAuthorizer, withUniqueEventOverwrite()),
+			mergeAddProviderEvents[Authorizer](TagUpdateAuthorizer, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[Validator](TagAddOrOverwiteValidator, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[dbs.ProviderID](TagShutdownProvider, withUniqueEventOverwrite()),
 			mergeAddProviderEvents[dbs.ProviderID](TagKillProvider, withUniqueEventOverwrite()),
@@ -633,7 +638,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.deleteBlobber(*blobberID)
 	// authorizer
 	case TagAddAuthorizer:
-		auth, ok := fromEvent[Authorizer](event.Data)
+		auth, ok := fromEvent[[]Authorizer](event.Data)
 
 		if !ok {
 			return ErrInvalidEventData

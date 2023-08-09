@@ -120,7 +120,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Creating Provider
 
 	var sp *StakePool
-	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, params.StakePoolSettings, ctx)
+	sp, err = zcn.getOrUpdateStakePool(authorizerID, params.StakePoolSettings, ctx)
 	if err != nil {
 		return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 	}
@@ -210,14 +210,6 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
 	}
 
-	globalNode, err := GetGlobalNode(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("get global node", zap.Error(err))
-		return "", err
-	}
-
 	// Provider may be updated only if authorizer exists/not deleted
 
 	_, err = GetAuthorizerNode(authorizerID, ctx)
@@ -227,7 +219,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	case nil:
 		// existing
 		var sp *StakePool
-		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
+		sp, err = zcn.getOrUpdateStakePool(authorizerID, poolSettings, ctx)
 		if err != nil {
 			return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 		}

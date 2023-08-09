@@ -170,11 +170,11 @@ func (sa *StorageAllocation) buildEventBlobberTerms() []event.AllocationBlobberT
 	bTerms := make([]event.AllocationBlobberTerm, 0, len(sa.BlobberAllocs))
 	for i, b := range sa.BlobberAllocs {
 		bTerms = append(bTerms, event.AllocationBlobberTerm{
-			AllocationID:    sa.ID,
-			BlobberID:       b.BlobberID,
-			ReadPrice:       int64(b.Terms.ReadPrice),
-			WritePrice:      int64(b.Terms.WritePrice),
-			AllocBlobberIdx: int64(i),
+			AllocationIdHash: sa.ID,
+			BlobberID:        b.BlobberID,
+			ReadPrice:        int64(b.Terms.ReadPrice),
+			WritePrice:       int64(b.Terms.WritePrice),
+			AllocBlobberIdx:  int64(i),
 		})
 	}
 
