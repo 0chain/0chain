@@ -1169,8 +1169,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if len(request.RemoveBlobberId) > 0 {
 			balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, []event.AllocationBlobberTerm{
 				{
-					AllocationID: alloc.ID,
-					BlobberID:    request.RemoveBlobberId,
+					AllocationIdHash: alloc.ID,
+					BlobberID:        request.RemoveBlobberId,
 				},
 			})
 		}
@@ -1442,8 +1442,6 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	emitDeleteAllocationBlobberTerms(alloc, balances, t)
-
 	return "canceled", nil
 }
 
@@ -1529,8 +1527,6 @@ func (sc *StorageSmartContract) finalizeAllocation(
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	emitUpdateAllocationBlobberTerms(alloc, balances, t)
-
 	return "finalized", nil
 }
 
@@ -1562,18 +1558,8 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	for _, d := range alloc.BlobberAllocs {
 		if d.Stats.UsedSize > 0 {
-			// get blobber allocations partitions
-			blobberAllocParts, err := partitionsBlobberAllocations(d.BlobberID, balances)
-			if err != nil {
-				return common.NewErrorf("fini_alloc_failed",
-					"error getting blobber_challenge_allocation list: %v", err)
-			}
-			if err := partitionsBlobberAllocationsRemove(balances, d.BlobberID, d.AllocationID, blobberAllocParts); err != nil {
+			if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 				return err
-			}
-			if err := blobberAllocParts.Save(balances); err != nil {
-				return common.NewErrorf("fini_alloc_failed",
-					"error saving blobber allocation partitions: %v", err)
 			}
 		}
 	}

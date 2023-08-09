@@ -7,7 +7,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"errors"
 	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"strings"
 )
 
@@ -155,7 +154,6 @@ func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances csta
 }
 
 func getOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
-	logging.Logger.Info("1 getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Int64("from", from), zap.Any("limit", limit))
 
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from, limit)
@@ -171,7 +169,6 @@ func getOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pag
 		chs = append(chs, challInfo)
 	}
 
-	logging.Logger.Info("2 getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Int64("from", from), zap.Any("limit", limit), zap.Any("chs", chs))
 	return chs, nil
 }
 
