@@ -837,7 +837,7 @@ func TestAllocations(t *testing.T) {
 
 		// Assert allocation entered successfuylly (2)
 		alloc, err = eventDb.GetAllocation(a2.AllocationID)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted"))
+		require.NoError(t, err, fmt.Sprintf("allocation %v not inserted", a2.AllocationID))
 		require.Equal(t, alloc.TotalChallenges, int64(40))
 		require.Equal(t, alloc.OpenChallenges, int64(20))
 
@@ -865,7 +865,7 @@ func TestAllocations(t *testing.T) {
 
 		// Test update was successful (2)
 		alloc, err = eventDb.GetAllocation(a2.AllocationID)
-		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update"))
+		require.NoError(t, err, fmt.Sprintf("allocation %v not found after update", a2.AllocationID))
 		require.Equal(t, alloc.TotalChallenges, int64(40))
 		require.Equal(t, alloc.OpenChallenges, int64(20))
 	})
