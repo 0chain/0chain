@@ -108,6 +108,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/alloc-challenge-rewards", srh.getAllocationChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/count-challenges", srh.getChallengesCountByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-rewards", srh.getRewardsByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/parition-size-frequency", srh.getPartitionSizeFrequency))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/blobber-selection-frequency", srh.getBlobberPartitionSelectionFrequency))
 	}
 
 	return restEndpoints
