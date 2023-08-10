@@ -3,7 +3,7 @@ module 0chain.net
 go 1.20
 
 require (
-	github.com/alicebob/miniredis/v2 v2.30.4
+	github.com/alicebob/miniredis/v2 v2.30.5
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.26.0
 	github.com/go-playground/validator/v10 v10.14.1
