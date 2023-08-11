@@ -150,6 +150,22 @@ func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
 	return
 }
 
+func decreaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
+	numAuth := &AuthCount{}
+	numAuth.Count, err = getAuthorizerCount(ctx)
+	if err != nil {
+		return
+	}
+
+	numAuth.Count--
+	if numAuth.Count < 0 {
+		return fmt.Errorf("authorizer count is negative")
+	}
+
+	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	return
+}
+
 func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
 	numAuth := &AuthCount{}
 	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
@@ -300,6 +316,10 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 		err = common.NewError(errorCode, msg)
 		Logger.Error("delete trie node", zap.Error(err))
 		return "", err
+	}
+
+	if err := decreaseAuthorizerCount(ctx); err != nil {
+		return "", common.NewErrorf(errorCode, "could not decrease authorizer count: %v", err)
 	}
 
 	ctx.EmitEvent(event.TypeStats, event.TagDeleteAuthorizer, authorizerID, authorizerID)
