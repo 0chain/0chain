@@ -1280,6 +1280,13 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 
 			var expire = oc.CreatedAt + toSeconds(maxChallengeCompletionTime)
 
+			logging.Logger.Info("settleOpenChallengesAndGetPassRates",
+				zap.Any("oc", oc),
+				zap.Any("now", now),
+				zap.Any("expire", expire),
+				zap.Any("maxChallengeCompletionTime", maxChallengeCompletionTime),
+			)
+
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
@@ -1291,7 +1298,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, true, ChallengeRespondedLate, balances, alloc.Stats, ba.Stats)
+				}, false, ChallengeRespondedLate, balances, alloc.Stats, ba.Stats)
 				if err != nil {
 					return nil, err
 				}
