@@ -21,6 +21,12 @@ type CreationDateField struct {
 
 /*InitializeCreationDate sets the creation date to current time */
 func (cd *CreationDateField) InitializeCreationDate() {
+
+	logging.Logger.Info("Jayash InitializeCreationDate",
+		zap.Any("TIME NOW", time.Now()),
+		zap.Any("COMMON NOW", common.Now()),
+	)
+
 	cd.CreationDate = common.Now()
 }
 
