@@ -342,7 +342,24 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
+
+	logging.Logger.Info("Jayash Finalize block - update steady state timer",
+		zap.Int64("round", fb.Round),
+		zap.String("block", fb.Hash),
+		zap.Any("time", fb.ToTime()),
+		zap.Any("now", time.Now()),
+		zap.Any("time.Since(fb.ToTime())", time.Since(fb.ToTime())),
+		zap.Any("100*time.Second", 100*time.Second))
+
 	if time.Since(fb.ToTime()) < 100*time.Second {
+		logging.Logger.Info("finalize block - update steady state timer",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
+			zap.Any("time", fb.ToTime()),
+			zap.Any("now", time.Now()),
+			zap.Any("time.Since(fb.ToTime())", time.Since(fb.ToTime())),
+			zap.Any("100*time.Second", 100*time.Second))
+
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	}
 
