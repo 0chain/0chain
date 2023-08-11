@@ -252,14 +252,15 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	var request = newAllocationRequest{
-		DataShards:      conf.FreeAllocationSettings.DataShards,
-		ParityShards:    conf.FreeAllocationSettings.ParityShards,
-		Size:            conf.FreeAllocationSettings.Size,
-		Owner:           marker.Recipient,
-		OwnerPublicKey:  inputObj.RecipientPublicKey,
-		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
-		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
-		Blobbers:        inputObj.Blobbers,
+		DataShards:           conf.FreeAllocationSettings.DataShards,
+		ParityShards:         conf.FreeAllocationSettings.ParityShards,
+		Size:                 conf.FreeAllocationSettings.Size,
+		Owner:                marker.Recipient,
+		OwnerPublicKey:       inputObj.RecipientPublicKey,
+		ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
+		WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
+		Blobbers:             inputObj.Blobbers,
+		ThirdPartyExtendable: true,
 	}
 
 	arBytes, err := request.encode()
