@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -19,6 +20,8 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
+
+	"github.com/beevik/ntp"
 )
 
 // VerifyTickets verifies tickets aggregately
@@ -343,15 +346,30 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
 
+	// Specify the NTP server you want to query.
+	ntpServer := "pool.ntp.org"
+
+	// Get the current time from the NTP server.
+	ntpTime, err := ntp.Time(ntpServer)
+	if err != nil {
+		log.Fatalf("Error fetching NTP time: %v", err)
+	}
+
+	logNow := time.Now()
+
 	logging.Logger.Info("Jayash Finalize block - update steady state timer",
+		zap.Any("now", logNow),
+		zap.Any("ntpTime", ntpTime),
 		zap.Int64("round", fb.Round),
 		zap.String("block", fb.Hash),
 		zap.Any("time", fb.ToTime()),
-		zap.Any("now", time.Now()),
+
 		zap.Any("time.Since(fb.ToTime())", time.Since(fb.ToTime())),
+		zap.Any("ntpSince", ntpTime.Sub(fb.ToTime())),
 		zap.Any("100*time.Second", 100*time.Second))
 
 	if time.Since(fb.ToTime()) < 100*time.Second {
+
 		logging.Logger.Info("finalize block - update steady state timer",
 			zap.Int64("round", fb.Round),
 			zap.String("block", fb.Hash),
