@@ -189,6 +189,23 @@ func (srh *StorageRestHandler) getRewardsByFilter(w http.ResponseWriter, r *http
 	common.Respond(w, r, result, err)
 }
 
+func (srh *StorageRestHandler) getDelegateRewardsByFilter(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	query := r.URL.Query().Get("query")
+
+	result, err := edb.GetDelegateRewardsByQuery(query)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, err)
+}
+
 func (srh *StorageRestHandler) getPartitionSizeFrequency(w http.ResponseWriter, r *http.Request) {
 	// read all data from block_rewards table and return
 	edb := srh.GetQueryStateContext().GetEventDB()

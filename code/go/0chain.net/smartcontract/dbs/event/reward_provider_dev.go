@@ -230,6 +230,33 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 	return result, nil
 }
 
+func (edb *EventDb) GetDelegateRewardsByQuery(query string) (map[string]int64, error) {
+	type DelegateReward struct {
+		PoolID string `gorm:"column:pool_id"`
+		Amount int    `gorm:"column:amount"`
+	}
+
+	var result []DelegateReward
+
+	whereQuery, err := url.QueryUnescape(query)
+	if err != nil {
+		return nil, err
+	}
+
+	err = edb.Get().Raw("SELECT pool_id, COALESCE(SUM(amount), 0) as amount FROM reward_delegates WHERE " + whereQuery + " GROUP BY pool_id").Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var delegateRewards = make(map[string]int64)
+
+	for _, dr := range result {
+		delegateRewards[dr.PoolID] = int64(dr.Amount)
+	}
+
+	return delegateRewards, nil
+}
+
 func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[int]int, error) {
 	type CountFrequency struct {
 		Cnt       int
