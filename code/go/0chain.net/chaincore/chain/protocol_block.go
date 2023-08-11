@@ -540,6 +540,14 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if config.Development() {
 		for _, txn := range fb.Txns {
 			ts := time.Now()
+
+			logging.Logger.Info("Jayash finalized txn",
+				zap.Int64("round", fb.Round),
+				zap.String("txn", txn.Hash),
+				zap.Any("ts", ts),
+				zap.Any("txn_creation_date", txn.CreationDate),
+				zap.Duration("duration", ts.Sub(common.ToTime(txn.CreationDate))))
+
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
 	}
