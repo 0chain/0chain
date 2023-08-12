@@ -1169,8 +1169,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if len(request.RemoveBlobberId) > 0 {
 			balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, []event.AllocationBlobberTerm{
 				{
-					AllocationID: alloc.ID,
-					BlobberID:    request.RemoveBlobberId,
+					AllocationIdHash: alloc.ID,
+					BlobberID:        request.RemoveBlobberId,
 				},
 			})
 		}
@@ -1249,51 +1249,9 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	return false
 }
 
-func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation, balances chainstate.StateContextI) ([]float64, error) {
-	if alloc.Stats == nil {
-		alloc.Stats = &StorageAllocationStats{}
-	}
-	var failed, succesful int64 = 0, 0
-	var passRates = make([]float64, 0, len(alloc.BlobberAllocs))
-	for _, ba := range alloc.BlobberAllocs {
-		if ba.Stats == nil {
-			ba.Stats = new(StorageAllocationStats)
-			passRates = append(passRates, 1.0)
-			continue
-		}
-		ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
-		ba.Stats.OpenChallenges = 0
-
-		baTotal := ba.Stats.FailedChallenges + ba.Stats.SuccessChallenges
-		if baTotal == 0 {
-			passRates = append(passRates, 1.0)
-			continue
-		}
-
-		if ba.Stats.TotalChallenges == 0 {
-			logging.Logger.Warn("empty total challenges on finalizedPassRates",
-				zap.Int64("OpenChallenges", ba.Stats.OpenChallenges),
-				zap.Int64("FailedChallenges", ba.Stats.FailedChallenges),
-				zap.Int64("SuccessChallenges", ba.Stats.SuccessChallenges))
-			return nil, errors.New("empty total challenges")
-		}
-
-		passRates = append(passRates, float64(ba.Stats.SuccessChallenges)/float64(ba.Stats.TotalChallenges))
-		succesful += ba.Stats.SuccessChallenges
-		failed += ba.Stats.FailedChallenges
-	}
-	alloc.Stats.SuccessChallenges = succesful
-	alloc.Stats.FailedChallenges = failed
-	alloc.Stats.OpenChallenges = 0
-
-	emitUpdateAllocationAndBlobberStats(alloc, balances)
-
-	return passRates, nil
-}
-
 // a blobber can not send a challenge response, thus we have to check out
 // challenge requests and their expiration
-func (sc *StorageSmartContract) canceledPassRates(
+func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	alloc *StorageAllocation,
 	now common.Timestamp,
 	maxChallengeCompletionTime time.Duration,
@@ -1321,25 +1279,43 @@ func (sc *StorageSmartContract) canceledPassRates(
 			}
 
 			var expire = oc.CreatedAt + toSeconds(maxChallengeCompletionTime)
-			if expire < now {
-				ba.Stats.FailedChallenges++
-				alloc.Stats.FailedChallenges++
-			} else {
-				ba.Stats.SuccessChallenges++
-				alloc.Stats.SuccessChallenges++
-			}
+
+			logging.Logger.Info("settleOpenChallengesAndGetPassRates",
+				zap.Any("oc", oc),
+				zap.Any("now", now),
+				zap.Any("expire", expire),
+				zap.Any("maxChallengeCompletionTime", maxChallengeCompletionTime),
+			)
+
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
-			err := emitUpdateChallenge(&StorageChallenge{
-				ID:           oc.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    oc.BlobberID,
-			}, true, balances, alloc.Stats, ba.Stats)
-			if err != nil {
-				return nil, err
-			}
+			if expire < now {
+				ba.Stats.FailedChallenges++
+				alloc.Stats.FailedChallenges++
 
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, false, ChallengeRespondedLate, balances, alloc.Stats, ba.Stats)
+				if err != nil {
+					return nil, err
+				}
+
+			} else {
+				ba.Stats.SuccessChallenges++
+				alloc.Stats.SuccessChallenges++
+
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 
 	default:
@@ -1404,7 +1380,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("can't get config", err.Error())
 	}
 	var passRates []float64
-	passRates, err = sc.canceledPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1441,8 +1417,6 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-
-	emitDeleteAllocationBlobberTerms(alloc, balances, t)
 
 	return "canceled", nil
 }
@@ -1495,7 +1469,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	var passRates []float64
-	passRates, err = sc.finalizedPassRates(alloc, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1528,8 +1502,6 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-
-	emitUpdateAllocationBlobberTerms(alloc, balances, t)
 
 	return "finalized", nil
 }

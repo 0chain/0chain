@@ -171,3 +171,77 @@ func (srh *StorageRestHandler) getChallengesCountByFilter(w http.ResponseWriter,
 
 	common.Respond(w, r, result, err)
 }
+
+func (srh *StorageRestHandler) getRewardsByFilter(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	query := r.URL.Query().Get("query")
+
+	result, err := edb.GetQueryRewards(query)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, err)
+}
+
+func (srh *StorageRestHandler) getDelegateRewardsByFilter(w http.ResponseWriter, r *http.Request) {
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	query := r.URL.Query().Get("query")
+
+	result, err := edb.GetDelegateRewardsByQuery(query)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, err)
+}
+
+func (srh *StorageRestHandler) getPartitionSizeFrequency(w http.ResponseWriter, r *http.Request) {
+	// read all data from block_rewards table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	startBlockNumber := r.URL.Query().Get("start")
+	endBlockNumber := r.URL.Query().Get("end")
+
+	result, err := edb.GetPartitionSizeFrequency(startBlockNumber, endBlockNumber)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, nil)
+}
+
+func (srh *StorageRestHandler) getBlobberPartitionSelectionFrequency(w http.ResponseWriter, r *http.Request) {
+	// read all data from block_rewards table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	startBlockNumber := r.URL.Query().Get("start")
+	endBlockNumber := r.URL.Query().Get("end")
+
+	result, err := edb.GetBlobberPartitionSelectionFrequency(startBlockNumber, endBlockNumber)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, nil)
+}

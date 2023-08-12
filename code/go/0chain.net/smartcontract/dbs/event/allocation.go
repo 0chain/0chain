@@ -50,7 +50,7 @@ type Allocation struct {
 
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
+	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:ID"`
 }
 
 func (edb *EventDb) GetAllocation(id string) (*Allocation, error) {

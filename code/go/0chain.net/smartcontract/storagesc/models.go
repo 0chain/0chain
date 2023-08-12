@@ -613,7 +613,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 				ID:           oc.ID,
 				AllocationID: alloc.ID,
 				BlobberID:    oc.BlobberID,
-			}, true, balances, alloc.Stats, ba.Stats)
+			}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
 			if err != nil {
 				return 0.0, err
 			}
@@ -680,16 +680,13 @@ func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stake
 
 func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config) (currency.Coin, error) {
 	payment := currency.Coin(0)
-	cpBalance, err := cp.Balance.Float64()
+
 	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime) / float64(conf.TimeUnit)
-	adjustableChallengePoolTokens := cpBalance * maxChallengeCompletionDTU
+	adjustableChallengePoolTokens := float64(d.ChallengePoolIntegralValue) * maxChallengeCompletionDTU
 
 	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {
 		allocationRealUsedSize := float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards)
 		ratio := float64(d.Stats.UsedSize) / allocationRealUsedSize
-		if err != nil {
-			return payment, err
-		}
 
 		reward, err := currency.Float64ToCoin(adjustableChallengePoolTokens * ratio * passRate)
 		if err != nil {
@@ -1780,7 +1777,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
 
 			if err != nil {
 				return nil, err

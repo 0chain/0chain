@@ -2,7 +2,9 @@ package event
 
 import (
 	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 	"github.com/pkg/errors"
+	"net/url"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
@@ -199,6 +201,115 @@ func (edb *EventDb) GetBlockRewards(startBlock, endBlock string) ([]int64, error
 	return result, err
 }
 
+func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
+	var result QueryReward
+
+	amount := 0
+
+	whereQuery, err := url.QueryUnescape(query)
+	if err != nil {
+		return result, err
+	}
+
+	err = edb.Get().Raw("SELECT COALESCE(SUM(amount), 0) FROM reward_providers WHERE " + whereQuery).Scan(&amount).Error
+	if err != nil {
+		return result, err
+	}
+
+	result.TotalProviderReward = int64(amount)
+
+	err = edb.Get().Raw("SELECT COALESCE(SUM(amount), 0) FROM reward_delegates WHERE " + whereQuery).Scan(&amount).Error
+	if err != nil {
+		return result, err
+	}
+
+	result.TotalDelegateReward += int64(amount)
+
+	result.TotalReward = result.TotalProviderReward + result.TotalDelegateReward
+
+	return result, nil
+}
+
+func (edb *EventDb) GetDelegateRewardsByQuery(query string) (map[string]int64, error) {
+	type DelegateReward struct {
+		PoolID string `gorm:"column:pool_id"`
+		Amount int    `gorm:"column:amount"`
+	}
+
+	var result []DelegateReward
+
+	whereQuery, err := url.QueryUnescape(query)
+	if err != nil {
+		return nil, err
+	}
+
+	err = edb.Get().Raw("SELECT pool_id, COALESCE(SUM(amount), 0) as amount FROM reward_delegates WHERE " + whereQuery + " GROUP BY pool_id").Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var delegateRewards = make(map[string]int64)
+
+	for _, dr := range result {
+		delegateRewards[dr.PoolID] = int64(dr.Amount)
+	}
+
+	return delegateRewards, nil
+}
+
+func (edb *EventDb) GetPartitionSizeFrequency(startBlock, endBlock string) (map[int]int, error) {
+	type CountFrequency struct {
+		Cnt       int
+		Frequency int
+	}
+	query := fmt.Sprintf(`SELECT cnt, COUNT(*) AS frequency FROM (SELECT COUNT(*) AS cnt FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number < %s GROUP BY block_number) subquery GROUP BY cnt`, startBlock, endBlock)
+
+	// Create an empty slice to store the results
+	var results []CountFrequency
+
+	// Execute the query and directly scan the results into the slice
+	err := edb.Get().Raw(query).Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a map to store the result
+	result := make(map[int]int)
+
+	// Populate the map based on the results
+	for _, cf := range results {
+		result[cf.Cnt] = cf.Frequency
+	}
+
+	return result, nil
+}
+
+func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock string) (map[string]int, error) {
+	type ProviderFrequency struct {
+		ProviderID string `gorm:"column:provider_id"`
+		Frequency  int    `gorm:"column:frequency"`
+	}
+
+	query := fmt.Sprintf(`SELECT provider_id, COUNT(*) AS frequency FROM reward_providers WHERE reward_type = 3 AND block_number >= %s AND block_number < %s GROUP BY provider_id`, startBlock, endBlock)
+
+	// Create an empty slice to store the results
+	var result []ProviderFrequency
+
+	// Execute the query and directly scan the results into the slice of ProviderFrequency
+	err := edb.Get().Raw(query).Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert the slice to a map
+	frequencyMap := make(map[string]int)
+	for _, pf := range result {
+		frequencyMap[pf.ProviderID] = pf.Frequency
+	}
+
+	return frequencyMap, nil
+}
+
 type ProviderAllocationRewards struct {
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 	Amount          int64            `json:"amount"`
@@ -220,4 +331,10 @@ type ProviderAllocationReward struct {
 	ProviderId string `json:"provider_id"`
 	Amount     int64  `json:"amount"`
 	RewardType int64  `json:"reward_type"`
+}
+
+type QueryReward struct {
+	TotalProviderReward int64 `json:"total_provider_reward"`
+	TotalDelegateReward int64 `json:"total_delegate_reward"`
+	TotalReward         int64 `json:"total_reward"`
 }

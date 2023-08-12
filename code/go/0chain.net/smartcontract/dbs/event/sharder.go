@@ -98,7 +98,7 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 	result := edb.Get().
 		Table("sharders").
 		Joins("left join provider_rewards on sharders.id = provider_rewards.provider_id").
-		Joins("left join delegate_pools on sharders.id = delegate_pools.provider_id").
+		Joins("left join delegate_pools on sharders.id = delegate_pools.provider_id AND delegate_pools.status = 0").
 		Where("sharders.id = ?", id).
 		Scan(&sharderDps)
 	if result.Error != nil {
@@ -119,9 +119,6 @@ func (edb *EventDb) GetSharderWithDelegatePools(id string) (Sharder, []DelegateP
 		return s, nil, nil
 	}
 	for i := range sharderDps {
-		if sharderDps[i].DelegatePool.Status != 0 {
-			continue
-		}
 		dps = append(dps, sharderDps[i].DelegatePool)
 		if id != sharderDps[i].DelegatePool.ProviderID {
 			return s, nil, fmt.Errorf("mismatched sharder id in delegate pool;"+
