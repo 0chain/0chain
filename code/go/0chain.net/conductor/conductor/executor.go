@@ -16,6 +16,7 @@ import (
 	"0chain.net/conductor/config"
 	"0chain.net/conductor/config/cases"
 	"0chain.net/conductor/dirs"
+	"0chain.net/conductor/utils"
 )
 
 //
@@ -392,7 +393,7 @@ func (r *Runner) WaitForChallengeStatus() {
 
 func (r *Runner) WaitForFileMetaRoot() {
 	if r.verbose {
-		log.Print(" [INF] waiting for challenge status from chain")
+		log.Print(" [INF] waiting for file meta root")
 	}
 	count := 0
 	for name := range r.server.Nodes() {
@@ -425,10 +426,13 @@ func (r *Runner) CheckFileMetaRoot(cfg *config.CheckFileMetaRoot) error {
 		curFmr = fmrs[i]
 	}
 
-	if allEqual != cfg.RequireSameRoot {
-		if cfg.RequireSameRoot {
-			return fmt.Errorf("required all file meta root to be same")
-		}
+	fmt.Printf("RequiredSameRoot = %v, allEqual = %v\n", cfg.RequireSameRoot, allEqual)
+
+	if cfg.RequireSameRoot && !allEqual {
+		return fmt.Errorf("required all file meta root to be same")
+	}
+
+	if !cfg.RequireSameRoot && allEqual {
 		return fmt.Errorf("required some file meta root to be different")
 	}
 
@@ -784,24 +788,24 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 }
 
 // Command executing.
-func (r *Runner) Command(name string, tm time.Duration) {
+func (r *Runner) Command(name string, params map[string]string, tm time.Duration) {
 	r.setupTimeout(tm)
 
 	if r.verbose {
 		log.Printf(" [INF] command %q", name)
 	}
 
-	r.waitCommand = r.asyncCommand(name)
+	r.waitCommand = r.asyncCommand(name, params)
 }
 
-func (r *Runner) asyncCommand(name string) (reply chan error) {
+func (r *Runner) asyncCommand(name string, params map[string]string) (reply chan error) {
 	reply = make(chan error)
-	go r.runAsyncCommand(reply, name)
+	go r.runAsyncCommand(reply, name, params)
 	return
 }
 
-func (r *Runner) runAsyncCommand(reply chan error, name string) {
-	var err = r.conf.Execute(name)
+func (r *Runner) runAsyncCommand(reply chan error, name string, params map[string]string) {
+	var err = r.conf.Execute(name, params)
 	if err != nil {
 		err = fmt.Errorf("%q: %v", name, err)
 	}
@@ -1031,8 +1035,13 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.GenerateChallenge = update
 		case config.GetFileMetaRoot:
 			state.GetFileMetaRoot = bool(update)
-		case []config.NodeID:
-			state.FailRenameCommit = update
+		case *config.RenameCommitControl:
+			if update.Fail {
+				state.FailRenameCommit = utils.SliceUnion(state.FailRenameCommit, update.Nodes)
+			} else {
+				state.FailRenameCommit = utils.SliceDifference(state.FailRenameCommit, update.Nodes)
+			}
+			fmt.Printf("state.FailRenameCommit = %v\n", state.FailRenameCommit)
 		}
 	})
 

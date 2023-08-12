@@ -7,6 +7,7 @@ sets:
   - name: "Minority Cases"
     tests:
       - "Allocation state should be same after rollback"
+      - "Allocation state should be same after repair"
 
 # test cases
 tests:
@@ -33,16 +34,29 @@ tests:
           name: 'init_allocation_only'
       - command:
           name: "upload"
+          params:
+            remotepath: /remote/upload.bin
+      - command:
+          name: "upload"
+          params:
+            remotepath: /remote/new.bin
       - fail_rename_commit: ['blobber-1', 'blobber-2']
       - sleep: "1m" # simple wait for blobbers to pick up state
       - command:
-          name: 'rename'
+          name: 'rename_can_fail'
+          params:
+            remotepath: /remote/upload.bin
+            destname: upload_renamed.bin
+      - disable_fail_rename_commit: ['blobber-1', 'blobber-2']
+      - sleep: "1m" # simple wait for blobbers to pick up state
       - command:
-          name: 'update'
+          name: 'rename'
+          params:
+            remotepath: /remote/new.bin
+            destname: new_renamed.bin
       - wait_for_file_meta_root: {}
       - check_file_meta_root:
           require_same_root: true
-
   - name: "Allocation state should be same after repair"
     flow:
       - set_monitor: "sharder-1"
@@ -66,12 +80,26 @@ tests:
           name: 'init_allocation_only'
       - command:
           name: "upload"
+          params:
+            remotepath: /remote/upload.bin
+      - command:
+          name: "upload"
+          params:
+            remotepath: /remote/new.bin
       - fail_rename_commit: ['blobber-1']
       - sleep: "1m" # simple wait for blobbers to pick up state
       - command:
           name: 'rename'
+          params:
+            remotepath: /remote/upload.bin
+            destname: upload_renamed.bin
+      - disable_fail_rename_commit: ['blobber-1']
+      - sleep: "1m" # simple wait for blobbers to pick up state
       - command:
-          name: 'update'
+          name: 'rename'
+          params:
+            remotepath: /remote/new.bin
+            destname: new_renamed.bin
       - wait_for_file_meta_root: {}
       - check_file_meta_root:
           require_same_root: true

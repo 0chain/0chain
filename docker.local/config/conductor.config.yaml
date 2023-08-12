@@ -224,8 +224,12 @@ commands:
     should_fail: false # consensus
   upload:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh $remotepath"
     should_fail: false
+    args:
+      remotepath:
+        required: false
+        default: /remote/upload.bin
   unverified_transaction:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/unverified_transaction.sh"
@@ -300,3 +304,33 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/mint_zcn.sh"
     should_fail: false
+  update:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/update.sh $remotepath"
+    should_fail: false
+    args:
+      remotepath:
+        required: false
+        default: /remote/upload.bin
+  rename:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/rename.sh $remotepath $destname"
+    can_fail: false
+    args: 
+      remotepath:
+        required: false
+        default: /remote/upload.bin
+      destname:
+        required: false
+        default: upload_renamed.bin
+  rename_can_fail:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/rename.sh $remotepath $destname"
+    can_fail: true
+    args: 
+      remotepath:
+        required: false
+        default: /remote/upload.bin
+      destname:
+        required: false
+        default: upload_renamed.bin

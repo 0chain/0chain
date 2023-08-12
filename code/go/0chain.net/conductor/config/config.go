@@ -15,7 +15,6 @@ type WaitOnChallengeGeneration bool
 type StopWMCommit bool
 type BlobberCommittedWM bool
 type GetFileMetaRoot bool
-type FailRenameCommit []NodeID
 
 // common types
 type (
@@ -88,17 +87,24 @@ type Set struct {
 	Tests []string `json:"tests" yaml:"tests" mapstructure:"tests"`
 }
 
+type Arg struct {
+	Required bool `json:"required" yaml:"required" mapstructured:"required"`
+	Default string `json:"default" yaml:"default" mapstructured:"default"`
+}
+
 // A system command.
 type Command struct {
 	WorkDir    string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
 	Exec       string `json:"exec" yaml:"exec" mapstructure:"exec"`
 	ShouldFail bool   `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
 	CanFail    bool   `json:"can_fail" yaml:"can_fail" mapstructure:"can_fail"`
+	Args	   map[string]*Arg	`json:"args" yaml:"args" mapstructure:"args"`
 }
 
 // CommandName
 type CommandName struct {
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
+	Params map[string]string `json:"params" yaml:"params" mapstructure:"params"`
 }
 
 // A Config represents conductor testing configurations.
@@ -163,7 +169,7 @@ func (c *Config) GetStuckWarningThreshold() time.Duration {
 }
 
 // Execute system command by its name.
-func (c *Config) Execute(name string) (err error) {
+func (c *Config) Execute(name string, params map[string]string) (err error) {
 	var n, ok = c.Commands[name]
 	if !ok {
 		return fmt.Errorf("unknown system command: %q", name)
@@ -173,8 +179,28 @@ func (c *Config) Execute(name string) (err error) {
 		n.WorkDir = "."
 	}
 
+	commandString := n.Exec
+	fmt.Printf("Command: %v, Args: %+v, Params: %v\n", name, n.Args, params)
+
+	// Build command arguments from given params
+	for aname, arg := range n.Args {
+		pval, ok := params[aname]
+		fmt.Printf("From params map, val = %v, found = %v\n", pval, ok)
+		if !ok {
+			if arg.Required {
+				return fmt.Errorf("argument %v is required for command %v but no value was provided", aname, name)
+			} else {
+				pval = arg.Default
+			}
+		}
+		fmt.Printf("Trying to replace %v with %v in %v\n", fmt.Sprintf("$%v", aname), pval, n.Exec)
+		commandString = strings.Replace(commandString, fmt.Sprintf("$%v", aname), pval, 1)
+	}
+
+	fmt.Printf("[INF] Running command: %v\n", n.Exec)
+
 	var (
-		ss      = strings.Fields(n.Exec)
+		ss      = strings.Fields(commandString)
 		command string
 	)
 	command = ss[0]

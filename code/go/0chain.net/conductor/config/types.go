@@ -195,3 +195,22 @@ func NewCollectVerificationTicketsWhenMissedVRF() *CollectVerificationTicketsWhe
 func (n *CollectVerificationTicketsWhenMissedVRF) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
+
+type RenameCommitControl struct {
+	Fail bool
+	Nodes []NodeID
+}
+
+func BuildFailRenameCommit(nodes []NodeID) *RenameCommitControl {
+	return &RenameCommitControl{
+		Fail: true,
+		Nodes: nodes,
+	}
+}
+
+func BuildDisableFailRenameCommit(nodes []NodeID) *RenameCommitControl {
+	return &RenameCommitControl{
+		Fail: false,
+		Nodes: nodes,
+	}
+}

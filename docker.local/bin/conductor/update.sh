@@ -2,6 +2,8 @@
 
 set -e
 
+remotepath=$1
+
 # create random file
 head -c 5M < /dev/urandom > update.bin
 
@@ -9,4 +11,4 @@ head -c 5M < /dev/urandom > update.bin
 ./zboxcli/zbox --wallet testing.json update \
     --allocation "$(cat ~/.zcn/allocation.txt)" \
     --localpath=update.bin \
-    --remotepath=/remote/upload.bin
+    --remotepath=$remotepath

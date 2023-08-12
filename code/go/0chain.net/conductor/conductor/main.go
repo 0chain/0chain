@@ -808,17 +808,22 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 	return nil
 }
 
-func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {
-	if len(m) != 1 {
-		return errors.New("invalid response from blobber rpc-client")
+func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {	
+	blobberId, ok := m["blobber_id"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks blobber_id")
 	}
+
+	fileMetaRoot, ok := m["file_meta_root"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks file_meta_root")
+	}
+
 	if r.fileMetaRoot.fmrs == nil {
 		r.fileMetaRoot.fmrs = make(map[string]string)
 	}
 
-	for blobberID, fileMetaRoot := range m {
-		r.fileMetaRoot.fmrs[blobberID] = fileMetaRoot
-	}
+	r.fileMetaRoot.fmrs[blobberId] = fileMetaRoot
 
 	if len(r.fileMetaRoot.fmrs) >= r.fileMetaRoot.totalBlobers {
 		r.fileMetaRoot.shouldWait = false
