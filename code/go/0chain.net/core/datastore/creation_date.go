@@ -1,8 +1,6 @@
 package datastore
 
 import (
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/core/common"
@@ -21,12 +19,6 @@ type CreationDateField struct {
 
 /*InitializeCreationDate sets the creation date to current time */
 func (cd *CreationDateField) InitializeCreationDate() {
-
-	logging.Logger.Info("Jayash InitializeCreationDate",
-		zap.Any("TIME NOW", time.Now()),
-		zap.Any("COMMON NOW", common.Now()),
-	)
-
 	cd.CreationDate = common.Now()
 }
 
@@ -37,10 +29,5 @@ func (cd *CreationDateField) GetCreationTime() common.Timestamp {
 
 /*ToTime - convert the common.Timestamp to time.Time */
 func (cd *CreationDateField) ToTime() time.Time {
-	logging.Logger.Info("Jayash TOTime",
-		zap.Any("cd.CreationDate", cd.CreationDate),
-		zap.Any("int64(cd.CreationDate)", int64(cd.CreationDate)),
-		zap.Any("time.Unix(int64(cd.CreationDate), 0)", time.Unix(int64(cd.CreationDate), 0)),
-	)
 	return time.Unix(int64(cd.CreationDate), 0)
 }
