@@ -307,9 +307,6 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
-
-	logging.Logger.Info("Jayash add_blobber", zap.Any("sc.SmartContractExecutionStats", sc.SmartContractExecutionStats))
-
 	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {

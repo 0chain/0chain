@@ -3,8 +3,6 @@ package storagesc
 import (
 	"context"
 	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"net/url"
 
 	"0chain.net/chaincore/smartcontract"
@@ -250,8 +248,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "collect_reward":
 		resp, err = sc.collectReward(t, input, balances)
 	case "generate_challenge":
-		logging.Logger.Info("Jayash generate_challenge", zap.Any("SC", sc.SmartContractExecutionStats))
-
 		var conf *Config
 		if conf, err = sc.getConfig(balances, true); err != nil {
 			return "", fmt.Errorf("can't get SC configurations: %v", err.Error())

@@ -342,7 +342,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
-
 	if time.Since(fb.ToTime()) < 100*time.Second {
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	}
