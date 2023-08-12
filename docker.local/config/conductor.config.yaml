@@ -193,7 +193,14 @@ commands:
     exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation.sh"
   init_allocation_only:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation_only.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation_only.sh $data_shards $parity_shards"
+    args:
+      data_shards:
+        required: false
+        default: "1"
+      parity_shards:
+        required: false
+        default: "2"
   list:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list.sh"

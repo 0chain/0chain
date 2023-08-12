@@ -59,6 +59,7 @@ tests:
           require_same_root: true
   - name: "Allocation state should be same after repair"
     flow:
+      - sleep: "1m"
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -78,6 +79,9 @@ tests:
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_allocation_only'
+          params:
+            data_shards: "2"
+            parity_shards: "1"
       - command:
           name: "upload"
           params:
@@ -89,7 +93,7 @@ tests:
       - fail_rename_commit: ['blobber-1']
       - sleep: "1m" # simple wait for blobbers to pick up state
       - command:
-          name: 'rename'
+          name: 'rename_can_fail'
           params:
             remotepath: /remote/upload.bin
             destname: upload_renamed.bin

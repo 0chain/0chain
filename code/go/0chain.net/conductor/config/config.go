@@ -197,7 +197,7 @@ func (c *Config) Execute(name string, params map[string]string) (err error) {
 		commandString = strings.Replace(commandString, fmt.Sprintf("$%v", aname), pval, 1)
 	}
 
-	fmt.Printf("[INF] Running command: %v\n", n.Exec)
+	fmt.Printf("[INF] Running command: %v\n", commandString)
 
 	var (
 		ss      = strings.Fields(commandString)
