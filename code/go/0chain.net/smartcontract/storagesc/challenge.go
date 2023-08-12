@@ -440,6 +440,9 @@ func (sc *StorageSmartContract) blobberPenalty(
 
 func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
+
+	logging.Logger.Info("Jayash challenge_response", zap.Any("sc.SmartContractExecutionStats", sc.SmartContractExecutionStats))
+
 	var (
 		challResp ChallengeResponse
 		errCode   = "verify_challenge"
