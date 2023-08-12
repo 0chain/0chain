@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/beevik/ntp"
+	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -316,6 +318,23 @@ func Provider() datastore.Entity {
 	b.Version = "1.0"
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
+
+	// Specify the NTP server you want to query.
+	ntpServer := "pool.ntp.org"
+
+	// Get the current time from the NTP server.
+	ntpTime, err := ntp.Time(ntpServer)
+	if err != nil {
+		log.Fatalf("Error fetching NTP time: %v", err)
+	}
+
+	logNow := time.Now()
+
+	logging.Logger.Info("Jayash CreationDate",
+		zap.Any("now", logNow),
+		zap.Any("ntpTime", ntpTime),
+		zap.Any("CreationDate", b.CreationDate))
+
 	return b
 }
 

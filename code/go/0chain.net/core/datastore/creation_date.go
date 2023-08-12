@@ -1,6 +1,10 @@
 package datastore
 
 import (
+	"github.com/0chain/common/core/logging"
+	"github.com/beevik/ntp"
+	"go.uber.org/zap"
+	"log"
 	"time"
 
 	"0chain.net/core/common"
@@ -19,6 +23,21 @@ type CreationDateField struct {
 
 /*InitializeCreationDate sets the creation date to current time */
 func (cd *CreationDateField) InitializeCreationDate() {
+	// Specify the NTP server you want to query.
+	ntpServer := "pool.ntp.org"
+
+	// Get the current time from the NTP server.
+	ntpTime, err := ntp.Time(ntpServer)
+	if err != nil {
+		log.Fatalf("Error fetching NTP time: %v", err)
+	}
+
+	logNow := time.Now()
+
+	logging.Logger.Info("Jayash InitializeCreationDate",
+		zap.Any("now", logNow),
+		zap.Any("ntpTime", ntpTime))
+
 	cd.CreationDate = common.Now()
 }
 
