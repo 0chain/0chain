@@ -45,6 +45,7 @@ type Executor interface {
 	WaitNoProgress(wait time.Duration) (err error)
 	WaitNoViewChainge(wnvc WaitNoViewChainge, timeout time.Duration) (err error)
 	WaitSharderKeep(wsk WaitSharderKeep, timeout time.Duration) (err error)
+	WaitMinerGeneratesBlock(wmgb WaitMinerGeneratesBlock, timeout time.Duration) (err error)
 
 	// Byzantine: BC, sharders
 

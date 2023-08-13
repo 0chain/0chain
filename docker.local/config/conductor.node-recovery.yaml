@@ -1,0 +1,56 @@
+enable:
+  - "Node Recovery"
+  - "Client Operation"
+
+# sets of test cases
+sets:
+  - name: "Node Recovery"
+    tests:
+      - "Miner Recovery - Miner should be able to produce blocks after it recovers"
+      # - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
+      # - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
+      # - "Validator Recovery - Validator should generate tickets and gain rewards after it recovers"
+      # - "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it gains rewards"
+
+tests:
+  - name: "Miner Recovery - Miner should be able to produce blocks after it recovers"
+    flow:
+      - set_monitor: 'sharder-1'
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - stop: ['miner-4']
+      - wait_round:
+          round: 30
+      - start: ['miner-4']
+      - check_miner_generates_blocks:
+          miner: 'miner-4'
+          timeout: '2m'
+      
+      
+  # - name: "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
+  #   flow:
+  #     - set_monitor: 'sharder-1'
+  #     - cleanup_bc: {}
+  #     - command:
+  #         name: "cleanup_0dns"
+  #     - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+  #     - wait_round:
+  #         round: 15 # just wait the BC starts
+  #     - stop: ['sharder-2']
+  #     - wait_round:
+  #         round: 30
+  #     - start: ['sharder-3']
+  #     - check_miner_generates_blocks:
+  #         miner: 'miner-4'
+  #         timeout: '2m'
+      
+  # - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
+    # flow:
+  # - name: "Validator Recovery - Validator should generate tickets and gain rewards after it recovers"
+    # flow:
+  # - name: "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it gains rewards"
+    # flow:

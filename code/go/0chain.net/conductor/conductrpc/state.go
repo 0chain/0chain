@@ -89,6 +89,7 @@ type State struct {
 
 	ServerStatsCollectorEnabled bool
 	ClientStatsCollectorEnabled bool
+	NotifyOnBlockGeneration bool
 }
 
 // Name returns NodeName by given NodeID.

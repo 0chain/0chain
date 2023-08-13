@@ -25,6 +25,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
 )
 
@@ -184,6 +185,7 @@ type Runner struct {
 	waitNoProgress         config.WaitNoProgress         // no new rounds expected
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	waitCommand            chan error                    // wait a command
+	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -228,6 +230,9 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		return tm, true
 	case !r.waitNoViewChange.IsZero():
 		log.Println("wait for no view change")
+		return tm, true
+	case r.waitMinerGeneratesBlock.MinerName != "":
+		log.Printf("wait until miner %v generates block\n", r.waitMinerGeneratesBlock.MinerName)
 		return tm, true
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
@@ -761,6 +766,33 @@ func (r *Runner) acceptShareOrSignsShares(
 	return
 }
 
+func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err error) {
+	miner, ok := r.conf.Nodes.NodeByName(r.waitMinerGeneratesBlock.MinerName)
+	if !ok {
+		return fmt.Errorf("expecting block from unknown miner: %s", miner.ID)
+	}
+
+	if r.verbose {
+		log.Printf(" [INF] got sharder block for miner %v, looking for miner %v\n", block.GeneratorId, miner.ID)
+	}
+	
+	if block.GeneratorId != string(miner.ID) {
+		return 
+	}
+
+	if r.verbose {
+		log.Printf(" [INF] ✅ found sharder block for miner %v\n", miner.ID)
+	}
+
+	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
+
+	err = r.SetServerState(&config.NotifyOnBlockGeneration{
+		Enable: false,
+	})
+
+	return
+}
+
 func (r *Runner) stopAll() {
 	log.Print("stop all nodes")
 	for _, n := range r.conf.Nodes {
@@ -796,6 +828,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
+		case block := <- r.server.OnSharderBlock():
+			err = r.acceptSharderBlockForMiner(block)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)
@@ -877,6 +911,7 @@ func (r *Runner) resetWaiters() {
 	r.waitNoProgress = config.WaitNoProgress{}                 //
 	r.waitNoViewChange = config.WaitNoViewChainge{}            //
 	r.waitSharderKeep = config.WaitSharderKeep{}               //
+	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
 	if r.waitCommand != nil {
 		go func(wc chan error) { <-wc }(r.waitCommand)
 		r.waitCommand = nil

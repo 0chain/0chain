@@ -15,3 +15,7 @@ func shutdownIntegrationTests()     {}
 func readMagicBlock(magicBlockConfig string) (*block.MagicBlock, error) {
 	return chain.ReadMagicBlockFile(magicBlockConfig)
 }
+
+func notifyConductor(block *block.Block) error {
+	return nil
+}

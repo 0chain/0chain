@@ -232,3 +232,14 @@ func (c *client) magicBlock() (configFile *string, err error) {
 	}
 	return
 }
+
+func (c *client) notifyOnSharderBlock(block *stats.BlockFromSharder) (err error) {
+	err = c.client.Call("Server.SharderBlock", block, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.SharderBlock", block, &struct{}{})
+	}
+	return
+}

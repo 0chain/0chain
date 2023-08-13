@@ -350,6 +350,24 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 	return
 }
 
+func (r *Runner) WaitMinerGeneratesBlock(wmgb config.WaitMinerGeneratesBlock, timeout time.Duration) (err error) {
+	if r.verbose {
+		log.Printf("[INF] start waiting until miner generates block: %s", wmgb.MinerName)
+	}
+
+	r.setupTimeout(timeout)
+
+	err = r.SetServerState(&config.NotifyOnBlockGeneration{
+		Enable: true,
+	})
+	if err != nil {
+		return
+	}
+
+	r.waitMinerGeneratesBlock = wmgb
+	return
+}
+
 //
 // Byzantine blockchain miners.
 //
@@ -936,6 +954,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.CollectVerificationTicketsWhenMissedVRF = update
 		case *config.AdversarialAuthorizer:
 			state.AdversarialAuthorizer = update
+		case *config.NotifyOnBlockGeneration:
+			state.NotifyOnBlockGeneration = update.Enable
 		}
 	})
 

@@ -236,6 +236,10 @@ func (e *Entity) AddBlockClientStats(rs *stats.BlockRequest, reqType stats.Block
 	return e.client.addBlockClientStats(blob)
 }
 
+func (e *Entity) NotifyOnSharderBlock(block *stats.BlockFromSharder) error {
+	return e.client.notifyOnSharderBlock(block)
+}
+
 var global *Entity
 
 // Init creates global Entity and locks until unlocked.

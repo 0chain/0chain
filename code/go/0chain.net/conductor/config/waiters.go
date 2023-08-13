@@ -198,3 +198,9 @@ func (wsk *WaitSharderKeep) TakeSharder(name NodeName) (ok bool) {
 	}
 	return
 }
+
+// WaitMinerGeneratesBlock used in waiting if a miner generates a block
+type WaitMinerGeneratesBlock struct {
+	MinerName NodeName `json:"miner" yaml:"miner" mapstructure:"miner"`
+}
+

@@ -698,4 +698,12 @@ func init() {
 
 		return ex.SetServerState(cfg)
 	})
+
+	register("check_miner_generates_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg WaitMinerGeneratesBlock
+		if err := mapstructure.Decode(val, &cfg); err != nil {
+			return err
+		}
+		return ex.WaitMinerGeneratesBlock(cfg, tm)
+	})
 }

@@ -137,3 +137,7 @@ func NewCollectVerificationTicketsWhenMissedVRF() *CollectVerificationTicketsWhe
 func (n *CollectVerificationTicketsWhenMissedVRF) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
+
+type NotifyOnBlockGeneration struct {
+	Enable bool	`json:"enable" yaml:"enable" mapstructure:"enable"`
+}

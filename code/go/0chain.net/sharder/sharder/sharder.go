@@ -95,6 +95,10 @@ func main() {
 	}
 
 	serverChain.OnBlockAdded = func(b *block.Block) {
+		err := notifyConductor(b) // only useful in conductor testing context
+		if err != nil {
+			logging.Logger.Error("couldn't notify conductor on block generator", zap.Error(err))
+		}
 		err, ev := block.CreateBlockEvent(b)
 		if err != nil {
 			logging.Logger.Error("emit block event error", zap.Error(err))
