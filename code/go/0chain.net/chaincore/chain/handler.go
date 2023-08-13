@@ -750,10 +750,6 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
 	selfNodeType := node.Self.Underlying().Type
-	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
-		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
-	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
