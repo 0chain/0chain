@@ -3,6 +3,8 @@ package config
 import (
 	"strings"
 	"time"
+
+	"0chain.net/conductor/conductrpc/stats"
 )
 
 // ExpectMagicBlock represents expected magic block.
@@ -204,3 +206,10 @@ type WaitMinerGeneratesBlock struct {
 	MinerName NodeName `json:"miner" yaml:"miner" mapstructure:"miner"`
 }
 
+// WaitSharderLFB used when checking a sharder recieves the LFB
+type WaitSharderLFB struct {
+	Target NodeName `json:"target" yaml:"target" mapstructure:"target"`
+
+	// Not part of the directive parameters
+	LFBs map[NodeID]*stats.BlockFromSharder
+}

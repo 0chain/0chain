@@ -50,6 +50,7 @@ func notifyConductor(block *block.Block) error {
 			Round: block.Round,
 			Hash: block.Hash,
 			GeneratorId: block.MinerID,
+			SenderId: node.Self.ID,
 		})
 	}
 	return nil

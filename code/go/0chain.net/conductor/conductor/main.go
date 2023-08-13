@@ -186,6 +186,7 @@ type Runner struct {
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	waitCommand            chan error                    // wait a command
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
+	waitSharderLFB	config.WaitSharderLFB	
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -233,6 +234,9 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		return tm, true
 	case r.waitMinerGeneratesBlock.MinerName != "":
 		log.Printf("wait until miner %v generates block\n", r.waitMinerGeneratesBlock.MinerName)
+		return tm, true
+	case r.waitSharderLFB.Target != "":
+		log.Printf("wait to check sharder %v got LFB\n", r.waitSharderLFB.Target)
 		return tm, true
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
@@ -767,21 +771,39 @@ func (r *Runner) acceptShareOrSignsShares(
 }
 
 func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err error) {
-	miner, ok := r.conf.Nodes.NodeByName(r.waitMinerGeneratesBlock.MinerName)
-	if !ok {
-		return fmt.Errorf("expecting block from unknown miner: %s", miner.ID)
+	switch {
+	case r.waitMinerGeneratesBlock.MinerName != "":
+		miner, ok := r.conf.Nodes.NodeByName(r.waitMinerGeneratesBlock.MinerName)
+		if !ok {
+			return fmt.Errorf("expecting block from unknown miner: %s", miner.ID)
+		}
+	
+		if r.verbose {
+			log.Printf(" [INF] got sharder block for miner %v, looking for miner %v\n", block.GeneratorId, miner.ID)
+		}
+	
+		err = r.handleNewBlockWaitingForMinerBlockGeneration(block, string(miner.ID))
+		return
+	case r.waitSharderLFB.Target != "":
+		sharder, ok := r.conf.Nodes.NodeByName(r.waitSharderLFB.Target)
+		if !ok {
+			return fmt.Errorf("expecting block from unknown sharder: %s", sharder.ID)
+		}
+			
+		err = r.handleNewBlockWaitingForSharderLFB(block, string(sharder.ID))
+		return
 	}
 
-	if r.verbose {
-		log.Printf(" [INF] got sharder block for miner %v, looking for miner %v\n", block.GeneratorId, miner.ID)
-	}
-	
-	if block.GeneratorId != string(miner.ID) {
+	return
+}
+
+func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
+	if block.GeneratorId != string(minerId) {
 		return 
 	}
 
 	if r.verbose {
-		log.Printf(" [INF] ✅ found sharder block for miner %v\n", miner.ID)
+		log.Printf(" [INF] ✅ found sharder block for miner %v\n", minerId)
 	}
 
 	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
@@ -791,6 +813,10 @@ func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err 
 	})
 
 	return
+}
+
+func (r *Runner) handleNewBlockWaitingForSharderLFB(block *stats.BlockFromSharder, sharderId string) (err error) {
+	return	
 }
 
 func (r *Runner) stopAll() {
