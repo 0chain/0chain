@@ -1,6 +1,12 @@
 package config
 
-import "github.com/mitchellh/mapstructure"
+import (
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/mitchellh/mapstructure"
+)
 
 // AdversarialAuthorizer represents the adversarial_authorizer directive state.
 type AdversarialAuthorizer struct {
@@ -104,6 +110,58 @@ func (n *BlobberDelete) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
 
+type GenerateChallege struct {
+	BlobberID         string        `json:"blobber_id" mapstructure:"blobber_id"`
+	ChallengeDuration time.Duration `json:"chal_dur" mapstructure:"chal_dur"`
+	ExpectedStatus    int           `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
+	// Id of a miner so that only this miner will generate challenge
+	MinerID                   string `json:"miner" mapstructure:"miner"`
+	WaitOnBlobberCommit       bool
+	WaitOnChallengeGeneration bool
+	WaitForChallengeStatus    bool
+}
+
+func (g *GenerateChallege) Decode(val interface{}) error {
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+		WeaklyTypedInput: true,
+		Result:           g,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = dec.Decode(val)
+	if err != nil {
+		return err
+	}
+
+	if g.ExpectedStatus == 0 || g.ExpectedStatus == 1 {
+		return nil
+	}
+
+	return fmt.Errorf("expected either '0' or '1', got: %d", g.ExpectedStatus)
+}
+
+func NewGenerateChallenge() *GenerateChallege {
+	return &GenerateChallege{}
+}
+
+type CheckFileMetaRoot struct {
+	RequireSameRoot bool `mapstructure:"require_same_root"`
+}
+
+func (c *CheckFileMetaRoot) Decode(val interface{}) error {
+	if c == nil {
+		return errors.New("cannot decode into nil pointer")
+	}
+	return mapstructure.Decode(val, c)
+}
+
+func NewCheckFileMetaRoot() *CheckFileMetaRoot {
+	return &CheckFileMetaRoot{}
+}
+
 // AdversarialValidator represents the blobber_delete directive state.
 type AdversarialValidator struct {
 	ID                 string `json:"id" yaml:"id" mapstructure:"id"`
@@ -136,4 +194,23 @@ func NewCollectVerificationTicketsWhenMissedVRF() *CollectVerificationTicketsWhe
 // Decode implements MapDecoder interface.
 func (n *CollectVerificationTicketsWhenMissedVRF) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
+}
+
+type RenameCommitControl struct {
+	Fail bool
+	Nodes []NodeID
+}
+
+func BuildFailRenameCommit(nodes []NodeID) *RenameCommitControl {
+	return &RenameCommitControl{
+		Fail: true,
+		Nodes: nodes,
+	}
+}
+
+func BuildDisableFailRenameCommit(nodes []NodeID) *RenameCommitControl {
+	return &RenameCommitControl{
+		Fail: false,
+		Nodes: nodes,
+	}
 }

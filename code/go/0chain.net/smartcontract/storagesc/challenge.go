@@ -623,7 +623,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}, nil
 }
 
-func (sc *StorageSmartContract) challengePassed(
+func (sc *StorageSmartContract) processChallengePassed(
 	balances cstate.StateContextI,
 	t *transaction.Transaction,
 	triggerPeriod int64,
@@ -756,7 +756,7 @@ func (sc *StorageSmartContract) challengePassed(
 	return "challenge passed by blobber", nil
 }
 
-func (sc *StorageSmartContract) challengeFailed(
+func (sc *StorageSmartContract) processChallengeFailed(
 	balances cstate.StateContextI,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
@@ -874,7 +874,7 @@ const (
 )
 
 // selectBlobberForChallenge select blobber for challenge in random manner
-func selectBlobberForChallenge(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
+func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
 	r *rand.Rand, balances cstate.StateContextI) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
@@ -1141,7 +1141,7 @@ type GenerateChallengeInput struct {
 	Round int64 `json:"round,omitempty"`
 }
 
-func (sc *StorageSmartContract) generateChallenge(
+func (sc *StorageSmartContract) genChal(
 	t *transaction.Transaction,
 	b *block.Block,
 	input []byte,

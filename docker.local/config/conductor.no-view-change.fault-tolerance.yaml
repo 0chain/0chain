@@ -147,14 +147,12 @@ tests:
       - stop: ["miner-4"]
       - wait_round:
           shift: 10
-      - command:
-          name: "sleep_3m"
+      - sleep: "3m"
       - stop: ["miner-3"]
       - start: ["miner-4"]
       - wait_round:
           shift: 10
-      - command:
-          name: "sleep_3m"
+      - sleep: "3m"
       - stop: ["miner-2"]
       - start: ["miner-3"]
       - wait_round:
@@ -202,13 +200,11 @@ tests:
       - wait_round:
           shift: 50
       - stop: ["sharder-2"]
-      - command:
-          name: "sleep_3m"
+      - sleep: "3m"
       - wait_round:
           shift: 50
       - start: ["sharder-2"]
-      - command:
-          name: "sleep_3m"
+      - sleep: "3m"
       - wait_round:
           shift: 50
       - stop: ["sharder-1"]

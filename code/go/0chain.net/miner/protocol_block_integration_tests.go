@@ -224,3 +224,14 @@ func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler f
 	logging.Logger.Info("injecting double-spend transaction", zap.String("hash", dstxn.Hash))
 	txnIterHandler(ctx, dstxn) // inject double-spend transaction
 }
+
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
+	s := crpc.Client().State()
+	if s.GenerateChallenge == nil {
+		return nil, nil
+	}
+	if node.Self.ID != s.GenerateChallenge.MinerID {
+		return nil, nil
+	}
+	return mc.createGenChalTxn(b)
+}
