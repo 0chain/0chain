@@ -39,8 +39,8 @@ jobs:
       run: |
         git clone --recursive https://github.com/herumi/bls
         cd bls
-        make -C mcl lib/libmcl.a
-        make BLS_ETH=1 lib/libbls384_256.a
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_DIR=./mcl -j 4 install
         cd ..
 
     - name: Docker Network Setup.
