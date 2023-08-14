@@ -19,7 +19,7 @@ for t in $@; do
 done
 
 # go caches all build by default
-(cd ./code/go/0chain.net/conductor/conductor/ && go build)
+(cd ./code/go/0chain.net/conductor/conductor/ && go build -tags "bn256")
 # start the conductor
 ./code/go/0chain.net/conductor/conductor/conductor                     \
     -config "./docker.local/config/conductor.config.yaml"              \
