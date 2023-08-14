@@ -36,10 +36,10 @@ jobs:
         bash ./docker.local/bin/init.setup.sh
 
     - name: Install dependencies
-        run: |
-          git clone --recursive https://github.com/herumi/bls
-          make -C mcl lib/libmcl.a
-          make BLS_ETH=1 lib/libbls384_256.a
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        make -C mcl lib/libmcl.a
+        make BLS_ETH=1 lib/libbls384_256.a
 
     - name: Docker Network Setup.
       run: |
