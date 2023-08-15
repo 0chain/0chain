@@ -45,7 +45,7 @@ jobs:
         sudo make MCL_USE_GMP=0 -C mcl -j 4 lib/libmclbn256.a install
         sudo make MCL_USE_GMP=0 MCL_DIR=./mcl -j 4 install
         ls /usr/local/lib
-        cp -rf /usr/local/lib/* ../code/go/0chain.net/conductor/conductor/conductor/
+        cp -rf /usr/local/lib/* ../code/go/0chain.net/conductor/conductor/
         cd ..
 
     - name: Docker Network Setup.
