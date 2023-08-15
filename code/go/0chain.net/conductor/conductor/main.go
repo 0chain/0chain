@@ -771,6 +771,9 @@ func (r *Runner) acceptShareOrSignsShares(
 }
 
 func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] Recieved new sharder block: %+v\n", block)
+	}
 	switch {
 	case r.waitMinerGeneratesBlock.MinerName != "":
 		miner, ok := r.conf.Nodes.NodeByName(r.waitMinerGeneratesBlock.MinerName)
@@ -803,7 +806,7 @@ func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.Block
 	}
 
 	if r.verbose {
-		log.Printf(" [INF] ✅ found sharder block for miner %v\n", minerId)
+		log.Printf(" [INF] ✅ found sharder block %v\n", minerId)
 	}
 
 	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
@@ -816,7 +819,40 @@ func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.Block
 }
 
 func (r *Runner) handleNewBlockWaitingForSharderLFB(block *stats.BlockFromSharder, sharderId string) (err error) {
-	return	
+	if block.SenderId == sharderId {
+		minDiff := int64(6) // well, 11 is infinity if the max allowed is 10
+		targetRound := block.Round
+		var curDiff int64
+		for sid, blk := range r.waitSharderLFB.LFBs {
+			if sid == config.NodeID(sharderId) {
+				continue
+			}
+			curDiff = blk.Round - targetRound
+			if curDiff < minDiff {
+				minDiff = curDiff
+			}
+		}
+
+		if minDiff <=5 {
+			if r.verbose {
+				log.Printf(" [INF] ✅ sharder sent LFB %+v\n", block)
+			}
+
+			r.waitSharderLFB = config.WaitSharderLFB{}
+			
+			err = r.SetServerState(&config.NotifyOnBlockGeneration{
+				Enable: false,
+			})
+
+			return
+		}
+	}
+
+	if r.waitSharderLFB.LFBs == nil {
+		r.waitSharderLFB.LFBs = make(map[config.NodeID]*stats.BlockFromSharder)
+	}
+	r.waitSharderLFB.LFBs[config.NodeID(block.SenderId)] = block
+	return
 }
 
 func (r *Runner) stopAll() {

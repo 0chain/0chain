@@ -368,6 +368,24 @@ func (r *Runner) WaitMinerGeneratesBlock(wmgb config.WaitMinerGeneratesBlock, ti
 	return
 }
 
+func (r *Runner) WaitSharderLFB(conf config.WaitSharderLFB, timeout time.Duration) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] Watching for sharders blocks to check LFB for %v\n", conf.Target)
+	}
+
+	r.setupTimeout(timeout)
+
+	err = r.SetServerState(&config.NotifyOnBlockGeneration{
+		Enable: true,
+	})
+	if err != nil {
+		return
+	}
+
+	r.waitSharderLFB = conf
+	return
+}
+
 //
 // Byzantine blockchain miners.
 //

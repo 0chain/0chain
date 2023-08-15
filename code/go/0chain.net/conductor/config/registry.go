@@ -706,4 +706,32 @@ func init() {
 		}
 		return ex.WaitMinerGeneratesBlock(cfg, tm)
 	})
+
+	register("wait_sharder_lfb", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg WaitSharderLFB
+		if err := mapstructure.Decode(val, &cfg); err != nil {
+			return err
+		}
+		return ex.WaitSharderLFB(cfg, tm)
+	})
+
+	register("sleep", func(_ string,
+		_ Executor, val interface{}, _ time.Duration) (err error) {
+		var d time.Duration
+		switch v := val.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return
+			}
+		case time.Duration:
+			d = v
+		case int:
+			d = time.Duration(v)
+		default:
+			return fmt.Errorf("invalid duration argument: %v", val)
+		}
+		time.Sleep(d)
+		return nil
+	})
 }

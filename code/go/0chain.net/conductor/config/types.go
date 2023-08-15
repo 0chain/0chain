@@ -141,3 +141,7 @@ func (n *CollectVerificationTicketsWhenMissedVRF) Decode(val interface{}) error 
 type NotifyOnBlockGeneration struct {
 	Enable bool	`json:"enable" yaml:"enable" mapstructure:"enable"`
 }
+
+func (nbg *NotifyOnBlockGeneration) Decode(val interface{}) error {
+	return mapstructure.Decode(val, nbg)
+}

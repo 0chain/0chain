@@ -208,8 +208,8 @@ type WaitMinerGeneratesBlock struct {
 
 // WaitSharderLFB used when checking a sharder recieves the LFB
 type WaitSharderLFB struct {
-	Target NodeName `json:"target" yaml:"target" mapstructure:"target"`
+	Target NodeName `json:"sharder" yaml:"sharder" mapstructure:"sharder"`
 
 	// Not part of the directive parameters
-	LFBs map[NodeID]*stats.BlockFromSharder
+	LFBs map[NodeID]*stats.BlockFromSharder `json:"-" yaml:"-" mapstructure:"-"`
 }
