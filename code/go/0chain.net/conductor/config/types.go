@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -146,6 +147,21 @@ func NewGenerateChallenge() *GenerateChallege {
 	return &GenerateChallege{}
 }
 
+type CheckFileMetaRoot struct {
+	RequireSameRoot bool `mapstructure:"require_same_root"`
+}
+
+func (c *CheckFileMetaRoot) Decode(val interface{}) error {
+	if c == nil {
+		return errors.New("cannot decode into nil pointer")
+	}
+	return mapstructure.Decode(val, c)
+}
+
+func NewCheckFileMetaRoot() *CheckFileMetaRoot {
+	return &CheckFileMetaRoot{}
+}
+
 // AdversarialValidator represents the blobber_delete directive state.
 type AdversarialValidator struct {
 	ID                 string `json:"id" yaml:"id" mapstructure:"id"`
@@ -186,4 +202,23 @@ type NotifyOnBlockGeneration struct {
 
 func (nbg *NotifyOnBlockGeneration) Decode(val interface{}) error {
 	return mapstructure.Decode(val, nbg)
+}
+
+type RenameCommitControl struct {
+	Fail bool
+	Nodes []NodeID
+}
+
+func BuildFailRenameCommit(nodes []NodeID) *RenameCommitControl {
+	return &RenameCommitControl{
+		Fail: true,
+		Nodes: nodes,
+	}
+}
+
+func BuildDisableFailRenameCommit(nodes []NodeID) *RenameCommitControl {
+	return &RenameCommitControl{
+		Fail: false,
+		Nodes: nodes,
+	}
 }

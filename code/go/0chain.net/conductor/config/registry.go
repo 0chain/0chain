@@ -355,7 +355,7 @@ func init() {
 		if err = mapstructure.Decode(val, &cn); err != nil {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
-		ex.Command(cn.Name, tm) // async command
+		ex.Command(cn.Name, cn.Params, tm) // async command
 		return nil
 	})
 
@@ -806,4 +806,58 @@ func init() {
 		cfg := StopWMCommit(false)
 		return ex.SetServerState(cfg)
 	})
+
+	register("fail_rename_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildFailRenameCommit(nodeIds))
+	})
+
+	register("disable_fail_rename_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildDisableFailRenameCommit(nodeIds))
+	})
+
+	register("wait_for_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		ex.WaitForFileMetaRoot()
+		cfg := GetFileMetaRoot(true)
+		return ex.SetServerState(cfg)
+	})
+
+	register("check_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command CheckFileMetaRoot
+		err = command.Decode(val)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+		return ex.CheckFileMetaRoot(&command)
+	})
+
 }
