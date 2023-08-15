@@ -39,6 +39,7 @@ jobs:
       run: |
         git clone --recursive https://github.com/herumi/bls
         cd bls
+        sudo make BLS_ETH=1 lib/libbls384_256.a
         sudo make MCL_USE_GMP=0 -C mcl -j 4 lib/libmclbn256.a install
         sudo make MCL_USE_GMP=0 MCL_DIR=./mcl -j 4 install
         cd ..
