@@ -5,6 +5,7 @@ on:
     branches: [ master,staging ]
     tags: [ "v*.*.*" ]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   BUILD_INTEGRATION_IMAGES:
