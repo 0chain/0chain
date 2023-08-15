@@ -1,0 +1,97 @@
+# enabled test cases sets
+enable:
+  - "Adversarial validator"
+  - "Client Operation"
+
+# sets of test cases
+sets:
+  - name: "Adversarial validator"
+    tests:
+      - "Challenge should pass with minority validator being adversarial"
+  - name: "Client Operation"
+    tests:
+      - "Blobber should pass challenge for a file which is deleted but WM is not committed"
+
+# test cases
+tests:
+  - name: "Challenge should pass with minority validator being adversarial"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - stop_challenge_generation: true
+      - start: ['0dns']
+      # wait the 0dns starts
+      - sleep: "20s"
+      # Two blobbers would suffice but we need 3 validators and since docker-compose
+      # file raises blobber and validator together we are raising 3 blobbers here.
+      # We need to decouple this behavior later on.
+      - start: ['blobber-1', 'blobber-2', 'blobber-3']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2']
+          timeout: '15m'
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'init_allocation_only'
+      - generate_challenge:
+          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          chal_dur: "40s" # one challenge shall be generated in each 40 seconds 
+          expected_status: 1 # 1 --> pass, 0 --> fail
+          miner: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929" # generate challenge by this miner
+      - adversarial_validator:
+          fail_valid_challenge: true
+          id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
+      - command:
+          name: "upload"
+      - wait_blobber_commit: {}
+      - stop_challenge_generation: false
+      - wait_challenge_generation: {}
+      - wait_challenge_status: {}
+
+  - name: "Blobber should pass challenge for a file which is deleted but WM is not committed"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - stop_challenge_generation: true
+      - start: ['0dns']
+      # wait the 0dns starts
+      - sleep: "20s"
+      # Two blobbers would suffice but we need 3 validators and since docker-compose
+      # file raises blobber and validator together we are raising 3 blobbers here.
+      # We need to decouple this behavior later on.
+      - start: ['blobber-1', 'blobber-2', 'blobber-3']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2']
+          timeout: '15m'
+      - generate_challenge:
+          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          chal_dur: "40s" # one challenge shall be generated in each 40 seconds 
+          expected_status: 1 # 1 --> pass, 0 --> fail
+          miner: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929" # generate challenge by this miner
+      - command:
+          name: 'init_allocation'
+      - wait_blobber_commit: {}
+      - stop_challenge_generation: false
+      - wait_challenge_generation: {}
+      - wait_challenge_status: {}
+      - stop_challenge_generation: true
+      - stop_wm_commit: {}
+      - sleep: "10s"
+      - command:
+          name: "delete"
+      - stop_challenge_generation: false
+      - wait_challenge_generation: {}
+      - wait_challenge_status: {}

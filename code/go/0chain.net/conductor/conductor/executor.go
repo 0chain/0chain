@@ -25,7 +25,7 @@ import (
 func (r *Runner) setupTimeout(tm time.Duration) {
 	r.timer = time.NewTimer(tm)
 	if tm <= 0 {
-		<-r.timer.C // drain zero timeout
+		<-r.timer.C // drain zero timeout so that wherever it is waited upon it waits indefinitely
 	}
 }
 
@@ -384,6 +384,37 @@ func (r *Runner) WaitSharderLFB(conf config.WaitSharderLFB, timeout time.Duratio
 
 	r.waitSharderLFB = conf
 	return
+}
+
+func (r *Runner) GenerateChallenge(c *config.GenerateChallege) error {
+	if r.verbose {
+		log.Print(" [INF] setting generate challenge info")
+	}
+
+	r.chalConf = c
+	return nil
+}
+
+func (r *Runner) WaitForChallengeGeneration() {
+	if r.verbose {
+		log.Print(" [INF] waiting for blockchain to generate challenge")
+	}
+
+	r.chalConf.WaitOnChallengeGeneration = true
+}
+
+func (r *Runner) WaitOnBlobberCommit() {
+	if r.verbose {
+		log.Print(" [INF] waiting for blobber to commit writemarker")
+	}
+	r.chalConf.WaitOnBlobberCommit = true
+}
+
+func (r *Runner) WaitForChallengeStatus() {
+	if r.verbose {
+		log.Print(" [INF] waiting for challenge status from chain")
+	}
+	r.chalConf.WaitForChallengeStatus = true
 }
 
 //
@@ -974,6 +1005,14 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.AdversarialAuthorizer = update
 		case *config.NotifyOnBlockGeneration:
 			state.NotifyOnBlockGeneration = update.Enable
+		case config.StopChallengeGeneration:
+			state.StopChallengeGeneration = bool(update)
+		case config.StopWMCommit:
+			state.StopWMCommit = true
+		case config.BlobberCommittedWM:
+			state.BlobberCommittedWM = true
+		case *config.GenerateChallege:
+			state.GenerateChallenge = update
 		}
 	})
 

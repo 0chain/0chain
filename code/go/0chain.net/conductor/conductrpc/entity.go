@@ -42,9 +42,8 @@ func (e *Entity) MagicBlock() string {
 // SetState sets current state.
 func (e *Entity) SetState(state *State) {
 	e.stateMu.Lock()
-	defer e.stateMu.Unlock()
-
 	e.state = state
+	e.stateMu.Unlock()
 }
 
 // Register registers node in conductor server
@@ -196,6 +195,27 @@ func (e *Entity) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (
 	return e.client.shareOrSignsShares(sosse)
 }
 
+func (e *Entity) ChallengeGenerated(blobberID string) {
+	err := e.client.challengeGenerated(blobberID)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
+}
+
+func (e *Entity) BlobberCommitted(blobberID string) {
+	err := e.client.blobberCommitted(blobberID)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
+}
+
+func (e *Entity) SendChallengeStatus(m map[string]interface{}) {
+	err := e.client.sendChallengeStatus(m)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
+}
+
 //
 // global
 //
@@ -256,17 +276,16 @@ func Shutdown() {
 
 // Client returns global Entity to interact with. Use it, for example,
 //
-//     var state = conductrpc.Client().State()
-//     for _, minerID := range miners {
-//         if state.VRFS.IsBad(state, minerID) {
-//             // send bad VRFS to this miner
-//         } else if state.VRFS.IsGood(state, minerID) {
-//             // send good VRFS to this miner
-//         } else {
-//             // don't send a VRFS to this miner
-//         }
-//     }
-//
+//	var state = conductrpc.Client().State()
+//	for _, minerID := range miners {
+//	    if state.VRFS.IsBad(state, minerID) {
+//	        // send bad VRFS to this miner
+//	    } else if state.VRFS.IsGood(state, minerID) {
+//	        // send good VRFS to this miner
+//	    } else {
+//	        // don't send a VRFS to this miner
+//	    }
+//	}
 func Client() *Entity {
 	return global
 }

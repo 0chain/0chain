@@ -1,6 +1,11 @@
 package config
 
-import "github.com/mitchellh/mapstructure"
+import (
+	"fmt"
+	"time"
+
+	"github.com/mitchellh/mapstructure"
+)
 
 // AdversarialAuthorizer represents the adversarial_authorizer directive state.
 type AdversarialAuthorizer struct {
@@ -102,6 +107,43 @@ func NewBlobberDelete() *BlobberDelete {
 // Decode implements MapDecoder interface.
 func (n *BlobberDelete) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
+}
+
+type GenerateChallege struct {
+	BlobberID         string        `json:"blobber_id" mapstructure:"blobber_id"`
+	ChallengeDuration time.Duration `json:"chal_dur" mapstructure:"chal_dur"`
+	ExpectedStatus    int           `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
+	// Id of a miner so that only this miner will generate challenge
+	MinerID                   string `json:"miner" mapstructure:"miner"`
+	WaitOnBlobberCommit       bool
+	WaitOnChallengeGeneration bool
+	WaitForChallengeStatus    bool
+}
+
+func (g *GenerateChallege) Decode(val interface{}) error {
+	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+		WeaklyTypedInput: true,
+		Result:           g,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = dec.Decode(val)
+	if err != nil {
+		return err
+	}
+
+	if g.ExpectedStatus == 0 || g.ExpectedStatus == 1 {
+		return nil
+	}
+
+	return fmt.Errorf("expected either '0' or '1', got: %d", g.ExpectedStatus)
+}
+
+func NewGenerateChallenge() *GenerateChallege {
+	return &GenerateChallege{}
 }
 
 // AdversarialValidator represents the blobber_delete directive state.

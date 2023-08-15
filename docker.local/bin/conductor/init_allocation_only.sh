@@ -27,6 +27,7 @@ BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
 ./zboxcli/zbox --wallet testing.json sp-lock \
     --blobber_id $BLOBBER3 --tokens 2
 
+
 VALIDATOR1=41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
 VALIDATOR2=ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd
 VALIDATOR3=86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
@@ -48,12 +49,3 @@ VALIDATOR3=86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
 
 # add to read pools
 ./zboxcli/zbox --wallet testing.json rp-lock --tokens 4.0
-
-# create random file
-head -c 5M < /dev/urandom > random.bin
-
-# upload initial file
-./zboxcli/zbox --wallet testing.json upload \
-    --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --localpath=random.bin \
-    --remotepath=/remote/random.bin

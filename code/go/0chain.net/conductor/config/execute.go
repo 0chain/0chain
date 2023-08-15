@@ -47,6 +47,9 @@ type Executor interface {
 	WaitSharderKeep(wsk WaitSharderKeep, timeout time.Duration) (err error)
 	WaitMinerGeneratesBlock(wmgb WaitMinerGeneratesBlock, timeout time.Duration) (err error)
 	WaitSharderLFB(wslfb WaitSharderLFB, timeout time.Duration) (err error)
+	WaitForChallengeGeneration()
+	WaitOnBlobberCommit()
+	WaitForChallengeStatus()
 
 	// Byzantine: BC, sharders
 
@@ -114,6 +117,7 @@ type Executor interface {
 
 	// SetServerState updates state.
 	SetServerState(interface{}) error
+	GenerateChallenge(c *GenerateChallege) error
 }
 
 //

@@ -191,18 +191,9 @@ commands:
   init_allocation:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation.sh"
-  sleep_20s:
+  init_allocation_only:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_20s.sh"
-  sleep_1m: # it sleeps a hour in reality, used for debugging tests
-    work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_1m.sh"
-  sleep_3m:
-    work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_3m.sh"
-  sleep_30m:
-    work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_30m.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation_only.sh"
   list:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list.sh"

@@ -125,16 +125,18 @@ type Server struct {
 	// onNodeReady used by miner/sharder to notify the server that the node
 	// has started and ready to register (if needed) in miner SC and start
 	// it work. E.g. the node has started and waits the conductor to enter BC.
-	onNodeReady chan NodeName
-
-	CurrentTest cases.TestCase
-
-	magicBlock string
-
+	onNodeReady               chan NodeName
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
+	// onChallengeGeneration will notify server that challenge has been generated
+	// May need to add fields in struct rather than only struct{}
+	onChallengeGeneration chan string
+	onBlobberCommit       chan string
+	onChallengeStatus     chan map[string]interface{}
+	CurrentTest           cases.TestCase
 
+	magicBlock string
 	// nodes lock/unlock/shares sending (send only, send bad)
 	mutex sync.Mutex
 	nodes map[NodeName]*nodeState
@@ -150,8 +152,28 @@ type Server struct {
 }
 
 // NewServer Conductor RPC server.
-func NewServer(address string, names map[NodeID]NodeName) (s *Server,
-	err error) {
+func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error) {
+	s = &Server{
+		quit:                      make(chan struct{}),
+		names:                     names,
+		onViewChange:              make(chan *ViewChangeEvent, 10),
+		onPhase:                   make(chan *PhaseEvent, 10),
+		onAddMiner:                make(chan *AddMinerEvent, 10),
+		onAddSharder:              make(chan *AddSharderEvent, 10),
+		onAddBlobber:              make(chan *AddBlobberEvent, 10),
+		onAddAuthorizer:           make(chan *AddAuthorizerEvent, 10),
+		onSharderKeep:             make(chan *SharderKeepEvent, 10),
+		onNodeReady:               make(chan NodeName, 10),
+		onRoundEvent:              make(chan *RoundEvent, 100),
+		onContributeMPKEvent:      make(chan *ContributeMPKEvent, 10),
+		onShareOrSignsSharesEvent: make(chan *ShareOrSignsSharesEvent, 10),
+		onChallengeGeneration:     make(chan string, 1),
+		onBlobberCommit:           make(chan string, 1),
+		onChallengeStatus:         make(chan map[string]interface{}, 1),
+		nodes:                     make(map[NodeName]*nodeState),
+		address:                   address,
+		server:                    rpc.NewServer(),
+	}
 
 	s = new(Server)
 	s.quit = make(chan struct{})
@@ -177,7 +199,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server,
 	if err = s.server.Register(s); err != nil {
 		return nil, err
 	}
-	s.address = address
+
 	return
 }
 
@@ -333,17 +355,40 @@ func (s *Server) OnShareOrSignsShares() chan *ShareOrSignsSharesEvent {
 	return s.onShareOrSignsSharesEvent
 }
 
+func (s *Server) OnGenerateChallenge() chan string {
+	return s.onChallengeGeneration
+}
+
+func (s *Server) OnBlobberCommit() chan string {
+	return s.onBlobberCommit
+}
+
+func (s *Server) OnChallengeStatus() chan map[string]interface{} {
+	return s.onChallengeStatus
+}
+
 func (s *Server) Nodes() map[config.NodeName]*nodeState {
 	return s.nodes
 }
 
+// GetMinersNum returns current miners number.
+func (s *Server) GetMinersNum() int {
+	var minersNum int
+	for nodeName, node := range s.nodes {
+		if strings.Contains(string(nodeName), "miner") && node != nil {
+			minersNum++
+		}
+	}
+	return minersNum
+}
+
 //
-// handlers
+// RPC functions/handlers
+// Signature Fn(args *Any, Response *Any)error
+// Exception of Any is channel. i.e channel can neither be argument nor response
 //
 
-func (s *Server) ViewChange(viewChange *ViewChangeEvent, _ *struct{}) (
-	err error) {
-
+func (s *Server) ViewChange(viewChange *ViewChangeEvent, _ *struct{}) (err error) {
 	select {
 	case s.onViewChange <- viewChange:
 	case <-s.quit:
@@ -415,9 +460,7 @@ func (s *Server) Round(rnd *RoundEvent, _ *struct{}) (err error) {
 	return
 }
 
-func (s *Server) ContributeMPK(cmpke *ContributeMPKEvent, _ *struct{}) (
-	err error) {
-
+func (s *Server) ContributeMPK(cmpke *ContributeMPKEvent, _ *struct{}) (err error) {
 	select {
 	case s.onContributeMPKEvent <- cmpke:
 	case <-s.quit:
@@ -425,14 +468,37 @@ func (s *Server) ContributeMPK(cmpke *ContributeMPKEvent, _ *struct{}) (
 	return
 }
 
-func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
-	_ *struct{}) (err error) {
-
+func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent, _ *struct{}) (err error) {
 	select {
 	case s.onShareOrSignsSharesEvent <- soss:
 	case <-s.quit:
 	}
 	return
+}
+
+func (s *Server) ChallengeGenerated(blobberID *string, _ *struct{}) error {
+	select {
+	case s.onChallengeGeneration <- *blobberID:
+	case <-s.quit:
+	}
+	return nil
+}
+
+func (s *Server) BlobberCommitted(blobberID *string, _ *struct{}) error {
+	select {
+	case s.onBlobberCommit <- *blobberID:
+	case <-s.quit:
+	}
+	return nil
+}
+
+func (s *Server) SetChallengeStatus(m map[string]interface{}, _ *struct{}) error {
+	select {
+	case s.onChallengeStatus <- m:
+	case <-s.quit:
+	}
+
+	return nil
 }
 
 // magic block handler
@@ -506,17 +572,6 @@ func (s *Server) ConfigureTestCase(blob []byte, _ *struct{}) error {
 func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
 	log.Printf("adding result to the test case: %s", string(blob))
 	return s.CurrentTest.AddResult(blob)
-}
-
-// GetMinersNum returns current miners number.
-func (s *Server) GetMinersNum() int {
-	var minersNum int
-	for nodeName, node := range s.nodes {
-		if strings.Contains(string(nodeName), "miner") && node != nil {
-			minersNum++
-		}
-	}
-	return minersNum
 }
 
 //
