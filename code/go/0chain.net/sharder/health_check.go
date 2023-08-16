@@ -163,13 +163,12 @@ func (sc *Chain) setCycleBounds(_ context.Context, scanMode HealthCheckScan) {
 	cb := &bss.cycle[scanMode].bounds
 
 	r := sc.GetLatestFinalizedBlock().Round
-	cb.window = r - cb.highRound
+
+	cb.lowRound = cb.highRound
 	cb.highRound = r
 	if r == 0 {
 		cb.highRound = 1
 	}
-
-	cb.lowRound = cb.highRound - cb.window
 }
 
 // HealthCheckSetup - checks the health for each round
@@ -249,7 +248,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 			Logger.Info("Jayash HC-CycleHistory",
 				zap.String("mode", scanMode.String()),
 				zap.Int64("cycle", cc.CycleCount),
-				zap.String("event", scanMode.String()),
+				zap.String("event", "start"),
 				zap.String("bounds",
 					fmt.Sprintf("[%v-%v]", cb.highRound, cb.lowRound)),
 				zap.Any("currentRound", cb.currentRound),
