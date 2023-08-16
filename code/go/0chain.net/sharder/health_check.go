@@ -163,12 +163,13 @@ func (sc *Chain) setCycleBounds(_ context.Context, scanMode HealthCheckScan) {
 	cb := &bss.cycle[scanMode].bounds
 
 	r := sc.GetLatestFinalizedBlock().Round
-
-	cb.lowRound = cb.highRound
+	cb.window = r - cb.highRound
 	cb.highRound = r
 	if r == 0 {
 		cb.highRound = 1
 	}
+
+	cb.lowRound = cb.highRound - cb.window
 }
 
 // HealthCheckSetup - checks the health for each round
