@@ -246,6 +246,15 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 			return
 		default:
 			cc.Status = SyncProgress
+			Logger.Info("Jayash HC-CycleHistory",
+				zap.String("mode", scanMode.String()),
+				zap.Int64("cycle", cc.CycleCount),
+				zap.String("event", scanMode.String()),
+				zap.String("bounds",
+					fmt.Sprintf("[%v-%v]", cb.highRound, cb.lowRound)),
+				zap.Any("currentRound", cb.currentRound),
+				zap.Time("start", cc.counters.current.CycleStart.Truncate(time.Second)))
+
 			for cb.currentRound = cb.highRound; cb.currentRound >= cb.lowRound; cb.currentRound-- {
 				t := time.Now()
 				sc.healthCheck(ctx, cb.currentRound, scanMode)
