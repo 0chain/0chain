@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	corecommon "0chain.net/core/common"
@@ -49,7 +50,7 @@ type Allocation struct {
 
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
+	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:ID"`
 }
 
 func (edb *EventDb) GetAllocation(id string) (*Allocation, error) {
@@ -59,6 +60,9 @@ func (edb *EventDb) GetAllocation(id string) (*Allocation, error) {
 		return nil, fmt.Errorf("error retrieving allocation: %v, error: %v", id, err)
 	}
 
+	if len(alloc.Terms) > 0 {
+		sort.Sort(ByIndex(alloc.Terms))
+	}
 	return &alloc, nil
 }
 
@@ -84,6 +88,11 @@ func (edb *EventDb) GetClientsAllocation(clientID string, limit common.Paginatio
 		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, err)
 	}
 
+	for _, alloc := range allocs {
+		if len(alloc.Terms) > 0 {
+			sort.Sort(ByIndex(alloc.Terms))
+		}
+	}
 	return allocs, nil
 }
 

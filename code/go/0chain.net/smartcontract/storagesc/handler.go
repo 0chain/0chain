@@ -107,6 +107,11 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/total-challenge-rewards", srh.getTotalChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/alloc-challenge-rewards", srh.getAllocationChallengeRewards))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/count-challenges", srh.getChallengesCountByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-rewards", srh.getRewardsByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-delegate-rewards", srh.getDelegateRewardsByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/parition-size-frequency", srh.getPartitionSizeFrequency))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/blobber-selection-frequency", srh.getBlobberPartitionSelectionFrequency))
 	}
 
 	return restEndpoints
@@ -904,7 +909,10 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		var dps = stakepool.DelegatePoolStat{
 			ID:           pool.PoolID,
 			DelegateID:   pool.DelegateID,
-			Status:       spenum.PoolStatus(pool.Status).String(),
+			UnStake:      false,
+			ProviderId:   pool.ProviderID,
+			ProviderType: pool.ProviderType,
+			Status:       pool.Status.String(),
 			RoundCreated: pool.RoundCreated,
 			StakedAt:     pool.StakedAt,
 		}
@@ -1190,14 +1198,6 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
-	conf, err := getConfig(sctx)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	logging.Logger.Info("getOpenChallenges", zap.Any("conf", conf))
 
 	challenges, err := getOpenChallengesForBlobber(
 		blobberID, from, limit, sctx.GetEventDB(),
@@ -1825,14 +1825,6 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	if len(removeID) > 0 {
-		if err := sa.removeBlobber(removeID); err != nil {
-			return err
-		}
-	} else {
-		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
-	}
 	_, ok := sa.BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
@@ -1858,9 +1850,35 @@ func changeBlobbersEventDB(
 	if err != nil {
 		return err
 	}
-	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-	sa.BlobberAllocsMap[addID] = ba
 
+	removedIdx := 0
+
+	if len(removeID) > 0 {
+		_, ok := sa.BlobberAllocsMap[removeID]
+		if !ok {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
+		}
+		delete(sa.BlobberAllocsMap, removeID)
+
+		var found bool
+		for i, d := range sa.BlobberAllocs {
+			if d.BlobberID == removeID {
+				sa.BlobberAllocs[i] = nil
+				found = true
+				removedIdx = i
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+	}
+
+	sa.BlobberAllocs[removedIdx] = ba
+	sa.BlobberAllocsMap[addID] = ba
 	return nil
 }
 

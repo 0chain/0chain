@@ -127,7 +127,7 @@ func TestSnapshotFunctions(t *testing.T) {
 
 	t.Run("test ApplyDiffBlobber", func(t *testing.T) {
 		newSnap := Snapshot{}
-		err := newSnap.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0])
+		err := newSnap.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0], true)
 		require.NoError(t, err)
 
 		require.EqualValues(t, blobbers[0].ChallengesPassed - blobberSnapshots[0].ChallengesPassed, newSnap.SuccessfulChallenges)
@@ -150,17 +150,22 @@ func TestSnapshotFunctions(t *testing.T) {
 		offBlobber := blobbers[1]
 		offBlobber.IsKilled = true
 		s1 := Snapshot{}
-		err = s1.ApplyDiffBlobber(&offBlobber, &blobberSnapshots[1])
+		err = s1.ApplyDiffBlobber(&offBlobber, &blobberSnapshots[1], true)
 		require.NoError(t, err)
 		s2 := Snapshot{}
 		err = s2.ApplyDiffOfflineBlobber(&blobberSnapshots[1])
 		require.NoError(t, err)
 		require.EqualValues(t, s1, s2)
+
+		// Test in case of blobber that's not new
+		err = newSnap.ApplyDiffBlobber(&Blobber{}, &BlobberSnapshot{}, false)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, newSnap.BlobberCount)
 	})
 
 	t.Run("test ApplyDiffMiner", func(t *testing.T) {
 		newSnap := Snapshot{}
-		err := newSnap.ApplyDiffMiner(&miners[0], &minerSnapshots[0])
+		err := newSnap.ApplyDiffMiner(&miners[0], &minerSnapshots[0], true)
 		require.NoError(t, err)
 
 		require.EqualValues(t, miners[0].Rewards.TotalRewards - minerSnapshots[0].TotalRewards, newSnap.TotalRewards)
@@ -172,17 +177,22 @@ func TestSnapshotFunctions(t *testing.T) {
 		offMiner := miners[1]
 		offMiner.IsKilled = true
 		s1 := Snapshot{}
-		err = s1.ApplyDiffMiner(&offMiner, &minerSnapshots[1])
+		err = s1.ApplyDiffMiner(&offMiner, &minerSnapshots[1], true)
 		require.NoError(t, err)
 		s2 := Snapshot{}
 		err = s2.ApplyDiffOfflineMiner(&minerSnapshots[1])
 		require.NoError(t, err)
 		require.EqualValues(t, s1, s2)
+
+		// Test in case of blobber that's not new
+		err = newSnap.ApplyDiffMiner(&Miner{}, &MinerSnapshot{}, false)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, newSnap.MinerCount)
 	})
 
 	t.Run("test ApplyDiffSharder", func(t *testing.T) {
 		newSnap := Snapshot{}
-		err := newSnap.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0])
+		err := newSnap.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0], true)
 		require.NoError(t, err)
 
 		require.EqualValues(t, sharders[0].Rewards.TotalRewards - sharderSnapshots[0].TotalRewards, newSnap.TotalRewards)
@@ -194,17 +204,22 @@ func TestSnapshotFunctions(t *testing.T) {
 		offSharder := sharders[1]
 		offSharder.IsKilled = true
 		s1 := Snapshot{}
-		err = s1.ApplyDiffSharder(&offSharder, &sharderSnapshots[1])
+		err = s1.ApplyDiffSharder(&offSharder, &sharderSnapshots[1], true)
 		require.NoError(t, err)
 		s2 := Snapshot{}
 		err = s2.ApplyDiffOfflineSharder(&sharderSnapshots[1])
 		require.NoError(t, err)
 		require.EqualValues(t, s1, s2)
+
+		// Test in case of blobber that's not new
+		err = newSnap.ApplyDiffSharder(&Sharder{}, &SharderSnapshot{}, false)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, newSnap.SharderCount)
 	})
 
 	t.Run("test ApplyDiffValidator", func(t *testing.T) {
 		newSnap := Snapshot{}
-		err := newSnap.ApplyDiffValidator(&validators[0], &validatorSnapshots[0])
+		err := newSnap.ApplyDiffValidator(&validators[0], &validatorSnapshots[0], true)
 		require.NoError(t, err)
 
 		require.EqualValues(t, validators[0].Rewards.TotalRewards - validatorSnapshots[0].TotalRewards, newSnap.TotalRewards)
@@ -215,17 +230,22 @@ func TestSnapshotFunctions(t *testing.T) {
 		offValidator := validators[1]
 		offValidator.IsKilled = true
 		s1 := Snapshot{}
-		err = s1.ApplyDiffValidator(&offValidator, &validatorSnapshots[1])
+		err = s1.ApplyDiffValidator(&offValidator, &validatorSnapshots[1], true)
 		require.NoError(t, err)
 		s2 := Snapshot{}
 		err = s2.ApplyDiffOfflineValidator(&validatorSnapshots[1])
 		require.NoError(t, err)
 		require.EqualValues(t, s1, s2)
+
+		// Test in case of blobber that's not new
+		err = newSnap.ApplyDiffValidator(&Validator{}, &ValidatorSnapshot{}, false)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, newSnap.ValidatorCount)
 	})
 
 	t.Run("test ApplyDiffAuthorizer", func(t *testing.T) {
 		newSnap := Snapshot{}
-		err := newSnap.ApplyDiffAuthorizer(&authorizers[0], &authorizerSnapshots[0])
+		err := newSnap.ApplyDiffAuthorizer(&authorizers[0], &authorizerSnapshots[0], true)
 		require.NoError(t, err)
 
 		require.EqualValues(t, authorizers[0].Rewards.TotalRewards - authorizerSnapshots[0].TotalRewards, newSnap.TotalRewards)
@@ -236,12 +256,17 @@ func TestSnapshotFunctions(t *testing.T) {
 		offAuthorizer := authorizers[1]
 		offAuthorizer.IsKilled = true
 		s1 := Snapshot{}
-		err = s1.ApplyDiffAuthorizer(&offAuthorizer, &authorizerSnapshots[1])
+		err = s1.ApplyDiffAuthorizer(&offAuthorizer, &authorizerSnapshots[1], true)
 		require.NoError(t, err)
 		s2 := Snapshot{}
 		err = s2.ApplyDiffOfflineAuthorizer(&authorizerSnapshots[1])
 		require.NoError(t, err)
 		require.EqualValues(t, s1, s2)
+		
+		// Test in case of blobber that's not new
+		err = newSnap.ApplyDiffAuthorizer(&Authorizer{}, &AuthorizerSnapshot{}, false)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, newSnap.AuthorizerCount)
 	})
 
 	t.Run("test ApplyDiffOfflineBlobber", func(t *testing.T) {
@@ -310,24 +335,24 @@ func TestSnapshotFunctions(t *testing.T) {
 		s1 := Snapshot{}
 		s2 := Snapshot{}
 
-		s1.ApplySingleProviderDiff(spenum.Blobber)(&blobbers[0], &blobberSnapshots[0])
-		s2.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0])
+		s1.ApplySingleProviderDiff(spenum.Blobber)(&blobbers[0], &blobberSnapshots[0], true)
+		s2.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0], true)
 		require.Equal(t, true, reflect.DeepEqual(s1, s2))
 
-		s1.ApplySingleProviderDiff(spenum.Miner)(&miners[0], &minerSnapshots[0])
-		s2.ApplyDiffMiner(&miners[0], &minerSnapshots[0])
+		s1.ApplySingleProviderDiff(spenum.Miner)(&miners[0], &minerSnapshots[0], true)
+		s2.ApplyDiffMiner(&miners[0], &minerSnapshots[0], true)
 		require.Equal(t, true, reflect.DeepEqual(s1, s2))
 
-		s1.ApplySingleProviderDiff(spenum.Sharder)(&sharders[0], &sharderSnapshots[0])
-		s2.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0])
+		s1.ApplySingleProviderDiff(spenum.Sharder)(&sharders[0], &sharderSnapshots[0], true)
+		s2.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0], true)
 		require.Equal(t, true, reflect.DeepEqual(s1, s2))
 
-		s1.ApplySingleProviderDiff(spenum.Validator)(&validators[0], &validatorSnapshots[0])
-		s2.ApplyDiffValidator(&validators[0], &validatorSnapshots[0])
+		s1.ApplySingleProviderDiff(spenum.Validator)(&validators[0], &validatorSnapshots[0], true)
+		s2.ApplyDiffValidator(&validators[0], &validatorSnapshots[0], true)
 		require.Equal(t, true, reflect.DeepEqual(s1, s2))
 
-		s1.ApplySingleProviderDiff(spenum.Authorizer)(&authorizers[0], &authorizerSnapshots[0])
-		s2.ApplyDiffAuthorizer(&authorizers[0], &authorizerSnapshots[0])
+		s1.ApplySingleProviderDiff(spenum.Authorizer)(&authorizers[0], &authorizerSnapshots[0], true)
+		s2.ApplyDiffAuthorizer(&authorizers[0], &authorizerSnapshots[0], true)
 		require.Equal(t, true, reflect.DeepEqual(s1, s2))
 	})
 
@@ -348,9 +373,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.NoError(t, err)
 
 		snapDiff := Snapshot{}
-		err = snapDiff.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffBlobber(&blobbers[2], &blobberSnapshots[2])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[2], &blobberSnapshots[2], false)
 		require.NoError(t, err)
 		err = snapDiff.ApplyDiffOfflineBlobber(&blobberSnapshots[3])
 		require.NoError(t, err)
@@ -642,65 +667,65 @@ func TestSnapshotFunctions(t *testing.T) {
 		}
 
 		snapDiff := Snapshot{}
-		err = snapDiff.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffBlobber(&blobbers[1], &blobberSnapshots[1])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[1], &blobberSnapshots[1], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffBlobber(&blobbers[2], &blobberSnapshots[2])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[2], &blobberSnapshots[2], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffBlobber(&blobbers[3], &blobberSnapshots[3])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[3], &blobberSnapshots[3], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffBlobber(&blobbers[4], &blobberSnapshots[4])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[4], &blobberSnapshots[4], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffBlobber(&blobbers[5], &blobberSnapshots[5])
+		err = snapDiff.ApplyDiffBlobber(&blobbers[5], &blobberSnapshots[5], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffMiner(&miners[0], &minerSnapshots[0])
+		err = snapDiff.ApplyDiffMiner(&miners[0], &minerSnapshots[0], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffMiner(&miners[1], &minerSnapshots[1])
+		err = snapDiff.ApplyDiffMiner(&miners[1], &minerSnapshots[1], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffMiner(&miners[2], &minerSnapshots[2])
+		err = snapDiff.ApplyDiffMiner(&miners[2], &minerSnapshots[2], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffMiner(&miners[3], &minerSnapshots[3])
+		err = snapDiff.ApplyDiffMiner(&miners[3], &minerSnapshots[3], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffMiner(&miners[4], &minerSnapshots[4])
+		err = snapDiff.ApplyDiffMiner(&miners[4], &minerSnapshots[4], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffMiner(&miners[5], &minerSnapshots[5])
+		err = snapDiff.ApplyDiffMiner(&miners[5], &minerSnapshots[5], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0])
+		err = snapDiff.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffSharder(&sharders[1], &sharderSnapshots[1])
+		err = snapDiff.ApplyDiffSharder(&sharders[1], &sharderSnapshots[1], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffSharder(&sharders[2], &sharderSnapshots[2])
+		err = snapDiff.ApplyDiffSharder(&sharders[2], &sharderSnapshots[2], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffSharder(&sharders[3], &sharderSnapshots[3])
+		err = snapDiff.ApplyDiffSharder(&sharders[3], &sharderSnapshots[3], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffSharder(&sharders[4], &sharderSnapshots[4])
+		err = snapDiff.ApplyDiffSharder(&sharders[4], &sharderSnapshots[4], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffSharder(&sharders[5], &sharderSnapshots[5])
+		err = snapDiff.ApplyDiffSharder(&sharders[5], &sharderSnapshots[5], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffAuthorizer(&authorizers[0], &authorizerSnapshots[0])
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[0], &authorizerSnapshots[0], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffAuthorizer(&authorizers[1], &authorizerSnapshots[1])
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[1], &authorizerSnapshots[1], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffAuthorizer(&authorizers[2], &authorizerSnapshots[2])
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[2], &authorizerSnapshots[2], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffAuthorizer(&authorizers[3], &authorizerSnapshots[3])
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[3], &authorizerSnapshots[3], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffAuthorizer(&authorizers[4], &authorizerSnapshots[4])
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[4], &authorizerSnapshots[4], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffAuthorizer(&authorizers[5], &authorizerSnapshots[5])
+		err = snapDiff.ApplyDiffAuthorizer(&authorizers[5], &authorizerSnapshots[5], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffValidator(&validators[0], &validatorSnapshots[0])
+		err = snapDiff.ApplyDiffValidator(&validators[0], &validatorSnapshots[0], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffValidator(&validators[1], &validatorSnapshots[1])
+		err = snapDiff.ApplyDiffValidator(&validators[1], &validatorSnapshots[1], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffValidator(&validators[2], &validatorSnapshots[2])
+		err = snapDiff.ApplyDiffValidator(&validators[2], &validatorSnapshots[2], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffValidator(&validators[3], &validatorSnapshots[3])
+		err = snapDiff.ApplyDiffValidator(&validators[3], &validatorSnapshots[3], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffValidator(&validators[4], &validatorSnapshots[4])
+		err = snapDiff.ApplyDiffValidator(&validators[4], &validatorSnapshots[4], false)
 		require.NoError(t, err)
-		err = snapDiff.ApplyDiffValidator(&validators[5], &validatorSnapshots[5])
+		err = snapDiff.ApplyDiffValidator(&validators[5], &validatorSnapshots[5], false)
 		require.NoError(t, err)
 
 		err = eventDb.UpdateSnapshotFromProviders(&s, providers)

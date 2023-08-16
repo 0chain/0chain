@@ -214,7 +214,7 @@ func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Type</td><td>ID</td><td>Link</td><td>RestAPIs</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'> <td>Type</td><td>ID</td><td>Link</td></tr>")
 	re := regexp.MustCompile(`\*.*\.`)
 	keys := make([]string, 0, len(smartcontract.ContractMap))
 	for k := range smartcontract.ContractMap {
@@ -224,7 +224,7 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	for _, k := range keys {
 		sc := smartcontract.ContractMap[k]
 		scType := re.ReplaceAllString(reflect.TypeOf(sc).String(), "")
-		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType, "v1/screst/"+k, "/v1/screst/*key*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType)
 	}
 	fmt.Fprintf(w, "</table>")
 }

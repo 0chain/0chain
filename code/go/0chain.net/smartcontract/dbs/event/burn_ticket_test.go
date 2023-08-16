@@ -35,7 +35,7 @@ func TestBurnTicketEvent(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
