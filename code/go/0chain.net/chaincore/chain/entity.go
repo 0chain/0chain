@@ -242,7 +242,7 @@ func (c *Chain) SetupEventDatabase() error {
 	time.Sleep(time.Second * 2)
 
 	var err error
-	c.EventDb, err = event.NewEventDb(c.ChainConfig.DbsEvents(), c.ChainConfig.DbSettings())
+	c.EventDb, err = event.NewEventDbWithWorker(c.ChainConfig.DbsEvents(), c.ChainConfig.DbSettings())
 	if err != nil {
 		return err
 	}

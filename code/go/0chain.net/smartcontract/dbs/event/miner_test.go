@@ -179,7 +179,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access, config.DbSettings{Debug: true})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{Debug: true})
 	if err != nil {
 		t.Error(err)
 	}

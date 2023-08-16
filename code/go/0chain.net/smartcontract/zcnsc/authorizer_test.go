@@ -9,9 +9,11 @@ import (
 
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/storagesc"
 
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 
 	cstate "0chain.net/chaincore/chain/state"
 	. "0chain.net/smartcontract/zcnsc"
@@ -277,6 +279,19 @@ func GetAuthorizerNodeFromCtx(t *testing.T, ctx cstate.StateContextI, key string
 	return node
 }
 
+func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
+	numAuth := &AuthCount{}
+	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	if err == util.ErrValueNotPresent {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	return numAuth.Count, nil
+}
+
 func Test_Can_Delete_Authorizer(t *testing.T) {
 	var (
 		ctx  = MakeMockStateContext()
@@ -289,6 +304,11 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 	sc := CreateZCNSmartContract()
 	tr, err := CreateDeleteAuthorizerTransaction(defaultAuthorizer, ctx, data)
 	require.NoError(t, err)
+
+	// auth num before deleting
+	authNum, err := getAuthorizerCount(ctx)
+	require.NoError(t, err)
+
 	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
@@ -296,4 +316,9 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 	authorizerNode, err := GetAuthorizerNode(defaultAuthorizer, ctx)
 	require.Error(t, err)
 	require.Nil(t, authorizerNode)
+
+	// auth number after deleting
+	authNumAfter, err := getAuthorizerCount(ctx)
+	require.NoError(t, err)
+	require.Equal(t, authNum-1, authNumAfter)
 }

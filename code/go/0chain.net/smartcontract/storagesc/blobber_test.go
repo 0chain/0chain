@@ -1093,6 +1093,19 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
+	for _, ba := range alloc.BlobberAllocs {
+
+		ba.LatestCompletedChallenge = &StorageChallenge{
+			Created: 0,
+		}
+		ba.ChallengePoolIntegralValue = 0
+	}
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
+	if err != nil {
+		return
+	}
+
 	_, err = alloc.restMinLockDemand()
 	require.NoError(t, err)
 	//require.EqualValues(t, 583333336580, restMinLock)

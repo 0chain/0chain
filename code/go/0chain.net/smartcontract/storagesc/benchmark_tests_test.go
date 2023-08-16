@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const extraStats = 6
+const extraStats = 4
 
 func TestStorageBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}
@@ -18,6 +18,11 @@ func TestStorageBenchmarkTests(t *testing.T) {
 	mockSigScheme.On("Sign", mock.Anything).Return("", nil)
 
 	ssc := NewStorageSmartContract()
+
+	a := ssc.GetExecutionStats()
+	b := BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks
+
+	require.NotEqual(t, a, b)
 
 	require.EqualValues(
 		t,

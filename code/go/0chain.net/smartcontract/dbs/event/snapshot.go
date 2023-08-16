@@ -118,20 +118,23 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 	}
 
 	// Active providers
+	isNew := false
 	if len(providers) > 0 {
 		for _, provider := range providers {
 			snap, ok := snapshotsMap[provider.GetID()]
 			if !ok {
 				snap = reflect.New(sReflectType).Interface().(S)
 				snap.SetID(provider.GetID())
+				isNew = true
 			}
 	
-			err = gs.ApplySingleProviderDiff(spenum.ToProviderType(ptypeName))(provider, snap)
+			err = gs.ApplySingleProviderDiff(spenum.ToProviderType(ptypeName))(provider, snap, isNew)
 			if err != nil {
 				logging.Logger.Error("error applying provider diff to global snapshot",
 					zap.String("provider_id", provider.GetID()), zap.String("provider_type", ptypeName), zap.Error(err))
 				return common.NewError("apply_providers_diff", fmt.Sprintf("error applying provider %v:%v diff to global snapshot", ptypeName, provider.GetID()))
 			}
+			isNew = false
 		}	
 	}
 
@@ -175,7 +178,7 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 }
 
 // Facade for provider-specific diff appliers.
-func (s *Snapshot) ApplySingleProviderDiff(ptype spenum.Provider) func(provider IProvider, snapshot IProviderSnapshot) error {
+func (s *Snapshot) ApplySingleProviderDiff(ptype spenum.Provider) func(provider IProvider, snapshot IProviderSnapshot, isNew bool) error {
 	switch ptype {
 	case spenum.Blobber:
 		return s.ApplyDiffBlobber
@@ -192,7 +195,7 @@ func (s *Snapshot) ApplySingleProviderDiff(ptype spenum.Provider) func(provider 
 	}
 }
 
-func (s *Snapshot) ApplyDiffBlobber(provider IProvider, snapshot IProviderSnapshot) error {
+func (s *Snapshot) ApplyDiffBlobber(provider IProvider, snapshot IProviderSnapshot, isNew bool) error {
 	current, ok := provider.(*Blobber)
 	if !ok {
 		return common.NewError("apply_provider_diff", "invalid blobber data")
@@ -203,6 +206,9 @@ func (s *Snapshot) ApplyDiffBlobber(provider IProvider, snapshot IProviderSnapsh
 	}
 	if current.IsOffline() && !previous.IsOffline() {
 		return s.ApplyDiffOfflineBlobber(snapshot)
+	}
+	if isNew {
+		s.BlobberCount++
 	}
 	s.SuccessfulChallenges += int64(current.ChallengesPassed - previous.ChallengesPassed)
 	s.TotalChallenges += int64(current.ChallengesCompleted - previous.ChallengesCompleted)
@@ -224,11 +230,10 @@ func (s *Snapshot) ApplyDiffBlobber(provider IProvider, snapshot IProviderSnapsh
 		newSS = int64((float64(current.TotalStake) / float64(current.WritePrice)) * GB)
 	}
 	s.StakedStorage += (newSS - previousSS)
-	s.BlobberCount++
 	return nil
 }
 
-func (s *Snapshot) ApplyDiffMiner(provider IProvider, snapshot IProviderSnapshot) error {
+func (s *Snapshot) ApplyDiffMiner(provider IProvider, snapshot IProviderSnapshot, isNew bool) error {
 	current, ok := provider.(*Miner)
 	if !ok {
 		return common.NewError("apply_provider_diff", "invalid miner data")
@@ -240,14 +245,16 @@ func (s *Snapshot) ApplyDiffMiner(provider IProvider, snapshot IProviderSnapshot
 	if current.IsOffline() && !previous.IsOffline() {
 		return s.ApplyDiffOfflineMiner(snapshot)
 	}
+	if isNew {
+		s.MinerCount++
+	}
 	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
 	s.MinerTotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
 	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
-	s.MinerCount++
 	return nil
 }
 
-func (s *Snapshot) ApplyDiffSharder(provider IProvider, snapshot IProviderSnapshot) error {
+func (s *Snapshot) ApplyDiffSharder(provider IProvider, snapshot IProviderSnapshot, isNew bool) error {
 	current, ok := provider.(*Sharder)
 	if !ok {
 		return common.NewError("apply_provider_diff", "invalid sharder data")
@@ -259,14 +266,16 @@ func (s *Snapshot) ApplyDiffSharder(provider IProvider, snapshot IProviderSnapsh
 	if current.IsOffline() && !previous.IsOffline() {
 		return s.ApplyDiffOfflineSharder(snapshot)
 	}
+	if isNew {
+		s.SharderCount++
+	}
 	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
 	s.SharderTotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
 	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
-	s.SharderCount++
 	return nil
 }
 
-func (s *Snapshot) ApplyDiffValidator(provider IProvider, snapshot IProviderSnapshot) error {
+func (s *Snapshot) ApplyDiffValidator(provider IProvider, snapshot IProviderSnapshot, isNew bool) error {
 	current, ok := provider.(*Validator)
 	if !ok {
 		return common.NewError("apply_provider_diff", "invalid validator data")
@@ -278,14 +287,15 @@ func (s *Snapshot) ApplyDiffValidator(provider IProvider, snapshot IProviderSnap
 	if current.IsOffline() && !previous.IsOffline() {
 		return s.ApplyDiffOfflineValidator(snapshot)
 	}
-
+	if isNew {
+		s.ValidatorCount++
+	}
 	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
 	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
-	s.ValidatorCount++
 	return nil
 }
 
-func (s *Snapshot) ApplyDiffAuthorizer(provider IProvider, snapshot IProviderSnapshot) error {
+func (s *Snapshot) ApplyDiffAuthorizer(provider IProvider, snapshot IProviderSnapshot, isNew bool) error {
 	current, ok := provider.(*Authorizer)
 	if !ok {
 		return common.NewError("apply_provider_diff", "invalid authorizer data")
@@ -297,11 +307,12 @@ func (s *Snapshot) ApplyDiffAuthorizer(provider IProvider, snapshot IProviderSna
 	if current.IsOffline() && !previous.IsOffline() {
 		return s.ApplyDiffOfflineAuthorizer(snapshot)
 	}
-
+	if isNew {
+		s.AuthorizerCount++
+	}
 	s.TotalRewards += int64(current.Rewards.TotalRewards - previous.TotalRewards)
 	s.TotalStaked += int64(current.TotalStake - previous.TotalStake)
 	s.TotalMint += int64(current.TotalMint - previous.TotalMint)
-	s.AuthorizerCount++
 	return nil
 }
 
