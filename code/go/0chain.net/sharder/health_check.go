@@ -269,8 +269,22 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 				runtime.Gosched()
 			}
 
+			currentTime := time.Now()
+
 			// Wait for new work.
 			sc.waitForWork(ctx, scanMode)
+
+			newTime := time.Now()
+
+			Logger.Info("Jayash HC-CycleHistory",
+				zap.String("mode", scanMode.String()),
+				zap.Int64("cycle", cc.CycleCount),
+				zap.String("event", "end"),
+				zap.String("bounds",
+					fmt.Sprintf("[%v-%v]", cb.highRound, cb.lowRound)),
+				zap.Time("start", currentTime.Truncate(time.Second)),
+				zap.Time("end", newTime.Truncate(time.Second)),
+				zap.Duration("duration", newTime.Sub(currentTime).Truncate(time.Second)))
 		}
 	}
 }
