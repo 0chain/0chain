@@ -18,6 +18,23 @@ jobs:
       - name: Actions checkout
         uses: actions/checkout@v2
         
+      - name: Docker Compose Setup.
+        run: |
+          sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+  
+      - name: Installing dependencies.
+        run: |
+          sudo apt update -y
+          sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
       - name: "Setup Go"
         shell: 'script --return --quiet --command "bash {0}"'
         run: |
@@ -35,23 +52,6 @@ jobs:
           export PATH=$PATH:/usr/local/go/bin
           which go
           go env
-        
-      - name: Docker Compose Setup.
-        run: |
-          sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose --version
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-  
-      - name: Installing dependencies.
-        run: |
-          sudo apt update -y
-          sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
 
       - name: Run Init
         run: |
