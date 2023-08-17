@@ -41,8 +41,6 @@ jobs:
         cd bls
         sudo make MCL_USE_GMP=0 -C mcl -j $(nproc) lib/libmclbn256.so install
         sudo make MCL_USE_GMP=0 MCL_DIR=$(pwd)/mcl -j $(nproc) lib/libbls256.so install
-        ls /usr/local/lib
-        echo $LD_LIBRARY_PATH
         cd ..
 
     - name: Docker Network Setup.
@@ -63,7 +61,6 @@ jobs:
 
     - name: Run Basic conductor tests
       run: |
-        echo $LD_LIBRARY_PATH  
         LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
         export LD_LIBRARY_PATH
         ./docker.local/bin/start.conductor.sh basic
