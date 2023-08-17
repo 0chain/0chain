@@ -18,27 +18,43 @@ jobs:
       - name: Actions checkout
         uses: actions/checkout@v2
         
-      - name: setup go
-        uses: actions/setup-go@v2
-        with:
-          go-version: '1.20'
-        
-      - name: Docker Build Image
+      - name: "Setup Go"
+        shell: 'script --return --quiet --command "bash {0}"'
         run: |
-          sudo apt-get update
-          sudo apt-get install ca-certificates curl gnupg lsb-release -y
-          sudo mkdir -m 0755 -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install docker-ce docker-ce-cli containerd.io -y
-          sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose || true
-          sudo chmod +x /usr/local/bin/docker-compose || true 
+          echo "GOMODCACHE=/root/actions-runner/_work/_tool/go/pkg/mod" >> $GITHUB_ENV
+          echo "GOCACHE=/root/actions-runner/_work/_tool/.cache/go-build" >> $GITHUB_ENV
+          echo "HOME=/root" >> $GITHUB_ENV
+          export GOMODCACHE="/root/actions-runner/_work/_tool/go/pkg/mod"
+          export GOCACHE="/root/actions-runner/_work/_tool/.cache/go-build"
+          export HOME="/root"
+          [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
+          [ -d /usr/local/go ] &&  sudo rm -rf /usr/local/go
+          [ -f /usr/local/bin/go ] &&  sudo rm -rf /usr/local/bin/go
+          sudo tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
+          echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+          export PATH=$PATH:/usr/local/go/bin
+          which go
+          go env
+        
+      - name: Docker Compose Setup.
+        run: |
+          sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+  
+      - name: Installing dependencies.
+        run: |
+          sudo apt update -y
+          sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
 
       - name: Run Init
         run: |
-          sudo apt update && sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           ./docker.local/bin/init.setup.sh
 
       - name: Build Base
