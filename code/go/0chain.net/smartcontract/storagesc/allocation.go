@@ -808,9 +808,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			})
 		}
 
-		movedtoChallengePool := alloc.MovedToChallenge
-		movedtoChallengePool += sum
-		alloc.MovedToChallenge = movedtoChallengePool
+		alloc.MovedToChallenge += sum
 	}
 
 	return nil
