@@ -766,6 +766,14 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
+	logging.Logger.Info("Jayash adjust_challenge_pool",
+		zap.String("allocation", alloc.ID),
+		zap.Any("changes", changes),
+		zap.Any("old_duration", odr),
+		zap.Any("new_duration", ndr),
+		zap.Any("time_unit", timeUnit),
+		zap.Any("old_terms", oterms))
+
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
@@ -810,6 +818,11 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		movedtoChallengePool += sum
 		alloc.MovedToChallenge = movedtoChallengePool
 	}
+
+	logging.Logger.Info("Jayash 2 adjust_challenge_pool",
+		zap.String("allocation", alloc.ID),
+		zap.Any("sum", sum),
+		zap.Any("changed", changed))
 
 	return nil
 }
