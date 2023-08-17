@@ -42,6 +42,7 @@ jobs:
         sudo make MCL_USE_GMP=0 -C mcl -j $(nproc) lib/libmclbn256.so install
         sudo make MCL_USE_GMP=0 MCL_DIR=$(pwd)/mcl -j $(nproc) lib/libbls256.so install
         ls /usr/local/lib
+        echo $LD_LIBRARY_PATH
         cd ..
 
     - name: Docker Network Setup.
