@@ -27,18 +27,19 @@ import (
 // ------------- GlobalNode ------------------------
 
 type ZCNSConfig struct {
-	MinMintAmount      currency.Coin  `json:"min_mint"`
-	MinBurnAmount      currency.Coin  `json:"min_burn"`
-	MinStakeAmount     currency.Coin  `json:"min_stake"`
-	MaxStakeAmount     currency.Coin  `json:"max_stake"`
-	MinLockAmount      currency.Coin  `json:"min_lock"`
-	MinAuthorizers     int64          `json:"min_authorizers"`
-	PercentAuthorizers float64        `json:"percent_authorizers"`
-	MaxFee             currency.Coin  `json:"max_fee"`
-	BurnAddress        string         `json:"burn_address"`
-	OwnerId            string         `json:"owner_id"`
-	Cost               map[string]int `json:"cost"`
-	MaxDelegates       int            `json:"max_delegates"` // MaxDelegates per stake pool
+	MinMintAmount       currency.Coin  `json:"min_mint"`
+	MinBurnAmount       currency.Coin  `json:"min_burn"`
+	MinStakeAmount      currency.Coin  `json:"min_stake"`
+	MinStakePerDelegate currency.Coin  `json:"min_stake_per_delegate"`
+	MaxStakeAmount      currency.Coin  `json:"max_stake"`
+	MinLockAmount       currency.Coin  `json:"min_lock"`
+	MinAuthorizers      int64          `json:"min_authorizers"`
+	PercentAuthorizers  float64        `json:"percent_authorizers"`
+	MaxFee              currency.Coin  `json:"max_fee"`
+	BurnAddress         string         `json:"burn_address"`
+	OwnerId             string         `json:"owner_id"`
+	Cost                map[string]int `json:"cost"`
+	MaxDelegates        int            `json:"max_delegates"` // MaxDelegates per stake pool
 }
 
 type GlobalNode struct {
@@ -88,6 +89,15 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
 			gn.MinStakeAmount, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
+		case MinStakePerDelegate:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
+			}
+			gn.MinStakePerDelegate, err = currency.ParseZCN(amount)
 			if err != nil {
 				return err
 			}

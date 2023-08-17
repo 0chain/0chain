@@ -225,7 +225,8 @@ type GlobalNode struct {
 	// MaxStake boundary of SC.
 	MaxStake currency.Coin `json:"max_stake"`
 	// MinStake boundary of SC.
-	MinStake currency.Coin `json:"min_stake"`
+	MinStake            currency.Coin `json:"min_stake"`
+	MinStakePerDelegate currency.Coin `json:"min_stake_per_delegate"`
 
 	// Reward rate.
 	RewardRate float64 `json:"reward_rate"`
@@ -265,6 +266,10 @@ type GlobalNode struct {
 func (gn *GlobalNode) readConfig() (err error) {
 	const pfx = "smart_contracts.minersc."
 	gn.MinStake, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MinStake]))
+	if err != nil {
+		return
+	}
+	gn.MinStakePerDelegate, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MinStakePerDelegate]))
 	if err != nil {
 		return
 	}
@@ -371,6 +376,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 	switch key {
 	case MinStake:
 		return gn.MinStake, nil
+	case MinStakePerDelegate:
+		return gn.MinStakePerDelegate, nil
 	case MaxStake:
 		return gn.MaxStake, nil
 	case MaxN:
