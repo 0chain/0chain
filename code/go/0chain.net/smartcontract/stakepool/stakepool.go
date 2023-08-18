@@ -384,7 +384,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	balances cstate.StateContextI,
 ) (err error) {
 	total, err := sp.stake()
-	if err == nil {
+	if err != nil {
 		return err
 	}
 
@@ -534,7 +534,7 @@ func (sp *StakePool) DistributeRewards(
 	options ...string,
 ) (err error) {
 	total, err := sp.stake()
-	if err == nil {
+	if err != nil {
 		return err
 	}
 
