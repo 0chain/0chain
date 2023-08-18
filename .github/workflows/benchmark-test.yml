@@ -47,11 +47,6 @@ jobs:
       - name: Build Base
         run: |
           # export HOME="/root"
-          echo $USER
-          ls -lha $HOME
-          pwd
-          ls -lha /
-          ls -lha /root/.docker
           sudo chown "$USER":"$USER" /$HOME/.docker -R
           sudo chmod g+rwx "/$HOME/.docker" -R
           ./docker.local/bin/build.base.sh
