@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"0chain.net/core/encryption"
@@ -229,18 +230,14 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	// Provider may be updated only if authorizer exists/not deleted
 
 	_, err = GetAuthorizerNode(authorizerID, ctx)
-	globalNode, err := GetGlobalNode(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("get global node", zap.Error(err))
-		return "", err
-	}
 
-	switch err {
-	case util.ErrValueNotPresent:
+	switch {
+	case errors.Is(err, util.ErrValueNotPresent):
 		return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
-	case nil:
+	case err == nil:
+
+		globalNode, _ := GetGlobalNode(ctx)
+
 		// existing
 		var sp *StakePool
 		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
