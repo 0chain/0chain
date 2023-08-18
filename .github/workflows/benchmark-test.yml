@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: [self-hosted, build]
+  benchmarks_build:
+    runs-on: [self-hosted, arc-runner]
     steps:
       - name: Actions checkout
         uses: actions/checkout@v2
@@ -47,16 +47,16 @@ jobs:
       - name: Build Base
         run: |
           export HOME="/root"
-          sudo ./docker.local/bin/build.base.sh
+          ./docker.local/bin/build.base.sh
 
       - name: Docker Build Image
         run: |
-          sudo ./docker.local/bin/build.benchmark.sh
+          ./docker.local/bin/build.benchmark.sh
 
       - name: Run tests
         run: |
           cd docker.local/benchmarks
-          sudo ../bin/start.benchmarks.sh | tee benchmark_run_output
+          ../bin/start.benchmarks.sh | tee benchmark_run_output
           grep -R "Results" -A 1000 benchmark_run_output > benchmark_results
           echo "TESTS_RAN=true" >> $GITHUB_ENV
           if grep -aq "FAILED" benchmark_results; then
