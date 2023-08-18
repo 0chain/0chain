@@ -46,8 +46,6 @@ type blockReward struct {
 	BlockRewardChangePeriod int64            `json:"block_reward_change_period"`
 	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio"`
 	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
-	SharderWeight           float64          `json:"sharder_weight"`
-	MinerWeight             float64          `json:"miner_weight"`
 	TriggerPeriod           int64            `json:"trigger_period"`
 	Gamma                   blockRewardGamma `json:"gamma"`
 	Zeta                    blockRewardZeta  `json:"zeta"`
@@ -246,14 +244,6 @@ func (conf *Config) validate() (err error) {
 			conf.MaxCharge)
 	}
 
-	if conf.BlockReward.SharderWeight < 0 {
-		return fmt.Errorf("negative block_reward.sharder_weight: %v",
-			conf.BlockReward.SharderWeight)
-	}
-	if conf.BlockReward.MinerWeight < 0 {
-		return fmt.Errorf("negative block_reward.miner_weight: %v",
-			conf.BlockReward.MinerWeight)
-	}
 	if len(conf.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
