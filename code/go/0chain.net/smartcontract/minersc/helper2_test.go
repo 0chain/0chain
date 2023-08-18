@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -120,6 +121,10 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 	} else {
 		require.EqualValues(t, global.RewardRate, scYaml.rewardRate)
 	}
+
+	x := float64(f.minerReward(EtBoth))
+
+	fmt.Print(x)
 
 	require.InEpsilon(t, float64(f.minerReward(EtBoth)), float64(mn.Reward), errEpsilon)
 
