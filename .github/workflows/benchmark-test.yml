@@ -52,8 +52,8 @@ jobs:
           pwd
           ls -lha /
           ls -lha /root/.docker
-          sudo chown "$USER":"$USER" /root/.docker -R
-          sudo chmod g+rwx "/home/$USER/.docker" -R
+          sudo chown "$USER":"$USER" /$HOME/.docker -R
+          sudo chmod g+rwx "/$HOME/.docker" -R
           ./docker.local/bin/build.base.sh
 
       - name: Docker Build Image
