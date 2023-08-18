@@ -128,6 +128,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 		writePrice:    0.1,
 	}
 
+	var challengePoolBalance = int64(700000)
+
 	var allocation = StorageAllocation{
 		DataShards:    1,
 		ParityShards:  1,
@@ -187,6 +189,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
 				Size:          1 * GB,
+				LatestCompletedChallenge: &StorageChallenge{
+					Created: allocation.Expiration,
+				},
+				ChallengePoolIntegralValue: currency.Coin(challengePoolBalance / int64(allocation.DataShards+allocation.ParityShards)),
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
@@ -201,7 +207,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 		}
 	}
 
-	var challengePoolBalance = int64(700000)
 	var thisExpires = common.Timestamp(222)
 
 	var blobberOffer = int64(123000)
@@ -307,11 +312,15 @@ func TestFinalizeAllocation(t *testing.T) {
 				Stats: &StorageAllocationStats{
 					UsedSize:        blobberUsedSize,
 					OpenChallenges:  int64(i + 1),
-					TotalChallenges: int64(i + 1), // add open challenges and success challenges
+					TotalChallenges: int64(i + 1), // add open challenges and success  challenges
 				},
 				MinLockDemand: 200 + currency.Coin(minLockDemand),
 				Spent:         100,
 				Size:          1 * GB,
+				LatestCompletedChallenge: &StorageChallenge{
+					Created: allocation.Expiration,
+				},
+				ChallengePoolIntegralValue: 0,
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
@@ -421,9 +430,10 @@ func testCancelAllocation(
 		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
 	}
 
-	for _, ba := range f.allocation.BlobberAllocs {
+	for i, ba := range f.allocation.BlobberAllocs {
+
 		blobberWritePriceWeight := float64(ba.Terms.WritePrice) / float64(totalWritePrice)
-		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight)
+		reward, err := currency.Float64ToCoin(float64(totalCancellationCharge) * blobberWritePriceWeight * f._passRates[i])
 
 		if err != nil {
 			return fmt.Errorf("failed to convert float to coin: %v", err)
@@ -438,7 +448,7 @@ func testCancelAllocation(
 	req.decode(input)
 	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
 	remainingWritePool, _ := allocation.WritePool.Int64()
-	require.Equal(t, int64(0), remainingWritePool)
+	require.Equal(t, int64(100000183), remainingWritePool)
 
 	return nil
 }
@@ -602,6 +612,7 @@ func setupMocksFinishAllocation(
 		clientBalance: zcnToBalance(3.1),
 		store:         make(map[string]util.MPTSerializable),
 	}
+
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
 			ID: storageScId,
@@ -733,9 +744,10 @@ func (f *formulaeFinalizeAllocation) blobberDelegateReward(bIndex, dIndex int, c
 }
 
 func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellationCharge int64, scYaml Config) float64 {
-	var challengePool = float64(f._challengePool())
 
-	var used = float64(f.allocation.BlobberAllocs[blobberIndex].Stats.UsedSize)
+	ba := f.allocation.BlobberAllocs[blobberIndex]
+
+	var used = float64(ba.Stats.UsedSize)
 	var totalUsed = float64(f.allocation.Stats.UsedSize)
 	var abdUsed int64 = 0
 	for _, d := range f.allocation.BlobberAllocs {
@@ -745,8 +757,11 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 
 	var passRate = f._passRates[blobberIndex]
 
-	maxChallengeCompletionDTU := float64(scYaml.MaxChallengeCompletionTime) / float64(scYaml.TimeUnit)
-	adjustableChallengePoolTokens := challengePool * maxChallengeCompletionDTU
+	timeDiffForLastCompletedChallenge := f.allocation.Expiration - f.allocation.BlobberAllocs[blobberIndex].LatestCompletedChallenge.Created
+	allocExpiryDuration := timeDiffForLastCompletedChallenge.Duration()
+
+	maxChallengeCompletionDTU := float64(scYaml.MaxChallengeCompletionTime+allocExpiryDuration) / float64(scYaml.TimeUnit)
+	adjustableChallengePoolTokens := float64(ba.ChallengePoolIntegralValue) * maxChallengeCompletionDTU
 
 	ratio := used / (totalUsed * float64(f.allocation.DataShards+f.allocation.ParityShards) / float64(f.allocation.DataShards))
 
@@ -833,7 +848,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := event.NewEventDb(access, config.DbSettings{})
+	eventDb, err := event.NewEventDbWithoutWorker(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

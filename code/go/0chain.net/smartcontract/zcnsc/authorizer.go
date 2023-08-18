@@ -120,7 +120,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Creating Provider
 
 	var sp *StakePool
-	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, params.StakePoolSettings, ctx)
+	sp, err = zcn.getOrUpdateStakePool(authorizerID, params.StakePoolSettings, ctx)
 	if err != nil {
 		return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 	}
@@ -145,6 +145,22 @@ func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
 		return
 	}
 	numAuth.Count++
+
+	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
+	return
+}
+
+func decreaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
+	numAuth := &AuthCount{}
+	numAuth.Count, err = getAuthorizerCount(ctx)
+	if err != nil {
+		return
+	}
+
+	numAuth.Count--
+	if numAuth.Count < 0 {
+		return fmt.Errorf("authorizer count is negative")
+	}
 
 	_, err = ctx.InsertTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
 	return
@@ -210,14 +226,6 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 		return "", common.NewError(code, "access denied, allowed for delegate_wallet owner only")
 	}
 
-	globalNode, err := GetGlobalNode(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(code, msg)
-		Logger.Error("get global node", zap.Error(err))
-		return "", err
-	}
-
 	// Provider may be updated only if authorizer exists/not deleted
 
 	_, err = GetAuthorizerNode(authorizerID, ctx)
@@ -227,7 +235,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	case nil:
 		// existing
 		var sp *StakePool
-		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
+		sp, err = zcn.getOrUpdateStakePool(authorizerID, poolSettings, ctx)
 		if err != nil {
 			return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 		}
@@ -308,6 +316,10 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 		err = common.NewError(errorCode, msg)
 		Logger.Error("delete trie node", zap.Error(err))
 		return "", err
+	}
+
+	if err := decreaseAuthorizerCount(ctx); err != nil {
+		return "", common.NewErrorf(errorCode, "could not decrease authorizer count: %v", err)
 	}
 
 	ctx.EmitEvent(event.TypeStats, event.TagDeleteAuthorizer, authorizerID, authorizerID)

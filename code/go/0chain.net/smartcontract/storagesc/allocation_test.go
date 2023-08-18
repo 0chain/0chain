@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/tokenpool"
 	"errors"
 	"fmt"
 	"math"
@@ -282,6 +283,7 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 }
 
 func TestChangeBlobbers(t *testing.T) {
+
 	const (
 		confMinAllocSize    = 1024
 		mockOwner           = "mock owner"
@@ -291,7 +293,7 @@ func TestChangeBlobbers(t *testing.T) {
 		mockPoolId          = "mock pool id"
 		confTimeUnit        = 720 * time.Hour
 		mockMaxOffDuration  = 744 * time.Hour
-		mockBlobberCapacity = 20 * confMinAllocSize
+		mockBlobberCapacity = 200000000 * confMinAllocSize
 		mockMinPrice        = 0
 	)
 
@@ -362,6 +364,17 @@ func TestChangeBlobbers(t *testing.T) {
 					ReadPrice:  mockReadPrice,
 					WritePrice: mockWritePrice,
 				},
+				Stats: &StorageAllocationStats{
+					UsedSize:          mockBlobberCapacity / 2,
+					SuccessChallenges: 100,
+					FailedChallenges:  2,
+					TotalChallenges:   102,
+					OpenChallenges:    0,
+				},
+				LatestCompletedChallenge: &StorageChallenge{
+					Created: mockAllocationExpiry,
+				},
+				ChallengePoolIntegralValue: 0,
 			}
 			if i < arg.blobberInChallenge {
 				err := bcPart.Add(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
@@ -399,7 +412,23 @@ func TestChangeBlobbers(t *testing.T) {
 					WritePrice: mockWritePrice,
 				},
 				NotAvailable: false,
+				Allocated:    49268107,
+				SavedData:    298934,
 			}
+
+			var id = strconv.Itoa(i)
+			var sp = newStakePool()
+			sp.Settings.ServiceChargeRatio = blobberYaml.serviceCharge
+			sp.TotalOffers = currency.Coin(200000000000)
+			var delegatePool = &stakepool.DelegatePool{}
+			delegatePool.Balance = zcnToBalance(10000000000.0)
+			delegatePool.DelegateID = encryption.Hash("delegate " + id)
+			//delegatePool.MintAt = stake.MintAt
+			sp.Pools["paula "+id] = delegatePool
+			sp.Pools["paula "+id] = delegatePool
+			sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
+			require.NoError(t, sp.Save(spenum.Blobber, blobber.ID, balances))
+
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
 			blobbers = append(blobbers, blobber)
@@ -416,6 +445,14 @@ func TestChangeBlobbers(t *testing.T) {
 			WritePriceRange:  PriceRange{mockMinPrice, mockMaxPrice},
 			DataShards:       arg.dataShards,
 			ParityShards:     arg.parityShards,
+			WritePool:        100000000000,
+			Stats: &StorageAllocationStats{
+				UsedSize:          int64(arg.dataShards+arg.parityShards) * mockBlobberCapacity / 2,
+				SuccessChallenges: int64(arg.dataShards+arg.parityShards) * 100,
+				FailedChallenges:  int64(arg.dataShards+arg.parityShards) * 2,
+				TotalChallenges:   int64(arg.dataShards+arg.parityShards) * 102,
+				OpenChallenges:    0,
+			},
 		}
 
 		if len(arg.addBlobberID) > 0 {
@@ -431,6 +468,16 @@ func TestChangeBlobbers(t *testing.T) {
 			_, err := balances.InsertTrieNode(stakePoolKey(spenum.Blobber, arg.addBlobberID), &sp)
 			require.NoError(t, err)
 		}
+
+		var cPool = challengePool{
+			ZcnPool: &tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					ID:      alloc.ID,
+					Balance: 100000000,
+				},
+			},
+		}
+		require.NoError(t, cPool.save(sc.ID, alloc, balances))
 
 		return blobbers, arg.addBlobberID, arg.removeBlobberID, sc, alloc, now, balances
 
@@ -494,8 +541,8 @@ func TestChangeBlobbers(t *testing.T) {
 			name: "remove_blobber_doesnt_exist",
 			args: args{
 				numBlobbers:          6,
-				blobbersInAllocation: 6,
-				addBlobberID:         "add_blobber_id",
+				blobbersInAllocation: 4,
+				addBlobberID:         "blobber_5",
 				removeBlobberID:      "blobber_non_existent",
 				dataShards:           5,
 			},
@@ -565,7 +612,7 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, now, balances)
+			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, now, balances, sc, clientId)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -1625,8 +1672,8 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, balances, removeBlobberID, allocationID := setup(tt.args)
-			err := removeAllocationFromBlobber(balances,
-				allocationID, removeBlobberID)
+			err := removeAllocationFromBlobberPartitions(balances,
+				removeBlobberID, allocationID)
 			require.NoError(t, err)
 			validate(tt.want, balances)
 		})
@@ -1646,8 +1693,39 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		err            error
 	)
 
+	confMinAllocSize := 1024
+	mockBlobberCapacity := 2000 * confMinAllocSize
+
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
+
+	alloc.Stats = &StorageAllocationStats{
+		UsedSize:          int64(alloc.DataShards+alloc.ParityShards) * int64(mockBlobberCapacity) / 2,
+		SuccessChallenges: int64(alloc.DataShards+alloc.ParityShards) * 100,
+		FailedChallenges:  int64(alloc.DataShards+alloc.ParityShards) * 2,
+		TotalChallenges:   int64(alloc.DataShards+alloc.ParityShards) * 102,
+		OpenChallenges:    0,
+	}
+
+	for _, ba := range alloc.BlobberAllocs {
+		ba.Stats = &StorageAllocationStats{
+			UsedSize:          int64(mockBlobberCapacity) / 2,
+			SuccessChallenges: 100,
+			FailedChallenges:  2,
+			TotalChallenges:   102,
+			OpenChallenges:    0,
+		}
+
+		ba.LatestCompletedChallenge = &StorageChallenge{
+			Created: alloc.Expiration,
+		}
+		ba.ChallengePoolIntegralValue = 0
+	}
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
+	if err != nil {
+		return
+	}
 
 	cp := &StorageAllocation{}
 	err = cp.Decode(alloc.Encode())
@@ -1784,6 +1862,25 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	nblobAlloc, ok := alloc.BlobberAllocsMap[nb.id]
 	require.True(t, ok)
 
+	alloc.BlobberAllocsMap[nb.id].Stats = &StorageAllocationStats{
+		UsedSize:          int64(mockBlobberCapacity) / 2,
+		SuccessChallenges: 100,
+		FailedChallenges:  2,
+		TotalChallenges:   102,
+		OpenChallenges:    0,
+	}
+
+	alloc.BlobberAllocsMap[nb.id].LatestCompletedChallenge = &StorageChallenge{
+		Created: alloc.Expiration,
+	}
+
+	alloc.BlobberAllocsMap[nb.id].ChallengePoolIntegralValue = 0
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
+	if err != nil {
+		return
+	}
+
 	nsp, err := ssc.getStakePool(spenum.Blobber, nb.id, balances)
 	require.NoError(t, err)
 	require.Equal(t, nsp.TotalOffers, nblobAlloc.Offer())
@@ -1881,6 +1978,24 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		RemoveBlobberId: nb2.id,
 	}
 
+	alloc.BlobberAllocsMap[nb2.id].Stats = &StorageAllocationStats{
+		UsedSize:          int64(mockBlobberCapacity) / 2,
+		SuccessChallenges: 100,
+		FailedChallenges:  2,
+		TotalChallenges:   102,
+		OpenChallenges:    0,
+	}
+
+	alloc.BlobberAllocsMap[nb2.id].LatestCompletedChallenge = &StorageChallenge{
+		Created: alloc.Expiration,
+	}
+
+	alloc.BlobberAllocsMap[nb2.id].ChallengePoolIntegralValue = 0
+	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
+	if err != nil {
+		return
+	}
+
 	resp, err = req.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
 	require.NoError(t, err)
 
@@ -1976,6 +2091,8 @@ func Test_finalize_allocation(t *testing.T) {
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 		err      error
 	)
+	confMinAllocSize := 1024
+	mockBlobberCapacity := 2000 * confMinAllocSize
 
 	setConfig(t, balances)
 
@@ -1987,6 +2104,34 @@ func Test_finalize_allocation(t *testing.T) {
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
+
+	alloc.Stats = &StorageAllocationStats{
+		UsedSize:          int64(alloc.DataShards+alloc.ParityShards) * int64(mockBlobberCapacity) / 2,
+		SuccessChallenges: int64(alloc.DataShards+alloc.ParityShards) * 100,
+		FailedChallenges:  int64(alloc.DataShards+alloc.ParityShards) * 2,
+		TotalChallenges:   int64(alloc.DataShards+alloc.ParityShards) * 102,
+		OpenChallenges:    0,
+	}
+
+	for _, ba := range alloc.BlobberAllocs {
+		ba.Stats = &StorageAllocationStats{
+			UsedSize:          int64(mockBlobberCapacity) / 2,
+			SuccessChallenges: 100,
+			FailedChallenges:  2,
+			TotalChallenges:   102,
+			OpenChallenges:    0,
+		}
+
+		ba.LatestCompletedChallenge = &StorageChallenge{
+			Created: 0,
+		}
+		ba.ChallengePoolIntegralValue = 0
+	}
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
+	if err != nil {
+		return
+	}
 
 	var b1 *Client
 	for _, b := range blobs {
@@ -2142,6 +2287,37 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
+
+	confMinAllocSize := 1024
+	mockBlobberCapacity := 2000 * confMinAllocSize
+
+	alloc.Stats = &StorageAllocationStats{
+		UsedSize:          int64(alloc.DataShards+alloc.ParityShards) * int64(mockBlobberCapacity) / 2,
+		SuccessChallenges: int64(alloc.DataShards+alloc.ParityShards) * 100,
+		FailedChallenges:  int64(alloc.DataShards+alloc.ParityShards) * 2,
+		TotalChallenges:   int64(alloc.DataShards+alloc.ParityShards) * 102,
+		OpenChallenges:    0,
+	}
+
+	for _, ba := range alloc.BlobberAllocs {
+		ba.Stats = &StorageAllocationStats{
+			UsedSize:          int64(mockBlobberCapacity) / 2,
+			SuccessChallenges: 100,
+			FailedChallenges:  2,
+			TotalChallenges:   102,
+			OpenChallenges:    0,
+		}
+
+		ba.LatestCompletedChallenge = &StorageChallenge{
+			Created: 0,
+		}
+		ba.ChallengePoolIntegralValue = 0
+	}
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
+	if err != nil {
+		return
+	}
 
 	var b1 *Client
 	for _, b := range blobs {
