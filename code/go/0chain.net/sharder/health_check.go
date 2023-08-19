@@ -401,6 +401,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	startTime := time.Now()
 
+	blockSynced := false
+
 	var hcStatus BlockHealthCheckStatus = HealthCheckSuccess
 
 	defer sc.hcUpdateBlockStatus(scanMode, &hcStatus)
@@ -432,11 +434,15 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		} else {
 			current.roundSummary.RepairSuccess++
 		}
+
+		blockSynced = true
 	}
 
 	if !sc.isValidRound(r) {
 		// Unable to get the round summary information.
 		hcStatus = HealthCheckFailure
+
+		blockSynced = true
 		return
 	}
 
@@ -452,6 +458,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		} else {
 			current.blockSummary.RepairFailure++
 		}
+
+		blockSynced = true
 	}
 
 	if bs == nil {
@@ -474,6 +482,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	if needTxnSummary {
 		// Missing txn summary. Need to pull from remote sharder.
 		current.txnSummary.Missing++
+		blockSynced = true
 	}
 
 	// The sharder needs txn_summary. Get the block
@@ -515,6 +524,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			}
 			current.block.RepairSuccess++
 		}
+
+		blockSynced = true
 	}
 
 	// Check if the sharder needs to store txn summary
@@ -544,9 +555,13 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			return
 		}
 		current.txnSummary.RepairSuccess++
+
+		blockSynced = true
 	}
 
 	endTime := time.Now()
 
-	chain.SynchronizedBlocksTimer.Update(endTime.Sub(startTime))
+	if blockSynced {
+		chain.SynchronizedBlocksTimer.Update(endTime.Sub(startTime))
+	}
 }
