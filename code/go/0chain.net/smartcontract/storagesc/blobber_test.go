@@ -109,10 +109,10 @@ func Test_flow_reward(t *testing.T) {
 	t.Skip("rewrite this tests")
 
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		client         = newClient(2000*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
 
 		// no owner
 		reader = newClient(100*x10, balances)
@@ -122,7 +122,7 @@ func Test_flow_reward(t *testing.T) {
 	conf := setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -654,10 +654,10 @@ func inspectCPIV(t *testing.T, ssc *StorageSmartContract, allocID string, balanc
 func Test_flow_penalty(t *testing.T) {
 	t.Skip("rewrite this tests")
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		client         = newClient(2000*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
 
 		err error
 	)
@@ -665,7 +665,7 @@ func Test_flow_penalty(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -872,7 +872,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -1077,7 +1077,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 		client   = newClient(1000*x10, balances)
-		tp, exp  = int64(0), int64(toSeconds(time.Hour))
+		tp       = int64(0)
 		conf     = setConfig(t, balances)
 
 		err error
@@ -1087,7 +1087,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)

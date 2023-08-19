@@ -797,10 +797,10 @@ func TestGetRandomSubSlice(t *testing.T) {
 func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
 	*StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode, []*Client) {
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, true)
-		client         = newClient(2000*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, true)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
 
 		// no owner
 		reader = newClient(100*x10, balances)
@@ -809,7 +809,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 
 	// new allocation
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
 
 	// blobbers: stake 10k, balance 40k
 
