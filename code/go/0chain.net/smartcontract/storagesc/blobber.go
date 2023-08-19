@@ -415,8 +415,12 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 		return "", common.NewError("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
-
-	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate)
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf("blobber_health_check_failed",
+			"cannot get config: %v", err)
+	}
+	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate, conf.HealthCheckPeriod)
 	blobber.LastHealthCheck = t.CreationDate
 
 	emitBlobberHealthCheck(blobber, downtime, balances)

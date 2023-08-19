@@ -35,6 +35,7 @@ const (
 	OwnerID             = "owner_id"
 	Cost                = "cost"
 	MaxDelegates        = "max_delegates"
+	HealthCheckPeriod   = "health_check_period"
 )
 
 var CostFunctions = []string{
@@ -116,6 +117,7 @@ func (gn *GlobalNode) ToStringMap() config.StringMap {
 		BurnAddress:         fmt.Sprintf("%v", gn.BurnAddress),
 		OwnerID:             fmt.Sprintf("%v", gn.OwnerId),
 		MaxDelegates:        fmt.Sprintf("%v", gn.MaxDelegates),
+		HealthCheckPeriod:   fmt.Sprintf("%v", gn.HealthCheckPeriod),
 	}
 
 	for _, key := range CostFunctions {
@@ -164,6 +166,7 @@ func getConfig() (conf *ZCNSConfig, err error) {
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
 	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
+	conf.HealthCheckPeriod = cfg.GetDuration(postfix(HealthCheckPeriod))
 
 	return conf, nil
 }

@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	config2 "0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
@@ -226,6 +227,7 @@ type GlobalNode struct {
 	// MinStake boundary of SC.
 	MinStake            currency.Coin `json:"min_stake"`
 	MinStakePerDelegate currency.Coin `json:"min_stake_per_delegate"`
+	HealthCheckPeriod   time.Duration `json:"health_check_period"`
 
 	// Reward rate.
 	RewardRate float64 `json:"reward_rate"`
@@ -276,6 +278,8 @@ func (gn *GlobalNode) readConfig() (err error) {
 	if err != nil {
 		return
 	}
+	gn.HealthCheckPeriod = config2.SmartContractConfig.GetDuration(pfx + SettingName[HealthCheckPeriod])
+
 	gn.MaxN = config2.SmartContractConfig.GetInt(pfx + SettingName[MaxN])
 	gn.MinN = config2.SmartContractConfig.GetInt(pfx + SettingName[MinN])
 	gn.TPercent = config2.SmartContractConfig.GetFloat64(pfx + SettingName[TPercent])
@@ -377,6 +381,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.MinStake, nil
 	case MinStakePerDelegate:
 		return gn.MinStakePerDelegate, nil
+	case HealthCheckPeriod:
+		return gn.HealthCheckPeriod, nil
 	case MaxStake:
 		return gn.MaxStake, nil
 	case MaxN:

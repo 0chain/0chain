@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
@@ -65,6 +66,7 @@ const (
 	CostSharderKeep
 	CostKillMiner
 	CostKillSharder
+	HealthCheckPeriod
 	NumberOfSettings
 )
 
@@ -113,6 +115,7 @@ func initSettingName() {
 	SettingName[MaxMint] = "max_mint"
 	SettingName[OwnerId] = "owner_id"
 	SettingName[CooldownPeriod] = "cooldown_period"
+	SettingName[HealthCheckPeriod] = "health_check_period"
 	SettingName[CostAddMiner] = "cost.add_miner"
 	SettingName[CostAddSharder] = "cost.add_sharder"
 	SettingName[CostDeleteMiner] = "cost.delete_miner"
@@ -164,6 +167,7 @@ func initSettings() {
 		MaxMint.String():                     {MaxMint, config.CurrencyCoin},
 		OwnerId.String():                     {OwnerId, config.Key},
 		CooldownPeriod.String():              {CooldownPeriod, config.Int64},
+		HealthCheckPeriod.String():           {HealthCheckPeriod, config.Duration},
 		CostAddMiner.String():                {CostAddMiner, config.Cost},
 		CostAddSharder.String():              {CostAddSharder, config.Cost},
 		CostDeleteMiner.String():             {CostDeleteMiner, config.Cost},
@@ -205,6 +209,16 @@ func (gn *GlobalNode) setInt(key string, change int) error {
 		gn.NumShardersRewarded = change
 	case NumSharderDelegatesRewarded:
 		gn.NumSharderDelegatesRewarded = change
+	default:
+		return fmt.Errorf("key: %v not implemented as int", key)
+	}
+	return nil
+}
+
+func (gn *GlobalNode) setDuration(key string, change time.Duration) error {
+	switch Settings[key].Setting {
+	case HealthCheckPeriod:
+		gn.HealthCheckPeriod = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int", key)
 	}
@@ -341,6 +355,14 @@ func (gn *GlobalNode) set(key string, change string) error {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
 		if err := gn.setInt64(key, value); err != nil {
+			return err
+		}
+	case config.Duration:
+		value, err := time.ParseDuration(change)
+		if err != nil {
+			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
+		}
+		if err := gn.setDuration(key, value); err != nil {
 			return err
 		}
 	case config.Float64:

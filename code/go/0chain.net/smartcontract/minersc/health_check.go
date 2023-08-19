@@ -8,7 +8,7 @@ import (
 )
 
 func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
-	_ []byte, _ *GlobalNode, balances cstate.StateContextI) (resp string, err error) {
+	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (resp string, err error) {
 	mn, err := getMinerNode(t.ClientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("miner_health_check_failed",
@@ -21,7 +21,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	}
 
 	//TODO move it to config
-	downtime := common.Downtime(mn.LastHealthCheck, t.CreationDate)
+	downtime := common.Downtime(mn.LastHealthCheck, t.CreationDate, gn.HealthCheckPeriod)
 	mn.LastHealthCheck = t.CreationDate
 	emitMinerHealthCheck(mn, downtime, balances)
 
@@ -34,7 +34,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
-	_ []byte, _ *GlobalNode, balances cstate.StateContextI) (
+	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 	sn, err := msc.getSharderNode(t.ClientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -47,7 +47,7 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 			"can't get the sharder "+t.ClientID+": "+err.Error())
 	}
 
-	downtime := common.Downtime(sn.LastHealthCheck, t.CreationDate)
+	downtime := common.Downtime(sn.LastHealthCheck, t.CreationDate, gn.HealthCheckPeriod)
 	sn.LastHealthCheck = t.CreationDate
 	emitSharderHealthCheck(sn, downtime, balances)
 
