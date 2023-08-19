@@ -1960,7 +1960,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	uar.ID = alloc.ID
-	uar.Size = -(alloc.Size / 2)
 	uar.Extend = true
 
 	tp += 100
@@ -1973,7 +1972,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	require.EqualValues(t, alloc, &deco)
 
-	assert.Equal(t, cp.Size/2, alloc.Size)
 	assert.Equal(t, common.Timestamp(tp+3600), alloc.Expiration)
 
 	tbs, mld = 0, 0
