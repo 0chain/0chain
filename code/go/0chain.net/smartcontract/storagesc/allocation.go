@@ -726,7 +726,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	var changed bool
 	sum := currency.Coin(0)
-	for _, ch := range changes {
+	for i, ch := range changes {
 		_, err = ch.Int64()
 		if err != nil {
 			return err
@@ -736,6 +736,8 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			err = alloc.moveToChallengePool(cp, ch)
 			sum += ch
 			changed = true
+
+			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch
 		default:
 			// no changes for the blobber
 		}
@@ -758,6 +760,8 @@ func (sc *StorageSmartContract) adjustChallengePool(
 				Amount:       i,
 			})
 		}
+
+		alloc.MovedToChallenge += sum
 	}
 
 	return nil
