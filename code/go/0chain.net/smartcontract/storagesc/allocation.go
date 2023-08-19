@@ -603,52 +603,6 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 		balances)
 }
 
-// closeAllocation making it expired; the allocation will be alive the
-// challenge_completion_time and be closed then
-func (sc *StorageSmartContract) closeAllocation(
-	t *transaction.Transaction,
-	alloc *StorageAllocation,
-	maxChallengeCompletionTime time.Duration,
-	balances chainstate.StateContextI,
-) (resp string, err error) {
-	if alloc.Expiration-t.CreationDate <
-		toSeconds(maxChallengeCompletionTime) {
-		return "", common.NewError("allocation_closing_failed",
-			"doesn't need to close allocation is about to expire")
-	}
-
-	// mark as expired, but it will be alive at least chellenge_competion_time
-	alloc.Expiration = t.CreationDate
-
-	for _, ba := range alloc.BlobberAllocs {
-		sp, err := sc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
-		if err != nil {
-			return "", fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
-				err)
-		}
-		if err := sp.reduceOffer(ba.Offer()); err != nil {
-			return "", common.NewError("fini_alloc_failed",
-				"error removing offer: "+err.Error())
-		}
-		if err = sp.Save(spenum.Blobber, ba.BlobberID, balances); err != nil {
-			return "", fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
-				err)
-		}
-	}
-
-	// Save allocation
-
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return "", common.NewError("allocation_closing_failed",
-			"can't save allocation: "+err.Error())
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-
-	return string(alloc.Encode()), nil // closing
-}
-
 func (sa *StorageAllocation) saveUpdatedAllocation(
 	blobbers []*StorageNode,
 	balances chainstate.StateContextI,

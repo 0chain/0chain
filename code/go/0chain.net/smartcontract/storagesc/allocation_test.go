@@ -1505,60 +1505,6 @@ func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
 	assert.Len(t, blobbers, 2)
 }
 
-func TestStorageSmartContract_closeAllocation(t *testing.T) {
-
-	const (
-		allocTxHash, clientID, pubKey, closeTxHash = "a5f4c3d2_tx_hex",
-			"client_hex", "pub_key_hex", "close_tx_hash"
-
-		errMsg1 = "allocation_closing_failed: " +
-			"doesn't need to close allocation is about to expire"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances(t, false)
-		tx       transaction.Transaction
-
-		alloc *StorageAllocation
-		resp  string
-		err   error
-	)
-
-	createNewTestAllocation(t, ssc, allocTxHash, clientID, pubKey, balances)
-
-	tx.Hash = closeTxHash
-	tx.ClientID = clientID
-	tx.CreationDate = 1050
-
-	alloc, err = ssc.getAllocation(allocTxHash, balances)
-	storageAllocationToAllocationTable(alloc)
-
-	require.NoError(t, err)
-
-	// 1. expiring allocation
-	alloc.Expiration = 1049
-	var conf = Config{
-		MaxChallengeCompletionTime: 30 * time.Minute,
-	}
-
-	_, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
-	requireErrMsg(t, err, errMsg1)
-
-	// 2. close (all related pools has created)
-	alloc.Expiration = tx.CreationDate +
-		toSeconds(conf.MaxChallengeCompletionTime) + 20
-	resp, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
-	require.NoError(t, err)
-	assert.NotZero(t, resp)
-	// checking out
-
-	alloc, err = ssc.getAllocation(alloc.ID, balances)
-	require.NoError(t, err)
-
-	require.Equal(t, tx.CreationDate, alloc.Expiration)
-}
-
 func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 	cp = new(StorageAllocation)
 	require.NoError(t, cp.Decode(mustEncode(t, alloc)))
