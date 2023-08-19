@@ -414,7 +414,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	// Get the current counters.
 	current := &cc.counters.current
 
-	missingRoundsBefore := current.roundSummary.Missing
+	blockSyncRequired := false
 
 	var r *round.Round
 	var bs *block.BlockSummary
@@ -426,6 +426,10 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	if !foundRoundSummary || !sc.isValidRound(r) {
 		// Update missing round summary
 		current.roundSummary.Missing++
+
+		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("foundRoundSummary", foundRoundSummary))
 
 		// No round found. Fetch the round summary and round information.
 		r = sc.syncRoundSummary(ctx, rNum, -config.BatchSize, scanMode)
@@ -448,6 +452,10 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	bs, foundBlockSummary := sc.hasBlockSummary(ctx, r.BlockHash)
 	if !foundBlockSummary {
 		current.blockSummary.Missing++
+
+		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("foundBlockSummary", foundBlockSummary))
 
 		// Missing block summary. Sync the blocks
 		bs = sc.syncBlockSummary(ctx, r, -config.BatchSize, scanMode)
@@ -480,6 +488,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		// Missing txn summary. Need to pull from remote sharder.
 		current.txnSummary.Missing++
 
+		blockSyncRequired = true
 	}
 
 	// The sharder needs txn_summary. Get the block
@@ -490,6 +499,10 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			// It needs a block either to fix txnsummary or missing block
 			// that it should have sharded.
 			current.block.Missing++
+
+			blockSyncRequired = true
+
+			Logger.Info("Missing++", zap.Any("foundBlock", foundBlock))
 
 			b = sc.requestBlock(ctx, r)
 			if b == nil {
@@ -556,7 +569,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	endTime := time.Now()
 
-	if current.roundSummary.Missing > missingRoundsBefore {
+	if blockSyncRequired {
 		chain.SynchronizedBlocksTimer.Update(endTime.Sub(startTime))
 	}
 }
