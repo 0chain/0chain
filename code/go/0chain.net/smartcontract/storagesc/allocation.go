@@ -945,7 +945,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if t.ClientID != alloc.Owner {
-		if !alloc.ThirdPartyExtendable || (request.Size <= 0 && request.Extend == false) {
+		if !alloc.ThirdPartyExtendable || request.Extend == false {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
 		}
@@ -973,10 +973,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
 	if t.ClientID != alloc.Owner /* Third-party actions */ {
-		if request.Extend == false {
-			return "", common.NewError("allocation_updating_failed", "third party can only extend the allocation")
-		}
-
 		err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
 		if err != nil {
 			return "", err
