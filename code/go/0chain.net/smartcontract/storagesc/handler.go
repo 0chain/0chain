@@ -1751,8 +1751,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	}
 
 	var (
-		now            = common.Now()
-		prevExpiration = alloc.Expiration
+		now = common.Now()
 	)
 
 	if req.Extend {
@@ -1779,7 +1778,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	if err := updateAllocBlobberTerms(edb, now, &req, &alloc.StorageAllocation, prevExpiration); err != nil {
+	if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -1929,10 +1928,7 @@ func getRestMinLockDemand(alloc *StorageAllocation, cancelCharge float64) (curre
 
 func updateAllocBlobberTerms(
 	edb *event.EventDb,
-	now common.Timestamp,
-	req *updateAllocationRequest,
-	alloc *StorageAllocation,
-	prevExpiration common.Timestamp) error {
+	alloc *StorageAllocation) error {
 	bIDs := make([]string, 0, len(alloc.BlobberAllocs))
 	for _, ba := range alloc.BlobberAllocs {
 		bIDs = append(bIDs, ba.BlobberID)
@@ -1951,29 +1947,10 @@ func updateAllocBlobberTerms(
 		}
 	}
 
-	if req.UpdateTerms {
-		for i := range alloc.BlobberAllocs {
-			alloc.BlobberAllocs[i].Terms = bTerms[i]
-		}
-	} else {
-		if req.Size > 0 || req.Extend || len(req.AddBlobberId) > 0 {
-			// use average terms
-			diff := req.getBlobbersSizeDiff(alloc) // size difference
-			for i, ba := range alloc.BlobberAllocs {
-				alloc.BlobberAllocs[i].Terms, err = weightedAverage(
-					&ba.Terms,
-					&bTerms[i],
-					now,
-					prevExpiration,
-					alloc.Expiration,
-					ba.Size,
-					diff)
-				if err != nil {
-					return common.NewErrInternal(fmt.Sprintf("could not calculate weighted average: %v", err))
-				}
-			}
-		}
+	for i := range alloc.BlobberAllocs {
+		alloc.BlobberAllocs[i].Terms = bTerms[i]
 	}
+
 	return nil
 }
 
