@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/chain/state"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 
@@ -12,7 +13,6 @@ import (
 
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract"
 	"github.com/pkg/errors"
 )
 
@@ -80,7 +80,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 		return "", errors.Wrap(err, Code)
 	}
 
-	var input smartcontract.StringMap
+	var input config.StringMap
 	err = input.Decode(inputData)
 	if err != nil {
 		return "", errors.Wrap(err, Code)
@@ -102,7 +102,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 	return string(gn.Encode()), nil
 }
 
-func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
+func (gn *GlobalNode) ToStringMap() config.StringMap {
 	fields := map[string]string{
 		MinMintAmount:       fmt.Sprintf("%v", gn.MinMintAmount),
 		MinBurnAmount:       fmt.Sprintf("%v", gn.MinBurnAmount),
@@ -122,7 +122,7 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", gn.Cost[strings.ToLower(key)])
 	}
 
-	return smartcontract.StringMap{
+	return config.StringMap{
 		Fields: fields,
 	}
 }

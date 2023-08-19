@@ -20,6 +20,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 			"can't get the miner "+t.ClientID+": "+err.Error())
 	}
 
+	//TODO move it to config
 	downtime := common.Downtime(mn.LastHealthCheck, t.CreationDate)
 	mn.LastHealthCheck = t.CreationDate
 	emitMinerHealthCheck(mn, downtime, balances)

@@ -11,16 +11,15 @@ import (
 	"strings"
 	"sync"
 
+	config2 "0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -265,46 +264,46 @@ type GlobalNode struct {
 
 func (gn *GlobalNode) readConfig() (err error) {
 	const pfx = "smart_contracts.minersc."
-	gn.MinStake, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MinStake]))
+	gn.MinStake, err = currency.ParseZCN(config2.SmartContractConfig.GetFloat64(pfx + SettingName[MinStake]))
 	if err != nil {
 		return
 	}
-	gn.MinStakePerDelegate, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MinStakePerDelegate]))
+	gn.MinStakePerDelegate, err = currency.ParseZCN(config2.SmartContractConfig.GetFloat64(pfx + SettingName[MinStakePerDelegate]))
 	if err != nil {
 		return
 	}
-	gn.MaxStake, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxStake]))
+	gn.MaxStake, err = currency.ParseZCN(config2.SmartContractConfig.GetFloat64(pfx + SettingName[MaxStake]))
 	if err != nil {
 		return
 	}
-	gn.MaxN = config.SmartContractConfig.GetInt(pfx + SettingName[MaxN])
-	gn.MinN = config.SmartContractConfig.GetInt(pfx + SettingName[MinN])
-	gn.TPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[TPercent])
-	gn.KPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[KPercent])
-	gn.XPercent = config.SmartContractConfig.GetFloat64(pfx + SettingName[XPercent])
-	gn.MaxS = config.SmartContractConfig.GetInt(pfx + SettingName[MaxS])
-	gn.MinS = config.SmartContractConfig.GetInt(pfx + SettingName[MinS])
-	gn.MaxDelegates = config.SmartContractConfig.GetInt(pfx + SettingName[MaxDelegates])
-	gn.RewardRoundFrequency = config.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
-	gn.RewardRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
-	gn.ShareRatio = config.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
-	gn.NumMinerDelegatesRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumMinerDelegatesRewarded])
-	gn.NumShardersRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumShardersRewarded])
-	gn.NumSharderDelegatesRewarded = config.SmartContractConfig.GetInt(pfx + SettingName[NumSharderDelegatesRewarded])
-	gn.BlockReward, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
+	gn.MaxN = config2.SmartContractConfig.GetInt(pfx + SettingName[MaxN])
+	gn.MinN = config2.SmartContractConfig.GetInt(pfx + SettingName[MinN])
+	gn.TPercent = config2.SmartContractConfig.GetFloat64(pfx + SettingName[TPercent])
+	gn.KPercent = config2.SmartContractConfig.GetFloat64(pfx + SettingName[KPercent])
+	gn.XPercent = config2.SmartContractConfig.GetFloat64(pfx + SettingName[XPercent])
+	gn.MaxS = config2.SmartContractConfig.GetInt(pfx + SettingName[MaxS])
+	gn.MinS = config2.SmartContractConfig.GetInt(pfx + SettingName[MinS])
+	gn.MaxDelegates = config2.SmartContractConfig.GetInt(pfx + SettingName[MaxDelegates])
+	gn.RewardRoundFrequency = config2.SmartContractConfig.GetInt64(pfx + SettingName[RewardRoundFrequency])
+	gn.RewardRate = config2.SmartContractConfig.GetFloat64(pfx + SettingName[RewardRate])
+	gn.ShareRatio = config2.SmartContractConfig.GetFloat64(pfx + SettingName[ShareRatio])
+	gn.NumMinerDelegatesRewarded = config2.SmartContractConfig.GetInt(pfx + SettingName[NumMinerDelegatesRewarded])
+	gn.NumShardersRewarded = config2.SmartContractConfig.GetInt(pfx + SettingName[NumShardersRewarded])
+	gn.NumSharderDelegatesRewarded = config2.SmartContractConfig.GetInt(pfx + SettingName[NumSharderDelegatesRewarded])
+	gn.BlockReward, err = currency.ParseZCN(config2.SmartContractConfig.GetFloat64(pfx + SettingName[BlockReward]))
 	if err != nil {
 		return
 	}
-	gn.MaxCharge = config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge])
-	gn.Epoch = config.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
-	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
-	gn.MaxMint, err = currency.ParseZCN(config.SmartContractConfig.GetFloat64(pfx + SettingName[MaxMint]))
+	gn.MaxCharge = config2.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge])
+	gn.Epoch = config2.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
+	gn.RewardDeclineRate = config2.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
+	gn.MaxMint, err = currency.ParseZCN(config2.SmartContractConfig.GetFloat64(pfx + SettingName[MaxMint]))
 	if err != nil {
 		return
 	}
-	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
-	gn.CooldownPeriod = config.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
-	gn.Cost = config.SmartContractConfig.GetStringMapInt(pfx + "cost")
+	gn.OwnerId = config2.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
+	gn.CooldownPeriod = config2.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
+	gn.Cost = config2.SmartContractConfig.GetStringMapInt(pfx + "cost")
 	return nil
 }
 
@@ -343,8 +342,8 @@ func (gn *GlobalNode) validate() error {
 	return nil
 }
 
-func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
-	var out smartcontract.StringMap
+func (gn *GlobalNode) getConfigMap() (config2.StringMap, error) {
+	var out config2.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
 		info, ok := Settings[key]
@@ -355,7 +354,7 @@ func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
 		if err != nil {
 			return out, err
 		}
-		if info.ConfigType == smartcontract.CurrencyCoin {
+		if info.ConfigType == config2.CurrencyCoin {
 			sbSetting, ok := iSetting.(currency.Coin)
 			if !ok {
 				return out, fmt.Errorf("%s key not implemented as state.balance", key)

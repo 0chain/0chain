@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/provider"
@@ -17,7 +18,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 )
@@ -47,7 +47,7 @@ type GlobalNode struct {
 	ID          string `json:"id"`
 }
 
-func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
+func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 	for key, value := range cfg.Fields {
 		switch key {
 		case MinMintAmount:

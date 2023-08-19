@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
@@ -14,7 +15,6 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/benchmark"

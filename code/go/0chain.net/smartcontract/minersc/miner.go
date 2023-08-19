@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
