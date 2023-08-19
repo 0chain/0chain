@@ -785,6 +785,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			changed = true
 
 			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch
+			alloc.MovedToChallenge += ch
 		default:
 			// no changes for the blobber
 		}
@@ -807,8 +808,6 @@ func (sc *StorageSmartContract) adjustChallengePool(
 				Amount:       i,
 			})
 		}
-
-		alloc.MovedToChallenge += sum
 	}
 
 	return nil
