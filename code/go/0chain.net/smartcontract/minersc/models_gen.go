@@ -308,9 +308,9 @@ func (z *DKGMinerNodes) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 29
+	// map header, size 30
 	// string "ViewChange"
-	o = append(o, 0xde, 0x0, 0x1d, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
+	o = append(o, 0xde, 0x0, 0x1e, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
 	o = msgp.AppendInt64(o, z.ViewChange)
 	// string "MaxN"
 	o = append(o, 0xa4, 0x4d, 0x61, 0x78, 0x4e)
@@ -360,6 +360,9 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "MinStakePerDelegate")
 		return
 	}
+	// string "HealthCheckPeriod"
+	o = append(o, 0xb1, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
+	o = msgp.AppendDuration(o, z.HealthCheckPeriod)
 	// string "RewardRate"
 	o = append(o, 0xaa, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x61, 0x74, 0x65)
 	o = msgp.AppendFloat64(o, z.RewardRate)
@@ -537,6 +540,12 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MinStakePerDelegate")
 				return
 			}
+		case "HealthCheckPeriod":
+			z.HealthCheckPeriod, bts, err = msgp.ReadDurationBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "HealthCheckPeriod")
+				return
+			}
 		case "RewardRate":
 			z.RewardRate, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
@@ -682,7 +691,7 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 26 + msgp.IntSize + 20 + msgp.IntSize + 28 + msgp.IntSize + 15
+	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 18 + msgp.DurationSize + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 26 + msgp.IntSize + 20 + msgp.IntSize + 28 + msgp.IntSize + 15
 	if z.PrevMagicBlock == nil {
 		s += msgp.NilSize
 	} else {
