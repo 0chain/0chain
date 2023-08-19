@@ -42,11 +42,15 @@ var StartToFinalizeTxnTimer metrics.Timer
 // FinalizationLagMetric - a metric that tracks how much is the lag between current round and finalization round
 var FinalizationLagMetric metrics.Histogram
 
+// SynchronizedBlocksCounter - a metric that tracks the number of synchronized blocks
+var SynchronizedBlocksTimer metrics.Timer
+
 func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
+	SynchronizedBlocksTimer = metrics.GetOrRegisterTimer("synchronized_blocks", nil)
 	_ = metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 

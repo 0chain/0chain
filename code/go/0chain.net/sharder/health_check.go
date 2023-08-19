@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/chaincore/chain"
 	"context"
 	"fmt"
 	"runtime"
@@ -398,6 +399,8 @@ func (sc *Chain) hcUpdateBlockStatus(scanMode HealthCheckScan, status *BlockHeal
 
 func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthCheckScan) {
 
+	startTime := time.Now()
+
 	var hcStatus BlockHealthCheckStatus = HealthCheckSuccess
 
 	defer sc.hcUpdateBlockStatus(scanMode, &hcStatus)
@@ -542,4 +545,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		}
 		current.txnSummary.RepairSuccess++
 	}
+
+	endTime := time.Now()
+
+	chain.SynchronizedBlocksTimer.Update(endTime.Sub(startTime))
 }
