@@ -1035,16 +1035,16 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	)
 
 	tx.Hash = txHash
-	tx.Value = 400
+	tx.Value = 100
 	tx.ClientID = clientID
 	tx.CreationDate = toSeconds(2 * time.Hour)
 
 	balances.setTransaction(t, &tx)
 
 	conf = setConfig(t, balances)
-	conf.MaxChallengeCompletionTime = 20 * time.Second
+	conf.MaxChallengeCompletionTime = 3 * time.Minute
 	conf.MinAllocSize = 10 * GB
-	conf.TimeUnit = 20 * time.Second
+	conf.TimeUnit = 720 * time.Hour
 
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	require.NoError(t, err)
