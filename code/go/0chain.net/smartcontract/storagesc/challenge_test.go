@@ -561,6 +561,7 @@ func TestVerifyChallenge(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ssc, balances, tp, alloc, b3, valids, validators, blobber, _ := prepareAllocChallenges(t, 10)
 			step := (int64(alloc.Expiration) - tp) / 10
+			tp += step / 2
 
 			challID := fmt.Sprintf("chall-0")
 			genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
@@ -586,7 +587,6 @@ func TestVerifyChallenge(t *testing.T) {
 				chall.ValidationTickets[len(chall.ValidationTickets)-1] = newValids[0].validTicket(t, chall.ID, b3.id, true, tp)
 			}
 
-			tp += step / 2
 			var tx *transaction.Transaction
 			if tc.wrongClientID {
 				tx = newTransaction(alloc.BlobberAllocs[0].BlobberID, ssc.ID, 0, tp)
@@ -619,6 +619,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 
 	t.Run("verify challenge first time", func(t *testing.T) {
 		challID := fmt.Sprintf("chall-0")
+		tp += step / 2
 		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
 
 		chall := &ChallengeResponse{
@@ -630,7 +631,6 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 				valids[i].validTicket(t, chall.ID, b3.id, true, tp))
 		}
 
-		tp += step / 2
 		tx := newTransaction(b3.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		bk := &block.Block{}
@@ -707,10 +707,10 @@ func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	return tmpt
 }
 
-// TODO: test to run the same verify challenge SC multiple times result in the same state
 func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	ssc, balances, tp, alloc, b3, valids, validators, blobber, _ := prepareAllocChallenges(t, 10)
 	step := (int64(alloc.Expiration) - tp) / 10
+	tp += step / 2
 
 	challID := fmt.Sprintf("chall-0")
 	genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
@@ -724,7 +724,6 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 			valids[i].validTicket(t, chall.ID, b3.id, true, tp))
 	}
 
-	tp += step / 2
 	tx := newTransaction(b3.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 
@@ -808,7 +807,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	)
 
 	// new allocation
-	tp += 100
+	tp += 1000
 	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
 
 	// blobbers: stake 10k, balance 40k
@@ -861,7 +860,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 
 func testAddValidators(t *testing.T, balances *testBalances, ssc *StorageSmartContract, num int, tp int64) ([]*Client, int64) {
 	var valids []*Client
-	tp += 100
+	tp += 1000
 	for i := 0; i < num; i++ {
 		valids = append(valids, addValidator(t, ssc, tp, balances))
 	}
@@ -881,7 +880,7 @@ func testGetBlobber(blobs []*Client, alloc *StorageAllocation, i int) *Client {
 
 func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client,
 	alloc *StorageAllocation, blobberID string, ssc *StorageSmartContract, tp int64) int64 {
-	tp += 100
+	tp += 1000
 	var rm ReadConnection
 	rm.ReadMarker = &ReadMarker{
 		ClientID:        reader.id,
@@ -897,14 +896,14 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 		encryption.Hash(rm.ReadMarker.GetHashData()))
 	require.NoError(t, err)
 
-	tp += 100
+	tp += 1000
 	var tx = newTransaction(blobberID, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 	_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
 	require.Error(t, err)
 
 	// read pool lock
-	tp += 100
+	tp += 1000
 
 	readPoolFund, err := currency.ParseZCN(float64(len(alloc.BlobberAllocs)) * 2)
 	require.NoError(t, err)
@@ -921,7 +920,7 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 	require.EqualValues(t, readPoolFund, int64(rp.Balance))
 
 	// read
-	tp += 100
+	tp += 1000
 	tx = newTransaction(blobberID, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 	_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
@@ -930,7 +929,7 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 }
 
 func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
-	tp += 100
+	tp += 1000
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: "",
@@ -951,7 +950,7 @@ func testCommitWrite(t *testing.T, balances *testBalances, client *Client, alloc
 	require.NoError(t, err)
 
 	// write
-	//tp += 100
+	//tp += 1000
 	var tx = newTransaction(blobberID, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 	var resp string

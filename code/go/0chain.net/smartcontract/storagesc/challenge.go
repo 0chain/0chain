@@ -268,14 +268,13 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 
-		// TODO: add code below back after validators staking are supported
-		// staked, err := sp.stake()
-		// if err != nil {
-		//	return fmt.Errorf("can't get stake: %v", err)
-		// }
-		// vid := validators[i]
-		// tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
-		// balances.EmitEvent(event.TypeStats, tag, vid, data)
+		staked, err := sp.stake()
+		if err != nil {
+			return fmt.Errorf("can't get stake: %v", err)
+		}
+		vid := validators[i]
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
+		balances.EmitEvent(event.TypeStats, tag, vid, data)
 	}
 	return
 }
@@ -409,10 +408,6 @@ func (sc *StorageSmartContract) blobberPenalty(
 		move, err = sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances, allocationID)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
-		}
-
-		if err := sp.reduceOffer(move); err != nil {
-			return err
 		}
 
 		penalty, err := currency.AddCoin(blobAlloc.Penalty, move) // penalty statistic
@@ -610,9 +605,13 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}
 
 	var (
-		pass  = success > threshold
+		pass = success > threshold
+		mcc  = toSeconds(maxChallengeCompletionTime)
+
 		fresh = challenge.Created+toSeconds(maxChallengeCompletionTime) >= t.CreationDate
 	)
+
+	fmt.Println(mcc)
 
 	return &verifyTicketsResult{
 		pass:       pass,

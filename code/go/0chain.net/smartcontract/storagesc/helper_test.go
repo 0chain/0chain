@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -459,10 +460,10 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 	require.NoError(t, err)
 
 	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		t.Fatal("unexpected error:", err)
 	}
-	if err == util.ErrValueNotPresent {
+	if errors.Is(err, util.ErrValueNotPresent) {
 		allocChall = new(AllocationChallenges)
 		allocChall.AllocationID = allocID
 	}
