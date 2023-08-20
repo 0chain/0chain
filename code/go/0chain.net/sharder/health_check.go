@@ -406,6 +406,12 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	var hcStatus BlockHealthCheckStatus = HealthCheckSuccess
 
 	defer func() {
+
+		Logger.Info("Jayash healthCheck",
+			zap.Any("blockSyncRequired", blockSyncRequired),
+			zap.Any("Starttime", startTime),
+			zap.Any("Endtime", time.Now()))
+
 		sc.hcUpdateBlockStatus(scanMode, &hcStatus)
 
 		endTime := time.Now()
@@ -492,6 +498,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		if err != nil || count != bs.NumTxns {
 			needTxnSummary = true
 			blockSyncRequired = true
+
+			Logger.Info("Missing++", zap.Any("txn", needTxnSummary))
 		}
 	}
 	if needTxnSummary {
@@ -505,6 +513,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	b, foundBlock := sc.hasBlock(bs.Hash, r.Number)
 	if !foundBlock {
 		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("foundBlock", foundBlock))
 
 		if needTxnSummary || canShard {
 			// The sharder doesn't have the block.
@@ -550,6 +560,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	// Check if the sharder needs to store txn summary
 	if needTxnSummary {
 		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("needTxnSummary", needTxnSummary))
 
 		if b == nil {
 			Logger.Panic("HC-Assertion",
