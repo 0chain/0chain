@@ -401,7 +401,18 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	startTime := time.Now()
 
+	blockSyncRequired := false
+
 	var hcStatus BlockHealthCheckStatus = HealthCheckSuccess
+
+	defer func() {
+		sc.hcUpdateBlockStatus(scanMode, &hcStatus)
+
+		endTime := time.Now()
+		if blockSyncRequired {
+			chain.SynchronizedBlocksTimer.Update(endTime.Sub(startTime))
+		}
+	}()
 
 	defer sc.hcUpdateBlockStatus(scanMode, &hcStatus)
 
@@ -413,8 +424,6 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	// Get the current counters.
 	current := &cc.counters.current
-
-	blockSyncRequired := false
 
 	var r *round.Round
 	var bs *block.BlockSummary
@@ -567,9 +576,4 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	}
 
-	endTime := time.Now()
-
-	if blockSyncRequired {
-		chain.SynchronizedBlocksTimer.Update(endTime.Sub(startTime))
-	}
 }
