@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/dbs/goose"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/chaincore/config"
@@ -616,10 +618,12 @@ func createEventsDb() *event.EventDb {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	if err := eventDb.AutoMigrate(); err != nil {
+	sqldb, err := eventDb.Store.Get().DB()
+	if err != nil {
 		log.Fatal(err)
 	}
+	goose.Migrate(sqldb)
+	ebk.AddAggregatePartitions(eventDb)
 	log.Println("created event database\t", time.Since(timer))
 	return eventDb
 }
@@ -628,7 +632,7 @@ func newEventsDb() *event.EventDb {
 	timer := time.Now()
 	var eventDb *event.EventDb
 	tick := func() (*event.EventDb, error) {
-		return event.NewEventDb(
+		return event.NewEventDbWithoutWorker(
 			config.DbAccess{
 				Enabled:         viper.GetBool(benchmark.EventDbEnabled),
 				Name:            viper.GetString(benchmark.EventDbName),
@@ -648,7 +652,6 @@ func newEventsDb() *event.EventDb {
 				PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
 			},
 		)
-
 	}
 
 	t := time.NewTicker(time.Second)

@@ -11,6 +11,15 @@ import (
 	"0chain.net/core/common"
 )
 
+type BlobberChallengeResponded int
+
+const (
+	ChallengeNotResponded BlobberChallengeResponded = iota
+	ChallengeResponded
+	ChallengeRespondedLate
+	ChallengeRespondedInvalid
+)
+
 // swagger:model Challenges
 type Challenges []Challenge
 
@@ -29,6 +38,58 @@ type Challenge struct {
 	RoundCreatedAt int64            `json:"round_created_at"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
+}
+
+func (edb *EventDb) GetChallengesCountByQuery(whereQuery string) (map[string]int64, error) {
+	var total, passed, failed, open int64
+
+	response := make(map[string]int64)
+
+	result := edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Count(&total)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	result = edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Where("responded = 1").
+		Count(&passed)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting passed challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	result = edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Where("responded = 2").
+		Count(&failed)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting failed challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	result = edb.Store.Get().
+		Model(&Challenge{}).
+		Where(whereQuery).
+		Where("responded = 0").
+		Count(&open)
+	if result.Error != nil {
+		logging.Logger.Error("Error getting open challenges count", zap.Error(result.Error))
+		return nil, result.Error
+	}
+
+	response["total"] = total
+	response["passed"] = passed
+	response["failed"] = failed
+	response["open"] = open
+
+	return response, nil
 }
 
 func (edb *EventDb) GetAllChallengesByAllocationID(allocationID string) (Challenges, error) {
@@ -72,12 +133,10 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 
 func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination) ([]*Challenge, error) {
 
-	logging.Logger.Info("1 GetOpenChallengesForBlobber", zap.Any("blobberID", blobberID), zap.Any("from", from), zap.Any("limit", limit))
-
 	var chs []*Challenge
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, 0).
+		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, ChallengeNotResponded).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round_created_at"},
@@ -91,8 +150,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
-
-	logging.Logger.Info("2 GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
 
 	return chs, nil
 }

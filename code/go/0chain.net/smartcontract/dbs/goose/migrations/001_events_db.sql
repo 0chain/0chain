@@ -18,11 +18,11 @@ CREATE TABLE public.allocation_blobber_terms (
                                                  created_at timestamp with time zone,
                                                  updated_at timestamp with time zone,
                                                  deleted_at timestamp with time zone,
-                                                 allocation_id text NOT NULL,
+                                                 alloc_id bigint NOT NULL,
                                                  blobber_id text NOT NULL,
                                                  read_price bigint,
                                                  write_price bigint,
-                                                 min_lock_demand numeric,
+                                                 alloc_blobber_idx numeric,
                                                  max_offer_duration bigint
 );
 
@@ -1612,7 +1612,7 @@ ALTER TABLE ONLY public.write_markers
 -- Name: idx_alloc_blob; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE UNIQUE INDEX idx_alloc_blob ON public.allocation_blobber_terms USING btree (allocation_id, blobber_id);
+CREATE UNIQUE INDEX idx_alloc_blob ON public.allocation_blobber_terms USING btree (alloc_id, blobber_id);
 
 
 --
@@ -2026,7 +2026,7 @@ CREATE UNIQUE INDEX ppp ON public.delegate_pools USING btree (pool_id, provider_
 --
 
 ALTER TABLE ONLY public.allocation_blobber_terms
-    ADD CONSTRAINT fk_allocations_terms FOREIGN KEY (allocation_id) REFERENCES public.allocations(allocation_id);
+    ADD CONSTRAINT fk_allocations_terms FOREIGN KEY (alloc_id) REFERENCES public.allocations(id);
 
 
 --

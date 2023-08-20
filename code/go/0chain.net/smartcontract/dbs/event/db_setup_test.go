@@ -105,7 +105,7 @@ func TestMain(m *testing.M) {
 
 	gEventDB = &EventDb{
 		Store:         postgresql.New(gormDB),
-		eventsChannel: make(chan blockEvents, 1),
+		eventsChannel: make(chan BlockEvents, 1),
 		settings:      dbSetting,
 	}
 

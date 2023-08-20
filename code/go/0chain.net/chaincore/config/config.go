@@ -293,6 +293,16 @@ type Config struct {
 /*Configuration of the system */
 var configuration Config
 
+func InitConfigurationGlobal(host, chainId string, port int, conf ChainConfig) {
+	configuration = Config{
+		Host:           host,
+		Port:           port,
+		ChainID:        chainId,
+		DeploymentMode: DeploymentDevelopment,
+		ChainConfig:    conf,
+	}
+}
+
 func Configuration() *Config {
 	return &configuration
 }

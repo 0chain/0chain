@@ -7,7 +7,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"errors"
 	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"strings"
 )
 
@@ -94,6 +93,7 @@ func emitAddChallenge(
 func emitUpdateChallenge(
 	sc *StorageChallenge,
 	passed bool,
+	responded BlobberChallengeResponded,
 	balances cstate.StateContextI,
 	allocStats, blobberStats *StorageAllocationStats,
 ) error {
@@ -103,11 +103,7 @@ func emitUpdateChallenge(
 		BlobberID:      sc.BlobberID,
 		RoundResponded: balances.GetBlock().Round,
 		Passed:         passed,
-	}
-	if passed {
-		clg.Responded = int64(1) // Passed challenge
-	} else {
-		clg.Responded = int64(2) // Failed challenge
+		Responded:      int64(responded),
 	}
 
 	a := event.Allocation{
@@ -158,7 +154,6 @@ func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances csta
 }
 
 func getOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination, edb *event.EventDb) ([]*StorageChallengeResponse, error) {
-	logging.Logger.Info("1 getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Int64("from", from), zap.Any("limit", limit))
 
 	var chs []*StorageChallengeResponse
 	challenges, err := edb.GetOpenChallengesForBlobber(blobberID, from, limit)
@@ -174,7 +169,6 @@ func getOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pag
 		chs = append(chs, challInfo)
 	}
 
-	logging.Logger.Info("2 getOpenChallengesForBlobber", zap.String("blobberID", blobberID), zap.Int64("from", from), zap.Any("limit", limit), zap.Any("chs", chs))
 	return chs, nil
 }
 
