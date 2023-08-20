@@ -723,9 +723,12 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
+	totalChanges := 0.0
+
 	var added, removed bool
 	addedToCP, removedFromCP := currency.Coin(0), currency.Coin(0)
 	for i, ch := range changes {
+		totalChanges += ch
 		changeValue, err := currency.Float64ToCoin(ch)
 		if err != nil {
 			return err
@@ -753,7 +756,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 	}
 
-	if added {
+	if totalChanges > 0 {
 		err = cp.save(sc.ID, alloc, balances)
 		if err != nil {
 			i := int64(0)
@@ -767,7 +770,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 				Amount:       i,
 			})
 		}
-	} else if removed {
+	} else if totalChanges < 0 {
 		err = cp.save(sc.ID, alloc, balances)
 		if err != nil {
 			i := int64(0)
