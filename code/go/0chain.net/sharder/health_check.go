@@ -491,6 +491,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		count, err := sc.getTxnCountForRound(ctx, bs.Round)
 		if err != nil || count != bs.NumTxns {
 			needTxnSummary = true
+			blockSyncRequired = true
 		}
 	}
 	if needTxnSummary {
@@ -503,13 +504,13 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	// The sharder needs txn_summary. Get the block
 	b, foundBlock := sc.hasBlock(bs.Hash, r.Number)
 	if !foundBlock {
+		blockSyncRequired = true
+
 		if needTxnSummary || canShard {
 			// The sharder doesn't have the block.
 			// It needs a block either to fix txnsummary or missing block
 			// that it should have sharded.
 			current.block.Missing++
-
-			blockSyncRequired = true
 
 			Logger.Info("Missing++", zap.Any("foundBlock", foundBlock))
 
@@ -548,6 +549,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	// Check if the sharder needs to store txn summary
 	if needTxnSummary {
+		blockSyncRequired = true
+
 		if b == nil {
 			Logger.Panic("HC-Assertion",
 				zap.String("mode", cc.ScanMode.String()),
