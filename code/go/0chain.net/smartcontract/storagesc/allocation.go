@@ -723,28 +723,30 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
-	totalChanges := 0.0
+	totalChanges := 0
 
 	addedToCP, removedFromCP := currency.Coin(0), currency.Coin(0)
 	for i, ch := range changes {
-		totalChanges += ch
-		changeValue, err := currency.Float64ToCoin(math.Abs(ch))
+		changeValueInInt64, err := ch.Value.Int64()
 		if err != nil {
 			return err
 		}
+
 		switch {
-		case ch > 0:
-			err = alloc.moveToChallengePool(cp, changeValue)
-			addedToCP += changeValue
+		case !ch.isNegative:
+			err = alloc.moveToChallengePool(cp, ch.Value)
+			addedToCP += ch.Value
 
-			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += changeValue
-			alloc.MovedToChallenge += changeValue
-		case ch < 0:
-			err = alloc.moveFromChallengePool(cp, changeValue)
-			removedFromCP += changeValue
+			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch.Value
+			alloc.MovedToChallenge += ch.Value
+			totalChanges += int(changeValueInInt64)
+		case ch.isNegative:
+			err = alloc.moveFromChallengePool(cp, ch.Value)
+			removedFromCP += ch.Value
 
-			alloc.BlobberAllocs[i].ChallengePoolIntegralValue -= changeValue
-			alloc.MovedBack += changeValue
+			alloc.BlobberAllocs[i].ChallengePoolIntegralValue -= ch.Value
+			alloc.MovedBack += ch.Value
+			totalChanges -= int(changeValueInInt64)
 		default:
 			// no changes for the blobber
 		}
