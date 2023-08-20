@@ -757,32 +757,36 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	if totalChanges > 0 {
 		err = cp.save(sc.ID, alloc, balances)
-		if err == nil {
-			i := int64(0)
-			i, err = addedToCP.Int64()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
-				Client:       alloc.Owner,
-				AllocationId: alloc.ID,
-				Amount:       i,
-			})
+		if err != nil {
+			return err
 		}
+
+		i := int64(0)
+		i, err = addedToCP.Int64()
+		if err != nil {
+			return err
+		}
+		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       i,
+		})
 	} else if totalChanges < 0 {
 		err = cp.save(sc.ID, alloc, balances)
-		if err == nil {
-			i := int64(0)
-			i, err = removedFromCP.Int64()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
-				Client:       alloc.Owner,
-				AllocationId: alloc.ID,
-				Amount:       i,
-			})
+		if err != nil {
+			return err
 		}
+
+		i := int64(0)
+		i, err = removedFromCP.Int64()
+		if err != nil {
+			return err
+		}
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       i,
+		})
 	}
 
 	return nil
