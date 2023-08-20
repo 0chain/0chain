@@ -725,7 +725,6 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	totalChanges := 0.0
 
-	var added, removed bool
 	addedToCP, removedFromCP := currency.Coin(0), currency.Coin(0)
 	for i, ch := range changes {
 		totalChanges += ch
@@ -737,14 +736,12 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		case ch > 0:
 			err = alloc.moveToChallengePool(cp, currency.Coin(ch))
 			addedToCP += changeValue
-			added = true
 
 			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += changeValue
 			alloc.MovedToChallenge += changeValue
 		case ch < 0:
 			err = alloc.moveFromChallengePool(cp, changeValue)
 			removedFromCP += changeValue
-			removed = true
 
 			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += changeValue
 			alloc.MovedBack += changeValue
