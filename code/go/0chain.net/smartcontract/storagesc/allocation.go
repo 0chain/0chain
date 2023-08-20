@@ -1410,6 +1410,9 @@ func (sc *StorageSmartContract) finishAllocation(
 }
 
 func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chainstate.StateContextI) {
+
+	logging.Logger.Info("emitUpdateAllocationStatEvent", zap.Any("allocation", allocation))
+
 	alloc := event.Allocation{
 		AllocationID:     allocation.ID,
 		UsedSize:         allocation.Stats.UsedSize,
