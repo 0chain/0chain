@@ -106,8 +106,6 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 // - delete
 // - challenge passed
 func Test_flow_reward(t *testing.T) {
-	t.Skip("rewrite this tests")
-
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -141,7 +139,7 @@ func Test_flow_reward(t *testing.T) {
 
 	restMinLock, err := alloc.restMinLockDemand()
 	require.NoError(t, err)
-	require.EqualValues(t, 583333336580, restMinLock)
+	require.EqualValues(t, currency.Coin(10000000040), restMinLock)
 
 	t.Run("read as owner", func(t *testing.T) {
 		tp += 100
@@ -200,7 +198,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		restMinLock, err := alloc.restMinLockDemand()
 		require.NoError(t, err)
-		require.EqualValues(t, 573333336580, restMinLock)
+		require.EqualValues(t, currency.Coin(9500000038), restMinLock)
 	})
 
 	t.Run("read as unauthorized separate user", func(t *testing.T) {
@@ -267,8 +265,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		var apb, cpb = alloc.WritePool, cp.Balance
-		require.EqualValues(t, 100*x10, apb)
-		require.EqualValues(t, 0, cpb)
+		require.EqualValues(t, currency.Coin(1000*x10), apb)
+		require.EqualValues(t, currency.Coin(0), cpb)
 
 		tp += 100
 		var cc = &BlobberCloseConnection{
@@ -315,21 +313,17 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		restMinLock, err := alloc.restMinLockDemand()
 		require.NoError(t, err)
-		require.EqualValues(t, 554166669751, restMinLock) // -read above
+		require.EqualValues(t, currency.Coin(9000000036), restMinLock) // -read above
 	})
 
-	//TODO why cp was not created in previous tests
 	t.Run("delete", func(t *testing.T) {
-		t.Skip("This test si dependent on previous tests and somehow challenge pool was not created, should figure it out")
 		var cp *challengePool
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
 		var wpb, cpb = alloc.WritePool, cp.Balance
-		//require.EqualValues(t, 149932183160, wpb)
-		//require.EqualValues(t, 67816840, cpb)
-		require.EqualValues(t, 1200000000000, wpb)
-		require.EqualValues(t, 0, cpb)
+		require.EqualValues(t, currency.Coin(9995118882922), wpb)
+		require.EqualValues(t, currency.Coin(4881117078), cpb)
 
 		tp += 100
 		var cc = &BlobberCloseConnection{
@@ -363,13 +357,13 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 39559823, cp.Balance)
+		require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
 		restMinLock, err := alloc.restMinLockDemand()
 		require.NoError(t, err)
-		require.EqualValues(t, 182291652, restMinLock) // -read above
+		require.EqualValues(t, currency.Coin(9000000036), restMinLock) // -read above
 	})
 
 	var b3 *Client
@@ -397,9 +391,9 @@ func Test_flow_reward(t *testing.T) {
 
 		var wpb1, cpb1 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 10000000000000, wpb1)
-		require.EqualValues(t, 39559823, cpb1)
-		require.EqualValues(t, 40*x10, blobb1)
+		require.EqualValues(t, currency.Coin(9997559253081), wpb1)
+		require.EqualValues(t, currency.Coin(2440746919), cpb1)
+		require.EqualValues(t, currency.Coin(40*x10), blobb1)
 
 		const allocRoot = "alloc-root-1"
 
@@ -440,9 +434,9 @@ func Test_flow_reward(t *testing.T) {
 
 		var apb2, cpb2 = alloc.WritePool, cp.Balance
 
-		require.EqualValues(t, 149960440177, apb2)
-		require.EqualValues(t, 98899558, cpb2)
-		require.EqualValues(t, 40*x10, blobb2)
+		require.EqualValues(t, currency.Coin(9997559253081), apb2)
+		require.EqualValues(t, currency.Coin(7320922097), cpb2)
+		require.EqualValues(t, currency.Coin(40*x10), blobb2)
 
 		// until the end
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -480,7 +474,6 @@ func Test_flow_reward(t *testing.T) {
 					val.validTicket(t, chall.ID, b3.id, true, tp))
 			}
 
-			tp += step / 2
 			tx = newTransaction(b3.id, ssc.ID, 0, tp)
 			balances.setTransaction(t, tx)
 			var resp string
@@ -512,9 +505,9 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
-		require.EqualValues(t, 10000000000000, wpb1i)
-		require.EqualValues(t, 71772822, cpb1i)
-		require.EqualValues(t, 40*x10, blobb1)
+		require.EqualValues(t, currency.Coin(10000000000000), wpb1i)
+		require.EqualValues(t, currency.Coin(71772822), cpb1i)
+		require.EqualValues(t, currency.Coin(40*x10), blobb1)
 
 		// write 10 KB
 		tp = 200
@@ -560,10 +553,10 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
-		require.EqualValues(t, 149901100442, apb2i)
-		require.EqualValues(t, 71832868, cpb2i)
+		require.EqualValues(t, currency.Coin(149901100442), apb2i)
+		require.EqualValues(t, currency.Coin(71832868), cpb2i)
 
-		require.EqualValues(t, 40*x10, blobb2)
+		require.EqualValues(t, currency.Coin(40*x10), blobb2)
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
