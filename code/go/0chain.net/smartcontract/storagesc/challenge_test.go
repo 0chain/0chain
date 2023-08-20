@@ -607,7 +607,7 @@ func TestVerifyChallenge(t *testing.T) {
 				return
 			}
 
-			require.Equal(t, resp, "challenge passed by blobber")
+			require.Equal(t, "challenge passed by blobber", resp)
 		})
 	}
 

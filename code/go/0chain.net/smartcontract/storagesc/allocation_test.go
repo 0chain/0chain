@@ -1960,7 +1960,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	uar.ID = alloc.ID
-	uar.Size = -(alloc.Size / 2)
 	uar.Extend = true
 
 	tp += 1000
