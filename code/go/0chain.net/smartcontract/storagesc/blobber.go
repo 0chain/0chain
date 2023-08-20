@@ -672,7 +672,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
-		logging.Logger.Info("commitMoveTokens", zap.Any("move", move), zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("alloc_write_pool", alloc.WritePool))
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
@@ -724,6 +723,8 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 		details.Returned = returned
 	}
+
+	logging.Logger.Info("commitMoveTokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc))
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
