@@ -750,6 +750,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"malformed input: "+err.Error())
 	}
 
+	logging.Logger.Info("commitBlobberConnection", zap.Any("commitConnection", commitConnection.WriteMarker.Size))
+
 	if !commitConnection.Verify() {
 		return "", common.NewError("commit_connection_failed", "Invalid input")
 	}

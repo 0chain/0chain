@@ -1631,7 +1631,7 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // we are using the same terms. And for this method, the oterms argument is
 // nil for this case (meaning, terms hasn't changed).
 func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, timeUnit time.Duration,
-	oterms []Terms) (values []currency.Coin, err error) {
+	oterms []Terms) (values []float64, err error) {
 
 	// odr -- old duration remaining
 	// ndr -- new duration remaining
@@ -1647,7 +1647,7 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 		return nil, fmt.Errorf("failed to get new challenge pool duration: %v", err)
 	}
 
-	values = make([]currency.Coin, 0, len(sa.BlobberAllocs))
+	values = make([]float64, 0, len(sa.BlobberAllocs))
 
 	for i, d := range sa.BlobberAllocs {
 		if d.Stats == nil || d.Stats.UsedSize == 0 {
@@ -1673,7 +1673,7 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 
 		diff = b - a // value difference
 
-		values = append(values, currency.Coin(diff))
+		values = append(values, diff)
 	}
 
 	return
