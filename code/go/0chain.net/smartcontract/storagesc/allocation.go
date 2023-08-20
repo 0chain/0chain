@@ -757,7 +757,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 
 	if totalChanges > 0 {
 		err = cp.save(sc.ID, alloc, balances)
-		if err != nil {
+		if err == nil {
 			i := int64(0)
 			i, err = addedToCP.Int64()
 			if err != nil {
@@ -771,7 +771,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 	} else if totalChanges < 0 {
 		err = cp.save(sc.ID, alloc, balances)
-		if err != nil {
+		if err == nil {
 			i := int64(0)
 			i, err = removedFromCP.Int64()
 			if err != nil {
