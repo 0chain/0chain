@@ -554,6 +554,71 @@ func (z *BlobberCloseConnection) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *ChallengePoolChanges) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 2
+	// string "Value"
+	o = append(o, 0x82, 0xa5, 0x56, 0x61, 0x6c, 0x75, 0x65)
+	o, err = z.Value.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Value")
+		return
+	}
+	// string "isNegative"
+	o = append(o, 0xaa, 0x69, 0x73, 0x4e, 0x65, 0x67, 0x61, 0x74, 0x69, 0x76, 0x65)
+	o = msgp.AppendBool(o, z.isNegative)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *ChallengePoolChanges) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "Value":
+			bts, err = z.Value.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Value")
+				return
+			}
+		case "isNegative":
+			z.isNegative, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "isNegative")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *ChallengePoolChanges) Msgsize() (s int) {
+	s = 1 + 6 + z.Value.Msgsize() + 11 + msgp.BoolSize
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z *ChallengeResponse) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 2
