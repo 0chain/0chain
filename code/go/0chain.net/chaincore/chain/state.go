@@ -151,9 +151,11 @@ func (c *Chain) ExecuteSmartContract(
 	case r := <-resultC:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		if len(balances.GetMissingNodeKeys()) > 0 {
+			logging.Logger.Error("execute smart contract - find missing nodes return node not found error")
 			return "", util.ErrNodeNotFound
 		}
 
+		logging.Logger.Error("execute smart contract - return node not found error directly")
 		return r.output, r.err
 	}
 }
