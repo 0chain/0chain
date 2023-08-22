@@ -12,7 +12,7 @@ require (
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru/v2 v2.0.4
 	github.com/herumi/bls v1.37.0
-	github.com/herumi/mcl v1.84.0
+	github.com/herumi/mcl v1.86.0
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
