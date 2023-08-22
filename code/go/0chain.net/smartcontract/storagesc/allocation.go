@@ -705,7 +705,7 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 }
 
 // The adjustChallengePool moves more or moves some tokens back from or to
-// challenge pool during allocation extending or reducing.
+// challenge pool during allocation extending.
 func (sc *StorageSmartContract) adjustChallengePool(
 	alloc *StorageAllocation,
 	odr, ndr common.Timestamp,
