@@ -40,8 +40,8 @@ github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9 h1:ssd/pmPpX56ztnf
 github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
-github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d h1:G19ZxPbPUX025coYOrj6klljl2zWnumW3ZyrpYTRb0I=
-github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d/go.mod h1:GgqNjoHBO0JN9TcpDAC28/VE2VsZi4MDr4qGdzfWV+I=
+github.com/0chain/gosdk v1.8.17 h1:ZKZv1z073wBklWJRmeixAGbm15NDwWsBHJZJpfy6zOc=
+github.com/0chain/gosdk v1.8.17/go.mod h1:3NKNYzmnMIYqZwwwOgZwMmTW1DT1ZUAmKyVPmYQOiT4=
 github.com/0chain/msgp v1.1.62 h1:D/s/TYygUwQnMlvfHUjh56FEaI0wP2VfPVS0TTGGu9I=
 github.com/0chain/msgp v1.1.62/go.mod h1:g7jEyb18KPe65d9RRhGw+ThaJr5duyBH8eaFgBUor7Y=
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25UVaW/CKtUDjefjrs0SPonmDGUVOYP0=
