@@ -724,6 +724,13 @@ func TestExtendAllocation(t *testing.T) {
 			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
 			TimeUnit:        mockTimeUnit,
 			WritePool:       args.poolFunds * 1e10,
+			Stats: &StorageAllocationStats{
+				UsedSize:          int64(mockDataShards+mockParityShards) * mockBlobberCapacity / 2,
+				SuccessChallenges: int64(mockDataShards+mockParityShards) * 100,
+				FailedChallenges:  int64(mockDataShards+mockParityShards) * 2,
+				TotalChallenges:   int64(mockDataShards+mockParityShards) * 102,
+				OpenChallenges:    0,
+			},
 		}
 
 		bCount := sa.DataShards + sa.ParityShards
@@ -759,7 +766,7 @@ func TestExtendAllocation(t *testing.T) {
 				balances.On("InsertTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
 					mock.Anything).Return("", nil).Once()
 				balances.On("EmitEvent", event.TypeStats,
-					event.TagUpdateBlobber, mock.Anything, mock.Anything).Return().Maybe()
+					event.TagToChallengePool, mock.Anything, mock.Anything).Return().Maybe()
 				balances.On("EmitEvent", event.TypeStats,
 					event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything).Return().Maybe()
 				balances.On("EmitEvent", event.TypeStats,

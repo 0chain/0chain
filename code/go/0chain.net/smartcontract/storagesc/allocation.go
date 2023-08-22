@@ -705,7 +705,7 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 }
 
 // The adjustChallengePool moves more or moves some tokens back from or to
-// challenge pool during allocation extending or reducing.
+// challenge pool during allocation extending.
 func (sc *StorageSmartContract) adjustChallengePool(
 	alloc *StorageAllocation,
 	odr, ndr common.Timestamp,
@@ -723,28 +723,30 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
-	var added, removed bool
+	totalChanges := 0
+
 	addedToCP, removedFromCP := currency.Coin(0), currency.Coin(0)
 	for i, ch := range changes {
-		_, err = ch.Int64()
+		changeValueInInt64, err := ch.Value.Int64()
 		if err != nil {
 			return err
 		}
+
 		switch {
-		case ch > 0:
-			err = alloc.moveToChallengePool(cp, ch)
-			addedToCP += ch
-			added = true
+		case !ch.isNegative && ch.Value > 0:
+			err = alloc.moveToChallengePool(cp, ch.Value)
+			addedToCP += ch.Value
 
-			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch
-			alloc.MovedToChallenge += ch
-		case ch < 0:
-			err = alloc.moveFromChallengePool(cp, ch)
-			removedFromCP += ch
-			removed = true
+			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch.Value
+			alloc.MovedToChallenge += ch.Value
+			totalChanges += int(changeValueInInt64)
+		case ch.isNegative && ch.Value > 0:
+			err = alloc.moveFromChallengePool(cp, ch.Value)
+			removedFromCP += ch.Value
 
-			alloc.BlobberAllocs[i].ChallengePoolIntegralValue -= ch
-			alloc.MovedBack += ch
+			alloc.BlobberAllocs[i].ChallengePoolIntegralValue -= ch.Value
+			alloc.MovedBack += ch.Value
+			totalChanges -= int(changeValueInInt64)
 		default:
 			// no changes for the blobber
 		}
@@ -753,34 +755,38 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 	}
 
-	if added {
+	if totalChanges > 0 {
 		err = cp.save(sc.ID, alloc, balances)
 		if err != nil {
-			i := int64(0)
-			i, err = addedToCP.Int64()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
-				Client:       alloc.Owner,
-				AllocationId: alloc.ID,
-				Amount:       i,
-			})
+			return err
 		}
-	} else if removed {
+
+		i := int64(0)
+		i, err = addedToCP.Int64()
+		if err != nil {
+			return err
+		}
+		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       i,
+		})
+	} else if totalChanges < 0 {
 		err = cp.save(sc.ID, alloc, balances)
 		if err != nil {
-			i := int64(0)
-			i, err = removedFromCP.Int64()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
-				Client:       alloc.Owner,
-				AllocationId: alloc.ID,
-				Amount:       i,
-			})
+			return err
 		}
+
+		i := int64(0)
+		i, err = removedFromCP.Int64()
+		if err != nil {
+			return err
+		}
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       i,
+		})
 	}
 
 	return nil
@@ -1410,6 +1416,9 @@ func (sc *StorageSmartContract) finishAllocation(
 }
 
 func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chainstate.StateContextI) {
+
+	logging.Logger.Info("emitUpdateAllocationStatEvent", zap.Any("allocation", allocation))
+
 	alloc := event.Allocation{
 		AllocationID:     allocation.ID,
 		UsedSize:         allocation.Stats.UsedSize,
