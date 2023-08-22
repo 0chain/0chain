@@ -733,14 +733,14 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 
 		switch {
-		case !ch.isNegative:
+		case !ch.isNegative && ch.Value > 0:
 			err = alloc.moveToChallengePool(cp, ch.Value)
 			addedToCP += ch.Value
 
 			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch.Value
 			alloc.MovedToChallenge += ch.Value
 			totalChanges += int(changeValueInInt64)
-		case ch.isNegative:
+		case ch.isNegative && ch.Value > 0:
 			err = alloc.moveFromChallengePool(cp, ch.Value)
 			removedFromCP += ch.Value
 
