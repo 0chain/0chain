@@ -136,7 +136,8 @@ type Config struct {
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
-	MaxStake currency.Coin `json:"max_stake"`
+	MaxStake            currency.Coin `json:"max_stake"`
+	MinStakePerDelegate currency.Coin `json:"min_stake_per_delegate"`
 
 	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
@@ -320,6 +321,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.MinStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinStakePerDelegate, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake_per_delegate"))
 	if err != nil {
 		return nil, err
 	}

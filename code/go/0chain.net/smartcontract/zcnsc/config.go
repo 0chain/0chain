@@ -22,18 +22,19 @@ const (
 )
 
 const (
-	MinMintAmount      = "min_mint"
-	PercentAuthorizers = "percent_authorizers"
-	MinAuthorizers     = "min_authorizers"
-	MinBurnAmount      = "min_burn"
-	MinStakeAmount     = "min_stake"
-	MaxStakeAmount     = "max_stake"
-	MinLockAmount      = "min_lock"
-	BurnAddress        = "burn_address"
-	MaxFee             = "max_fee"
-	OwnerID            = "owner_id"
-	Cost               = "cost"
-	MaxDelegates       = "max_delegates"
+	MinMintAmount       = "min_mint"
+	PercentAuthorizers  = "percent_authorizers"
+	MinAuthorizers      = "min_authorizers"
+	MinBurnAmount       = "min_burn"
+	MinStakeAmount      = "min_stake"
+	MinStakePerDelegate = "min_stake_per_delegate"
+	MaxStakeAmount      = "max_stake"
+	MinLockAmount       = "min_lock"
+	BurnAddress         = "burn_address"
+	MaxFee              = "max_fee"
+	OwnerID             = "owner_id"
+	Cost                = "cost"
+	MaxDelegates        = "max_delegates"
 )
 
 var CostFunctions = []string{
@@ -103,17 +104,18 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 
 func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 	fields := map[string]string{
-		MinMintAmount:      fmt.Sprintf("%v", gn.MinMintAmount),
-		MinBurnAmount:      fmt.Sprintf("%v", gn.MinBurnAmount),
-		MinStakeAmount:     fmt.Sprintf("%v", gn.MinStakeAmount),
-		MaxStakeAmount:     fmt.Sprintf("%v", gn.MaxStakeAmount),
-		PercentAuthorizers: fmt.Sprintf("%v", gn.PercentAuthorizers),
-		MinAuthorizers:     fmt.Sprintf("%v", gn.MinAuthorizers),
-		MinLockAmount:      fmt.Sprintf("%v", gn.MinLockAmount),
-		MaxFee:             fmt.Sprintf("%v", gn.MaxFee),
-		BurnAddress:        fmt.Sprintf("%v", gn.BurnAddress),
-		OwnerID:            fmt.Sprintf("%v", gn.OwnerId),
-		MaxDelegates:       fmt.Sprintf("%v", gn.MaxDelegates),
+		MinMintAmount:       fmt.Sprintf("%v", gn.MinMintAmount),
+		MinBurnAmount:       fmt.Sprintf("%v", gn.MinBurnAmount),
+		MinStakeAmount:      fmt.Sprintf("%v", gn.MinStakeAmount),
+		MinStakePerDelegate: fmt.Sprintf("%v", gn.MinStakePerDelegate),
+		MaxStakeAmount:      fmt.Sprintf("%v", gn.MaxStakeAmount),
+		PercentAuthorizers:  fmt.Sprintf("%v", gn.PercentAuthorizers),
+		MinAuthorizers:      fmt.Sprintf("%v", gn.MinAuthorizers),
+		MinLockAmount:       fmt.Sprintf("%v", gn.MinLockAmount),
+		MaxFee:              fmt.Sprintf("%v", gn.MaxFee),
+		BurnAddress:         fmt.Sprintf("%v", gn.BurnAddress),
+		OwnerID:             fmt.Sprintf("%v", gn.OwnerId),
+		MaxDelegates:        fmt.Sprintf("%v", gn.MaxDelegates),
 	}
 
 	for _, key := range CostFunctions {
@@ -140,6 +142,10 @@ func getConfig() (conf *ZCNSConfig, err error) {
 		return nil, err
 	}
 	conf.MinStakeAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinStakeAmount)))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinStakePerDelegate, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinStakePerDelegate)))
 	if err != nil {
 		return nil, err
 	}

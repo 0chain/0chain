@@ -22,7 +22,8 @@ const x10 float64 = 10 * 1000 * 1000 * 1000
 type Setting int
 
 const (
-	MinStake Setting = iota
+	MinStake            Setting = iota
+	MinStakePerDelegate Setting = iota
 	MaxStake
 	MaxN
 	MinN
@@ -90,6 +91,7 @@ func init() {
 
 func initSettingName() {
 	SettingName[MinStake] = "min_stake"
+	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
 	SettingName[MaxStake] = "max_stake"
 	SettingName[MaxN] = "max_n"
 	SettingName[MinN] = "min_n"
@@ -140,6 +142,7 @@ func initSettings() {
 		ConfigType smartcontract.ConfigType
 	}{
 		MinStake.String():                    {MinStake, smartcontract.CurrencyCoin},
+		MinStakePerDelegate.String():         {MinStakePerDelegate, smartcontract.CurrencyCoin},
 		MaxStake.String():                    {MaxStake, smartcontract.CurrencyCoin},
 		MaxN.String():                        {MaxN, smartcontract.Int},
 		MinN.String():                        {MinN, smartcontract.Int},
@@ -215,6 +218,8 @@ func (gn *GlobalNode) setBalance(key string, change currency.Coin) error {
 		gn.MaxMint = change
 	case MinStake:
 		gn.MinStake = change
+	case MinStakePerDelegate:
+		gn.MinStakePerDelegate = change
 	case MaxStake:
 		gn.MaxStake = change
 	case BlockReward:

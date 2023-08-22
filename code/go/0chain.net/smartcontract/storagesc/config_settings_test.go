@@ -457,6 +457,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxStake
 	case MinStake:
 		return conf.MinStake
+	case MinStakePerDelegate:
+		return conf.MinStakePerDelegate
 	case TimeUnit:
 		return conf.TimeUnit
 	case MinAllocSize:

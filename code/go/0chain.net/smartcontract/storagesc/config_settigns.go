@@ -31,9 +31,10 @@ var settingChangesKey = datastore.Key(ADDRESS + encryption.Hash("setting_changes
 const x10 = 10 * 1000 * 1000 * 1000
 
 const (
-	MaxMint  Setting = iota
-	MaxStake Setting = iota
-	MinStake Setting = iota
+	MaxMint             Setting = iota
+	MaxStake            Setting = iota
+	MinStake            Setting = iota
+	MinStakePerDelegate Setting = iota
 	TimeUnit
 	MinAllocSize
 	MaxChallengeCompletionTime
@@ -140,6 +141,7 @@ func initSettingName() {
 	SettingName[MaxMint] = "max_mint"
 	SettingName[MaxStake] = "max_stake"
 	SettingName[MinStake] = "min_stake"
+	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
 	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
@@ -221,6 +223,7 @@ func initSettings() {
 		MaxMint.String():                          {MaxMint, smartcontract.CurrencyCoin},
 		MaxStake.String():                         {MaxStake, smartcontract.CurrencyCoin},
 		MinStake.String():                         {MinStake, smartcontract.CurrencyCoin},
+		MinStakePerDelegate.String():              {MinStakePerDelegate, smartcontract.CurrencyCoin},
 		MaxCharge.String():                        {MaxCharge, smartcontract.Float64},
 		TimeUnit.String():                         {TimeUnit, smartcontract.Duration},
 		MinAllocSize.String():                     {MinAllocSize, smartcontract.Int64},
@@ -379,6 +382,8 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 		conf.MaxStake = change
 	case MinStake:
 		conf.MinStake = change
+	case MinStakePerDelegate:
+		conf.MinStakePerDelegate = change
 	case MaxTotalFreeAllocation:
 		conf.MaxTotalFreeAllocation = change
 	case MaxIndividualFreeAllocation:
@@ -620,6 +625,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxStake
 	case MinStake:
 		return conf.MinStake
+	case MinStakePerDelegate:
+		return conf.MinStakePerDelegate
 	case TimeUnit:
 		return conf.TimeUnit
 	case MinAllocSize:
