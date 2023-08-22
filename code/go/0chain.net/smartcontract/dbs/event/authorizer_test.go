@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/config"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/core/common"

@@ -1,8 +1,4 @@
-package enums
-
-import (
-	"0chain.net/smartcontract"
-)
+package config
 
 type GlobalSetting int
 
@@ -111,7 +107,7 @@ const (
 var (
 	GlobalSettingName []string
 	GlobalSettingInfo map[string]struct {
-		SettingType smartcontract.ConfigType
+		SettingType ConfigType
 
 		// Indicates that the settings cannot be changed by a transaction
 		// This includes both true immutable settings and settings that are local
@@ -262,7 +258,7 @@ func initGlobalSettingsIgnored() {
 func initGlobalSettings() {
 	// GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
 	GlobalSettingInfo = map[string]struct {
-		SettingType smartcontract.ConfigType
+		SettingType ConfigType
 
 		// Indicates that the settings cannot be changed by a transaction
 		// This includes both true immutable settings and settings that are local
@@ -270,101 +266,101 @@ func initGlobalSettings() {
 		// todo we need to split up immutable and stored in MPT and local so can't be changed in transaction
 		Mutable bool
 	}{
-		GlobalSettingName[State]:        {smartcontract.Boolean, false},
-		GlobalSettingName[Dkg]:          {smartcontract.Boolean, false},
-		GlobalSettingName[ViewChange]:   {smartcontract.Boolean, false},
-		GlobalSettingName[BlockRewards]: {smartcontract.Boolean, false},
-		GlobalSettingName[Storage]:      {smartcontract.Boolean, false},
-		GlobalSettingName[Faucet]:       {smartcontract.Boolean, false},
-		GlobalSettingName[Miner]:        {smartcontract.Boolean, false},
-		GlobalSettingName[Multisig]:     {smartcontract.Boolean, true},
-		GlobalSettingName[Vesting]:      {smartcontract.Boolean, true},
-		GlobalSettingName[Zcn]:          {smartcontract.Boolean, false},
+		GlobalSettingName[State]:        {Boolean, false},
+		GlobalSettingName[Dkg]:          {Boolean, false},
+		GlobalSettingName[ViewChange]:   {Boolean, false},
+		GlobalSettingName[BlockRewards]: {Boolean, false},
+		GlobalSettingName[Storage]:      {Boolean, false},
+		GlobalSettingName[Faucet]:       {Boolean, false},
+		GlobalSettingName[Miner]:        {Boolean, false},
+		GlobalSettingName[Multisig]:     {Boolean, true},
+		GlobalSettingName[Vesting]:      {Boolean, true},
+		GlobalSettingName[Zcn]:          {Boolean, false},
 
-		GlobalSettingName[Owner]: {smartcontract.String, false},
+		GlobalSettingName[Owner]: {String, false},
 
-		GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
-		GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},
-		GlobalSettingName[BlockMaxCost]:                      {smartcontract.Int, true},
-		GlobalSettingName[BlockMaxByteSize]:                  {smartcontract.Int64, true},
-		GlobalSettingName[BlockReplicators]:                  {smartcontract.Int, true},
-		GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, true},
-		GlobalSettingName[BlockGenerationRetryWaitTime]:      {smartcontract.Int, true},
-		GlobalSettingName[BlockProposalMaxWaitTime]:          {smartcontract.Duration, true},
-		GlobalSettingName[BlockProposalWaitMode]:             {smartcontract.String, true},
-		GlobalSettingName[BlockConsensusThresholdByCount]:    {smartcontract.Int, true},
-		GlobalSettingName[BlockConsensusThresholdByStake]:    {smartcontract.Int, true},
-		GlobalSettingName[BlockShardingMinActiveSharders]:    {smartcontract.Int, true},
-		GlobalSettingName[BlockShardingMinActiveReplicators]: {smartcontract.Int, true},
-		GlobalSettingName[BlockValidationBatchSize]:          {smartcontract.Int, true},
-		GlobalSettingName[BlockReuseTransactions]:            {smartcontract.Boolean, true},
-		GlobalSettingName[BlockFinalizationTimeout]:          {smartcontract.Duration, true},
-		GlobalSettingName[BlockMinGenerators]:                {smartcontract.Int, true},
-		GlobalSettingName[BlockGeneratorsPercent]:            {smartcontract.Float64, true},
+		GlobalSettingName[BlockMinSize]:                      {Int32, true},
+		GlobalSettingName[BlockMaxSize]:                      {Int32, true},
+		GlobalSettingName[BlockMaxCost]:                      {Int, true},
+		GlobalSettingName[BlockMaxByteSize]:                  {Int64, true},
+		GlobalSettingName[BlockReplicators]:                  {Int, true},
+		GlobalSettingName[BlockGenerationTimout]:             {Int, true},
+		GlobalSettingName[BlockGenerationRetryWaitTime]:      {Int, true},
+		GlobalSettingName[BlockProposalMaxWaitTime]:          {Duration, true},
+		GlobalSettingName[BlockProposalWaitMode]:             {String, true},
+		GlobalSettingName[BlockConsensusThresholdByCount]:    {Int, true},
+		GlobalSettingName[BlockConsensusThresholdByStake]:    {Int, true},
+		GlobalSettingName[BlockShardingMinActiveSharders]:    {Int, true},
+		GlobalSettingName[BlockShardingMinActiveReplicators]: {Int, true},
+		GlobalSettingName[BlockValidationBatchSize]:          {Int, true},
+		GlobalSettingName[BlockReuseTransactions]:            {Boolean, true},
+		GlobalSettingName[BlockFinalizationTimeout]:          {Duration, true},
+		GlobalSettingName[BlockMinGenerators]:                {Int, true},
+		GlobalSettingName[BlockGeneratorsPercent]:            {Float64, true},
 
-		GlobalSettingName[RoundRange]:                    {smartcontract.Int64, true},
-		GlobalSettingName[RoundTimeoutsSofttoMin]:        {smartcontract.Int, true},
-		GlobalSettingName[RoundTimeoutsSofttoMult]:       {smartcontract.Int, true},
-		GlobalSettingName[RoundTimeoutsRoundRestartMult]: {smartcontract.Int, true},
-		GlobalSettingName[RoundTimeoutsTimeoutCap]:       {smartcontract.Int, true},
+		GlobalSettingName[RoundRange]:                    {Int64, true},
+		GlobalSettingName[RoundTimeoutsSofttoMin]:        {Int, true},
+		GlobalSettingName[RoundTimeoutsSofttoMult]:       {Int, true},
+		GlobalSettingName[RoundTimeoutsRoundRestartMult]: {Int, true},
+		GlobalSettingName[RoundTimeoutsTimeoutCap]:       {Int, true},
 
-		GlobalSettingName[TransactionPayloadMaxSize]: {smartcontract.Int, true},
-		GlobalSettingName[TransactionTimeout]:        {smartcontract.Int, false},
-		GlobalSettingName[TransactionMinFee]:         {smartcontract.Int64, true},
-		GlobalSettingName[TransactionMaxFee]:         {smartcontract.Int64, false},
-		GlobalSettingName[TransactionExempt]:         {smartcontract.Strings, true},
-		GlobalSettingName[TransactionCostFeeCoeff]:   {smartcontract.Int, true},
-		GlobalSettingName[TransactionFutureNonce]:    {smartcontract.Int, true},
+		GlobalSettingName[TransactionPayloadMaxSize]: {Int, true},
+		GlobalSettingName[TransactionTimeout]:        {Int, false},
+		GlobalSettingName[TransactionMinFee]:         {Int64, true},
+		GlobalSettingName[TransactionMaxFee]:         {Int64, false},
+		GlobalSettingName[TransactionExempt]:         {Strings, true},
+		GlobalSettingName[TransactionCostFeeCoeff]:   {Int, true},
+		GlobalSettingName[TransactionFutureNonce]:    {Int, true},
 
-		GlobalSettingName[ClientSignatureScheme]: {smartcontract.String, true},
-		GlobalSettingName[ClientDiscover]:        {smartcontract.Boolean, false},
+		GlobalSettingName[ClientSignatureScheme]: {String, true},
+		GlobalSettingName[ClientDiscover]:        {Boolean, false},
 
-		GlobalSettingName[MessagesVerificationTicketsTo]: {smartcontract.String, true},
+		GlobalSettingName[MessagesVerificationTicketsTo]: {String, true},
 
-		GlobalSettingName[StatePruneBelowCount]: {smartcontract.Int, true},
-		GlobalSettingName[StateSyncTimeout]:     {smartcontract.Duration, false},
+		GlobalSettingName[StatePruneBelowCount]: {Int, true},
+		GlobalSettingName[StateSyncTimeout]:     {Duration, false},
 
-		GlobalSettingName[StuckCheckInterval]: {smartcontract.Duration, false},
-		GlobalSettingName[StuckTimeThreshold]: {smartcontract.Duration, false},
+		GlobalSettingName[StuckCheckInterval]: {Duration, false},
+		GlobalSettingName[StuckTimeThreshold]: {Duration, false},
 
-		GlobalSettingName[SmartContractTimeout]:             {smartcontract.Duration, true},
-		GlobalSettingName[SmartContractSettingUpdatePeriod]: {smartcontract.Int64, true},
+		GlobalSettingName[SmartContractTimeout]:             {Duration, true},
+		GlobalSettingName[SmartContractSettingUpdatePeriod]: {Int64, true},
 
-		GlobalSettingName[LfbTicketRebroadcastTimeout]: {smartcontract.Duration, false},
-		GlobalSettingName[LfbTicketAhead]:              {smartcontract.Int, false},
+		GlobalSettingName[LfbTicketRebroadcastTimeout]: {Duration, false},
+		GlobalSettingName[LfbTicketAhead]:              {Int, false},
 
-		GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {smartcontract.Int, false},
-		GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: {smartcontract.Int, false},
+		GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {Int, false},
+		GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: {Int, false},
 
-		GlobalSettingName[DbsEventsEnabled]:         {smartcontract.Boolean, false},
-		GlobalSettingName[DbsEventsName]:            {smartcontract.String, false},
-		GlobalSettingName[DbsEventsUser]:            {smartcontract.String, false},
-		GlobalSettingName[DbsEventsPassword]:        {smartcontract.String, false},
-		GlobalSettingName[DbsEventsHost]:            {smartcontract.String, false},
-		GlobalSettingName[DbsEventsPort]:            {smartcontract.String, false},
-		GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, false},
-		GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, false},
-		GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, false},
+		GlobalSettingName[DbsEventsEnabled]:         {Boolean, false},
+		GlobalSettingName[DbsEventsName]:            {String, false},
+		GlobalSettingName[DbsEventsUser]:            {String, false},
+		GlobalSettingName[DbsEventsPassword]:        {String, false},
+		GlobalSettingName[DbsEventsHost]:            {String, false},
+		GlobalSettingName[DbsEventsPort]:            {String, false},
+		GlobalSettingName[DbsEventsMaxIdleConns]:    {Int, false},
+		GlobalSettingName[DbsEventsMaxOpenConns]:    {Int, false},
+		GlobalSettingName[DbsEventsConnMaxLifetime]: {Duration, false},
 
-		GlobalSettingName[DbsAggregateDebug]:        {smartcontract.Boolean, true},
-		GlobalSettingName[DbsAggregatePeriod]:       {smartcontract.Int64, true},
-		GlobalSettingName[DbsPartitionChangePeriod]: {smartcontract.Int64, true},
-		GlobalSettingName[DbsPartitionKeepCount]:    {smartcontract.Int64, true},
-		GlobalSettingName[DbsAggregatePageLimit]:    {smartcontract.Int64, true},
+		GlobalSettingName[DbsAggregateDebug]:        {Boolean, true},
+		GlobalSettingName[DbsAggregatePeriod]:       {Int64, true},
+		GlobalSettingName[DbsPartitionChangePeriod]: {Int64, true},
+		GlobalSettingName[DbsPartitionKeepCount]:    {Int64, true},
+		GlobalSettingName[DbsAggregatePageLimit]:    {Int64, true},
 
-		GlobalSettingName[HealthCheckDeepScanEnabled]:          {smartcontract.Boolean, false},
-		GlobalSettingName[HealthCheckDeepScanBatchSize]:        {smartcontract.Int64, false},
-		GlobalSettingName[HealthCheckDeepScanWindow]:           {smartcontract.Int64, false},
-		GlobalSettingName[HealthCheckDeepScanSettleSecs]:       {smartcontract.Duration, false},
-		GlobalSettingName[HealthCheckDeepScanIntervalMins]:     {smartcontract.Duration, false},
-		GlobalSettingName[HealthCheckDeepScanReportStatusMins]: {smartcontract.Duration, false},
+		GlobalSettingName[HealthCheckDeepScanEnabled]:          {Boolean, false},
+		GlobalSettingName[HealthCheckDeepScanBatchSize]:        {Int64, false},
+		GlobalSettingName[HealthCheckDeepScanWindow]:           {Int64, false},
+		GlobalSettingName[HealthCheckDeepScanSettleSecs]:       {Duration, false},
+		GlobalSettingName[HealthCheckDeepScanIntervalMins]:     {Duration, false},
+		GlobalSettingName[HealthCheckDeepScanReportStatusMins]: {Duration, false},
 
-		GlobalSettingName[HealthCheckProximityScanEnabled]:            {smartcontract.Boolean, false},
-		GlobalSettingName[HealthCheckProximityScanBatchSize]:          {smartcontract.Int64, false},
-		GlobalSettingName[HealthCheckProximityScanWindow]:             {smartcontract.Int64, false},
-		GlobalSettingName[HealthCheckProximityScanSettleSecs]:         {smartcontract.Duration, false},
-		GlobalSettingName[HealthCheckProximityScanRepeatIntervalMins]: {smartcontract.Duration, false},
-		GlobalSettingName[HealthCheckProximityScanRejportStatusMins]:  {smartcontract.Duration, false},
-		GlobalSettingName[HealthCheckShowCounters]:                    {smartcontract.Boolean, false},
+		GlobalSettingName[HealthCheckProximityScanEnabled]:            {Boolean, false},
+		GlobalSettingName[HealthCheckProximityScanBatchSize]:          {Int64, false},
+		GlobalSettingName[HealthCheckProximityScanWindow]:             {Int64, false},
+		GlobalSettingName[HealthCheckProximityScanSettleSecs]:         {Duration, false},
+		GlobalSettingName[HealthCheckProximityScanRepeatIntervalMins]: {Duration, false},
+		GlobalSettingName[HealthCheckProximityScanRejportStatusMins]:  {Duration, false},
+		GlobalSettingName[HealthCheckShowCounters]:                    {Boolean, false},
 	}
 }

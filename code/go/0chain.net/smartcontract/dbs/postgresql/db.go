@@ -3,7 +3,7 @@ package postgresql
 import (
 	"fmt"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

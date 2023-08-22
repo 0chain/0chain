@@ -453,7 +453,15 @@ func (zcn *ZCNSmartContract) AuthorizerHealthCheck(
 		return "", err
 	}
 
-	downtime := common.Downtime(authorizer.LastHealthCheck, t.CreationDate)
+	gn, err := GetGlobalNode(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get global node, err: %v", err)
+		err = common.NewError(code, msg)
+		Logger.Error("get global node", zap.Error(err))
+		return "", err
+	}
+
+	downtime := common.Downtime(authorizer.LastHealthCheck, t.CreationDate, gn.HealthCheckPeriod)
 	authorizer.LastHealthCheck = t.CreationDate
 
 	data := dbs.DbHealthCheck{

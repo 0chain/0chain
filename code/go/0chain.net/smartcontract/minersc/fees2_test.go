@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/core/config"
+	"0chain.net/core/config/mocks"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/config/mocks"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"

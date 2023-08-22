@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/event"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"

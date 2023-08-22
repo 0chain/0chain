@@ -3,7 +3,7 @@ package event
 import (
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/currency"
 )

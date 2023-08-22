@@ -359,9 +359,9 @@ func (z UserNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 13
+	// map header, size 14
 	// string "MinMintAmount"
-	o = append(o, 0x8d, 0xad, 0x4d, 0x69, 0x6e, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
+	o = append(o, 0x8e, 0xad, 0x4d, 0x69, 0x6e, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
 	o, err = z.MinMintAmount.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinMintAmount")
@@ -437,6 +437,9 @@ func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxDelegates"
 	o = append(o, 0xac, 0x4d, 0x61, 0x78, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.MaxDelegates)
+	// string "HealthCheckPeriod"
+	o = append(o, 0xb1, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
+	o = msgp.AppendDuration(o, z.HealthCheckPeriod)
 	return
 }
 
@@ -560,6 +563,12 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxDelegates")
 				return
 			}
+		case "HealthCheckPeriod":
+			z.HealthCheckPeriod, bts, err = msgp.ReadDurationBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "HealthCheckPeriod")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -581,6 +590,6 @@ func (z *ZCNSConfig) Msgsize() (s int) {
 			s += msgp.StringPrefixSize + len(za0001) + msgp.IntSize
 		}
 	}
-	s += 13 + msgp.IntSize
+	s += 13 + msgp.IntSize + 18 + msgp.DurationSize
 	return
 }

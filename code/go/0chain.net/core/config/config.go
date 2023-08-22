@@ -5,13 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"0chain.net/smartcontract/minersc/enums"
-
-	"0chain.net/smartcontract"
-
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/core/datastore"
 	"0chain.net/core/viper"
 )
 
@@ -91,9 +86,9 @@ func SetupDefaultConfig() {
 
 	viper.SetDefault("smart_contracts.storagesc.max_blobbers_per_allocation", 40)
 
-	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregateDebug], false)
-	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePeriod], 10)
-	viper.SetDefault(enums.GlobalSettingName[enums.DbsAggregatePageLimit], 50)
+	viper.SetDefault(GlobalSettingName[DbsAggregateDebug], false)
+	viper.SetDefault(GlobalSettingName[DbsAggregatePeriod], 10)
+	viper.SetDefault(GlobalSettingName[DbsAggregatePageLimit], 50)
 }
 
 // SetupConfig setups the main configuration system.
@@ -108,17 +103,6 @@ func SetupConfig(workdir string) {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
 	setupDevConfig()
-}
-
-func SetupDefaultSmartContractConfig() {
-	SmartContractConfig.SetDefault("smart_contracts.faucetsc.pour_limit", 10000)
-	SmartContractConfig.SetDefault("smart_contracts.faucetsc.periodic_limit", 1000000)
-	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_limit", 100000000)
-	SmartContractConfig.SetDefault("smart_contracts.faucetsc.individual_reset", "2h")
-	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_reset", "24h")
-
-	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
-	SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", "3m")
 }
 
 // SetupSmartContractConfig setups the smart contracts configuration system.
@@ -163,7 +147,7 @@ type ChainConfig interface {
 	IsMultisigEnabled() bool
 	IsVestingEnabled() bool
 	IsZcnEnabled() bool
-	OwnerID() datastore.Key
+	OwnerID() string
 	MinBlockSize() int32
 	MaxBlockCost() int
 	MaxByteSize() int64
@@ -226,36 +210,36 @@ type DbSettings struct {
 }
 
 func (s *DbSettings) Update(updates map[string]string) error {
-	if value, found := updates[enums.DbsAggregateDebug.String()]; found {
-		iValue, err := smartcontract.StringToInterface(value, smartcontract.Boolean)
+	if value, found := updates[DbsAggregateDebug.String()]; found {
+		iValue, err := StringToInterface(value, Boolean)
 		if err != nil {
 			return err
 		}
 		s.Debug = iValue.(bool)
 	}
-	if value, found := updates[enums.DbsAggregatePeriod.String()]; found {
-		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+	if value, found := updates[DbsAggregatePeriod.String()]; found {
+		iValue, err := StringToInterface(value, Int64)
 		if err != nil {
 			return err
 		}
 		s.AggregatePeriod = iValue.(int64)
 	}
-	if value, found := updates[enums.DbsPartitionChangePeriod.String()]; found {
-		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+	if value, found := updates[DbsPartitionChangePeriod.String()]; found {
+		iValue, err := StringToInterface(value, Int64)
 		if err != nil {
 			return err
 		}
 		s.PartitionChangePeriod = iValue.(int64)
 	}
-	if value, found := updates[enums.DbsPartitionKeepCount.String()]; found {
-		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+	if value, found := updates[DbsPartitionKeepCount.String()]; found {
+		iValue, err := StringToInterface(value, Int64)
 		if err != nil {
 			return err
 		}
 		s.PartitionKeepCount = iValue.(int64)
 	}
-	if value, found := updates[enums.DbsAggregatePageLimit.String()]; found {
-		iValue, err := smartcontract.StringToInterface(value, smartcontract.Int64)
+	if value, found := updates[DbsAggregatePageLimit.String()]; found {
+		iValue, err := StringToInterface(value, Int64)
 		if err != nil {
 			return err
 		}
