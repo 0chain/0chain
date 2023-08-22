@@ -1,9 +1,10 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"fmt"
+
+	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/provider"
 
@@ -298,8 +299,13 @@ func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
 		return "", common.NewError("validator_health_check_failed",
 			"can't get the validator "+t.ClientID+": "+err.Error())
 	}
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf("blobber_health_check_failed",
+			"cannot get config: %v", err)
+	}
 
-	downtime = common.Downtime(validator.LastHealthCheck, t.CreationDate)
+	downtime = common.Downtime(validator.LastHealthCheck, t.CreationDate, conf.HealthCheckPeriod)
 	validator.LastHealthCheck = t.CreationDate
 
 	emitValidatorHealthCheck(validator, downtime, balances)

@@ -1,7 +1,7 @@
 package mocket
 
 import (
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/event"
 	mocket "github.com/selvatico/go-mocket"
 	"gorm.io/driver/postgres"

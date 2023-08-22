@@ -7,9 +7,9 @@ import (
 
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"

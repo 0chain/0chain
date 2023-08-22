@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/chain/state"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 
@@ -12,7 +13,6 @@ import (
 
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract"
 	"github.com/pkg/errors"
 )
 
@@ -35,6 +35,7 @@ const (
 	OwnerID             = "owner_id"
 	Cost                = "cost"
 	MaxDelegates        = "max_delegates"
+	HealthCheckPeriod   = "health_check_period"
 )
 
 var CostFunctions = []string{
@@ -80,7 +81,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 		return "", errors.Wrap(err, Code)
 	}
 
-	var input smartcontract.StringMap
+	var input config.StringMap
 	err = input.Decode(inputData)
 	if err != nil {
 		return "", errors.Wrap(err, Code)
@@ -102,7 +103,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 	return string(gn.Encode()), nil
 }
 
-func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
+func (gn *GlobalNode) ToStringMap() config.StringMap {
 	fields := map[string]string{
 		MinMintAmount:       fmt.Sprintf("%v", gn.MinMintAmount),
 		MinBurnAmount:       fmt.Sprintf("%v", gn.MinBurnAmount),
@@ -116,13 +117,14 @@ func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
 		BurnAddress:         fmt.Sprintf("%v", gn.BurnAddress),
 		OwnerID:             fmt.Sprintf("%v", gn.OwnerId),
 		MaxDelegates:        fmt.Sprintf("%v", gn.MaxDelegates),
+		HealthCheckPeriod:   fmt.Sprintf("%v", gn.HealthCheckPeriod),
 	}
 
 	for _, key := range CostFunctions {
 		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", gn.Cost[strings.ToLower(key)])
 	}
 
-	return smartcontract.StringMap{
+	return config.StringMap{
 		Fields: fields,
 	}
 }
@@ -164,6 +166,7 @@ func getConfig() (conf *ZCNSConfig, err error) {
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
 	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
+	conf.HealthCheckPeriod = cfg.GetDuration(postfix(HealthCheckPeriod))
 
 	return conf, nil
 }

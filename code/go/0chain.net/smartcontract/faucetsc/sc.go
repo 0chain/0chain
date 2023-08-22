@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	sc "0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/smartcontract"
@@ -15,7 +16,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	sc "0chain.net/smartcontract"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	metrics "github.com/rcrowley/go-metrics"

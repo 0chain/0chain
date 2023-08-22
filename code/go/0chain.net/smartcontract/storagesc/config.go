@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"

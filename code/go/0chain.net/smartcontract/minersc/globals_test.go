@@ -3,7 +3,7 @@ package minersc_test
 import (
 	"testing"
 
-	"0chain.net/smartcontract"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/minersc"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -57,7 +57,7 @@ func TestUpdateGlobals(t *testing.T) {
 		return args{
 			msc:      msc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&config.StringMap{p.inputMap}).Encode(),
 			gn:       &minersc.GlobalNode{OwnerId: owner},
 			balances: balances,
 		}

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"github.com/spf13/pflag"
 
 	"0chain.net/chaincore/node"

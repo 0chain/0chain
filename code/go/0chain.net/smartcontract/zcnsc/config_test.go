@@ -33,7 +33,7 @@ func TestConfigMap_Get(t *testing.T) {
 
 	stringMap := cfg.ToStringMap()
 
-	require.Equal(t, 16, len(stringMap.Fields))
+	require.Equal(t, 17, len(stringMap.Fields))
 	require.Contains(t, stringMap.Fields, OwnerID)
 	require.Contains(t, stringMap.Fields, MinBurnAmount)
 	require.Contains(t, stringMap.Fields, MinMintAmount)
@@ -46,6 +46,7 @@ func TestConfigMap_Get(t *testing.T) {
 	require.Contains(t, stringMap.Fields, BurnAddress)
 	require.Contains(t, stringMap.Fields, PercentAuthorizers)
 	require.Contains(t, stringMap.Fields, MaxDelegates)
+	require.Contains(t, stringMap.Fields, HealthCheckPeriod)
 
 	for _, costFunction := range CostFunctions {
 		require.Contains(t, stringMap.Fields, fmt.Sprintf("%s.%s", Cost, costFunction))
@@ -63,6 +64,7 @@ func TestConfigMap_Get(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("%v", cfg.BurnAddress), stringMap.Fields[BurnAddress])
 	require.Equal(t, fmt.Sprintf("%v", cfg.PercentAuthorizers), stringMap.Fields[PercentAuthorizers])
 	require.Equal(t, fmt.Sprintf("%v", cfg.MaxDelegates), stringMap.Fields[MaxDelegates])
+	require.Equal(t, fmt.Sprintf("%v", cfg.HealthCheckPeriod), stringMap.Fields[HealthCheckPeriod])
 
 	for _, costFunction := range CostFunctions {
 		t.Log("expected key,  value:", costFunction, fmt.Sprintf("%d", cfg.Cost[strings.ToLower(costFunction)]))
