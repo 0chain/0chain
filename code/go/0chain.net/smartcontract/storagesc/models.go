@@ -1630,8 +1630,14 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp, timeU
 // For a case of allocation reducing, where no expiration, nor size changed
 // we are using the same terms. And for this method, the oterms argument is
 // nil for this case (meaning, terms hasn't changed).
+
+type ChallengePoolChanges struct {
+	Value      currency.Coin
+	isNegative bool
+}
+
 func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, timeUnit time.Duration,
-	oterms []Terms) (values []currency.Coin, err error) {
+	oterms []Terms) (values []ChallengePoolChanges, err error) {
 
 	// odr -- old duration remaining
 	// ndr -- new duration remaining
@@ -1647,11 +1653,11 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 		return nil, fmt.Errorf("failed to get new challenge pool duration: %v", err)
 	}
 
-	values = make([]currency.Coin, 0, len(sa.BlobberAllocs))
+	values = make([]ChallengePoolChanges, 0, len(sa.BlobberAllocs))
 
 	for i, d := range sa.BlobberAllocs {
 		if d.Stats == nil || d.Stats.UsedSize == 0 {
-			values = append(values, 0) // no data, no changes
+			values = append(values, ChallengePoolChanges{Value: 0, isNegative: false}) // no data, no changes
 			continue
 		}
 		var (
@@ -1673,7 +1679,12 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp, tim
 
 		diff = b - a // value difference
 
-		values = append(values, currency.Coin(diff))
+		if diff < 0 {
+			diff = -diff
+			values = append(values, ChallengePoolChanges{Value: currency.Coin(diff), isNegative: true})
+		} else {
+			values = append(values, ChallengePoolChanges{Value: currency.Coin(diff), isNegative: false})
+		}
 	}
 
 	return
