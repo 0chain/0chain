@@ -605,13 +605,9 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}
 
 	var (
-		pass = success > threshold
-		mcc  = toSeconds(maxChallengeCompletionTime)
-
+		pass  = success > threshold
 		fresh = challenge.Created+toSeconds(maxChallengeCompletionTime) >= t.CreationDate
 	)
-
-	fmt.Println(mcc)
 
 	return &verifyTicketsResult{
 		pass:       pass,

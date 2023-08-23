@@ -699,6 +699,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 		details.Spent = spent
 	} else {
+		logging.Logger.Info("Jayash negative tokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc))
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
@@ -726,9 +727,11 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, err
 		}
 		details.Returned = returned
+
+		logging.Logger.Info("Jayash negative tokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc.MovedBack), zap.Any("alloc", alloc))
 	}
 
-	logging.Logger.Info("commitMoveTokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc))
+	logging.Logger.Info("commitMoveTokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc.MovedBack))
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return 0, fmt.Errorf("can't Save challenge pool: %v", err)

@@ -854,10 +854,10 @@ type StorageAllocation struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
-	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
+	MovedToChallenge currency.Coin `json:"moved_to_challenge"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
-	MovedBack currency.Coin `json:"moved_back,omitempty"`
+	MovedBack currency.Coin `json:"moved_back"`
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
 	MovedToValidators currency.Coin `json:"moved_to_validators,omitempty"`
