@@ -656,22 +656,15 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
-	logging.Logger.Info("1 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
-
 	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
-	logging.Logger.Info("2 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
-
-	logging.Logger.Info("3 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
 		return 0, fmt.Errorf("can't get related challenge pool: %v", err)
 	}
-
-	logging.Logger.Info("4 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
 
 	var move currency.Coin
 	if size > 0 {
@@ -707,7 +700,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 		details.Spent = spent
 	} else {
-		logging.Logger.Info("Jayash negative tokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc))
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
@@ -735,11 +727,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, err
 		}
 		details.Returned = returned
-
-		logging.Logger.Info("Jayash negative tokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc.MovedBack), zap.Any("alloc", alloc))
 	}
-
-	logging.Logger.Info("commitMoveTokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc.MovedBack))
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
@@ -764,8 +752,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewError("commit_connection_failed",
 			"malformed input: "+err.Error())
 	}
-
-	logging.Logger.Info("commitBlobberConnection", zap.Any("commitConnection", commitConnection.WriteMarker.Size))
 
 	if !commitConnection.Verify() {
 		return "", common.NewError("commit_connection_failed", "Invalid input")
