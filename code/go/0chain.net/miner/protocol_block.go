@@ -56,6 +56,7 @@ func init() {
 }
 
 func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
+	logging.Logger.Info("ebrahim_debug: processTxn started for builtIn txn", zap.Any("txn", txn))
 	clients[txn.ClientID] = nil
 	events, err := mc.UpdateState(ctx, b, bState, txn)
 	if err != nil {
@@ -67,6 +68,7 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 	b.Events = append(b.Events, events...)
 	b.Txns = append(b.Txns, txn)
 	b.AddTransaction(txn)
+	logging.Logger.Info("ebrahim_debug: processTxn done")
 	return nil
 }
 
@@ -424,7 +426,7 @@ func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, 
 			}
 
 			if !cstate.ErrInvalidState(err) {
-				logging.Logger.Warn("sync and retry - none invalid state error",
+				logging.Logger.Warn("ebrahim_debug: sync and retry - none invalid state error",
 					zap.String("desc", desc),
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
@@ -437,7 +439,7 @@ func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, 
 				return false, cctx.Err()
 			case _, ok := <-wc:
 				if !ok {
-					logging.Logger.Error("sync and retry - sync failed",
+					logging.Logger.Error("ebrahim_debug: sync and retry - sync failed",
 						zap.String("desc", desc),
 						zap.Int64("round", b.Round),
 						zap.String("block", b.Hash),
@@ -445,7 +447,7 @@ func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, 
 					return false, err
 				}
 
-				logging.Logger.Debug("sync and retry - retry",
+				logging.Logger.Debug("ebrahim_debug: sync and retry - retry",
 					zap.String("desc", desc),
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
@@ -582,7 +584,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				return ctx.Err()
 			case result := <-validChannel:
 				if roundMismatch {
-					logging.Logger.Info("validate transactions (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("current_round", mc.GetCurrentRound()))
+					logging.Logger.Info("ebrahim_debug: validate transactions (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("current_round", mc.GetCurrentRound()))
 					return ErrRoundMismatch
 				}
 				if !result {
@@ -718,15 +720,15 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
 			return false, nil
 		}
-		var debugTxn = txn.DebugTxn()
+		var debugTxn = true
 
 		nonce, err := mc.validateTransaction(b, bState, txn, waitC)
 		switch err {
 		case PastTransaction:
 			tii.pastTxns = append(tii.pastTxns, txn)
 			if debugTxn {
-				logging.Logger.Debug("generate block (debug transaction) error, transaction hash old nonce",
-					zap.String("txn", txn.Hash),
+				logging.Logger.Debug("ebrahim_debug: generate block (debug transaction) error, transaction hash old nonce",
+					zap.Any("txn", txn),
 					zap.Int32("iterate count", tii.count),
 					zap.Any("now", common.Now()),
 					zap.Int64("nonce", txn.Nonce))
@@ -751,7 +753,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			})
 			tii.futureTxns[txn.ClientID] = list
 			if debugTxn {
-				logging.Logger.Debug("generate block - future transaction",
+				logging.Logger.Debug("ebrahim_debug: generate block - future transaction",
 					zap.String("txn", txn.Hash),
 					zap.Int64("round", b.Round),
 					zap.Int32("iterate count", tii.count))
@@ -760,7 +762,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
 			if debugTxn {
-				logging.Logger.Info("generate block (debug transaction) error - txn creation not within tolerance",
+				logging.Logger.Info("ebrahim_debug: generate block (debug transaction) error - txn creation not within tolerance",
 					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 					zap.Any("now", common.Now()))
 			}
@@ -772,7 +774,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		}
 
 		if debugTxn {
-			logging.Logger.Info("generate block (debug transaction)",
+			logging.Logger.Info("ebrahim_debug: generate block (debug transaction)",
 				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
@@ -780,7 +782,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		events, err := mc.UpdateState(ctx, b, bState, txn, waitC)
 		if err != nil {
 			if debugTxn {
-				logging.Logger.Error("generate block (debug transaction) update state",
+				logging.Logger.Error("ebrahim_debug: generate block (debug transaction) update state",
 					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
 					zap.String("txn_object", datastore.ToJSON(txn).String()),
 					zap.Error(err))
@@ -799,7 +801,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		tii.txnMap[txn.GetKey()] = struct{}{}
 		b.Txns = append(b.Txns, txn)
 		if debugTxn {
-			logging.Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
+			logging.Logger.Info("ebrahim_debug: generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
 		}
 		tii.eTxns = append(tii.eTxns, txn)
 		b.AddTransaction(txn)
@@ -925,13 +927,13 @@ func txnIterHandlerFunc(
 		}
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
-			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
+			logging.Logger.Error("ebrahim_debug: generate block (invalid entity)", zap.Any("entity", qe))
 			// continue iteration to process next transaction
 			return true, nil
 		}
 
 		if lfb.ClientState == nil {
-			logging.Logger.Warn("generate block, chain is not ready yet",
+			logging.Logger.Warn("ebrahim_debug: generate block, chain is not ready yet",
 				zap.Int64("round", b.Round),
 				zap.String("hash", b.Hash),
 				zap.Error(ErrLFBClientStateNil))
@@ -939,7 +941,7 @@ func txnIterHandlerFunc(
 		}
 
 		if txn.Value > config.MaxTokenSupply {
-			logging.Logger.Error("generate block, invalid transaction value",
+			logging.Logger.Error("ebrahim_debug: generate block, invalid transaction value",
 				zap.String("hash", txn.Hash),
 				zap.Uint64("value", uint64(txn.Value)))
 			tii.invalidTxns = append(tii.invalidTxns, txn)
@@ -948,7 +950,7 @@ func txnIterHandlerFunc(
 
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
-			logging.Logger.Debug("generate block - bad transaction cost fee",
+			logging.Logger.Debug("ebrahim_debug: generate block - bad transaction cost fee",
 				zap.Error(err),
 				zap.String("txn_hash", txn.Hash))
 
@@ -984,7 +986,7 @@ func txnIterHandlerFunc(
 
 		success, err := txnProcessor(ctx, bState, txn, tii, waitC)
 		if err != nil {
-			logging.Logger.Debug("generate block txn processor failed",
+			logging.Logger.Debug("ebrahim_debug: generate block txn processor failed",
 				zap.Error(err),
 				zap.Int64("round", b.Round),
 				zap.Int32("iterate count", tii.count),
@@ -994,20 +996,20 @@ func txnIterHandlerFunc(
 
 		if !success {
 			// skipping and continue to check the next transaction
-			logging.Logger.Debug("generate block txn processor failed",
+			logging.Logger.Debug("ebrahim_debug: generate block txn processor failed",
 				zap.Int64("round", b.Round),
 				zap.Int32("iterate count", tii.count),
 				zap.Int("current block size", len(b.Txns)))
 			return true, nil
 		}
 
-		logging.Logger.Debug("generate block - process txn success",
+		logging.Logger.Debug("ebrahim_debug: generate block - process txn success",
 			zap.Int64("round", b.Round),
 			zap.String("txn", txn.Hash))
 
 		tii.cost += cost
 		if tii.byteSize >= mc.MaxByteSize() {
-			logging.Logger.Debug("generate block (too big block size)",
+			logging.Logger.Debug("ebrahim_debug: generate block (too big block size)",
 				zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
 				zap.Int32("idx", tii.idx),
 				zap.Int64("byte size", tii.byteSize),
@@ -1086,7 +1088,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 				}
 			}
 
-			logging.Logger.Debug("remove future txns",
+			logging.Logger.Debug("ebrahim_debug: remove future txns",
 				zap.Int("count", len(deleteTxns)),
 				zap.Strings("txns", txnHashes),
 				zap.Int64("future transaction limit", futureNonceAllowed))
@@ -1094,7 +1096,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 		if len(deleteTxns) > 0 {
 			if err := mc.deleteTxns(deleteTxns); err != nil {
-				logging.Logger.Warn("generate block - remove future txns failed", zap.Error(err))
+				logging.Logger.Warn("ebrahim_debug: generate block - remove future txns failed", zap.Error(err))
 			}
 		}
 	}()
@@ -1102,10 +1104,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
-	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
+	logging.Logger.Info("ebrahim_debug: generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	err = transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if cstate.ErrInvalidState(err) {
-		logging.Logger.Error("generate block - process txn failed",
+		logging.Logger.Error("ebrahim_debug: generate block - process txn failed",
 			zap.Error(err),
 			zap.Int64("round", b.Round))
 		return err
@@ -1116,7 +1118,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found txns very old)", zap.Int64("round", b.Round),
+		logging.Logger.Info("ebrahim_debug: generate block (found txns very old)", zap.Int64("round", b.Round),
 			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
 			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
@@ -1129,14 +1131,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		for _, txn := range iterInfo.pastTxns {
 			keys = append(keys, txn.GetKey())
 		}
-		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Int64("round", b.Round), zap.Int("txn num", len(keys)))
+		logging.Logger.Info("ebrahim_debug: generate block (found pastTxns transactions)", zap.Int64("round", b.Round), zap.Int("txn num", len(keys)))
 	}
 	if iterInfo.roundMismatch {
-		logging.Logger.Debug("generate block (round mismatch)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("ebrahim_debug: generate block (round mismatch)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
 		return ErrRoundMismatch
 	}
 	if iterInfo.roundTimeout {
-		logging.Logger.Debug("generate block (round timeout)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("ebrahim_debug: generate block (round timeout)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
 		return ErrRoundTimeout
 	}
 	if iterInfo.reInclusionErr != nil {
@@ -1146,9 +1148,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	switch err {
 	case context.DeadlineExceeded:
-		logging.Logger.Debug("generate block - slow block generation, stopping transaction collection and finishing the block")
+		logging.Logger.Debug("ebrahim_debug: generate block - slow block generation, stopping transaction collection and finishing the block")
 	case context.Canceled:
-		logging.Logger.Debug("generate block - context cancelled, rejecting current block")
+		logging.Logger.Debug("ebrahim_debug: generate block - context cancelled, rejecting current block")
 		return err
 	default:
 		if err != nil {
@@ -1159,31 +1161,45 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	blockSize := iterInfo.idx
 	var reusedTxns int32
 
+	logging.Logger.Info("ebrahim_debug: Entering rcount loop", 
+		zap.Any("cost", iterInfo.cost),
+		zap.Any("currentTxns", iterInfo.currentTxns),
+		zap.Any("byteSize", iterInfo.byteSize),
+		zap.Any("futureTxns", iterInfo.futureTxns),
+		zap.Any("pastTxns", iterInfo.pastTxns),
+		zap.Any("failedStateCount", iterInfo.failedStateCount),
+		zap.Any("invalidTxns", iterInfo.invalidTxns),
+		zap.Any("eTxns", iterInfo.eTxns),
+		zap.Any("max_block_cost", mc.ChainConfig.MaxBlockCost()),
+		zap.Error(err),
+	)
 	rcount := 0
 	for i := 0; i < len(iterInfo.currentTxns) && iterInfo.cost < mc.ChainConfig.MaxBlockCost() &&
 		iterInfo.byteSize < mc.MaxByteSize() && err != context.DeadlineExceeded; i++ {
+		logging.Logger.Info("ebrahim_debug: Loop count", zap.Any("i", i), zap.Any("rcount", rcount))
 		txn := iterInfo.currentTxns[i]
 		cost, err := mc.EstimateTransactionCost(ctx, lfb, txn, chain.WithSync())
 		if err != nil {
 			// Note: optimistic block generation
 			// we would just skip the error so that the work on txns collection and state computation above
 			// would not be wasted. Therefore, we will pack the block anyway.
-			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
+			logging.Logger.Debug("ebrahim_debug: Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 			break
 		}
 		if iterInfo.cost+cost >= mc.ChainConfig.MaxBlockCost() {
-			logging.Logger.Debug("generate block (too big cost, skipping)")
+			logging.Logger.Debug("ebrahim_debug: generate block (too big cost, skipping)")
 			break
 		}
 
 		success, err := txnProcessor(ctx, blockState, txn, iterInfo, waitC)
 		if err != nil {
 			// optimistic block generation. Same as EstimateTransactionCost above
-			logging.Logger.Debug("generate block - process failed and ignored", zap.Error(err))
+			logging.Logger.Debug("ebrahim_debug: generate block - process failed and ignored", zap.Error(err))
 			break
 		}
 
 		if success {
+			logging.Logger.Debug("ebrahim_debug: txnProcessor not successful", zap.Any("txn", txn))
 			rcount++
 			iterInfo.cost += cost
 			if iterInfo.byteSize >= mc.MaxByteSize() {
@@ -1193,7 +1209,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 	if rcount > 0 {
 		blockSize += int32(rcount)
-		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
+		logging.Logger.Debug("ebrahim_debug: Processed current transactions", zap.Int("count", rcount))
 	}
 	if iterInfo.byteSize < mc.MaxByteSize() {
 		if !waitOver && blockSize < mc.MinBlockSize() {
@@ -1202,7 +1218,9 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			for _, ftxns := range iterInfo.futureTxns {
 				futureTxnsCount += len(ftxns.txns)
 			}
-			logging.Logger.Debug("generate block (insufficient txns)",
+			logging.Logger.Debug("ebrahim_debug: generate block (insufficient txns)",
+				zap.Int64("max_byte_size", mc.MaxByteSize()),
+				zap.Int32("min_block_size", mc.MinBlockSize()),
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", iterInfo.count),
 				zap.Int32("block_size", blockSize),
@@ -1253,7 +1271,7 @@ l:
 
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if iterInfo.byteSize > 10*mc.MaxByteSize() {
-		logging.Logger.Info("generate block (too much byte size)",
+		logging.Logger.Info("ebrahim_debug: generate block (too much byte size)",
 			zap.Int64("round", b.Round),
 			zap.Int64("iteration byte size", iterInfo.byteSize))
 	}
@@ -1263,7 +1281,7 @@ l:
 		return common.NewError("get_clients_error", err.Error())
 	}
 
-	logging.Logger.Debug("generate block (assemble)",
+	logging.Logger.Debug("ebrahim_debug: generate block (assemble)",
 		zap.Int64("round", b.Round),
 		zap.Int("txns", len(b.Txns)),
 		zap.Duration("time", time.Since(start)))
@@ -1286,7 +1304,7 @@ l:
 	b.SetClientState(blockState)
 	b.SetStateChangesCount(blockState)
 	bgTimer.UpdateSince(start)
-	logging.Logger.Debug("generate block (assemble+update)",
+	logging.Logger.Debug("ebrahim_debug: generate block (assemble+update)",
 		zap.Int64("round", b.Round),
 		zap.Int("txns", len(b.Txns)),
 		zap.Duration("time", time.Since(start)))
@@ -1313,7 +1331,7 @@ l:
 
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
-	logging.Logger.Info("generate block (assemble+update+sign)",
+	logging.Logger.Info("ebrahim_debug: generate block (assemble+update+sign)",
 		zap.Int64("round", b.Round),
 		zap.Int("block_size", len(b.Txns)),
 		zap.Int32("reused_txns", 0),
@@ -1383,6 +1401,8 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 		}
 		cost += c
 	}
+
+	logging.Logger.Info("ebrahim_debug: done buildInTxns", zap.Any("txns", txns))
 
 	return txns, cost, nil
 }

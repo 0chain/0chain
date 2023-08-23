@@ -4,19 +4,14 @@
 package storagesc
 
 import (
-	"errors"
-	"fmt"
 	"math/rand"
 	"time"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/smartcontract/partitions"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 var curTime = time.Now()
@@ -28,38 +23,7 @@ func (sc *StorageSmartContract) generateChallenge(
 	conf *Config,
 	balances cstate.StateContextI,
 ) (err error) {
-
-	s := crpc.Client().State()
-	if s.GenerateChallenge == nil {
-		return errors.New("No conductor instruction to generate challenge")
-	}
-
-	if t.ClientID != s.GenerateChallenge.MinerID {
-		return fmt.Errorf("only miner %s can generate challenge", s.GenerateChallenge.MinerID)
-	}
-
-	if s.StopChallengeGeneration {
-		logging.Logger.Info("Challenge generation has been stopped", zap.Bool("stopChalGen", s.StopChallengeGeneration))
-		return errors.New("challenge generation stopped by conductor")
-	}
-
-	if !s.BlobberCommittedWM {
-		return errors.New("conductor is waiting for selected blobber to commit")
-	}
-
-	if node.Self.ID == s.GenerateChallenge.MinerID && !(time.Since(curTime) > s.GenerateChallenge.ChallengeDuration) {
-		return fmt.Errorf("waiting %v to pass", s.GenerateChallenge.ChallengeDuration)
-	}
-
 	err = sc.genChal(t, b, input, conf, balances)
-	if err != nil {
-		return
-	}
-	if node.Self.ID == s.GenerateChallenge.MinerID {
-		curTime = time.Now()
-		logging.Logger.Info("Challenge has been generated", zap.String("client_id", t.ClientID))
-		crpc.Client().ChallengeGenerated(s.GenerateChallenge.BlobberID)
-	}
 	return
 }
 
@@ -92,17 +56,6 @@ func (sc *StorageSmartContract) challengePassed(
 		validatorsRewarded, cab, maxChallengeCompletionTime,
 	)
 
-	m := map[string]interface{}{
-		"blobber_id": cab.blobAlloc.BlobberID,
-		"status":     0,
-	}
-
-	if err == nil {
-		m["status"] = 1
-	}
-
-	crpc.Client().SendChallengeStatus(m)
-
 	return s, err
 }
 
@@ -116,13 +69,5 @@ func (sc *StorageSmartContract) challengeFailed(
 	s, err := sc.processChallengeFailed(
 		balances, validatorsRewarded, cab, maxChallengeCompletionTime)
 
-	m := map[string]interface{}{
-		"error":      err.Error(),
-		"status":     0,
-		"response":   s,
-		"blobber_id": cab.blobAlloc.BlobberID,
-	}
-
-	crpc.Client().SendChallengeStatus(m)
 	return s, err
 }

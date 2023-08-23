@@ -10,6 +10,7 @@ import (
 	"log"
 	"math/rand"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -25,6 +26,8 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"github.com/0chain/common/core/logging"
 )
+
+var curTime = time.Now()
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
 	bvt *block.BlockVerificationTicket, err error) {
@@ -227,11 +230,29 @@ func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler f
 
 func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
 	s := crpc.Client().State()
-	if s.GenerateChallenge == nil {
+	if s.GenerateChallenge == nil || s.StopChallengeGeneration || node.Self.ID != s.GenerateChallenge.MinerID {
+		logging.Logger.Info("ebrahim_debug: createGenerateChallengeTxn: Challenge generation has been stopped for the whole system or for this miner only", 
+			zap.Bool("stopChalGen", s.StopChallengeGeneration),
+			zap.String("current_miner", node.Self.ID))
 		return nil, nil
 	}
-	if node.Self.ID != s.GenerateChallenge.MinerID {
+
+	if !s.BlobberCommittedWM {
+		logging.Logger.Info("ebrahim_debug: createGenerateChallengeTxn: Challenge not generated: conductor is waiting for selected blobber to commit")
 		return nil, nil
 	}
-	return mc.createGenChalTxn(b)
+
+	if node.Self.ID == s.GenerateChallenge.MinerID && !(time.Since(curTime) > s.GenerateChallenge.ChallengeDuration) {
+		logging.Logger.Info("ebrahim_debug: createGenerateChallengeTxn: Challenge not generated: waiting duration to pass", zap.Any("duration", s.GenerateChallenge.ChallengeDuration))
+		return nil, nil
+	}
+
+	if node.Self.ID == s.GenerateChallenge.MinerID {
+		curTime = time.Now()
+	}
+
+	txn, err := mc.createGenChalTxn(b)
+	logging.Logger.Info("ebrahim_debug: createGenerateChallengeTxn: Challenge should have been generated", zap.Any("txn", txn))
+
+	return txn, err
 }

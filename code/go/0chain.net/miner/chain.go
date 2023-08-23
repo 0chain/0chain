@@ -256,7 +256,7 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 	for i, txn := range txns {
 		txnHashes[i] = txn.(*transaction.Transaction).Hash
 	}
-	logging.Logger.Debug("delete txns", zap.Any("txns", txnHashes))
+	logging.Logger.Debug("ebrahim_debug: delete txns", zap.Any("txns", txnHashes))
 	return transactionMetadataProvider.GetStore().MultiDelete(ctx, transactionMetadataProvider, txns)
 }
 

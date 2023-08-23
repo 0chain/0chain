@@ -1139,6 +1139,7 @@ func (sc *StorageSmartContract) genChal(
 	conf *Config,
 	balances cstate.StateContextI,
 ) (err error) {
+	logging.Logger.Info("ebrahim_debug: running genChal")
 	inputRound := GenerateChallengeInput{}
 	if err := json.Unmarshal(input, &inputRound); err != nil {
 		return err
@@ -1228,6 +1229,8 @@ func (sc *StorageSmartContract) genChal(
 	}
 
 	afterAddChallenge(result.challInfo.ID, result.challInfo.ValidatorIDs)
+
+	logging.Logger.Info("ebrahim_debug: done genChal", zap.String("challenge_id", challengeID))
 
 	return nil
 }
