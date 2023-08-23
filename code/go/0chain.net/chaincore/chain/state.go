@@ -157,6 +157,8 @@ func (c *Chain) ExecuteSmartContract(
 					zap.Any("txn", txn))
 			} else {
 				logging.Logger.Error("execute smart contract - find missing nodes, return node not found error",
+					zap.Error(r.err),
+					zap.Any("output", r.output),
 					zap.Any("txn", txn))
 			}
 			return "", util.ErrNodeNotFound
