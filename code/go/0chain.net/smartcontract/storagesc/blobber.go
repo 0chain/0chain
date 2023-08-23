@@ -656,17 +656,22 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
-	logging.Logger.Info("commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
+	logging.Logger.Info("1 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
 
 	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
+	logging.Logger.Info("2 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
+
+	logging.Logger.Info("3 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
 		return 0, fmt.Errorf("can't get related challenge pool: %v", err)
 	}
+
+	logging.Logger.Info("4 commitMoveTokens", zap.Any("size", size), zap.Any("alloc", alloc))
 
 	var move currency.Coin
 	if size > 0 {
