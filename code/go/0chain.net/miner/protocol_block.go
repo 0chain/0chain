@@ -1246,8 +1246,8 @@ l:
 			case context.Canceled, context.DeadlineExceeded:
 				break l
 			}
-			blockSize++
 		}
+		blockSize++
 
 		if !waitOver && blockSize < mc.MinBlockSize() {
 			b.Txns = nil
