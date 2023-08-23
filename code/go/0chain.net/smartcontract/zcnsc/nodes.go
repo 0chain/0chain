@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/provider"
@@ -17,7 +19,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 )
@@ -39,7 +40,8 @@ type ZCNSConfig struct {
 	BurnAddress         string         `json:"burn_address"`
 	OwnerId             string         `json:"owner_id"`
 	Cost                map[string]int `json:"cost"`
-	MaxDelegates        int            `json:"max_delegates"` // MaxDelegates per stake pool
+	MaxDelegates        int            `json:"max_delegates"`       // MaxDelegates per stake pool
+	HealthCheckPeriod   time.Duration  `json:"health_check_period"` // MaxDelegates per stake pool
 }
 
 type GlobalNode struct {
@@ -47,7 +49,7 @@ type GlobalNode struct {
 	ID          string `json:"id"`
 }
 
-func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
+func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 	for key, value := range cfg.Fields {
 		switch key {
 		case MinMintAmount:
@@ -137,6 +139,12 @@ func (gn *GlobalNode) UpdateConfig(cfg *smartcontract.StringMap) (err error) {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to int64", key, value)
 			}
+		case HealthCheckPeriod:
+			v, err := time.ParseDuration(value)
+			if err != nil {
+				return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, value, err)
+			}
+			gn.HealthCheckPeriod = v
 		default:
 			return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 		}
@@ -198,6 +206,8 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
 	case gn.MaxDelegates <= 0:
 		return common.NewError(Code, fmt.Sprintf("max delegate count (%v) is less than 0", gn.MaxDelegates))
+	case gn.HealthCheckPeriod <= 0:
+		return common.NewError(Code, fmt.Sprintf("health check period (%v) is less than 0", gn.HealthCheckPeriod))
 	case gn.MinLockAmount == 0:
 		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is equal to 0", gn.MinLockAmount))
 	}

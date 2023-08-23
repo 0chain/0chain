@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/assert"

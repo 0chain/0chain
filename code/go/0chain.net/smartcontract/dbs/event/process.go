@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/config"
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"

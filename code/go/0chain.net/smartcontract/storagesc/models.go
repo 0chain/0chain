@@ -1218,7 +1218,7 @@ func (sa *StorageAllocation) isActive(
 	conf *Config,
 	now common.Timestamp,
 ) error {
-	active, reason := blobber.Provider.IsActive(now, common.ToSeconds(conf.HealthCheckPeriod))
+	active, reason := blobber.Provider.IsActive(now, conf.HealthCheckPeriod)
 	if !active {
 		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
 	}

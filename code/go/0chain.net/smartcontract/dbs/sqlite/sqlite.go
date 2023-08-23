@@ -3,7 +3,7 @@ package sqlite
 import (
 	"fmt"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
 	"gorm.io/driver/sqlite"

@@ -232,6 +232,7 @@ const (
 	ZcnMinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
 	ZcnBurnAddress        = SmartContract + ZcnSc + "burn_address"
 	ZcnMaxDelegates       = SmartContract + ZcnSc + "max_delegates"
+	HealthCheckPeriod     = SmartContract + ZcnSc + "health_check_period"
 
 	EventDbEnabled         = DbsEvents + "enabled"
 	EventDbName            = DbsEvents + "name"

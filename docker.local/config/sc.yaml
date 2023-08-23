@@ -60,6 +60,7 @@ smart_contracts:
     # sharder delegates to get paid each round when paying fees and rewards
     num_sharder_delegates_rewarded: 5
     cooldown_period: 100
+    health_check_period: 90m
     cost:
       add_miner: 361
       add_sharder: 331
@@ -231,6 +232,7 @@ smart_contracts:
     max_delegates: 10
     max_fee: 100 #todo change the wording
     burn_address: "0000000000000000000000000000000000000000000000000000000000000000" #todo maybe we should use sc address
+    health_check_period: 90m
     cost:
       mint: 100
       burn: 100
