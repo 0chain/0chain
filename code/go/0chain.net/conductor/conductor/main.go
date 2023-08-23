@@ -808,9 +808,9 @@ func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err 
 	case r.waitSharderLFB.Target != "":
 		sharder, ok := r.conf.Nodes.NodeByName(r.waitSharderLFB.Target)
 		if !ok {
-			return fmt.Errorf("expecting block from unknown sharder: %s", sharder.ID)
+			return fmt.Errorf("expecting block from unknown sharder: %s", r.waitSharderLFB.Target)
 		}
-			
+
 		err = r.handleNewBlockWaitingForSharderLFB(block, string(sharder.ID))
 		return
 	}

@@ -164,6 +164,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		onAddBlobber:              make(chan *AddBlobberEvent, 10),
 		onAddAuthorizer:           make(chan *AddAuthorizerEvent, 10),
 		onSharderKeep:             make(chan *SharderKeepEvent, 10),
+		onSharderBlock: 		   make(chan *stats.BlockFromSharder),
 		onNodeReady:               make(chan NodeName, 10),
 		onRoundEvent:              make(chan *RoundEvent, 100),
 		onContributeMPKEvent:      make(chan *ContributeMPKEvent, 10),
@@ -177,27 +178,6 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		server:                    rpc.NewServer(),
 	}
 
-	s = new(Server)
-	s.quit = make(chan struct{})
-	s.names = names
-
-	// without a buffer
-	s.onViewChange = make(chan *ViewChangeEvent, 10)
-	s.onPhase = make(chan *PhaseEvent, 10)
-	s.onAddMiner = make(chan *AddMinerEvent, 10)
-	s.onAddSharder = make(chan *AddSharderEvent, 10)
-	s.onAddBlobber = make(chan *AddBlobberEvent, 10)
-	s.onAddAuthorizer = make(chan *AddAuthorizerEvent, 10)
-	s.onSharderKeep = make(chan *SharderKeepEvent, 10)
-	s.onSharderBlock = make(chan *stats.BlockFromSharder, 10)
-	s.onNodeReady = make(chan NodeName, 10)
-
-	s.onRoundEvent = make(chan *RoundEvent, 100)
-	s.onContributeMPKEvent = make(chan *ContributeMPKEvent, 10)
-	s.onShareOrSignsSharesEvent = make(chan *ShareOrSignsSharesEvent, 10)
-
-	s.nodes = make(map[NodeName]*nodeState)
-	s.server = rpc.NewServer()
 	if err = s.server.Register(s); err != nil {
 		return nil, err
 	}

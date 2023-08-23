@@ -341,3 +341,13 @@ commands:
       destname:
         required: false
         default: upload_renamed.bin
+  cleanup_provider:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/cleanup_provider.sh $path $recreate_script $recreate_script_workdir"
+    args:
+      path:
+        required: true
+      recreate_script:
+        required: true
+      recreate_script_workdir:
+        required: true

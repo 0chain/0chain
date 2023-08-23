@@ -21,10 +21,23 @@ tests:
           name: "cleanup_0dns"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
       - wait_round:
-          round: 15 # just wait the BC starts
+          shift: 15 # just wait the BC starts
       - stop: ['miner-4']
       - wait_round:
-          round: 30
+          shift: 15
+      - start: ['miner-4']
+      - check_miner_generates_blocks:
+          miner: 'miner-4'
+          timeout: '2m'
+      - stop: ['miner-4']
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./0chain/docker.local/miner4"
+            recreate_script: docker.local/bin/init.setup.sh
+            recreate_script_workdir: "0chain"
+      - wait_round:
+          shift: 15
       - start: ['miner-4']
       - check_miner_generates_blocks:
           miner: 'miner-4'
@@ -32,17 +45,30 @@ tests:
   
   - name: "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
     flow:
-      - sleep: "1m"
+      - sleep: "30s"
       - set_monitor: 'sharder-1'
       - cleanup_bc: {}
       - command:
           name: "cleanup_0dns"
       - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
-          round: 15 # just wait the BC starts
+          shift: 15 # just wait the BC starts
       - stop: ['sharder-2']
       - wait_round:
-          round: 30
+          shift: 15
+      - start: ['sharder-2']
+      - wait_sharder_lfb:
+          sharder: 'sharder-2'
+          timeout: '5m'
+      - stop: ['sharder-2']
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./0chain/docker.local/sharder2"
+            recreate_script: docker.local/bin/init.setup.sh
+            recreate_script_workdir: "0chain"
+      - wait_round:
+          shift: 15
       - start: ['sharder-2']
       - wait_sharder_lfb:
           sharder: 'sharder-2'
