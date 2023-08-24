@@ -9,14 +9,16 @@ import (
 
 type AllocationBlobberTerm struct {
 	gorm.Model
-	AllocationID    string `json:"allocation_id" gorm:"uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
-	BlobberID       string `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`    // Foreign Key
+	AllocationID    int64  `json:"alloc_id" gorm:"column:alloc_id; uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first
+	BlobberID       string `json:"blobber_id" gorm:"uniqueIndex:idx_alloc_blob,priority:2; not null"`                // Foreign Key
 	ReadPrice       int64  `json:"read_price"`
 	WritePrice      int64  `json:"write_price"`
 	AllocBlobberIdx int64  `json:"alloc_blobber_idx"`
+
+	AllocationIdHash string `json:"allocation_id" gorm:"-"` // Hash of AllocationID
 }
 
-// ByAge implements sort.Interface based on the Age field.
+// ByIndex implements sort.Interface based on the Age field.
 type ByIndex []AllocationBlobberTerm
 
 func (a ByIndex) Len() int           { return len(a) }
@@ -25,32 +27,55 @@ func (a ByIndex) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 func (edb *EventDb) GetAllocationBlobberTerm(allocationID string, blobberID string) (*AllocationBlobberTerm, error) {
 	var term AllocationBlobberTerm
-	return &term, edb.Store.Get().Model(&AllocationBlobberTerm{}).
-		Where("allocation_id = ? and blobber_id = ?", allocationID, blobberID).
+
+	err := edb.Store.Get().
+		Joins("JOIN allocations ON allocation_blobber_terms.alloc_id = allocations.id").
+		Model(&AllocationBlobberTerm{}).
+		Select("allocations.allocation_id as allocation_id, allocation_blobber_terms.blobber_id as blobber_id, allocation_blobber_terms.read_price as read_price, allocation_blobber_terms.write_price as write_price").
+		Where("allocations.allocation_id = ? AND allocation_blobber_terms.blobber_id = ?", allocationID, blobberID).
 		Take(&term).Error
+
+	if err == nil {
+		term.AllocationIdHash = allocationID
+	}
+
+	return &term, err
 }
 
 func (edb *EventDb) GetAllocationBlobberTerms(allocationID string, limit common2.Pagination) ([]AllocationBlobberTerm, error) {
 	var terms []AllocationBlobberTerm
-	return terms, edb.Store.Get().
+
+	err := edb.Store.Get().
+		Joins("JOIN allocations ON allocation_blobber_terms.alloc_id = allocations.id").
 		Model(&AllocationBlobberTerm{}).
-		Where(AllocationBlobberTerm{AllocationID: allocationID}).
+		Select("allocations.allocation_id as allocation_id, allocation_blobber_terms.blobber_id as blobber_id, allocation_blobber_terms.read_price as read_price, allocation_blobber_terms.write_price as write_price").
+		Where("allocations.allocation_id = ?", allocationID).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order("alloc_blobber_idx").
 		Find(&terms).Error
+
+	if err == nil {
+		for i := range terms {
+			terms[i].AllocationIdHash = allocationID
+		}
+	}
+
+	return terms, err
 }
 
 func deleteAllocationBlobberTerms(edb *EventDb, allocBlobbers map[string][]string) error {
 	for allocationID, blobberIDs := range allocBlobbers {
 		db := edb.Store.Get()
+
+		var err error
+
 		if len(blobberIDs) > 0 {
-			db = db.Where("allocation_id = ? and blobber_id in ?", allocationID, blobberIDs)
+			err = db.Exec("DELETE FROM allocation_blobber_terms WHERE alloc_id = (SELECT id FROM allocations WHERE allocation_id=?) AND blobber_id IN (?)", allocationID, blobberIDs).Error
 		} else {
-			db = db.Where("allocation_id = ?", allocationID)
+			err = db.Exec("DELETE FROM allocation_blobber_terms WHERE alloc_id = (SELECT id FROM allocations WHERE allocation_id=?)", allocationID).Error
 		}
 
-		err := db.Unscoped().Delete(&AllocationBlobberTerm{}).Error
 		if err != nil {
 			return err
 		}
@@ -60,7 +85,7 @@ func deleteAllocationBlobberTerms(edb *EventDb, allocBlobbers map[string][]strin
 }
 
 func (edb *EventDb) deleteAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
-	if len(terms) < 1 || terms[0].AllocationID == "" {
+	if len(terms) < 1 || terms[0].AllocationIdHash == "" {
 		return nil
 	}
 
@@ -69,7 +94,7 @@ func (edb *EventDb) deleteAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 		if term.BlobberID == "" {
 			continue
 		}
-		allocIDBlobberIDs[term.AllocationID] = append(allocIDBlobberIDs[term.AllocationID], term.BlobberID)
+		allocIDBlobberIDs[term.AllocationIdHash] = append(allocIDBlobberIDs[term.AllocationIdHash], term.BlobberID)
 	}
 
 	err := deleteAllocationBlobberTerms(edb, allocIDBlobberIDs)
@@ -81,20 +106,27 @@ func (edb *EventDb) deleteAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 
 func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
 	var (
-		allocationIdList []string
+		allocationIdList []int64
 		blobberIdList    []string
 		readPriceList    []int64
 		writePriceList   []int64
 	)
 
 	for _, t := range terms {
-		allocationIdList = append(allocationIdList, t.AllocationID)
+
+		var allocationID int64
+		err := edb.Store.Get().Model(&Allocation{}).Select("id").Where("allocation_id = ?", t.AllocationIdHash).Take(&allocationID).Error
+		if err != nil {
+			return err
+		}
+
+		allocationIdList = append(allocationIdList, allocationID)
 		blobberIdList = append(blobberIdList, t.BlobberID)
 		readPriceList = append(readPriceList, t.ReadPrice)
 		writePriceList = append(writePriceList, t.WritePrice)
 	}
 
-	return CreateBuilder("allocation_blobber_terms", "allocation_id", allocationIdList).
+	return CreateBuilder("allocation_blobber_terms", "alloc_id", allocationIdList).
 		AddCompositeId("blobber_id", blobberIdList).
 		AddUpdate("read_price", readPriceList).
 		AddUpdate("write_price", writePriceList).
@@ -104,8 +136,18 @@ func (edb *EventDb) updateAllocationBlobberTerms(terms []AllocationBlobberTerm) 
 func (edb *EventDb) addOrOverwriteAllocationBlobberTerms(terms []AllocationBlobberTerm) error {
 	updateFields := []string{"read_price", "write_price", "max_offer_duration"}
 
+	for i, t := range terms {
+		var allocationID int64
+		err := edb.Store.Get().Model(&Allocation{}).Select("id").Where("allocation_id = ?", t.AllocationIdHash).Take(&allocationID).Error
+		if err != nil {
+			return err
+		}
+
+		terms[i].AllocationID = allocationID
+	}
+
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "allocation_id"}, {Name: "blobber_id"}},
+		Columns:   []clause.Column{{Name: "alloc_id"}, {Name: "blobber_id"}},
 		DoUpdates: clause.AssignmentColumns(updateFields), // column needed to be updated
 	}).Create(terms).Error
 }
@@ -113,7 +155,7 @@ func (edb *EventDb) addOrOverwriteAllocationBlobberTerms(terms []AllocationBlobb
 func (edb *EventDb) GetAllocationsByBlobberId(blobberId string, limit common2.Pagination) ([]Allocation, error) {
 	var result []Allocation
 	err := edb.Store.Get().Model(&Allocation{}).
-		Joins("JOIN allocation_blobber_terms on allocation_blobber_terms.allocation_id = allocations.allocation_id").
+		Joins("JOIN allocation_blobber_terms on allocation_blobber_terms.alloc_id = allocations.id").
 		Where("blobber_id = ?", blobberId).
 		Offset(limit.Offset).
 		Limit(limit.Limit).

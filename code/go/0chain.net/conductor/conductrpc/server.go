@@ -130,6 +130,7 @@ type Server struct {
 	onChallengeGeneration chan string
 	onBlobberCommit       chan string
 	onChallengeStatus     chan map[string]interface{}
+	onGettingFileMetaRoot chan map[string]string
 	CurrentTest           cases.TestCase
 
 	magicBlock string
@@ -166,6 +167,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		onChallengeGeneration:     make(chan string, 1),
 		onBlobberCommit:           make(chan string, 1),
 		onChallengeStatus:         make(chan map[string]interface{}, 1),
+		onGettingFileMetaRoot:     make(chan map[string]string, 1),
 		nodes:                     make(map[NodeName]*nodeState),
 		address:                   address,
 		server:                    rpc.NewServer(),
@@ -338,6 +340,10 @@ func (s *Server) OnChallengeStatus() chan map[string]interface{} {
 	return s.onChallengeStatus
 }
 
+func (s *Server) OnGettingFileMetaRoot() chan map[string]string {
+	return s.onGettingFileMetaRoot
+}
+
 func (s *Server) Nodes() map[config.NodeName]*nodeState {
 	return s.nodes
 }
@@ -461,6 +467,14 @@ func (s *Server) SetChallengeStatus(m map[string]interface{}, _ *struct{}) error
 	case <-s.quit:
 	}
 
+	return nil
+}
+
+func (s *Server) GetFileMetaRoot(m map[string]string, _ *struct{}) error {
+	select {
+	case s.onGettingFileMetaRoot <- m:
+	case <-s.quit:
+	}
 	return nil
 }
 

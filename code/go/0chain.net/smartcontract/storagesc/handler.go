@@ -108,6 +108,10 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/alloc-challenge-rewards", srh.getAllocationChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/count-challenges", srh.getChallengesCountByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-rewards", srh.getRewardsByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-delegate-rewards", srh.getDelegateRewardsByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/parition-size-frequency", srh.getPartitionSizeFrequency))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/blobber-selection-frequency", srh.getBlobberPartitionSelectionFrequency))
 	}
 
 	return restEndpoints
@@ -905,7 +909,10 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		var dps = stakepool.DelegatePoolStat{
 			ID:           pool.PoolID,
 			DelegateID:   pool.DelegateID,
-			Status:       spenum.PoolStatus(pool.Status).String(),
+			UnStake:      false,
+			ProviderId:   pool.ProviderID,
+			ProviderType: pool.ProviderType,
+			Status:       pool.Status.String(),
 			RoundCreated: pool.RoundCreated,
 			StakedAt:     pool.StakedAt,
 		}
@@ -1191,14 +1198,6 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
-	conf, err := getConfig(sctx)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	logging.Logger.Info("getOpenChallenges", zap.Any("conf", conf))
 
 	challenges, err := getOpenChallengesForBlobber(
 		blobberID, from, limit, sctx.GetEventDB(),

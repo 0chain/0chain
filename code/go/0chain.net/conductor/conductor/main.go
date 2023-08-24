@@ -78,7 +78,6 @@ func main() {
 	r.conf = conf
 	r.chalConf = config.NewGenerateChallenge()
 	r.verbose = verbose
-	r.chalConf = config.NewGenerateChallenge()
 	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
 	if err != nil {
 		log.Fatal("[ERR]", err)
@@ -160,6 +159,12 @@ type reportFlowDirective struct {
 	directive string
 }
 
+type fileMetaRoot struct {
+	fmrs         map[string]string // blobberID:fileMetaRoot
+	totalBlobers int
+	shouldWait   bool
+}
+
 type Runner struct {
 	server  *conductrpc.Server
 	conf    *config.Config
@@ -188,6 +193,7 @@ type Runner struct {
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	waitCommand            chan error                    // wait a command
 	chalConf               *config.GenerateChallege
+	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -241,6 +247,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case r.chalConf.WaitOnChallengeGeneration:
 		return tm, true
 	case r.chalConf.WaitForChallengeStatus:
+		return tm, true
+	case r.fileMetaRoot.shouldWait:
 		return tm, true
 	}
 
@@ -800,6 +808,31 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 	return nil
 }
 
+func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {	
+	blobberId, ok := m["blobber_id"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks blobber_id")
+	}
+
+	fileMetaRoot, ok := m["file_meta_root"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks file_meta_root")
+	}
+
+	if r.fileMetaRoot.fmrs == nil {
+		r.fileMetaRoot.fmrs = make(map[string]string)
+	}
+
+	r.fileMetaRoot.fmrs[blobberId] = fileMetaRoot
+
+	if len(r.fileMetaRoot.fmrs) >= r.fileMetaRoot.totalBlobers {
+		r.fileMetaRoot.shouldWait = false
+		cfg := config.GetFileMetaRoot(false)
+		return r.SetServerState(cfg)
+	}
+	return nil
+}
+
 func (r *Runner) onBlobberCommit(blobberID string) {
 	if blobberID != r.chalConf.BlobberID {
 		log.Printf("Ignoring blobber: %s\n", blobberID)
@@ -854,6 +887,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			r.onChallengeGeneration(blobberID)
 		case m := <-r.server.OnChallengeStatus():
 			err = r.onChallengeStatus(m)
+		case m := <-r.server.OnGettingFileMetaRoot():
+			err = r.onGettingFileMetaRoot(m)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)

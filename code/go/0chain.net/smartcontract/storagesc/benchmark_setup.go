@@ -128,10 +128,10 @@ func addMockAllocation(
 		allocationTerms := make([]event.AllocationBlobberTerm, 0)
 		for _, b := range sa.BlobberAllocs {
 			allocationTerms = append(allocationTerms, event.AllocationBlobberTerm{
-				BlobberID:    b.BlobberID,
-				AllocationID: b.AllocationID,
-				ReadPrice:    int64(b.Terms.ReadPrice),
-				WritePrice:   int64(b.Terms.WritePrice),
+				BlobberID:        b.BlobberID,
+				AllocationIdHash: b.AllocationID,
+				ReadPrice:        int64(b.Terms.ReadPrice),
+				WritePrice:       int64(b.Terms.WritePrice),
 			})
 		}
 
@@ -973,20 +973,17 @@ func SetMockConfig(
 		"cost.blobber_health_check":      mockCost,
 		"cost.update_blobber_settings":   mockCost,
 		"cost.pay_blobber_block_rewards": mockCost,
-		"cost.challenge_request":         mockCost,
 		"cost.challenge_response":        mockCost,
 		"cost.generate_challenge":        mockCost,
 		"cost.add_validator":             mockCost,
 		"cost.update_validator_settings": mockCost,
 		"cost.add_blobber":               mockCost,
-		"cost.new_read_pool":             mockCost,
 		"cost.read_pool_lock":            mockCost,
 		"cost.read_pool_unlock":          mockCost,
 		"cost.write_pool_lock":           mockCost,
 		"cost.write_pool_unlock":         mockCost,
 		"cost.stake_pool_lock":           mockCost,
 		"cost.stake_pool_unlock":         mockCost,
-		"cost.stake_pool_pay_interests":  mockCost,
 		"cost.commit_settings_changes":   mockCost,
 		"cost.collect_reward":            mockCost,
 		"cost.kill_blobber":              mockCost,

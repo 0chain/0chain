@@ -79,7 +79,8 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int("block size", blockSize))
 		err := tx.Rollback()
 		if err != nil {
-			return nil, err
+			logging.Logger.Error("can't rollback", zap.Error(err))
+			return nil, ctx.Err()
 		}
 		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
@@ -125,7 +126,8 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int("block size", blockSize))
 		err := tx.Rollback()
 		if err != nil {
-			return nil, err
+			logging.Logger.Error("can't rollback", zap.Error(err))
+			return nil, ctx.Err()
 		}
 		return nil, ctx.Err()
 	}

@@ -11,6 +11,15 @@ import (
 	"0chain.net/core/common"
 )
 
+type BlobberChallengeResponded int
+
+const (
+	ChallengeNotResponded BlobberChallengeResponded = iota
+	ChallengeResponded
+	ChallengeRespondedLate
+	ChallengeRespondedInvalid
+)
+
 // swagger:model Challenges
 type Challenges []Challenge
 
@@ -124,12 +133,10 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 
 func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination) ([]*Challenge, error) {
 
-	logging.Logger.Info("1 GetOpenChallengesForBlobber", zap.Any("blobberID", blobberID), zap.Any("from", from), zap.Any("limit", limit))
-
 	var chs []*Challenge
 
 	query := edb.Store.Get().Model(&Challenge{}).
-		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, 0).
+		Where("round_created_at > ? AND blobber_id = ? AND responded = ?", from, blobberID, ChallengeNotResponded).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round_created_at"},
@@ -143,8 +150,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
-
-	logging.Logger.Info("2 GetOpenChallengesForBlobber", zap.Any("result", result), zap.Any("chs", chs))
 
 	return chs, nil
 }

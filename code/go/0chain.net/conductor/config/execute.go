@@ -82,7 +82,7 @@ type Executor interface {
 	Publish(p *Bad) (err error)
 
 	// system command (a bash script, etc)
-	Command(name string, timeout time.Duration)
+	Command(name string, params map[string]string, timeout time.Duration)
 
 	// Blobber related executors
 	StorageTree(st *Bad) (err error)
@@ -118,6 +118,7 @@ type Executor interface {
 	// SetServerState updates state.
 	SetServerState(interface{}) error
 	GenerateChallenge(c *GenerateChallege) error
+	GetNodes() map[NodeName]NodeID
 }
 
 //
