@@ -681,14 +681,23 @@ func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stake
 func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config) (currency.Coin, error) {
 	payment := currency.Coin(0)
 
-	maxChallengeCompletionDTU := float64(conf.MaxChallengeCompletionTime) / float64(conf.TimeUnit)
-	adjustableChallengePoolTokens := float64(d.ChallengePoolIntegralValue) * maxChallengeCompletionDTU
+	rdtu, err := alloc.restDurationInTimeUnits(alloc.Expiration, conf.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("blobber reward failed: %v", err)
+	}
+
+	dtu, err := alloc.durationInTimeUnits(common.Timestamp(conf.MaxChallengeCompletionTime), conf.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("blobber reward failed: %v", err)
+	}
+
+	move, err := d.challenge(dtu, rdtu)
+	if err != nil {
+		return 0, err
+	}
 
 	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {
-		allocationRealUsedSize := float64(alloc.Stats.UsedSize) * float64(alloc.DataShards+alloc.ParityShards) / float64(alloc.DataShards)
-		ratio := float64(d.Stats.UsedSize) / allocationRealUsedSize
-
-		reward, err := currency.Float64ToCoin(adjustableChallengePoolTokens * ratio * passRate)
+		reward, err := currency.MultFloat64(move, passRate)
 		if err != nil {
 			return payment, err
 		}
