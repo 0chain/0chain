@@ -678,10 +678,10 @@ func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stake
 	return currency.Coin(0), nil
 }
 
-func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config) (currency.Coin, error) {
+func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp) (currency.Coin, error) {
 	payment := currency.Coin(0)
 
-	rdtu, err := alloc.restDurationInTimeUnits(alloc.Expiration, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(now, conf.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("blobber reward failed: %v", err)
 	}
@@ -1048,10 +1048,10 @@ func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, bala
 	return nil
 }
 
-func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract) error {
+func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract, now common.Timestamp) error {
 	var passPayments currency.Coin
 	for i, d := range sa.BlobberAllocs {
-		blobberPassPayment, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf)
+		blobberPassPayment, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf, now)
 		if err != nil {
 			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 		}
@@ -1097,8 +1097,8 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 	return nil
 }
 
-func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, cp *challengePool, passRate float64, conf *Config, sc *StorageSmartContract, ba *BlobberAllocation) error {
-	passPayments, err := ba.payChallengePoolPassPayments(sa, sp, cp, passRate, balances, conf)
+func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, cp *challengePool, passRate float64, conf *Config, sc *StorageSmartContract, ba *BlobberAllocation, now common.Timestamp) error {
+	passPayments, err := ba.payChallengePoolPassPayments(sa, sp, cp, passRate, balances, conf, now)
 	if err != nil {
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
@@ -1315,7 +1315,7 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string, addedBlobberAllocation *BlobberAllocation) error {
+func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) error {
 	_, ok := sa.BlobberAllocsMap[blobberID]
 	if !ok {
 		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
@@ -1356,7 +1356,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)
 			}
 
-			if err = sa.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d); err != nil {
+			if err = sa.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
 				return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 			}
 
@@ -1379,9 +1379,9 @@ func replaceBlobber(
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
 	clientID string,
-	addedBlobber *StorageNode, addedBlobberAllocation *BlobberAllocation) ([]*StorageNode, error) {
+	addedBlobber *StorageNode, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) ([]*StorageNode, error) {
 
-	if err := sa.replaceBlobber(blobberID, sc, balances, clientID, addedBlobberAllocation); err != nil {
+	if err := sa.replaceBlobber(blobberID, sc, balances, clientID, addedBlobberAllocation, now); err != nil {
 		return nil, err
 	}
 
@@ -1448,7 +1448,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	}
 
 	if len(removeId) > 0 {
-		if blobbers, err = replaceBlobber(sa, blobbers, removeId, balances, sc, clientID, addedBlobber, ba); err != nil {
+		if blobbers, err = replaceBlobber(sa, blobbers, removeId, balances, sc, clientID, addedBlobber, ba, now); err != nil {
 			return nil, err
 		}
 	} else {
