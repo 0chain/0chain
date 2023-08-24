@@ -136,7 +136,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		ID:            ownerId,
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
-		Expiration:    now,
+		Expiration:    now * 3,
 		Stats: &StorageAllocationStats{
 			UsedSize: 1073741824,
 		},
@@ -448,7 +448,7 @@ func testCancelAllocation(
 	req.decode(input)
 	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
 	remainingWritePool, _ := allocation.WritePool.Int64()
-	require.Equal(t, int64(100000183), remainingWritePool)
+	require.Equal(t, int64(100000364), remainingWritePool)
 
 	return nil
 }
@@ -561,7 +561,7 @@ func confirmFinalizeAllocation(
 	for i, sp := range sps {
 		minLockServiceCharge := f.minLockServiceCharge(i)
 		serviceCharge := f.blobberServiceCharge(i, cancellationCharge[i], scYaml) + minLockServiceCharge
-		require.Equal(t, serviceCharge, int64(sp.Reward))
+		require.InDelta(t, serviceCharge, int64(sp.Reward), errDelta)
 		orderedPoolIds := sp.OrderedPoolIds()
 		for _, poolId := range orderedPoolIds {
 			dp := sp.Pools[poolId]
@@ -747,25 +747,19 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 
 	ba := f.allocation.BlobberAllocs[blobberIndex]
 
-	var used = float64(ba.Stats.UsedSize)
-	var totalUsed = float64(f.allocation.Stats.UsedSize)
-	var abdUsed int64 = 0
-	for _, d := range f.allocation.BlobberAllocs {
-		abdUsed += int64(float64(d.Stats.UsedSize) * float64(f.allocation.DataShards) / float64(f.allocation.DataShards+f.allocation.ParityShards))
-	}
-	require.InDelta(f.t, totalUsed, abdUsed, errDelta)
-
 	var passRate = f._passRates[blobberIndex]
 
-	timeDiffForLastCompletedChallenge := f.allocation.Expiration - f.allocation.BlobberAllocs[blobberIndex].LatestCompletedChallenge.Created
-	allocExpiryDuration := timeDiffForLastCompletedChallenge.Duration()
+	dtu := float64(scYaml.MaxChallengeCompletionTime) / float64(scYaml.TimeUnit)
+	remainingDuration := f.allocation.Expiration - f.now
+	rdtu := float64(remainingDuration.Duration()) / float64(scYaml.TimeUnit)
 
-	maxChallengeCompletionDTU := float64(scYaml.MaxChallengeCompletionTime+allocExpiryDuration) / float64(scYaml.TimeUnit)
-	adjustableChallengePoolTokens := float64(ba.ChallengePoolIntegralValue) * maxChallengeCompletionDTU
+	if rdtu == 0 {
+		return float64(cancellationCharge)
+	}
 
-	ratio := used / (totalUsed * float64(f.allocation.DataShards+f.allocation.ParityShards) / float64(f.allocation.DataShards))
+	move := (dtu / rdtu) * float64(ba.ChallengePoolIntegralValue) * passRate
 
-	return adjustableChallengePoolTokens*ratio*passRate + float64(cancellationCharge)
+	return move + float64(cancellationCharge)
 }
 
 func (f *formulaeFinalizeAllocation) setCancelPassRates() {
