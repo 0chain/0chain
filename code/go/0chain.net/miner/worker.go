@@ -270,6 +270,7 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 
 	// get all missing nodes from LFB
 	for {
+		logging.Logger.Debug("sync all missing nodes - loading all missing nodes...")
 		var err error
 		missingNodes, err = lfb.ClientState.GetAllMissingNodes()
 		if err != nil {
@@ -277,11 +278,13 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 			time.Sleep(3 * time.Second)
 			continue
 		}
+		logging.Logger.Debug("sync all missing nodes - finish load all missing nodes",
+			zap.Int("num", len(missingNodes)))
 		break
 	}
 
 	var (
-		batchSize = 10
+		batchSize = 100
 		batchs    = len(missingNodes) / batchSize
 	)
 
@@ -294,8 +297,10 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 			wc := make(chan struct{}, 1)
 			mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
 			<-wc
-			logging.Logger.Debug("sync all missing nodes - pull missing nodes", zap.Int("num", batchSize))
-			tk.Reset(3 * time.Second)
+			logging.Logger.Debug("sync all missing nodes - pull missing nodes",
+				zap.Int("num", batchSize),
+				zap.Int("remaining", len(missingNodes)-end))
+			tk.Reset(2 * time.Second)
 		}
 	}
 
@@ -304,7 +309,8 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 		wc := make(chan struct{}, 1)
 		mc.SyncMissingNodes(lfb.Round, missingNodes[batchs*batchSize:], wc)
 		<-wc
-		logging.Logger.Debug("sync all missing nodes - pull missing nodes", zap.Int("num", mod))
+		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
+			zap.Int("num", mod))
 	}
 
 	logging.Logger.Debug("sync all missing nodes - done")
