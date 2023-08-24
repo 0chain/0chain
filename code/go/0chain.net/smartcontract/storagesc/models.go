@@ -680,20 +680,25 @@ func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stake
 
 func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp) (currency.Coin, error) {
 	payment := currency.Coin(0)
+	var move currency.Coin
 
-	rdtu, err := alloc.restDurationInTimeUnits(now, conf.TimeUnit)
-	if err != nil {
-		return 0, fmt.Errorf("blobber reward failed: %v", err)
-	}
+	if now < alloc.Expiration {
+		rdtu, err := alloc.restDurationInTimeUnits(now, conf.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("blobber reward failed: %v", err)
+		}
 
-	dtu, err := alloc.durationInTimeUnits(common.Timestamp(conf.MaxChallengeCompletionTime), conf.TimeUnit)
-	if err != nil {
-		return 0, fmt.Errorf("blobber reward failed: %v", err)
-	}
+		dtu, err := alloc.durationInTimeUnits(common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), conf.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("blobber reward failed: %v", err)
+		}
 
-	move, err := d.challenge(dtu, rdtu)
-	if err != nil {
-		return 0, err
+		move, err = d.challenge(dtu, rdtu)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		move = d.ChallengePoolIntegralValue
 	}
 
 	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {

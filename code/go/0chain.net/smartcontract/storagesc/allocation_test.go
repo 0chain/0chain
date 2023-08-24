@@ -612,7 +612,7 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, now, balances, sc, clientId, now)
+			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, now, balances, sc, clientId)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -2197,6 +2197,8 @@ func Test_finalize_allocation(t *testing.T) {
 
 	tx = newTransaction(client.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
+
+	tx.CreationDate = alloc.Expiration + common.Timestamp(conf.MaxChallengeCompletionTime.Seconds())
 	_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
 	require.NoError(t, err)
 

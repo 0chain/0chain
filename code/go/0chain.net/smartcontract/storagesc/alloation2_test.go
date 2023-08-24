@@ -122,7 +122,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		CancellationCharge:         0.2,
 		MinLockDemand:              0.1,
 	}
-	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime) * 5
+	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime.Seconds()) * 5
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
 		writePrice:    0.1,
@@ -141,7 +141,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 			UsedSize: 1073741824,
 		},
 		Size:          4560,
-		WritePool:     399300641,
+		WritePool:     400000000,
 		MinLockDemand: scYaml.MinLockDemand,
 	}
 	var blobbers = new(SortedBlobbers)
@@ -448,7 +448,7 @@ func testCancelAllocation(
 	req.decode(input)
 	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
 	remainingWritePool, _ := allocation.WritePool.Int64()
-	require.Equal(t, int64(100000364), remainingWritePool)
+	require.Equal(t, int64(100647223), remainingWritePool)
 
 	return nil
 }
