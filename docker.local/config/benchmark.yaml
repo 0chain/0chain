@@ -21,6 +21,10 @@ simulation:
   num_reward_partition_blobber: 5
   num_blocks: 300
   num_transactions_per_block: 10
+  num_write_redeem_allocation: 2
+  num_read_markers_allocation: 10
+  num_rounds_between_writes: 5
+  num_rounds_between_reads: 10
 
 options:
   verbose: true
@@ -32,6 +36,10 @@ options:
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
+  event_database_benchmarks: true
+  smart_contract_event_file: "edb_in.json"
+  event_database_event_file: "edb_in.json"
+  verify_burned_tokens: false
 
 dbs:
   events:

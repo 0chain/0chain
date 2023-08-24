@@ -18,6 +18,7 @@ import (
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	bk "0chain.net/smartcontract/benchmark"
 
@@ -107,7 +108,7 @@ func BenchmarkTests(
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
 
-	creationTime := data.Now
+	creationTime := common.Now()
 	timings := make(map[string]time.Duration)
 	newAllocationRequestF := func(
 		t *transaction.Transaction,
@@ -158,9 +159,9 @@ func BenchmarkTests(
 					AllocationRoot:         encryption.Hash("allocation root"),
 					PreviousAllocationRoot: encryption.Hash("allocation root"),
 					AllocationID:           getMockAllocationId(0),
-					Size:                   1024,
+					Size:                   256,
 					BlobberID:              getMockBlobberId(0),
-					Timestamp:              1,
+					Timestamp:              creationTime,
 					ClientID:               data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])

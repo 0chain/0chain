@@ -1287,8 +1287,12 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 				zap.Any("maxChallengeCompletionTime", maxChallengeCompletionTime),
 			)
 
-			ba.Stats.OpenChallenges--
-			alloc.Stats.OpenChallenges--
+			if ba.Stats.OpenChallenges > 0 {
+				ba.Stats.OpenChallenges--
+			}
+			if alloc.Stats.OpenChallenges > 0 {
+				alloc.Stats.OpenChallenges--
+			}
 
 			if expire < now {
 				ba.Stats.FailedChallenges++
