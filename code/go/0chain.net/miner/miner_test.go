@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/alicebob/miniredis/v2"
 
 	"0chain.net/chaincore/state"
@@ -19,7 +20,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"

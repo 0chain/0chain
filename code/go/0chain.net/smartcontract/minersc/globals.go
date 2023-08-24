@@ -6,13 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/smartcontract/minersc/enums"
-
+	config2 "0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/smartcontractinterface"
 
-	"0chain.net/smartcontract"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/transaction"
@@ -63,20 +61,20 @@ func (gl *GlobalSettings) save(balances cstate.StateContextI) error {
 	return err
 }
 
-func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
+func (gl *GlobalSettings) update(inputMap config2.StringMap) error {
 	var err error
 	for key, value := range inputMap.Fields {
-		info, found := enums.GlobalSettingInfo[key]
+		info, found := config2.GlobalSettingInfo[key]
 		if !found {
 			return fmt.Errorf("'%s' is not a valid global setting", key)
 		}
 		if !info.Mutable {
 			return fmt.Errorf("%s cannot be modified via a transaction", key)
 		}
-		_, err = smartcontract.StringToInterface(value, info.SettingType)
+		_, err = config2.StringToInterface(value, info.SettingType)
 		if err != nil {
 			return fmt.Errorf("%v value %v cannot be parsed as a %s",
-				key, value, smartcontract.ConfigTypeName[info.SettingType])
+				key, value, config2.ConfigTypeName[info.SettingType])
 		}
 		gl.Fields[key] = value
 	}
@@ -84,15 +82,15 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 	return nil
 }
 
-func getGlobalSettingName(field enums.GlobalSetting) (string, error) {
-	if field >= enums.NumOfGlobalSettings || 0 > field {
+func getGlobalSettingName(field config2.GlobalSetting) (string, error) {
+	if field >= config2.NumOfGlobalSettings || 0 > field {
 		return "", fmt.Errorf("field out of range %d", field)
 	}
-	return enums.GlobalSettingName[field], nil
+	return config2.GlobalSettingName[field], nil
 }
 
 // GetInt returns a global setting as an int, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetInt(field enums.GlobalSetting) (int, error) {
+func (gl *GlobalSettings) GetInt(field config2.GlobalSetting) (int, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return 0, err
@@ -102,7 +100,7 @@ func (gl *GlobalSettings) GetInt(field enums.GlobalSetting) (int, error) {
 	if !found {
 		return viper.GetInt(key), nil
 	}
-	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int)
+	iValue, err := config2.StringToInterface(sValue, config2.Int)
 	if err != nil {
 		return viper.GetInt(key), nil
 	}
@@ -114,7 +112,7 @@ func (gl *GlobalSettings) GetInt(field enums.GlobalSetting) (int, error) {
 }
 
 // GetInt32 returns a global setting as an int32, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetInt32(field enums.GlobalSetting) (int32, error) {
+func (gl *GlobalSettings) GetInt32(field config2.GlobalSetting) (int32, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return 0, err
@@ -124,7 +122,7 @@ func (gl *GlobalSettings) GetInt32(field enums.GlobalSetting) (int32, error) {
 	if !found {
 		return viper.GetInt32(key), nil
 	}
-	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int32)
+	iValue, err := config2.StringToInterface(sValue, config2.Int32)
 	if err != nil {
 		return viper.GetInt32(key), nil
 	}
@@ -136,7 +134,7 @@ func (gl *GlobalSettings) GetInt32(field enums.GlobalSetting) (int32, error) {
 }
 
 // GetInt64 returns a global setting as an int64, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetInt64(field enums.GlobalSetting) (int64, error) {
+func (gl *GlobalSettings) GetInt64(field config2.GlobalSetting) (int64, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return 0, err
@@ -146,7 +144,7 @@ func (gl *GlobalSettings) GetInt64(field enums.GlobalSetting) (int64, error) {
 	if !found {
 		return viper.GetInt64(key), nil
 	}
-	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int64)
+	iValue, err := config2.StringToInterface(sValue, config2.Int64)
 	if err != nil {
 		return viper.GetInt64(key), nil
 	}
@@ -158,7 +156,7 @@ func (gl *GlobalSettings) GetInt64(field enums.GlobalSetting) (int64, error) {
 }
 
 // GetCoin returns a global setting as an currency.Coin, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetCoin(field enums.GlobalSetting) (currency.Coin, error) {
+func (gl *GlobalSettings) GetCoin(field config2.GlobalSetting) (currency.Coin, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return 0, err
@@ -168,7 +166,7 @@ func (gl *GlobalSettings) GetCoin(field enums.GlobalSetting) (currency.Coin, err
 	if !found {
 		return currency.Coin(viper.GetUint64(key)), nil
 	}
-	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.CurrencyCoin)
+	iValue, err := config2.StringToInterface(sValue, config2.CurrencyCoin)
 	if err != nil {
 		return currency.Coin(viper.GetUint64(key)), nil
 	}
@@ -180,7 +178,7 @@ func (gl *GlobalSettings) GetCoin(field enums.GlobalSetting) (currency.Coin, err
 }
 
 // GetFloat64 returns a global setting as a float64, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetFloat64(field enums.GlobalSetting) (float64, error) {
+func (gl *GlobalSettings) GetFloat64(field config2.GlobalSetting) (float64, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return 0, err
@@ -190,7 +188,7 @@ func (gl *GlobalSettings) GetFloat64(field enums.GlobalSetting) (float64, error)
 	if !found {
 		return viper.GetFloat64(key), nil
 	}
-	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Float64)
+	iValue, err := config2.StringToInterface(sValue, config2.Float64)
 	if err != nil {
 		return viper.GetFloat64(key), nil
 	}
@@ -202,7 +200,7 @@ func (gl *GlobalSettings) GetFloat64(field enums.GlobalSetting) (float64, error)
 }
 
 // GetDuration returns a global setting as a duration, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetDuration(field enums.GlobalSetting) (time.Duration, error) {
+func (gl *GlobalSettings) GetDuration(field config2.GlobalSetting) (time.Duration, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return 0, err
@@ -212,7 +210,7 @@ func (gl *GlobalSettings) GetDuration(field enums.GlobalSetting) (time.Duration,
 	if !found {
 		return viper.GetDuration(key), nil
 	}
-	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Duration)
+	iValue, err := config2.StringToInterface(sValue, config2.Duration)
 	if err != nil {
 		return viper.GetDuration(key), nil
 	}
@@ -224,7 +222,7 @@ func (gl *GlobalSettings) GetDuration(field enums.GlobalSetting) (time.Duration,
 }
 
 // GetString returns a global setting as a string, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetString(field enums.GlobalSetting) (string, error) {
+func (gl *GlobalSettings) GetString(field config2.GlobalSetting) (string, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return "", err
@@ -238,13 +236,13 @@ func (gl *GlobalSettings) GetString(field enums.GlobalSetting) (string, error) {
 }
 
 // GetBool returns a global setting as a boolean, a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetBool(field enums.GlobalSetting) (bool, error) {
+func (gl *GlobalSettings) GetBool(field config2.GlobalSetting) (bool, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return false, err
 	}
 
-	iValue, err := smartcontract.StringToInterface(gl.Fields[key], smartcontract.Boolean)
+	iValue, err := config2.StringToInterface(gl.Fields[key], config2.Boolean)
 	if err != nil {
 		return viper.GetBool(key), nil
 	}
@@ -256,13 +254,13 @@ func (gl *GlobalSettings) GetBool(field enums.GlobalSetting) (bool, error) {
 }
 
 // GetStrings returns a global setting as a []string], a check is made to confirm the setting's type.
-func (gl *GlobalSettings) GetStrings(field enums.GlobalSetting) ([]string, error) {
+func (gl *GlobalSettings) GetStrings(field config2.GlobalSetting) ([]string, error) {
 	key, err := getGlobalSettingName(field)
 	if err != nil {
 		return nil, err
 	}
 
-	iValue, err := smartcontract.StringToInterface(gl.Fields[key], smartcontract.Strings)
+	iValue, err := config2.StringToInterface(gl.Fields[key], config2.Strings)
 	if err != nil {
 		return viper.GetStringSlice(key), nil
 	}
@@ -275,12 +273,12 @@ func (gl *GlobalSettings) GetStrings(field enums.GlobalSetting) ([]string, error
 
 func getStringMapFromViper() map[string]string {
 	globals := make(map[string]string)
-	for key := range enums.GlobalSettingInfo {
-		if _, ok := enums.GlobalSettingsIgnored[key]; ok {
+	for key := range config2.GlobalSettingInfo {
+		if _, ok := config2.GlobalSettingsIgnored[key]; ok {
 			continue
 		}
 		switch key {
-		case enums.GlobalSettingName[enums.TransactionExempt]:
+		case config2.GlobalSettingName[config2.TransactionExempt]:
 			globals[key] = strings.Join(viper.GetStringSlice(key), ",")
 		default:
 			globals[key] = viper.GetString(key)
@@ -311,7 +309,7 @@ func (msc *MinerSmartContract) updateGlobals(
 	}); err != nil {
 		return "", err
 	}
-	var changes smartcontract.StringMap
+	var changes config2.StringMap
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_globals", err.Error())
 	}

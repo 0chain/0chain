@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/config"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/currency"
 )

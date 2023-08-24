@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/chain/state"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 
@@ -12,7 +13,6 @@ import (
 
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract"
 	"github.com/pkg/errors"
 )
 
@@ -22,18 +22,20 @@ const (
 )
 
 const (
-	MinMintAmount      = "min_mint"
-	PercentAuthorizers = "percent_authorizers"
-	MinAuthorizers     = "min_authorizers"
-	MinBurnAmount      = "min_burn"
-	MinStakeAmount     = "min_stake"
-	MaxStakeAmount     = "max_stake"
-	MinLockAmount      = "min_lock"
-	BurnAddress        = "burn_address"
-	MaxFee             = "max_fee"
-	OwnerID            = "owner_id"
-	Cost               = "cost"
-	MaxDelegates       = "max_delegates"
+	MinMintAmount       = "min_mint"
+	PercentAuthorizers  = "percent_authorizers"
+	MinAuthorizers      = "min_authorizers"
+	MinBurnAmount       = "min_burn"
+	MinStakeAmount      = "min_stake"
+	MinStakePerDelegate = "min_stake_per_delegate"
+	MaxStakeAmount      = "max_stake"
+	MinLockAmount       = "min_lock"
+	BurnAddress         = "burn_address"
+	MaxFee              = "max_fee"
+	OwnerID             = "owner_id"
+	Cost                = "cost"
+	MaxDelegates        = "max_delegates"
+	HealthCheckPeriod   = "health_check_period"
 )
 
 var CostFunctions = []string{
@@ -79,7 +81,7 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 		return "", errors.Wrap(err, Code)
 	}
 
-	var input smartcontract.StringMap
+	var input config.StringMap
 	err = input.Decode(inputData)
 	if err != nil {
 		return "", errors.Wrap(err, Code)
@@ -101,26 +103,28 @@ func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inpu
 	return string(gn.Encode()), nil
 }
 
-func (gn *GlobalNode) ToStringMap() smartcontract.StringMap {
+func (gn *GlobalNode) ToStringMap() config.StringMap {
 	fields := map[string]string{
-		MinMintAmount:      fmt.Sprintf("%v", gn.MinMintAmount),
-		MinBurnAmount:      fmt.Sprintf("%v", gn.MinBurnAmount),
-		MinStakeAmount:     fmt.Sprintf("%v", gn.MinStakeAmount),
-		MaxStakeAmount:     fmt.Sprintf("%v", gn.MaxStakeAmount),
-		PercentAuthorizers: fmt.Sprintf("%v", gn.PercentAuthorizers),
-		MinAuthorizers:     fmt.Sprintf("%v", gn.MinAuthorizers),
-		MinLockAmount:      fmt.Sprintf("%v", gn.MinLockAmount),
-		MaxFee:             fmt.Sprintf("%v", gn.MaxFee),
-		BurnAddress:        fmt.Sprintf("%v", gn.BurnAddress),
-		OwnerID:            fmt.Sprintf("%v", gn.OwnerId),
-		MaxDelegates:       fmt.Sprintf("%v", gn.MaxDelegates),
+		MinMintAmount:       fmt.Sprintf("%v", gn.MinMintAmount),
+		MinBurnAmount:       fmt.Sprintf("%v", gn.MinBurnAmount),
+		MinStakeAmount:      fmt.Sprintf("%v", gn.MinStakeAmount),
+		MinStakePerDelegate: fmt.Sprintf("%v", gn.MinStakePerDelegate),
+		MaxStakeAmount:      fmt.Sprintf("%v", gn.MaxStakeAmount),
+		PercentAuthorizers:  fmt.Sprintf("%v", gn.PercentAuthorizers),
+		MinAuthorizers:      fmt.Sprintf("%v", gn.MinAuthorizers),
+		MinLockAmount:       fmt.Sprintf("%v", gn.MinLockAmount),
+		MaxFee:              fmt.Sprintf("%v", gn.MaxFee),
+		BurnAddress:         fmt.Sprintf("%v", gn.BurnAddress),
+		OwnerID:             fmt.Sprintf("%v", gn.OwnerId),
+		MaxDelegates:        fmt.Sprintf("%v", gn.MaxDelegates),
+		HealthCheckPeriod:   fmt.Sprintf("%v", gn.HealthCheckPeriod),
 	}
 
 	for _, key := range CostFunctions {
 		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", gn.Cost[strings.ToLower(key)])
 	}
 
-	return smartcontract.StringMap{
+	return config.StringMap{
 		Fields: fields,
 	}
 }
@@ -143,6 +147,10 @@ func getConfig() (conf *ZCNSConfig, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.MinStakePerDelegate, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinStakePerDelegate)))
+	if err != nil {
+		return nil, err
+	}
 	conf.MaxStakeAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MaxStakeAmount)))
 	if err != nil {
 		return nil, err
@@ -158,6 +166,7 @@ func getConfig() (conf *ZCNSConfig, err error) {
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
 	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
+	conf.HealthCheckPeriod = cfg.GetDuration(postfix(HealthCheckPeriod))
 
 	return conf, nil
 }

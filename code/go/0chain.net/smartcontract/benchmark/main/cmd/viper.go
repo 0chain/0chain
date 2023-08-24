@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"0chain.net/smartcontract/multisigsc"
 
-	"0chain.net/chaincore/config"
 	cviper "0chain.net/core/viper"
 	bk "0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"

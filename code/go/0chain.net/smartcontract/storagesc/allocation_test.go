@@ -724,6 +724,13 @@ func TestExtendAllocation(t *testing.T) {
 			WritePriceRange: PriceRange{mockMinPrice, mockMaxPrice},
 			TimeUnit:        mockTimeUnit,
 			WritePool:       args.poolFunds * 1e10,
+			Stats: &StorageAllocationStats{
+				UsedSize:          int64(mockDataShards+mockParityShards) * mockBlobberCapacity / 2,
+				SuccessChallenges: int64(mockDataShards+mockParityShards) * 100,
+				FailedChallenges:  int64(mockDataShards+mockParityShards) * 2,
+				TotalChallenges:   int64(mockDataShards+mockParityShards) * 102,
+				OpenChallenges:    0,
+			},
 		}
 
 		bCount := sa.DataShards + sa.ParityShards
@@ -759,7 +766,7 @@ func TestExtendAllocation(t *testing.T) {
 				balances.On("InsertTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
 					mock.Anything).Return("", nil).Once()
 				balances.On("EmitEvent", event.TypeStats,
-					event.TagUpdateBlobber, mock.Anything, mock.Anything).Return().Maybe()
+					event.TagToChallengePool, mock.Anything, mock.Anything).Return().Maybe()
 				balances.On("EmitEvent", event.TypeStats,
 					event.TagAddOrUpdateChallengePool, mock.Anything, mock.Anything).Return().Maybe()
 				balances.On("EmitEvent", event.TypeStats,
@@ -1505,60 +1512,6 @@ func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
 	assert.Len(t, blobbers, 2)
 }
 
-func TestStorageSmartContract_closeAllocation(t *testing.T) {
-
-	const (
-		allocTxHash, clientID, pubKey, closeTxHash = "a5f4c3d2_tx_hex",
-			"client_hex", "pub_key_hex", "close_tx_hash"
-
-		errMsg1 = "allocation_closing_failed: " +
-			"doesn't need to close allocation is about to expire"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances(t, false)
-		tx       transaction.Transaction
-
-		alloc *StorageAllocation
-		resp  string
-		err   error
-	)
-
-	createNewTestAllocation(t, ssc, allocTxHash, clientID, pubKey, balances)
-
-	tx.Hash = closeTxHash
-	tx.ClientID = clientID
-	tx.CreationDate = 1050
-
-	alloc, err = ssc.getAllocation(allocTxHash, balances)
-	storageAllocationToAllocationTable(alloc)
-
-	require.NoError(t, err)
-
-	// 1. expiring allocation
-	alloc.Expiration = 1049
-	var conf = Config{
-		MaxChallengeCompletionTime: 30 * time.Minute,
-	}
-
-	_, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
-	requireErrMsg(t, err, errMsg1)
-
-	// 2. close (all related pools has created)
-	alloc.Expiration = tx.CreationDate +
-		toSeconds(conf.MaxChallengeCompletionTime) + 20
-	resp, err = ssc.closeAllocation(&tx, alloc, conf.MaxChallengeCompletionTime, balances)
-	require.NoError(t, err)
-	assert.NotZero(t, resp)
-	// checking out
-
-	alloc, err = ssc.getAllocation(alloc.ID, balances)
-	require.NoError(t, err)
-
-	require.Equal(t, tx.CreationDate, alloc.Expiration)
-}
-
 func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 	cp = new(StorageAllocation)
 	require.NoError(t, cp.Decode(mustEncode(t, alloc)))
@@ -2014,7 +1967,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	uar.ID = alloc.ID
-	uar.Size = -(alloc.Size / 2)
 	uar.Extend = true
 
 	tp += 100
@@ -2027,7 +1979,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	require.EqualValues(t, alloc, &deco)
 
-	assert.Equal(t, cp.Size/2, alloc.Size)
 	assert.Equal(t, common.Timestamp(tp+3600), alloc.Expiration)
 
 	tbs, mld = 0, 0

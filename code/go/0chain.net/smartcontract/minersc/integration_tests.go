@@ -5,9 +5,9 @@ package minersc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/config"
 
 	crpc "0chain.net/conductor/conductrpc"
 )

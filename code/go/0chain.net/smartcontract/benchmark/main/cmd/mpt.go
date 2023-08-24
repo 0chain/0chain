@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/goose"
 
 	"golang.org/x/net/context"
 
-	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"

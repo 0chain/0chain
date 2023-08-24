@@ -1,15 +1,16 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"errors"
 	"fmt"
 
+	"0chain.net/core/config"
+	"0chain.net/smartcontract/dto"
+
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"

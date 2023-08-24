@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"0chain.net/chaincore/threshold/bls"
+	configpkg "0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

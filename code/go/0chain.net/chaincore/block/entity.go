@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/core/config"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

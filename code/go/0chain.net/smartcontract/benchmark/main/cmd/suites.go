@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/postgresql"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
