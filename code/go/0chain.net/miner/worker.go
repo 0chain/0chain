@@ -13,6 +13,7 @@ import (
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
@@ -33,6 +34,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.MinerHealthCheck(ctx)
 	go mc.NotarizationProcessWorker(ctx)
 	go mc.BlockVerifyWorkers(ctx)
+	go mc.SyncAllMissingNodesWorker(ctx)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
@@ -242,4 +244,68 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)
 	}
+}
+
+func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
+	// get LFB first
+	var (
+		lfb = mc.GetLatestFinalizedBlock()
+		tk  = time.NewTicker(time.Second)
+	)
+
+	for {
+		if lfb == nil || lfb.ClientState == nil {
+			time.Sleep(10 * time.Second)
+			lfb = mc.GetLatestFinalizedBlock()
+			continue
+		}
+
+		logging.Logger.Debug("sync all missing nodes - start from LFB", zap.Int64("round", lfb.Round))
+		break
+	}
+
+	var (
+		missingNodes []util.Key
+	)
+
+	// get all missing nodes from LFB
+	for {
+		var err error
+		missingNodes, err = lfb.ClientState.GetAllMissingNodes()
+		if err != nil {
+			logging.Logger.Error("sync all missing nodes - get all missing nodes failed", zap.Error(err))
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		break
+	}
+
+	var (
+		batchSize = 10
+		batchs    = len(missingNodes) / batchSize
+	)
+
+	for idx := 1; idx <= batchs; idx++ {
+		select {
+		case <-tk.C:
+			// pull missing nodes
+			start := (idx - 1) * batchSize
+			end := idx * batchSize
+			wc := make(chan struct{}, 1)
+			mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
+			<-wc
+			logging.Logger.Debug("sync all missing nodes - pull missing nodes", zap.Int("num", batchSize))
+			tk.Reset(3 * time.Second)
+		}
+	}
+
+	mod := len(missingNodes) % batchSize
+	if mod > 0 {
+		wc := make(chan struct{}, 1)
+		mc.SyncMissingNodes(lfb.Round, missingNodes[batchs*batchSize:], wc)
+		<-wc
+		logging.Logger.Debug("sync all missing nodes - pull missing nodes", zap.Int("num", mod))
+	}
+
+	logging.Logger.Debug("sync all missing nodes - done")
 }
