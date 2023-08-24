@@ -682,7 +682,7 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 	payment := currency.Coin(0)
 	var move currency.Coin
 
-	if now < alloc.Expiration {
+	if now+common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()) <= alloc.Expiration {
 		rdtu, err := alloc.restDurationInTimeUnits(now, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("blobber reward failed: %v", err)
@@ -868,10 +868,10 @@ type StorageAllocation struct {
 	MinLockDemand float64 `json:"min_lock_demand"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
-	MovedToChallenge currency.Coin `json:"moved_to_challenge"`
+	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
-	MovedBack currency.Coin `json:"moved_back"`
+	MovedBack currency.Coin `json:"moved_back,omitempty"`
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
 	MovedToValidators currency.Coin `json:"moved_to_validators,omitempty"`
@@ -1108,26 +1108,35 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
-	if passPayments > 0 {
-		cp.Balance, err = currency.MinusCoin(cp.Balance, passPayments)
-		if err != nil {
-			return err
-		}
-
-		sa.MovedBack, err = currency.AddCoin(sa.MovedBack, passPayments)
-		if err != nil {
-			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
-		}
-
-		err = sa.moveFromChallengePool(cp, passPayments)
-		if err != nil {
-			return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
-		}
-
-		if err = cp.save(sc.ID, sa, balances); err != nil {
-			return fmt.Errorf("failed to save challenge pool: %v", err)
-		}
+	cp.Balance, err = currency.MinusCoin(cp.Balance, ba.ChallengePoolIntegralValue)
+	if err != nil {
+		return err
 	}
+
+	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, ba.ChallengePoolIntegralValue-passPayments)
+	if err != nil {
+		return err
+	}
+
+	err = sa.moveFromChallengePool(cp, ba.ChallengePoolIntegralValue-passPayments)
+	if err != nil {
+		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+	}
+
+	if err = cp.save(sc.ID, sa, balances); err != nil {
+		return fmt.Errorf("failed to save challenge pool: %v", err)
+	}
+
+	i, err := ba.ChallengePoolIntegralValue.Int64()
+	if err != nil {
+		return fmt.Errorf("failed to convert balance: %v", err)
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+		Client:       sa.Owner,
+		AllocationId: sa.ID,
+		Amount:       i,
+	})
 
 	return nil
 }
