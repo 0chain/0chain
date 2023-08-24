@@ -2,6 +2,8 @@ package miner
 
 import (
 	"context"
+	"os"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -280,6 +282,18 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 		}
 		logging.Logger.Debug("sync all missing nodes - finish load all missing nodes",
 			zap.Int("num", len(missingNodes)))
+
+		mns := make([]string, 0, len(missingNodes))
+		for _, n := range missingNodes {
+			mns = append(mns, util.ToHex(n))
+		}
+		mn := strings.Join(mns, "\n")
+		err = os.WriteFile("/tmp/missing_nodes.txt", []byte(mn), 0644)
+		if err != nil {
+			logging.Logger.Error("sync all missing nodes - write missing nodes to file failed", zap.Error(err))
+		} else {
+			logging.Logger.Debug("sync all missing nodes - write missing nodes to file")
+		}
 		break
 	}
 
