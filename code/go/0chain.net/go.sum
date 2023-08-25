@@ -52,6 +52,8 @@ github.com/0chain/common v0.0.7-0.20230824132009-549ea1ac1065 h1:as9zCNbMqEsc/bN
 github.com/0chain/common v0.0.7-0.20230824132009-549ea1ac1065/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/common v0.0.7-0.20230824133507-d2b92de4e0c0 h1:5d7JMenRzC+MqewT7q9hOoPMz4v0WIJb3aHmIg5l6cs=
 github.com/0chain/common v0.0.7-0.20230824133507-d2b92de4e0c0/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
+github.com/0chain/common v0.0.7-0.20230825051950-34936ea9ea1f h1:2sIy8E3O1t9h7lpvavuVzO2C3zSmw/wPXvhxOSyD1Ms=
+github.com/0chain/common v0.0.7-0.20230825051950-34936ea9ea1f/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
 github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d h1:G19ZxPbPUX025coYOrj6klljl2zWnumW3ZyrpYTRb0I=
