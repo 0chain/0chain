@@ -2166,7 +2166,6 @@ func Test_finalize_allocation(t *testing.T) {
 				val.validTicket(t, chall.ID, b1.id, true, tp))
 		}
 
-		tp += step / 2
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		b := &block.Block{}
@@ -2357,7 +2356,6 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 				val.validTicket(t, chall.ID, b1.id, true, tp))
 		}
 
-		tp += step / 2
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		b := &block.Block{}
