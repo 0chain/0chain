@@ -8,11 +8,11 @@ import (
 	"sync"
 	"testing"
 
+	"0chain.net/core/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"

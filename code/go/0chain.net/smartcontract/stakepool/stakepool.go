@@ -8,8 +8,8 @@ import (
 	"sort"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -59,9 +59,10 @@ type StakePool struct {
 }
 
 type Settings struct {
-	DelegateWallet     string  `json:"delegate_wallet"`
-	MaxNumDelegates    int     `json:"num_delegates"`
-	ServiceChargeRatio float64 `json:"service_charge"`
+	DelegateWallet     string        `json:"delegate_wallet"`
+	MaxNumDelegates    int           `json:"num_delegates"`
+	MinStake           currency.Coin `json:"min_stake"`
+	ServiceChargeRatio float64       `json:"service_charge"`
 }
 
 type DelegatePool struct {
@@ -268,7 +269,7 @@ func (sp *StakePool) MintRewards(
 			return 0, err
 		}
 		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId, dbs.ProviderID{
-			ID: providerId,
+			ID:   providerId,
 			Type: providerType,
 		})
 
@@ -382,7 +383,12 @@ func (sp *StakePool) DistributeRewardsRandN(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
-	if value == 0 || sp.HasBeenKilled {
+	total, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
+	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
 		return nil // nothing to move
 	}
 	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
@@ -527,7 +533,12 @@ func (sp *StakePool) DistributeRewards(
 	balances cstate.StateContextI,
 	options ...string,
 ) (err error) {
-	if value == 0 || sp.HasBeenKilled {
+	total, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
+	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
 		return nil // nothing to move
 	}
 

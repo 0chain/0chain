@@ -20,11 +20,11 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/config"
 	"0chain.net/core/metric"
 	"go.uber.org/zap"
 

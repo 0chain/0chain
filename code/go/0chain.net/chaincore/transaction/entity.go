@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/core/viper"
 
 	"encoding/json"
@@ -17,7 +18,6 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"

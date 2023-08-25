@@ -8,10 +8,10 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/core/memorystore"

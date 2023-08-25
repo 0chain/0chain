@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/core/common"
@@ -14,7 +15,6 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/benchmark"
@@ -65,6 +65,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.ZcnPercentAuthorizers)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress)
 	gn.MaxDelegates = viper.GetInt(benchmark.ZcnMaxDelegates)
+	gn.HealthCheckPeriod = viper.GetDuration(benchmark.HealthCheckPeriod)
 	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 	if err != nil {
 		log.Fatal(err)

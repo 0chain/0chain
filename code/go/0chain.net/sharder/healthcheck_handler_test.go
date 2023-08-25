@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/config"
 
 	"github.com/rcrowley/go-metrics"
 

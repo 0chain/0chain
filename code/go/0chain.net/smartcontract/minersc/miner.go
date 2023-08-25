@@ -1,14 +1,15 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"fmt"
+
+	"0chain.net/core/config"
+	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -50,7 +51,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
-
+	newMiner.Settings.MinStake = gn.MinStakePerDelegate
 	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
 
 	if magicBlockMiners == nil {

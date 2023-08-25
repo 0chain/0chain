@@ -11,10 +11,10 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/core/config"
 )
 
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {

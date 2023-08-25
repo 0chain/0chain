@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"

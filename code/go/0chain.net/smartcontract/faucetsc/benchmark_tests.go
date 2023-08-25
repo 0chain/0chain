@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"0chain.net/core/common"
+	sc "0chain.net/core/config"
 
 	"0chain.net/core/viper"
 
@@ -12,7 +13,6 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	sc "0chain.net/smartcontract"
 	bk "0chain.net/smartcontract/benchmark"
 )
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	common2 "0chain.net/smartcontract/common"
