@@ -355,6 +355,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 		}
 
 		lfnb, er := func() (*block.Block, error) {
+			logging.Logger.Debug("load_lfb - get notarized block from sharders")
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
@@ -445,6 +446,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
 	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
 
+	logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")
 	// and then, check out related LFMB can be missing
 	bl.lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, bl.lfb)
 	if err != nil {
@@ -477,6 +479,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 	var bl = sc.iterateRoundsLookingForLFB(ctx)
 
 	if bl == nil || bl.r == nil || bl.r.Number == 0 || bl.r.Number == 1 {
+		logging.Logger.Debug("load_lfb, could not load LFB from store")
 		return // use genesis blocks
 	}
 

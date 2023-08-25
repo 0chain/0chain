@@ -165,10 +165,12 @@ func (bStore *BlockStore) Read(hash string) (*block.Block, error) {
 		}
 	}
 
+	logging.Logger.Debug("read from disk", zap.String("hash", hash))
 	b, err = bStore.readFromDisk(hash)
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Debug("finish read from disk", zap.String("hash", hash))
 
 	go func() {
 		ctx, ctxCncl := context.WithTimeout(context.TODO(), CacheWriteTimeOut)
@@ -187,12 +189,17 @@ func (bStore *BlockStore) readFromDisk(hash string) (*block.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Debug("readFromDisk - getBlockFilePath", zap.String("path", bp))
 	bPath := filepath.Join(bStore.basePath, bp)
 	f, err := os.Open(bPath)
 	if err != nil {
+		logging.Logger.Error("readFromDisk - open file failed",
+			zap.String("path", bPath),
+			zap.Error(err))
 		return nil, err
 	}
 	defer f.Close()
+	logging.Logger.Debug("readFromDisk - open file", zap.String("path", bPath))
 
 	r, err := zlib.NewReader(f)
 	if err != nil {
@@ -204,6 +211,7 @@ func (bStore *BlockStore) readFromDisk(hash string) (*block.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Debug("readFromDisk - decode msgpack block", zap.String("hash", hash))
 	return b, nil
 }
 
