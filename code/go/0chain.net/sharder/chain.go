@@ -382,6 +382,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 		// Don't check the state. It can be missing if the state had synced.
 		// But it works fine anyway.
 
+		logging.Logger.Debug("load_lfb, check if client state stored")
 		if !sc.HasClientStateStored(lfb.ClientStateHash) {
 			logging.Logger.Warn("load_lfb, missing corresponding state",
 				zap.Int64("round", r.Number),
@@ -391,6 +392,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 			continue
 		}
 
+		logging.Logger.Debug("load_lfb, validate state")
 		// check if lfb has full state
 		if !sc.ValidateState(lfb) {
 			logging.Logger.Warn("load_lfb, lfb state missing nodes",
@@ -401,6 +403,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 			continue
 		}
 
+		logging.Logger.Debug("load_lfb, find it", zap.Int64("round", lfb.Round))
 		return // got it
 	}
 
