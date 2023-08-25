@@ -1151,13 +1151,6 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 
 			var expire = oc.CreatedAt + toSeconds(maxChallengeCompletionTime)
 
-			logging.Logger.Info("settleOpenChallengesAndGetPassRates",
-				zap.Any("oc", oc),
-				zap.Any("now", now),
-				zap.Any("expire", expire),
-				zap.Any("maxChallengeCompletionTime", maxChallengeCompletionTime),
-			)
-
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
