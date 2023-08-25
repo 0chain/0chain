@@ -10,7 +10,6 @@ import (
 	"log"
 	"math/rand"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -26,8 +25,6 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"github.com/0chain/common/core/logging"
 )
-
-var curTime = time.Now()
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
 	bvt *block.BlockVerificationTicket, err error) {
@@ -240,15 +237,6 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 	if !s.BlobberCommittedWM {
 		logging.Logger.Info("ebrahim_debug: createGenerateChallengeTxn: Challenge not generated: conductor is waiting for selected blobber to commit")
 		return nil, nil
-	}
-
-	if node.Self.ID == s.GenerateChallenge.MinerID && !(time.Since(curTime) > s.GenerateChallenge.ChallengeDuration) {
-		logging.Logger.Info("ebrahim_debug: createGenerateChallengeTxn: Challenge not generated: waiting duration to pass", zap.Any("duration", s.GenerateChallenge.ChallengeDuration))
-		return nil, nil
-	}
-
-	if node.Self.ID == s.GenerateChallenge.MinerID {
-		curTime = time.Now()
 	}
 
 	txn, err := mc.createGenChalTxn(b)
