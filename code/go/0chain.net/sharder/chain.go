@@ -523,6 +523,7 @@ func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 }
 
 func (sc *Chain) ValidateState(b *block.Block) bool {
+	logging.Logger.Debug("load_lfb, validate state - init state DB")
 	if err := b.InitStateDB(sc.GetStateDB()); err != nil {
 		logging.Logger.Warn("load_lfb, init block state failed",
 			zap.Int64("round", b.Round),
@@ -533,6 +534,7 @@ func (sc *Chain) ValidateState(b *block.Block) bool {
 		return false
 	}
 
+	logging.Logger.Debug("load_lfb, validate state - sync msissing nodes")
 	if err := sc.syncLFBMissingNodes(b); err != nil {
 		logging.Logger.Warn("load_lfb, sync missing nodes failed",
 			zap.Int64("round", b.Round),
@@ -541,6 +543,7 @@ func (sc *Chain) ValidateState(b *block.Block) bool {
 		return false
 	}
 
+	logging.Logger.Debug("load_lfb, alidate state - sync msissing nodes done")
 	return true
 }
 
