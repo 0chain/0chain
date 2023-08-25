@@ -4,7 +4,7 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 )
 
 func (msc *MinerSmartContract) initSC() {

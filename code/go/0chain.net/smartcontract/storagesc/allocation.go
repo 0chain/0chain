@@ -477,7 +477,6 @@ type updateAllocationRequest struct {
 	OwnerPublicKey          string `json:"owner_public_key"` // Owner Public Key of the allocation
 	Size                    int64  `json:"size"`             // difference
 	Extend                  bool   `json:"extend"`
-	UpdateTerms             bool   `json:"update_terms"`
 	AddBlobberId            string `json:"add_blobber_id"`
 	RemoveBlobberId         string `json:"remove_blobber_id"`
 	SetThirdPartyExtendable bool   `json:"set_third_party_extendable"`
@@ -706,7 +705,7 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 }
 
 // The adjustChallengePool moves more or moves some tokens back from or to
-// challenge pool during allocation extending or reducing.
+// challenge pool during allocation extending.
 func (sc *StorageSmartContract) adjustChallengePool(
 	alloc *StorageAllocation,
 	odr, ndr common.Timestamp,
@@ -724,18 +723,30 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
 	}
 
-	var changed bool
-	sum := currency.Coin(0)
-	for _, ch := range changes {
-		_, err = ch.Int64()
+	totalChanges := 0
+
+	addedToCP, removedFromCP := currency.Coin(0), currency.Coin(0)
+	for i, ch := range changes {
+		changeValueInInt64, err := ch.Value.Int64()
 		if err != nil {
 			return err
 		}
+
 		switch {
-		case ch > 0:
-			err = alloc.moveToChallengePool(cp, ch)
-			sum += ch
-			changed = true
+		case !ch.isNegative && ch.Value > 0:
+			err = alloc.moveToChallengePool(cp, ch.Value)
+			addedToCP += ch.Value
+
+			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch.Value
+			alloc.MovedToChallenge += ch.Value
+			totalChanges += int(changeValueInInt64)
+		case ch.isNegative && ch.Value > 0:
+			err = alloc.moveFromChallengePool(cp, ch.Value)
+			removedFromCP += ch.Value
+
+			alloc.BlobberAllocs[i].ChallengePoolIntegralValue -= ch.Value
+			alloc.MovedBack += ch.Value
+			totalChanges -= int(changeValueInInt64)
 		default:
 			// no changes for the blobber
 		}
@@ -744,20 +755,38 @@ func (sc *StorageSmartContract) adjustChallengePool(
 		}
 	}
 
-	if changed {
+	if totalChanges > 0 {
 		err = cp.save(sc.ID, alloc, balances)
 		if err != nil {
-			i := int64(0)
-			i, err = sum.Int64()
-			if err != nil {
-				return err
-			}
-			balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
-				Client:       alloc.Owner,
-				AllocationId: alloc.ID,
-				Amount:       i,
-			})
+			return err
 		}
+
+		i := int64(0)
+		i, err = addedToCP.Int64()
+		if err != nil {
+			return err
+		}
+		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       i,
+		})
+	} else if totalChanges < 0 {
+		err = cp.save(sc.ID, alloc, balances)
+		if err != nil {
+			return err
+		}
+
+		i := int64(0)
+		i, err = removedFromCP.Int64()
+		if err != nil {
+			return err
+		}
+		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
+			Client:       alloc.Owner,
+			AllocationId: alloc.ID,
+			Amount:       i,
+		})
 	}
 
 	return nil
@@ -784,9 +813,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		originalRemainingDuration = alloc.Expiration - txn.CreationDate
 	)
 
-	// adjust the expiration if changed, boundaries has already checked
-	var prevExpiration = alloc.Expiration
-
 	if req.Extend {
 		alloc.Expiration = common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()) // new expiration
 	}
@@ -807,6 +833,7 @@ func (sc *StorageSmartContract) extendAllocation(
 			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s no longer provides its service", b.ID)
 		}
+
 		if req.Size > 0 {
 			if b.Capacity-b.Allocated-diff < 0 {
 				return common.NewErrorf("allocation_extending_failed",
@@ -817,20 +844,12 @@ func (sc *StorageSmartContract) extendAllocation(
 		b.Allocated += diff // new capacity used
 
 		// update terms using weighted average
-		details.Terms, err = weightedAverage(&details.Terms, &b.Terms,
-			txn.CreationDate, prevExpiration, alloc.Expiration, details.Size,
-			diff)
+		details.Terms = b.Terms
 		if err != nil {
 			return err
 		}
 
 		details.Size = size // new size
-
-		// since, new terms is weighted average based on previous terms and
-		// past allocation time and new terms and new allocation time; then
-		// we can easily recalculate new min_lock_demand value from allocation
-		// start to its new end using the new weighted average terms; but, we
-		// can't reduce the min_lock_demand_value; that's all;
 
 		// new blobber's min lock demand (alloc.Expiration is already updated
 		// and we can use restDurationInTimeUnits method here)
@@ -849,6 +868,7 @@ func (sc *StorageSmartContract) extendAllocation(
 			details.MinLockDemand = nbmld
 		}
 
+		// update blobber's offer
 		newOffer := details.Offer()
 		if newOffer != oldOffer {
 			var sp *stakePool
@@ -994,17 +1014,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if len(blobbers) != len(alloc.BlobberAllocs) {
 			return "", common.NewError("allocation_updating_failed",
 				"error allocation blobber size mismatch")
-		}
-
-		if request.UpdateTerms {
-			for i, bd := range alloc.BlobberAllocs {
-				if bd.Terms.WritePrice >= blobbers[i].Terms.WritePrice {
-					bd.Terms.WritePrice = blobbers[i].Terms.WritePrice
-				}
-				if bd.Terms.ReadPrice >= blobbers[i].Terms.ReadPrice {
-					bd.Terms.ReadPrice = blobbers[i].Terms.ReadPrice
-				}
-			}
 		}
 
 		// if size or expiration increased, then we use new terms
@@ -1407,6 +1416,9 @@ func (sc *StorageSmartContract) finishAllocation(
 }
 
 func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chainstate.StateContextI) {
+
+	logging.Logger.Info("emitUpdateAllocationStatEvent", zap.Any("allocation", allocation))
+
 	alloc := event.Allocation{
 		AllocationID:     allocation.ID,
 		UsedSize:         allocation.Stats.UsedSize,

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/config"
 
 	"0chain.net/smartcontract/provider"
 
@@ -20,7 +21,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"

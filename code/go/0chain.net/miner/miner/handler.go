@@ -3,8 +3,8 @@ package main
 import (
 	"net/http"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/core/encryption"
 )
 
