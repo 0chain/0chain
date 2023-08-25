@@ -44,21 +44,20 @@ var txnHandlers = map[string] TxnHandler{
 }
 
 func (c *Chain) postFinalize(ctx context.Context, fb *block.Block) error {
-	logging.Logger.Debug("ebrahim_debug: A block is finalized", zap.String("hash", fb.Hash), zap.Any("txns", fb.Txns))
 	client := crpc.Client()
 	for _, txn := range fb.Txns {
 		handler, ok := txnHandlers[txn.FunctionName]
 		if !ok {
 			continue
 		}
-		logging.Logger.Info("ebrahim_debug: post_finalize processing txn",
+		logging.Logger.Info("post_finalize processing txn",
 			zap.Any("function_name", txn.FunctionName),
 			zap.Any("hash", txn.Hash),
 			zap.Any("output", txn.TransactionOutput),	
 		)
 		err := handler(txn, client)
 		if err != nil {
-			logging.Logger.Error("ebrahim_debug:post_finalize txn error",
+			logging.Logger.Error("post_finalize txn error",
 				zap.Int64("round", fb.Round),
 				zap.String("hash", fb.Hash),
 				zap.Any("txn", txn),
