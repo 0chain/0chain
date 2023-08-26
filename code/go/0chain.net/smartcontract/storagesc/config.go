@@ -90,7 +90,7 @@ type Config struct {
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
 	// MaxChallengeCompletionTime is max time to complete a challenge.
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	MaxChallengeCompletionTime int64 `json:"max_challenge_completion_time"`
 	// MinBlobberCapacity allowed to register in the SC.
 	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
 	// ReadPool related configurations.
@@ -344,7 +344,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
-	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
+	conf.MaxChallengeCompletionTime = scc.GetInt64(pfx + "max_challenge_completion_time")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")

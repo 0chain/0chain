@@ -92,7 +92,6 @@ func (sc *StorageSmartContract) blobberReward(
 	blobAlloc *BlobberAllocation,
 	validators []string,
 	partial float64,
-	maxChallengeCompletionTime time.Duration,
 	balances cstate.StateContextI,
 	allocationID string,
 ) error {
@@ -103,7 +102,7 @@ func (sc *StorageSmartContract) blobberReward(
 
 	// time of this challenge
 	challengeCompletedTime := blobAlloc.LatestCompletedChallenge.Created
-	if challengeCompletedTime > alloc.Expiration+toSeconds(maxChallengeCompletionTime) {
+	if alloc.Finalized {
 		return errors.New("late challenge response")
 	}
 
@@ -286,7 +285,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 	prev common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
-	maxChallengeCompletionTime time.Duration,
+	maxChallengeCompletionTime int64,
 	balances cstate.StateContextI,
 	allocationID string,
 ) (err error) {
@@ -297,7 +296,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 
 	// time of this challenge
 	challengeCompleteTime := blobAlloc.LatestCompletedChallenge.Created
-	if challengeCompleteTime > alloc.Expiration+toSeconds(maxChallengeCompletionTime) {
+	if alloc.Finalized {
 		return errors.New("late challenge response")
 	}
 
@@ -536,7 +535,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
 	}
 
-	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
+	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab)
 }
 
 type verifyTicketsResult struct {
@@ -561,7 +560,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	t *transaction.Transaction,
 	challenge *StorageChallenge,
 	cr *ChallengeResponse,
-	maxChallengeCompletionTime time.Duration,
+	maxChallengeCompletionTime int64,
 ) (*verifyTicketsResult, error) {
 	// get unique validation tickets map
 	vtsMap := make(map[string]struct{}, len(cr.ValidationTickets))
@@ -611,7 +610,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 
 	var (
 		pass  = success > threshold
-		fresh = challenge.Created+toSeconds(maxChallengeCompletionTime) >= t.CreationDate
+		fresh = challenge.RoundCreatedAt+maxChallengeCompletionTime >= balances.GetBlock().Round
 	)
 
 	return &verifyTicketsResult{
@@ -629,7 +628,6 @@ func (sc *StorageSmartContract) challengePassed(
 	triggerPeriod int64,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionTime time.Duration,
 ) (string, error) {
 	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
 	if err != nil {
@@ -736,7 +734,6 @@ func (sc *StorageSmartContract) challengePassed(
 		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc,
 		validators,
 		partial,
-		maxChallengeCompletionTime,
 		balances,
 		cab.challenge.AllocationID,
 	)
@@ -760,7 +757,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	balances cstate.StateContextI,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionTime time.Duration,
+	maxChallengeCompletionTime int64,
 ) (string, error) {
 	if !sc.completeChallenge(cab) {
 		return "", common.NewError("challenge_out_of_order",
@@ -1321,6 +1318,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	return emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances, alloc.Stats, blobAlloc.Stats)
 }
 
-func isChallengeExpired(now, createdAt common.Timestamp, challengeCompletionTime time.Duration) bool {
-	return createdAt+common.ToSeconds(challengeCompletionTime) <= now
+func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionTime int64) bool {
+	return roundCreatedAt+maxChallengeCompletionTime <= currentRound
 }

@@ -1124,8 +1124,8 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 // challenge requests and their expiration
 func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	alloc *StorageAllocation,
-	now common.Timestamp,
-	maxChallengeCompletionTime time.Duration,
+	now,
+	maxChallengeCompletionTime int64,
 	balances chainstate.StateContextI,
 ) (
 	passRates []float64, err error) {
@@ -1149,7 +1149,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = oc.CreatedAt + toSeconds(maxChallengeCompletionTime)
+			var expire = oc.RoundCreatedAt + maxChallengeCompletionTime
 
 			logging.Logger.Info("settleOpenChallengesAndGetPassRates",
 				zap.Any("oc", oc),
@@ -1251,7 +1251,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("can't get config", err.Error())
 	}
 	var passRates []float64
-	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionTime, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1334,13 +1334,13 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	// should be expired
-	if alloc.Until(conf.MaxChallengeCompletionTime) > t.CreationDate {
+	if alloc.Expiration > t.CreationDate {
 		return "", common.NewError("fini_alloc_failed",
 			"allocation is not expired yet")
 	}
 
 	var passRates []float64
-	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, t.CreationDate, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionTime, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())

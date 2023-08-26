@@ -85,9 +85,9 @@ type ChallengeResponse struct {
 }
 
 type AllocOpenChallenge struct {
-	ID        string           `json:"id"`
-	CreatedAt common.Timestamp `json:"created_at"`
-	BlobberID string           `json:"blobber_id"` // blobber id
+	ID             string `json:"id"`
+	RoundCreatedAt int64  `json:"round_created_at"`
+	BlobberID      string `json:"blobber_id"` // blobber id
 }
 
 type AllocationChallenges struct {
@@ -128,9 +128,9 @@ func (acs *AllocationChallenges) addChallenge(challenge *StorageChallenge) bool 
 
 	if _, ok := acs.ChallengeMap[challenge.ID]; !ok {
 		oc := &AllocOpenChallenge{
-			ID:        challenge.ID,
-			BlobberID: challenge.BlobberID,
-			CreatedAt: challenge.Created,
+			ID:             challenge.ID,
+			BlobberID:      challenge.BlobberID,
+			RoundCreatedAt: challenge.RoundCreatedAt,
 		}
 		acs.OpenChallenges = append(acs.OpenChallenges, oc)
 		acs.ChallengeMap[challenge.ID] = oc
@@ -571,7 +571,7 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	return
 }
 
-func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now common.Timestamp, maxChallengeCompletionTime time.Duration, balances chainstate.StateContextI, sc *StorageSmartContract, ba *BlobberAllocation) (float64, error) {
+func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionTime int64, balances chainstate.StateContextI, sc *StorageSmartContract, ba *BlobberAllocation) (float64, error) {
 
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
@@ -598,8 +598,10 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = oc.CreatedAt + toSeconds(maxChallengeCompletionTime)
-			if expire < now {
+			var expire = oc.RoundCreatedAt + maxChallengeCompletionTime
+			currentRound := balances.GetBlock().Round
+
+			if expire < currentRound {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
 			} else {
@@ -617,7 +619,6 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 			if err != nil {
 				return 0.0, err
 			}
-
 		}
 
 	default:
@@ -1326,7 +1327,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				}
 			}
 
-			passRate, err := d.removeBlobberPassRates(sa, common.Now(), conf.MaxChallengeCompletionTime, balances, sc, d)
+			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionTime, balances, sc, d)
 
 			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
 			if err != nil {
@@ -1750,7 +1751,7 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 func (sa *StorageAllocation) removeExpiredChallenges(
 	allocChallenges *AllocationChallenges,
 	now common.Timestamp,
-	cct time.Duration,
+	cct int64,
 	balances cstate.StateContextI,
 ) (map[string]string, error) {
 	var expiredChallengeBlobberMap = make(map[string]string)
@@ -1759,15 +1760,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
 	for _, oc := range allocChallenges.OpenChallenges {
-		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
-		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
-		//logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
-		if _, ok := expiredChallengeBlobberMap[oc.ID]; ok {
-			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ID))
-			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
-		}
-
-		if !isChallengeExpired(now, oc.CreatedAt, cct) {
+		if !isChallengeExpired(balances.GetBlock().Round, oc.RoundCreatedAt, cct) {
 			nonExpiredChallenges = append(nonExpiredChallenges, oc)
 			continue
 		}
