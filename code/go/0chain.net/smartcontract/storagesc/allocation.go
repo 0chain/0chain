@@ -1151,13 +1151,6 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 
 			var expire = oc.RoundCreatedAt + maxChallengeCompletionTime
 
-			logging.Logger.Info("settleOpenChallengesAndGetPassRates",
-				zap.Any("oc", oc),
-				zap.Any("now", now),
-				zap.Any("expire", expire),
-				zap.Any("maxChallengeCompletionTime", maxChallengeCompletionTime),
-			)
-
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
@@ -1257,10 +1250,6 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
 
-	// can cancel
-	// new values
-	alloc.Expiration = t.CreationDate
-
 	sps := make([]*stakePool, 0, len(alloc.BlobberAllocs))
 	for _, d := range alloc.BlobberAllocs {
 		var sp *stakePool
@@ -1280,6 +1269,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
+	alloc.Expiration = t.CreationDate
 	alloc.Finalized, alloc.Canceled = true, true
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
@@ -1395,7 +1385,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
-	if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc); err != nil {
+	if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc, t.CreationDate); err != nil {
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
@@ -1416,8 +1406,6 @@ func (sc *StorageSmartContract) finishAllocation(
 }
 
 func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chainstate.StateContextI) {
-
-	logging.Logger.Info("emitUpdateAllocationStatEvent", zap.Any("allocation", allocation))
 
 	alloc := event.Allocation{
 		AllocationID:     allocation.ID,
