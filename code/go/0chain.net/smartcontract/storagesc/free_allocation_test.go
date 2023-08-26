@@ -232,7 +232,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		mockAllBlobbers = &StorageNodes{}
 		conf            = &Config{
 			MinAllocSize:                 1027,
-			MaxChallengeCompletionRounds: 1 * time.Hour,
+			MaxChallengeCompletionRounds: 720,
 			MaxTotalFreeAllocation:       mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:       mockFreeAllocationSettings,
 			TimeUnit:                     timeUnit,
@@ -449,7 +449,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 	var mockAllBlobbers = &StorageNodes{}
 	var conf = &Config{
 		MinAllocSize:                 1027,
-		MaxChallengeCompletionRounds: 1 * time.Hour,
+		MaxChallengeCompletionRounds: 720,
 		MaxTotalFreeAllocation:       mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:       mockFreeAllocationSettings,
 		MaxBlobbersPerAllocation:     40,

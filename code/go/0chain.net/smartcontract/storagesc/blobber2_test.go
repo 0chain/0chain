@@ -1,13 +1,11 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/provider"
 	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
-
-	"0chain.net/smartcontract/provider"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -159,12 +157,8 @@ func TestCommitBlobberRead(t *testing.T) {
 	})
 
 	t.Run(errExpiredAllocation, func(t *testing.T) {
-		var conf = Config{
-			MaxChallengeCompletionRounds: 30 * time.Minute,
-		}
 		var faultyRead = read
-		faultyRead.timestamp = allocation.expiration +
-			toSeconds(conf.MaxChallengeCompletionRounds) + 1
+		faultyRead.timestamp = allocation.expiration + 1
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPool,
 		)

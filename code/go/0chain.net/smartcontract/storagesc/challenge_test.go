@@ -51,7 +51,7 @@ func TestAddChallenge(t *testing.T) {
 		allocID      string
 		challengesTS []blobberTS
 		add          challengeAdd
-		cct          time.Duration
+		cct          int64
 		challInfo    *StorageChallengeResponse
 	}
 
@@ -176,7 +176,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				add: challengeAdd{"blobber_1", common.Timestamp(10)},
 			},
 			want: want{
@@ -189,7 +189,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK - more than one open challenges",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				challengesTS: []blobberTS{
 					{"blobber_1", 10},
 					{"blobber_2", 20},
@@ -207,7 +207,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK - one challenge expired",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				challengesTS: []blobberTS{
 					{"blobber_1", 10},
 					{"blobber_2", 20},
@@ -225,7 +225,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK - more challenges expired, multiple blobbers",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				challengesTS: []blobberTS{
 					{"blobber_1", 10},
 					{"blobber_2", 20},
@@ -346,7 +346,7 @@ func TestBlobberReward(t *testing.T) {
 	var scYaml = Config{
 		MaxMint:                      zcnToBalance(4000000.0),
 		ValidatorReward:              0.025,
-		MaxChallengeCompletionRounds: 5 * time.Minute,
+		MaxChallengeCompletionRounds: 720,
 		TimeUnit:                     720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
@@ -365,22 +365,12 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionRounds) + 1
+		var thisChallenge = thisExpires + 1
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
-	})
-
-	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionRounds) - toSeconds(1*time.Minute)
-
-		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
-
-		require.NoError(t, err)
 	})
 
 	t.Run("test old challenge", func(t *testing.T) {
@@ -457,7 +447,7 @@ func TestBlobberPenalty(t *testing.T) {
 		MaxMint:                      zcnToBalance(4000000.0),
 		BlobberSlash:                 0.1,
 		ValidatorReward:              0.025,
-		MaxChallengeCompletionRounds: 5 * time.Minute,
+		MaxChallengeCompletionRounds: 720,
 		TimeUnit:                     720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
@@ -484,7 +474,7 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionRounds) + 1
+		var thisChallenge = thisExpires + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
@@ -1051,7 +1041,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, scYaml.MaxChallengeCompletionRounds, ctx, allocationId)
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx, allocationId)
 	if err != nil {
 		return err
 	}
