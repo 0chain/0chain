@@ -436,6 +436,8 @@ func (conf *Config) setInt64(key string, change int64) error {
 		conf.MinBlobberCapacity = change
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
+	case MaxChallengeCompletionTime:
+		conf.MaxChallengeCompletionTime = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
@@ -499,8 +501,6 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 	switch Settings[key].setting {
 	case TimeUnit:
 		conf.TimeUnit = change
-	case MaxChallengeCompletionTime:
-		conf.MaxChallengeCompletionTime = change
 	case StakePoolMinLockPeriod:
 		if conf.StakePool == nil {
 			conf.StakePool = &stakePoolConfig{}
