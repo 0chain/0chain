@@ -11,7 +11,7 @@ cleanup_command: "./docker.local/bin/docker-clean.sh"
 # number of rounds per view change
 view_change: 250 # 100
 # skip 0dns from initialization message waiting
-skip_wait: ["0dns"]
+skip_wait: ["0dns","0box"]
 stuck_warning_threshold: "2s"
 
 #
@@ -154,6 +154,13 @@ nodes:
     env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_ADDRESS=0xfa0204737fB21F565FcF5293FD1Efc0f89f2D158,ETH_PK=0xb9226048816807399cb8123a0216fb8b1f9b0e54020283609cc25ac4faae7284
     start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+  
+  - name: "authorizer-4"
+    id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
+    work_dir: "../token_bridge_authserver/docker.local/auth4"
+    env: AUTHORIZER=4,ETH_MNEMONIC=prize tennis people canoe tongue reform main ghost jelly prefer swear nurse,ETH_UNLOCKPASSWORD="L9gwnf#Gm)bpZLP7",ETH_ADDRESS=0xD21073e6DC7E65aABc8763b9B34AAd9Eb4c8cE65,ETH_PK=0x8f86829881c924854a3ed32e986cb64bde652eb7431cc693a38d20da90319a88
+    start_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   # 0dns (patched version, add docker-clean, start-no-daemon.sh)
   - name: "0dns" #
@@ -162,6 +169,13 @@ nodes:
     env: "" # no ENV needed
     start_command: "../0dns/docker.local/bin/start-no-daemon.sh" # not demonized instance
     stop_command: "../0dns/docker.local/bin/stop-no-daemon.sh" # not demonized instance
+  
+  - name: "0box"
+    id: "0box"
+    work_dir: "../0box/"
+    env: ""
+    start_command: "../0box/docker.local/bin/start.sh"
+    stop_command: "../0box/docker.local/bin/stop.sh"
 
 # named system commands
 commands:
