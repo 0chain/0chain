@@ -474,7 +474,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"cannot get smart contract configurations: %v", err)
 	}
 
-	result, err := verifyChallengeTickets(balances, t, challenge, &challResp, conf.MaxChallengeCompletionTime)
+	result, err := verifyChallengeTickets(balances, t, challenge, &challResp, conf.MaxChallengeCompletionRounds)
 	if err != nil {
 		return "", common.NewError(errCode, err.Error())
 	}
@@ -531,7 +531,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	}
 
 	if !(result.pass && result.fresh) {
-		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionTime)
+		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionRounds)
 	}
 
 	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab)
@@ -1256,7 +1256,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created, conf.MaxChallengeCompletionTime, balances)
+	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created, conf.MaxChallengeCompletionRounds, balances)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}

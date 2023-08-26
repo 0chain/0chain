@@ -117,7 +117,7 @@ func TestNewAllocation(t *testing.T) {
 
 func TestCancelAllocationRequest(t *testing.T) {
 	var blobberStakePools [][]mockStakePool
-	var challenges [][]common.Timestamp
+	var challenges [][]int64
 
 	var ctx = &mockStateContext{
 		clientBalance: zcnToBalance(3.1),
@@ -129,7 +129,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	scYaml, err := getConfig(ctx)
 	require.NoError(t, err)
 
-	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime.Seconds()) * 5
+	var now = common.Timestamp(900)
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
 		writePrice:    0.1,
@@ -208,9 +208,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 			allocation.Stats.OpenChallenges += ba.Stats.OpenChallenges
 			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
 
-			challenges = append(challenges, []common.Timestamp{})
+			challenges = append(challenges, []int64{})
 			for j := 0; j < int(allocation.BlobberAllocs[i].Stats.OpenChallenges); j++ {
-				var expires = now - common.Timestamp(float64(j)*float64(scYaml.MaxChallengeCompletionTime)/3.0)
+				var expires = int64(float64(ctx.GetBlock().Round) - float64(j)*float64(scYaml.MaxChallengeCompletionRounds)/3.0)
 				challenges[i] = append(challenges[i], expires)
 			}
 		}
@@ -248,7 +248,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 func TestFinalizeAllocation(t *testing.T) {
 	var now = common.Timestamp(300)
 	var blobberStakePools = [][]mockStakePool{}
-	var challenges [][]common.Timestamp
+	var challenges [][]int64
 
 	var ctx = &mockStateContext{
 		clientBalance: zcnToBalance(3.1),
@@ -271,7 +271,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		ID:            ownerId,
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
-		Expiration:    now - toSeconds(scYaml.MaxChallengeCompletionTime),
+		Expiration:    now - 180,
 		Stats: &StorageAllocationStats{
 			UsedSize:       205,
 			OpenChallenges: 3,
@@ -337,9 +337,9 @@ func TestFinalizeAllocation(t *testing.T) {
 			allocation.Stats.OpenChallenges += ba.Stats.OpenChallenges
 			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
 
-			challenges = append(challenges, []common.Timestamp{})
+			challenges = append(challenges, []int64{})
 			for j := 0; j < int(allocation.BlobberAllocs[i].Stats.OpenChallenges); j++ {
-				var expires = now - common.Timestamp(float64(j)*float64(scYaml.MaxChallengeCompletionTime)/3.0)
+				var expires = int64(float64(ctx.GetBlock().Round) - float64(j)*float64(scYaml.MaxChallengeCompletionRounds)/3.0)
 				challenges[i] = append(challenges[i], expires)
 			}
 		}
@@ -370,7 +370,7 @@ func testCancelAllocation(
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	challengePoolBalance int64,
-	challenges [][]common.Timestamp,
+	challenges [][]int64,
 	ctx *mockStateContext,
 	now common.Timestamp,
 ) error {
@@ -408,9 +408,9 @@ func testCancelAllocation(
 
 		for _, created := range blobberChallenges {
 			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
-				ID:        fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
-				BlobberID: blobberID,
-				CreatedAt: created,
+				ID:             fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
+				BlobberID:      blobberID,
+				RoundCreatedAt: created,
 			})
 		}
 		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
@@ -467,7 +467,7 @@ func testCancelAllocation(
 	return nil
 }
 
-func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, challengePoolBalance int64, now common.Timestamp, challenges [][]common.Timestamp, ctx *mockStateContext) error {
+func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, challengePoolBalance int64, now common.Timestamp, challenges [][]int64, ctx *mockStateContext) error {
 
 	var ssc, txn, input = setupMocksFinishAllocation(
 		t, sAllocation, blobbers, bStakes,
@@ -500,9 +500,9 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 
 		for _, created := range blobberChallenges {
 			ac.OpenChallenges = append(ac.OpenChallenges, &AllocOpenChallenge{
-				ID:        fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
-				BlobberID: blobberID,
-				CreatedAt: created,
+				ID:             fmt.Sprintf("%s:%s:%v", sAllocation.ID, blobberID, created),
+				BlobberID:      blobberID,
+				RoundCreatedAt: created,
 			})
 		}
 		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
@@ -693,7 +693,7 @@ type formulaeFinalizeAllocation struct {
 	blobbers             SortedBlobbers
 	bStakes              [][]mockStakePool
 	challengePoolBalance int64
-	challengeCreation    [][]common.Timestamp
+	challengeCreation    [][]int64
 	_passRates           []float64
 }
 
@@ -764,7 +764,7 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 
 	var passRate = f._passRates[blobberIndex]
 
-	dtu := float64(scYaml.MaxChallengeCompletionTime) / float64(scYaml.TimeUnit)
+	dtu := float64(scYaml.MaxChallengeCompletionRounds) / float64(scYaml.TimeUnit)
 	remainingDuration := f.allocation.Expiration - f.now
 	rdtu := float64(remainingDuration.Duration()) / float64(scYaml.TimeUnit)
 
@@ -823,12 +823,12 @@ func (f *formulaeFinalizeAllocation) setFinilizationPassRates(ssc *StorageSmartC
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = oc.CreatedAt + toSeconds(scYaml.MaxChallengeCompletionTime)
+			var expire = oc.RoundCreatedAt + scYaml.MaxChallengeCompletionRounds
 
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
-			if expire < now {
+			if expire < balances.GetBlock().Round {
 				ba.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
 			} else {

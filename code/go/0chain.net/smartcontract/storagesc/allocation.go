@@ -1244,7 +1244,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("can't get config", err.Error())
 	}
 	var passRates []float64
-	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionRounds, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1330,7 +1330,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	var passRates []float64
-	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionTime, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionRounds, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())

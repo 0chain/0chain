@@ -30,9 +30,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MinAllocSize"
 	o = append(o, 0xac, 0x4d, 0x69, 0x6e, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x53, 0x69, 0x7a, 0x65)
 	o = msgp.AppendInt64(o, z.MinAllocSize)
-	// string "MaxChallengeCompletionTime"
+	// string "MaxChallengeCompletionRounds"
 	o = append(o, 0xba, 0x4d, 0x61, 0x78, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x69, 0x6d, 0x65)
-	o = msgp.AppendInt64(o, z.MaxChallengeCompletionTime)
+	o = msgp.AppendInt64(o, z.MaxChallengeCompletionRounds)
 	// string "MinBlobberCapacity"
 	o = append(o, 0xb2, 0x4d, 0x69, 0x6e, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79)
 	o = msgp.AppendInt64(o, z.MinBlobberCapacity)
@@ -245,10 +245,10 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MinAllocSize")
 				return
 			}
-		case "MaxChallengeCompletionTime":
-			z.MaxChallengeCompletionTime, bts, err = msgp.ReadInt64Bytes(bts)
+		case "MaxChallengeCompletionRounds":
+			z.MaxChallengeCompletionRounds, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "MaxChallengeCompletionTime")
+				err = msgp.WrapError(err, "MaxChallengeCompletionRounds")
 				return
 			}
 		case "MinBlobberCapacity":

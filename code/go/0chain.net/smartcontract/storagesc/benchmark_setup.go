@@ -910,7 +910,7 @@ func SetMockConfig(
 	conf.NumValidatorsRewarded = viper.GetInt(sc.StorageNumValidatorsRewarded)
 	conf.ValidatorsPerChallenge = viper.GetInt(sc.StorageValidatorsPerChallenge)
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
-	conf.MaxChallengeCompletionTime = viper.GetInt64(sc.StorageMaxChallengeCompletionTime)
+	conf.MaxChallengeCompletionRounds = viper.GetInt64(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
 	conf.MinStake = currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10)
 	conf.MaxStake = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)

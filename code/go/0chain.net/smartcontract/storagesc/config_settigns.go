@@ -437,7 +437,7 @@ func (conf *Config) setInt64(key string, change int64) error {
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
 	case MaxChallengeCompletionTime:
-		conf.MaxChallengeCompletionTime = change
+		conf.MaxChallengeCompletionRounds = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
@@ -631,7 +631,7 @@ func (conf *Config) get(key Setting) interface{} {
 	case MinAllocSize:
 		return conf.MinAllocSize
 	case MaxChallengeCompletionTime:
-		return conf.MaxChallengeCompletionTime
+		return conf.MaxChallengeCompletionRounds
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:

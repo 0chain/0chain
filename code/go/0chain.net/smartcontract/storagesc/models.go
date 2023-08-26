@@ -1350,7 +1350,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				}
 			}
 
-			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionTime, balances, sc, d)
+			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc, d)
 
 			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
 			if err != nil {
@@ -1588,8 +1588,8 @@ func (sa *StorageAllocation) validateEachBlobber(
 }
 
 // Until returns allocation expiration.
-func (sa *StorageAllocation) Until(maxChallengeCompletionTime time.Duration) common.Timestamp {
-	return sa.Expiration + toSeconds(maxChallengeCompletionTime)
+func (sa *StorageAllocation) Until(duration time.Duration) common.Timestamp {
+	return sa.Expiration + toSeconds(duration)
 }
 
 // The durationInTimeUnits returns given duration (represented as

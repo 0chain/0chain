@@ -136,7 +136,7 @@ func TestAddChallenge(t *testing.T) {
 				AllocationRoot:   alloc.BlobberAllocsMap[bid].AllocationRoot,
 			}
 			var conf = &Config{
-				MaxChallengeCompletionTime: p.cct,
+				MaxChallengeCompletionRounds: p.cct,
 			}
 			err = ssc.addChallenge(alloc, c, allocChallenges, challInfo, conf, balances)
 			require.NoError(t, err)
@@ -265,7 +265,7 @@ func TestAddChallenge(t *testing.T) {
 			// add new challenge
 			c, challInfo := newChallenge(args.alloc.ID, tt.parameters.add.blobberID, tt.parameters.add.ts)
 			var conf = &Config{
-				MaxChallengeCompletionTime: tt.parameters.cct,
+				MaxChallengeCompletionRounds: tt.parameters.cct,
 			}
 			err := ssc.addChallenge(args.alloc,
 				c,
@@ -344,10 +344,10 @@ func TestBlobberReward(t *testing.T) {
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
 	var writePoolBalance currency.Coin = 23423 + 33333333 + 234234234
 	var scYaml = Config{
-		MaxMint:                    zcnToBalance(4000000.0),
-		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 5 * time.Minute,
-		TimeUnit:                   720 * time.Hour,
+		MaxMint:                      zcnToBalance(4000000.0),
+		ValidatorReward:              0.025,
+		MaxChallengeCompletionRounds: 5 * time.Minute,
+		TimeUnit:                     720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
@@ -365,7 +365,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionRounds) + 1
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -374,7 +374,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionRounds) - toSeconds(1*time.Minute)
 
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
@@ -454,11 +454,11 @@ func TestBlobberPenalty(t *testing.T) {
 	var writePoolBalance currency.Coin = 234234234
 	var size = int64(123000)
 	var scYaml = Config{
-		MaxMint:                    zcnToBalance(4000000.0),
-		BlobberSlash:               0.1,
-		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 5 * time.Minute,
-		TimeUnit:                   720 * time.Hour,
+		MaxMint:                      zcnToBalance(4000000.0),
+		BlobberSlash:                 0.1,
+		ValidatorReward:              0.025,
+		MaxChallengeCompletionRounds: 5 * time.Minute,
+		TimeUnit:                     720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
@@ -484,7 +484,7 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
+		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionRounds) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
@@ -997,7 +997,7 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, previous, details, validators, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
+	err = ssc.blobberPenalty(allocation, previous, details, validators, scYaml.MaxChallengeCompletionRounds, ctx, allocationId)
 	if err != nil {
 		return err
 	}
@@ -1051,7 +1051,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
+	err = ssc.blobberReward(allocation, previous, details, validators, partial, scYaml.MaxChallengeCompletionRounds, ctx, allocationId)
 	if err != nil {
 		return err
 	}
