@@ -97,7 +97,7 @@ smart_contracts:
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1048576
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_time: "3m"
+    max_challenge_completion_time: 720
     # min blobber's offer duration allowed by the SC
     min_offer_duration: "10h" #todo based on timeunit
     # min blobber capacity allowed by the SC
