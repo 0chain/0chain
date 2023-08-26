@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/0chain/common/core/currency"
@@ -192,16 +193,16 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 // newChallengePool SC function creates new
 // challenge pool for a client don't saving it
 func (ssc *StorageSmartContract) newChallengePool(allocationID string,
-	creationDate, expiresAt common.Timestamp, balances cstate.StateContextI) (
+	balances cstate.StateContextI) (
 	cp *challengePool, err error) {
 
 	_, err = ssc.getChallengePool(allocationID, balances)
-	switch err {
-	case util.ErrValueNotPresent:
+	switch {
+	case errors.Is(err, util.ErrValueNotPresent):
 		cp = newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(ssc.ID, allocationID)
 		return cp, nil
-	case nil:
+	case err == nil:
 		return nil, common.NewError("new_challenge_pool_failed", "already exist")
 	default:
 		return nil, common.NewError("new_challenge_pool_failed", err.Error())
@@ -216,8 +217,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	// completion time
 	var cp *challengePool
 
-	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(conf.MaxChallengeCompletionTime),
-		balances)
+	cp, err = ssc.newChallengePool(alloc.ID, balances)
 	if err != nil {
 		return fmt.Errorf("can't create challenge pool: %v", err)
 	}
