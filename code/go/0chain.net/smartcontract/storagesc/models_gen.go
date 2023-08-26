@@ -7,19 +7,15 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *AllocOpenChallenge) MarshalMsg(b []byte) (o []byte, err error) {
+func (z AllocOpenChallenge) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
 	// string "ID"
 	o = append(o, 0x83, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "RoundCreatedAt"
-	o = append(o, 0xa9, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74)
-	o, err = z.RoundCreatedAt.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "RoundCreatedAt")
-		return
-	}
+	o = append(o, 0xae, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74)
+	o = msgp.AppendInt64(o, z.RoundCreatedAt)
 	// string "BlobberID"
 	o = append(o, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
@@ -51,7 +47,7 @@ func (z *AllocOpenChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "RoundCreatedAt":
-			bts, err = z.RoundCreatedAt.UnmarshalMsg(bts)
+			z.RoundCreatedAt, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "RoundCreatedAt")
 				return
@@ -75,8 +71,8 @@ func (z *AllocOpenChallenge) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *AllocOpenChallenge) Msgsize() (s int) {
-	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 10 + z.RoundCreatedAt.Msgsize() + 10 + msgp.StringPrefixSize + len(z.BlobberID)
+func (z AllocOpenChallenge) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID) + 15 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.BlobberID)
 	return
 }
 
@@ -2789,12 +2785,8 @@ func (z *allocationChallengesDecoder) MarshalMsg(b []byte) (o []byte, err error)
 			o = append(o, 0x83, 0xa2, 0x49, 0x44)
 			o = msgp.AppendString(o, z.OpenChallenges[za0001].ID)
 			// string "RoundCreatedAt"
-			o = append(o, 0xa9, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74)
-			o, err = z.OpenChallenges[za0001].RoundCreatedAt.MarshalMsg(o)
-			if err != nil {
-				err = msgp.WrapError(err, "OpenChallenges", za0001, "RoundCreatedAt")
-				return
-			}
+			o = append(o, 0xae, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74)
+			o = msgp.AppendInt64(o, z.OpenChallenges[za0001].RoundCreatedAt)
 			// string "BlobberID"
 			o = append(o, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 			o = msgp.AppendString(o, z.OpenChallenges[za0001].BlobberID)
@@ -2871,7 +2863,7 @@ func (z *allocationChallengesDecoder) UnmarshalMsg(bts []byte) (o []byte, err er
 								return
 							}
 						case "RoundCreatedAt":
-							bts, err = z.OpenChallenges[za0001].RoundCreatedAt.UnmarshalMsg(bts)
+							z.OpenChallenges[za0001].RoundCreatedAt, bts, err = msgp.ReadInt64Bytes(bts)
 							if err != nil {
 								err = msgp.WrapError(err, "OpenChallenges", za0001, "RoundCreatedAt")
 								return
@@ -2911,7 +2903,7 @@ func (z *allocationChallengesDecoder) Msgsize() (s int) {
 		if z.OpenChallenges[za0001] == nil {
 			s += msgp.NilSize
 		} else {
-			s += 1 + 3 + msgp.StringPrefixSize + len(z.OpenChallenges[za0001].ID) + 10 + z.OpenChallenges[za0001].RoundCreatedAt.Msgsize() + 10 + msgp.StringPrefixSize + len(z.OpenChallenges[za0001].BlobberID)
+			s += 1 + 3 + msgp.StringPrefixSize + len(z.OpenChallenges[za0001].ID) + 15 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.OpenChallenges[za0001].BlobberID)
 		}
 	}
 	return

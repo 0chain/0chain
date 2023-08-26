@@ -32,7 +32,7 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendInt64(o, z.MinAllocSize)
 	// string "MaxChallengeCompletionTime"
 	o = append(o, 0xba, 0x4d, 0x61, 0x78, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x43, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x69, 0x6d, 0x65)
-	o = msgp.AppendDuration(o, z.MaxChallengeCompletionTime)
+	o = msgp.AppendInt64(o, z.MaxChallengeCompletionTime)
 	// string "MinBlobberCapacity"
 	o = append(o, 0xb2, 0x4d, 0x69, 0x6e, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79)
 	o = msgp.AppendInt64(o, z.MinBlobberCapacity)
@@ -246,7 +246,7 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "MaxChallengeCompletionTime":
-			z.MaxChallengeCompletionTime, bts, err = msgp.ReadDurationBytes(bts)
+			z.MaxChallengeCompletionTime, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MaxChallengeCompletionTime")
 				return
@@ -570,7 +570,7 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Config) Msgsize() (s int) {
-	s = 3 + 9 + msgp.DurationSize + 8 + z.MaxMint.Msgsize() + 7 + z.Minted.Msgsize() + 13 + msgp.Int64Size + 27 + msgp.DurationSize + 19 + msgp.Int64Size + 9
+	s = 3 + 9 + msgp.DurationSize + 8 + z.MaxMint.Msgsize() + 7 + z.Minted.Msgsize() + 13 + msgp.Int64Size + 27 + msgp.Int64Size + 19 + msgp.Int64Size + 9
 	if z.ReadPool == nil {
 		s += msgp.NilSize
 	} else {
