@@ -3,12 +3,10 @@ package event
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"time"
 
 	"0chain.net/chaincore/state"
-	"0chain.net/core/config"
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -279,9 +277,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		s, err := edb.Work(ctx, gs, es, &p)
 		if err != nil {
-			if config.Development() { //panic in case of development
-				log.Panic(err)
-			}
+			logging.Logger.Error("error executing events", zap.Error(err))
 		}
 		if s != nil {
 			gs = s
