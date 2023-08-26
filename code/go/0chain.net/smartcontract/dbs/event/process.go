@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/core/config"
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -277,7 +278,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 		s, err := edb.Work(ctx, gs, es, &p)
 		if err != nil {
-			logging.Logger.Error("error executing events", zap.Error(err))
+			if config.Development() { //panic in case of development
+				logging.Logger.Panic("process events", zap.Error(err))
+			}
 		}
 		if s != nil {
 			gs = s
@@ -472,13 +475,6 @@ func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, erro
 }
 
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
-	defer func() {
-		if r := recover(); r != nil {
-			logging.Logger.Error("panic recovered in processEvent",
-				zap.Any("r", r),
-				zap.Any("event", event))
-		}
-	}()
 	var err error = nil
 	switch event.Type {
 	case TypeStats:
