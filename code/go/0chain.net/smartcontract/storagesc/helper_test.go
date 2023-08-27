@@ -392,7 +392,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MinWritePrice = 0      // 0 tokens per GB min allowed
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionRounds = 720
-	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "3m")
+	config.SmartContractConfig.Set(confmaxChallengeCompletionRounds, "3m")
 	conf.MinLockDemand = 0.1
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks

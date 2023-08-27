@@ -462,7 +462,7 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.TimeUnit
 	case MinAllocSize:
 		return conf.MinAllocSize
-	case MaxChallengeCompletionTime:
+	case MaxChallengeCompletionRounds:
 		return conf.MaxChallengeCompletionRounds
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity

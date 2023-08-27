@@ -36,7 +36,7 @@ const (
 	MinStakePerDelegate Setting = iota
 	TimeUnit
 	MinAllocSize
-	MaxChallengeCompletionTime
+	MaxChallengeCompletionRounds
 	MinBlobberCapacity
 
 	ReadPoolMinLock
@@ -143,7 +143,7 @@ func initSettingName() {
 	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
-	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_rounds"
+	SettingName[MaxChallengeCompletionRounds] = "max_challenge_completion_rounds"
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
 	SettingName[MaxCharge] = "max_charge"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
@@ -226,7 +226,7 @@ func initSettings() {
 		MaxCharge.String():                        {MaxCharge, config.Float64},
 		TimeUnit.String():                         {TimeUnit, config.Duration},
 		MinAllocSize.String():                     {MinAllocSize, config.Int64},
-		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, config.Duration},
+		MaxChallengeCompletionRounds.String():     {MaxChallengeCompletionRounds, config.Duration},
 		MinBlobberCapacity.String():               {MinBlobberCapacity, config.Int64},
 		ReadPoolMinLock.String():                  {ReadPoolMinLock, config.CurrencyCoin},
 		WritePoolMinLock.String():                 {WritePoolMinLock, config.CurrencyCoin},
@@ -436,7 +436,7 @@ func (conf *Config) setInt64(key string, change int64) error {
 		conf.MinBlobberCapacity = change
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
-	case MaxChallengeCompletionTime:
+	case MaxChallengeCompletionRounds:
 		conf.MaxChallengeCompletionRounds = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int64", key)
@@ -630,7 +630,7 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.TimeUnit
 	case MinAllocSize:
 		return conf.MinAllocSize
-	case MaxChallengeCompletionTime:
+	case MaxChallengeCompletionRounds:
 		return conf.MaxChallengeCompletionRounds
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity

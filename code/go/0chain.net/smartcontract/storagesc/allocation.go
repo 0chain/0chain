@@ -1125,7 +1125,7 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	alloc *StorageAllocation,
 	now,
-	maxChallengeCompletionTime int64,
+	maxChallengeCompletionRounds int64,
 	balances chainstate.StateContextI,
 ) (
 	passRates []float64, err error) {
@@ -1149,7 +1149,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = oc.RoundCreatedAt + maxChallengeCompletionTime
+			var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
 
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--

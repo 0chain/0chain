@@ -284,7 +284,6 @@ func (sc *StorageSmartContract) blobberPenalty(
 	prev common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
-	maxChallengeCompletionTime int64,
 	balances cstate.StateContextI,
 	allocationID string,
 ) (err error) {
@@ -559,7 +558,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	t *transaction.Transaction,
 	challenge *StorageChallenge,
 	cr *ChallengeResponse,
-	maxChallengeCompletionTime int64,
+	maxChallengeCompletionRounds int64,
 ) (*verifyTicketsResult, error) {
 	// get unique validation tickets map
 	vtsMap := make(map[string]struct{}, len(cr.ValidationTickets))
@@ -609,7 +608,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 
 	var (
 		pass  = success > threshold
-		fresh = challenge.RoundCreatedAt+maxChallengeCompletionTime >= balances.GetBlock().Round
+		fresh = challenge.RoundCreatedAt+maxChallengeCompletionRounds >= balances.GetBlock().Round
 	)
 
 	return &verifyTicketsResult{
@@ -756,7 +755,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	balances cstate.StateContextI,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionTime int64,
+	maxChallengeCompletionRounds int64,
 ) (string, error) {
 	if !sc.completeChallenge(cab) {
 		return "", common.NewError("challenge_out_of_order",
@@ -784,7 +783,6 @@ func (sc *StorageSmartContract) challengeFailed(
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 	err = sc.blobberPenalty(
 		cab.alloc, cab.latestCompletedChallTime, cab.blobAlloc, validators,
-		maxChallengeCompletionTime,
 		balances,
 		cab.challenge.AllocationID,
 	)
@@ -1317,6 +1315,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	return emitAddChallenge(challInfo, expiredCountMap, len(expiredIDsMap), balances, alloc.Stats, blobAlloc.Stats)
 }
 
-func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionTime int64) bool {
-	return roundCreatedAt+maxChallengeCompletionTime <= currentRound
+func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionRounds int64) bool {
+	return roundCreatedAt+maxChallengeCompletionRounds <= currentRound
 }

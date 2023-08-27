@@ -33,7 +33,7 @@ import (
 	"0chain.net/core/encryption"
 )
 
-const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_rounds"
+const confMaxChallengeCompletionRounds = "smart_contracts.storagesc.max_challenge_completion_rounds"
 
 //msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
@@ -571,7 +571,7 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	return
 }
 
-func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionTime int64, balances chainstate.StateContextI, sc *StorageSmartContract, ba *BlobberAllocation) (float64, error) {
+func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionRounds int64, balances chainstate.StateContextI, sc *StorageSmartContract, ba *BlobberAllocation) (float64, error) {
 
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
@@ -598,7 +598,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 				ba.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			var expire = oc.RoundCreatedAt + maxChallengeCompletionTime
+			var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
 			currentRound := balances.GetBlock().Round
 
 			if expire < currentRound {

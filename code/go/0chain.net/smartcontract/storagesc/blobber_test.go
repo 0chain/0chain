@@ -872,7 +872,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)))
+		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confmaxChallengeCompletionRounds)))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1101,7 +1101,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)))
+		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confmaxChallengeCompletionRounds)))
 
 		tp += 10 // a not expired allocation to cancel
 
