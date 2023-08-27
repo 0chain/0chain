@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -198,6 +199,7 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 }
 
 func (c *Chain) GetCurrentRoundHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	logging.Logger.Info("GetCurrentRoundHandler", zap.Any("roundA", c.currentRound), zap.Any("roundB", c.GetCurrentRound()), zap.Any("CHAIN", c))
 	return c.GetCurrentRound(), nil
 }
 
