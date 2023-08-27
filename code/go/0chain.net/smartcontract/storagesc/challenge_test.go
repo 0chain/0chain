@@ -78,7 +78,7 @@ func TestAddChallenge(t *testing.T) {
 		ssc := &StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
-		config.SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", p.cct)
+		config.SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_rounds", p.cct)
 
 		balances := &mockStateContext{
 			store: make(map[datastore.Key]util.MPTSerializable),

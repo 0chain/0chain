@@ -33,7 +33,7 @@ import (
 	"0chain.net/core/encryption"
 )
 
-const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
+const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_rounds"
 
 //msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v

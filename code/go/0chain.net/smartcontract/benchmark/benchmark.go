@@ -170,7 +170,7 @@ const (
 	StorageMinAllocSize                = SmartContract + StorageSc + "min_alloc_size"
 	StorageMaxReadPrice                = SmartContract + StorageSc + "max_read_price"
 	StorageMaxWritePrice               = SmartContract + StorageSc + "max_write_price"
-	StorageMaxChallengeCompletionTime  = SmartContract + StorageSc + "max_challenge_completion_time"
+	StorageMaxChallengeCompletionTime  = SmartContract + StorageSc + "max_challenge_completion_rounds"
 	StorageMinBlobberCapacity          = SmartContract + StorageSc + "min_blobber_capacity"
 	StorageMaxCharge                   = SmartContract + StorageSc + "max_charge"
 	StorageMinStake                    = SmartContract + StorageSc + "min_stake"

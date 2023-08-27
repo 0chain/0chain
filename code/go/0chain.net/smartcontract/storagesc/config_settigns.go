@@ -143,7 +143,7 @@ func initSettingName() {
 	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
-	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
+	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_rounds"
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
 	SettingName[MaxCharge] = "max_charge"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
