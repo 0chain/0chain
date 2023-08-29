@@ -304,13 +304,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 
 	// only sc owner can add new authorizer
 	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
-		return globalNode.ZCNSConfig.OwnerId == tran.ClientID
-	}); err != nil {
-		return "", err
-	}
-
-	if err := smartcontractinterface.AuthorizeWithDelegate(errorCode, func() bool {
-		return sp.Settings.DelegateWallet == tran.ClientID
+		return globalNode.ZCNSConfig.OwnerId == tran.ClientID || sp.Settings.DelegateWallet == tran.ClientID
 	}); err != nil {
 		return "", err
 	}
