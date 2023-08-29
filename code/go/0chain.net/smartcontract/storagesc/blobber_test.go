@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/config"
-
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -872,7 +870,8 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confmaxChallengeCompletionRounds)))
+		balances.block.Round += int64(MaxChallengeCompletionRounds)
+		tp += 180
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -961,6 +960,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		err error
 	)
+
+	balances.block.Round = 100000
 
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	require.NoError(t, err)
@@ -1101,7 +1102,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confmaxChallengeCompletionRounds)))
+		balances.block.Round += int64(MaxChallengeCompletionRounds)
+		tp += 180
 
 		tp += 10 // a not expired allocation to cancel
 

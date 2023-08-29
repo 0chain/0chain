@@ -492,7 +492,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_blobber_read",
 			"early reading, allocation not started yet")
-	} else if alloc.Finalized {
+	} else if commitRead.ReadMarker.Timestamp > alloc.Expiration {
 		return "", common.NewError("commit_blobber_read",
 			"late reading, allocation expired")
 	}

@@ -987,7 +987,7 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, previous, details, validators, scYaml.MaxChallengeCompletionRounds, ctx, allocationId)
+	err = ssc.blobberPenalty(allocation, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}

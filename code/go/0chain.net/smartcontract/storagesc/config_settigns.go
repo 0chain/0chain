@@ -226,7 +226,7 @@ func initSettings() {
 		MaxCharge.String():                        {MaxCharge, config.Float64},
 		TimeUnit.String():                         {TimeUnit, config.Duration},
 		MinAllocSize.String():                     {MinAllocSize, config.Int64},
-		MaxChallengeCompletionRounds.String():     {MaxChallengeCompletionRounds, config.Duration},
+		MaxChallengeCompletionRounds.String():     {MaxChallengeCompletionRounds, config.Int64},
 		MinBlobberCapacity.String():               {MinBlobberCapacity, config.Int64},
 		ReadPoolMinLock.String():                  {ReadPoolMinLock, config.CurrencyCoin},
 		WritePoolMinLock.String():                 {WritePoolMinLock, config.CurrencyCoin},

@@ -1,12 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/provider"
-	"encoding/json"
-	"strconv"
-	"strings"
-	"testing"
-
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -15,11 +9,16 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
+	"strconv"
+	"strings"
+	"testing"
 )
 
 const (
@@ -94,13 +93,12 @@ func TestCommitBlobberRead(t *testing.T) {
 		)
 		require.NoError(t, err)
 	})
-	// TODO: add back when panic is fixe
-	//t.Run("test commit blobber read empty pool", func(t *testing.T) {
-	//	var err = testCommitBlobberRead(
-	//		t, freeReadBlobberYaml, lastRead, read, allocation, stakes, mockReadPool{},
-	//	)
-	//	require.NoError(t, err)
-	//})
+	t.Run("test commit blobber read empty pool", func(t *testing.T) {
+		var err = testCommitBlobberRead(
+			t, freeReadBlobberYaml, lastRead, read, allocation, stakes, mockReadPool{},
+		)
+		require.NoError(t, err)
+	})
 
 	t.Run("check blobber sort needed", func(t *testing.T) {
 		var bRPool = mockReadPool{11 * 1e10}
