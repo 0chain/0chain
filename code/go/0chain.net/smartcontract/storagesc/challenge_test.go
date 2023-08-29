@@ -361,7 +361,6 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
-		//require.EqualValues(t, true, false)
 	})
 
 	t.Run(errLate, func(t *testing.T) {
