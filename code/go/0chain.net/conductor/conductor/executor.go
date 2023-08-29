@@ -427,6 +427,21 @@ func (r *Runner) WaitForChallengeStatus() {
 	r.chalConf.WaitForChallengeStatus = true
 }
 
+func (r *Runner) WaitValidatorTicket(wvt config.WaitValidatorTicket, timeout time.Duration) (err error) {
+	validator, ok := r.conf.Nodes.NodeByName(config.NodeName(wvt.ValidatorName))
+	if !ok {
+		return fmt.Errorf("Validator with name %v not found", wvt.ValidatorName)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] waiting for ticket from validator %v (%v)", wvt.ValidatorName, validator.ID)
+	}
+
+	r.setupTimeout(timeout)
+	r.waitValidatorTicket.ValidatorId = string(validator.ID)
+	return nil
+}
+
 func (r *Runner) WaitForFileMetaRoot() {
 	if r.verbose {
 		log.Print(" [INF] waiting for file meta root")

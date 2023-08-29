@@ -175,7 +175,7 @@ nodes:
     work_dir: "../0box/"
     env: ""
     start_command: "../0box/docker.local/bin/start.sh"
-    stop_command: "../0box/docker.local/bin/stop.sh"
+    stop_command: "cd ../0box && docker compoer -p 0box down && ./docker.local/bin/clean.sh"
 
 # named system commands
 commands:
@@ -365,3 +365,16 @@ commands:
         required: true
       recreate_script_workdir:
         required: true
+  check_aggregate_value_change:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/check_aggregate_value_change.sh $provider_type $provider_id $key $monotonicity"
+    args:
+      provider_type:
+        required: true
+      provider_id:
+        required: true
+      key:
+        required: true
+      monotonicity:
+        required: false
+        default: INC

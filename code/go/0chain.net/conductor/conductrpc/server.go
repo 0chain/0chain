@@ -97,6 +97,10 @@ type nodeState struct {
 	counter int         // used when node appears
 }
 
+type ValidtorTicket struct {
+	ValidatorId string
+}
+
 type Server struct {
 	server  *rpc.Server
 	address string
@@ -120,6 +124,8 @@ type Server struct {
 	onSharderKeep chan *SharderKeepEvent
 	// onSharderBlock occurs when the sharder is send an add_block request
 	onSharderBlock chan *stats.BlockFromSharder
+	// onValidatorTicket occurs when the validator sends a ticket
+	onValidatorTicket chan *ValidtorTicket
 
 
 	// onNodeReady used by miner/sharder to notify the server that the node
@@ -165,6 +171,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		onAddAuthorizer:           make(chan *AddAuthorizerEvent, 10),
 		onSharderKeep:             make(chan *SharderKeepEvent, 10),
 		onSharderBlock: 		   make(chan *stats.BlockFromSharder),
+		onValidatorTicket: 		   make(chan *ValidtorTicket, 10),
 		onNodeReady:               make(chan NodeName, 10),
 		onRoundEvent:              make(chan *RoundEvent, 100),
 		onContributeMPKEvent:      make(chan *ContributeMPKEvent, 10),
@@ -353,6 +360,10 @@ func (s *Server) OnGettingFileMetaRoot() chan map[string]string {
 	return s.onGettingFileMetaRoot
 }
 
+func (s *Server) OnValidatorTicket() chan *ValidtorTicket {
+	return s.onValidatorTicket
+}
+
 func (s *Server) Nodes() map[config.NodeName]*nodeState {
 	return s.nodes
 }
@@ -473,6 +484,14 @@ func (s *Server) ChallengeGenerated(blobberID *string, _ *struct{}) error {
 func (s *Server) BlobberCommitted(blobberID *string, _ *struct{}) error {
 	select {
 	case s.onBlobberCommit <- *blobberID:
+	case <-s.quit:
+	}
+	return nil
+}
+
+func (s *Server) ValidatorTicket(ticket *ValidtorTicket, _ *struct{}) error {
+	select {
+	case s.onValidatorTicket <- ticket:
 	case <-s.quit:
 	}
 	return nil

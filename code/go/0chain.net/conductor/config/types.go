@@ -222,3 +222,12 @@ func BuildDisableFailRenameCommit(nodes []NodeID) *RenameCommitControl {
 		Nodes: nodes,
 	}
 }
+
+type WaitValidatorTicket struct {
+	ValidatorName string `json:"validator_name" yaml:"validator_name" mapstructure:"validator_name"`
+	ValidatorId string `json:"-" yaml:"-" mapstructure:"-"`
+}
+
+func NewWaitValidatorTicket() *WaitValidatorTicket {
+	return &WaitValidatorTicket{}
+}

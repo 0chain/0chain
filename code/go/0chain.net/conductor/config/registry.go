@@ -787,6 +787,16 @@ func init() {
 		return nil
 	})
 
+	register("wait_validator_ticket", func(_ string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewWaitValidatorTicket()
+		err = mapstructure.Decode(val, cfg)
+		if err != nil {
+			return
+		}
+
+		return ex.WaitValidatorTicket(*cfg, tm)
+	})
+
 	// stop_challenge_generation directs miner to stop/resume generating challenge for any blobber
 	register("stop_challenge_generation", func(_ string, ex Executor, val interface{}, _ time.Duration) (err error) {
 		stopChalGen, ok := val.(bool)

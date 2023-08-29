@@ -195,6 +195,7 @@ type Runner struct {
 	waitCommand            chan error                    // wait a command
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	waitSharderLFB	config.WaitSharderLFB	
+	waitValidatorTicket   config.WaitValidatorTicket
 	chalConf               *config.GenerateChallege
 	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
@@ -258,6 +259,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case r.chalConf.WaitForChallengeStatus:
 		return tm, true
 	case r.fileMetaRoot.shouldWait:
+		return tm, true
+	case r.waitValidatorTicket.ValidatorName != "":
 		return tm, true
 	}
 
@@ -818,6 +821,23 @@ func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err 
 	return
 }
 
+func (r *Runner) acceptValidatorTicket(vt conductrpc.ValidtorTicket) (err error) {
+	if r.verbose {
+		log.Printf("[INF] got validator ticket from %v\n", vt.ValidatorId)
+	}
+
+	if vt.ValidatorId != r.waitValidatorTicket.ValidatorId {
+		return nil
+	}
+
+	if r.verbose {
+		log.Printf(" [INF] ✅ Got validator ticket from the required validator %v\n", r.waitValidatorTicket.ValidatorId)
+	}
+
+	r.waitValidatorTicket = config.WaitValidatorTicket{}
+	return nil
+}
+
 func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
 	if block.GeneratorId != string(minerId) {
 		return 
@@ -985,6 +1005,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.onChallengeStatus(m)
 		case m := <-r.server.OnGettingFileMetaRoot():
 			err = r.onGettingFileMetaRoot(m)
+		case vt := <-r.server.OnValidatorTicket():
+			err = r.acceptValidatorTicket()
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)
