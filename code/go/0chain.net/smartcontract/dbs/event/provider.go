@@ -28,10 +28,10 @@ type ProviderIdsMap map[spenum.Provider]map[string]interface{}
 type ProvidersMap map[spenum.Provider]map[string]IProvider
 
 var ProviderTextMapping = map[reflect.Type]string{
-	reflect.TypeOf(Blobber{}): "blobber",
-	reflect.TypeOf(Sharder{}): "sharder",
-	reflect.TypeOf(Miner{}):  "miner",
-	reflect.TypeOf(Validator{}): "validator",
+	reflect.TypeOf(Blobber{}):    "blobber",
+	reflect.TypeOf(Sharder{}):    "sharder",
+	reflect.TypeOf(Miner{}):      "miner",
+	reflect.TypeOf(Validator{}):  "validator",
 	reflect.TypeOf(Authorizer{}): "authorizer",
 }
 
@@ -144,7 +144,7 @@ func (edb *EventDb) BuildChangedProvidersMapFromEvents(events []Event) (Provider
 		spenum.Authorizer: make([]string, 0, len(ids[spenum.Authorizer])),
 		spenum.Validator:  make([]string, 0, len(ids[spenum.Validator])),
 	}
-	
+
 	for provider, pids := range ids {
 		for id := range pids {
 			idsLists[provider] = append(idsLists[provider], id)
@@ -186,12 +186,11 @@ func (edb *EventDb) GetProvidersByIds(ptype spenum.Provider, ids []string) ([]IP
 
 func getProvidersById[P IProvider](edb *EventDb, ids []string) ([]IProvider, error) {
 	var (
-		model P
+		model     P
 		providers []P
 		tableName = model.TableName()
 	)
 
-	
 	err := edb.Get().
 		Model(&model).
 		Joins("Rewards").
@@ -211,15 +210,15 @@ func getProvidersById[P IProvider](edb *EventDb, ids []string) ([]IProvider, err
 
 func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 	ids := map[spenum.Provider]map[string]interface{}{
-		spenum.Blobber: {},
-		spenum.Miner:   {},
-		spenum.Sharder: {},
-		spenum.Validator: {},
+		spenum.Blobber:    {},
+		spenum.Miner:      {},
+		spenum.Sharder:    {},
+		spenum.Validator:  {},
 		spenum.Authorizer: {},
 	}
 	for _, event := range events {
 		switch event.Tag {
-			case TagAddBlobber,
+		case TagAddBlobber,
 			TagUpdateBlobber,
 			TagUpdateBlobberAllocatedSavedHealth,
 			TagUpdateBlobberTotalStake,
@@ -237,7 +236,6 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 				ids[spenum.Blobber][b.ID] = nil
 			}
 		case TagAddMiner,
-			TagUpdateMiner,
 			TagUpdateMinerTotalStake:
 			miners, ok := fromEvent[[]Miner](event.Data)
 			if !ok {
@@ -248,8 +246,15 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 			for _, m := range *miners {
 				ids[spenum.Miner][m.ID] = nil
 			}
+		case TagUpdateMiner:
+			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				return nil, common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
+			}
+			ids[spenum.Miner][updates.Id] = nil
 		case TagAddSharder,
-			TagUpdateSharder,
 			TagUpdateSharderTotalStake:
 			sharders, ok := fromEvent[[]Sharder](event.Data)
 			if !ok {
@@ -260,6 +265,15 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 			for _, s := range *sharders {
 				ids[spenum.Sharder][s.ID] = nil
 			}
+		case TagUpdateSharder:
+			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+			if !ok {
+				logging.Logger.Error("snapshot",
+					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
+				return nil, common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
+			}
+			ids[spenum.Sharder][updates.Id] = nil
+
 		case TagAddAuthorizer,
 			TagUpdateAuthorizer,
 			TagUpdateAuthorizerTotalStake:

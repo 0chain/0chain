@@ -279,7 +279,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		s, err := edb.Work(ctx, gs, es, &p)
 		if err != nil {
 			if config.Development() { //panic in case of development
-				logging.Logger.Panic("process events", zap.Error(err))
+				logging.Logger.Error("process events", zap.Error(err))
+				logging.Logger.Panic(err.Error())
 			}
 		}
 		if s != nil {
