@@ -34,8 +34,8 @@ func (sn *SelfNode) SetNonce(nonce int64) {
 	sn.mx.Unlock()
 }
 
-//returns next time if nonce is not evicted, if it is 0 is returned and client should request it again from server
-//since we do not validate transaction confirmation it is the only way to prevent FutureTransactionError due to tx errors
+// returns next time if nonce is not evicted, if it is 0 is returned and client should request it again from server
+// since we do not validate transaction confirmation it is the only way to prevent FutureTransactionError due to tx errors
 func (sn *SelfNode) GetNextNonce() int64 {
 	sn.mx.Lock()
 	defer sn.mx.Unlock()
@@ -122,7 +122,7 @@ func (sn *SelfNode) IsEqual(node *Node) bool {
 		return false
 	}
 
-	return sn.Node.ID == node.ID
+	return sn.Node.ID == node.ID && sn.Node.Type == node.Type
 }
 
 func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
