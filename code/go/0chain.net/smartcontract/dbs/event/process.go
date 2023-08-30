@@ -54,7 +54,7 @@ func (edb *EventDb) ProcessEvents(
 	}
 
 	pdu := time.Since(ts)
-	tx, err := edb.Begin(ctx)
+	tx, err := edb.Begin(context.Background())
 	if err != nil {
 		return nil, err
 	}
