@@ -434,8 +434,10 @@ func (r *Runner) WaitValidatorTicket(wvt config.WaitValidatorTicket, timeout tim
 	}
 
 	if r.verbose {
-		log.Print(" [INF] waiting for ticket from validator %v (%v)", wvt.ValidatorName, validator.ID)
+		log.Printf(" [INF] waiting for ticket from validator %v (%v)", wvt.ValidatorName, validator.ID)
 	}
+
+	r.SetServerState(config.NotifyOnValidationTicketGeneration(true))
 
 	r.setupTimeout(timeout)
 	r.waitValidatorTicket.ValidatorId = string(validator.ID)
@@ -1095,6 +1097,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 				state.FailRenameCommit = utils.SliceDifference(state.FailRenameCommit, update.Nodes)
 			}
 			fmt.Printf("state.FailRenameCommit = %v\n", state.FailRenameCommit)
+		case config.NotifyOnValidationTicketGeneration:
+			state.NotifyOnValidationTicketGeneration = bool(update)
 		}
 	})
 

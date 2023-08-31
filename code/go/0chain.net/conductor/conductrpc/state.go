@@ -95,6 +95,7 @@ type State struct {
 	ServerStatsCollectorEnabled bool
 	ClientStatsCollectorEnabled bool
 	NotifyOnBlockGeneration bool
+	NotifyOnValidationTicketGeneration bool
 }
 
 // Name returns NodeName by given NodeID.

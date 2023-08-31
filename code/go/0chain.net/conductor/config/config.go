@@ -15,6 +15,7 @@ type WaitOnChallengeGeneration bool
 type StopWMCommit bool
 type BlobberCommittedWM bool
 type GetFileMetaRoot bool
+type NotifyOnValidationTicketGeneration bool
 
 // common types
 type (

@@ -821,7 +821,7 @@ func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err 
 	return
 }
 
-func (r *Runner) acceptValidatorTicket(vt conductrpc.ValidtorTicket) (err error) {
+func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error) {
 	if r.verbose {
 		log.Printf("[INF] got validator ticket from %v\n", vt.ValidatorId)
 	}
@@ -835,6 +835,7 @@ func (r *Runner) acceptValidatorTicket(vt conductrpc.ValidtorTicket) (err error)
 	}
 
 	r.waitValidatorTicket = config.WaitValidatorTicket{}
+	r.SetServerState(config.NotifyOnValidationTicketGeneration(false))
 	return nil
 }
 
@@ -1006,7 +1007,7 @@ func (r *Runner) proceedWaiting() (err error) {
 		case m := <-r.server.OnGettingFileMetaRoot():
 			err = r.onGettingFileMetaRoot(m)
 		case vt := <-r.server.OnValidatorTicket():
-			err = r.acceptValidatorTicket()
+			err = r.acceptValidatorTicket(vt)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)
