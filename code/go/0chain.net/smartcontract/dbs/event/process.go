@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/state"
@@ -54,7 +55,7 @@ func (edb *EventDb) ProcessEvents(
 	}
 
 	pdu := time.Since(ts)
-	tx, err := edb.Begin(context.Background())
+	tx, err := edb.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +286,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			if err != nil {
 				if config.Development() { //panic in case of development
 					logging.Logger.Error("process events", zap.Error(err))
-					logging.Logger.Panic(err.Error())
+					if !strings.Contains(err.Error(), "transaction has already been committed or rolled back") {
+						logging.Logger.Panic(err.Error())
+					}
 				}
 
 			}
