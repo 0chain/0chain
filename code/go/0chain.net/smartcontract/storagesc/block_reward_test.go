@@ -112,8 +112,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 
 		totalWeight := blobber1Weight + blobber2Weight
 
-		blobber1TotalReward := (blobber1Weight / totalWeight) * 1000
-		blobber2TotalReward := (blobber2Weight / totalWeight) * 1000
+		blobber1TotalReward := (blobber1Weight / totalWeight) * 18000000000
+		blobber2TotalReward := (blobber2Weight / totalWeight) * 18000000000
 
 		blobber1Reward := blobber1TotalReward * serviceCharge1
 		blobber2Reward := blobber2TotalReward * serviceCharge2
@@ -239,8 +239,8 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		serviceCharge:     []float64{.1},
 	}
 	caseResult := result{
-		blobberRewards:          []currency.Coin{100},
-		blobberDelegatesRewards: [][]currency.Coin{{226, 0, 674}},
+		blobberRewards:          []currency.Coin{1800000000},
+		blobberDelegatesRewards: [][]currency.Coin{{4050000000, 0, 12150000000}},
 	}
 	tests = append(tests, TestCase{
 		name:    "Only one blobber in the partition",
