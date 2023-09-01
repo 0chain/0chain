@@ -7,7 +7,7 @@ type DevConfig struct {
 	// add and test a new developmnet feature
 }
 
-//DevConfiguration - for configuration of features in development
+// DevConfiguration - for configuration of features in development
 var DevConfiguration DevConfig
 
 func setupDevConfig() {

@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/logging"
 )
 

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
@@ -46,8 +46,6 @@ type blockReward struct {
 	BlockRewardChangePeriod int64            `json:"block_reward_change_period"`
 	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio"`
 	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
-	SharderWeight           float64          `json:"sharder_weight"`
-	MinerWeight             float64          `json:"miner_weight"`
 	TriggerPeriod           int64            `json:"trigger_period"`
 	Gamma                   blockRewardGamma `json:"gamma"`
 	Zeta                    blockRewardZeta  `json:"zeta"`
@@ -138,7 +136,8 @@ type Config struct {
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
-	MaxStake currency.Coin `json:"max_stake"`
+	MaxStake            currency.Coin `json:"max_stake"`
+	MinStakePerDelegate currency.Coin `json:"min_stake_per_delegate"`
 
 	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
@@ -246,14 +245,6 @@ func (conf *Config) validate() (err error) {
 			conf.MaxCharge)
 	}
 
-	if conf.BlockReward.SharderWeight < 0 {
-		return fmt.Errorf("negative block_reward.sharder_weight: %v",
-			conf.BlockReward.SharderWeight)
-	}
-	if conf.BlockReward.MinerWeight < 0 {
-		return fmt.Errorf("negative block_reward.miner_weight: %v",
-			conf.BlockReward.MinerWeight)
-	}
 	if len(conf.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
@@ -330,6 +321,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.MinStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
+	if err != nil {
+		return nil, err
+	}
+	conf.MinStakePerDelegate, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake_per_delegate"))
 	if err != nil {
 		return nil, err
 	}

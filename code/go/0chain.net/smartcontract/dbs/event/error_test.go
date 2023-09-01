@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/require"
 )

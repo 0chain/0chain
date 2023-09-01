@@ -268,14 +268,13 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 
-		// TODO: add code below back after validators staking are supported
-		// staked, err := sp.stake()
-		// if err != nil {
-		//	return fmt.Errorf("can't get stake: %v", err)
-		// }
-		// vid := validators[i]
-		// tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
-		// balances.EmitEvent(event.TypeStats, tag, vid, data)
+		staked, err := sp.stake()
+		if err != nil {
+			return fmt.Errorf("can't get stake: %v", err)
+		}
+		vid := validators[i]
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
+		balances.EmitEvent(event.TypeStats, tag, vid, data)
 	}
 	return
 }

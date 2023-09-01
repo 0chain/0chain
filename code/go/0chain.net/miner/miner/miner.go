@@ -14,12 +14,13 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/core/config"
+	"0chain.net/rest"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -466,7 +467,7 @@ func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost
 
 func initHandlers(c chain.Chainer) {
 	if config.Development() {
-		config.SetupHandlers()
+		rest.SetupHandlers()
 		chain.SetupDebugStateHandlers()
 	}
 

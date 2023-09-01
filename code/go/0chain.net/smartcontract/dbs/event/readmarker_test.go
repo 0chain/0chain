@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/logging"
 )
 
