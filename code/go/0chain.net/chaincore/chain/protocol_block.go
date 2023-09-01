@@ -291,7 +291,7 @@ func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.Verificati
 	}
 }
 
-func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) (err error) {
+func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler, timing []*TimingEvent) (err error) {
 	logging.Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
@@ -345,7 +345,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if time.Since(fb.ToTime()) < 100*time.Second {
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	}
-
+	timing = append(timing, &TimingEvent{
+		Name: "gens",
+		Time: time.Now().UnixNano(),
+	})
 	if err := c.SaveChanges(ctx, fb); err != nil {
 		logging.Logger.Error("finalize block save changes failed",
 			zap.Error(err),
@@ -353,6 +356,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.String("hash", fb.Hash))
 		return err
 	}
+	timing = append(timing, &TimingEvent{
+		Name: "saved_changes",
+		Time: time.Now().UnixNano(),
+	})
 
 	ssFTs = time.Now()
 
@@ -369,6 +376,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.String("block", fb.Hash),
 				zap.Error(err))
 		}
+		timing = append(timing, &TimingEvent{
+			Name: "record_dead",
+			Time: time.Now().UnixNano(),
+		})
 		// do not return err, we don't want to see the dead nodes removing failure stop the finalizing process
 		return nil
 	})
@@ -389,6 +400,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			EventsComputationTimer.Update(time.Since(ts).Microseconds())
 			fb.Events = nil
 
+			timing = append(timing, &TimingEvent{
+				Name: "add_events",
+				Time: time.Now().UnixNano(),
+			})
 			// failing of events process should stop the finalizing progress
 			return err
 		})
@@ -411,6 +426,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	wg.Run("finalize block - update finalized block", fb.Round, func() error {
 		bsh.UpdateFinalizedBlock(ctx, fb) //
 		fbPersisted = true
+		timing = append(timing, &TimingEvent{
+			Name: "update_fin",
+			Time: time.Now().UnixNano(),
+		})
 		return nil
 	})
 
@@ -469,6 +488,11 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
+	timing = append(timing, &TimingEvent{
+		Name: "after_wg",
+		Time: time.Now().UnixNano(),
+	})
+
 	wg.Run("finalize block - delete dead blocks", fb.Round, func() error {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 		pfb := fb
@@ -496,6 +520,11 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 		logging.Logger.Error("delete dead block", zap.Error(err))
 	}
+
+	timing = append(timing, &TimingEvent{
+		Name: "delete_dead",
+		Time: time.Now().UnixNano(),
+	})
 
 	c.rebaseState(fb)
 	fr.Finalize(fb)
@@ -526,11 +555,38 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
 	}
+	timing = append(timing, &TimingEvent{
+		Name: "end",
+		Time: time.Now().UnixNano(),
+	})
+
+	printTimings(timing)
 
 	logging.Logger.Debug("finalized block - done",
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 		zap.Duration("duration", time.Since(ts)))
 	return nil
+}
+
+func printTimings(timing []*TimingEvent) {
+	prev := int64(0)
+	var fields []zap.Field
+	for _, t := range timing {
+		switch t.Name {
+		case "start":
+			prev = t.Time
+			continue
+		case "add_events":
+		case "update_fin":
+		case "record_dead":
+			//do not update prev for wgs
+			fields = append(fields, zap.Duration(t.Name, time.Duration(t.Time-prev)))
+			continue
+		}
+		fields = append(fields, zap.Duration(t.Name, time.Duration(t.Time-prev)))
+		prev = t.Time
+	}
+	logging.Logger.Info("fin_timings", fields...)
 }
 
 // IsFinalizedDeterministically - checks if a block is finalized deterministically

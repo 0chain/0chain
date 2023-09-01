@@ -280,7 +280,14 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 	}
 }
 
+type TimingEvent struct {
+	Name string
+	Time int64
+}
+
 func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh BlockStateHandler) error {
+	timing := []*TimingEvent{{Name: "start", Time: time.Now().UnixNano()}}
+
 	lfb := c.GetLatestFinalizedBlock()
 	if fb.Round < lfb.Round-5 {
 		logging.Logger.Warn("finalize block - slow finalized block processing",
@@ -300,7 +307,10 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		zap.String("prev block", fb.PrevHash))
 
 	isSharder := node.Self.IsSharder()
-
+	timing = append(timing, &TimingEvent{
+		Name: "prep",
+		Time: time.Now().UnixNano(),
+	})
 	if !fb.IsStateComputed() {
 		if fb.PrevBlock == nil {
 			pb := c.GetLocalPreviousBlock(ctx, fb)
@@ -348,6 +358,11 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 	}
 
+	timing = append(timing, &TimingEvent{
+		Name: "state_compute",
+		Time: time.Now().UnixNano(),
+	})
+
 	// TODO/TOTHINK: move the repair chain outside the finalized worker?
 	// make sure we have valid verified MB chain if the block contains
 	// a magic block; we already have verified and valid MB chain at this
@@ -360,6 +375,10 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 			return fmt.Errorf("repair chain failed: %v", err)
 		}
 	}
+	timing = append(timing, &TimingEvent{
+		Name: "repair",
+		Time: time.Now().UnixNano(),
+	})
 
 	if isSharder {
 		// get previous finalized block
@@ -387,8 +406,12 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 
 	}
+	timing = append(timing, &TimingEvent{
+		Name: "before_fin",
+		Time: time.Now().UnixNano(),
+	})
 	// finalize
-	return c.finalizeBlock(ctx, fb, bsh)
+	return c.finalizeBlock(ctx, fb, bsh, timing)
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */
