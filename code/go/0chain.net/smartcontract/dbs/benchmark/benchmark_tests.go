@@ -43,7 +43,7 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	}
 	var gs *event.Snapshot
 	p := int64(-1)
-	_, err = sCtx.GetEventDB().Work(et.ctx, gs, be, &p)
+	_, err = event.Work(et.ctx, gs, be, &p)
 	if err != nil {
 		return err
 	}
