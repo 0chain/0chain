@@ -611,6 +611,18 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		fresh = challenge.RoundCreatedAt+maxChallengeCompletionRounds >= balances.GetBlock().Round
 	)
 
+	if !pass || !fresh {
+		logging.Logger.Info("JAYASH challenge failed",
+			zap.Int("success", success),
+			zap.Int("threshold", threshold),
+			zap.Bool("pass", pass),
+			zap.Bool("fresh", fresh),
+			zap.Int64("round_created_at", challenge.RoundCreatedAt),
+			zap.Int64("max_challenge_completion_rounds", maxChallengeCompletionRounds),
+			zap.Int64("current_round", balances.GetBlock().Round),
+		)
+	}
+
 	return &verifyTicketsResult{
 		pass:       pass,
 		fresh:      fresh,

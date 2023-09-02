@@ -212,7 +212,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 				Spent:         100,
 				Size:          1 * GB,
 				LatestCompletedChallenge: &StorageChallenge{
-					Created: allocation.Expiration,
+					Created: now - 200,
 				},
 				ChallengePoolIntegralValue: currency.Coin(challengePoolBalance / int64(allocation.DataShards+allocation.ParityShards)),
 			}
@@ -231,9 +231,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 	}
 
 	t.Run("cancel allocation", func(t *testing.T) {
-
-		z := ctx.GetBlock().Round
-		fmt.Println(z)
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
 
@@ -410,9 +407,6 @@ func testCancelAllocation(
 	scYaml, err := getConfig(ctx)
 	require.NoError(t, err)
 
-	z := ctx.GetBlock().Round
-	fmt.Println(z)
-
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
 		scYaml:               *scYaml,
@@ -429,17 +423,11 @@ func testCancelAllocation(
 		currency.Coin(challengePoolBalance), now, ctx,
 	)
 
-	z = ctx.GetBlock().Round
-	fmt.Println(z)
-
 	require.True(t, len(challenges) <= len(blobbers))
 
 	ac := AllocationChallenges{
 		AllocationID: sAllocation.ID,
 	}
-
-	z = ctx.GetBlock().Round
-	fmt.Println(z)
 
 	for i, blobberChallenges := range challenges {
 		blobberID := strconv.Itoa(i)
@@ -457,9 +445,6 @@ func testCancelAllocation(
 		_, err = ctx.InsertTrieNode(ac.GetKey(ssc.ID), &ac)
 		require.NoError(t, err)
 	}
-
-	z = ctx.GetBlock().Round
-	fmt.Println(z)
 
 	f.setFinilizationPassRates(ssc, ctx, *scYaml, now)
 

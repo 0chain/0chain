@@ -372,7 +372,7 @@ func TestChangeBlobbers(t *testing.T) {
 					OpenChallenges:    0,
 				},
 				LatestCompletedChallenge: &StorageChallenge{
-					Created: mockAllocationExpiry,
+					Created: now - 200,
 				},
 				ChallengePoolIntegralValue: 0,
 			}
@@ -1824,7 +1824,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	}
 
 	alloc.BlobberAllocsMap[nb.id].LatestCompletedChallenge = &StorageChallenge{
-		Created: alloc.Expiration,
+		Created: common.Timestamp(tp),
 	}
 
 	alloc.BlobberAllocsMap[nb.id].ChallengePoolIntegralValue = 0
@@ -1940,7 +1940,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	}
 
 	alloc.BlobberAllocsMap[nb2.id].LatestCompletedChallenge = &StorageChallenge{
-		Created: alloc.Expiration,
+		Created: common.Timestamp(tp),
 	}
 
 	alloc.BlobberAllocsMap[nb2.id].ChallengePoolIntegralValue = 0
