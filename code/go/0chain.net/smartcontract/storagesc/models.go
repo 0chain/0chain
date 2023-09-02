@@ -683,6 +683,10 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 	payment := currency.Coin(0)
 	var move currency.Coin
 
+	if d.LatestCompletedChallenge == nil {
+		return 0, nil
+	}
+
 	if now <= alloc.Expiration {
 		rdtu, err := alloc.restDurationInTimeUnits(d.LatestCompletedChallenge.Created, conf.TimeUnit)
 		if err != nil {
