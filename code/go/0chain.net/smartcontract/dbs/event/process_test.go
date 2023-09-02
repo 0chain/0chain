@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm/clause"
@@ -176,9 +177,17 @@ func TestUpdateHistoricData(t *testing.T) {
 		{
 			Type: TypeStats,
 			Tag:  TagUpdateMiner,
-			Data: []Miner{
-				{Provider: Provider{ID: "miner2"}},
-				{Provider: Provider{ID: "miner3"}},
+			Data: dbs.DbUpdates{
+				Id:      "miner2",
+				Updates: map[string]interface{}{"path": miners[1].Path},
+			},
+		},
+		{
+			Type: TypeStats,
+			Tag:  TagUpdateMiner,
+			Data: dbs.DbUpdates{
+				Id:      "miner3",
+				Updates: map[string]interface{}{"path": miners[1].Path},
 			},
 		},
 		// Events changing sharders
