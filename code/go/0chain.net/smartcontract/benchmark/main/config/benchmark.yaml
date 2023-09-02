@@ -127,7 +127,7 @@ smart_contracts:
     min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
-    max_challenge_completion_rounds: 3m
+    max_challenge_completion_rounds: 720
     min_offer_duration: 10h
     max_offer_duration: 744h
     min_blobber_capacity: 1024

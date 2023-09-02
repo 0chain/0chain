@@ -111,7 +111,7 @@ smart_contracts:
     # min possible allocation duration allowed by the SC
     min_alloc_duration: "5m"
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_rounds: "3m"
+    max_challenge_completion_rounds: 720
     # min blobber's offer duration allowed by the SC
     min_offer_duration: "10h"
     # min blobber capacity allowed by the SC
