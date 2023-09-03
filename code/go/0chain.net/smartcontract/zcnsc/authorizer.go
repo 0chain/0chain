@@ -292,11 +292,19 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 	var sp *StakePool
 	if sp, err = zcn.getStakePool(authorizerID, ctx); err != nil {
 		return "", common.NewErrorf(errorCode, "error occurred while getting stake pool: %v", err)
-
 	}
 
-	if err := smartcontractinterface.AuthorizeWithDelegate(errorCode, func() bool {
-		return sp.Settings.DelegateWallet == tran.ClientID
+	globalNode, err := GetGlobalNode(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(errorCode, msg)
+		Logger.Error("get global node", zap.Error(err))
+		return "", err
+	}
+
+	// only sc owner can add new authorizer
+	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
+		return globalNode.ZCNSConfig.OwnerId == tran.ClientID || sp.Settings.DelegateWallet == tran.ClientID
 	}); err != nil {
 		return "", err
 	}

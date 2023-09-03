@@ -1,18 +1,16 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/encryption"
 	"context"
 	"fmt"
+	"github.com/0chain/common/core/util"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
-
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/encryption"
-	"github.com/0chain/common/core/util"
 
 	"github.com/stretchr/testify/require"
 )
@@ -98,10 +96,10 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 		b.Run(fmt.Sprintf("%d blobbers", n), func(b *testing.B) {
 
 			var (
-				ssc            = newTestStorageSC()
-				balances       = newTestBalances(b, true)
-				client         = newClient(100000*x10, balances)
-				tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+				ssc      = newTestStorageSC()
+				balances = newTestBalances(b, true)
+				client   = newClient(100000*x10, balances)
+				tp       = int64(0)
 
 				conf *Config
 				err  error
@@ -115,7 +113,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 			// call the addAllocation to create and stake n blobbers, the resulting
 			// allocation will not be used
 			tp += 1
-			addAllocation(b, ssc, client, tp, exp, n, balances)
+			addAllocation(b, ssc, client, tp, n, balances)
 
 			conf.MinAllocSize = 1 * KB
 			mustSave(b, scConfigKey(ADDRESS), conf, balances)
@@ -173,10 +171,10 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 func Benchmark_generateChallenges(b *testing.B) {
 
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(b, true)
-		client         = newClient(100000*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(b, true)
+		client   = newClient(100000*x10, balances)
+		tp       = int64(0)
 
 		tx    *transaction.Transaction
 		blobs []*Client
@@ -193,7 +191,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 	b.Log("add 1k blobbers")
 	tp += 1
 	balances.skipMerge = true // don't merge transactions for now
-	_, blobs = addAllocation(b, ssc, client, tp, exp, 1000, balances)
+	_, blobs = addAllocation(b, ssc, client, tp, 1000, balances)
 
 	// 2. and 1000 corresponding validators
 	b.Log("add 1k corresponding validators")
@@ -299,10 +297,10 @@ func Benchmark_generateChallenges(b *testing.B) {
 func Benchmark_verifyChallenge(b *testing.B) {
 
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(b, true)
-		client         = newClient(100000*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(b, true)
+		client   = newClient(100000*x10, balances)
+		tp       = int64(0)
 
 		tx    *transaction.Transaction
 		blobs []*Client
@@ -319,7 +317,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 	b.Log("add 1k blobbers")
 	tp += 1
 	balances.skipMerge = true // don't merge transactions for now
-	_, blobs = addAllocation(b, ssc, client, tp, exp, 1000, balances)
+	_, blobs = addAllocation(b, ssc, client, tp, 1000, balances)
 
 	// 2. and 1000 corresponding validators
 	b.Log("add 1k corresponding validators")
