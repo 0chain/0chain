@@ -1473,13 +1473,6 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	sa.BlobberAllocsMap[addId] = ba
 
-	if sa.Stats.UsedSize > 0 {
-		err = partitionsBlobberAllocationsAdd(balances, addId, sa.ID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to add allocation to blobber: %v", err)
-		}
-	}
-
 	if err := sp.addOffer(ba.Offer()); err != nil {
 		return nil, fmt.Errorf("failed to add offter: %v", err)
 	}
