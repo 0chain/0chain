@@ -1300,11 +1300,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 	// Save challenge to MPT
 	if err := challenge.Save(balances, sc.ID); err != nil {
-		logging.Logger.Error("add_challenge failed",
-			zap.String("id", challenge.ID),
-			zap.String("scAddress", sc.ID),
-			zap.String("key path", encryption.Hash(challenge.GetKey(sc.ID))),
-			zap.Error(err))
 		return common.NewErrorf("add_challenge",
 			"error storing challenge: %v", err)
 	}
