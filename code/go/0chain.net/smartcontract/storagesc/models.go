@@ -1105,6 +1105,12 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
+	if balance, err := currency.MinusCoin(cp.Balance, passPayments); err != nil {
+		return err
+	} else {
+		cp.Balance = balance
+	}
+
 	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, ba.ChallengePoolIntegralValue-passPayments)
 	if err != nil {
 		return err
