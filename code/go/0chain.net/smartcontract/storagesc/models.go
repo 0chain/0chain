@@ -693,10 +693,7 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 			return 0, fmt.Errorf("blobber reward failed: %v", err)
 		}
 
-		move, err = d.challenge(dtu, rdtu)
-		if err != nil {
-			return 0, err
-		}
+		move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
 	} else {
 		move = d.ChallengePoolIntegralValue
 	}
@@ -1108,17 +1105,12 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
-	cp.Balance, err = currency.MinusCoin(cp.Balance, ba.ChallengePoolIntegralValue)
-	if err != nil {
-		return err
-	}
-
 	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, ba.ChallengePoolIntegralValue-passPayments)
 	if err != nil {
 		return err
 	}
 
-	err = sa.moveFromChallengePool(cp, ba.ChallengePoolIntegralValue-passPayments)
+	err = sa.moveFromChallengePool(cp, ba.ChallengePoolIntegralValue)
 	if err != nil {
 		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
 	}
