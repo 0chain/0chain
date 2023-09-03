@@ -182,13 +182,18 @@ jobs:
         ./docker.local/bin/start.conductor.sh blobber-4
 
     - uses: actions/upload-artifact@v3
-      if: failure()
+      if: always()
       with:
-        name: conductor-logs
+        name: blobber-04-logs
         path: |
           0chain/conductor/logs/
           0chain/docker.local/
           blobber/docker.local/
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
