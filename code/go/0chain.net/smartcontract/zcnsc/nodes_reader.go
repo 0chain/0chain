@@ -3,9 +3,9 @@ package zcnsc
 import (
 	"fmt"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
 

@@ -3,7 +3,7 @@ package common
 import (
 	"errors"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/core/encryption"
 )
 

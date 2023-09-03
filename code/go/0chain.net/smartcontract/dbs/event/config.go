@@ -3,13 +3,19 @@ package event
 import (
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/currency"
 )
 
 type TestConfig struct {
 	conf *TestConfigData
+}
+
+func NewTestConfig(dbSettings config.DbSettings) *TestConfig {
+	return &TestConfig{&TestConfigData{
+		DbsSettings: dbSettings,
+	}}
 }
 
 type TestConfigData struct {

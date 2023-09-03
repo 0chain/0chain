@@ -20,11 +20,11 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/config"
 	"0chain.net/core/metric"
 	"go.uber.org/zap"
 
@@ -108,9 +108,6 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		),
 		"/_diagnostics/current_mb_nodes": common.UserRateLimit(
 			DiagnosticsNodesHandler,
-		),
-		"/_diagnostics/dkg_process": common.UserRateLimit(
-			DiagnosticsDKGHandler,
 		),
 		"/_diagnostics/round_info": common.UserRateLimit(
 			RoundInfoHandler(c),
@@ -438,10 +435,6 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Rollbacks")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", c.RollbackCount)
-	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "</tr>")
 
 	var rn = c.GetCurrentRound()
 	cr := c.GetRound(rn)
@@ -757,10 +750,6 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
 	selfNodeType := node.Self.Underlying().Type
-	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
-		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
-	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
@@ -787,7 +776,6 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 		// ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
-	fmt.Fprintf(w, "<li><a href='_diagnostics/dkg_process'>/_diagnostics/dkg_process</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
@@ -1250,7 +1238,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td>Time</td>")
 	}
 	fmt.Fprintf(w, "<th>Round</th>")
-	fmt.Fprintf(w, "<th>Chain Weight</th><th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th></tr>")
+	fmt.Fprintf(w, "<th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th></tr>")
 	chainInfo := chainMetrics.GetAll()
 	for idx := 0; idx < len(chainInfo); idx++ {
 		cf := chainInfo[idx].(*Info)
@@ -1275,7 +1263,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<th>Time</th>")
 	}
 	fmt.Fprintf(w, "<th>Round</th>")
-	fmt.Fprintf(w, "<th>Notarized Blocks</th><th>Multi Block Rounds</th><th>Zero Block Rounds</th><th>Missed Blocks</th><th>Rollbacks</th><th>Max Rollback Length</th></tr>")
+	fmt.Fprintf(w, "<th>Notarized Blocks</th><th>Multi Block Rounds</th><th>Zero Block Rounds</th></tr>")
 	roundInfo := roundMetrics.GetAll()
 	for idx := 0; idx < len(roundInfo); idx++ {
 		rf := roundInfo[idx].(*round.Info)
@@ -1290,9 +1278,6 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.NotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MultiNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.ZeroNotarizedBlocksCount)
-		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.MissedBlocks)
-		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.RollbackCount)
-		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.LongestRollbackLength)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")

@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/config"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
@@ -305,7 +305,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				zap.Int64("round", roundNumber),
 				zap.Int64("from", plfb.Round+1),
 				zap.Int64("to", fb.Round-1))
-			c.MissedBlocks += fb.Round - 1 - plfb.Round
 		}
 
 		// perform view change (or not perform)
@@ -412,11 +411,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	b := c.commonAncestor(ctx, plfb, lfb)
 	if b != nil {
 		// Recovering from incorrectly finalized block
-		c.RollbackCount++
-		rl := plfb.Round - b.Round
-		if c.LongestRollbackLength < int8(rl) {
-			c.LongestRollbackLength = int8(rl)
-		}
 		logging.Logger.Error("finalize round - rolling back finalized block", zap.Int64("round", roundNumber),
 			zap.Int64("cf_round", plfb.Round), zap.String("cf_block", plfb.Hash), zap.String("cf_prev_block", plfb.PrevHash),
 			zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash), zap.Int64("caf_round", b.Round), zap.String("caf_block", b.Hash))

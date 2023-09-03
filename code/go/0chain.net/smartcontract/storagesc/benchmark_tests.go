@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	sc "0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
 
 	"github.com/0chain/common/core/currency"
 
-	sc "0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -509,12 +509,6 @@ func BenchmarkTests(
 		},
 		// read_pool
 		{
-			name:     "storage.new_read_pool",
-			endpoint: ssc.newReadPool,
-			txn:      &transaction.Transaction{CreationDate: creationTime},
-			input:    []byte{},
-		},
-		{
 			name:     "storage.read_pool_lock",
 			endpoint: ssc.readPoolLock,
 			txn: &transaction.Transaction{
@@ -802,20 +796,17 @@ func BenchmarkTests(
 					"cost.blobber_health_check":      "105",
 					"cost.update_blobber_settings":   "105",
 					"cost.pay_blobber_block_rewards": "105",
-					"cost.challenge_request":         "105",
 					"cost.challenge_response":        "105",
 					"cost.generate_challenge":        "105",
 					"cost.add_validator":             "105",
 					"cost.update_validator_settings": "105",
 					"cost.add_blobber":               "105",
-					"cost.new_read_pool":             "105",
 					"cost.read_pool_lock":            "105",
 					"cost.read_pool_unlock":          "105",
 					"cost.write_pool_lock":           "105",
 					"cost.write_pool_unlock":         "105",
 					"cost.stake_pool_lock":           "105",
 					"cost.stake_pool_unlock":         "105",
-					"cost.stake_pool_pay_interests":  "105",
 					"cost.commit_settings_changes":   "105",
 					"cost.collect_reward":            "105",
 				},

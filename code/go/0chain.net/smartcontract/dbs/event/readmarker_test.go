@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/config"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -32,7 +32,7 @@ func TestReadMarkersPaginated(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	if err != nil {
 		t.Skip("only for local debugging, requires local postgresql")
 		return

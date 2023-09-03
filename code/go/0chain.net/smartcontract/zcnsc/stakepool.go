@@ -105,13 +105,12 @@ func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, p
 // SC functions
 
 // get existing stake pool or create new one not saving it
-func (zcn *ZCNSmartContract) getOrUpdateStakePool(
-	gn *GlobalNode,
+func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 	authorizerID datastore.Key,
 	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
-	if err := validateStakePoolSettings(settings, gn); err != nil {
+	if err := validateStakePoolSettings(settings); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
 
@@ -138,6 +137,10 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 		changed = true
 	}
+	if sp.Settings.MinStake != gn.MinStakePerDelegate {
+		sp.Settings.MinStake = gn.MinStakePerDelegate
+		changed = true
+	}
 
 	if changed {
 		return sp, nil
@@ -146,7 +149,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
-func validateStakePoolSettings(poolSettings stakepool.Settings, conf *GlobalNode) error {
+func validateStakePoolSettings(poolSettings stakepool.Settings) error {
 	if poolSettings.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
 	}

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/stretchr/testify/assert"
@@ -82,7 +82,7 @@ func TestFindTransactionByHash(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

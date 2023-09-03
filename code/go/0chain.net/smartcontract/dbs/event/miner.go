@@ -63,7 +63,7 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 	result := edb.Get().Preload("Rewards").
 		Table("miners").
 		Joins("left join provider_rewards on miners.id = provider_rewards.provider_id").
-		Joins("left join delegate_pools on miners.id = delegate_pools.provider_id").
+		Joins("left join delegate_pools on miners.id = delegate_pools.provider_id AND delegate_pools.status = 0").
 		Where("miners.id = ?", id).
 		Scan(&minerDps)
 	if result.Error != nil {
@@ -85,9 +85,6 @@ func (edb *EventDb) GetMinerWithDelegatePools(id string) (Miner, []DelegatePool,
 		return m, nil, nil
 	}
 	for i := range minerDps {
-		if minerDps[i].DelegatePool.Status != 0 {
-			continue
-		}
 		dps = append(dps, minerDps[i].DelegatePool)
 		if id != minerDps[i].DelegatePool.ProviderID {
 			return m, nil, fmt.Errorf("mismatched miner id in delegate pool;"+

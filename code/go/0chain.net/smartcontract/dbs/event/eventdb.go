@@ -5,15 +5,30 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
 	"0chain.net/smartcontract/dbs/sqlite"
 )
 
-func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+	eventDb, err := NewEventDbWithoutWorker(config, settings)
+	if err != nil {
+		return nil, err
+	}
+	sqldb, err := eventDb.Store.Get().DB()
+	if err != nil {
+		return nil, err
+	}
+	goose.Migrate(sqldb)
+	go eventDb.addEventsWorker(common.GetRootContext())
+
+	return eventDb, nil
+}
+
+func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
 	goose.Init()
 	db, err := postgresql.GetPostgresSqlDb(config)
 	if err != nil {
@@ -23,15 +38,9 @@ func NewEventDb(config config.DbAccess, settings config.DbSettings) (*EventDb, e
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
-		eventsChannel: make(chan blockEvents, 1),
+		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
-	go eventDb.addEventsWorker(common.GetRootContext())
-	sqldb, err := eventDb.Store.Get().DB()
-	if err != nil {
-		return nil, err
-	}
-	goose.Migrate(sqldb)
 
 	return eventDb, nil
 }
@@ -44,7 +53,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
-		eventsChannel: make(chan blockEvents, 1),
+		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
@@ -58,7 +67,7 @@ type EventDb struct {
 	dbs.Store
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
-	eventsChannel chan blockEvents
+	eventsChannel chan BlockEvents
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -92,8 +101,38 @@ func (edb *EventDb) Rollback() error {
 	return edb.Store.Get().Rollback().Error
 }
 
+func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, error) {
+	cloneConfig := config.DbAccess{
+		Enabled:         true,
+		Name:            dbName,
+		User:            edb.dbConfig.User,
+		Password:        edb.dbConfig.Password,
+		Host:            edb.dbConfig.Host,
+		Port:            edb.dbConfig.Port,
+		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
+		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
+		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
+	}
+	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
+	if err != nil {
+		fmt.Printf("clonning of %s to %s failed %v\n", edb.dbConfig.Name, dbName, err)
+		return nil, err
+	}
+
+	return &EventDb{
+		Store:         clone,
+		dbConfig:      cloneConfig,
+		eventsChannel: nil,
+		settings:      edb.settings,
+	}, nil
+}
+
 func (edb *EventDb) UpdateSettings(updates map[string]string) error {
 	return edb.settings.Update(updates)
+}
+
+func (edb *EventDb) Settings() config.DbSettings {
+	return edb.settings
 }
 
 func (edb *EventDb) AggregatePeriod() int64 {
@@ -111,7 +150,7 @@ func (edb *EventDb) Debug() bool {
 	return edb.settings.Debug
 }
 
-type blockEvents struct {
+type BlockEvents struct {
 	block     string
 	blockSize int
 	round     int64

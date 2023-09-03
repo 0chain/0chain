@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/core/memorystore"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
@@ -281,7 +281,6 @@ func (c *Chain) getChainHealth() ChainHealth {
 	return ChainHealth{
 		LatestFinalizedRound:        c.GetLatestFinalizedBlock().Round,
 		DeterministicFinalizedRound: c.LatestDeterministicBlock.Round,
-		Rollbacks:                   c.RollbackCount,
 		Timeouts:                    c.RoundTimeoutsCount,
 		RoundTimeoutCount:           rtoc,
 		RelatedMB:                   mb.StartingRound,

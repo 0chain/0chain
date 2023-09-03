@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
 	"github.com/0chain/common/core/logging"
@@ -105,7 +105,7 @@ func TestMain(m *testing.M) {
 
 	gEventDB = &EventDb{
 		Store:         postgresql.New(gormDB),
-		eventsChannel: make(chan blockEvents, 1),
+		eventsChannel: make(chan BlockEvents, 1),
 		settings:      dbSetting,
 	}
 

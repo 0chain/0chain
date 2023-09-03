@@ -63,19 +63,27 @@ func (a *Authorizer) SetTotalRewards(value currency.Coin) {
 	a.Rewards.TotalRewards = value
 }
 
-func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
-	exists, err := a.exists(edb)
-	if err != nil {
-		return err
+func (edb *EventDb) AddAuthorizer(authorizers *[]Authorizer) error {
+	auths := *authorizers
+	for _, a := range auths {
+		exists, err := a.exists(edb)
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			return errors.New("authorizer already exists")
+		}
+
+		result := edb.Store.Get().Create(&a)
+
+		if result.Error != nil {
+			return result.Error
+		}
+
 	}
 
-	if exists {
-		return errors.New("authorizer already exists")
-	}
-
-	result := edb.Store.Get().Create(a)
-
-	return result.Error
+	return nil
 }
 
 func (edb *EventDb) GetAuthorizerCount() (int64, error) {
@@ -123,7 +131,7 @@ func (edb *EventDb) GetAuthorizers() ([]Authorizer, error) {
 
 func (edb *EventDb) DeleteAuthorizer(id string) error {
 	result := edb.Store.Get().
-		Where("authorizer_id = ?", id).
+		Where("id = ?", id).
 		Delete(&Authorizer{})
 	return result.Error
 }

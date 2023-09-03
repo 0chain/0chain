@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 
 	"0chain.net/smartcontract/provider"
 
@@ -107,6 +107,11 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/total-challenge-rewards", srh.getTotalChallengeRewards))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/cancellation-rewards", srh.getAllocationCancellationReward))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/alloc-challenge-rewards", srh.getAllocationChallengeRewards))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/count-challenges", srh.getChallengesCountByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-rewards", srh.getRewardsByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-delegate-rewards", srh.getDelegateRewardsByFilter))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/parition-size-frequency", srh.getPartitionSizeFrequency))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/blobber-selection-frequency", srh.getBlobberPartitionSelectionFrequency))
 	}
 
 	return restEndpoints
@@ -904,7 +909,10 @@ func (srh *StorageRestHandler) getUserStakePoolStat(w http.ResponseWriter, r *ht
 		var dps = stakepool.DelegatePoolStat{
 			ID:           pool.PoolID,
 			DelegateID:   pool.DelegateID,
-			Status:       spenum.PoolStatus(pool.Status).String(),
+			UnStake:      false,
+			ProviderId:   pool.ProviderID,
+			ProviderType: pool.ProviderType,
+			Status:       pool.Status.String(),
 			RoundCreated: pool.RoundCreated,
 			StakedAt:     pool.StakedAt,
 		}
@@ -1190,14 +1198,6 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-
-	conf, err := getConfig(sctx)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	logging.Logger.Info("getOpenChallenges", zap.Any("conf", conf))
 
 	challenges, err := getOpenChallengesForBlobber(
 		blobberID, from, limit, sctx.GetEventDB(),
@@ -1751,8 +1751,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	}
 
 	var (
-		now            = common.Now()
-		prevExpiration = alloc.Expiration
+		now = common.Now()
 	)
 
 	if req.Extend {
@@ -1779,7 +1778,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	if err := updateAllocBlobberTerms(edb, now, &req, &alloc.StorageAllocation, prevExpiration); err != nil {
+	if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
@@ -1825,14 +1824,6 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	if len(removeID) > 0 {
-		if err := sa.removeBlobber(removeID); err != nil {
-			return err
-		}
-	} else {
-		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
-	}
 	_, ok := sa.BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
@@ -1858,9 +1849,35 @@ func changeBlobbersEventDB(
 	if err != nil {
 		return err
 	}
-	sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-	sa.BlobberAllocsMap[addID] = ba
 
+	removedIdx := 0
+
+	if len(removeID) > 0 {
+		_, ok := sa.BlobberAllocsMap[removeID]
+		if !ok {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
+		}
+		delete(sa.BlobberAllocsMap, removeID)
+
+		var found bool
+		for i, d := range sa.BlobberAllocs {
+			if d.BlobberID == removeID {
+				sa.BlobberAllocs[i] = nil
+				found = true
+				removedIdx = i
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
+		}
+	} else {
+		// If we are not removing a blobber, then the number of shards must increase.
+		sa.ParityShards++
+	}
+
+	sa.BlobberAllocs[removedIdx] = ba
+	sa.BlobberAllocsMap[addID] = ba
 	return nil
 }
 
@@ -1911,10 +1928,7 @@ func getRestMinLockDemand(alloc *StorageAllocation, cancelCharge float64) (curre
 
 func updateAllocBlobberTerms(
 	edb *event.EventDb,
-	now common.Timestamp,
-	req *updateAllocationRequest,
-	alloc *StorageAllocation,
-	prevExpiration common.Timestamp) error {
+	alloc *StorageAllocation) error {
 	bIDs := make([]string, 0, len(alloc.BlobberAllocs))
 	for _, ba := range alloc.BlobberAllocs {
 		bIDs = append(bIDs, ba.BlobberID)
@@ -1933,29 +1947,10 @@ func updateAllocBlobberTerms(
 		}
 	}
 
-	if req.UpdateTerms {
-		for i := range alloc.BlobberAllocs {
-			alloc.BlobberAllocs[i].Terms = bTerms[i]
-		}
-	} else {
-		if req.Size > 0 || req.Extend || len(req.AddBlobberId) > 0 {
-			// use average terms
-			diff := req.getBlobbersSizeDiff(alloc) // size difference
-			for i, ba := range alloc.BlobberAllocs {
-				alloc.BlobberAllocs[i].Terms, err = weightedAverage(
-					&ba.Terms,
-					&bTerms[i],
-					now,
-					prevExpiration,
-					alloc.Expiration,
-					ba.Size,
-					diff)
-				if err != nil {
-					return common.NewErrInternal(fmt.Sprintf("could not calculate weighted average: %v", err))
-				}
-			}
-		}
+	for i := range alloc.BlobberAllocs {
+		alloc.BlobberAllocs[i].Terms = bTerms[i]
 	}
+
 	return nil
 }
 

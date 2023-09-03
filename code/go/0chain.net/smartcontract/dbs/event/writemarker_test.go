@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/assert"
@@ -61,7 +61,7 @@ func TestWriteMarker(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.Drop()
@@ -117,7 +117,7 @@ func TestGetWriteMarkers(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	if err != nil {
 		return
 	}

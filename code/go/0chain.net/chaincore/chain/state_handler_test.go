@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"

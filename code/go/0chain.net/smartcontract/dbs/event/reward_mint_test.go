@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ func TestRewardEvents(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()

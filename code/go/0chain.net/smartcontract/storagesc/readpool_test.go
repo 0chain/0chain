@@ -97,36 +97,6 @@ func TestStorageSmartContract_getReadPool(t *testing.T) {
 	require.EqualValues(t, nrps, rps)
 }
 
-func TestStorageSmartContract_newReadPool(t *testing.T) {
-	const (
-		clientID, txHash = "client_id", "tx_hash"
-		errMsg           = "new_read_pool_failed: already exist"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances(t, false)
-		tx       = transaction.Transaction{
-			ClientID:   clientID,
-			ToClientID: ssc.ID,
-			Value:      0,
-		}
-		resp string
-		err  error
-	)
-
-	balances.setTransaction(t, &tx)
-	tx.Hash = txHash
-
-	resp, err = ssc.newReadPool(&tx, nil, balances)
-	require.NoError(t, err)
-	var nrp = new(readPool)
-	assert.Equal(t, string(nrp.Encode()), resp)
-
-	_, err = ssc.newReadPool(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg)
-}
-
 func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
 	balances chainState.StateContextI, sscID string) {
 

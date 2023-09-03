@@ -415,8 +415,12 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 		return "", common.NewError("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
-
-	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate)
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf("blobber_health_check_failed",
+			"cannot get config: %v", err)
+	}
+	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate, conf.HealthCheckPeriod)
 	blobber.LastHealthCheck = t.CreationDate
 
 	emitBlobberHealthCheck(blobber, downtime, balances)
@@ -651,6 +655,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
+
 	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
@@ -672,7 +677,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
-		logging.Logger.Info("commitMoveTokens", zap.Any("move", move), zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("alloc_write_pool", alloc.WritePool))
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
@@ -798,7 +802,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	allocSizeBefore := alloc.Stats.UsedSize
+	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize := blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
@@ -867,22 +871,16 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 
-	if allocSizeBefore == 0 && commitConnection.WriteMarker.Size > 0 {
-		for _, ba := range alloc.BlobberAllocs {
-			if err := partitionsBlobberAllocationsAdd(balances, ba.BlobberID, ba.AllocationID); err != nil {
-				logging.Logger.Error("add_blobber_allocation_to_partitions_error",
-					zap.String("blobber", ba.BlobberID),
-					zap.String("allocation", ba.AllocationID),
-					zap.Error(err))
-				return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
-			}
+	if blobberAllocSizeBefore == 0 && commitConnection.WriteMarker.Size > 0 {
+		if err := partitionsBlobberAllocationsAdd(balances, blobAlloc.BlobberID, blobAlloc.AllocationID); err != nil {
+			logging.Logger.Error("add_blobber_allocation_to_partitions_error",
+				zap.String("blobber", blobAlloc.BlobberID),
+				zap.String("allocation", blobAlloc.AllocationID),
+				zap.Error(err))
+			return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
 		}
-	} else if alloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
-		blobAllocsParts, err := partitionsBlobberAllocations(blobber.ID, balances)
-		if err != nil {
-			return "", fmt.Errorf("error fetching blobber challenge allocation partition, %v", err)
-		}
-		if err := partitionsBlobberAllocationsRemove(balances, blobber.ID, alloc.ID, blobAllocsParts); err != nil {
+	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
+		if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
 			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
 				zap.String("blobber", blobber.ID),
 				zap.String("allocation", alloc.ID),

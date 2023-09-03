@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
-
-	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
@@ -53,10 +52,10 @@ func TestUpdateSettings(t *testing.T) {
 			ClientID: p.client,
 		}
 
-		var oldChanges smartcontract.StringMap
+		var oldChanges config.StringMap
 		oldChanges.Fields = p.previousMap
 		balances.On("GetTrieNode", settingChangesKey,
-			mock.MatchedBy(func(c *smartcontract.StringMap) bool {
+			mock.MatchedBy(func(c *config.StringMap) bool {
 				*c = oldChanges
 				return true
 			})).Return(nil).Once()
@@ -65,7 +64,7 @@ func TestUpdateSettings(t *testing.T) {
 			oldChanges.Fields[key] = value
 		}
 
-		var expected = smartcontract.NewStringMap()
+		var expected = config.NewStringMap()
 		for key, value := range p.previousMap {
 			expected.Fields[key] = value
 		}
@@ -76,7 +75,7 @@ func TestUpdateSettings(t *testing.T) {
 		balances.On(
 			"InsertTrieNode",
 			settingChangesKey,
-			mock.MatchedBy(func(actual *smartcontract.StringMap) bool {
+			mock.MatchedBy(func(actual *config.StringMap) bool {
 				if len(expected.Fields) != len(actual.Fields) {
 					return false
 				}
@@ -101,7 +100,7 @@ func TestUpdateSettings(t *testing.T) {
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
+			input:    (&config.StringMap{Fields: p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}
@@ -174,20 +173,17 @@ func TestUpdateSettings(t *testing.T) {
 					"cost.blobber_health_check":      "105",
 					"cost.update_blobber_settings":   "105",
 					"cost.pay_blobber_block_rewards": "105",
-					"cost.challenge_request":         "105",
 					"cost.challenge_response":        "105",
 					"cost.generate_challenge":        "105",
 					"cost.add_validator":             "105",
 					"cost.update_validator_settings": "105",
 					"cost.add_blobber":               "105",
-					"cost.new_read_pool":             "105",
 					"cost.read_pool_lock":            "105",
 					"cost.read_pool_unlock":          "105",
 					"cost.write_pool_lock":           "105",
 					"cost.write_pool_unlock":         "105",
 					"cost.stake_pool_lock":           "105",
 					"cost.stake_pool_unlock":         "105",
-					"cost.stake_pool_pay_interests":  "105",
 					"cost.commit_settings_changes":   "105",
 					"cost.collect_reward":            "105",
 				},
@@ -241,7 +237,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		balances.On("GetTrieNode", scConfigKey(ADDRESS),
 			mockSetValue(conf)).Return(nil).Once()
 		balances.On("GetTrieNode", settingChangesKey,
-			mockSetValue(&smartcontract.StringMap{
+			mockSetValue(&config.StringMap{
 				Fields: p.inputMap,
 			})).Return(nil).Once()
 
@@ -252,7 +248,7 @@ func TestCommitSettingChanges(t *testing.T) {
 				for key, value := range p.inputMap {
 					setting := getConfField(*conf, key)
 					switch Settings[key].configType {
-					case smartcontract.Int:
+					case config.Int:
 						{
 							expected, err := strconv.Atoi(value)
 							require.NoError(t, err)
@@ -262,7 +258,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Int64:
+					case config.Int64:
 						{
 							expected, err := strconv.ParseInt(value, 10, 64)
 							require.NoError(t, err)
@@ -272,7 +268,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Float64:
+					case config.Float64:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							require.NoError(t, err)
@@ -282,7 +278,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Boolean:
+					case config.Boolean:
 						{
 							expected, err := strconv.ParseBool(value)
 							require.NoError(t, err)
@@ -292,7 +288,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Duration:
+					case config.Duration:
 						{
 							expected, err := time.ParseDuration(value)
 							require.NoError(t, err)
@@ -302,7 +298,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.CurrencyCoin:
+					case config.CurrencyCoin:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected
@@ -313,7 +309,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Cost:
+					case config.Cost:
 						{
 							expected, err := strconv.Atoi(value)
 							require.NoError(t, err)
@@ -323,7 +319,7 @@ func TestCommitSettingChanges(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Key:
+					case config.Key:
 						{
 							_, err := hex.DecodeString(value)
 							require.NoError(t, err)
@@ -344,7 +340,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
+			input:    (&config.StringMap{Fields: p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}
@@ -417,20 +413,17 @@ func TestCommitSettingChanges(t *testing.T) {
 					"cost.blobber_health_check":                      "105",
 					"cost.update_blobber_settings":                   "105",
 					"cost.pay_blobber_block_rewards":                 "105",
-					"cost.challenge_request":                         "105",
 					"cost.challenge_response":                        "105",
 					"cost.generate_challenge":                        "105",
 					"cost.add_validator":                             "105",
 					"cost.update_validator_settings":                 "105",
 					"cost.add_blobber":                               "105",
-					"cost.new_read_pool":                             "105",
 					"cost.read_pool_lock":                            "105",
 					"cost.read_pool_unlock":                          "105",
 					"cost.write_pool_lock":                           "105",
 					"cost.write_pool_unlock":                         "105",
 					"cost.stake_pool_lock":                           "105",
 					"cost.stake_pool_unlock":                         "105",
-					"cost.stake_pool_pay_interests":                  "105",
 					"cost.commit_settings_changes":                   "105",
 					"cost.collect_reward":                            "105",
 				},
@@ -463,6 +456,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxStake
 	case MinStake:
 		return conf.MinStake
+	case MinStakePerDelegate:
+		return conf.MinStakePerDelegate
 	case TimeUnit:
 		return conf.TimeUnit
 	case MinAllocSize:

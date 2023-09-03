@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	common2 "0chain.net/smartcontract/common"
@@ -179,7 +179,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	eventDb, err := NewEventDb(access, config.DbSettings{Debug: true})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{Debug: true})
 	if err != nil {
 		t.Error(err)
 	}

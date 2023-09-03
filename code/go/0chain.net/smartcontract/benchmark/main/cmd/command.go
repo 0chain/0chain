@@ -5,25 +5,17 @@ import (
 	"fmt"
 	"path"
 	"sort"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"github.com/spf13/pflag"
-
-	"0chain.net/smartcontract/zcnsc"
-
-	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
 	"0chain.net/chaincore/node"
 	bk "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
-	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/multisigsc"
-	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/vestingsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,21 +24,6 @@ import (
 const (
 	defaultConfigPath = "testdata/benchmark.yaml"
 )
-
-var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
-	bk.Storage:         storagesc.BenchmarkTests,
-	bk.StorageRest:     storagesc.BenchmarkRestTests,
-	bk.Miner:           minersc.BenchmarkTests,
-	bk.MinerRest:       minersc.BenchmarkRestTests,
-	bk.Faucet:          faucetsc.BenchmarkTests,
-	bk.FaucetRest:      faucetsc.BenchmarkRestTests,
-	bk.Vesting:         vestingsc.BenchmarkTests,
-	bk.VestingRest:     vestingsc.BenchmarkRestTests,
-	bk.MultiSig:        multisigsc.BenchmarkTests,
-	bk.ZCNSCBridge:     zcnsc.BenchmarkTests,
-	bk.ZCNSCBridgeRest: zcnsc.BenchmarkRestTests,
-	bk.Control:         control.BenchmarkTests,
-}
 
 func init() {
 	logging.InitLogging("testing", "")
@@ -200,7 +177,9 @@ func printResults(results []suiteResults) {
 			return suiteResult.results[i].test.Name() < suiteResult.results[j].test.Name()
 		})
 	}
+	mapResults := make(map[string][]benchmarkResults)
 	for _, suiteResult := range results {
+		mapResults[suiteResult.name] = suiteResult.results
 		if verbose {
 			fmt.Printf("\nbenchmark suite " + suiteResult.name + "\n")
 		}
@@ -254,6 +233,40 @@ func printResults(results []suiteResults) {
 					colourReset,
 				)
 			}
+		}
+	}
+
+	if viper.GetBool(bk.OptionsEventDatabaseBenchmarks) && viper.GetBool(bk.EventDbEnabled) &&
+		viper.GetString(bk.OptionsSmartContractEventFile) == viper.GetString(bk.OptionsEventDatabaseEventFile) {
+		fmt.Printf("\nCombined smartcontract and event processing times")
+		fmt.Printf("\n%s,%s,%s,%s,%s,%s,%s,%s\n", "name", "sc/ms", "events/ms", "num events", "ms/event", "event", "aggreates", "differnece")
+		for i, edbResult := range mapResults[bk.SourceNames[bk.EventDatabase]] {
+			name := edbResult.test.Name()
+			edbEventsResult := mapResults[bk.SourceNames[bk.EventDatabaseEvents]][i]
+			edbEventsAggregates := mapResults[bk.SourceNames[bk.EventDatabaseAggregates]][i]
+			splitName := strings.Split(name, ".")
+			if len(splitName) != 2 {
+				log.Println("bad name", name, "should be exactly one period.")
+			}
+			for _, smartContractRestult := range mapResults[splitName[0]] {
+				if smartContractRestult.test.Name() == name {
+					takenSC := float64(smartContractRestult.result.T.Milliseconds()) / float64(smartContractRestult.result.N)
+					takenEdb := float64(edbResult.result.T.Milliseconds()) / float64(edbResult.result.N)
+					takenEvents := float64(edbEventsResult.result.T.Milliseconds()) / float64(edbEventsResult.result.N)
+					takenAggregates := float64(edbEventsAggregates.result.T.Milliseconds()) / float64(edbEventsAggregates.result.N)
+					fmt.Printf("%s,%f,%f,%d,%f,%f,%f,%f\n",
+						name,
+						takenSC,
+						takenEdb,
+						smartContractRestult.numEvents,
+						takenEdb/float64(smartContractRestult.numEvents),
+						takenEvents,
+						takenAggregates,
+						takenEvents+takenAggregates-takenEdb,
+					)
+				}
+			}
+
 		}
 	}
 }

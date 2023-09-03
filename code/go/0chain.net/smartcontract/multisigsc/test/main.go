@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	chainconfig "0chain.net/chaincore/config"
+	chainconfig "0chain.net/core/config"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/multisigsc"
 	. "github.com/0chain/common/core/logging"

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
@@ -93,7 +93,6 @@ func (store *PostgresStore) Open(config config.DbAccess) error {
 		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
 	}
 
-	fmt.Println("made event sql database ok")
 	return nil
 }
 

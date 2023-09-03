@@ -60,6 +60,7 @@ smart_contracts:
     # sharder delegates to get paid each round when paying fees and rewards
     num_sharder_delegates_rewarded: 5
     cooldown_period: 100
+    health_check_period: 90m
     cost:
       add_miner: 361
       add_sharder: 331
@@ -190,18 +191,15 @@ smart_contracts:
       update_blobber_settings: 338
       update_validator_settings: 247
       pay_blobber_block_rewards: 100 #todo
-      challenge_request: 100 #todo
       challenge_response: 728
       add_validator: 348
       add_blobber: 266
-      new_read_pool: 100
       read_pool_lock: 170
       read_pool_unlock: 104
       write_pool_lock: 186
       write_pool_unlock: 121
       stake_pool_lock: 187
       stake_pool_unlock: 119
-      stake_pool_pay_interests: 100 #todo
       commit_settings_changes: 56
       generate_challenge: 600
       blobber_block_rewards: 794
@@ -234,6 +232,7 @@ smart_contracts:
     max_delegates: 10
     max_fee: 100 #todo change the wording
     burn_address: "0000000000000000000000000000000000000000000000000000000000000000" #todo maybe we should use sc address
+    health_check_period: 90m
     cost:
       mint: 100
       burn: 100

@@ -33,6 +33,15 @@ import (
 // TODO: add back after fixing the chain stuck
 // const blobberAllocationPartitionSize = 100
 
+type BlobberChallengeResponded int
+
+const (
+	ChallengeNotResponded BlobberChallengeResponded = iota
+	ChallengeResponded
+	ChallengeRespondedLate
+	ChallengeRespondedInvalid
+)
+
 const blobberAllocationPartitionSize = 10
 
 // completeChallenge complete the challenge
@@ -259,14 +268,13 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 			return fmt.Errorf("saving stake pool: %v", err)
 		}
 
-		// TODO: add code below back after validators staking are supported
-		// staked, err := sp.stake()
-		// if err != nil {
-		//	return fmt.Errorf("can't get stake: %v", err)
-		// }
-		// vid := validators[i]
-		// tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
-		// balances.EmitEvent(event.TypeStats, tag, vid, data)
+		staked, err := sp.stake()
+		if err != nil {
+			return fmt.Errorf("can't get stake: %v", err)
+		}
+		vid := validators[i]
+		tag, data := event.NewUpdateBlobberTotalStakeEvent(vid, staked)
+		balances.EmitEvent(event.TypeStats, tag, vid, data)
 	}
 	return
 }
@@ -449,7 +457,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewErrorf(errCode, "could not find challenge, %v", err)
 	}
-	if challenge.Responded != 0 {
+	if challenge.Responded != int64(ChallengeNotResponded) {
 		return "", common.NewError(errCode, "challenge already processed")
 	}
 
@@ -498,7 +506,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		// TODO: remove this challenge already redeemed response. This response will be returned only when the
 		// challenge is the last completed challenge, which means if we have more challenges completed after it, we
 		// will see different result, even the challenge's state is the same as 'it has been redeemed'.
-		if lcc != nil && challResp.ID == lcc.ID && lcc.Responded == 1 {
+		if lcc != nil && challResp.ID == lcc.ID && lcc.Responded == int64(ChallengeResponded) {
 			return "challenge already redeemed", nil
 		}
 
@@ -513,7 +521,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		latestCompletedChallTime = lcc.Created
 	}
 
-	challenge.Responded = 1
+	challenge.Responded = int64(ChallengeResponded)
 	cab := &challengeAllocBlobberPassResult{
 		verifyTicketsResult:      result,
 		alloc:                    alloc,
@@ -696,7 +704,7 @@ func (sc *StorageSmartContract) challengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	err = emitUpdateChallenge(cab.challenge, true, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -766,7 +774,7 @@ func (sc *StorageSmartContract) challengeFailed(
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	err := emitUpdateChallenge(cab.challenge, false, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -842,7 +850,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	// we check that this allocation do have write-commits and can be challenged.
 	// We can't check only allocation to be written, because blobbers can commit in different order,
 	// so we check particular blobber's allocation to be written
-	if alloc.Stats.NumWrites > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
+	if alloc.Stats.UsedSize > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
 		return alloc, nil // found
 	}
 	return nil, nil
@@ -977,7 +985,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 
 		if alloc.Finalized {
-			if err := partitionsBlobberAllocationsRemove(balances, blobberID, allocID, blobberAllocParts); err != nil {
+			if err := removeAllocationFromBlobberPartitions(balances, blobberID, allocID); err != nil {
 				return nil, err
 			}
 			continue

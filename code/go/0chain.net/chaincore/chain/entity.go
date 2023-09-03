@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -26,7 +27,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -242,7 +242,7 @@ func (c *Chain) SetupEventDatabase() error {
 	time.Sleep(time.Second * 2)
 
 	var err error
-	c.EventDb, err = event.NewEventDb(c.ChainConfig.DbsEvents(), c.ChainConfig.DbSettings())
+	c.EventDb, err = event.NewEventDbWithWorker(c.ChainConfig.DbsEvents(), c.ChainConfig.DbSettings())
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/common"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +23,7 @@ func TestAddAndGetError(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDb(access, config.DbSettings{})
+	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
 	if err != nil {
 		return
 	}
