@@ -191,9 +191,9 @@ jobs:
       with:
         name: conductor-logs
         path: |
-          0chain/conductor/logs/
-          0chain/docker.local/
-          token_bridge_authserver/docker.local/
+          0chain/0chain/conductor/logs/
+          0chain/0chain/docker.local/
+          0chain/token_bridge_authserver/docker.local/
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
