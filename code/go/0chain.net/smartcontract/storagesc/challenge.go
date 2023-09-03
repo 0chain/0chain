@@ -488,7 +488,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"can't get related allocation: %v", err)
 	}
 
-	if alloc.Finalized {
+	if t.CreationDate >= alloc.Expiration {
 		return "", common.NewError(errCode, "allocation is finalized")
 	}
 
