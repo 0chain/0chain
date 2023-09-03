@@ -36,12 +36,10 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3fOKtUw0Xmo=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9 h1:ssd/pmPpX56ztnfEWUP/AStwDdSVYwE150pebU2/8RU=
-github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
+github.com/0chain/common v0.0.6 h1:ak49NelyeFlujZzc57eZjG8Pp6tOWDX1ZrDvNCV0Q9g=
+github.com/0chain/common v0.0.6/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
-github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d h1:G19ZxPbPUX025coYOrj6klljl2zWnumW3ZyrpYTRb0I=
-github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d/go.mod h1:GgqNjoHBO0JN9TcpDAC28/VE2VsZi4MDr4qGdzfWV+I=
 github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9 h1:GHTdYTmhNY9genBkNWLXdn3Z1yCtcbSNkcIFaKrqBRU=
 github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9/go.mod h1:3NKNYzmnMIYqZwwwOgZwMmTW1DT1ZUAmKyVPmYQOiT4=
 github.com/0chain/msgp v1.1.62 h1:D/s/TYygUwQnMlvfHUjh56FEaI0wP2VfPVS0TTGGu9I=
