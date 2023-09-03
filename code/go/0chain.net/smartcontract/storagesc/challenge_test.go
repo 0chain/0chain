@@ -478,7 +478,7 @@ func TestBlobberPenalty(t *testing.T) {
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errLate)
+		require.EqualValues(t, errLate, err.Error())
 	})
 
 	t.Run("old challenge", func(t *testing.T) {

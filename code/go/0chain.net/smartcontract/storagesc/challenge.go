@@ -294,6 +294,10 @@ func (sc *StorageSmartContract) blobberPenalty(
 
 	// time of this challenge
 	challengeCompleteTime := blobAlloc.LatestCompletedChallenge.Created
+	if challengeCompleteTime > alloc.Expiration {
+		return errors.New("late challenge response")
+	}
+
 	if challengeCompleteTime < prev {
 		logging.Logger.Debug("old challenge response - blobber penalty",
 			zap.Int64("latestCompletedChallTime", int64(prev)),
@@ -460,7 +464,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if challenge.Responded != int64(ChallengeNotResponded) {
 		return "", common.NewError(errCode, "challenge already processed")
 	}
-	if challenge.RoundCreatedAt+conf.MaxChallengeCompletionRounds >= balances.GetBlock().Round {
+
+	currentRound := balances.GetBlock().Round
+	if challenge.RoundCreatedAt+conf.MaxChallengeCompletionRounds <= currentRound {
 		return "", common.NewError(errCode, "challenge expired")
 	}
 
