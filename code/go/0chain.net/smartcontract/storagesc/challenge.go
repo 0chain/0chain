@@ -294,10 +294,6 @@ func (sc *StorageSmartContract) blobberPenalty(
 
 	// time of this challenge
 	challengeCompleteTime := blobAlloc.LatestCompletedChallenge.Created
-	if challengeCompleteTime > alloc.Expiration {
-		return errors.New("late challenge response")
-	}
-
 	if challengeCompleteTime < prev {
 		logging.Logger.Debug("old challenge response - blobber penalty",
 			zap.Int64("latestCompletedChallTime", int64(prev)),
@@ -442,6 +438,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		errCode   = "verify_challenge"
 	)
 
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf(errCode,
+			"cannot get smart contract configurations: %v", err)
+	}
+
 	if err := json.Unmarshal(input, &challResp); err != nil {
 		return "", common.NewErrorf(errCode, "failed to decode txn input: %v", err)
 	}
@@ -458,6 +460,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	if challenge.Responded != int64(ChallengeNotResponded) {
 		return "", common.NewError(errCode, "challenge already processed")
 	}
+	if challenge.RoundCreatedAt+conf.MaxChallengeCompletionRounds >= balances.GetBlock().Round {
+		return "", common.NewError(errCode, "challenge expired")
+	}
 
 	if challenge.BlobberID != t.ClientID {
 		return "", errors.New("challenge blobber id does not match")
@@ -467,13 +472,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		zap.String("challenge_id", challenge.ID),
 		zap.Duration("delay", time.Since(common.ToTime(challenge.Created))))
 
-	conf, err := sc.getConfig(balances, true)
-	if err != nil {
-		return "", common.NewErrorf(errCode,
-			"cannot get smart contract configurations: %v", err)
-	}
-
-	result, err := verifyChallengeTickets(balances, t, challenge, &challResp, conf.MaxChallengeCompletionRounds)
+	result, err := verifyChallengeTickets(balances, challenge, &challResp, conf.MaxChallengeCompletionRounds)
 	if err != nil {
 		return "", common.NewError(errCode, err.Error())
 	}
@@ -529,8 +528,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		latestCompletedChallTime: latestCompletedChallTime,
 	}
 
-	if !(result.pass && result.fresh) {
-		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionRounds)
+	if !(result.pass) {
+		return sc.challengeFailed(balances, conf.NumValidatorsRewarded, cab)
 	}
 
 	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab)
@@ -538,7 +537,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 type verifyTicketsResult struct {
 	pass       bool
-	fresh      bool
 	threshold  int
 	success    int
 	validators []string
@@ -555,7 +553,6 @@ type challengeAllocBlobberPassResult struct {
 }
 
 func verifyChallengeTickets(balances cstate.StateContextI,
-	t *transaction.Transaction,
 	challenge *StorageChallenge,
 	cr *ChallengeResponse,
 	maxChallengeCompletionRounds int64,
@@ -607,16 +604,14 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}
 
 	var (
-		pass  = success > threshold
-		fresh = challenge.RoundCreatedAt+maxChallengeCompletionRounds >= balances.GetBlock().Round
+		pass = success > threshold
 	)
 
-	if !pass || !fresh {
+	if !pass {
 		logging.Logger.Info("JAYASH challenge failed",
 			zap.Int("success", success),
 			zap.Int("threshold", threshold),
 			zap.Bool("pass", pass),
-			zap.Bool("fresh", fresh),
 			zap.Int64("round_created_at", challenge.RoundCreatedAt),
 			zap.Int64("max_challenge_completion_rounds", maxChallengeCompletionRounds),
 			zap.Int64("current_round", balances.GetBlock().Round),
@@ -625,7 +620,6 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 
 	return &verifyTicketsResult{
 		pass:       pass,
-		fresh:      fresh,
 		threshold:  threshold,
 		success:    success,
 		validators: validators,
@@ -767,7 +761,6 @@ func (sc *StorageSmartContract) challengeFailed(
 	balances cstate.StateContextI,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionRounds int64,
 ) (string, error) {
 	if !sc.completeChallenge(cab) {
 		return "", common.NewError("challenge_out_of_order",
@@ -806,11 +799,6 @@ func (sc *StorageSmartContract) challengeFailed(
 	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
-	}
-
-	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
-	if cab.pass && !cab.fresh {
-		return "late challenge (failed)", nil
 	}
 
 	return "Challenge Failed by Blobber", nil
@@ -1266,7 +1254,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, challenge.Created, conf.MaxChallengeCompletionRounds, balances)
+	expiredIDsMap, err := alloc.removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances)
 	if err != nil {
 		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
 	}

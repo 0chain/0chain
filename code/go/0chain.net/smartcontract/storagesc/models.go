@@ -33,8 +33,6 @@ import (
 	"0chain.net/core/encryption"
 )
 
-const confMaxChallengeCompletionRounds = "smart_contracts.storagesc.max_challenge_completion_rounds"
-
 //msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
 
@@ -1777,7 +1775,6 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(
 	allocChallenges *AllocationChallenges,
-	now common.Timestamp,
 	cct int64,
 	balances cstate.StateContextI,
 ) (map[string]string, error) {

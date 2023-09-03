@@ -122,7 +122,7 @@ func (sn *SelfNode) IsEqual(node *Node) bool {
 		return false
 	}
 
-	return sn.Node.ID == node.ID && sn.Node.Type == node.Type
+	return sn.Node.ID == node.ID
 }
 
 func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
