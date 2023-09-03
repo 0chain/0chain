@@ -249,6 +249,23 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 }
 
 func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
+	// start in a second, repeat every 30 minutes
+	tk := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-tk.C:
+			mc.syncAllMissingNodes(ctx)
+			// do all missing nodes check and sync every 30 minutes
+			// TODO: move the interval to a config file
+			tk.Reset(30 * time.Minute)
+		case <-ctx.Done():
+			logging.Logger.Debug("Sync all missing nodes worker exit!")
+			return
+		}
+	}
+}
+
+func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	// get LFB first
 	var (
 		lfb = mc.GetLatestFinalizedBlock()
