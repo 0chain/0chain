@@ -87,9 +87,9 @@ jobs:
         bash ./docker.local/bin/start.conductor.sh miners
 
     - uses: actions/upload-artifact@v3
-      if: failure()
+      if: always()
       with:
-        name: conductor-logs
+        name: standard-miner-logs
         path: |
           conductor/logs/
           docker.local/
@@ -97,6 +97,11 @@ jobs:
     - name: Cleanup
       run: |
         rm -rf *
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
