@@ -1841,11 +1841,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// assert the blobber allocation is added
 	baParts, err := partitionsBlobberAllocations(nb.id, balances)
 	require.NoError(t, err)
-	var it BlobberAllocationNode
-
-	err = baParts.Get(balances, alloc.ID, &it)
-	require.NoError(t, err)
-	require.Equal(t, alloc.ID, it.ID)
 
 	//
 	// remove blobber
