@@ -24,34 +24,12 @@ func (edb *EventDb) GetUserSnapshotsByIds(ids []string) (snapshots []UserSnapsho
 		return snapshots, nil
 	}
 
-	tx := edb.Store.Get().Begin()
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
-	err = tx.Exec(`CREATE TEMPORARY TABLE IF NOT EXISTS user_snapshot_ids_temp
-        AS SELECT t.id FROM UNNEST(?::text[]) AS t(id)`, pq.StringArray(ids),
-	).Debug().Error
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	err = tx.Raw(`SELECT us.* FROM user_snapshot_ids_temp tmp
-        INNER JOIN user_snapshots us ON tmp.id = us.user_id`).Scan(&snapshots).Debug().Error
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	err = tx.Exec(`DROP TABLE IF EXISTS user_snapshot_ids_temp`).Debug().Error
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	tx.Commit()
-	return snapshots, nil
+	err = edb.Store.Get().Raw(`
+			SELECT us.* 
+			FROM user_snapshots us 
+			WHERE us.user_id IN (SELECT t.id FROM UNNEST(?::text[]) AS t(id))`,
+		pq.StringArray(ids)).Scan(&snapshots).Debug().Error
+	return
 }
 
 func (edb *EventDb) AddOrOverwriteUserSnapshots(snapshots []*UserSnapshot) error {
