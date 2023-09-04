@@ -48,7 +48,7 @@ require (
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.13.1
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
-	golang.org/x/sys v0.10.0
+	golang.org/x/sys v0.12.0
 	gorm.io/driver/sqlite v1.5.2
 	moul.io/zapgorm2 v1.3.0
 )
