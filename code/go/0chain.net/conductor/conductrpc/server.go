@@ -101,6 +101,12 @@ type ValidtorTicket struct {
 	ValidatorId string
 }
 
+type AggregateMessage struct {
+	ProviderType stats.ProviderType
+	ProviderId string
+	Values stats.Aggregate
+}
+
 type Server struct {
 	server  *rpc.Server
 	address string
@@ -126,7 +132,8 @@ type Server struct {
 	onSharderBlock chan *stats.BlockFromSharder
 	// onValidatorTicket occurs when the validator sends a ticket
 	onValidatorTicket chan *ValidtorTicket
-
+	// onAggregate occurs when the sharder sends an aggregate if the aggregates are being monitored
+	onAggregate chan *AggregateMessage
 
 	// onNodeReady used by miner/sharder to notify the server that the node
 	// has started and ready to register (if needed) in miner SC and start
@@ -364,6 +371,10 @@ func (s *Server) OnValidatorTicket() chan *ValidtorTicket {
 	return s.onValidatorTicket
 }
 
+func (s *Server) OnAggregate() chan *AggregateMessage {
+	return s.onAggregate
+}
+
 func (s *Server) Nodes() map[config.NodeName]*nodeState {
 	return s.nodes
 }
@@ -476,6 +487,14 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent, _ *struct{}) 
 func (s *Server) ChallengeGenerated(blobberID *string, _ *struct{}) error {
 	select {
 	case s.onChallengeGeneration <- *blobberID:
+	case <-s.quit:
+	}
+	return nil
+}
+
+func (s *Server) AggregateMessage(agg *AggregateMessage, _ *struct{}) error {
+	select {
+	case s.onAggregate <- agg:
 	case <-s.quit:
 	}
 	return nil

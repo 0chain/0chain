@@ -122,6 +122,10 @@ type Executor interface {
 	SetServerState(interface{}) error
 	GenerateChallenge(c *GenerateChallege) error
 	GetNodes() map[NodeName]NodeID
+	MonitorAggregates(cfg *MonitorAggregates) error
+	StopMonitorAggregate() error
+	CheckAggregateValueChange(cfg *CheckAggregateChange) error
+	CheckAggregateValueComparison(cfg *CheckAggregateComparison) error
 }
 
 //

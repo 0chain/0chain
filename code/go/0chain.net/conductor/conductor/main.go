@@ -196,6 +196,7 @@ type Runner struct {
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	waitSharderLFB	config.WaitSharderLFB	
 	waitValidatorTicket   config.WaitValidatorTicket
+	waitAggregates		  *config.MonitorAggregates
 	chalConf               *config.GenerateChallege
 	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
@@ -261,6 +262,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case r.fileMetaRoot.shouldWait:
 		return tm, true
 	case r.waitValidatorTicket.ValidatorName != "":
+		return tm, true
+	case r.waitAggregates != nil:
 		return tm, true
 	}
 
@@ -839,6 +842,42 @@ func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error
 	return nil
 }
 
+func (r *Runner) acceptAggregate(agg *conductrpc.AggregateMessage) (err error) {
+	var fields []string
+	switch agg.ProviderType {
+	case stats.Miner:
+		fields = r.waitAggregates.MinerFields
+	case stats.Sharder:
+		fields = r.waitAggregates.SharderFields
+	case stats.Blobber:
+		fields = r.waitAggregates.BlobberFields
+	case stats.Validator:
+		fields = r.waitAggregates.ValidatorFields
+	case stats.Authorizer:
+		fields = r.waitAggregates.AuthorizerFields
+	default:
+		err = fmt.Errorf("received aggregate with unknown provider type")
+		return
+	}
+	
+	needsNewAgg := false
+	for _, f := range fields {
+		latestAggValue, err := stats.GetLatestAggregateValue(agg.ProviderType, agg.ProviderId, f)
+		if err != nil {
+			return err
+		}
+		if agg.Values[f] != latestAggValue {
+			needsNewAgg = true
+			break
+		}
+	}
+
+	if needsNewAgg {
+		err = stats.AddAggregate(agg.Values, agg.ProviderType, agg.ProviderId)
+	}
+	return
+}
+
 func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
 	if block.GeneratorId != string(minerId) {
 		return 
@@ -859,7 +898,7 @@ func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.Block
 
 func (r *Runner) handleNewBlockWaitingForSharderLFB(block *stats.BlockFromSharder, sharderId string) (err error) {
 	if block.SenderId == sharderId {
-		minDiff := int64(6) // well, 11 is infinity if the max allowed is 10
+		minDiff := int64(6) // well, 6 is infinity if the max allowed is 5
 		targetRound := block.Round
 		var curDiff int64
 		for sid, blk := range r.waitSharderLFB.LFBs {
@@ -1008,6 +1047,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.onGettingFileMetaRoot(m)
 		case vt := <-r.server.OnValidatorTicket():
 			err = r.acceptValidatorTicket(vt)
+		case agg := <-r.server.OnAggregate():
+			err = r.acceptAggregate(agg)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)

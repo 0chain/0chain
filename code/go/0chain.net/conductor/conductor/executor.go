@@ -1090,6 +1090,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.GenerateChallenge = update
 		case config.GetFileMetaRoot:
 			state.GetFileMetaRoot = bool(update)
+		case *config.MonitorAggregates:
+			state.MonitorAggregates = update
 		case *config.RenameCommitControl:
 			if update.Fail {
 				state.FailRenameCommit = utils.SliceUnion(state.FailRenameCommit, update.Nodes)
@@ -1114,4 +1116,68 @@ func (r *Runner) SetMagicBlock(configFile string) error {
 	r.server.SetMagicBlock(configFile)
 
 	return nil
+}
+
+func (r *Runner) MonitorAggregates(cfg *config.MonitorAggregates) error {
+	if r.verbose {
+		log.Printf("[INF] started monitoring aggrgetes, %+v\n", cfg)
+	}
+
+	err := r.SetServerState(cfg)
+	if err != nil {
+		return err
+	}
+
+	r.waitAggregates = cfg
+
+	return nil
+}
+
+func (r *Runner) StopMonitorAggregate() error {
+	if r.verbose {
+		log.Printf("[INF] stopped monitoring aggregates")
+	}
+
+	err := r.SetServerState(nil)
+	if err != nil {
+		return err
+	}
+
+	r.waitAggregates = nil
+
+	return nil
+}
+
+func (r *Runner) CheckAggregateValueChange(cfg *config.CheckAggregateChange) error {
+	if r.verbose {
+		log.Printf("[INF] checking aggregate value change: %+v", cfg)
+	}
+
+	check, err := stats.CheckAggregateValueChange(cfg.ProviderType, cfg.ProviderId, cfg.Key, cfg.Monotonicity)
+	if err != nil {
+		return err
+	}
+
+	if !check {
+		return fmt.Errorf("aggregate value not changed: %v", cfg)
+	}
+
+	return nil
+}
+
+func (r *Runner) CheckAggregateValueComparison(cfg *config.CheckAggregateComparison) error {
+	if r.verbose {
+		log.Printf("[INF] checking aggregate value comparison: %+v", cfg)
+	}
+	
+	check, err := stats.CompareAggregateValue(cfg.ProviderType, cfg.ProviderId, cfg.Key, cfg.Comparison, cfg.RValue)
+	if err != nil {
+		return err
+	}
+
+	if !check {
+		return fmt.Errorf("aggregate comparison failed: %v", cfg)
+	}
+
+	return nil	
 }

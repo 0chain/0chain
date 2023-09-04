@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/conductor/conductrpc/stats"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -230,4 +231,35 @@ type WaitValidatorTicket struct {
 
 func NewWaitValidatorTicket() *WaitValidatorTicket {
 	return &WaitValidatorTicket{}
+}
+
+type MonitorAggregates struct {
+	SharderIds []string `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+	MinerIds []string	`json:"miners" yaml:"miners" mapstructure:"miners"`
+	BlobberIds []string	`json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
+	ValidatorIds []string	`json:"validators" yaml:"validators" mapstructure:"validators"`
+	AuthorizerIds []string	`json:"authorizers" yaml:"authorizers" mapstructure:"authorizers"`
+	MonitorGlobal bool	`json:"global" yaml:"global" mapstructure:"global"`
+
+	SharderFields []string	`json:"sharder_fields" yaml:"sharder_fields" mapstructure:"sharder_fields"`
+	MinerFields []string	`json:"miner_fields" yaml:"miner_fields" mapstructure:"miner_fields"`
+	BlobberFields []string	`json:"blobber_fields" yaml:"blobber_fields" mapstructure:"blobber_fields"`
+	ValidatorFields []string	`json:"validator_fields" yaml:"validator_fields" mapstructure:"validator_fields"`
+	AuthorizerFields []string	`json:"authorizer_fields" yaml:"authorizer_fields" mapstructure:"authorizer_fields"`
+	GlobalFields []string	`json:"global_fields" yaml:"global_fields" mapstructure:"global_fields"`
+}
+
+type CheckAggregateChange struct {
+	ProviderType stats.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
+	ProviderId string `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
+	Key string `json:"key" yaml:"key" mapstructure:"key"`
+	Monotonicity stats.Monotonicity `json:"monotonicity" yaml:"monotonicity" mapstructure:"monotonicity"`
+}
+
+type CheckAggregateComparison struct {
+	ProviderType stats.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
+	ProviderId string `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
+	Key string `json:"key" yaml:"key" mapstructure:"key"`
+	Comparison stats.Comparison `json:"comparison" yaml:"comparison" mapstructure:"comparison"`
+	RValue int64 `json:"rvalue" yaml:"rvalue" mapstructure:"rvalue"`
 }

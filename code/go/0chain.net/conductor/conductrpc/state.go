@@ -96,6 +96,7 @@ type State struct {
 	ClientStatsCollectorEnabled bool
 	NotifyOnBlockGeneration bool
 	NotifyOnValidationTicketGeneration bool
+	MonitorAggregates *config.MonitorAggregates
 }
 
 // Name returns NodeName by given NodeID.
