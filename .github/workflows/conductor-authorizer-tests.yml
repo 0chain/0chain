@@ -187,13 +187,18 @@ jobs:
         ./docker.local/bin/start.conductor.sh authorizer
 
     - uses: actions/upload-artifact@v3
-      if: failure()
+      if: always()
       with:
-        name: conductor-logs
+        name: authorizers-logs
         path: |
           0chain/0chain/conductor/logs/
           0chain/0chain/docker.local/
           0chain/token_bridge_authserver/docker.local/
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]

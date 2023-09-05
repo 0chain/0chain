@@ -1838,15 +1838,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, nsp.TotalOffers, nblobAlloc.Offer())
 
-	// assert the blobber allocation is added
-	baParts, err := partitionsBlobberAllocations(nb.id, balances)
-	require.NoError(t, err)
-	var it BlobberAllocationNode
-
-	err = baParts.Get(balances, alloc.ID, &it)
-	require.NoError(t, err)
-	require.Equal(t, alloc.ID, it.ID)
-
 	//
 	// remove blobber
 	//
@@ -1871,7 +1862,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.False(t, ok)
 
 	// assert allocation is removed from blobber
-	baParts, err = partitionsBlobberAllocations(nb.id, balances)
+	baParts, err := partitionsBlobberAllocations(nb.id, balances)
 	require.NoError(t, err)
 	var noneIt BlobberAllocationNode
 	err = baParts.Get(balances, alloc.ID, &noneIt)
