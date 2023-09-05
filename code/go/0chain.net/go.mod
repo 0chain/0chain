@@ -44,7 +44,7 @@ require (
 	github.com/go-faker/faker/v4 v4.1.1
 	github.com/jackc/pgx/v5 v5.4.1
 	github.com/lib/pq v1.10.9
-	github.com/linxGnu/grocksdb v1.8.0
+	github.com/linxGnu/grocksdb v1.8.4
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.13.1
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
