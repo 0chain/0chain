@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/0chain/common/core/currency"
@@ -197,12 +196,12 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 	cp *challengePool, err error) {
 
 	_, err = ssc.getChallengePool(allocationID, balances)
-	switch {
-	case errors.Is(err, util.ErrValueNotPresent):
+	switch err {
+	case util.ErrValueNotPresent:
 		cp = newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(ssc.ID, allocationID)
 		return cp, nil
-	case err == nil:
+	case nil:
 		return nil, common.NewError("new_challenge_pool_failed", "already exist")
 	default:
 		return nil, common.NewError("new_challenge_pool_failed", err.Error())
