@@ -87,7 +87,8 @@ jobs:
         name: fault-tolerance-logs
         path: |
           conductor/logs/
-          docker.local/
+          docker.local/miner*
+          docker.local/sharder*
 
     - name: Cleanup
       run: |
