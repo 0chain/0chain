@@ -78,7 +78,10 @@ jobs:
       with:
         name: byzantine-logs
         path: |
-          docker.local/
+          ls
+          conductor/
+          docker.local/miner*
+          docker.local/sharder*
 
     - name: Cleanup
       run: |
