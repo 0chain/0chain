@@ -608,6 +608,25 @@ func (sc *StorageSmartContract) challengePassed(
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
 ) (string, error) {
+
+	// Remove out of order open challenges
+	allocChallenges, err := sc.getAllocationChallenges(cab.alloc.ID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			allocChallenges = &AllocationChallenges{}
+			allocChallenges.AllocationID = cab.alloc.ID
+		} else {
+			return "failed to get out of order allocation challenges", common.NewError("challenge_reward_error",
+				"error fetching allocation challenge: "+err.Error())
+		}
+	}
+
+	err = cab.alloc.removeOutOfOrderChallenges(allocChallenges, balances, cab.challenge.ID)
+	if err != nil {
+		return "failed to remove out of order allocation challenges", common.NewError("challenge_reward_error",
+			"error removing out of order challenges: "+err.Error())
+	}
+
 	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
 	if err != nil {
 		return "", common.NewError("verify_challenge",

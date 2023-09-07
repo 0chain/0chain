@@ -1799,8 +1799,6 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 				ba.LatestFinalizedChallCreatedAt = oc.CreatedAt
 			}
 
-			// Set failed challenge here and then reward on passing as current - last failed and remove tokens from last failed to last completed.
-
 			err := emitUpdateChallenge(&StorageChallenge{
 				ID:           oc.ID,
 				AllocationID: sa.ID,
@@ -1816,6 +1814,49 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	allocChallenges.OpenChallenges = nonExpiredChallenges
 
 	return expiredChallengeBlobberMap, nil
+}
+
+// removeOutOfOrderChallenges removes all open challenges from the allocation that are out of order
+func (sa *StorageAllocation) removeOutOfOrderChallenges(
+	allocChallenges *AllocationChallenges,
+	balances cstate.StateContextI,
+	currentChallengeID string,
+) error {
+	var nonExpiredChallenges []*AllocOpenChallenge
+	logging.Logger.Info("removeOutOfOrderChallenges found open challenges",
+		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
+
+	for _, oc := range allocChallenges.OpenChallenges {
+		if oc.ID == currentChallengeID {
+			continue
+		}
+
+		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
+		if ok {
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			sa.Stats.FailedChallenges++
+			sa.Stats.OpenChallenges--
+
+			if ba.LatestFinalizedChallCreatedAt < oc.CreatedAt {
+				ba.LatestFinalizedChallCreatedAt = oc.CreatedAt
+			}
+
+			err := emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: sa.ID,
+				BlobberID:    oc.BlobberID,
+			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	allocChallenges.OpenChallenges = nonExpiredChallenges
+
+	return nil
 }
 
 type BlobberCloseConnection struct {
