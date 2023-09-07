@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -332,7 +333,7 @@ var avgTerms = Terms{
 
 // add allocation and 20 blobbers
 func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
-	now, exp int64, nblobs int, balances chainState.StateContextI) (
+	now int64, nblobs int, balances chainState.StateContextI) (
 	allocID string, blobs []*Client) {
 
 	if nblobs <= 0 {
@@ -378,20 +379,20 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf = newConfig()
 
-	conf.TimeUnit = 1 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = 720 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ValidatorsPerChallenge = 10
 	conf.MaxBlobbersPerAllocation = 10
-	conf.MinAllocSize = 1 * GB
+	conf.MinAllocSize = 1 * KB
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
-	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
+	conf.MinWritePrice = 0      // 0 tokens per GB min allowed
 	conf.MaxDelegates = 200
-	conf.MaxChallengeCompletionTime = 5 * time.Minute
-	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "5m")
+	conf.MaxChallengeCompletionTime = 3 * time.Minute
+	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "3m")
 	conf.MinLockDemand = 0.1
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
@@ -409,8 +410,8 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.StakePool = &stakePoolConfig{}
 
 	conf.BlockReward = &blockReward{
-		BlockReward:             1000,
-		BlockRewardChangePeriod: 1000,
+		BlockReward:             18 * 1e9,
+		BlockRewardChangePeriod: 125000000,
 		BlockRewardChangeRatio:  0.1,
 		TriggerPeriod:           30,
 		Gamma: blockRewardGamma{
@@ -423,7 +424,29 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 			I:  1,
 			K:  0.9,
 		},
+		QualifyingStake: 1,
 	}
+
+	conf.CancellationCharge = 0.2
+	conf.MaxIndividualFreeAllocation = 1000000
+	conf.MaxTotalFreeAllocation = 100000000000000000
+
+	conf.FreeAllocationSettings = freeAllocationSettings{
+		DataShards:   4,
+		ParityShards: 2,
+		Size:         2147483648,
+		WritePriceRange: PriceRange{
+			Min: 0,
+			Max: 100,
+		},
+		ReadPriceRange: PriceRange{
+			Min: 0,
+			Max: 100,
+		},
+		ReadPoolFraction: 0,
+	}
+
+	conf.NumValidatorsRewarded = 10
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return
@@ -437,10 +460,10 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 	require.NoError(t, err)
 
 	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		t.Fatal("unexpected error:", err)
 	}
-	if err == util.ErrValueNotPresent {
+	if errors.Is(err, util.ErrValueNotPresent) {
 		allocChall = new(AllocationChallenges)
 		allocChall.AllocationID = allocID
 	}

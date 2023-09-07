@@ -607,9 +607,9 @@ func (z *Config) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *blockReward) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 9
+	// map header, size 7
 	// string "BlockReward"
-	o = append(o, 0x89, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
+	o = append(o, 0x87, 0xab, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64)
 	o, err = z.BlockReward.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "BlockReward")
@@ -628,12 +628,6 @@ func (z *blockReward) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "QualifyingStake")
 		return
 	}
-	// string "SharderWeight"
-	o = append(o, 0xad, 0x53, 0x68, 0x61, 0x72, 0x64, 0x65, 0x72, 0x57, 0x65, 0x69, 0x67, 0x68, 0x74)
-	o = msgp.AppendFloat64(o, z.SharderWeight)
-	// string "MinerWeight"
-	o = append(o, 0xab, 0x4d, 0x69, 0x6e, 0x65, 0x72, 0x57, 0x65, 0x69, 0x67, 0x68, 0x74)
-	o = msgp.AppendFloat64(o, z.MinerWeight)
 	// string "TriggerPeriod"
 	o = append(o, 0xad, 0x54, 0x72, 0x69, 0x67, 0x67, 0x65, 0x72, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
 	o = msgp.AppendInt64(o, z.TriggerPeriod)
@@ -704,18 +698,6 @@ func (z *blockReward) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			bts, err = z.QualifyingStake.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "QualifyingStake")
-				return
-			}
-		case "SharderWeight":
-			z.SharderWeight, bts, err = msgp.ReadFloat64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "SharderWeight")
-				return
-			}
-		case "MinerWeight":
-			z.MinerWeight, bts, err = msgp.ReadFloat64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MinerWeight")
 				return
 			}
 		case "TriggerPeriod":
@@ -820,7 +802,7 @@ func (z *blockReward) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *blockReward) Msgsize() (s int) {
-	s = 1 + 12 + z.BlockReward.Msgsize() + 24 + msgp.Int64Size + 23 + msgp.Float64Size + 16 + z.QualifyingStake.Msgsize() + 14 + msgp.Float64Size + 12 + msgp.Float64Size + 14 + msgp.Int64Size + 6 + 1 + 6 + msgp.Float64Size + 2 + msgp.Float64Size + 2 + msgp.Float64Size + 5 + 1 + 2 + msgp.Float64Size + 2 + msgp.Float64Size + 3 + msgp.Float64Size
+	s = 1 + 12 + z.BlockReward.Msgsize() + 24 + msgp.Int64Size + 23 + msgp.Float64Size + 16 + z.QualifyingStake.Msgsize() + 14 + msgp.Int64Size + 6 + 1 + 6 + msgp.Float64Size + 2 + msgp.Float64Size + 2 + msgp.Float64Size + 5 + 1 + 2 + msgp.Float64Size + 2 + msgp.Float64Size + 3 + msgp.Float64Size
 	return
 }
 
