@@ -1,4 +1,4 @@
-package smartcontract
+package config
 
 import (
 	"encoding/json"

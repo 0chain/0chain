@@ -3,12 +3,12 @@ package event
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
+	"strings"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/config"
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -276,20 +276,32 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 	for {
 		es := <-edb.eventsChannel
+		func() {
+			var commit bool
+			defer func() {
+				es.done <- commit
+			}()
 
-		s, err := edb.Work(ctx, gs, es, &p)
-		if err != nil {
-			if config.Development() { //panic in case of development
-				log.Panic(err)
+			s, err := Work(ctx, gs, es, &p)
+			if err != nil {
+				if config.Development() { //panic in case of development
+					logging.Logger.Error("process events", zap.Error(err))
+					if !strings.Contains(err.Error(), "transaction has already been committed or rolled back") {
+						logging.Logger.Panic(err.Error())
+					}
+					return
+				}
+
 			}
-		}
-		if s != nil {
-			gs = s
-		}
+			commit = true
+			if s != nil {
+				gs = s
+			}
+		}()
 	}
 }
 
-func (edb *EventDb) Work(
+func Work(
 	ctx context.Context,
 	gSnapshot *Snapshot,
 	blockEvents BlockEvents,
@@ -297,10 +309,6 @@ func (edb *EventDb) Work(
 ) (*Snapshot, error) {
 	tx := blockEvents.tx
 
-	var commit bool
-	defer func() {
-		blockEvents.done <- commit
-	}()
 	tse := time.Now()
 
 	tags, err := tx.WorkEvents(ctx, blockEvents, currentPartition)
@@ -317,8 +325,6 @@ func (edb *EventDb) Work(
 			zap.Error(err),
 		)
 	}
-
-	commit = true
 
 	due := time.Since(tse)
 	if due.Milliseconds() > 200 {
@@ -476,13 +482,6 @@ func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, erro
 }
 
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
-	defer func() {
-		if r := recover(); r != nil {
-			logging.Logger.Error("panic recovered in processEvent",
-				zap.Any("r", r),
-				zap.Any("event", event))
-		}
-	}()
 	var err error = nil
 	switch event.Type {
 	case TypeStats:

@@ -5,14 +5,13 @@ import (
 	"strings"
 	"testing"
 
+	sc "0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/core/common"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-
-	sc "0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -11,7 +12,7 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 type AbstractProvider interface {
-	IsActive(common.Timestamp, common.Timestamp) (bool, string)
+	IsActive(common.Timestamp, time.Duration) (bool, string)
 	Kill()
 	IsKilled() bool
 	IsShutDown() bool
@@ -36,14 +37,15 @@ func (p *Provider) Id() string {
 	return p.ID
 }
 
-func (p *Provider) IsActive(now, healthCheckPeriod common.Timestamp) (bool, string) {
+func (p *Provider) IsActive(now common.Timestamp, healthCheckPeriod time.Duration) (bool, string) {
 	if p.IsKilled() {
 		return false, "provider was killed"
 	}
 	if p.IsShutDown() {
 		return false, "provider was shutdown"
 	}
-	if p.LastHealthCheck < (now - healthCheckPeriod) {
+	downtime := common.Downtime(p.LastHealthCheck, now, healthCheckPeriod)
+	if downtime > 0 {
 		return false, fmt.Sprintf(" failed health check, last check %v.", p.LastHealthCheck)
 	}
 	return true, ""

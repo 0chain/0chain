@@ -1,4 +1,4 @@
-package config
+package rest
 
 import (
 	"fmt"

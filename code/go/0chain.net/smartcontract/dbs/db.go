@@ -1,7 +1,7 @@
 package dbs
 
 import (
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"gorm.io/gorm"
 )
 
