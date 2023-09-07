@@ -631,6 +631,12 @@ func (sc *StorageSmartContract) challengePassed(
 			"error removing out of order challenges: "+err.Error())
 	}
 
+	// Save the allocation challenges to MPT
+	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+		return "error storing alloc challenge", common.NewErrorf("add_challenge",
+			"error storing alloc challenge: %v", err)
+	}
+
 	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
 	if err != nil {
 		return "", common.NewError("verify_challenge",
