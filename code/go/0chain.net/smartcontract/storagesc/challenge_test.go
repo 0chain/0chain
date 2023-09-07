@@ -668,7 +668,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 		bk.Round = 500
 		balances.setBlock(t, bk)
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall1), balances)
-		require.EqualError(t, err, "challenge_reward_error: old challenge response on blobber rewarding")
+		require.EqualError(t, err, "verify_challenge: old challenge response")
 	})
 }
 
