@@ -602,24 +602,36 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 			var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
 			currentRound := balances.GetBlock().Round
 
-			if expire < currentRound {
-				ba.Stats.FailedChallenges++
-				alloc.Stats.FailedChallenges++
-			} else {
-				ba.Stats.SuccessChallenges++
-				alloc.Stats.SuccessChallenges++
-			}
 			ba.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
-			err := emitUpdateChallenge(&StorageChallenge{
-				ID:           oc.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    oc.BlobberID,
-			}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
-			if err != nil {
-				return 0.0, err
+			if expire < currentRound {
+				ba.Stats.FailedChallenges++
+				alloc.Stats.FailedChallenges++
+
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, false, ChallengeRespondedLate, balances, alloc.Stats, ba.Stats)
+				if err != nil {
+					return 0.0, err
+				}
+
+			} else {
+				ba.Stats.SuccessChallenges++
+				alloc.Stats.SuccessChallenges++
+
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
+				if err != nil {
+					return 0.0, err
+				}
 			}
+
 		}
 
 	default:
