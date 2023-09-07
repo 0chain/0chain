@@ -503,7 +503,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	latestFinalizedChallTime := blobAlloc.LatestFinalizedChallCreatedAt
 	latestSuccessfulChallTime := blobAlloc.LatestSuccessfulChallCreatedAt
 
-	if challenge.Created <= latestSuccessfulChallTime {
+	if challenge.Created < latestSuccessfulChallTime {
 		return "old challenge response", common.NewError(errCode, "old challenge response")
 	}
 
