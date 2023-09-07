@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/smartcontract"
-
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
@@ -22,7 +22,8 @@ const x10 float64 = 10 * 1000 * 1000 * 1000
 type Setting int
 
 const (
-	MinStake Setting = iota
+	MinStake            Setting = iota
+	MinStakePerDelegate Setting = iota
 	MaxStake
 	MaxN
 	MinN
@@ -65,6 +66,7 @@ const (
 	CostSharderKeep
 	CostKillMiner
 	CostKillSharder
+	HealthCheckPeriod
 	NumberOfSettings
 )
 
@@ -79,7 +81,7 @@ var (
 	SettingName = make([]string, NumberOfSettings)
 	Settings    map[string]struct {
 		Setting    Setting
-		ConfigType smartcontract.ConfigType
+		ConfigType config.ConfigType
 	}
 )
 
@@ -90,6 +92,7 @@ func init() {
 
 func initSettingName() {
 	SettingName[MinStake] = "min_stake"
+	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
 	SettingName[MaxStake] = "max_stake"
 	SettingName[MaxN] = "max_n"
 	SettingName[MinN] = "min_n"
@@ -112,6 +115,7 @@ func initSettingName() {
 	SettingName[MaxMint] = "max_mint"
 	SettingName[OwnerId] = "owner_id"
 	SettingName[CooldownPeriod] = "cooldown_period"
+	SettingName[HealthCheckPeriod] = "health_check_period"
 	SettingName[CostAddMiner] = "cost.add_miner"
 	SettingName[CostAddSharder] = "cost.add_sharder"
 	SettingName[CostDeleteMiner] = "cost.delete_miner"
@@ -137,51 +141,53 @@ func initSettingName() {
 func initSettings() {
 	Settings = map[string]struct {
 		Setting    Setting
-		ConfigType smartcontract.ConfigType
+		ConfigType config.ConfigType
 	}{
-		MinStake.String():                    {MinStake, smartcontract.CurrencyCoin},
-		MaxStake.String():                    {MaxStake, smartcontract.CurrencyCoin},
-		MaxN.String():                        {MaxN, smartcontract.Int},
-		MinN.String():                        {MinN, smartcontract.Int},
-		TPercent.String():                    {TPercent, smartcontract.Float64},
-		KPercent.String():                    {KPercent, smartcontract.Float64},
-		XPercent.String():                    {XPercent, smartcontract.Float64},
-		MaxS.String():                        {MaxS, smartcontract.Int},
-		MinS.String():                        {MinS, smartcontract.Int},
-		MaxDelegates.String():                {MaxDelegates, smartcontract.Int},
-		RewardRoundFrequency.String():        {RewardRoundFrequency, smartcontract.Int64},
-		RewardRate.String():                  {RewardRate, smartcontract.Float64},
-		ShareRatio.String():                  {ShareRatio, smartcontract.Float64},
-		BlockReward.String():                 {BlockReward, smartcontract.CurrencyCoin},
-		MaxCharge.String():                   {MaxCharge, smartcontract.Float64},
-		Epoch.String():                       {Epoch, smartcontract.Int64},
-		RewardDeclineRate.String():           {RewardDeclineRate, smartcontract.Float64},
-		NumMinerDelegatesRewarded.String():   {NumMinerDelegatesRewarded, smartcontract.Int},
-		NumShardersRewarded.String():         {NumShardersRewarded, smartcontract.Int},
-		NumSharderDelegatesRewarded.String(): {NumSharderDelegatesRewarded, smartcontract.Int},
-		MaxMint.String():                     {MaxMint, smartcontract.CurrencyCoin},
-		OwnerId.String():                     {OwnerId, smartcontract.Key},
-		CooldownPeriod.String():              {CooldownPeriod, smartcontract.Int64},
-		CostAddMiner.String():                {CostAddMiner, smartcontract.Cost},
-		CostAddSharder.String():              {CostAddSharder, smartcontract.Cost},
-		CostDeleteMiner.String():             {CostDeleteMiner, smartcontract.Cost},
-		CostMinerHealthCheck.String():        {CostMinerHealthCheck, smartcontract.Cost},
-		CostSharderHealthCheck.String():      {CostSharderHealthCheck, smartcontract.Cost},
-		CostContributeMpk.String():           {CostContributeMpk, smartcontract.Cost},
-		CostShareSignsOrShares.String():      {CostShareSignsOrShares, smartcontract.Cost},
-		CostWait.String():                    {CostWait, smartcontract.Cost},
-		CostUpdateGlobals.String():           {CostUpdateGlobals, smartcontract.Cost},
-		CostUpdateSettings.String():          {CostUpdateSettings, smartcontract.Cost},
-		CostUpdateMinerSettings.String():     {CostUpdateMinerSettings, smartcontract.Cost},
-		CostUpdateSharderSettings.String():   {CostUpdateSharderSettings, smartcontract.Cost},
-		CostPayFees.String():                 {CostPayFees, smartcontract.Cost},
-		CostFeesPaid.String():                {CostFeesPaid, smartcontract.Cost},
-		CostMintedTokens.String():            {CostMintedTokens, smartcontract.Cost},
-		CostAddToDelegatePool.String():       {CostAddToDelegatePool, smartcontract.Cost},
-		CostDeleteFromDelegatePool.String():  {CostDeleteFromDelegatePool, smartcontract.Cost},
-		CostSharderKeep.String():             {CostSharderKeep, smartcontract.Cost},
-		CostKillMiner.String():               {CostKillMiner, smartcontract.Cost},
-		CostKillSharder.String():             {CostKillSharder, smartcontract.Cost},
+		MinStake.String():                    {MinStake, config.CurrencyCoin},
+		MinStakePerDelegate.String():         {MinStakePerDelegate, config.CurrencyCoin},
+		MaxStake.String():                    {MaxStake, config.CurrencyCoin},
+		MaxN.String():                        {MaxN, config.Int},
+		MinN.String():                        {MinN, config.Int},
+		TPercent.String():                    {TPercent, config.Float64},
+		KPercent.String():                    {KPercent, config.Float64},
+		XPercent.String():                    {XPercent, config.Float64},
+		MaxS.String():                        {MaxS, config.Int},
+		MinS.String():                        {MinS, config.Int},
+		MaxDelegates.String():                {MaxDelegates, config.Int},
+		RewardRoundFrequency.String():        {RewardRoundFrequency, config.Int64},
+		RewardRate.String():                  {RewardRate, config.Float64},
+		ShareRatio.String():                  {ShareRatio, config.Float64},
+		BlockReward.String():                 {BlockReward, config.CurrencyCoin},
+		MaxCharge.String():                   {MaxCharge, config.Float64},
+		Epoch.String():                       {Epoch, config.Int64},
+		RewardDeclineRate.String():           {RewardDeclineRate, config.Float64},
+		NumMinerDelegatesRewarded.String():   {NumMinerDelegatesRewarded, config.Int},
+		NumShardersRewarded.String():         {NumShardersRewarded, config.Int},
+		NumSharderDelegatesRewarded.String(): {NumSharderDelegatesRewarded, config.Int},
+		MaxMint.String():                     {MaxMint, config.CurrencyCoin},
+		OwnerId.String():                     {OwnerId, config.Key},
+		CooldownPeriod.String():              {CooldownPeriod, config.Int64},
+		HealthCheckPeriod.String():           {HealthCheckPeriod, config.Duration},
+		CostAddMiner.String():                {CostAddMiner, config.Cost},
+		CostAddSharder.String():              {CostAddSharder, config.Cost},
+		CostDeleteMiner.String():             {CostDeleteMiner, config.Cost},
+		CostMinerHealthCheck.String():        {CostMinerHealthCheck, config.Cost},
+		CostSharderHealthCheck.String():      {CostSharderHealthCheck, config.Cost},
+		CostContributeMpk.String():           {CostContributeMpk, config.Cost},
+		CostShareSignsOrShares.String():      {CostShareSignsOrShares, config.Cost},
+		CostWait.String():                    {CostWait, config.Cost},
+		CostUpdateGlobals.String():           {CostUpdateGlobals, config.Cost},
+		CostUpdateSettings.String():          {CostUpdateSettings, config.Cost},
+		CostUpdateMinerSettings.String():     {CostUpdateMinerSettings, config.Cost},
+		CostUpdateSharderSettings.String():   {CostUpdateSharderSettings, config.Cost},
+		CostPayFees.String():                 {CostPayFees, config.Cost},
+		CostFeesPaid.String():                {CostFeesPaid, config.Cost},
+		CostMintedTokens.String():            {CostMintedTokens, config.Cost},
+		CostAddToDelegatePool.String():       {CostAddToDelegatePool, config.Cost},
+		CostDeleteFromDelegatePool.String():  {CostDeleteFromDelegatePool, config.Cost},
+		CostSharderKeep.String():             {CostSharderKeep, config.Cost},
+		CostKillMiner.String():               {CostKillMiner, config.Cost},
+		CostKillSharder.String():             {CostKillSharder, config.Cost},
 	}
 }
 
@@ -209,12 +215,24 @@ func (gn *GlobalNode) setInt(key string, change int) error {
 	return nil
 }
 
+func (gn *GlobalNode) setDuration(key string, change time.Duration) error {
+	switch Settings[key].Setting {
+	case HealthCheckPeriod:
+		gn.HealthCheckPeriod = change
+	default:
+		return fmt.Errorf("key: %v not implemented as int", key)
+	}
+	return nil
+}
+
 func (gn *GlobalNode) setBalance(key string, change currency.Coin) error {
 	switch Settings[key].Setting {
 	case MaxMint:
 		gn.MaxMint = change
 	case MinStake:
 		gn.MinStake = change
+	case MinStakePerDelegate:
+		gn.MinStakePerDelegate = change
 	case MaxStake:
 		gn.MaxStake = change
 	case BlockReward:
@@ -311,7 +329,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 	}
 
 	switch settings.ConfigType {
-	case smartcontract.Int:
+	case config.Int:
 		value, err := strconv.Atoi(change)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
@@ -319,7 +337,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		if err := gn.setInt(key, value); err != nil {
 			return err
 		}
-	case smartcontract.CurrencyCoin:
+	case config.CurrencyCoin:
 		value, err := strconv.ParseFloat(change, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
@@ -331,7 +349,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		if err := gn.setBalance(key, coinV); err != nil {
 			return err
 		}
-	case smartcontract.Int64:
+	case config.Int64:
 		value, err := strconv.ParseInt(change, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
@@ -339,7 +357,15 @@ func (gn *GlobalNode) set(key string, change string) error {
 		if err := gn.setInt64(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Float64:
+	case config.Duration:
+		value, err := time.ParseDuration(change)
+		if err != nil {
+			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
+		}
+		if err := gn.setDuration(key, value); err != nil {
+			return err
+		}
+	case config.Float64:
 		value, err := strconv.ParseFloat(change, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
@@ -347,12 +373,12 @@ func (gn *GlobalNode) set(key string, change string) error {
 		if err := gn.setFloat64(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Key:
+	case config.Key:
 		if _, err := hex.DecodeString(change); err != nil {
 			return fmt.Errorf("%s must be a hex string: %v", key, err)
 		}
 		gn.setKey(key, change)
-	case smartcontract.Cost:
+	case config.Cost:
 		value, err := strconv.Atoi(change)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
@@ -361,13 +387,13 @@ func (gn *GlobalNode) set(key string, change string) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("unsupported type setting %v", smartcontract.ConfigTypeName[Settings[key].ConfigType])
+		return fmt.Errorf("unsupported type setting %v", config.ConfigTypeName[Settings[key].ConfigType])
 	}
 
 	return nil
 }
 
-func (gn *GlobalNode) update(changes smartcontract.StringMap) error {
+func (gn *GlobalNode) update(changes config.StringMap) error {
 	for key, value := range changes.Fields {
 		if err := gn.set(key, value); err != nil {
 			return err
@@ -389,7 +415,7 @@ func (msc *MinerSmartContract) updateSettings(
 		return "", err
 	}
 
-	var changes smartcontract.StringMap
+	var changes config.StringMap
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}

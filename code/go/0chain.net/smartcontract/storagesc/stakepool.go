@@ -324,6 +324,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+	sp.Settings.MinStake = conf.MinStakePerDelegate
 	return sp, nil
 }
 
@@ -340,6 +341,7 @@ func (ssc *StorageSmartContract) createStakePool(
 	sp.Minter = chainstate.MinterStorage
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+	sp.Settings.MinStake = conf.MinStakePerDelegate
 
 	return sp, nil
 }

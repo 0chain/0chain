@@ -359,9 +359,9 @@ func (z UserNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 12
+	// map header, size 14
 	// string "MinMintAmount"
-	o = append(o, 0x8c, 0xad, 0x4d, 0x69, 0x6e, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
+	o = append(o, 0x8e, 0xad, 0x4d, 0x69, 0x6e, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
 	o, err = z.MinMintAmount.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinMintAmount")
@@ -379,6 +379,13 @@ func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.MinStakeAmount.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinStakeAmount")
+		return
+	}
+	// string "MinStakePerDelegate"
+	o = append(o, 0xb3, 0x4d, 0x69, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x50, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65)
+	o, err = z.MinStakePerDelegate.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MinStakePerDelegate")
 		return
 	}
 	// string "MaxStakeAmount"
@@ -430,6 +437,9 @@ func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "MaxDelegates"
 	o = append(o, 0xac, 0x4d, 0x61, 0x78, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73)
 	o = msgp.AppendInt(o, z.MaxDelegates)
+	// string "HealthCheckPeriod"
+	o = append(o, 0xb1, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x69, 0x6f, 0x64)
+	o = msgp.AppendDuration(o, z.HealthCheckPeriod)
 	return
 }
 
@@ -467,6 +477,12 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			bts, err = z.MinStakeAmount.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "MinStakeAmount")
+				return
+			}
+		case "MinStakePerDelegate":
+			bts, err = z.MinStakePerDelegate.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MinStakePerDelegate")
 				return
 			}
 		case "MaxStakeAmount":
@@ -547,6 +563,12 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxDelegates")
 				return
 			}
+		case "HealthCheckPeriod":
+			z.HealthCheckPeriod, bts, err = msgp.ReadDurationBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "HealthCheckPeriod")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -561,13 +583,13 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *ZCNSConfig) Msgsize() (s int) {
-	s = 1 + 14 + z.MinMintAmount.Msgsize() + 14 + z.MinBurnAmount.Msgsize() + 15 + z.MinStakeAmount.Msgsize() + 15 + z.MaxStakeAmount.Msgsize() + 14 + z.MinLockAmount.Msgsize() + 15 + msgp.Int64Size + 19 + msgp.Float64Size + 7 + z.MaxFee.Msgsize() + 12 + msgp.StringPrefixSize + len(z.BurnAddress) + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s = 1 + 14 + z.MinMintAmount.Msgsize() + 14 + z.MinBurnAmount.Msgsize() + 15 + z.MinStakeAmount.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 15 + z.MaxStakeAmount.Msgsize() + 14 + z.MinLockAmount.Msgsize() + 15 + msgp.Int64Size + 19 + msgp.Float64Size + 7 + z.MaxFee.Msgsize() + 12 + msgp.StringPrefixSize + len(z.BurnAddress) + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002
 			s += msgp.StringPrefixSize + len(za0001) + msgp.IntSize
 		}
 	}
-	s += 13 + msgp.IntSize
+	s += 13 + msgp.IntSize + 18 + msgp.DurationSize
 	return
 }

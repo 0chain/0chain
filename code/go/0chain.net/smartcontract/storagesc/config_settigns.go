@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -15,13 +16,11 @@ import (
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
 
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract"
-
 	chainState "0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 )
 
 type Setting int
@@ -31,9 +30,10 @@ var settingChangesKey = datastore.Key(ADDRESS + encryption.Hash("setting_changes
 const x10 = 10 * 1000 * 1000 * 1000
 
 const (
-	MaxMint  Setting = iota
-	MaxStake Setting = iota
-	MinStake Setting = iota
+	MaxMint             Setting = iota
+	MaxStake            Setting = iota
+	MinStake            Setting = iota
+	MinStakePerDelegate Setting = iota
 	TimeUnit
 	MinAllocSize
 	MaxChallengeCompletionTime
@@ -127,7 +127,7 @@ var (
 	SettingName = make([]string, NumberOfSettings)
 	Settings    map[string]struct {
 		setting    Setting
-		configType smartcontract.ConfigType
+		configType config.ConfigType
 	}
 )
 
@@ -140,6 +140,7 @@ func initSettingName() {
 	SettingName[MaxMint] = "max_mint"
 	SettingName[MaxStake] = "max_stake"
 	SettingName[MinStake] = "min_stake"
+	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
 	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
@@ -216,87 +217,88 @@ func initSettingName() {
 func initSettings() {
 	Settings = map[string]struct {
 		setting    Setting
-		configType smartcontract.ConfigType
+		configType config.ConfigType
 	}{
-		MaxMint.String():                          {MaxMint, smartcontract.CurrencyCoin},
-		MaxStake.String():                         {MaxStake, smartcontract.CurrencyCoin},
-		MinStake.String():                         {MinStake, smartcontract.CurrencyCoin},
-		MaxCharge.String():                        {MaxCharge, smartcontract.Float64},
-		TimeUnit.String():                         {TimeUnit, smartcontract.Duration},
-		MinAllocSize.String():                     {MinAllocSize, smartcontract.Int64},
-		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, smartcontract.Duration},
-		MinBlobberCapacity.String():               {MinBlobberCapacity, smartcontract.Int64},
-		ReadPoolMinLock.String():                  {ReadPoolMinLock, smartcontract.CurrencyCoin},
-		WritePoolMinLock.String():                 {WritePoolMinLock, smartcontract.CurrencyCoin},
-		StakePoolMinLockPeriod.String():           {StakePoolMinLockPeriod, smartcontract.Duration},
-		StakePoolKillSlash.String():               {StakePoolKillSlash, smartcontract.Float64},
-		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, smartcontract.CurrencyCoin},
-		MaxIndividualFreeAllocation.String():      {MaxIndividualFreeAllocation, smartcontract.CurrencyCoin},
-		CancellationCharge.String():               {CancellationCharge, smartcontract.Float64},
-		MinLockDemand.String():                    {MinLockDemand, smartcontract.Float64},
-		FreeAllocationDataShards.String():         {FreeAllocationDataShards, smartcontract.Int},
-		FreeAllocationParityShards.String():       {FreeAllocationParityShards, smartcontract.Int},
-		FreeAllocationSize.String():               {FreeAllocationSize, smartcontract.Int64},
-		FreeAllocationReadPriceRangeMin.String():  {FreeAllocationReadPriceRangeMin, smartcontract.CurrencyCoin},
-		FreeAllocationReadPriceRangeMax.String():  {FreeAllocationReadPriceRangeMax, smartcontract.CurrencyCoin},
-		FreeAllocationWritePriceRangeMin.String(): {FreeAllocationWritePriceRangeMin, smartcontract.CurrencyCoin},
-		FreeAllocationWritePriceRangeMax.String(): {FreeAllocationWritePriceRangeMax, smartcontract.CurrencyCoin},
-		FreeAllocationReadPoolFraction.String():   {FreeAllocationReadPoolFraction, smartcontract.Float64},
-		ValidatorReward.String():                  {ValidatorReward, smartcontract.Float64},
-		BlobberSlash.String():                     {BlobberSlash, smartcontract.Float64},
-		HealthCheckPeriod.String():                {HealthCheckPeriod, smartcontract.Duration},
-		MaxBlobbersPerAllocation.String():         {MaxBlobbersPerAllocation, smartcontract.Int},
-		MaxReadPrice.String():                     {MaxReadPrice, smartcontract.CurrencyCoin},
-		MaxWritePrice.String():                    {MaxWritePrice, smartcontract.CurrencyCoin},
-		MinWritePrice.String():                    {MinWritePrice, smartcontract.CurrencyCoin},
-		ChallengeEnabled.String():                 {ChallengeEnabled, smartcontract.Boolean},
-		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, smartcontract.Int},
-		NumValidatorsRewarded.String():            {NumValidatorsRewarded, smartcontract.Int},
-		MaxDelegates.String():                     {MaxDelegates, smartcontract.Int},
-		BlockRewardBlockReward.String():           {BlockRewardBlockReward, smartcontract.CurrencyCoin},
-		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, smartcontract.CurrencyCoin},
-		BlockRewardGammaAlpha.String():            {BlockRewardGammaAlpha, smartcontract.Float64},
-		BlockRewardGammaA.String():                {BlockRewardGammaA, smartcontract.Float64},
-		BlockRewardGammaB.String():                {BlockRewardGammaB, smartcontract.Float64},
-		BlockRewardZetaI.String():                 {BlockRewardZetaI, smartcontract.Float64},
-		BlockRewardZetaK.String():                 {BlockRewardZetaK, smartcontract.Float64},
-		BlockRewardZetaMu.String():                {BlockRewardZetaMu, smartcontract.Float64},
-		OwnerId.String():                          {OwnerId, smartcontract.Key},
-		CostUpdateSettings.String():               {CostUpdateSettings, smartcontract.Cost},
-		CostReadRedeem.String():                   {CostReadRedeem, smartcontract.Cost},
-		CostCommitConnection.String():             {CostCommitConnection, smartcontract.Cost},
-		CostNewAllocationRequest.String():         {CostNewAllocationRequest, smartcontract.Cost},
-		CostUpdateAllocationRequest.String():      {CostUpdateAllocationRequest, smartcontract.Cost},
-		CostFinalizeAllocation.String():           {CostFinalizeAllocation, smartcontract.Cost},
-		CostCancelAllocation.String():             {CostCancelAllocation, smartcontract.Cost},
-		CostAddFreeStorageAssigner.String():       {CostAddFreeStorageAssigner, smartcontract.Cost},
-		CostFreeAllocationRequest.String():        {CostFreeAllocationRequest, smartcontract.Cost},
-		CostFreeUpdateAllocation.String():         {CostFreeUpdateAllocation, smartcontract.Cost},
-		CostBlobberHealthCheck.String():           {CostBlobberHealthCheck, smartcontract.Cost},
-		CostUpdateBlobberSettings.String():        {CostUpdateBlobberSettings, smartcontract.Cost},
-		CostPayBlobberBlockRewards.String():       {CostPayBlobberBlockRewards, smartcontract.Cost},
-		CostChallengeResponse.String():            {CostChallengeResponse, smartcontract.Cost},
-		CostGenerateChallenges.String():           {CostGenerateChallenges, smartcontract.Cost},
-		CostAddValidator.String():                 {CostAddValidator, smartcontract.Cost},
-		CostUpdateValidatorSettings.String():      {CostUpdateValidatorSettings, smartcontract.Cost},
-		CostAddBlobber.String():                   {CostAddBlobber, smartcontract.Cost},
-		CostReadPoolLock.String():                 {CostReadPoolLock, smartcontract.Cost},
-		CostReadPoolUnlock.String():               {CostReadPoolUnlock, smartcontract.Cost},
-		CostWritePoolLock.String():                {CostWritePoolLock, smartcontract.Cost},
-		CostWritePoolUnlock.String():              {CostWritePoolUnlock, smartcontract.Cost},
-		CostStakePoolLock.String():                {CostStakePoolLock, smartcontract.Cost},
-		CostStakePoolUnlock.String():              {CostStakePoolUnlock, smartcontract.Cost},
-		CostCommitSettingsChanges.String():        {CostCommitSettingsChanges, smartcontract.Cost},
-		CostCollectReward.String():                {CostCollectReward, smartcontract.Cost},
-		CostKillBlobber.String():                  {CostKillBlobber, smartcontract.Cost},
-		CostKillValidator.String():                {CostKillValidator, smartcontract.Cost},
-		CostShutdownBlobber.String():              {CostShutdownBlobber, smartcontract.Cost},
-		CostShutdownValidator.String():            {CostShutdownValidator, smartcontract.Cost},
+		MaxMint.String():                          {MaxMint, config.CurrencyCoin},
+		MaxStake.String():                         {MaxStake, config.CurrencyCoin},
+		MinStake.String():                         {MinStake, config.CurrencyCoin},
+		MinStakePerDelegate.String():              {MinStakePerDelegate, config.CurrencyCoin},
+		MaxCharge.String():                        {MaxCharge, config.Float64},
+		TimeUnit.String():                         {TimeUnit, config.Duration},
+		MinAllocSize.String():                     {MinAllocSize, config.Int64},
+		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, config.Duration},
+		MinBlobberCapacity.String():               {MinBlobberCapacity, config.Int64},
+		ReadPoolMinLock.String():                  {ReadPoolMinLock, config.CurrencyCoin},
+		WritePoolMinLock.String():                 {WritePoolMinLock, config.CurrencyCoin},
+		StakePoolMinLockPeriod.String():           {StakePoolMinLockPeriod, config.Duration},
+		StakePoolKillSlash.String():               {StakePoolKillSlash, config.Float64},
+		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, config.CurrencyCoin},
+		MaxIndividualFreeAllocation.String():      {MaxIndividualFreeAllocation, config.CurrencyCoin},
+		CancellationCharge.String():               {CancellationCharge, config.Float64},
+		MinLockDemand.String():                    {MinLockDemand, config.Float64},
+		FreeAllocationDataShards.String():         {FreeAllocationDataShards, config.Int},
+		FreeAllocationParityShards.String():       {FreeAllocationParityShards, config.Int},
+		FreeAllocationSize.String():               {FreeAllocationSize, config.Int64},
+		FreeAllocationReadPriceRangeMin.String():  {FreeAllocationReadPriceRangeMin, config.CurrencyCoin},
+		FreeAllocationReadPriceRangeMax.String():  {FreeAllocationReadPriceRangeMax, config.CurrencyCoin},
+		FreeAllocationWritePriceRangeMin.String(): {FreeAllocationWritePriceRangeMin, config.CurrencyCoin},
+		FreeAllocationWritePriceRangeMax.String(): {FreeAllocationWritePriceRangeMax, config.CurrencyCoin},
+		FreeAllocationReadPoolFraction.String():   {FreeAllocationReadPoolFraction, config.Float64},
+		ValidatorReward.String():                  {ValidatorReward, config.Float64},
+		BlobberSlash.String():                     {BlobberSlash, config.Float64},
+		HealthCheckPeriod.String():                {HealthCheckPeriod, config.Duration},
+		MaxBlobbersPerAllocation.String():         {MaxBlobbersPerAllocation, config.Int},
+		MaxReadPrice.String():                     {MaxReadPrice, config.CurrencyCoin},
+		MaxWritePrice.String():                    {MaxWritePrice, config.CurrencyCoin},
+		MinWritePrice.String():                    {MinWritePrice, config.CurrencyCoin},
+		ChallengeEnabled.String():                 {ChallengeEnabled, config.Boolean},
+		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, config.Int},
+		NumValidatorsRewarded.String():            {NumValidatorsRewarded, config.Int},
+		MaxDelegates.String():                     {MaxDelegates, config.Int},
+		BlockRewardBlockReward.String():           {BlockRewardBlockReward, config.CurrencyCoin},
+		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, config.CurrencyCoin},
+		BlockRewardGammaAlpha.String():            {BlockRewardGammaAlpha, config.Float64},
+		BlockRewardGammaA.String():                {BlockRewardGammaA, config.Float64},
+		BlockRewardGammaB.String():                {BlockRewardGammaB, config.Float64},
+		BlockRewardZetaI.String():                 {BlockRewardZetaI, config.Float64},
+		BlockRewardZetaK.String():                 {BlockRewardZetaK, config.Float64},
+		BlockRewardZetaMu.String():                {BlockRewardZetaMu, config.Float64},
+		OwnerId.String():                          {OwnerId, config.Key},
+		CostUpdateSettings.String():               {CostUpdateSettings, config.Cost},
+		CostReadRedeem.String():                   {CostReadRedeem, config.Cost},
+		CostCommitConnection.String():             {CostCommitConnection, config.Cost},
+		CostNewAllocationRequest.String():         {CostNewAllocationRequest, config.Cost},
+		CostUpdateAllocationRequest.String():      {CostUpdateAllocationRequest, config.Cost},
+		CostFinalizeAllocation.String():           {CostFinalizeAllocation, config.Cost},
+		CostCancelAllocation.String():             {CostCancelAllocation, config.Cost},
+		CostAddFreeStorageAssigner.String():       {CostAddFreeStorageAssigner, config.Cost},
+		CostFreeAllocationRequest.String():        {CostFreeAllocationRequest, config.Cost},
+		CostFreeUpdateAllocation.String():         {CostFreeUpdateAllocation, config.Cost},
+		CostBlobberHealthCheck.String():           {CostBlobberHealthCheck, config.Cost},
+		CostUpdateBlobberSettings.String():        {CostUpdateBlobberSettings, config.Cost},
+		CostPayBlobberBlockRewards.String():       {CostPayBlobberBlockRewards, config.Cost},
+		CostChallengeResponse.String():            {CostChallengeResponse, config.Cost},
+		CostGenerateChallenges.String():           {CostGenerateChallenges, config.Cost},
+		CostAddValidator.String():                 {CostAddValidator, config.Cost},
+		CostUpdateValidatorSettings.String():      {CostUpdateValidatorSettings, config.Cost},
+		CostAddBlobber.String():                   {CostAddBlobber, config.Cost},
+		CostReadPoolLock.String():                 {CostReadPoolLock, config.Cost},
+		CostReadPoolUnlock.String():               {CostReadPoolUnlock, config.Cost},
+		CostWritePoolLock.String():                {CostWritePoolLock, config.Cost},
+		CostWritePoolUnlock.String():              {CostWritePoolUnlock, config.Cost},
+		CostStakePoolLock.String():                {CostStakePoolLock, config.Cost},
+		CostStakePoolUnlock.String():              {CostStakePoolUnlock, config.Cost},
+		CostCommitSettingsChanges.String():        {CostCommitSettingsChanges, config.Cost},
+		CostCollectReward.String():                {CostCollectReward, config.Cost},
+		CostKillBlobber.String():                  {CostKillBlobber, config.Cost},
+		CostKillValidator.String():                {CostKillValidator, config.Cost},
+		CostShutdownBlobber.String():              {CostShutdownBlobber, config.Cost},
+		CostShutdownValidator.String():            {CostShutdownValidator, config.Cost},
 	}
 }
 
-func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
-	var out smartcontract.StringMap
+func (conf *Config) getConfigMap() (config.StringMap, error) {
+	var out config.StringMap
 	out.Fields = make(map[string]string)
 	for _, key := range SettingName {
 		info, ok := Settings[key]
@@ -304,7 +306,7 @@ func (conf *Config) getConfigMap() (smartcontract.StringMap, error) {
 			return out, fmt.Errorf("SettingName %s not found in Settings", key)
 		}
 		iSetting := conf.get(info.setting)
-		if info.configType == smartcontract.CurrencyCoin {
+		if info.configType == config.CurrencyCoin {
 			sbSetting, ok := iSetting.(currency.Coin)
 			if !ok {
 				return out, fmt.Errorf("%s key not implemented as state.balance", key)
@@ -379,6 +381,8 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 		conf.MaxStake = change
 	case MinStake:
 		conf.MinStake = change
+	case MinStakePerDelegate:
+		conf.MinStakePerDelegate = change
 	case MaxTotalFreeAllocation:
 		conf.MaxTotalFreeAllocation = change
 	case MaxIndividualFreeAllocation:
@@ -536,7 +540,7 @@ func (conf *Config) set(key string, change string) error {
 	}
 
 	switch s.configType {
-	case smartcontract.Int:
+	case config.Int:
 		value, err := strconv.Atoi(change)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
@@ -544,7 +548,7 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setInt(key, value); err != nil {
 			return err
 		}
-	case smartcontract.CurrencyCoin:
+	case config.CurrencyCoin:
 		value, err := strconv.ParseFloat(change, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
@@ -556,7 +560,7 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setCoin(key, vCoin); err != nil {
 			return err
 		}
-	case smartcontract.Int64:
+	case config.Int64:
 		value, err := strconv.ParseInt(change, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
@@ -564,7 +568,7 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setInt64(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Float64:
+	case config.Float64:
 		value, err := strconv.ParseFloat(change, 64)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
@@ -572,7 +576,7 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setFloat64(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Duration:
+	case config.Duration:
 		value, err := time.ParseDuration(change)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
@@ -580,7 +584,7 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setDuration(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Boolean:
+	case config.Boolean:
 		value, err := strconv.ParseBool(change)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
@@ -588,7 +592,7 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setBoolean(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Cost:
+	case config.Cost:
 		value, err := strconv.Atoi(change)
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
@@ -596,13 +600,13 @@ func (conf *Config) set(key string, change string) error {
 		if err := conf.setCost(key, value); err != nil {
 			return err
 		}
-	case smartcontract.Key:
+	case config.Key:
 		if _, err := hex.DecodeString(change); err != nil {
 			return fmt.Errorf("%s must be a hes string: %v", key, err)
 		}
 		conf.setKey(key, change)
 	default:
-		return fmt.Errorf("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].configType])
+		return fmt.Errorf("unsupported type setting " + config.ConfigTypeName[Settings[key].configType])
 	}
 	return nil
 }
@@ -620,6 +624,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxStake
 	case MinStake:
 		return conf.MinStake
+	case MinStakePerDelegate:
+		return conf.MinStakePerDelegate
 	case TimeUnit:
 		return conf.TimeUnit
 	case MinAllocSize:
@@ -707,7 +713,7 @@ func (conf *Config) get(key Setting) interface{} {
 	}
 }
 
-func (conf *Config) update(changes smartcontract.StringMap) error {
+func (conf *Config) update(changes config.StringMap) error {
 	for key, value := range changes.Fields {
 		trimmedKey := strings.TrimSpace(key)
 		trimmedValue := strings.TrimSpace(value)
@@ -737,7 +743,7 @@ func (ssc *StorageSmartContract) updateSettings(
 		return "", err
 	}
 
-	var newChanges smartcontract.StringMap
+	var newChanges config.StringMap
 	if err = newChanges.Decode(input); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
@@ -804,17 +810,17 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	return "", nil
 }
 
-func getSettingChanges(balances cstate.StateContextI) (*smartcontract.StringMap, error) {
-	var changes = new(smartcontract.StringMap)
+func getSettingChanges(balances cstate.StateContextI) (*config.StringMap, error) {
+	var changes = new(config.StringMap)
 	err := balances.GetTrieNode(settingChangesKey, changes)
 	switch err {
 	case nil:
 		if len(changes.Fields) == 0 {
-			return smartcontract.NewStringMap(), nil
+			return config.NewStringMap(), nil
 		}
 		return changes, nil
 	case util.ErrValueNotPresent:
-		return smartcontract.NewStringMap(), nil
+		return config.NewStringMap(), nil
 	default:
 		return nil, err
 	}

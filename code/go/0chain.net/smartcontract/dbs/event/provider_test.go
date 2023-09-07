@@ -227,9 +227,16 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 		},
 		{
 			Tag: TagUpdateMiner,
-			Data: []Miner{
-				miners[1],
-				miners[2],
+			Data: dbs.DbUpdates{
+				Id:      miners[1].ID,
+				Updates: map[string]interface{}{"path": miners[1].Path},
+			},
+		},
+		{
+			Tag: TagUpdateMiner,
+			Data: dbs.DbUpdates{
+				Id:      miners[2].ID,
+				Updates: map[string]interface{}{"path": miners[2].Path},
 			},
 		},
 		{
@@ -258,13 +265,13 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 			Data: []dbs.StakePoolReward{
 				{
 					ProviderID: dbs.ProviderID{
-						ID: blobbers[0].ID,
+						ID:   blobbers[0].ID,
 						Type: spenum.Blobber,
 					},
 				},
 				{
 					ProviderID: dbs.ProviderID{
-						ID: miners[0].ID,
+						ID:   miners[0].ID,
 						Type: spenum.Miner,
 					},
 				},
@@ -275,13 +282,13 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 			Data: []dbs.StakePoolReward{
 				{
 					ProviderID: dbs.ProviderID{
-						ID: miners[1].ID,
+						ID:   miners[1].ID,
 						Type: spenum.Miner,
 					},
 				},
 				{
 					ProviderID: dbs.ProviderID{
-						ID: sharders[0].ID,
+						ID:   sharders[0].ID,
 						Type: spenum.Sharder,
 					},
 				},
@@ -290,7 +297,7 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 		{
 			Tag: TagCollectProviderReward,
 			Data: dbs.ProviderID{
-				ID: validators[4].ID,
+				ID:   validators[4].ID,
 				Type: spenum.Validator,
 			},
 		},
@@ -353,11 +360,11 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 			Tag: TagKillProvider,
 			Data: []dbs.ProviderID{
 				{
-					ID: blobbers[5].ID,
+					ID:   blobbers[5].ID,
 					Type: spenum.Blobber,
 				},
 				{
-					ID: validators[5].ID,
+					ID:   validators[5].ID,
 					Type: spenum.Validator,
 				},
 			},
@@ -366,11 +373,11 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 			Tag: TagShutdownProvider,
 			Data: []dbs.ProviderID{
 				{
-					ID: miners[5].ID,
+					ID:   miners[5].ID,
 					Type: spenum.Miner,
 				},
 				{
-					ID: sharders[5].ID,
+					ID:   sharders[5].ID,
 					Type: spenum.Sharder,
 				},
 			},
@@ -383,11 +390,11 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		idsLists := map[spenum.Provider][]string{
-			spenum.Blobber: make([]string, 0, len(ids[spenum.Blobber])),
-			spenum.Miner: make([]string, 0, len(ids[spenum.Miner])),
-			spenum.Sharder: make([]string, 0, len(ids[spenum.Sharder])),
+			spenum.Blobber:    make([]string, 0, len(ids[spenum.Blobber])),
+			spenum.Miner:      make([]string, 0, len(ids[spenum.Miner])),
+			spenum.Sharder:    make([]string, 0, len(ids[spenum.Sharder])),
 			spenum.Authorizer: make([]string, 0, len(ids[spenum.Authorizer])),
-			spenum.Validator: make([]string, 0, len(ids[spenum.Validator])),
+			spenum.Validator:  make([]string, 0, len(ids[spenum.Validator])),
 		}
 
 		for providerType, idsList := range ids {
