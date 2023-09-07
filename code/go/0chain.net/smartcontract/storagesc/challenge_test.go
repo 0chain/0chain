@@ -472,24 +472,6 @@ func TestBlobberPenalty(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + 1
-		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
-		require.Error(t, err)
-		require.EqualValues(t, errLate, err.Error())
-	})
-
-	t.Run("old challenge", func(t *testing.T) {
-		var thisChallenge = previousChallenge - 1
-		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
-		require.Error(t, err)
-		require.EqualValues(t, err.Error(), "old challenge response on blobber penalty")
-	})
-
 	t.Run(errNoStakePools, func(t *testing.T) {
 		var validatorStakes = [][]int64{{45, 666, 4533}, {}, {10}}
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
@@ -986,7 +968,7 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, previous, details, validators, ctx, allocationId)
+	err = ssc.blobberPenalty(allocation, previous, details.LatestFinalizedChallCreatedAt, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}
@@ -1088,10 +1070,8 @@ func setupChallengeMocks(
 		Terms: Terms{
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
-		Size: size,
-		LatestCompletedChallenge: &StorageChallenge{
-			Created: thisChallange,
-		},
+		Size:                          size,
+		LatestFinalizedChallCreatedAt: thisChallange,
 	}
 
 	var txn = &transaction.Transaction{

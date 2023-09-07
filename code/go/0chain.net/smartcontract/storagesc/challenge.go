@@ -284,14 +284,14 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 // move tokens from challenge pool back to write pool
 func (sc *StorageSmartContract) blobberPenalty(
 	alloc *StorageAllocation,
-	latestCompletedChallTime common.Timestamp,
+	latestSuccessfulChallTime common.Timestamp,
 	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
 	balances cstate.StateContextI,
 	allocationID string,
 ) (err error) {
-	if latestCompletedChallTime >= latestFinalizedChallTime {
+	if latestSuccessfulChallTime >= latestFinalizedChallTime {
 		return nil
 	}
 
@@ -306,12 +306,12 @@ func (sc *StorageSmartContract) blobberPenalty(
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	rdtu, err := alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(latestSuccessfulChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber penalty failed: %v", err)
 	}
 
-	dtu, err := alloc.durationInTimeUnits(latestFinalizedChallTime-latestCompletedChallTime, conf.TimeUnit)
+	dtu, err := alloc.durationInTimeUnits(latestFinalizedChallTime-latestSuccessfulChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber penalty failed: %v", err)
 	}

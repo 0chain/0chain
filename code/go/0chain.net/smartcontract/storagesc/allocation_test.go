@@ -371,10 +371,8 @@ func TestChangeBlobbers(t *testing.T) {
 					TotalChallenges:   102,
 					OpenChallenges:    0,
 				},
-				LatestCompletedChallenge: &StorageChallenge{
-					Created: now - 200,
-				},
-				ChallengePoolIntegralValue: 0,
+				LatestFinalizedChallCreatedAt: now - 200,
+				ChallengePoolIntegralValue:    0,
 			}
 			if i < arg.blobberInChallenge {
 				err := bcPart.Add(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
@@ -1669,9 +1667,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 			OpenChallenges:    0,
 		}
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: alloc.Expiration / 2,
-		}
+		ba.LatestFinalizedChallCreatedAt = alloc.Expiration / 2
 		ba.ChallengePoolIntegralValue = 0
 	}
 
@@ -1823,9 +1819,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		OpenChallenges:    0,
 	}
 
-	alloc.BlobberAllocsMap[nb.id].LatestCompletedChallenge = &StorageChallenge{
-		Created: common.Timestamp(tp),
-	}
+	alloc.BlobberAllocsMap[nb.id].LatestFinalizedChallCreatedAt = common.Timestamp(tp)
 
 	alloc.BlobberAllocsMap[nb.id].ChallengePoolIntegralValue = 0
 
@@ -1930,9 +1924,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		OpenChallenges:    0,
 	}
 
-	alloc.BlobberAllocsMap[nb2.id].LatestCompletedChallenge = &StorageChallenge{
-		Created: common.Timestamp(tp),
-	}
+	alloc.BlobberAllocsMap[nb2.id].LatestFinalizedChallCreatedAt = common.Timestamp(tp)
 
 	alloc.BlobberAllocsMap[nb2.id].ChallengePoolIntegralValue = 0
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
@@ -2064,9 +2056,7 @@ func Test_finalize_allocation(t *testing.T) {
 			OpenChallenges:    0,
 		}
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: 0,
-		}
+		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
 
@@ -2246,9 +2236,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 			OpenChallenges:    0,
 		}
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: 0,
-		}
+		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
 

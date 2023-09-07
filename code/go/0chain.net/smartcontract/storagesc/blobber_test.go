@@ -975,9 +975,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 	for _, ba := range alloc.BlobberAllocs {
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: 0,
-		}
+		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
 

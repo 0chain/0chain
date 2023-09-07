@@ -208,13 +208,11 @@ func TestCancelAllocationRequest(t *testing.T) {
 					OpenChallenges:  int64(i + 1),
 					TotalChallenges: int64(i + 1),
 				},
-				MinLockDemand: 200 + currency.Coin(minLockDemand),
-				Spent:         100,
-				Size:          1 * GB,
-				LatestCompletedChallenge: &StorageChallenge{
-					Created: now - 200,
-				},
-				ChallengePoolIntegralValue: currency.Coin(challengePoolBalance / int64(allocation.DataShards+allocation.ParityShards)),
+				MinLockDemand:                 200 + currency.Coin(minLockDemand),
+				Spent:                         100,
+				Size:                          1 * GB,
+				LatestFinalizedChallCreatedAt: now - 200,
+				ChallengePoolIntegralValue:    currency.Coin(challengePoolBalance / int64(allocation.DataShards+allocation.ParityShards)),
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
@@ -352,13 +350,11 @@ func TestFinalizeAllocation(t *testing.T) {
 					OpenChallenges:  int64(i + 1),
 					TotalChallenges: int64(i + 1), // add open challenges and success  challenges
 				},
-				MinLockDemand: 200 + currency.Coin(minLockDemand),
-				Spent:         100,
-				Size:          1 * GB,
-				LatestCompletedChallenge: &StorageChallenge{
-					Created: allocation.Expiration,
-				},
-				ChallengePoolIntegralValue: 0,
+				MinLockDemand:                 200 + currency.Coin(minLockDemand),
+				Spent:                         100,
+				Size:                          1 * GB,
+				LatestFinalizedChallCreatedAt: allocation.Expiration,
+				ChallengePoolIntegralValue:    0,
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
