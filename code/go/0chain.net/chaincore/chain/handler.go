@@ -333,7 +333,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "<a style='display:flex;' href='_diagnostics/round_info'><span style='flex:1;'></span>%d</a>", rn)
+	fmt.Fprintf(w, "<a style='display:flex;' href='/_diagnostics/round_info'><span style='flex:1;'></span>%d</a>", rn)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
@@ -533,7 +533,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 			if ok {
 				fmt.Fprintf(w, "<tr class='active'>")
 				fmt.Fprintf(w, "<td>")
-				fmt.Fprintf(w, "<a href='_diagnostics/txns_in_pool'>Redis Collection</a>")
+				fmt.Fprintf(w, "<a href='/_diagnostics/txns_in_pool'>Redis Collection</a>")
 				fmt.Fprintf(w, "</td>")
 				fmt.Fprintf(w, "<td class='number'>")
 				fmt.Fprintf(w, "%v", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName))
@@ -774,7 +774,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	if node.NodeType(selfNodeType) == node.NodeTypeMiner {
 		// ToDo: For sharders show who all can store the blocks
-		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
+		fmt.Fprintf(w, "<li><a href='/_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
 	fmt.Fprintf(w, "</td>")
 
