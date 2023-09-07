@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -1780,10 +1781,21 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(
-	allocChallenges *AllocationChallenges,
 	cct int64,
 	balances cstate.StateContextI,
-) (map[string]string, error) {
+	sc *StorageSmartContract,
+) (int, error) {
+	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			allocChallenges = &AllocationChallenges{}
+			allocChallenges.AllocationID = sa.ID
+		} else {
+			return 0, common.NewError("challenge_reward_error",
+				"error fetching allocation challenge: "+err.Error())
+		}
+	}
+
 	var expiredChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
 	logging.Logger.Info("removeExpiredChallenges found open challenges",
@@ -1818,22 +1830,67 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
 
 			if err != nil {
-				return nil, err
+				return 0, err
 			}
 		}
 	}
 
 	allocChallenges.OpenChallenges = nonExpiredChallenges
 
-	return expiredChallengeBlobberMap, nil
+	// Save the allocation challenges to MPT
+	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+		return 0, common.NewErrorf("add_challenge",
+			"error storing alloc challenge: %v", err)
+	}
+
+	var expChalIDs []string
+	for challengeID := range expiredChallengeBlobberMap {
+		expChalIDs = append(expChalIDs, challengeID)
+	}
+	sort.Strings(expChalIDs)
+
+	// maps blobberID to count of its expiredIDs.
+	expiredCountMap := make(map[string]int)
+
+	for _, challengeID := range expChalIDs {
+		blobberID := expiredChallengeBlobberMap[challengeID]
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
+		if err != nil {
+			return 0, common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
+		}
+
+		if _, ok := expiredCountMap[blobberID]; !ok {
+			expiredCountMap[blobberID] = 0
+		}
+		expiredCountMap[blobberID]++
+	}
+
+	if err := sa.save(balances, sc.ID); err != nil {
+		return 0, common.NewErrorf("add_challenge",
+			"error storing allocation: %v", err)
+	}
+
+	return len(expiredCountMap), nil
 }
 
 // removeOutOfOrderChallenges removes all open challenges from the allocation that are out of order
 func (sa *StorageAllocation) removeOutOfOrderChallenges(
-	allocChallenges *AllocationChallenges,
 	balances cstate.StateContextI,
 	currentChallenge *StorageChallenge,
+	sc *StorageSmartContract,
 ) error {
+	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			allocChallenges = &AllocationChallenges{}
+			allocChallenges.AllocationID = sa.ID
+		} else {
+			return common.NewError("challenge_reward_error",
+				"error fetching allocation challenge: "+err.Error())
+		}
+	}
+
+	var removedChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
 	logging.Logger.Info("removeOutOfOrderChallenges found open challenges",
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
@@ -1843,6 +1900,8 @@ func (sa *StorageAllocation) removeOutOfOrderChallenges(
 			nonExpiredChallenges = append(nonExpiredChallenges, oc)
 			continue
 		}
+
+		removedChallengeBlobberMap[oc.ID] = oc.BlobberID
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -1868,6 +1927,39 @@ func (sa *StorageAllocation) removeOutOfOrderChallenges(
 	}
 
 	allocChallenges.OpenChallenges = nonExpiredChallenges
+
+	// Save the allocation challenges to MPT
+	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+		return common.NewErrorf("add_challenge",
+			"error storing alloc challenge: %v", err)
+	}
+
+	var expChalIDs []string
+	for challengeID := range removedChallengeBlobberMap {
+		expChalIDs = append(expChalIDs, challengeID)
+	}
+	sort.Strings(expChalIDs)
+
+	// maps blobberID to count of its expiredIDs.
+	expiredCountMap := make(map[string]int)
+
+	for _, challengeID := range expChalIDs {
+		blobberID := removedChallengeBlobberMap[challengeID]
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
+		if err != nil {
+			return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
+		}
+
+		if _, ok := expiredCountMap[blobberID]; !ok {
+			expiredCountMap[blobberID] = 0
+		}
+		expiredCountMap[blobberID]++
+	}
+
+	if err := sa.save(balances, sc.ID); err != nil {
+		return common.NewErrorf("add_challenge",
+			"error storing allocation: %v", err)
+	}
 
 	return nil
 }
