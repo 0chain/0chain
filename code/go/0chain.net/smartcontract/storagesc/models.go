@@ -83,9 +83,10 @@ type ChallengeResponse struct {
 }
 
 type AllocOpenChallenge struct {
-	ID             string `json:"id"`
-	RoundCreatedAt int64  `json:"round_created_at"`
-	BlobberID      string `json:"blobber_id"` // blobber id
+	ID             string           `json:"id"`
+	CreatedAt      common.Timestamp `json:"created_at"`
+	RoundCreatedAt int64            `json:"round_created_at"`
+	BlobberID      string           `json:"blobber_id"` // blobber id
 }
 
 type AllocationChallenges struct {
@@ -128,6 +129,7 @@ func (acs *AllocationChallenges) addChallenge(challenge *StorageChallenge) bool 
 		oc := &AllocOpenChallenge{
 			ID:             challenge.ID,
 			BlobberID:      challenge.BlobberID,
+			CreatedAt:      challenge.Created,
 			RoundCreatedAt: challenge.RoundCreatedAt,
 		}
 		acs.OpenChallenges = append(acs.OpenChallenges, oc)
@@ -527,8 +529,9 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
-	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
+	ChallengePoolIntegralValue     currency.Coin    `json:"challenge_pool_integral_value"`
+	LatestSuccessfulChallCreatedAt common.Timestamp `json:"latest_successful_chall_created_at"`
+	LatestFinalizedChallCreatedAt  common.Timestamp `json:"latest_finalized_chall_created_att"`
 }
 
 func newBlobberAllocation(
@@ -681,17 +684,17 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 	payment := currency.Coin(0)
 	var move currency.Coin
 
-	if d.LatestCompletedChallenge == nil {
+	if d.LatestFinalizedChallCreatedAt == 0 {
 		return 0, nil
 	}
 
 	if now <= alloc.Expiration {
-		rdtu, err := alloc.restDurationInTimeUnits(d.LatestCompletedChallenge.Created, conf.TimeUnit)
+		rdtu, err := alloc.restDurationInTimeUnits(d.LatestFinalizedChallCreatedAt, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("blobber reward failed: %v", err)
 		}
 
-		dtu, err := alloc.durationInTimeUnits(now-d.LatestCompletedChallenge.Created, conf.TimeUnit)
+		dtu, err := alloc.durationInTimeUnits(now-d.LatestFinalizedChallCreatedAt, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("blobber reward failed: %v", err)
 		}
@@ -1791,6 +1794,12 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			ba.Stats.OpenChallenges--
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
+
+			if ba.LatestFinalizedChallCreatedAt < oc.CreatedAt {
+				ba.LatestFinalizedChallCreatedAt = oc.CreatedAt
+			}
+
+			// Set failed challenge here and then reward on passing as current - last failed and remove tokens from last failed to last completed.
 
 			err := emitUpdateChallenge(&StorageChallenge{
 				ID:           oc.ID,
