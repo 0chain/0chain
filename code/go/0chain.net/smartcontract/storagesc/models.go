@@ -1840,6 +1840,7 @@ func (sa *StorageAllocation) removeOutOfOrderChallenges(
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt {
+			nonExpiredChallenges = append(nonExpiredChallenges, oc)
 			continue
 		}
 
