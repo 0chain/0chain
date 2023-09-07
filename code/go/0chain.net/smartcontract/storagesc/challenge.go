@@ -621,7 +621,7 @@ func (sc *StorageSmartContract) challengePassed(
 		}
 	}
 
-	err = cab.alloc.removeOutOfOrderChallenges(allocChallenges, balances, cab.challenge.ID)
+	err = cab.alloc.removeOutOfOrderChallenges(allocChallenges, balances, cab.challenge)
 	if err != nil {
 		return "failed to remove out of order allocation challenges", common.NewError("challenge_reward_error",
 			"error removing out of order challenges: "+err.Error())

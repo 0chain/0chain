@@ -1820,14 +1820,14 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 func (sa *StorageAllocation) removeOutOfOrderChallenges(
 	allocChallenges *AllocationChallenges,
 	balances cstate.StateContextI,
-	currentChallengeID string,
+	currentChallenge *StorageChallenge,
 ) error {
 	var nonExpiredChallenges []*AllocOpenChallenge
 	logging.Logger.Info("removeOutOfOrderChallenges found open challenges",
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
 	for _, oc := range allocChallenges.OpenChallenges {
-		if oc.ID == currentChallengeID {
+		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt {
 			continue
 		}
 
