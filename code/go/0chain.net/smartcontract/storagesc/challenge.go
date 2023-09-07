@@ -50,12 +50,9 @@ func (sc *StorageSmartContract) completeChallenge(cab *challengeAllocBlobberPass
 		return false
 	}
 
-	// update to latest challenge
-
 	if success {
 		cab.blobAlloc.LatestSuccessfulChallCreatedAt = cab.challenge.Created
 	}
-
 	cab.blobAlloc.LatestFinalizedChallCreatedAt = cab.challenge.Created
 
 	return true
@@ -288,13 +285,13 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 func (sc *StorageSmartContract) blobberPenalty(
 	alloc *StorageAllocation,
 	latestCompletedChallTime common.Timestamp,
-	latestFailedChallTime common.Timestamp,
+	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
 	balances cstate.StateContextI,
 	allocationID string,
 ) (err error) {
-	if latestCompletedChallTime >= latestFailedChallTime {
+	if latestCompletedChallTime >= latestFinalizedChallTime {
 		return nil
 	}
 
@@ -314,7 +311,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 		return fmt.Errorf("blobber penalty failed: %v", err)
 	}
 
-	dtu, err := alloc.durationInTimeUnits(latestFailedChallTime-latestCompletedChallTime, conf.TimeUnit)
+	dtu, err := alloc.durationInTimeUnits(latestFinalizedChallTime-latestCompletedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber penalty failed: %v", err)
 	}
