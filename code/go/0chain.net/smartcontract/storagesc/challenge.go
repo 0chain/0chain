@@ -458,7 +458,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	currentRound := balances.GetBlock().Round
 	if challenge.RoundCreatedAt+conf.MaxChallengeCompletionRounds <= currentRound {
-		return "", common.NewError(errCode, "challenge expired")
+		return "", common.NewError(errCode, "challenge expired, current round : "+strconv.FormatInt(currentRound, 10)+" challenge round : "+strconv.FormatInt(challenge.RoundCreatedAt, 10))
 	}
 
 	if challenge.BlobberID != t.ClientID {
@@ -522,7 +522,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return sc.challengeFailed(balances, cab)
 	}
 
-	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab)
+	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, conf.MaxChallengeCompletionRounds)
 }
 
 type verifyTicketsResult struct {
@@ -611,9 +611,10 @@ func (sc *StorageSmartContract) challengePassed(
 	triggerPeriod int64,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
+	cct int64,
 ) (string, error) {
 
-	err := cab.alloc.removeOldChallenges(balances, cab.challenge, sc)
+	err := cab.alloc.removeOldChallenges(cct, balances, cab.challenge, sc)
 	if err != nil {
 		return "failed to remove out of order allocation challenges", common.NewError("challenge_reward_error",
 			"error removing out of order challenges: "+err.Error())

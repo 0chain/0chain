@@ -1818,6 +1818,8 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 				zap.Any("oc", oc),
 				zap.Any("ba", ba.Stats),
 				zap.Any("sa", sa.Stats),
+				zap.Any("StorageAlloc", sa),
+				zap.Any("len(OpenChallenges)", len(allocChallenges.OpenChallenges)),
 			)
 
 			ba.Stats.FailedChallenges++
@@ -1846,11 +1848,21 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 		}
 	}
 
+	logging.Logger.Info("A Jayash EC : ",
+		zap.Int("len", len(allocChallenges.OpenChallenges)),
+		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)),
+		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
+
 	allocChallenges.OpenChallenges = nonExpiredChallenges
+
+	logging.Logger.Info("B Jayash EC : ",
+		zap.Int("len", len(allocChallenges.OpenChallenges)),
+		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)),
+		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
 
 	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
-		return 0, common.NewErrorf("add_challenge",
+		return 0, common.NewErrorf("remove_expired_challenges",
 			"error storing alloc challenge: %v", err)
 	}
 
@@ -1885,6 +1897,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 
 // removeOldChallenges removes all open challenges from the allocation that are out of order
 func (sa *StorageAllocation) removeOldChallenges(
+	cct int64,
 	balances cstate.StateContextI,
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
@@ -1908,13 +1921,11 @@ func (sa *StorageAllocation) removeOldChallenges(
 	logging.Logger.Info("removeOldChallenges found open challenges",
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
-	count := 0
-
 	for _, oc := range allocChallenges.OpenChallenges {
 		logging.Logger.Info("Jayash ROC : "+uniqueIdForLogging,
 			zap.Any("oc", oc))
 
-		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
+		if !isChallengeExpired(balances.GetBlock().Round, oc.RoundCreatedAt, cct) && (oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID) {
 			nonRemovedChallenges = append(nonRemovedChallenges, oc)
 			continue
 		}
@@ -1947,16 +1958,9 @@ func (sa *StorageAllocation) removeOldChallenges(
 				zap.Any("ba", ba),
 			)
 		}
-
-		count++
-	}
-
-	if count == 0 {
-		return nil
 	}
 
 	logging.Logger.Info("A Jayash OC : "+uniqueIdForLogging,
-		zap.Int("count", count),
 		zap.Int("len", len(allocChallenges.OpenChallenges)),
 		zap.Int("lenNonRemovedChallenges", len(nonRemovedChallenges)),
 		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
@@ -1964,7 +1968,6 @@ func (sa *StorageAllocation) removeOldChallenges(
 	allocChallenges.OpenChallenges = nonRemovedChallenges
 
 	logging.Logger.Info("B Jayash OC : "+uniqueIdForLogging,
-		zap.Int("count", count),
 		zap.Int("len", len(allocChallenges.OpenChallenges)),
 		zap.Int("lenNonRemovedChallenges", len(nonRemovedChallenges)),
 		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
