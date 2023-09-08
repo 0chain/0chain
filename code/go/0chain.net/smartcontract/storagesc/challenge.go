@@ -733,7 +733,7 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	err = sc.blobberReward(
-		cab.alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
+		cab.alloc, cab.latestSuccessfulChallTime, cab.blobAlloc,
 		validators,
 		partial,
 		balances,
