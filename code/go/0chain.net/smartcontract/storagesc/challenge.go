@@ -1243,7 +1243,8 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	// remove expired challenges
 	lenExpired, err := alloc.removeExpiredChallenges(conf.MaxChallengeCompletionRounds, balances, sc)
 	if err != nil {
-		return common.NewErrorf("add_challenge", "remove expired challenges: %v", err)
+		return common.NewErrorf("add_challenge",
+			"error removing expired challenges: %v", err)
 	}
 
 	// add the generated challenge to the open challenges list in the allocation

@@ -1785,14 +1785,13 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
 ) (int, error) {
-	return 0, nil
 	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
 			allocChallenges = &AllocationChallenges{}
 			allocChallenges.AllocationID = sa.ID
 		} else {
-			return 0, common.NewError("challenge_reward_error",
+			return 0, common.NewError("remove_expired_challenges",
 				"error fetching allocation challenge: "+err.Error())
 		}
 	}
@@ -1857,7 +1856,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 		blobberID := expiredChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
-			return 0, common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
+			return 0, common.NewErrorf("remove_expired_challenges", "could not delete challenge node: %v", err)
 		}
 
 		if _, ok := expiredCountMap[blobberID]; !ok {
@@ -1867,7 +1866,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	}
 
 	if err := sa.save(balances, sc.ID); err != nil {
-		return 0, common.NewErrorf("add_challenge",
+		return 0, common.NewErrorf("remove_expired_challenges",
 			"error storing allocation: %v", err)
 	}
 
@@ -1880,6 +1879,8 @@ func (sa *StorageAllocation) removeOldChallenges(
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
+	uniqueIdForLogging := fmt.Sprintf("%s-%s", sa.ID, currentChallenge.ID)
+
 	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
@@ -1892,14 +1893,17 @@ func (sa *StorageAllocation) removeOldChallenges(
 	}
 
 	var removedChallengeBlobberMap = make(map[string]string)
-	var nonExpiredChallenges []*AllocOpenChallenge
 	logging.Logger.Info("removeOldChallenges found open challenges",
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
+	count := 0
+
 	for _, oc := range allocChallenges.OpenChallenges {
+		logging.Logger.Info("Jayash ROC : "+uniqueIdForLogging,
+			zap.Any("oc", oc))
+
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt {
-			nonExpiredChallenges = append(nonExpiredChallenges, oc)
-			continue
+			break
 		}
 
 		removedChallengeBlobberMap[oc.ID] = oc.BlobberID
@@ -1925,9 +1929,11 @@ func (sa *StorageAllocation) removeOldChallenges(
 				return err
 			}
 		}
+
+		count++
 	}
 
-	allocChallenges.OpenChallenges = nonExpiredChallenges
+	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[count:]
 
 	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
