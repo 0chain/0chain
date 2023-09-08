@@ -6,13 +6,13 @@ require (
 	github.com/alicebob/miniredis/v2 v2.30.5
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.26.0
-	github.com/go-playground/validator/v10 v10.15.1
+	github.com/go-playground/validator/v10 v10.15.3
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
-	github.com/hashicorp/golang-lru/v2 v2.0.5
+	github.com/hashicorp/golang-lru/v2 v2.0.6
 	github.com/herumi/bls v1.37.0
-	github.com/herumi/mcl v1.84.0
+	github.com/herumi/mcl v1.86.0
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
@@ -30,8 +30,8 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.25.0
-	golang.org/x/crypto v0.12.0
-	golang.org/x/net v0.14.0
+	golang.org/x/crypto v0.13.0
+	golang.org/x/net v0.15.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.5.2
@@ -40,16 +40,16 @@ require (
 
 require (
 	github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9
-	github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d
+	github.com/0chain/gosdk v1.10.0
 	github.com/go-faker/faker/v4 v4.1.1
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
-	github.com/linxGnu/grocksdb v1.8.0
+	github.com/linxGnu/grocksdb v1.8.4
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
-	golang.org/x/sys v0.11.0
-	gorm.io/driver/sqlite v1.5.2
+	golang.org/x/sys v0.12.0
+	gorm.io/driver/sqlite v1.5.3
 	moul.io/zapgorm2 v1.3.0
 )
 
@@ -118,7 +118,7 @@ require (
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.10.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
