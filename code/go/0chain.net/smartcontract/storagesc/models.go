@@ -1882,6 +1882,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
+	return nil
 	uniqueIdForLogging := fmt.Sprintf("%s-%s", sa.ID, currentChallenge.ID)
 
 	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
