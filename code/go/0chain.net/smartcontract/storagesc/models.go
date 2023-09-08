@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"sort"
 	"strings"
 	"time"
 
@@ -1785,6 +1784,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
 ) (int, error) {
+	return 0, nil
 	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
@@ -1847,7 +1847,6 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	for challengeID := range expiredChallengeBlobberMap {
 		expChalIDs = append(expChalIDs, challengeID)
 	}
-	sort.Strings(expChalIDs)
 
 	// maps blobberID to count of its expiredIDs.
 	expiredCountMap := make(map[string]int)
@@ -1933,6 +1932,10 @@ func (sa *StorageAllocation) removeOldChallenges(
 		count++
 	}
 
+	if count == 0 {
+		return nil
+	}
+
 	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[count:]
 
 	// Save the allocation challenges to MPT
@@ -1945,7 +1948,6 @@ func (sa *StorageAllocation) removeOldChallenges(
 	for challengeID := range removedChallengeBlobberMap {
 		expChalIDs = append(expChalIDs, challengeID)
 	}
-	sort.Strings(expChalIDs)
 
 	// maps blobberID to count of its expiredIDs.
 	expiredCountMap := make(map[string]int)
