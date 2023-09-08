@@ -74,16 +74,22 @@ jobs:
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
     - uses: actions/upload-artifact@v3
-      if: failure()
+      if: always()
       with:
-        name: conductor-logs
+        name: byzantine-logs
         path: |
-          conductor/logs/
-          docker.local/
+          conductor/
+          docker.local/miner*
+          docker.local/sharder*
 
     - name: Cleanup
       run: |
         rm -rf *
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]

@@ -105,7 +105,7 @@ func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, p
 // SC functions
 
 // get existing stake pool or create new one not saving it
-func (zcn *ZCNSmartContract) getOrUpdateStakePool(
+func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 	authorizerID datastore.Key,
 	settings stakepool.Settings,
 	ctx cstate.StateContextI,
@@ -135,6 +135,10 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 
 	if sp.Settings.MaxNumDelegates != settings.MaxNumDelegates {
 		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
+		changed = true
+	}
+	if sp.Settings.MinStake != gn.MinStakePerDelegate {
+		sp.Settings.MinStake = gn.MinStakePerDelegate
 		changed = true
 	}
 

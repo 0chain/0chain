@@ -46,11 +46,28 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		StakePool:                  &stakePoolConfig{},
 		BlobberSlash:               0.1,
 		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 30 * time.Minute,
+		MaxChallengeCompletionTime: 3 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
-		MaxStake:                   zcnToBalance(100.0),
+		MaxStake:                   zcnToBalance(100000.0),
 		CancellationCharge:         0.2,
 		MinLockDemand:              0.1,
+		BlockReward: &blockReward{
+			BlockReward:             zcnToBalance(0.06),
+			BlockRewardChangePeriod: 125000000,
+			BlockRewardChangeRatio:  0.1,
+			QualifyingStake:         1,
+			TriggerPeriod:           30,
+			Gamma: blockRewardGamma{
+				Alpha: 0.2,
+				A:     10,
+				B:     9,
+			},
+			Zeta: blockRewardZeta{
+				I:  1,
+				K:  0.9,
+				Mu: 0.2,
+			},
+		},
 	}
 
 	if mpts {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
