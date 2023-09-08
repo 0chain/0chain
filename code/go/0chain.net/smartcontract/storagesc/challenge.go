@@ -613,11 +613,11 @@ func (sc *StorageSmartContract) challengePassed(
 	cab *challengeAllocBlobberPassResult,
 ) (string, error) {
 
-	err := cab.alloc.removeOldChallenges(balances, cab.challenge, sc)
-	if err != nil {
-		return "failed to remove out of order allocation challenges", common.NewError("challenge_reward_error",
-			"error removing out of order challenges: "+err.Error())
-	}
+	//err := cab.alloc.removeOldChallenges(balances, cab.challenge, sc)
+	//if err != nil {
+	//	return "failed to remove out of order allocation challenges", common.NewError("challenge_reward_error",
+	//		"error removing out of order challenges: "+err.Error())
+	//}
 
 	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
 	if err != nil {
