@@ -1949,7 +1949,15 @@ func (sa *StorageAllocation) removeOldChallenges(
 		return nil
 	}
 
+	logging.Logger.Info("A Jayash OC : "+uniqueIdForLogging,
+		zap.Int("count", count),
+		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
+
 	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[count:]
+
+	logging.Logger.Info("B Jayash OC : "+uniqueIdForLogging,
+		zap.Int("count", count),
+		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
 
 	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
