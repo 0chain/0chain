@@ -1784,7 +1784,6 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
 ) (int, error) {
-	return 0, nil
 	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
