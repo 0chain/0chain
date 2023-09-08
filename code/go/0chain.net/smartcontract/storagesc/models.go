@@ -1873,8 +1873,8 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	return len(expiredCountMap), nil
 }
 
-// removeOutOfOrderChallenges removes all open challenges from the allocation that are out of order
-func (sa *StorageAllocation) removeOutOfOrderChallenges(
+// removeOldChallenges removes all open challenges from the allocation that are out of order
+func (sa *StorageAllocation) removeOldChallenges(
 	balances cstate.StateContextI,
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
@@ -1892,7 +1892,7 @@ func (sa *StorageAllocation) removeOutOfOrderChallenges(
 
 	var removedChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
-	logging.Logger.Info("removeOutOfOrderChallenges found open challenges",
+	logging.Logger.Info("removeOldChallenges found open challenges",
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
 	for _, oc := range allocChallenges.OpenChallenges {
@@ -1930,7 +1930,7 @@ func (sa *StorageAllocation) removeOutOfOrderChallenges(
 
 	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
-		return common.NewErrorf("add_challenge",
+		return common.NewErrorf("remove_old_challenges",
 			"error storing alloc challenge: %v", err)
 	}
 
@@ -1947,7 +1947,7 @@ func (sa *StorageAllocation) removeOutOfOrderChallenges(
 		blobberID := removedChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
-			return common.NewErrorf("add_challenge", "could not delete challenge node: %v", err)
+			return common.NewErrorf("remove_old_challenges", "could not delete challenge node: %v", err)
 		}
 
 		if _, ok := expiredCountMap[blobberID]; !ok {
@@ -1957,7 +1957,7 @@ func (sa *StorageAllocation) removeOutOfOrderChallenges(
 	}
 
 	if err := sa.save(balances, sc.ID); err != nil {
-		return common.NewErrorf("add_challenge",
+		return common.NewErrorf("remove_old_challenges",
 			"error storing allocation: %v", err)
 	}
 
