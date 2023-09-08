@@ -1831,6 +1831,11 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			if err != nil {
 				return 0, err
 			}
+		} else {
+			logging.Logger.Info("Jayash2 ba, ok := sa.BlobberAllocsMap[oc.BlobberID]",
+				zap.Any("oc", oc),
+				zap.Any("ba", ba),
+			)
 		}
 	}
 
