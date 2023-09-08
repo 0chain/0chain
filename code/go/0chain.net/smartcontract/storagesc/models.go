@@ -1882,7 +1882,6 @@ func (sa *StorageAllocation) removeOldChallenges(
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
-	return nil
 	uniqueIdForLogging := fmt.Sprintf("%s-%s", sa.ID, currentChallenge.ID)
 
 	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
@@ -1905,6 +1904,10 @@ func (sa *StorageAllocation) removeOldChallenges(
 	for _, oc := range allocChallenges.OpenChallenges {
 		logging.Logger.Info("Jayash ROC : "+uniqueIdForLogging,
 			zap.Any("oc", oc))
+
+		if oc.BlobberID != currentChallenge.BlobberID {
+			continue
+		}
 
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt {
 			break
