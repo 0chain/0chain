@@ -1813,6 +1813,13 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
+
+			logging.Logger.Info("Jayash1 ba, ok := sa.BlobberAllocsMap[oc.BlobberID]",
+				zap.Any("oc", oc),
+				zap.Any("ba", ba.Stats),
+				zap.Any("sa", sa.Stats),
+			)
+
 			ba.Stats.FailedChallenges++
 			ba.Stats.OpenChallenges--
 			sa.Stats.FailedChallenges++
@@ -1896,6 +1903,8 @@ func (sa *StorageAllocation) removeOldChallenges(
 	}
 
 	var removedChallengeBlobberMap = make(map[string]string)
+	var nonRemovedChallenges []*AllocOpenChallenge
+
 	logging.Logger.Info("removeOldChallenges found open challenges",
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
@@ -1905,12 +1914,9 @@ func (sa *StorageAllocation) removeOldChallenges(
 		logging.Logger.Info("Jayash ROC : "+uniqueIdForLogging,
 			zap.Any("oc", oc))
 
-		if oc.BlobberID != currentChallenge.BlobberID {
+		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
+			nonRemovedChallenges = append(nonRemovedChallenges, oc)
 			continue
-		}
-
-		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt {
-			break
 		}
 
 		removedChallengeBlobberMap[oc.ID] = oc.BlobberID
@@ -1951,12 +1957,16 @@ func (sa *StorageAllocation) removeOldChallenges(
 
 	logging.Logger.Info("A Jayash OC : "+uniqueIdForLogging,
 		zap.Int("count", count),
+		zap.Int("len", len(allocChallenges.OpenChallenges)),
+		zap.Int("lenNonRemovedChallenges", len(nonRemovedChallenges)),
 		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
 
-	allocChallenges.OpenChallenges = allocChallenges.OpenChallenges[count:]
+	allocChallenges.OpenChallenges = nonRemovedChallenges
 
 	logging.Logger.Info("B Jayash OC : "+uniqueIdForLogging,
 		zap.Int("count", count),
+		zap.Int("len", len(allocChallenges.OpenChallenges)),
+		zap.Int("lenNonRemovedChallenges", len(nonRemovedChallenges)),
 		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
 
 	// Save the allocation challenges to MPT
