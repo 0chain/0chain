@@ -1843,15 +1843,13 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 
 	logging.Logger.Info("A Jayash EC : ",
 		zap.Int("len", len(allocChallenges.OpenChallenges)),
-		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)),
-		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
+		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)))
 
 	allocChallenges.OpenChallenges = nonExpiredChallenges
 
 	logging.Logger.Info("B Jayash EC : ",
 		zap.Int("len", len(allocChallenges.OpenChallenges)),
-		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)),
-		zap.Any("allocChallenges.OpenChallenges", allocChallenges.OpenChallenges))
+		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)))
 
 	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
@@ -1868,6 +1866,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	expiredCountMap := make(map[string]int)
 
 	for _, challengeID := range expChalIDs {
+		logging.Logger.Info("Jayash Deleting", zap.String("challengeID", challengeID))
 		blobberID := expiredChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
@@ -1895,6 +1894,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
+	return nil
 	uniqueIdForLogging := fmt.Sprintf("%s-%s", sc.ID, currentChallenge.ID)
 
 	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
