@@ -1851,25 +1851,14 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 
 // removeOldChallenges removes all open challenges from the allocation that are old
 func (sa *StorageAllocation) removeOldChallenges(
+	allocChallenges *AllocationChallenges,
 	balances cstate.StateContextI,
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
-	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			allocChallenges = &AllocationChallenges{}
-			allocChallenges.AllocationID = sa.ID
-		} else {
-			return common.NewError("challenge_reward_error",
-				"error fetching allocation challenge: "+err.Error())
-		}
-	}
 
 	var removedChallengeBlobberMap = make(map[string]string)
 	var nonRemovedChallenges []*AllocOpenChallenge
-
-	len1 := len(allocChallenges.OpenChallenges)
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
@@ -1910,31 +1899,6 @@ func (sa *StorageAllocation) removeOldChallenges(
 	}
 
 	allocChallenges.OpenChallenges = nonRemovedChallenges
-
-	len2 := len(allocChallenges.OpenChallenges)
-
-	// Save the allocation challenges to MPT
-	if err := allocChallenges.Save(balances, sc.ID); err != nil {
-		return common.NewErrorf("remove_old_challenges",
-			"error storing alloc challenge: %v", err)
-	}
-
-	allocChallenges, err = sc.getAllocationChallenges(sa.ID, balances)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			allocChallenges = &AllocationChallenges{}
-			allocChallenges.AllocationID = sa.ID
-		} else {
-			return common.NewError("challenge_reward_error",
-				"error fetching allocation challenge: "+err.Error())
-		}
-	}
-
-	logging.Logger.Info("removeOldChallenges",
-		zap.Int("len1", len1),
-		zap.Int("len2", len2),
-		zap.Int("len3", len(allocChallenges.OpenChallenges)),
-	)
 
 	var expChalIDs []string
 	for challengeID := range removedChallengeBlobberMap {

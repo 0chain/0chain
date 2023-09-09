@@ -623,7 +623,7 @@ func (sc *StorageSmartContract) challengePassed(
 	cab *challengeAllocBlobberPassResult,
 ) (string, error) {
 
-	err := cab.alloc.removeOldChallenges(balances, cab.challenge, sc)
+	err := cab.alloc.removeOldChallenges(cab.allocChallenges, balances, cab.challenge, sc)
 	if err != nil {
 		return "failed to remove old allocation challenges", common.NewError("challenge_reward_error",
 			"error removing old challenges: "+err.Error())
