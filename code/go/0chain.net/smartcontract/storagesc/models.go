@@ -1866,7 +1866,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	expiredCountMap := make(map[string]int)
 
 	for _, challengeID := range expChalIDs {
-		logging.Logger.Info("Jayash Deleting", zap.String("challengeID", challengeID))
+		logging.Logger.Info("Jayash Deleting", zap.String("challengeID", challengeID), zap.String("blobberID", expiredChallengeBlobberMap[challengeID]), zap.String("sc", sc.ID))
 		blobberID := expiredChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
