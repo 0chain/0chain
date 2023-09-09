@@ -659,7 +659,9 @@ func Test_flow_penalty(t *testing.T) {
 			}
 
 			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+
+			currentRound := balances.GetBlock().Round
+			genChall(t, ssc, tp, currentRound-200*(i-2), challID, i, validators, alloc.ID, blobber, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -864,7 +866,8 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+				currentRound := balances.GetBlock().Round
+				genChall(t, ssc, tp, currentRound-100, challID, 0, validators, alloc.ID, blobber, balances)
 				gfc++
 			}
 		}
@@ -1095,7 +1098,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+				currentRound := balances.GetBlock().Round
+				genChall(t, ssc, tp, currentRound-10000+i, challID, i, validators, alloc.ID, blobber, balances)
 			}
 		}
 
@@ -1142,7 +1146,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Zero(t, cpa)
-		require.Equal(t, wpb, wpa)
+		require.EqualValues(t, wpb, wpa)
 		require.Equal(t, alloc.MovedBack, cpb)
 
 		// no rewards for the blobber

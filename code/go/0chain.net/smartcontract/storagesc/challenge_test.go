@@ -497,33 +497,58 @@ func TestVerifyChallenge(t *testing.T) {
 		hasDuplicateTicket        bool
 		hasNonceSelectedValidator bool
 		wrongClientID             bool
+		numChallenges             int
+		ignoreChallengeRange      []int
 		err                       error
 	}{
 		{
-			name:      "ok",
-			ticketNum: 10,
+			name:          "ok",
+			ticketNum:     10,
+			numChallenges: 10,
+		},
+		{
+			name:          "should return expired challenge error",
+			ticketNum:     10,
+			numChallenges: 10,
+			err:           common.NewError("verify_challenge", "challenge expired"),
+		},
+		{
+			name:                 "expired middle challenges",
+			ticketNum:            10,
+			numChallenges:        10,
+			ignoreChallengeRange: []int{2, 8},
+		},
+		{
+			name:                 "never return response",
+			ticketNum:            10,
+			numChallenges:        10,
+			ignoreChallengeRange: []int{2, 80},
 		},
 		{
 			name:               "duplicate ticket",
 			ticketNum:          10,
 			hasDuplicateTicket: true,
+			numChallenges:      1,
 			err:                common.NewError("verify_challenge", "found duplicate validation tickets"),
 		},
 		{
-			name:      "not enough tickets",
-			ticketNum: 4, // threshold is 5
-			err:       common.NewError("verify_challenge", "validation tickets less than threshold: 5, tickets: 4"),
+			name:          "not enough tickets",
+			ticketNum:     4, // threshold is 5
+			numChallenges: 1,
+			err:           common.NewError("verify_challenge", "validation tickets less than threshold: 5, tickets: 4"),
 		},
 		{
 			name:                      "ticket signed with unauthorized validator",
 			ticketNum:                 5,
 			hasNonceSelectedValidator: true,
+			numChallenges:             1,
 			err:                       common.NewError("verify_challenge", "found invalid validator id in validation ticket"),
 		},
 		{
 			name:          "wrong txn client id",
 			ticketNum:     5,
 			wrongClientID: true,
+			numChallenges: 1,
 			err:           errors.New("challenge blobber id does not match"),
 		},
 	}
@@ -534,51 +559,103 @@ func TestVerifyChallenge(t *testing.T) {
 			step := (int64(alloc.Expiration) - tp) / 10
 			tp += step / 2
 
-			challID := fmt.Sprintf("chall-0")
-			genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
-
-			chall := &ChallengeResponse{
-				ID: challID,
-			}
-
-			for i := 0; i < tc.ticketNum; i++ {
-				chall.ValidationTickets = append(chall.ValidationTickets,
-					valids[i].validTicket(t, chall.ID, b3.id, true, tp))
-			}
-
-			if tc.hasDuplicateTicket {
-				chall.ValidationTickets[0] = chall.ValidationTickets[1]
-			}
-
-			if tc.hasNonceSelectedValidator {
-				tp += 10
-				var newValids []*Client
-				newValids, tp = testAddValidators(t, balances, ssc, 1, tp)
-				// replace the last ticket with the new none selected validator
-				chall.ValidationTickets[len(chall.ValidationTickets)-1] = newValids[0].validTicket(t, chall.ID, b3.id, true, tp)
-			}
-
-			var tx *transaction.Transaction
-			if tc.wrongClientID {
-				tx = newTransaction(alloc.BlobberAllocs[0].BlobberID, ssc.ID, 0, tp)
-			} else {
-				tx = newTransaction(b3.id, ssc.ID, 0, tp)
-			}
-
-			balances.setTransaction(t, tx)
-
 			bk := &block.Block{}
-			bk.Round = 500
+			bk.Round = 50000
 			balances.setBlock(t, bk)
 
-			var resp string
-			resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-			require.Equal(t, tc.err, err)
-			if err != nil {
-				return
+			currentRound := balances.GetBlock().Round
+
+			var generatedChallenges []string
+
+			for i := 0; i < tc.numChallenges; i++ {
+				challID := fmt.Sprintf("chall-%d", i)
+
+				challengeRoundCreatedAt := currentRound - 10*(20-int64(i))
+
+				if tc.name == "should return expired challenge error" {
+					challengeRoundCreatedAt = currentRound - 1000*(20-int64(i))
+				}
+
+				genChall(t, ssc, tp, challengeRoundCreatedAt, challID, 0, validators, alloc.ID, blobber, balances)
+				generatedChallenges = append(generatedChallenges, challID)
+
+				allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
+				require.NoError(t, err)
+
+				if tc.ignoreChallengeRange != nil && (i >= tc.ignoreChallengeRange[0] && i <= tc.ignoreChallengeRange[1]+1) {
+					require.Equal(t, i-tc.ignoreChallengeRange[0]+1, len(allocChallenges.OpenChallenges))
+				} else {
+					require.Equal(t, 1, len(allocChallenges.OpenChallenges))
+				}
+
+				chall := &ChallengeResponse{
+					ID: challID,
+				}
+
+				for i := 0; i < tc.ticketNum; i++ {
+					chall.ValidationTickets = append(chall.ValidationTickets,
+						valids[i].validTicket(t, chall.ID, b3.id, true, tp))
+				}
+
+				if tc.hasDuplicateTicket {
+					chall.ValidationTickets[0] = chall.ValidationTickets[1]
+				}
+
+				if tc.hasNonceSelectedValidator {
+					tp += 10
+					var newValids []*Client
+					newValids, tp = testAddValidators(t, balances, ssc, 1, tp)
+					// replace the last ticket with the new none selected validator
+					chall.ValidationTickets[len(chall.ValidationTickets)-1] = newValids[0].validTicket(t, chall.ID, b3.id, true, tp)
+				}
+
+				var tx *transaction.Transaction
+				if tc.wrongClientID {
+					tx = newTransaction(alloc.BlobberAllocs[0].BlobberID, ssc.ID, 0, tp)
+				} else {
+					tx = newTransaction(b3.id, ssc.ID, 0, tp)
+				}
+
+				balances.setTransaction(t, tx)
+
+				if tc.ignoreChallengeRange != nil {
+					if i >= tc.ignoreChallengeRange[0] && i <= tc.ignoreChallengeRange[1] {
+						continue
+					}
+				}
+
+				var resp string
+				resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+				require.Equal(t, tc.err, err)
+				if err != nil {
+					return
+				}
+
+				require.Equal(t, "challenge passed by blobber", resp)
 			}
 
-			require.Equal(t, "challenge passed by blobber", resp)
+			if tc.ignoreChallengeRange != nil {
+				for i := tc.ignoreChallengeRange[0]; i <= tc.ignoreChallengeRange[1] && i < tc.numChallenges; i++ {
+					challID := generatedChallenges[i]
+
+					_, err := ssc.getStorageChallenge(challID, balances)
+
+					if tc.ignoreChallengeRange[1] >= tc.numChallenges-1 {
+						require.NoError(t, err)
+					} else {
+						require.Error(t, err)
+					}
+				}
+
+				allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
+				require.NoError(t, err)
+
+				if tc.ignoreChallengeRange[1] >= tc.numChallenges-1 {
+					require.Equal(t, tc.numChallenges-tc.ignoreChallengeRange[0], len(allocChallenges.OpenChallenges))
+				} else {
+					require.Equal(t, 0, len(allocChallenges.OpenChallenges))
+				}
+			}
 		})
 	}
 
@@ -591,7 +668,14 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 	t.Run("verify challenge first time", func(t *testing.T) {
 		challID := fmt.Sprintf("chall-0")
 		tp += step / 2
-		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+
+		currentRound := balances.GetBlock().Round
+
+		genChall(t, ssc, tp, currentRound-100, challID, 0, validators, alloc.ID, blobber, balances)
 
 		chall := &ChallengeResponse{
 			ID: challID,
@@ -604,9 +688,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 
 		tx := newTransaction(b3.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
-		bk := &block.Block{}
-		bk.Round = 500
-		balances.setBlock(t, bk)
+
 		var resp string
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
@@ -621,10 +703,16 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 			blobber1 *StorageNode
 		)
 
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+
 		blobber1, err := ssc.getBlobber(b1.id, balances)
 		// reduce timestamp to generate challenge with older create time
 		tp := tp - 10
-		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber1, balances)
+		currentRound := balances.GetBlock().Round
+
+		genChall(t, ssc, tp, currentRound-200, challID, 0, validators, alloc.ID, blobber1, balances)
 
 		chall1 := &ChallengeResponse{
 			ID: challID,
@@ -645,12 +733,18 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 	t.Run("same alloc, same blobber, older timestamp, should fail", func(t *testing.T) {
 		b1 := testGetBlobber(blobbers, alloc, 0)
 
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+
 		challID := fmt.Sprintf("chall-1")
 		var blobber1 *StorageNode
 		blobber1, err := ssc.getBlobber(b1.id, balances)
 		// reduce timestamp to generate challenge with older create time
 		tp := tp - 20
-		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber1, balances)
+		currentRound := balances.GetBlock().Round
+
+		genChall(t, ssc, tp, currentRound-300, challID, 0, validators, alloc.ID, blobber1, balances)
 
 		chall1 := &ChallengeResponse{
 			ID: challID,
@@ -664,9 +758,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 		tx := newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		// update block round to ignore the ongoing blobber reward checking
-		bk := &block.Block{}
-		bk.Round = 500
-		balances.setBlock(t, bk)
+
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall1), balances)
 		require.EqualError(t, err, "verify_challenge: old challenge response")
 	})
@@ -683,8 +775,14 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 	step := (int64(alloc.Expiration) - tp) / 10
 	tp += step / 2
 
+	bk := &block.Block{}
+	bk.Round = 500
+	balances.setBlock(t, bk)
+
+	currentRound := balances.GetBlock().Round
+
 	challID := fmt.Sprintf("chall-0")
-	genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+	genChall(t, ssc, tp, currentRound-100, challID, 0, validators, alloc.ID, blobber, balances)
 
 	chall := &ChallengeResponse{
 		ID: challID,

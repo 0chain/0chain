@@ -452,7 +452,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	return
 }
 
-func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string, seed int64,
+func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64, challID string, seed int64,
 	valids *partitions.Partitions, allocID string,
 	blobber *StorageNode, balances chainState.StateContextI) {
 
@@ -469,6 +469,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
+	storChall.RoundCreatedAt = roundCreatedAt
 	storChall.ID = challID
 	var valSlice []ValidationPartitionNode
 	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)

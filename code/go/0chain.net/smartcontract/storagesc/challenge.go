@@ -468,7 +468,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	currentRound := balances.GetBlock().Round
 	if challenge.RoundCreatedAt+conf.MaxChallengeCompletionRounds <= currentRound {
-		return "", common.NewError(errCode, "challenge expired, current round : "+strconv.FormatInt(currentRound, 10)+" challenge round : "+strconv.FormatInt(challenge.RoundCreatedAt, 10))
+		return "", common.NewError(errCode, "challenge expired")
 	}
 
 	if challenge.BlobberID != t.ClientID {

@@ -2137,7 +2137,9 @@ func Test_finalize_allocation(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+
+		currentRound := balances.GetBlock().Round
+		genChall(t, ssc, tp, currentRound-200*(i-2), challID, i, validators, alloc.ID, blobber, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID
@@ -2320,7 +2322,8 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+		currentRound := balances.GetBlock().Round
+		genChall(t, ssc, tp, currentRound-200*(i-2), challID, i, validators, alloc.ID, blobber, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID
