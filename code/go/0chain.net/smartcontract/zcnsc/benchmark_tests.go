@@ -121,6 +121,8 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 						PercentAuthorizers: "73",
 						MaxFee:             "800",
 						BurnAddress:        "7000000000000000000000000000000000000000000000000000000000000000",
+						MaxStakeAmount:     "100",
+						HealthCheckPeriod:  "10s",
 					},
 				}).Encode(),
 			},
