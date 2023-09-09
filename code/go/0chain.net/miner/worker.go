@@ -320,19 +320,17 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	)
 
 	for idx := 1; idx <= batchs; idx++ {
-		select {
-		case <-tk.C:
-			// pull missing nodes
-			start := (idx - 1) * batchSize
-			end := idx * batchSize
-			wc := make(chan struct{}, 1)
-			mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
-			<-wc
-			logging.Logger.Debug("sync all missing nodes - pull missing nodes",
-				zap.Int("num", batchSize),
-				zap.Int("remaining", len(missingNodes)-end))
-			tk.Reset(2 * time.Second)
-		}
+		<-tk.C
+		// pull missing nodes
+		start := (idx - 1) * batchSize
+		end := idx * batchSize
+		wc := make(chan struct{}, 1)
+		mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
+		<-wc
+		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
+			zap.Int("num", batchSize),
+			zap.Int("remaining", len(missingNodes)-end))
+		tk.Reset(2 * time.Second)
 	}
 
 	mod := len(missingNodes) % batchSize
