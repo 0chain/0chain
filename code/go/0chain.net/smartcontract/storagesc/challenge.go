@@ -149,7 +149,7 @@ func (sc *StorageSmartContract) blobberReward(
 		return err
 	}
 
-	logging.Logger.Info("Paying challenge reward", zap.Any("challenge reward", move))
+	logging.Logger.Info("Paying challenge reward", zap.Any("challenge reward", move), zap.Any("challengeCompletedTime", challengeCompletedTime), zap.Any("latestFinalizedChallTime", latestFinalizedChallTime), zap.Any("rdtu", rdtu), zap.Any("dtu", dtu), zap.Any("partial", partial))
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
