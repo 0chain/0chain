@@ -1128,7 +1128,16 @@ func (r *Runner) MonitorAggregates(cfg *config.MonitorAggregates) error {
 		return err
 	}
 
-	r.waitAggregates = cfg
+	r.monitorAggregates = cfg
+
+	go func() {
+		for r.monitorAggregates != nil {
+			select {
+			case agg := <-r.server.OnAggregate():
+				r.acceptAggregate(agg)
+			}
+		}
+	}()
 
 	return nil
 }
@@ -1143,7 +1152,7 @@ func (r *Runner) StopMonitorAggregate() error {
 		return err
 	}
 
-	r.waitAggregates = nil
+	r.monitorAggregates = nil
 
 	return nil
 }
@@ -1180,4 +1189,17 @@ func (r *Runner) CheckAggregateValueComparison(cfg *config.CheckAggregateCompari
 	}
 
 	return nil	
+}
+
+func (r *Runner) SetNodeCustomConfig(cfg *config.NodeCustomConfig) error {
+	if r.verbose {
+		log.Printf("[INF] setting node custom config: %+v", cfg)
+	}
+
+	node, ok := r.conf.Nodes.NodeByName(cfg.NodeName)
+	if !ok {
+		return fmt.Errorf("node not found: %v", cfg.NodeName)
+	}
+
+	return r.server.SetNodeConfig(node.ID, cfg.Config)
 }

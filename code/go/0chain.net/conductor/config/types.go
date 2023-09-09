@@ -240,6 +240,7 @@ type MonitorAggregates struct {
 	ValidatorIds []string	`json:"validators" yaml:"validators" mapstructure:"validators"`
 	AuthorizerIds []string	`json:"authorizers" yaml:"authorizers" mapstructure:"authorizers"`
 	MonitorGlobal bool	`json:"global" yaml:"global" mapstructure:"global"`
+	UserIds []string `json:"users" yaml:"users" mapstructure:"users"`
 
 	SharderFields []string	`json:"sharder_fields" yaml:"sharder_fields" mapstructure:"sharder_fields"`
 	MinerFields []string	`json:"miner_fields" yaml:"miner_fields" mapstructure:"miner_fields"`
@@ -247,6 +248,7 @@ type MonitorAggregates struct {
 	ValidatorFields []string	`json:"validator_fields" yaml:"validator_fields" mapstructure:"validator_fields"`
 	AuthorizerFields []string	`json:"authorizer_fields" yaml:"authorizer_fields" mapstructure:"authorizer_fields"`
 	GlobalFields []string	`json:"global_fields" yaml:"global_fields" mapstructure:"global_fields"`
+	UserFields []string `json:"user_fields" yaml:"user_fields" mapstructure:"user_fields"`
 }
 
 type CheckAggregateChange struct {
@@ -262,4 +264,9 @@ type CheckAggregateComparison struct {
 	Key string `json:"key" yaml:"key" mapstructure:"key"`
 	Comparison stats.Comparison `json:"comparison" yaml:"comparison" mapstructure:"comparison"`
 	RValue int64 `json:"rvalue" yaml:"rvalue" mapstructure:"rvalue"`
+}
+
+type NodeCustomConfig struct {
+	NodeName NodeName `json:"node" yaml:"node" mapstructure:"node"`
+	Config map[string]interface{} `json:"config" yaml:"config" mapstructure:"config"`
 }

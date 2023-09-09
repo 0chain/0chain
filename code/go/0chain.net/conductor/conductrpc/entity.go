@@ -216,6 +216,17 @@ func (e *Entity) SendChallengeStatus(m map[string]interface{}) {
 	}
 }
 
+func (e *Entity) SendAggregate(aggMessage *AggregateMessage) {
+	err := e.client.sendAggregate(aggMessage)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
+}
+
+func (e *Entity) GetNodeConfig(pid string) (config NodeConfig, err error) {
+	return e.client.getNodeCustomConfig(pid)
+}
+
 //
 // global
 //

@@ -4,8 +4,11 @@
 package main
 
 import (
+	"context"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 // stubs that does nothing
@@ -17,5 +20,9 @@ func readMagicBlock(magicBlockConfig string) (*block.MagicBlock, error) {
 }
 
 func notifyConductor(block *block.Block) error {
+	return nil
+}
+
+func notifyOnAggregates(ctx context.Context, edb *event.EventDb, round int64) error {
 	return nil
 }

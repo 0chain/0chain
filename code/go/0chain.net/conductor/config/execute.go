@@ -126,6 +126,7 @@ type Executor interface {
 	StopMonitorAggregate() error
 	CheckAggregateValueChange(cfg *CheckAggregateChange) error
 	CheckAggregateValueComparison(cfg *CheckAggregateComparison) error
+	SetNodeCustomConfig(cfg *NodeCustomConfig) error
 }
 
 //

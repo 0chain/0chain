@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -196,7 +197,8 @@ type Runner struct {
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	waitSharderLFB	config.WaitSharderLFB	
 	waitValidatorTicket   config.WaitValidatorTicket
-	waitAggregates		  *config.MonitorAggregates
+	monitorAggregates	   *config.MonitorAggregates
+	aggregatesLock		   sync.Mutex
 	chalConf               *config.GenerateChallege
 	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
@@ -262,8 +264,6 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case r.fileMetaRoot.shouldWait:
 		return tm, true
 	case r.waitValidatorTicket.ValidatorName != "":
-		return tm, true
-	case r.waitAggregates != nil:
 		return tm, true
 	}
 
@@ -843,18 +843,21 @@ func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error
 }
 
 func (r *Runner) acceptAggregate(agg *conductrpc.AggregateMessage) (err error) {
+	r.aggregatesLock.Lock()
+	defer r.aggregatesLock.Unlock()
+	
 	var fields []string
 	switch agg.ProviderType {
 	case stats.Miner:
-		fields = r.waitAggregates.MinerFields
+		fields = r.monitorAggregates.MinerFields
 	case stats.Sharder:
-		fields = r.waitAggregates.SharderFields
+		fields = r.monitorAggregates.SharderFields
 	case stats.Blobber:
-		fields = r.waitAggregates.BlobberFields
+		fields = r.monitorAggregates.BlobberFields
 	case stats.Validator:
-		fields = r.waitAggregates.ValidatorFields
+		fields = r.monitorAggregates.ValidatorFields
 	case stats.Authorizer:
-		fields = r.waitAggregates.AuthorizerFields
+		fields = r.monitorAggregates.AuthorizerFields
 	default:
 		err = fmt.Errorf("received aggregate with unknown provider type")
 		return

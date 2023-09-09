@@ -107,6 +107,38 @@ type AggregateMessage struct {
 	Values stats.Aggregate
 }
 
+type NodeConfig struct {
+	Version int
+	Map map[string]interface{}
+	mutex *sync.RWMutex
+}
+
+func (nc *NodeConfig) Get(key string) map[string]interface{} {
+	nc.mutex.RLock()
+	defer nc.mutex.Unlock()
+
+	return nc.Map
+}
+
+func (nc *NodeConfig) Update(config map[string]interface{}) {
+	nc.mutex.Lock()
+	defer nc.mutex.Unlock()
+
+	for k, v := range config {
+		nc.Map[k] = v
+	}
+
+	nc.Version++
+}
+
+func NewNodeConfig(config map[string]interface{}) *NodeConfig {
+	return &NodeConfig{
+		Version: 1,
+		Map: config,
+		mutex: &sync.RWMutex{},
+	}
+}
+
 type Server struct {
 	server  *rpc.Server
 	address string
@@ -157,6 +189,7 @@ type Server struct {
 
 	// node id -> node name mapping
 	names map[NodeID]NodeName
+	nodeCustomConfig map[NodeID]*NodeConfig
 
 	NodesServerStatsCollector *stats.NodesServerStats
 	NodesClientStatsCollector *stats.NodesClientStats
@@ -170,6 +203,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 	s = &Server{
 		quit:                      make(chan struct{}),
 		names:                     names,
+		nodeCustomConfig: 		   make(map[config.NodeID]*NodeConfig),
 		onViewChange:              make(chan *ViewChangeEvent, 10),
 		onPhase:                   make(chan *PhaseEvent, 10),
 		onAddMiner:                make(chan *AddMinerEvent, 10),
@@ -236,6 +270,17 @@ func (s *Server) AddNode(name NodeName, lock bool) {
 
 	ns.state.send(ns.poll) // initial state sending
 	s.nodes[name] = ns
+}
+
+func (s *Server) SetNodeConfig(id NodeID, config map[string]interface{}) (err error) {
+	nc, ok := s.nodeCustomConfig[id]
+	if !ok {
+		s.nodeCustomConfig[id] = NewNodeConfig(config)
+		return
+	}
+	
+	nc.Update(config)
+	return
 }
 
 // not for updating
@@ -589,6 +634,17 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 	case <-s.quit:
 		return ErrShutdown
 	}
+	return
+}
+
+func (s *Server) NodeCustomConfig(id NodeID, config *NodeConfig) (err error) {
+	cfg, ok := s.nodeCustomConfig[id]
+	if !ok {
+		log.Printf("[warn] no custom config for node %v\n", id)
+		return
+	}
+
+	(*config) = (*cfg)
 	return
 }
 

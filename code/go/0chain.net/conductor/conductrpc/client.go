@@ -260,3 +260,19 @@ func (c *client) sendChallengeStatus(m map[string]interface{}) (err error) {
 	err = c.client.Call("Server.SetChallengeStatus", m, nil)
 	return
 }
+
+func (c *client) sendAggregate(aggMessage *AggregateMessage) (err error) {
+	err = c.client.Call("Server.AggregateMessage", aggMessage, nil)
+	return
+}
+
+func (c *client) getNodeCustomConfig(pid string) (config NodeConfig, err error) {
+	err = c.client.Call("Server.NodeCustomConfig", pid, &config)
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.NodeCustomConfig", pid, &config)
+	}
+	return
+}

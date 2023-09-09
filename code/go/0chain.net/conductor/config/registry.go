@@ -902,4 +902,14 @@ func init() {
 
 		return ex.CheckAggregateValueComparison(&cfg)
 	})
+
+	register("set_node_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg NodeCustomConfig
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return 
+		}
+
+		return ex.SetNodeCustomConfig(&cfg)
+	})
 }
