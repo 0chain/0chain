@@ -91,7 +91,7 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(
 	alloc *StorageAllocation,
-	latestCompletedChallTime common.Timestamp,
+	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
 	partial float64,
@@ -109,15 +109,15 @@ func (sc *StorageSmartContract) blobberReward(
 		return errors.New("late challenge response")
 	}
 
-	if challengeCompletedTime < latestCompletedChallTime {
+	if challengeCompletedTime < latestFinalizedChallTime {
 		logging.Logger.Debug("old challenge response - blobber reward",
-			zap.Int64("latestSuccessfulChallTime", int64(latestCompletedChallTime)),
+			zap.Int64("latestFinalizedChallTime", int64(latestFinalizedChallTime)),
 			zap.Int64("challenge time", int64(challengeCompletedTime)))
 		return errors.New("old challenge response on blobber rewarding")
 	}
 
 	if challengeCompletedTime > alloc.Expiration {
-		challengeCompletedTime = alloc.Expiration // last challenge
+		return errors.New("late challenge response")
 	}
 
 	// pool
@@ -126,12 +126,12 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	rdtu, err := alloc.restDurationInTimeUnits(latestCompletedChallTime, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(latestFinalizedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
 
-	dtu, err := alloc.durationInTimeUnits(challengeCompletedTime-latestCompletedChallTime, conf.TimeUnit)
+	dtu, err := alloc.durationInTimeUnits(challengeCompletedTime-latestFinalizedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
@@ -140,6 +140,8 @@ func (sc *StorageSmartContract) blobberReward(
 	if err != nil {
 		return err
 	}
+
+	logging.Logger.Info("Paying challenge reward", zap.Any("challenge reward", move))
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
@@ -733,7 +735,7 @@ func (sc *StorageSmartContract) challengePassed(
 	}
 
 	err = sc.blobberReward(
-		cab.alloc, cab.latestSuccessfulChallTime, cab.blobAlloc,
+		cab.alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
 		validators,
 		partial,
 		balances,
