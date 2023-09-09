@@ -111,13 +111,11 @@ func addMockAllocation(
 				FailedChallenges:          (sa.Stats.FailedChallenges) / 2,
 				LastestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 			},
-			Terms:           getMockBlobberTerms(),
-			MinLockDemand:   mockMinLockDemand,
-			AllocationRoot:  encryption.Hash("allocation root"),
-			LastWriteMarker: &WriteMarker{},
-			LatestCompletedChallenge: &StorageChallenge{
-				Created: 0,
-			},
+			Terms:                         getMockBlobberTerms(),
+			MinLockDemand:                 mockMinLockDemand,
+			AllocationRoot:                encryption.Hash("allocation root"),
+			LastWriteMarker:               &WriteMarker{},
+			LatestFinalizedChallCreatedAt: 0,
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 
