@@ -1849,7 +1849,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	return len(expiredCountMap), nil
 }
 
-// removeOldChallenges removes all open challenges from the allocation that are out of order
+// removeOldChallenges removes all open challenges from the allocation that are old
 func (sa *StorageAllocation) removeOldChallenges(
 	balances cstate.StateContextI,
 	currentChallenge *StorageChallenge,

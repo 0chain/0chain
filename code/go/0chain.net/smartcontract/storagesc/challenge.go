@@ -625,8 +625,8 @@ func (sc *StorageSmartContract) challengePassed(
 
 	err := cab.alloc.removeOldChallenges(balances, cab.challenge, sc)
 	if err != nil {
-		return "failed to remove out of order allocation challenges", common.NewError("challenge_reward_error",
-			"error removing out of order challenges: "+err.Error())
+		return "failed to remove old allocation challenges", common.NewError("challenge_reward_error",
+			"error removing old challenges: "+err.Error())
 	}
 
 	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
