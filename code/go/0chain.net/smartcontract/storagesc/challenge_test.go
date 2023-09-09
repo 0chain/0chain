@@ -499,7 +499,7 @@ func TestVerifyChallenge(t *testing.T) {
 		wrongClientID             bool
 		numChallenges             int
 		ignoreChallengeRange      []int
-		err                       error
+		errors                    []error
 	}{
 		{
 			name:          "ok",
@@ -509,8 +509,8 @@ func TestVerifyChallenge(t *testing.T) {
 		{
 			name:          "should return expired challenge error",
 			ticketNum:     10,
-			numChallenges: 10,
-			err:           common.NewError("verify_challenge", "challenge expired"),
+			numChallenges: 1,
+			errors:        []error{common.NewError("verify_challenge", "challenge expired")},
 		},
 		{
 			name:                 "expired middle challenges",
@@ -525,31 +525,37 @@ func TestVerifyChallenge(t *testing.T) {
 			ignoreChallengeRange: []int{2, 80},
 		},
 		{
+			name:          "old challenge",
+			ticketNum:     10,
+			numChallenges: 2,
+			errors:        []error{nil, common.NewError("verify_challenge", "old challenge response")},
+		},
+		{
 			name:               "duplicate ticket",
 			ticketNum:          10,
 			hasDuplicateTicket: true,
 			numChallenges:      1,
-			err:                common.NewError("verify_challenge", "found duplicate validation tickets"),
+			errors:             []error{common.NewError("verify_challenge", "found duplicate validation tickets")},
 		},
 		{
 			name:          "not enough tickets",
 			ticketNum:     4, // threshold is 5
 			numChallenges: 1,
-			err:           common.NewError("verify_challenge", "validation tickets less than threshold: 5, tickets: 4"),
+			errors:        []error{common.NewError("verify_challenge", "validation tickets less than threshold: 5, tickets: 4")},
 		},
 		{
 			name:                      "ticket signed with unauthorized validator",
 			ticketNum:                 5,
 			hasNonceSelectedValidator: true,
 			numChallenges:             1,
-			err:                       common.NewError("verify_challenge", "found invalid validator id in validation ticket"),
+			errors:                    []error{common.NewError("verify_challenge", "found invalid validator id in validation ticket")},
 		},
 		{
 			name:          "wrong txn client id",
 			ticketNum:     5,
 			wrongClientID: true,
 			numChallenges: 1,
-			err:           errors.New("challenge blobber id does not match"),
+			errors:        []error{errors.New("challenge blobber id does not match")},
 		},
 	}
 
@@ -567,6 +573,8 @@ func TestVerifyChallenge(t *testing.T) {
 
 			var generatedChallenges []string
 
+			now := tp + 10
+
 			for i := 0; i < tc.numChallenges; i++ {
 				challID := fmt.Sprintf("chall-%d", i)
 
@@ -574,9 +582,12 @@ func TestVerifyChallenge(t *testing.T) {
 
 				if tc.name == "should return expired challenge error" {
 					challengeRoundCreatedAt = currentRound - 1000*(20-int64(i))
+				} else if tc.name == "old challenge" {
+					challengeRoundCreatedAt = currentRound - 100*(int64(i)+1)
+					now--
 				}
 
-				genChall(t, ssc, tp, challengeRoundCreatedAt, challID, 0, validators, alloc.ID, blobber, balances)
+				genChall(t, ssc, now, challengeRoundCreatedAt, challID, 0, validators, alloc.ID, blobber, balances)
 				generatedChallenges = append(generatedChallenges, challID)
 
 				allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
@@ -626,11 +637,12 @@ func TestVerifyChallenge(t *testing.T) {
 
 				var resp string
 				resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-				require.Equal(t, tc.err, err)
-				if err != nil {
-					return
+				if tc.errors != nil {
+					require.Equal(t, tc.errors[i], err)
+					continue
 				}
 
+				require.NoError(t, err)
 				require.Equal(t, "challenge passed by blobber", resp)
 			}
 
