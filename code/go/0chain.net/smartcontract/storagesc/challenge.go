@@ -1244,7 +1244,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	}
 
 	// remove expired challenges
-	lenExpired, err := alloc.removeExpiredChallenges(conf.MaxChallengeCompletionRounds, balances, sc)
+	lenExpired, err := alloc.removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances, sc)
 	if err != nil {
 		return common.NewErrorf("add_challenge",
 			"error removing expired challenges: %v", err)
@@ -1284,5 +1284,5 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 }
 
 func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionRounds int64) bool {
-	return roundCreatedAt+maxChallengeCompletionRounds <= currentRound
+	return roundCreatedAt+maxChallengeCompletionRounds < currentRound
 }

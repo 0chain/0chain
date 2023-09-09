@@ -1780,26 +1780,16 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(
+	allocChallenges *AllocationChallenges,
 	cct int64,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
 ) (int, error) {
-	allocChallenges, err := sc.getAllocationChallenges(sa.ID, balances)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			allocChallenges = &AllocationChallenges{}
-			allocChallenges.AllocationID = sa.ID
-		} else {
-			return 0, common.NewError("remove_expired_challenges",
-				"error fetching allocation challenge: "+err.Error())
-		}
-	}
 
 	var expiredChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
 	logging.Logger.Info("removeExpiredChallenges found open challenges : "+sc.ID,
 		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID),
-		zap.Any("sa", sa.Stats),
 		zap.Any("StorageAlloc", sa),
 		zap.Any("len(OpenChallenges)", len(allocChallenges.OpenChallenges)),
 	)
@@ -1841,21 +1831,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 		}
 	}
 
-	logging.Logger.Info("A Jayash EC : ",
-		zap.Int("len", len(allocChallenges.OpenChallenges)),
-		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)))
-
 	allocChallenges.OpenChallenges = nonExpiredChallenges
-
-	logging.Logger.Info("B Jayash EC : ",
-		zap.Int("len", len(allocChallenges.OpenChallenges)),
-		zap.Int("lenNonRemovedChallenges", len(nonExpiredChallenges)))
-
-	// Save the allocation challenges to MPT
-	if err := allocChallenges.Save(balances, sc.ID); err != nil {
-		return 0, common.NewErrorf("remove_expired_challenges",
-			"error storing alloc challenge: %v", err)
-	}
 
 	var expChalIDs []string
 	for challengeID := range expiredChallengeBlobberMap {
@@ -1872,16 +1848,12 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 		if err != nil {
 			return 0, common.NewErrorf("remove_expired_challenges", "could not delete challenge node: %v", err)
 		}
+		logging.Logger.Info("Jayash Deleted", zap.String("challengeID", challengeID), zap.String("blobberID", expiredChallengeBlobberMap[challengeID]), zap.String("sc", sc.ID))
 
 		if _, ok := expiredCountMap[blobberID]; !ok {
 			expiredCountMap[blobberID] = 0
 		}
 		expiredCountMap[blobberID]++
-	}
-
-	if err := sa.save(balances, sc.ID); err != nil {
-		return 0, common.NewErrorf("remove_expired_challenges",
-			"error storing allocation: %v", err)
 	}
 
 	return len(expiredCountMap), nil
