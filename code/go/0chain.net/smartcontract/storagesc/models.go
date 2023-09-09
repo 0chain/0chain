@@ -1798,7 +1798,11 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	var expiredChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
 	logging.Logger.Info("removeExpiredChallenges found open challenges : "+sc.ID,
-		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
+		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID),
+		zap.Any("sa", sa.Stats),
+		zap.Any("StorageAlloc", sa),
+		zap.Any("len(OpenChallenges)", len(allocChallenges.OpenChallenges)),
+	)
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		if !isChallengeExpired(balances.GetBlock().Round, oc.RoundCreatedAt, cct) {
@@ -1808,20 +1812,9 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 
 		// expired
 		expiredChallengeBlobberMap[oc.ID] = oc.BlobberID
-		logging.Logger.Info("removeExpiredChallenges found expired challenge",
-			zap.String("challengeID", oc.ID), zap.String("blobberID", oc.BlobberID))
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
-
-			logging.Logger.Info("Jayash1 ba, ok := sa.BlobberAllocsMap[oc.BlobberID]",
-				zap.Any("oc", oc),
-				zap.Any("ba", ba.Stats),
-				zap.Any("sa", sa.Stats),
-				zap.Any("StorageAlloc", sa),
-				zap.Any("len(OpenChallenges)", len(allocChallenges.OpenChallenges)),
-			)
-
 			ba.Stats.FailedChallenges++
 			ba.Stats.OpenChallenges--
 			sa.Stats.FailedChallenges++
