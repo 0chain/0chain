@@ -547,6 +547,8 @@ func newBlobberAllocation(
 	ba.Terms = blobber.Terms
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
+	ba.LatestFinalizedChallCreatedAt = date
+	ba.LatestSuccessfulChallCreatedAt = date
 
 	rdtu, err := allocation.restDurationInTimeUnits(date, timeUnit)
 	if err != nil {
