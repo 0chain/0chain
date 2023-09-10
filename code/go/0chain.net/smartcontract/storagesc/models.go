@@ -583,6 +583,15 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 	passRate := 0.0
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			allocChallenges = &AllocationChallenges{}
+			allocChallenges.AllocationID = alloc.ID
+		} else {
+			return 0, common.NewError("remove_blobber_pass_rates",
+				"error fetching allocation challenge: "+err.Error())
+		}
+	}
 
 	var nonRemovedChallenges []*AllocOpenChallenge
 	var removedChallengeIds []string

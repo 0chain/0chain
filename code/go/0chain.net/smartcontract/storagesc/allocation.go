@@ -1141,6 +1141,15 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	passRates = make([]float64, 0, len(alloc.BlobberAllocs))
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			allocChallenges = &AllocationChallenges{}
+			allocChallenges.AllocationID = alloc.ID
+		} else {
+			return nil, common.NewError("finish_allocation",
+				"error fetching allocation challenge: "+err.Error())
+		}
+	}
 
 	var removedChallengeIds []string
 	switch err {
