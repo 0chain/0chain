@@ -56,6 +56,8 @@ func removeAllocationFromBlobberPartitions(state state.StateContextI, blobberID,
 
 	err = blobAllocsParts.Remove(state, allocID)
 
+	logging.Logger.Info("removeAllocationFromBlobberPartitions", zap.Any("blobberID", blobberID), zap.Any("allocID", allocID), zap.Any("err", err))
+
 	if err == nil {
 		if err := blobAllocsParts.Save(state); err != nil {
 			logging.Logger.Info("could not update blobber allocation partitions",

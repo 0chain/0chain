@@ -1386,6 +1386,11 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"saving allocation: "+err.Error())
 	}
 
+	logging.Logger.Info("Jayash Updating allocation to DB",
+		zap.String("allocation_id", alloc.ID),
+		zap.String("allocation", string(alloc.Encode())),
+	)
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "finalized", nil
@@ -1425,7 +1430,6 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
-	alloc.Finalized = true
 	return nil
 }
 
