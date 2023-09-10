@@ -640,6 +640,12 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		return 0.0, fmt.Errorf("getting allocation challenge: %v", err)
 	}
 
+	// Save the allocation challenges to MPT
+	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+		return 0, common.NewErrorf("add_challenge",
+			"error storing alloc challenge: %v", err)
+	}
+
 	if ba.Stats.OpenChallenges > 0 {
 		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
 
