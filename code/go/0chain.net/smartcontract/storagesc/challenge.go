@@ -417,6 +417,9 @@ func (sc *StorageSmartContract) blobberPenalty(
 			return err
 		}
 		blobAlloc.Penalty = penalty
+
+		logging.Logger.Info("Paying blobber penalty", zap.Any("penalty", dpMove), zap.Any("slash", slash), zap.Any("move", move), zap.Any("blobber", blobAlloc.BlobberID))
+
 		// Save stake pool
 		if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't Save blobber's stake pool: %v", err)
