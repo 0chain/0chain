@@ -775,7 +775,7 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 }
 
 func (d *BlobberAllocation) Offer() currency.Coin {
-	return currency.Coin(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
+	return currency.Coin(sizeInGB(d.Size)*float64(d.Terms.WritePrice)) - d.Penalty
 }
 
 // The upload used after commitBlobberConnection (size < 0) to calculate
