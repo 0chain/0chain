@@ -1368,6 +1368,13 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			}
 
 			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc, d)
+			if err != nil {
+				logging.Logger.Info("error removing blobber pass rates",
+					zap.Any("allocation", sa.ID),
+					zap.Any("blobber", d.BlobberID),
+					zap.Error(err))
+				return fmt.Errorf("error removing blobber pass rates: %v", err)
+			}
 
 			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
 			if err != nil {
