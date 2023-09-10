@@ -403,16 +403,16 @@ func (sc *StorageSmartContract) blobberPenalty(
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
-		DpMove, err := sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances, allocationID)
+		dpMove, err := sp.slash(blobAlloc.BlobberID, blobAlloc.Offer(), slash, balances, allocationID)
 		if err != nil {
-			return fmt.Errorf("can't move tokens to write pool: %v", err)
+			return fmt.Errorf("can't slash tokens: %v", err)
 		}
 
-		if err := sp.reduceOffer(DpMove); err != nil {
+		if err := sp.reduceOffer(dpMove); err != nil {
 			return err
 		}
 
-		penalty, err := currency.AddCoin(blobAlloc.Penalty, DpMove) // penalty statistic
+		penalty, err := currency.AddCoin(blobAlloc.Penalty, dpMove) // penalty statistic
 		if err != nil {
 			return err
 		}
