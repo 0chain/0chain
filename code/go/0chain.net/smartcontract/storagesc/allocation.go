@@ -1141,6 +1141,8 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	passRates = make([]float64, 0, len(alloc.BlobberAllocs))
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+
+	var removedChallengeIds []string
 	switch err {
 	case util.ErrValueNotPresent:
 	case nil:
@@ -1185,10 +1187,27 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 					return nil, err
 				}
 			}
+
+			removedChallengeIds = append(removedChallengeIds, oc.ID)
 		}
 
 	default:
 		return nil, fmt.Errorf("getting allocation challenge: %v", err)
+	}
+
+	allocChallenges.OpenChallenges = make([]*AllocOpenChallenge, 0)
+
+	// Save the allocation challenges to MPT
+	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+		return nil, common.NewErrorf("add_challenge",
+			"error storing alloc challenge: %v", err)
+	}
+
+	for _, challengeID := range removedChallengeIds {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
+		if err != nil {
+			return nil, common.NewErrorf("remove_expired_challenges", "could not delete challenge node: %v", err)
+		}
 	}
 
 	for _, ba := range alloc.BlobberAllocs {

@@ -583,12 +583,17 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 	passRate := 0.0
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+
+	var nonRemovedChallenges []*AllocOpenChallenge
+	var removedChallengeIds []string
+
 	switch err {
 	case util.ErrValueNotPresent:
 		return 1, nil
 	case nil:
 		for _, oc := range allocChallenges.OpenChallenges {
 			if oc.BlobberID != ba.BlobberID {
+				nonRemovedChallenges = append(nonRemovedChallenges, oc)
 				continue
 			}
 
@@ -634,16 +639,26 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 				}
 			}
 
+			removedChallengeIds = append(removedChallengeIds, oc.ID)
 		}
 
 	default:
 		return 0.0, fmt.Errorf("getting allocation challenge: %v", err)
 	}
 
+	allocChallenges.OpenChallenges = nonRemovedChallenges
+
 	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
 		return 0, common.NewErrorf("add_challenge",
 			"error storing alloc challenge: %v", err)
+	}
+
+	for _, challengeID := range removedChallengeIds {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
+		if err != nil {
+			return 0, common.NewErrorf("remove_expired_challenges", "could not delete challenge node: %v", err)
+		}
 	}
 
 	if ba.Stats.OpenChallenges > 0 {
