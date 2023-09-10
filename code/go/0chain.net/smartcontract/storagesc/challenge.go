@@ -408,10 +408,6 @@ func (sc *StorageSmartContract) blobberPenalty(
 			return fmt.Errorf("can't slash tokens: %v", err)
 		}
 
-		if err := sp.reduceOffer(dpMove); err != nil {
-			return err
-		}
-
 		penalty, err := currency.AddCoin(blobAlloc.Penalty, dpMove) // penalty statistic
 		if err != nil {
 			return err
