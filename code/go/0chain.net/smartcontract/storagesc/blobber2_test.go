@@ -59,6 +59,9 @@ var (
 	freeReadBlobberYaml = mockBlobberYaml{
 		serviceCharge: 0.3,
 	}
+	validatorYamls = []mockBlobberYaml{
+		{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3},
+	}
 )
 
 func TestCommitBlobberRead(t *testing.T) {
