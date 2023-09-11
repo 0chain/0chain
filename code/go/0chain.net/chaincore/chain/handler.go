@@ -776,9 +776,6 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
-	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
-	}
 	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
 	fmt.Fprintf(w, "</td>")
 
