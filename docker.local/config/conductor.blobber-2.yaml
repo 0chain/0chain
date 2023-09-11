@@ -41,8 +41,7 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
@@ -94,8 +93,7 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
@@ -123,8 +121,7 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
