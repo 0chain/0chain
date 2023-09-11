@@ -369,25 +369,30 @@ func (r *Runner) GenerateChallenge(c *config.GenerateChallege) error {
 	return nil
 }
 
-func (r *Runner) WaitForChallengeGeneration() {
+func (r *Runner) WaitForChallengeGeneration(timeout time.Duration) {
 	if r.verbose {
 		log.Print(" [INF] waiting for blockchain to generate challenge")
 	}
 
+	r.setupTimeout(timeout)
 	r.chalConf.WaitOnChallengeGeneration = true
 }
 
-func (r *Runner) WaitOnBlobberCommit() {
+func (r *Runner) WaitOnBlobberCommit(timeout time.Duration) {
 	if r.verbose {
 		log.Print(" [INF] waiting for blobber to commit writemarker")
 	}
+	
+	r.setupTimeout(timeout)
 	r.chalConf.WaitOnBlobberCommit = true
 }
 
-func (r *Runner) WaitForChallengeStatus() {
+func (r *Runner) WaitForChallengeStatus(timeout time.Duration) {
 	if r.verbose {
 		log.Print(" [INF] waiting for challenge status from chain")
 	}
+
+	r.setupTimeout(timeout)
 	r.chalConf.WaitForChallengeStatus = true
 }
 

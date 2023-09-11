@@ -227,11 +227,20 @@ func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler f
 
 func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
 	s := crpc.Client().State()
-	if s.GenerateChallenge == nil {
+	if s.GenerateChallenge == nil || s.StopChallengeGeneration || node.Self.ID != s.GenerateChallenge.MinerID {
+		logging.Logger.Info("createGenerateChallengeTxn: Challenge generation has been stopped for the whole system or for this miner only", 
+			zap.Bool("stopChalGen", s.StopChallengeGeneration),
+			zap.String("current_miner", node.Self.ID))
 		return nil, nil
 	}
-	if node.Self.ID != s.GenerateChallenge.MinerID {
+
+	if !s.BlobberCommittedWM {
+		logging.Logger.Info("createGenerateChallengeTxn: Challenge not generated: conductor is waiting for selected blobber to commit")
 		return nil, nil
 	}
-	return mc.createGenChalTxn(b)
+
+	txn, err := mc.createGenChalTxn(b)
+	logging.Logger.Info("createGenerateChallengeTxn: Challenge should have been generated", zap.Any("txn", txn))
+
+	return txn, err
 }

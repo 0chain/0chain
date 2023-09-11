@@ -45,9 +45,9 @@ type Executor interface {
 	WaitNoProgress(wait time.Duration) (err error)
 	WaitNoViewChainge(wnvc WaitNoViewChainge, timeout time.Duration) (err error)
 	WaitSharderKeep(wsk WaitSharderKeep, timeout time.Duration) (err error)
-	WaitForChallengeGeneration()
-	WaitOnBlobberCommit()
-	WaitForChallengeStatus()
+	WaitForChallengeGeneration(timeout time.Duration)
+	WaitOnBlobberCommit(timeout time.Duration)
+	WaitForChallengeStatus(timeout time.Duration)
 	WaitForFileMetaRoot()
 	CheckFileMetaRoot(cfg *CheckFileMetaRoot) error
 

@@ -734,20 +734,20 @@ func init() {
 	})
 
 	register("wait_blobber_commit", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
-		ex.WaitOnBlobberCommit()
+		ex.WaitOnBlobberCommit(tm)
 		return nil
 
 	})
 
 	// waits for miner to generate challenge-generate transaction
 	register("wait_challenge_generation", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		ex.WaitForChallengeGeneration()
+		ex.WaitForChallengeGeneration(tm)
 		return nil
 	})
 
 	// waits for blobber to submit challenge and miner to send status of this challenge
-	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, _ time.Duration) (err error) {
-		ex.WaitForChallengeStatus()
+	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
+		ex.WaitForChallengeStatus(tm)
 		return nil
 	})
 
