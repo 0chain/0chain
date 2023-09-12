@@ -26,8 +26,7 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       # setup blobbers and create allocation with minimum write pool lock
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
@@ -56,8 +55,7 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       # setup blobbers and create allocation with minimum write pool lock
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
@@ -86,8 +84,7 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       # setup blobbers and create allocation with minimum write pool lock
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']

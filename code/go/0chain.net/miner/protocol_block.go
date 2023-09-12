@@ -133,21 +133,6 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) (*transaction.Transaction,
 	return brTxn, nil
 }
 
-func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
-	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = node.Self.ID
-	brTxn.PublicKey = node.Self.PublicKey
-	brTxn.ToClientID = storagesc.ADDRESS
-	brTxn.CreationDate = b.CreationDate
-	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
-	brTxn.Fee = 0
-	if err := brTxn.ComputeProperties(); err != nil {
-		return nil, err
-	}
-	return brTxn, nil
-}
-
 func (mc *Chain) validateTransaction(b *block.Block,
 	bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC chan struct{}) (int64, error) {
 	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
@@ -733,7 +718,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
 			return false, nil
 		}
-		var debugTxn = txn.DebugTxn()
+		var debugTxn = true
 
 		nonce, err := mc.validateTransaction(b, bState, txn, waitC)
 		switch err {
@@ -741,7 +726,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			tii.pastTxns = append(tii.pastTxns, txn)
 			if debugTxn {
 				logging.Logger.Debug("generate block (debug transaction) error, transaction hash old nonce",
-					zap.String("txn", txn.Hash),
+					zap.Any("txn", txn),
 					zap.Int32("iterate count", tii.count),
 					zap.Any("now", common.Now()),
 					zap.Int64("nonce", txn.Nonce))
@@ -1199,6 +1184,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		}
 
 		if success {
+			logging.Logger.Debug("txnProcessor not successful", zap.Any("txn", txn))
 			rcount++
 			iterInfo.cost += cost
 			if iterInfo.byteSize >= mc.MaxByteSize() {
@@ -1368,7 +1354,9 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 		if err != nil {
 			return nil, 0, err
 		}
-		txns = append(txns, gcTxn)
+		if gcTxn != nil {
+			txns = append(txns, gcTxn)
+		}
 	}
 
 	if mc.ChainConfig.IsBlockRewardsEnabled() &&
@@ -1401,4 +1389,19 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 	}
 
 	return txns, cost, nil
+}
+
+func (mc *Chain) createGenChalTxn(b *block.Block) (*transaction.Transaction, error) {
+	brTxn := transaction.Provider().(*transaction.Transaction)
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
+	brTxn.ToClientID = storagesc.ADDRESS
+	brTxn.CreationDate = b.CreationDate
+	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionData = fmt.Sprintf(`{"name":"generate_challenge","input":{"round":%d}}`, b.Round)
+	brTxn.Fee = 0
+	if err := brTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return brTxn, nil
 }

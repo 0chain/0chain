@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/transaction"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -38,4 +39,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context,
 	return mc.generateBlockWorker.Run(ctx, func() error {
 		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
 	})
+}
+
+func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
+	return mc.createGenChalTxn(b)
 }
