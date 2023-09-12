@@ -487,7 +487,7 @@ func testCancelAllocation(
 	req.decode(input)
 	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
 	remainingWritePool, _ := allocation.WritePool.Int64()
-	require.Equal(t, int64(100647223), remainingWritePool)
+	require.Equal(t, int64(100660834), remainingWritePool)
 
 	return nil
 }
@@ -606,6 +606,7 @@ func confirmFinalizeAllocation(
 		minLockServiceCharge := f.minLockServiceCharge(i)
 		serviceCharge := f.blobberServiceCharge(i, cancellationCharge[i], scYaml) + minLockServiceCharge
 		require.InDelta(t, serviceCharge, int64(sp.Reward), errDelta)
+
 		orderedPoolIds := sp.OrderedPoolIds()
 		for _, poolId := range orderedPoolIds {
 			dp := sp.Pools[poolId]
@@ -787,19 +788,30 @@ func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int, cancellati
 
 	ba := f.allocation.BlobberAllocs[blobberIndex]
 
+	challengePoolIntegralValue := float64(ba.ChallengePoolIntegralValue)
+
 	var passRate = f._passRates[blobberIndex]
 
-	dtu := float64(180) / scYaml.TimeUnit.Seconds()
-	remainingDuration := f.allocation.Expiration - f.now
-	rdtu := float64(remainingDuration.Duration()) / float64(scYaml.TimeUnit)
+	dtu := float64(ba.LatestFinalizedChallCreatedAt - ba.LatestSuccessfulChallCreatedAt)
+	rdtu := float64(f.allocation.Expiration - ba.LatestSuccessfulChallCreatedAt)
+	move := currency.Coin((dtu / rdtu) * challengePoolIntegralValue)
+	cv, _ := currency.MinusCoin(currency.Coin(challengePoolIntegralValue), move)
+	challengePoolIntegralValue = float64(cv)
 
-	if rdtu == 0 {
+	dtu = float64(f.now - ba.LatestFinalizedChallCreatedAt)
+	rdtu = float64(f.allocation.Expiration - ba.LatestFinalizedChallCreatedAt)
+
+	if rdtu <= 0 {
 		return float64(cancellationCharge)
 	}
 
-	move := (dtu / rdtu) * float64(ba.ChallengePoolIntegralValue) * passRate
+	move = currency.Coin((dtu / rdtu) * challengePoolIntegralValue)
+	cv, _ = currency.MinusCoin(currency.Coin(challengePoolIntegralValue), move)
 
-	return move + float64(cancellationCharge)
+	moveFloat64, _ := move.Float64()
+	moveFloat64 *= passRate
+
+	return moveFloat64 + float64(cancellationCharge)
 }
 
 func DeepCopyBlobberAllocsMap(original map[string]*BlobberAllocation) map[string]*BlobberAllocation {
