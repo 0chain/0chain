@@ -350,11 +350,12 @@ func TestFinalizeAllocation(t *testing.T) {
 					OpenChallenges:  int64(i + 1),
 					TotalChallenges: int64(i + 1), // add open challenges and success  challenges
 				},
-				MinLockDemand:                 200 + currency.Coin(minLockDemand),
-				Spent:                         100,
-				Size:                          1 * GB,
-				LatestFinalizedChallCreatedAt: allocation.Expiration,
-				ChallengePoolIntegralValue:    0,
+				MinLockDemand:                  200 + currency.Coin(minLockDemand),
+				Spent:                          100,
+				Size:                           1 * GB,
+				LatestFinalizedChallCreatedAt:  allocation.Expiration / 6,
+				LatestSuccessfulChallCreatedAt: allocation.Expiration / 8,
+				ChallengePoolIntegralValue:     10000,
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
@@ -369,12 +370,12 @@ func TestFinalizeAllocation(t *testing.T) {
 			}
 		}
 	}
-	var challengePoolBalance = int64(700000)
+	var challengePoolBalance = int64(7000000)
 
 	allocation.WritePool = currency.Coin(10000000000000000000)
 
 	t.Run("finalize allocation", func(t *testing.T) {
-		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, challengePoolBalance, now, challenges, ctx)
+		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, challengePoolBalance, allocation.Expiration, challenges, ctx)
 		require.NoError(t, err)
 	})
 

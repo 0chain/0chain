@@ -760,16 +760,26 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 		dtu = rdtu // now can be more for finalization
 	}
 
-	move, err := d.challenge(dtu, rdtu)
-	if err != nil {
-		return 0, err
-	}
+	move := currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
 
 	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {
 		reward, err := currency.MultFloat64(move, passRate)
 		if err != nil {
 			return payment, err
 		}
+
+		cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, reward)
+		if err != nil {
+			logging.Logger.Warn("challenge minus failed",
+				zap.Error(err),
+				zap.Any("dtu", dtu),
+				zap.Any("rdtu", rdtu),
+				zap.Any("challenge value", d.ChallengePoolIntegralValue),
+				zap.Any("move", move))
+			err = fmt.Errorf("minus challenge pool value failed: %v", err)
+			return 0, err
+		}
+		d.ChallengePoolIntegralValue = cv
 
 		err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
 		if err != nil {
