@@ -423,7 +423,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 	}
 
 	if err = alloc.saveUpdatedStakes(balances); err != nil {
-		return common.NewError("fini_alloc_failed",
+		return common.NewError("blobber_penalty_failed",
 			"saving allocation pools: "+err.Error())
 	}
 
@@ -493,7 +493,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"can't get related allocation: %v", err)
 	}
 
-	if t.CreationDate >= alloc.Expiration {
+	if t.CreationDate > alloc.Expiration {
 		return "", common.NewError(errCode, "allocation is finalized")
 	}
 
