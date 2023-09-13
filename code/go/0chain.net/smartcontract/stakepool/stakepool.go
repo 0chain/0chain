@@ -179,7 +179,6 @@ func (sp *StakePool) IsDead() bool {
 func (sp *StakePool) Kill(
 	killSlash float64, providerId string, pType spenum.Provider, balances cstate.StateContextI,
 ) error {
-	logging.Logger.Info("Jayash Kill", zap.Any("killSlash", killSlash), zap.Any("providerId", providerId), zap.Any("providerType", pType))
 	sp.HasBeenKilled = true
 	return sp.SlashFraction(
 		killSlash,
@@ -348,7 +347,6 @@ func (sp *StakePool) SlashFraction(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) error {
-	logging.Logger.Info("SlashFraction", zap.Any("killSlashFraction", killSlashFraction), zap.Any("providerId", providerId), zap.Any("providerType", providerType))
 	if killSlashFraction == 0.0 {
 		return nil
 	}
@@ -367,7 +365,6 @@ func (sp *StakePool) SlashFraction(
 		var err error
 		dp := sp.Pools[id]
 		dp.Balance, err = currency.MultFloat64(dp.Balance, reduction)
-		logging.Logger.Info("SlashFraction", zap.Any("DP", dp), zap.Any("reduction", reduction), zap.Any("err", err), zap.Any("providerID", providerId))
 		if err != nil {
 			return err
 		}
