@@ -355,7 +355,27 @@ func init() {
 		if err = mapstructure.Decode(val, &cn); err != nil {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
-		ex.Command(cn.Name, tm) // async command
+		ex.Command(cn.Name, cn.Params, tm) // async command
+		return nil
+	})
+
+	register("sleep", func(_ string,
+		_ Executor, val interface{}, _ time.Duration) (err error) {
+		var d time.Duration
+		switch v := val.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return
+			}
+		case time.Duration:
+			d = v
+		case int:
+			d = time.Duration(v)
+		default:
+			return fmt.Errorf("Invalid duration argument: %v", val)
+		}
+		time.Sleep(d)
 		return nil
 	})
 
@@ -698,4 +718,110 @@ func init() {
 
 		return ex.SetServerState(cfg)
 	})
+
+	register("generate_challenge", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewGenerateChallenge()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		err = ex.GenerateChallenge(cfg)
+		if err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("wait_blobber_commit", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
+		ex.WaitOnBlobberCommit(tm)
+		return nil
+
+	})
+
+	// waits for miner to generate challenge-generate transaction
+	register("wait_challenge_generation", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		ex.WaitForChallengeGeneration(tm)
+		return nil
+	})
+
+	// waits for blobber to submit challenge and miner to send status of this challenge
+	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
+		ex.WaitForChallengeStatus(tm)
+		return nil
+	})
+
+	// stop_challenge_generation directs miner to stop/resume generating challenge for any blobber
+	register("stop_challenge_generation", func(_ string, ex Executor, val interface{}, _ time.Duration) (err error) {
+		stopChalGen, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type bool, got %T", val)
+		}
+		cfg := StopChallengeGeneration(stopChalGen)
+		return ex.SetServerState(cfg)
+	})
+
+	register("stop_wm_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := StopWMCommit(true)
+		return ex.SetServerState(cfg)
+	})
+
+	register("resume_wm_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := StopWMCommit(false)
+		return ex.SetServerState(cfg)
+	})
+
+	register("fail_rename_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildFailRenameCommit(nodeIds))
+	})
+
+	register("disable_fail_rename_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildDisableFailRenameCommit(nodeIds))
+	})
+
+	register("wait_for_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		ex.WaitForFileMetaRoot()
+		cfg := GetFileMetaRoot(true)
+		return ex.SetServerState(cfg)
+	})
+
+	register("check_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command CheckFileMetaRoot
+		err = command.Decode(val)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+		return ex.CheckFileMetaRoot(&command)
+	})
+
 }

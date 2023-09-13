@@ -388,7 +388,11 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 	}
 	// finalize
-	return c.finalizeBlock(ctx, fb, bsh)
+	if err := c.finalizeBlock(ctx, fb, bsh); err != nil {
+		return err
+	}
+
+	return c.postFinalize(ctx, fb)
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */
