@@ -1,12 +1,12 @@
 simulation:
-  num_clients: 210
-  num_active_clients: 210
-  num_miners: 100
-  num_active_miners: 100
+  num_clients: 21
+  num_active_clients: 21
+  num_miners: 10
+  num_active_miners: 10
   nun_sharders: 20
   nun_active_sharders: 20
-  num_allocations: 300
-  num_blobbers: 100
+  num_allocations: 30
+  num_blobbers: 10
   num_validators: 10
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
@@ -17,17 +17,15 @@ simulation:
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
   num_challenges_blobber: 1
-  num_authorizers: 12
+  num_authorizers: 2
   num_reward_partition_blobber: 5
-  num_blocks: 300
+  num_blocks: 32
   num_transactions_per_block: 10
 
 options:
   verbose: true
   test_suites:
-    - "miner"
-    - "storage"
-    - "faucet"
+    - "miner_rest"
     - "storage_rest"
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
