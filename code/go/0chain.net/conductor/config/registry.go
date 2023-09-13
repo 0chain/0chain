@@ -733,7 +733,7 @@ func init() {
 		return ex.SetServerState(cfg)
 	})
 
-	register("wait_blobber_commit", func(_ string, ex Executor, val interface{}, tm time.Duration) (err error) {
+	register("wait_blobber_commit", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
 		ex.WaitOnBlobberCommit(tm)
 		return nil
 
