@@ -626,6 +626,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "failed to remove old allocation challenges", common.NewError("challenge_reward_error",
 			"error removing old challenges: "+err.Error())
 	}
+	cab.latestFinalizedChallTime = cab.blobAlloc.LatestFinalizedChallCreatedAt
 
 	ongoingParts, err := getOngoingPassedBlobberRewardsPartitions(balances, triggerPeriod)
 	if err != nil {

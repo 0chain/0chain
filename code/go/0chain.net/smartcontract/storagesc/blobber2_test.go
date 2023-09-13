@@ -55,6 +55,7 @@ var (
 	blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.3,
 		readPrice:     0.01,
+		writePrice:    0.1,
 	}
 	freeReadBlobberYaml = mockBlobberYaml{
 		serviceCharge: 0.3,
