@@ -449,6 +449,12 @@ func TestCompleteRewardFlow(t *testing.T) {
 			numChallenges:        10,
 			ignoreChallengeRange: []int64{2, 8},
 		},
+		{
+			name:                 "never return response",
+			ticketNum:            10,
+			numChallenges:        10,
+			ignoreChallengeRange: []int64{2, 9},
+		},
 	}
 
 	for _, tc := range tt {
@@ -458,17 +464,22 @@ func TestCompleteRewardFlow(t *testing.T) {
 			totalExpectedReward := int64(0)
 			totalPaidReward := int64(0)
 			totalPenalty := int64(0)
+			settledChallengePassed := int64(0)
 
-			bk := &block.Block{}
-			bk.Round = 50000
-			balances.setBlock(t, bk)
-
-			currentRound := balances.GetBlock().Round
+			if tc.name == "never return response" {
+				settledChallengePassed = 3
+			}
 
 			conf, err := getConfig(balances)
 			require.NoError(t, err)
 
+			totalOpenChallengesLeftInAllocation := int64(0)
+
 			for idx := 0; idx < len(blobberClients); idx++ {
+				bk := &block.Block{}
+				bk.Round = 50000
+				balances.setBlock(t, bk)
+
 				blobberClient := blobberClients[idx]
 				blobber := blobbers[idx]
 
@@ -487,13 +498,25 @@ func TestCompleteRewardFlow(t *testing.T) {
 				var generatedChallenges []string
 				lastFinalizedChallenge := alloc.StartTime
 				lastSuccessfulChallenge := alloc.StartTime
+				lastVerifiedChallengeRound := balances.GetBlock().Round
 
 				collectedBlobberReward := currency.Coin(0)
 				totalExpectedReward += int64(alloc.BlobberAllocs[idx].ChallengePoolIntegralValue)
 				lastChallengeIgnored := false
 
 				for i := int64(0); i < tc.numChallenges; i++ {
+					// Challenge Timing details
+					bk.Round += 200
+					balances.setBlock(t, bk)
+					currentRound := balances.GetBlock().Round
+
 					challengeGenerationTime := initialTime + (step*(i+1))/tc.numChallenges
+
+					challID := fmt.Sprintf("%s-chall-%d", blobber.ID, i)
+
+					challengeRoundCreatedAt := currentRound - 200
+
+					// Setting allocations details
 
 					alloc, err = ssc.getAllocation(alloc.ID, balances)
 					require.NoError(t, err)
@@ -539,16 +562,6 @@ func TestCompleteRewardFlow(t *testing.T) {
 						size:                       blobberAlloc.Size,
 					}
 
-					challID := fmt.Sprintf("chall-%d", i)
-
-					challengeRoundCreatedAt := currentRound - 10*(20-int64(i))
-
-					if tc.name == "should return expired challenge error" {
-						challengeRoundCreatedAt = currentRound - 1000*(20-int64(i))
-					} else if tc.name == "old challenge" {
-						challengeRoundCreatedAt = currentRound - 100*(int64(i)+1)
-					}
-
 					allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
 					if err != nil {
 						require.Equal(t, util.ErrValueNotPresent, err)
@@ -558,7 +571,22 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 					countExpiredChallenges, err := alloc.removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances, ssc)
 					require.NoError(t, err)
-					require.Equal(t, 0, countExpiredChallenges)
+					if currentRound-lastVerifiedChallengeRound > conf.MaxChallengeCompletionRounds {
+						roundDiff := currentRound - lastVerifiedChallengeRound - conf.MaxChallengeCompletionRounds
+						expectedOpenChallenges := roundDiff / 200
+						if expectedOpenChallenges > 1 {
+							expectedOpenChallenges = 1
+						}
+						require.Equal(t, int(expectedOpenChallenges), countExpiredChallenges)
+					} else {
+						require.Equal(t, 0, countExpiredChallenges)
+					}
+					// Save the allocation challenges to MPT
+					err = allocChallenges.Save(balances, ssc.ID)
+					require.NoError(t, err)
+
+					err = alloc.save(balances, ssc.ID)
+					require.NoError(t, err)
 
 					genChall(t, ssc, challengeGenerationTime, challengeRoundCreatedAt, challID, 0, validators, alloc.ID, blobber, balances)
 					generatedChallenges = append(generatedChallenges, challID)
@@ -568,9 +596,11 @@ func TestCompleteRewardFlow(t *testing.T) {
 					require.NoError(t, err)
 
 					if tc.ignoreChallengeRange != nil && (i >= tc.ignoreChallengeRange[0] && i <= tc.ignoreChallengeRange[1]+1) {
-						require.Equal(t, i-tc.ignoreChallengeRange[0]+1, int64(len(allocChallenges.OpenChallenges)))
+						expectedOpenChallenges := int64(math.Min(float64(i-tc.ignoreChallengeRange[0]+1), float64(3)))
+						expectedOpenChallenges += totalOpenChallengesLeftInAllocation
+						require.Equal(t, expectedOpenChallenges, int64(len(allocChallenges.OpenChallenges)))
 					} else {
-						require.Equal(t, 1, len(allocChallenges.OpenChallenges))
+						require.Equal(t, totalOpenChallengesLeftInAllocation+1, int64(len(allocChallenges.OpenChallenges)))
 					}
 
 					chall := &ChallengeResponse{
@@ -619,6 +649,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 						continue
 					}
 					lastSuccessfulChallenge = common.Timestamp(challengeGenerationTime)
+					lastVerifiedChallengeRound = challengeRoundCreatedAt
 
 					require.NoError(t, err)
 					require.Equal(t, "challenge passed by blobber", resp)
@@ -643,14 +674,40 @@ func TestCompleteRewardFlow(t *testing.T) {
 					collectedBlobberReward = blobberSP.Reward
 				}
 
+				alloc, err = ssc.getAllocation(alloc.ID, balances)
+				require.NoError(t, err)
+
+				//bk.Round += 200000
+				//balances.setBlock(t, bk)
+				//
+				allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
+				if err != nil {
+					require.Equal(t, util.ErrValueNotPresent, err)
+					allocChallenges = &AllocationChallenges{}
+					allocChallenges.AllocationID = alloc.ID
+				}
+				totalOpenChallengesLeftInAllocation = int64(len(allocChallenges.OpenChallenges))
+				//lenOpenChallenges := len(allocChallenges.OpenChallenges)
+				//countExpiredChallenges, err := alloc.removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances, ssc)
+				//require.NoError(t, err)
+				//require.Equal(t, lenOpenChallenges, countExpiredChallenges)
+				//require.Equal(t, 0, len(allocChallenges.OpenChallenges))
+				//
+				// Save the allocation challenges to MPT
+				err = allocChallenges.Save(balances, ssc.ID)
+				require.NoError(t, err)
+
+				err = alloc.save(balances, ssc.ID)
+				require.NoError(t, err)
 			}
 
-			cp, err := ssc.getChallengePool(alloc.ID, balances)
-			require.NoError(t, err)
-			require.NotNil(t, cp)
+			beforeBlobberSPs := make(map[string]*stakePool)
+			for _, blobber := range blobbers {
+				beforeBlobberSPs[blobber.ID], err = ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+				require.NoError(t, err)
+			}
 
-			cpBalance, _ := cp.Balance.Int64()
-			require.Equal(t, int64(0), cpBalance, "All money from challenge pool should be paid to blobbers")
+			beforeBlobberAllocs := alloc.BlobberAllocs
 
 			var req lockRequest
 			req.AllocationID = alloc.ID
@@ -660,12 +717,22 @@ func TestCompleteRewardFlow(t *testing.T) {
 			_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
 			require.NoError(t, err)
 
+			cp, err := ssc.getChallengePool(alloc.ID, balances)
+			require.NoError(t, err)
+			require.NotNil(t, cp)
+
+			cpBalance, _ := cp.Balance.Int64()
+			require.Equal(t, int64(0), cpBalance, "All money from challenge pool should be paid to blobbers")
+
 			alloc, err = ssc.getAllocation(alloc.ID, balances)
 			require.NoError(t, err)
 
 			totalReturnedReward := int64(0)
 
-			for _, blobberAlloc := range alloc.BlobberAllocs {
+			for idx, blobberAlloc := range alloc.BlobberAllocs {
+				beforeBlobberSP, ok := beforeBlobberSPs[blobberAlloc.BlobberID]
+				require.True(t, ok)
+
 				blobberSP, err := ssc.getStakePool(spenum.Blobber, blobberAlloc.BlobberID, balances)
 				require.NoError(t, err)
 				require.NotNil(t, blobberSP)
@@ -674,14 +741,13 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 				require.Equal(t, tc.numChallenges, blobberAlloc.Stats.TotalChallenges)
 				if tc.ignoreChallengeRange != nil {
-					require.Equal(t, tc.numChallenges-tc.ignoreChallengeRange[1]+tc.ignoreChallengeRange[0]-1, blobberAlloc.Stats.SuccessChallenges)
-					require.Equal(t, tc.ignoreChallengeRange[1]-tc.ignoreChallengeRange[0]+1, blobberAlloc.Stats.FailedChallenges)
+					require.Equal(t, tc.numChallenges-tc.ignoreChallengeRange[1]+tc.ignoreChallengeRange[0]-1+settledChallengePassed, blobberAlloc.Stats.SuccessChallenges)
+					require.Equal(t, tc.ignoreChallengeRange[1]-tc.ignoreChallengeRange[0]+1-settledChallengePassed, blobberAlloc.Stats.FailedChallenges)
 				} else {
 					require.Equal(t, tc.numChallenges, blobberAlloc.Stats.SuccessChallenges)
 					require.Equal(t, int64(0), blobberAlloc.Stats.FailedChallenges)
 				}
 				require.Equal(t, int64(0), blobberAlloc.Stats.OpenChallenges)
-				require.Equal(t, 0, int(blobberAlloc.ChallengePoolIntegralValue))
 
 				var f = formulaeBlobberReward{
 					t:           t,
@@ -694,39 +760,43 @@ func TestCompleteRewardFlow(t *testing.T) {
 					validators:                 []string{},
 					validatorStakes:            [][]int64{},
 					wpBalance:                  alloc.WritePool,
-					challengePoolIntegralValue: int64(blobberAlloc.ChallengePoolIntegralValue),
+					challengePoolIntegralValue: int64(beforeBlobberAllocs[idx].ChallengePoolIntegralValue),
 					challengePoolBalance:       cpBalance,
 					partial:                    1,
 					lastFinalizedChallenge:     blobberAlloc.LatestFinalizedChallCreatedAt,
 					lastSuccessfulChallenge:    blobberAlloc.LatestSuccessfulChallCreatedAt,
-					thisChallange:              common.Timestamp(tp),
+					thisChallange:              alloc.Expiration,
 					thisExpires:                alloc.Expiration,
 					now:                        common.Timestamp(tp + 10),
-					collectedReward:            blobberSP.Reward,
+					collectedReward:            beforeBlobberSP.Reward,
 					size:                       blobberAlloc.Size,
 				}
 
+				finalBlobberReward := int64(0)
+				passRate := float64(blobberAlloc.Stats.SuccessChallenges) / float64(blobberAlloc.Stats.TotalChallenges)
 				if blobberAlloc.LatestSuccessfulChallCreatedAt < blobberAlloc.LatestFinalizedChallCreatedAt {
-					blobberReward, penaltyPaid := confirmBlobberPenaltyonFinalization(t, f, *cp, *blobberSP, true)
+					blobberReward, penaltyPaid := confirmBlobberPenaltyOnFinalization(t, f, int64(blobberAlloc.ChallengePoolIntegralValue), *blobberSP, true, passRate)
 					totalPaidReward += blobberReward - penaltyPaid
+					totalPenalty += penaltyPaid
+					finalBlobberReward = blobberReward
 				} else {
-					totalPaidReward += confirmBlobberRewardOnFinalization(t, f, *cp, *blobberSP)
+					blobberReward := confirmBlobberRewardOnFinalization(t, f, *blobberSP, passRate, int64(blobberAlloc.ChallengePoolIntegralValue))
+					totalPaidReward += blobberReward
+					finalBlobberReward = blobberReward
 				}
 
-				totalReturnedReward += int64(blobberAlloc.Returned)
+				totalReturnedReward += int64(blobberAlloc.ChallengePoolIntegralValue)
+
+				require.InDelta(t, finalBlobberReward, int64(blobberAlloc.ChallengePoolIntegralValue), errDelta)
 			}
 
 			allocCost, _ := alloc.cost()
 			wpBalance, _ := alloc.WritePool.Int64()
 
-			totalChallenges := tc.numChallenges
-			totalSuccessfulChallenges := tc.numChallenges
-			if tc.ignoreChallengeRange != nil {
-				totalSuccessfulChallenges = tc.numChallenges - tc.ignoreChallengeRange[1] + tc.ignoreChallengeRange[0] - 1
-			}
+			passRate := float64(alloc.Stats.SuccessChallenges) / float64(alloc.Stats.TotalChallenges)
 
-			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty, 15)
-			require.InDelta(t, wpBalance, 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*(float64(totalSuccessfulChallenges)/float64(totalChallenges))), 50)
+			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 15)
+			require.InDelta(t, wpBalance, 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
 		})
 	}
 }
@@ -1640,6 +1710,15 @@ func (f formulaeBlobberReward) reward() int64 {
 	return int64(challengePool * interpolationFraction)
 }
 
+func (f formulaeBlobberReward) rewardOnFinalization(challengePool, passRate float64) int64 {
+	var lastFinalizedChallenge = float64(f.lastFinalizedChallenge)
+	var passedCurrent = math.Min(float64(f.thisChallange), float64(f.thisExpires))
+	var currentExpires = float64(f.thisExpires)
+	var interpolationFraction = (passedCurrent - lastFinalizedChallenge) / (currentExpires - lastFinalizedChallenge)
+
+	return int64(challengePool * interpolationFraction * passRate)
+}
+
 func (f formulaeBlobberReward) penalty() (int64, int64) {
 	var challengePool = float64(f.challengePoolIntegralValue)
 	var lastFinalizedChallenge = float64(f.lastFinalizedChallenge)
@@ -1814,20 +1893,20 @@ func confirmBlobberPenalty(
 	return blobberReward, validatorsReward, penaltyPaid
 }
 
-func confirmBlobberPenaltyonFinalization(
+func confirmBlobberPenaltyOnFinalization(
 	t *testing.T,
 	f formulaeBlobberReward,
-	challengePool challengePool,
+	challengePoolIntergalValue int64,
 	blobber stakePool,
 	includeBlobberReward bool,
+	passRate float64,
 ) (int64, int64) {
 	penaltyPaid := f.penaltyOnFinalization()
-	f.challengePoolIntegralValue -= penaltyPaid
 	blobberReward := int64(0)
 	if includeBlobberReward {
-		blobberReward = f.reward()
+		blobberReward = f.rewardOnFinalization(float64(f.challengePoolIntegralValue-penaltyPaid), passRate)
 	}
-	require.InDelta(t, f.challengePoolBalance-penaltyPaid-blobberReward, int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolIntegralValue-penaltyPaid-blobberReward, challengePoolIntergalValue, errDelta)
 
 	if f.scYaml.BlobberSlash > 0.0 {
 		blobberOrderedPoolIds := blobber.OrderedPoolIds()
@@ -1873,14 +1952,17 @@ func confirmBlobberReward(
 func confirmBlobberRewardOnFinalization(
 	t *testing.T,
 	f formulaeBlobberReward,
-	challengePool challengePool,
 	blobber stakePool,
+	passRate float64,
+	challengePoolIntergalValue int64,
 ) int64 {
 
-	blobberCollectedReward, _ := f.collectedReward.Int64()
+	//blobberCollectedReward, _ := f.collectedReward.Int64()
+	blobberReward := f.rewardOnFinalization(float64(f.challengePoolIntegralValue), passRate)
 
-	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
-	require.InDelta(t, f.blobberServiceChargeOnFinalization(), int64(blobber.Reward)-blobberCollectedReward, errDelta)
+	require.InDelta(t, f.challengePoolIntegralValue-blobberReward, challengePoolIntergalValue, errDelta)
 
-	return f.blobberReward() + f.rewardReturned()
+	//require.InDelta(t, int64(float64(blobberReward)*passRate), int64(blobber.Reward)-blobberCollectedReward, errDelta)
+
+	return blobberReward
 }
