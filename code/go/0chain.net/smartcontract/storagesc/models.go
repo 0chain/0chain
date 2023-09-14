@@ -731,12 +731,12 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 
 	challengePenaltyPaid, err := d.challengePenaltyOnFinalization(conf, alloc, balances, sc)
 	if err != nil {
-		return 0, 0, common.NewError("challenge_penalty_error", err.Error())
+		return 0, 0, common.NewError("challenge_penalty_on_finalization_error", err.Error())
 	}
 
 	challengeRewardPaid, err := d.challengeRewardOnFinalization(conf.TimeUnit, now, sp, cp, passRate, balances, alloc)
 	if err != nil {
-		return 0, 0, common.NewError("challenge_reward_error", err.Error())
+		return 0, 0, common.NewError("challenge_reward_on_finalization_error", err.Error())
 	}
 
 	return challengeRewardPaid, challengePenaltyPaid, nil
@@ -817,6 +817,10 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 	dtu, err := alloc.durationInTimeUnits(d.LatestFinalizedChallCreatedAt-d.LatestSuccessfulChallCreatedAt, conf.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("blobber penalty failed: %v", err)
+	}
+
+	if dtu > rdtu {
+		dtu = rdtu // now can be more for finalization
 	}
 
 	move, err := d.challenge(dtu, rdtu)
