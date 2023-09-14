@@ -1143,8 +1143,10 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
-			allocChallenges = &AllocationChallenges{}
-			allocChallenges.AllocationID = alloc.ID
+			for i := 0; i < len(alloc.BlobberAllocs); i++ {
+				passRates = append(passRates, 1.0)
+			}
+			return passRates, nil
 		} else {
 			return nil, common.NewError("finish_allocation",
 				"error fetching allocation challenge: "+err.Error())
@@ -1394,11 +1396,6 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
 	}
-
-	logging.Logger.Info("Jayash Updating allocation to DB",
-		zap.String("allocation_id", alloc.ID),
-		zap.String("allocation", string(alloc.Encode())),
-	)
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 

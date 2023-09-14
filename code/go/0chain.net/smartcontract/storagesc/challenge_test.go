@@ -1723,15 +1723,6 @@ func (f formulaeBlobberReward) rewardOnFinalization(challengePool, passRate floa
 	var currentExpires = float64(f.thisExpires)
 	var interpolationFraction = (passedCurrent - lastFinalizedChallenge) / (currentExpires - lastFinalizedChallenge)
 
-	fmt.Println("challengePool", challengePool)
-	fmt.Println("interpolationFraction", interpolationFraction)
-	fmt.Println("passRate", passRate)
-	fmt.Println("lastFinalizedChallenge", lastFinalizedChallenge)
-	fmt.Println("passedCurrent", passedCurrent)
-	fmt.Println("currentExpires", currentExpires)
-	fmt.Println("interpolationFraction", interpolationFraction)
-	fmt.Println("challengePool * interpolationFraction * passRate", challengePool*interpolationFraction*passRate)
-
 	return int64(challengePool * interpolationFraction * passRate)
 }
 
@@ -1980,12 +1971,6 @@ func confirmBlobberRewardOnFinalization(
 
 	blobberCollectedReward, _ := f.collectedReward.Int64()
 	blobberReward := f.rewardOnFinalization(float64(f.challengePoolIntegralValue), passRate)
-
-	fmt.Println("CPIV", f.challengePoolIntegralValue)
-	fmt.Println("passRate", passRate)
-	fmt.Println("blobberReward", blobberReward)
-	fmt.Println("blobberYaml.serviceCharge", blobberYaml.serviceCharge)
-	fmt.Println("expectedCancellationCharge", expectedCancellationCharge)
 
 	require.InDelta(t, f.challengePoolIntegralValue-blobberReward, challengePoolIntergalValue, errDelta)
 

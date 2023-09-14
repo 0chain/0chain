@@ -6,8 +6,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 type StakePoolReward dbs.StakePoolReward
@@ -22,8 +20,6 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 		dp := sp.Pools[id]
 		dpu := dbs.NewDelegatePoolUpdate(id, pId, pType)
 		dpu.Updates["balance"] = dp.Balance
-
-		logging.Logger.Info("EmitStakePoolBalanceUpdate", zap.Any("dpu", dpu))
 
 		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id, *dpu)
 	}
