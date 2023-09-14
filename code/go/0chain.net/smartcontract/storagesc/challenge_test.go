@@ -774,13 +774,16 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 				finalBlobberReward := int64(0)
 				passRate := float64(blobberAlloc.Stats.SuccessChallenges) / float64(blobberAlloc.Stats.TotalChallenges)
+				allocCost, _ := alloc.cost()
+				expectedCancellationCharge := int64(float64(allocCost)*conf.CancellationCharge*passRate) / int64(len(alloc.BlobberAllocs))
+
 				if blobberAlloc.LatestSuccessfulChallCreatedAt < blobberAlloc.LatestFinalizedChallCreatedAt {
-					blobberReward, penaltyPaid := confirmBlobberPenaltyOnFinalization(t, f, int64(blobberAlloc.ChallengePoolIntegralValue), *blobberSP, true, passRate)
+					blobberReward, penaltyPaid := confirmBlobberPenaltyOnFinalization(t, f, int64(blobberAlloc.ChallengePoolIntegralValue), *blobberSP, true, passRate, expectedCancellationCharge)
 					totalPaidReward += blobberReward - penaltyPaid
 					totalPenalty += penaltyPaid
 					finalBlobberReward = blobberReward
 				} else {
-					blobberReward := confirmBlobberRewardOnFinalization(t, f, *blobberSP, passRate, int64(blobberAlloc.ChallengePoolIntegralValue))
+					blobberReward := confirmBlobberRewardOnFinalization(t, f, *blobberSP, passRate, int64(blobberAlloc.ChallengePoolIntegralValue), expectedCancellationCharge)
 					totalPaidReward += blobberReward
 					finalBlobberReward = blobberReward
 				}
@@ -1900,6 +1903,7 @@ func confirmBlobberPenaltyOnFinalization(
 	blobber stakePool,
 	includeBlobberReward bool,
 	passRate float64,
+	expectedCancellationCharge int64,
 ) (int64, int64) {
 	penaltyPaid := f.penaltyOnFinalization()
 	blobberReward := int64(0)
@@ -1907,6 +1911,9 @@ func confirmBlobberPenaltyOnFinalization(
 		blobberReward = f.rewardOnFinalization(float64(f.challengePoolIntegralValue-penaltyPaid), passRate)
 	}
 	require.InDelta(t, f.challengePoolIntegralValue-penaltyPaid-blobberReward, challengePoolIntergalValue, errDelta)
+
+	blobberCollectedReward, _ := f.collectedReward.Int64()
+	require.InDelta(t, int64(float64(blobberReward)*blobberYaml.serviceCharge+float64(expectedCancellationCharge)*blobberYaml.serviceCharge), int64(blobber.Reward)-blobberCollectedReward, errDelta)
 
 	if f.scYaml.BlobberSlash > 0.0 {
 		blobberOrderedPoolIds := blobber.OrderedPoolIds()
@@ -1955,14 +1962,15 @@ func confirmBlobberRewardOnFinalization(
 	blobber stakePool,
 	passRate float64,
 	challengePoolIntergalValue int64,
+	expectedCancellationCharge int64,
 ) int64 {
 
-	//blobberCollectedReward, _ := f.collectedReward.Int64()
+	blobberCollectedReward, _ := f.collectedReward.Int64()
 	blobberReward := f.rewardOnFinalization(float64(f.challengePoolIntegralValue), passRate)
 
 	require.InDelta(t, f.challengePoolIntegralValue-blobberReward, challengePoolIntergalValue, errDelta)
 
-	//require.InDelta(t, int64(float64(blobberReward)*passRate), int64(blobber.Reward)-blobberCollectedReward, errDelta)
+	require.InDelta(t, int64(float64(blobberReward)*blobberYaml.serviceCharge+float64(expectedCancellationCharge)*blobberYaml.serviceCharge), int64(blobber.Reward)-blobberCollectedReward, errDelta)
 
 	return blobberReward
 }
