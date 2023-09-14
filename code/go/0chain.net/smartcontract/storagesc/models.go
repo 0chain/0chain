@@ -1972,22 +1972,14 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 	}
 
 	// maps blobberID to count of its expiredIDs.
-	expiredCountMap := make(map[string]int)
-
 	for _, challengeID := range expChalIDs {
-		blobberID := expiredChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
 			return 0, common.NewErrorf("remove_expired_challenges", "could not delete challenge node: %v", err)
 		}
-
-		if _, ok := expiredCountMap[blobberID]; !ok {
-			expiredCountMap[blobberID] = 0
-		}
-		expiredCountMap[blobberID]++
 	}
 
-	return len(expiredCountMap), nil
+	return len(expChalIDs), nil
 }
 
 // removeOldChallenges removes all open challenges from the allocation that are old
