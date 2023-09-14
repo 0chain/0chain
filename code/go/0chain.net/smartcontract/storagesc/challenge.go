@@ -55,14 +55,6 @@ func (sc *StorageSmartContract) completeChallenge(cab *challengeAllocBlobberPass
 	}
 	cab.blobAlloc.LatestFinalizedChallCreatedAt = cab.challenge.Created
 
-	logging.Logger.Info("time_taken: complete challenge",
-		zap.String("challenge_id", cab.challenge.ID),
-		zap.Any("success", success),
-		zap.Any("batime", cab.blobAlloc.LatestFinalizedChallCreatedAt),
-		zap.Any("bct", cab.blobAlloc.LatestSuccessfulChallCreatedAt),
-		zap.Any("ct", cab.challenge.Created),
-	)
-
 	return true
 }
 
