@@ -53,7 +53,7 @@ func (sc *StorageSmartContract) challengePassed(
 
 	s, err := sc.processChallengePassed(
 		balances, t, triggerPeriod,
-		validatorsRewarded, cab, maxChallengeCompletionTime,
+		validatorsRewarded, cab,
 	)
 
 	return s, err
@@ -67,7 +67,7 @@ func (sc *StorageSmartContract) challengeFailed(
 ) (string, error) {
 
 	s, err := sc.processChallengeFailed(
-		balances, validatorsRewarded, cab, maxChallengeCompletionTime)
+		balances, cab)
 
 	return s, err
 }
