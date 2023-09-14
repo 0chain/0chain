@@ -739,6 +739,9 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 		return 0, 0, common.NewError("challenge_reward_on_finalization_error", err.Error())
 	}
 
+	d.LatestSuccessfulChallCreatedAt = now
+	d.LatestFinalizedChallCreatedAt = now
+
 	return challengeRewardPaid, challengePenaltyPaid, nil
 }
 
