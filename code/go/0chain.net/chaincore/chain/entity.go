@@ -878,6 +878,12 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 	return c.getBlock(ctx, hash)
 }
 
+func (c *Chain) SetBlock(b *block.Block) {
+	c.blocksMutex.Lock()
+	c.blocks[b.Hash] = b
+	c.blocksMutex.Unlock()
+}
+
 func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, error) {
 	c.blocksMutex.RLock()
 	defer c.blocksMutex.RUnlock()
