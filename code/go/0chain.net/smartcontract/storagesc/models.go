@@ -729,14 +729,9 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 		return 0, 0, nil
 	}
 
-	challengePenaltyPaid, err := d.challengePenaltyOnFinalization(conf, alloc, balances, sc)
+	challengePenaltyPaid, err := d.challengePenaltyOnFinalization(conf, alloc, balances, sp)
 	if err != nil {
 		return 0, 0, common.NewError("challenge_penalty_on_finalization_error", err.Error())
-	}
-
-	sp, err = getStakePool(spenum.Blobber, d.BlobberID, balances)
-	if err != nil {
-		return 0, 0, common.NewError("challenge_reward_on_finalization_error", err.Error())
 	}
 
 	challengeRewardPaid, err := d.challengeRewardOnFinalization(conf.TimeUnit, now, sp, cp, passRate, balances, alloc)
@@ -800,16 +795,12 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 			return payment, fmt.Errorf("pass payments: %v", err)
 		}
 
-		// Save stake pool
-		if err = sp.Save(spenum.Blobber, d.BlobberID, balances); err != nil {
-			return 0, fmt.Errorf("can't Save blobber's stake pool: %v", err)
-		}
 	}
 
 	return payment, nil
 }
 
-func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances chainstate.StateContextI, sc *StorageSmartContract) (currency.Coin, error) {
+func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances chainstate.StateContextI, sp *stakePool) (currency.Coin, error) {
 	if d.LatestSuccessfulChallCreatedAt >= d.LatestFinalizedChallCreatedAt {
 		return 0, nil
 	}
@@ -848,12 +839,6 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 	if conf.BlobberSlash > 0 && move > 0 &&
 		slash > 0 {
 
-		// load stake pool
-		var sp *stakePool
-		if sp, err = sc.getStakePool(spenum.Blobber, d.BlobberID, balances); err != nil {
-			return 0, fmt.Errorf("can't get blobber's stake pool: %v", err)
-		}
-
 		dpMove, err := sp.slash(d.BlobberID, d.Offer(), slash, balances, alloc.ID)
 		if err != nil {
 			return 0, fmt.Errorf("can't slash tokens: %v", err)
@@ -866,11 +851,6 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 		d.Penalty = penalty
 
 		logging.Logger.Info("Paying blobber penalty", zap.Any("penalty", dpMove), zap.Any("slash", slash), zap.Any("move", move), zap.Any("blobber", d.BlobberID))
-
-		// Save stake pool
-		if err = sp.Save(spenum.Blobber, d.BlobberID, balances); err != nil {
-			return 0, fmt.Errorf("can't Save blobber's stake pool: %v", err)
-		}
 	}
 
 	return move, nil
@@ -883,10 +863,6 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 	err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", d.BlobberID, err)
-	}
-
-	if err = sp.Save(spenum.Blobber, d.BlobberID, balances); err != nil {
-		return reward, fmt.Errorf("failed to save stake pool: %s, err: %v", d.BlobberID, err)
 	}
 
 	blobber, err := sc.getBlobber(d.BlobberID, balances)

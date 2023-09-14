@@ -1439,6 +1439,13 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
+	for i, sp := range sps {
+		blobberAlloc := alloc.BlobberAllocs[i]
+		if err = sp.Save(spenum.Blobber, blobberAlloc.BlobberID, balances); err != nil {
+			return fmt.Errorf("can't save stake pool of %s: %v", blobberAlloc.BlobberID, err)
+		}
+	}
+
 	return nil
 }
 
