@@ -734,13 +734,15 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 		return 0, 0, common.NewError("challenge_penalty_on_finalization_error", err.Error())
 	}
 
-	challengeRewardPaid, err := d.challengeRewardOnFinalization(conf.TimeUnit, now, sp, cp, passRate, balances, alloc)
+	sp, err = getStakePool(spenum.Blobber, d.BlobberID, balances)
 	if err != nil {
 		return 0, 0, common.NewError("challenge_reward_on_finalization_error", err.Error())
 	}
 
-	d.LatestSuccessfulChallCreatedAt = now
-	d.LatestFinalizedChallCreatedAt = now
+	challengeRewardPaid, err := d.challengeRewardOnFinalization(conf.TimeUnit, now, sp, cp, passRate, balances, alloc)
+	if err != nil {
+		return 0, 0, common.NewError("challenge_reward_on_finalization_error", err.Error())
+	}
 
 	return challengeRewardPaid, challengePenaltyPaid, nil
 }
