@@ -60,7 +60,7 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 
 ## Initial Setup
 
-Docker must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/)
+Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/) and Go from [here](https://go.dev/doc/install). 
 
 ### Host Machine Network setup
 
@@ -105,22 +105,28 @@ Set up a network called testnet0 for each of these node containers to talk to ea
    ```
    ./docker.local/bin/build.base.sh
    ```
+2. Build mocks from the Makefile in the repo, from git/0chain directory run:
+   
+   ```
+    make build-mocks 
+   ```
+   Note: Mocks have to be built once in the beginning. Building mocks require mockery and brew which can be installed from [here](https://docs.zus.network/guides/setup-a-blockchain/additional-tips-and-troubleshooting-for-mac#install-homebrew-and-mockery-on-mac-and-linux). 
 
-2. Building the miners and sharders. From the git/0chain directory use
+3. Building the miners and sharders. From the git/0chain directory use
 
-   2.1) To build the miner containers
+   3.1) To build the miner containers
 
    ```
    ./docker.local/bin/build.miners.sh
    ```
 
-   2.2) To build the sharder containers
+   3.2) To build the sharder containers
 
    ```
    ./docker.local/bin/build.sharders.sh
    ```
 
-   2.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
+   3.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
 
    ```
    ./docker.local/bin/sync_clock.sh
