@@ -1,14 +1,14 @@
 package event
 
 import (
+	"0chain.net/core/common"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"fmt"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
-
-	"0chain.net/core/common"
+	"sort"
 )
 
 type BlobberChallengeResponded int
@@ -140,6 +140,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round_created_at"},
+			Desc:   true,
 		}).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "challenge_id"},
@@ -150,6 +151,10 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
+
+	sort.Slice(chs, func(i, j int) bool {
+		return chs[i].RoundCreatedAt < chs[j].RoundCreatedAt
+	})
 
 	return chs, nil
 }

@@ -121,11 +121,11 @@ func TestUpdateSettings(t *testing.T) {
 				client:      owner,
 				previousMap: map[string]string{},
 				inputMap: map[string]string{
-					"max_mint":                      "1500000.02",
-					"time_unit":                     "720h",
-					"min_alloc_size":                "1024",
-					"max_challenge_completion_time": "3m",
-					"min_blobber_capacity":          "1024",
+					"max_mint":                        "1500000.02",
+					"time_unit":                       "720h",
+					"min_alloc_size":                  "1024",
+					"max_challenge_completion_rounds": "720",
+					"min_blobber_capacity":            "1024",
 
 					"readpool.min_lock":  "10",
 					"writepool.min_lock": "10",
@@ -360,11 +360,11 @@ func TestCommitSettingChanges(t *testing.T) {
 			parameters: parameters{
 				client: mockMinerId,
 				inputMap: map[string]string{
-					"max_mint":                      "1500000.02",
-					"time_unit":                     "720h",
-					"min_alloc_size":                "1024",
-					"max_challenge_completion_time": "3m",
-					"min_blobber_capacity":          "1024",
+					"max_mint":                        "1500000.02",
+					"time_unit":                       "720h",
+					"min_alloc_size":                  "1024",
+					"max_challenge_completion_rounds": "720",
+					"min_blobber_capacity":            "1024",
 
 					"readpool.min_lock":  "10",
 					"writepool.min_lock": "10",
@@ -462,8 +462,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.TimeUnit
 	case MinAllocSize:
 		return conf.MinAllocSize
-	case MaxChallengeCompletionTime:
-		return conf.MaxChallengeCompletionTime
+	case MaxChallengeCompletionRounds:
+		return conf.MaxChallengeCompletionRounds
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity
 
