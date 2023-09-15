@@ -665,7 +665,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 	}
 
 	if d.Stats.OpenChallenges > 0 {
-		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
+		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", d.Stats.OpenChallenges))
 
 		d.Stats.SuccessChallenges += d.Stats.OpenChallenges
 		alloc.Stats.SuccessChallenges += d.Stats.OpenChallenges
