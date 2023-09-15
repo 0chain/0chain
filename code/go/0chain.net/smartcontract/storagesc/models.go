@@ -574,7 +574,7 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	return
 }
 
-func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionRounds int64, balances chainstate.StateContextI, sc *StorageSmartContract, ba *BlobberAllocation) (float64, error) {
+func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionRounds int64, balances chainstate.StateContextI, sc *StorageSmartContract) (float64, error) {
 
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
@@ -600,48 +600,43 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		return 1, nil
 	case nil:
 		for _, oc := range allocChallenges.OpenChallenges {
-			if oc.BlobberID != ba.BlobberID {
+			if oc.BlobberID != d.BlobberID {
 				nonRemovedChallenges = append(nonRemovedChallenges, oc)
 				continue
 			}
 
-			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
-			if !ok {
-				continue
-			}
-
-			if ba.Stats == nil {
-				ba.Stats = new(StorageAllocationStats) // make sure
+			if d.Stats == nil {
+				d.Stats = new(StorageAllocationStats) // make sure
 			}
 
 			var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
 			currentRound := balances.GetBlock().Round
 
-			ba.Stats.OpenChallenges--
+			d.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
 			if expire < currentRound {
-				ba.Stats.FailedChallenges++
+				d.Stats.FailedChallenges++
 				alloc.Stats.FailedChallenges++
 
 				err := emitUpdateChallenge(&StorageChallenge{
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, false, ChallengeRespondedLate, balances, alloc.Stats, ba.Stats)
+				}, false, ChallengeRespondedLate, balances, alloc.Stats, d.Stats)
 				if err != nil {
 					return 0.0, err
 				}
 
 			} else {
-				ba.Stats.SuccessChallenges++
+				d.Stats.SuccessChallenges++
 				alloc.Stats.SuccessChallenges++
 
 				err := emitUpdateChallenge(&StorageChallenge{
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
+				}, true, ChallengeResponded, balances, alloc.Stats, d.Stats)
 				if err != nil {
 					return 0.0, err
 				}
@@ -658,31 +653,31 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 
 	// Save the allocation challenges to MPT
 	if err := allocChallenges.Save(balances, sc.ID); err != nil {
-		return 0, common.NewErrorf("add_challenge",
+		return 0, common.NewErrorf("remove_blobber_failed",
 			"error storing alloc challenge: %v", err)
 	}
 
 	for _, challengeID := range removedChallengeIds {
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
-			return 0, common.NewErrorf("remove_expired_challenges", "could not delete challenge node: %v", err)
+			return 0, common.NewErrorf("remove_blobber_failed", "could not delete challenge node: %v", err)
 		}
 	}
 
-	if ba.Stats.OpenChallenges > 0 {
+	if d.Stats.OpenChallenges > 0 {
 		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
 
-		ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
-		alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
-		alloc.Stats.OpenChallenges -= ba.Stats.OpenChallenges
+		d.Stats.SuccessChallenges += d.Stats.OpenChallenges
+		alloc.Stats.SuccessChallenges += d.Stats.OpenChallenges
+		alloc.Stats.OpenChallenges -= d.Stats.OpenChallenges
 
-		ba.Stats.OpenChallenges = 0
+		d.Stats.OpenChallenges = 0
 	}
 
-	if ba.Stats.TotalChallenges == 0 {
+	if d.Stats.TotalChallenges == 0 {
 		passRate = 1
 	} else {
-		passRate = float64(ba.Stats.SuccessChallenges) / float64(ba.Stats.TotalChallenges)
+		passRate = float64(d.Stats.SuccessChallenges) / float64(d.Stats.TotalChallenges)
 	}
 
 	emitUpdateAllocationAndBlobberStats(alloc, balances)
@@ -1478,7 +1473,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				}
 			}
 
-			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc, d)
+			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc)
 			if err != nil {
 				logging.Logger.Info("error removing blobber pass rates",
 					zap.Any("allocation", sa.ID),
