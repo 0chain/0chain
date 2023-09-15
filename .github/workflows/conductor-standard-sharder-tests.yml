@@ -91,8 +91,8 @@ jobs:
         name: standard-sharder-logs
         path: |
           conductor/logs/
-          docker.local/miner*
-          docker.local/sharder*
+          docker.local/miner*/log
+          docker.local/sharder*/log
 
     - name: Cleanup
       run: |
@@ -120,7 +120,7 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
+
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_SHARDER_STANDARD_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
