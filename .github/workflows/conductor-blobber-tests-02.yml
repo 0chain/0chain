@@ -185,10 +185,10 @@ jobs:
         name: blobber-02-logs
         path: |
           0chain/conductor/logs/
-          0chain/docker.local/miner*
-          0chain/docker.local/sharder*
-          blobber/docker.local/blobber*
-          blobber/docker.local/validator*
+          0chain/docker.local/miner*/log
+          0chain/docker.local/sharder*/log
+          blobber/docker.local/blobber*/log
+          blobber/docker.local/validator*/log
 
     - name: Added /tmp folder cleanup.
       run: |

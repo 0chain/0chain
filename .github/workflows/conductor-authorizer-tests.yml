@@ -192,9 +192,9 @@ jobs:
         name: authorizers-logs
         path: |
           0chain/conductor/logs/
-          0chain/docker.local/miner*
-          0chain/docker.local/sharder*
-          token_bridge_authserver/docker.local/auth*
+          0chain/docker.local/miner*/log
+          0chain/docker.local/sharder*/log
+          token_bridge_authserver/docker.local/auth*/log
 
     - name: Added /tmp folder cleanup.
       run: |
