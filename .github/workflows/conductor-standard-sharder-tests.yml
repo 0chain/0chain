@@ -91,7 +91,8 @@ jobs:
         name: standard-sharder-logs
         path: |
           conductor/logs/
-          docker.local/
+          docker.local/miner*
+          docker.local/sharder*
 
     - name: Cleanup
       run: |
