@@ -45,8 +45,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// if payload.Amount.ToZCN()
-
 	if len(payload.Signatures) == 0 {
 		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
 		err = common.NewError(code, msg)
