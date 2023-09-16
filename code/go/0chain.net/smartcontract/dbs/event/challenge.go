@@ -8,7 +8,6 @@ import (
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
-	"sort"
 )
 
 type BlobberChallengeResponded int
@@ -140,7 +139,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round_created_at"},
-			Desc:   true,
 		})
 
 	result := query.Find(&chs)
@@ -148,14 +146,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
-
-	sort.Slice(chs, func(i, j int) bool {
-		return chs[i].RoundCreatedAt < chs[j].RoundCreatedAt
-	})
-
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("from", from), zap.Any("chs", chs[0].RoundCreatedAt),
-		zap.Any("chs", chs[len(chs)-1].RoundCreatedAt), zap.Any("challenge_id", chs[0].ChallengeID),
-		zap.Any("challenge_id", chs[len(chs)-1].ChallengeID), zap.Any("blobber_id", blobberID), zap.Any("limit", limit))
 
 	return chs, nil
 }
