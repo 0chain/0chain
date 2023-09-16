@@ -45,6 +45,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	// if payload.Amount.ToZCN()
+
 	if len(payload.Signatures) == 0 {
 		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
 		err = common.NewError(code, msg)
@@ -85,12 +87,24 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// check mint amount
+	// check mint amount to be higher than min mint amount
 	if payload.Amount < gn.MinMintAmount {
 		msg := fmt.Sprintf(
 			"amount requested (%v) is lower than min amount for mint (%v), %s",
 			payload.Amount,
 			gn.MinMintAmount,
+			info,
+		)
+		err = common.NewError(code, msg)
+		return
+	}
+
+	// check mint amount to be higher than min mint amount
+	if payload.Amount < gn.ZCNSConfig.MaxFee {
+		msg := fmt.Sprintf(
+			"amount requested (%v) is lower than max fee (%v), %s",
+			payload.Amount,
+			gn.MaxFee,
 			info,
 		)
 		err = common.NewError(code, msg)

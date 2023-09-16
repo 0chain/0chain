@@ -162,11 +162,6 @@ func getConfig() (conf *ZCNSConfig, err error) {
 		return nil, err
 	}
 	conf.MaxFee = currency.Coin(cfg.GetFloat64(postfix(MaxFee)))
-
-	if conf.MinMintAmount < conf.MaxFee {
-		return nil, errors.New(fmt.Sprintf("min mint amount (%v) is less than max fee (%v)", conf.MinMintAmount, conf.MaxFee))
-	}
-
 	conf.BurnAddress = cfg.GetString(postfix(BurnAddress))
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
