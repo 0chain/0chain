@@ -141,9 +141,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "round_created_at"},
 			Desc:   true,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "challenge_id"},
 		})
 
 	result := query.Find(&chs)
