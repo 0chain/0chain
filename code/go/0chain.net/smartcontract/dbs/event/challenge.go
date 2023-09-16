@@ -153,6 +153,10 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		return chs[i].RoundCreatedAt < chs[j].RoundCreatedAt
 	})
 
+	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("from", from), zap.Any("chs", chs[0].RoundCreatedAt),
+		zap.Any("chs", chs[len(chs)-1].RoundCreatedAt), zap.Any("challenge_id", chs[0].ChallengeID),
+		zap.Any("challenge_id", chs[len(chs)-1].ChallengeID), zap.Any("blobber_id", blobberID), zap.Any("limit", limit))
+
 	return chs, nil
 }
 
