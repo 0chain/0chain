@@ -121,11 +121,6 @@ func main() {
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash))
 			}
-
-			err := notifyOnAggregates(ctx, serverChain.GetEventDb(), b.Round)
-			if err != nil {
-				logging.Logger.Error("couldn't notify conductor on aggregates", zap.Error(err))
-			}
 		}()
 	}
 
