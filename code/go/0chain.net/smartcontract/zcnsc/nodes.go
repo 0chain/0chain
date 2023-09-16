@@ -194,6 +194,8 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than 1", gn.MinMintAmount))
 	case gn.MaxFee < 1:
 		return common.NewError(Code, fmt.Sprintf("max fee (%v) is less than 1", gn.MaxFee))
+	case gn.MinMintAmount < gn.MaxFee:
+		return common.NewError(Code, fmt.Sprintf("min mint amount (%v) is less than max fee (%v)", gn.MinMintAmount, gn.MaxFee))
 	case gn.MinAuthorizers < 1:
 		return common.NewError(Code, fmt.Sprintf("min quantity of authorizers (%v) is less than 1", gn.MinAuthorizers))
 	case gn.MinBurnAmount < 1:
