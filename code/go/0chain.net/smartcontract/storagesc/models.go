@@ -1995,7 +1995,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeRespondedInvalid, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
 
 			if err != nil {
 				return err
