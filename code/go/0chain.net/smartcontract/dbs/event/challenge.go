@@ -131,7 +131,6 @@ func (edb *EventDb) GetChallenges(blobberId string, start, end int64) ([]Challen
 }
 
 func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pagination) ([]*Challenge, error) {
-
 	var chs []*Challenge
 
 	query := edb.Store.Get().Model(&Challenge{}).
@@ -146,6 +145,8 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 		return nil, fmt.Errorf("error retriving open Challenges with blobberid %v; error: %v",
 			blobberID, result.Error)
 	}
+
+	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("chs", chs))
 
 	return chs, nil
 }

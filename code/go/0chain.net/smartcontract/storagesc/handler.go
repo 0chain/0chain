@@ -1176,6 +1176,8 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		from       int64
 	)
 
+	logging.Logger.Info("getOpenChallenges", zap.Any("blobberID", blobberID), zap.Any("fromString", fromString), zap.Any("r.URL.Query()", r.URL.Query()))
+
 	if fromString != "" {
 		fromI, err := strconv.Atoi(fromString)
 		if err != nil {
@@ -1186,11 +1188,15 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		from = int64(fromI)
 	}
 
+	logging.Logger.Info("getOpenChallenges", zap.Any("blobberID", blobberID), zap.Any("from", from))
+
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
+
+	logging.Logger.Info("getOpenChallenges", zap.Any("blobberID", blobberID), zap.Any("limit", limit))
 
 	sctx := srh.GetQueryStateContext()
 	edb := sctx.GetEventDB()
@@ -1206,6 +1212,9 @@ func (srh *StorageRestHandler) getOpenChallenges(w http.ResponseWriter, r *http.
 		common.Respond(w, r, "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find challenges"))
 		return
 	}
+
+	logging.Logger.Info("getOpenChallenges", zap.Any("challenges", challenges))
+
 	common.Respond(w, r, ChallengesResponse{
 		BlobberID:  blobberID,
 		Challenges: challenges,

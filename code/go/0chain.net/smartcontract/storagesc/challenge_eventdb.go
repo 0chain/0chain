@@ -7,6 +7,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"errors"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"strings"
 )
 
@@ -167,6 +168,8 @@ func getOpenChallengesForBlobber(blobberID string, from int64, limit common2.Pag
 		}
 		chs = append(chs, challInfo)
 	}
+
+	logging.Logger.Info("1 GetOpenChallengesForBlobber", zap.Any("chs", chs))
 
 	return chs, nil
 }
