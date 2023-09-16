@@ -1140,22 +1140,16 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberAllocs))
 
-	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
-	if err != nil {
-		if err == util.ErrValueNotPresent {
-			for i := 0; i < len(alloc.BlobberAllocs); i++ {
-				passRates = append(passRates, 1.0)
-			}
-			return passRates, nil
-		} else {
-			return nil, common.NewError("finish_allocation",
-				"error fetching allocation challenge: "+err.Error())
-		}
-	}
-
 	var removedChallengeIds []string
+	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
 	switch err {
 	case util.ErrValueNotPresent:
+		for i := 0; i < len(alloc.BlobberAllocs); i++ {
+			passRates = append(passRates, 1.0)
+		}
+		return passRates, nil
+	case util.ErrNodeNotFound:
+		return nil, err
 	case nil:
 		for _, oc := range allocChallenges.OpenChallenges {
 			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
@@ -1201,9 +1195,9 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 
 			removedChallengeIds = append(removedChallengeIds, oc.ID)
 		}
-
 	default:
-		return nil, fmt.Errorf("getting allocation challenge: %v", err)
+		return nil, common.NewError("finish_allocation",
+			"error fetching allocation challenge: "+err.Error())
 	}
 
 	allocChallenges.OpenChallenges = make([]*AllocOpenChallenge, 0)
