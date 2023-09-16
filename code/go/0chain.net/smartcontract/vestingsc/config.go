@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	config2 "0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/smartcontractinterface"
@@ -19,11 +20,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract"
 	"github.com/0chain/common/core/util"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	configpkg "0chain.net/chaincore/config"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -104,7 +103,7 @@ func (c *config) Decode(b []byte) error {
 	return json.Unmarshal(b, c)
 }
 
-func (c *config) update(changes *smartcontract.StringMap) error {
+func (c *config) update(changes *config2.StringMap) error {
 	for key, value := range changes.Fields {
 		switch key {
 		case Settings[MinLock]:
@@ -188,7 +187,7 @@ func (c *config) setCostValue(key, value string) error {
 	return fmt.Errorf("cost config setting %s not found", costKey)
 }
 
-func (c *config) getConfigMap() smartcontract.StringMap {
+func (c *config) getConfigMap() config2.StringMap {
 	fields := map[string]string{
 		Settings[MinLock]:              fmt.Sprintf("%v", float64(c.MinLock)/1e10),
 		Settings[MinDuration]:          fmt.Sprintf("%v", c.MinDuration),
@@ -202,7 +201,7 @@ func (c *config) getConfigMap() smartcontract.StringMap {
 		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", c.Cost[strings.ToLower(key)])
 	}
 
-	return smartcontract.StringMap{
+	return config2.StringMap{
 		Fields: fields,
 	}
 }
@@ -224,7 +223,7 @@ func (vsc *VestingSmartContract) updateConfig(
 		return "", err
 	}
 
-	update := &smartcontract.StringMap{}
+	update := &config2.StringMap{}
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
@@ -252,7 +251,7 @@ func getConfiguredConfig() (conf *config, err error) {
 	conf = new(config)
 
 	// short hand
-	var scconf = configpkg.SmartContractConfig
+	var scconf = config2.SmartContractConfig
 	conf.MinLock, err = currency.ParseZCN(scconf.GetFloat64(prefix + "min_lock"))
 	if err != nil {
 		return nil, err

@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/core/config"
+	"0chain.net/rest"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/dbs/event"
 
@@ -23,7 +25,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -253,6 +254,8 @@ func main() {
 		return
 	}
 
+	Logger.Info("finish load latest blocks from store")
+
 	sharder.SetupWorkers(ctx)
 
 	startBlocksInfoLogs(sc)
@@ -380,7 +383,7 @@ func initHandlers(c chain.Chainer) {
 		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
 		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 		chain.SetupDebugStateHandlers()
-		config.SetupHandlers()
+		rest.SetupHandlers()
 	}
 
 	// common

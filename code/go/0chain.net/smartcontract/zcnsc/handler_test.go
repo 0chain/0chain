@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 	"0chain.net/smartcontract/dbs/event"

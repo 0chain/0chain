@@ -7,17 +7,18 @@ import (
 	"testing"
 	"time"
 
+	sc "0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
 
 	"github.com/0chain/common/core/currency"
 
-	sc "0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	bk "0chain.net/smartcontract/benchmark"
 
@@ -107,7 +108,7 @@ func BenchmarkTests(
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
 
-	creationTime := data.Now
+	creationTime := common.Now()
 	timings := make(map[string]time.Duration)
 	newAllocationRequestF := func(
 		t *transaction.Transaction,
@@ -158,9 +159,9 @@ func BenchmarkTests(
 					AllocationRoot:         encryption.Hash("allocation root"),
 					PreviousAllocationRoot: encryption.Hash("allocation root"),
 					AllocationID:           getMockAllocationId(0),
-					Size:                   1024,
+					Size:                   256,
 					BlobberID:              getMockBlobberId(0),
-					Timestamp:              1,
+					Timestamp:              creationTime,
 					ClientID:               data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
@@ -742,11 +743,11 @@ func BenchmarkTests(
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
-					"max_mint":                      "1500000.02",
-					"time_unit":                     "720h",
-					"min_alloc_size":                "1024",
-					"max_challenge_completion_time": "3m",
-					"min_blobber_capacity":          "1024",
+					"max_mint":                        "1500000.02",
+					"time_unit":                       "720h",
+					"min_alloc_size":                  "1024",
+					"max_challenge_completion_rounds": "720",
+					"min_blobber_capacity":            "1024",
 
 					"readpool.min_lock": "10",
 

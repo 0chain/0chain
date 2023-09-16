@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -388,7 +388,11 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 	}
 	// finalize
-	return c.finalizeBlock(ctx, fb, bsh)
+	if err := c.finalizeBlock(ctx, fb, bsh); err != nil {
+		return err
+	}
+
+	return c.postFinalize(ctx, fb)
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */

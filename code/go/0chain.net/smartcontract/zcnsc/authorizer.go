@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"0chain.net/core/encryption"
@@ -120,7 +121,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Creating Provider
 
 	var sp *StakePool
-	sp, err = zcn.getOrUpdateStakePool(authorizerID, params.StakePoolSettings, ctx)
+	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, params.StakePoolSettings, ctx)
 	if err != nil {
 		return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 	}
@@ -229,13 +230,17 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	// Provider may be updated only if authorizer exists/not deleted
 
 	_, err = GetAuthorizerNode(authorizerID, ctx)
-	switch err {
-	case util.ErrValueNotPresent:
+
+	switch {
+	case errors.Is(err, util.ErrValueNotPresent):
 		return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
-	case nil:
+	case err == nil:
+
+		globalNode, _ := GetGlobalNode(ctx)
+
 		// existing
 		var sp *StakePool
-		sp, err = zcn.getOrUpdateStakePool(authorizerID, poolSettings, ctx)
+		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
 		if err != nil {
 			return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 		}
@@ -287,11 +292,19 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 	var sp *StakePool
 	if sp, err = zcn.getStakePool(authorizerID, ctx); err != nil {
 		return "", common.NewErrorf(errorCode, "error occurred while getting stake pool: %v", err)
-
 	}
 
-	if err := smartcontractinterface.AuthorizeWithDelegate(errorCode, func() bool {
-		return sp.Settings.DelegateWallet == tran.ClientID
+	globalNode, err := GetGlobalNode(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(errorCode, msg)
+		Logger.Error("get global node", zap.Error(err))
+		return "", err
+	}
+
+	// only sc owner can add new authorizer
+	if err := smartcontractinterface.AuthorizeWithOwner("register-authorizer", func() bool {
+		return globalNode.ZCNSConfig.OwnerId == tran.ClientID || sp.Settings.DelegateWallet == tran.ClientID
 	}); err != nil {
 		return "", err
 	}
@@ -448,7 +461,15 @@ func (zcn *ZCNSmartContract) AuthorizerHealthCheck(
 		return "", err
 	}
 
-	downtime := common.Downtime(authorizer.LastHealthCheck, t.CreationDate)
+	gn, err := GetGlobalNode(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("failed to get global node, err: %v", err)
+		err = common.NewError(code, msg)
+		Logger.Error("get global node", zap.Error(err))
+		return "", err
+	}
+
+	downtime := common.Downtime(authorizer.LastHealthCheck, t.CreationDate, gn.HealthCheckPeriod)
 	authorizer.LastHealthCheck = t.CreationDate
 
 	data := dbs.DbHealthCheck{

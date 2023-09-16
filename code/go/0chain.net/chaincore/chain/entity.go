@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -26,7 +27,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -876,6 +876,12 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 	c.blocksMutex.RLock()
 	defer c.blocksMutex.RUnlock()
 	return c.getBlock(ctx, hash)
+}
+
+func (c *Chain) SetBlock(b *block.Block) {
+	c.blocksMutex.Lock()
+	c.blocks[b.Hash] = b
+	c.blocksMutex.Unlock()
 }
 
 func (c *Chain) GetBlockClone(ctx context.Context, hash string) (*block.Block, error) {

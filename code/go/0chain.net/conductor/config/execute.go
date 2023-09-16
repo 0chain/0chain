@@ -48,9 +48,9 @@ type Executor interface {
 	WaitMinerGeneratesBlock(wmgb WaitMinerGeneratesBlock, timeout time.Duration) (err error)
 	WaitSharderLFB(wslfb WaitSharderLFB, timeout time.Duration) (err error)
 	WaitValidatorTicket(wvt WaitValidatorTicket, timeout time.Duration) (err error)
-	WaitForChallengeGeneration()
-	WaitOnBlobberCommit()
-	WaitForChallengeStatus()
+	WaitForChallengeGeneration(timeout time.Duration)
+	WaitOnBlobberCommit(timeout time.Duration)
+	WaitForChallengeStatus(timeout time.Duration)
 	WaitForFileMetaRoot()
 	CheckFileMetaRoot(cfg *CheckFileMetaRoot) error
 

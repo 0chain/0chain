@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/postgresql"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/dbs/event"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -133,21 +133,21 @@ func runSuites(
 			}
 		}
 		timer := time.Now()
-		log.Println("starting benchmark tests")
+		log.Println("\nstarting benchmark tests")
 		suiteResult := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap, benchmark.EventDatabase), data.EventDb)
 		results = append(results, suiteResults{
 			name:    benchmark.SourceNames[benchmark.EventDatabase],
 			results: suiteResult,
 		})
 
-		log.Println("starting benchmark event tests")
+		log.Println("\nstarting benchmark event tests")
 		suiteResultEvents := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap, benchmark.EventDatabaseEvents), data.EventDb)
 		results = append(results, suiteResults{
 			name:    benchmark.SourceNames[benchmark.EventDatabaseEvents],
 			results: suiteResultEvents,
 		})
 
-		log.Println("starting benchmark aggregate tests")
+		log.Println("\nstarting benchmark aggregate tests")
 		suiteResultAggregates := runEventDatabaseSuite(ebk.GetBenchmarkTestSuite(eventMap, benchmark.EventDatabaseAggregates), data.EventDb)
 		results = append(results, suiteResults{
 			name:    benchmark.SourceNames[benchmark.EventDatabaseAggregates],
@@ -349,7 +349,7 @@ func runSuite(
 				}
 				benchmarkEvents[bm.Name()] = balances.GetEvents()
 			})
-			log.Println(bm.Name(), "run count is:", runCount)
+
 			var resTimings map[string]time.Duration
 			if wt, ok := bm.(benchmark.WithTimings); ok && len(wt.Timings()) > 0 {
 				resTimings = wt.Timings()
@@ -366,7 +366,7 @@ func runSuite(
 				},
 			)
 
-			log.Println("test", bm.Name(), "done. took:", time.Since(timer))
+			log.Println("test", bm.Name(), "done. took:", time.Since(timer), "run count is:", runCount)
 		}(bm, &wg)
 	}
 	wg.Wait()
@@ -407,7 +407,7 @@ func runEventDatabaseSuite(
 		//wg.Add(1)
 		//go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 		//defer wg.Done()
-		log.Println("edb start", bm.Name())
+		log.Println("edb bench test starting... bm name:", bm.Name())
 		timer := time.Now()
 		var err error
 		result := testing.Benchmark(func(b *testing.B) {
@@ -455,6 +455,7 @@ func runEventDatabaseBenchmark(
 		if r := recover(); r != nil {
 			log.Println("Recovered from panic running events", r)
 		}
+		cloneEdb.Close()
 		deleteError := pdb.Drop(cleanName)
 		if deleteError != nil {
 			log.Println("error deleting event database: " + deleteError.Error())

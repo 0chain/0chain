@@ -8,7 +8,7 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -20,6 +20,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -151,7 +152,21 @@ func (c *Chain) ExecuteSmartContract(
 	case r := <-resultC:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		if len(balances.GetMissingNodeKeys()) > 0 {
+			if r.err == nil || !cstate.ErrInvalidState(r.err) {
+				logging.Logger.Error("execute smart contract - find missing nodes, not return from calling",
+					zap.Any("txn", txn))
+			} else {
+				logging.Logger.Error("execute smart contract - find missing nodes, return node not found error",
+					zap.Error(r.err),
+					zap.Any("output", r.output),
+					zap.Any("txn", txn))
+			}
 			return "", util.ErrNodeNotFound
+		}
+
+		if cstate.ErrInvalidState(r.err) {
+			logging.Logger.Debug("execute smart contract - return node not found error directly",
+				zap.Any("txn", txn))
 		}
 
 		return r.output, r.err

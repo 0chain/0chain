@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
@@ -1494,10 +1494,10 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		t.Run(test.name,
 			func(t *testing.T) {
 				if test.setValidConfig {
-					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", 1000)
+					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_rounds", 1000)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", time.Second*5)
 				} else {
-					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", -1)
+					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_rounds", -1)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", 0)
 				}
 

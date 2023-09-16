@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
@@ -752,6 +752,7 @@ func (c *Chain) syncBlocksWithCache(ctx context.Context, b *block.Block, opt syn
 			}
 			return pb
 		case <-ctx.Done():
+			logging.Logger.Debug("sync_block - context done", zap.Error(ctx.Err()))
 			return nil
 		}
 	}

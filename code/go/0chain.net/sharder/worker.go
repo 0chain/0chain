@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/config"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -139,6 +139,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("end round", cr+reqNum+1))
 			go sc.requestBlocks(ctx, cr, reqNum)
 		case b := <-sc.blockChannel:
+			logging.Logger.Debug("process block, received block",
+				zap.Int64("block round", b.Round))
 			stuckCheckTimer.Reset(stuckDuration)
 			cr := sc.GetCurrentRound()
 			lfb := sc.GetLatestFinalizedBlock()

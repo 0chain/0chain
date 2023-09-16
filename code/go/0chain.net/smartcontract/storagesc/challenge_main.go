@@ -4,13 +4,11 @@
 package storagesc
 
 import (
-	"math/rand"
-	"time"
-
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/partitions"
+	"math/rand"
 )
 
 func (sc *StorageSmartContract) generateChallenge(
@@ -40,22 +38,18 @@ func (sc *StorageSmartContract) challengePassed(
 	triggerPeriod int64,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionTime time.Duration,
 ) (string, error) {
 
 	return sc.processChallengePassed(
 		balances, t, triggerPeriod,
-		validatorsRewarded, cab, maxChallengeCompletionTime,
+		validatorsRewarded, cab,
 	)
 }
 
 func (sc *StorageSmartContract) challengeFailed(
 	balances cstate.StateContextI,
-	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionTime time.Duration,
 ) (string, error) {
-
 	return sc.processChallengeFailed(
-		balances, validatorsRewarded, cab, maxChallengeCompletionTime)
+		balances, cab)
 }

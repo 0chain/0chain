@@ -6,17 +6,16 @@ import (
 	"strconv"
 	"testing"
 
+	config2 "0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -112,7 +111,7 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				name:     benchmark.ZcnSc + UpdateGlobalConfigFunc,
 				endpoint: sc.UpdateGlobalConfig,
 				txn:      createTransaction(owner, "", 3000),
-				input: (&smartcontract.StringMap{
+				input: (&config2.StringMap{
 					Fields: map[string]string{
 						MinMintAmount:      "2",
 						MinBurnAmount:      "3",
@@ -122,6 +121,8 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 						PercentAuthorizers: "73",
 						MaxFee:             "800",
 						BurnAddress:        "7000000000000000000000000000000000000000000000000000000000000000",
+						MaxStakeAmount:     "100",
+						HealthCheckPeriod:  "10s",
 					},
 				}).Encode(),
 			},
@@ -267,7 +268,7 @@ func createBurnTransaction(clientId, publicKey string) *transaction.Transaction 
 		},
 		ClientID:     clientId,
 		PublicKey:    publicKey,
-		ToClientID:   config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress),
+		ToClientID:   config2.SmartContractConfig.GetString(benchmark.ZcnBurnAddress),
 		Value:        burnAmount,
 		CreationDate: common.Now(),
 	}

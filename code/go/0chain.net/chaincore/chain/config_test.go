@@ -3,7 +3,7 @@ package chain
 import (
 	"bytes"
 
-	"0chain.net/chaincore/config"
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/minersc"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"

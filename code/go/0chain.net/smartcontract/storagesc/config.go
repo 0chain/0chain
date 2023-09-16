@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
@@ -46,8 +46,6 @@ type blockReward struct {
 	BlockRewardChangePeriod int64            `json:"block_reward_change_period"`
 	BlockRewardChangeRatio  float64          `json:"block_reward_change_ratio"`
 	QualifyingStake         currency.Coin    `json:"qualifying_stake"`
-	SharderWeight           float64          `json:"sharder_weight"`
-	MinerWeight             float64          `json:"miner_weight"`
 	TriggerPeriod           int64            `json:"trigger_period"`
 	Gamma                   blockRewardGamma `json:"gamma"`
 	Zeta                    blockRewardZeta  `json:"zeta"`
@@ -89,8 +87,8 @@ type Config struct {
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
-	// MaxChallengeCompletionTime is max time to complete a challenge.
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	// MaxChallengeCompletionRounds is max time to complete a challenge.
+	MaxChallengeCompletionRounds int64 `json:"max_challenge_completion_rounds"`
 	// MinBlobberCapacity allowed to register in the SC.
 	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
 	// ReadPool related configurations.
@@ -138,7 +136,8 @@ type Config struct {
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
-	MaxStake currency.Coin `json:"max_stake"`
+	MaxStake            currency.Coin `json:"max_stake"`
+	MinStakePerDelegate currency.Coin `json:"min_stake_per_delegate"`
 
 	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
@@ -180,9 +179,9 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
 			conf.MinBlobberCapacity)
 	}
-	if conf.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative max_challenge_completion_time: %v",
-			conf.MaxChallengeCompletionTime)
+	if conf.MaxChallengeCompletionRounds < 0 {
+		return fmt.Errorf("negative max_challenge_completion_rounds: %v",
+			conf.MaxChallengeCompletionRounds)
 	}
 	if conf.HealthCheckPeriod <= 0 {
 		return fmt.Errorf("non-positive health check period: %v", conf.HealthCheckPeriod)
@@ -246,14 +245,6 @@ func (conf *Config) validate() (err error) {
 			conf.MaxCharge)
 	}
 
-	if conf.BlockReward.SharderWeight < 0 {
-		return fmt.Errorf("negative block_reward.sharder_weight: %v",
-			conf.BlockReward.SharderWeight)
-	}
-	if conf.BlockReward.MinerWeight < 0 {
-		return fmt.Errorf("negative block_reward.miner_weight: %v",
-			conf.BlockReward.MinerWeight)
-	}
 	if len(conf.OwnerId) == 0 {
 		return fmt.Errorf("owner_id does not set or empty")
 	}
@@ -333,13 +324,17 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.MinStakePerDelegate, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake_per_delegate"))
+	if err != nil {
+		return nil, err
+	}
 	conf.MaxStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_stake"))
 	if err != nil {
 		return nil, err
 	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
-	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
+	conf.MaxChallengeCompletionRounds = scc.GetInt64(pfx + "max_challenge_completion_rounds")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
