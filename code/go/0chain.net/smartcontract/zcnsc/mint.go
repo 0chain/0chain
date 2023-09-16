@@ -100,9 +100,9 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	// check mint amount to be higher than min mint amount
 	if payload.Amount < gn.ZCNSConfig.MaxFee {
 		msg := fmt.Sprintf(
-			"amount requested (%v) is lower than max fee (%v), %s",
+			"amount requested (%v) is lower than zcn max fee (%v), %s",
 			payload.Amount,
-			gn.MaxFee,
+			gn.ZCNSConfig.MaxFee,
 			info,
 		)
 		err = common.NewError(code, msg)
