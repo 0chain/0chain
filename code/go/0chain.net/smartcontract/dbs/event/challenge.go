@@ -146,8 +146,6 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 			blobberID, result.Error)
 	}
 
-	logging.Logger.Info("GetOpenChallengesForBlobber", zap.Any("chs", chs))
-
 	return chs, nil
 }
 
