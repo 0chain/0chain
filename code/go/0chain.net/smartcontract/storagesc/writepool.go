@@ -131,7 +131,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(
 			"only owner can unlock tokens")
 	}
 
-	if !alloc.Finalized && !alloc.Canceled {
+	if !alloc.Finalized || !alloc.Canceled {
 		return "", common.NewError("write_pool_unlock_failed",
 			"can't unlock until the allocation is finalized or cancelled")
 	}
