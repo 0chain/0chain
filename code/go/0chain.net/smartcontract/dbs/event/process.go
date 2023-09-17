@@ -1,6 +1,8 @@
 package event
 
 import (
+	"0chain.net/smartcontract/dbs/queueProvider"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -562,6 +564,16 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 	}
 
 	s.Round = round
+
+	edb.kafka = queueProvider.NewKafkaProvider()
+	
+	data, err := json.Marshal(events)
+	if err != nil {
+		logging.Logger.Error("Getting error while marshalling data", zap.Error(err))
+		return s, err
+	}
+	edb.kafka.PublishToKafka("events", data)
+
 	err = edb.UpdateSnapshotFromEvents(s, events)
 	if err != nil {
 		logging.Logger.Error("error updating snapshot", zap.Error(err))
