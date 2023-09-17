@@ -261,6 +261,7 @@ func main() {
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
+
 }
 
 func initScheme(signatureScheme encryption.SignatureScheme, reader io.Reader) {

@@ -1,16 +1,16 @@
 package event
 
 import (
-	"context"
-	"errors"
-	"fmt"
-
 	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"0chain.net/smartcontract/dbs/queueProvider"
 	"0chain.net/smartcontract/dbs/sqlite"
+	"context"
+	"errors"
+	"fmt"
 )
 
 func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
@@ -40,6 +40,7 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
+		kafka:         queueProvider.NewKafkaProvider(),
 	}
 
 	return eventDb, nil
@@ -68,6 +69,7 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
+	kafka         *queueProvider.KafkaProvider
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
