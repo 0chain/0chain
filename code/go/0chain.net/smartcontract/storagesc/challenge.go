@@ -40,6 +40,7 @@ const (
 	ChallengeResponded
 	ChallengeRespondedLate
 	ChallengeRespondedInvalid
+	ChallengeOldRemoved
 )
 
 const blobberAllocationPartitionSize = 10
