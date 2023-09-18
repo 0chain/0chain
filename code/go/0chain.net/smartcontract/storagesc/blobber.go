@@ -492,7 +492,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_blobber_read",
 			"early reading, allocation not started yet")
-	} else if commitRead.ReadMarker.Timestamp > alloc.Until(conf.MaxChallengeCompletionTime) {
+	} else if commitRead.ReadMarker.Timestamp > alloc.Expiration {
 		return "", common.NewError("commit_blobber_read",
 			"late reading, allocation expired")
 	}
@@ -808,7 +808,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize - changeSize
-		// TODO: check if this is correct
 		blobAlloc.Stats.NumWrites++
 		blobber.SavedData -= changeSize
 		alloc.Stats.UsedSize -= int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))

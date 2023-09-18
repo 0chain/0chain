@@ -48,26 +48,22 @@ func (sc *StorageSmartContract) challengePassed(
 	triggerPeriod int64,
 	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionTime time.Duration,
 ) (string, error) {
 
 	s, err := sc.processChallengePassed(
 		balances, t, triggerPeriod,
-		validatorsRewarded, cab, maxChallengeCompletionTime,
-	)
+		validatorsRewarded, cab)
 
 	return s, err
 }
 
 func (sc *StorageSmartContract) challengeFailed(
 	balances cstate.StateContextI,
-	validatorsRewarded int,
 	cab *challengeAllocBlobberPassResult,
-	maxChallengeCompletionTime time.Duration,
 ) (string, error) {
 
 	s, err := sc.processChallengeFailed(
-		balances, validatorsRewarded, cab, maxChallengeCompletionTime)
+		balances, cab)
 
 	return s, err
 }
