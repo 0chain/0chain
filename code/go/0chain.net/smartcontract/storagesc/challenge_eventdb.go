@@ -59,7 +59,6 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 
 func emitAddChallenge(
 	ch *StorageChallengeResponse,
-	expiredCountMap map[string]int,
 	expiredN int,
 	balances cstate.StateContextI,
 	allocStats, blobberStats *StorageAllocationStats,

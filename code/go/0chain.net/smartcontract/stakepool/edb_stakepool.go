@@ -1,12 +1,11 @@
 package stakepool
 
 import (
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/dbs/event"
 )
 
 type StakePoolReward dbs.StakePoolReward
@@ -21,6 +20,7 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 		dp := sp.Pools[id]
 		dpu := dbs.NewDelegatePoolUpdate(id, pId, pType)
 		dpu.Updates["balance"] = dp.Balance
+
 		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id, *dpu)
 	}
 }
