@@ -135,7 +135,7 @@ type Server struct {
 
 	magicBlock string
 	// nodes lock/unlock/shares sending (send only, send bad)
-	mutex sync.Mutex
+	mutex sync.RWMutex
 	nodes map[NodeName]*nodeState
 
 	// node id -> node name mapping
@@ -221,8 +221,8 @@ func (s *Server) AddNode(name NodeName, lock bool) {
 
 // not for updating
 func (s *Server) nodeState(name NodeName) (ns *nodeState, err error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
 	var ok bool
 	if ns, ok = s.nodes[name]; !ok {
@@ -486,43 +486,20 @@ func (s *Server) MagicBlock(_ *struct{}, configFile *string) (err error) {
 
 // state polling handler
 func (s *Server) State(id NodeID, state *State) (err error) {
-	// node name is not known by the node requesting the State
-	// and thus, NodeID used here
-
-	var name NodeName
-
-	// Validator does not need to change the state generated while reading conductor test configuration,
-	// so we can return	an existing state of a different node.
-	if strings.Contains(string(id), "validator-") {
-		for _, k := range s.names {
-			if strings.Contains(string(k), "blobber-") {
-				name = k
-				break
-			}
-		}
-
-		if ns, ok := s.nodes[name]; ok {
-			*state = *ns.state
-		}
-
-		return
-	}
-
-	var nodeName, ok = s.names[id]
+	nodeName, ok := s.names[id]
 	if !ok {
 		return fmt.Errorf("unknown node ID: %s", id)
 	}
-	name = nodeName
 
 	var ns *nodeState
-	if ns, err = s.nodeState(name); err != nil {
+	if ns, err = s.nodeState(nodeName); err != nil {
 		return
 	}
 
 	// trigger the node ready once
 	if ns.counter == 1 {
 		select {
-		case s.onNodeReady <- name:
+		case s.onNodeReady <- nodeName:
 		case <-s.quit:
 			return ErrShutdown
 		}
