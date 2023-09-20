@@ -13,7 +13,10 @@ jobs:
     steps:
     - name: Cleanup before restarting conductor tests.
       run: |
+        echo 'y' | docker system prune -a
         rm -rf *
+        cd /tmp
+        rm -rf ./*
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -203,11 +206,6 @@ jobs:
           0chain/docker.local/sharder*/log
           token_bridge_authserver/docker.local/auth*/log
 
-    - name: Added /tmp folder cleanup.
-      run: |
-        cd /tmp
-        rm -rf ./*
-
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
     needs: [CONDUCTOR_AUTHORIZER_TESTS]
@@ -225,7 +223,7 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
+
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:

@@ -14,7 +14,10 @@ jobs:
     steps:
     - name: Cleanup before restarting conductor tests.
       run: |
+        echo 'y' | docker system prune -a
         rm -rf *
+        cd /tmp
+        rm -rf ./*
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -29,7 +32,7 @@ jobs:
         export HOME="/root"
         which go
         go env
-      
+
     - name: Docker Compose Setup.
       run: |
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
@@ -41,7 +44,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-    
+
     - name: Get Branch
       id: get_branch
       run: |
@@ -195,11 +198,6 @@ jobs:
           blobber/docker.local/blobber*/log
           blobber/docker.local/validator*/log
 
-    - name: Added /tmp folder cleanup.
-      run: |
-        cd /tmp
-        rm -rf ./*
-
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
     needs: [CONDUCTOR_BLOBBERS_01_TESTS]
@@ -218,7 +216,7 @@ jobs:
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-        
+
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
     needs: [CONDUCTOR_BLOBBERS_01_TESTS]
@@ -236,5 +234,5 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
+
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
