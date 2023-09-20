@@ -395,15 +395,14 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 			continue
 		}
 
-		// check if lfb has full state
-		if !sc.ValidateState(lfb) {
-			logging.Logger.Warn("load_lfb, lfb state missing nodes",
-				zap.Int64("round", r.Number),
-				zap.String("block_hash", r.BlockHash))
-			rollBackCount++
-
-			continue
-		}
+		go func() {
+			// check if lfb has full state and sync all missing nodes
+			if !sc.ValidateState(lfb) {
+				logging.Logger.Warn("load_lfb, lfb state missing nodes",
+					zap.Int64("round", r.Number),
+					zap.String("block_hash", r.BlockHash))
+			}
+		}()
 
 		return // got it
 	}
@@ -446,6 +445,8 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 			zap.Error(err))
 		return nil // the nil is 'use genesis'
 	}
+
+	logging.Logger.Debug("load_lfb, finish walk down looking")
 
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
 	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
