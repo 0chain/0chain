@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	sc "0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	"github.com/spf13/viper"
@@ -14,7 +15,6 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	sc "0chain.net/smartcontract"
 	bk "0chain.net/smartcontract/benchmark"
 )
 

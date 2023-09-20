@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/core/config"
 	"0chain.net/smartcontract/rest"
 
 	"0chain.net/chaincore/chain/state"
@@ -109,7 +110,7 @@ func (frh *FaucetscRestHandler) getConfig(w http.ResponseWriter, r *http.Request
 		fields[fmt.Sprintf("cost.%s", key)] = fmt.Sprintf("%0v", faucetConfig.Cost[strings.ToLower(key)])
 	}
 
-	common.Respond(w, r, smartcontract.StringMap{
+	common.Respond(w, r, config.StringMap{
 		Fields: fields,
 	}, nil)
 }

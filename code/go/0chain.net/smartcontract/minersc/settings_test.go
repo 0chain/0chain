@@ -7,11 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
 	chainstate "0chain.net/chaincore/chain/state"
-
-	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -65,7 +64,7 @@ func TestUpdateSettings(t *testing.T) {
 				for key, value := range p.inputMap {
 					setting, _ := gn.Get(Settings[key].Setting)
 					switch Settings[key].ConfigType {
-					case smartcontract.Int:
+					case config.Int:
 						{
 							expected, err := strconv.Atoi(value)
 							require.NoError(t, err)
@@ -75,7 +74,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Int64:
+					case config.Int64:
 						{
 							expected, err := strconv.ParseInt(value, 10, 64)
 							require.NoError(t, err)
@@ -85,7 +84,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Float64:
+					case config.Float64:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							require.NoError(t, err)
@@ -95,7 +94,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Boolean:
+					case config.Boolean:
 						{
 							expected, err := strconv.ParseBool(value)
 							require.NoError(t, err)
@@ -105,7 +104,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Duration:
+					case config.Duration:
 						{
 							expected, err := time.ParseDuration(value)
 							require.NoError(t, err)
@@ -115,7 +114,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.CurrencyCoin:
+					case config.CurrencyCoin:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
 							expected = x10 * expected
@@ -126,7 +125,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Cost:
+					case config.Cost:
 						{
 							expected, err := strconv.Atoi(value)
 							require.NoError(t, err)
@@ -136,7 +135,7 @@ func TestUpdateSettings(t *testing.T) {
 								return false
 							}
 						}
-					case smartcontract.Key:
+					case config.Key:
 						{
 							_, err := hex.DecodeString(value)
 							require.NoError(t, err)
@@ -158,7 +157,7 @@ func TestUpdateSettings(t *testing.T) {
 		return args{
 			msc:   msc,
 			txn:   txn,
-			input: (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input: (&config.StringMap{p.inputMap}).Encode(),
 			gn: &GlobalNode{
 				OwnerId: owner,
 				Cost:    make(map[string]int),

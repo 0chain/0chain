@@ -11,11 +11,11 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/core/util/waitgroup"
 	"github.com/0chain/common/core/util"
 	"github.com/rcrowley/go-metrics"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/sharder/blockstore"
 
 	"0chain.net/chaincore/block"

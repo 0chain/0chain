@@ -1,4 +1,4 @@
-package enums
+package config
 
 import (
 	"testing"

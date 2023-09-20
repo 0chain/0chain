@@ -415,8 +415,12 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 		return "", common.NewError("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
-
-	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate)
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewErrorf("blobber_health_check_failed",
+			"cannot get config: %v", err)
+	}
+	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate, conf.HealthCheckPeriod)
 	blobber.LastHealthCheck = t.CreationDate
 
 	emitBlobberHealthCheck(blobber, downtime, balances)
@@ -651,6 +655,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
+
 	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
@@ -724,8 +729,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		details.Returned = returned
 	}
 
-	logging.Logger.Info("commitMoveTokens", zap.Any("size", size), zap.Any("move", move), zap.Any("alloc", alloc))
-
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
 	}
@@ -749,8 +752,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewError("commit_connection_failed",
 			"malformed input: "+err.Error())
 	}
-
-	logging.Logger.Info("commitBlobberConnection", zap.Any("commitConnection", commitConnection.WriteMarker.Size))
 
 	if !commitConnection.Verify() {
 		return "", common.NewError("commit_connection_failed", "Invalid input")
