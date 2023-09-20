@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/chaincore/chain"
 	"context"
 	"fmt"
 	"runtime"
@@ -398,7 +399,26 @@ func (sc *Chain) hcUpdateBlockStatus(scanMode HealthCheckScan, status *BlockHeal
 
 func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthCheckScan) {
 
+	startTime := time.Now()
+
+	blockSyncRequired := false
+
 	var hcStatus BlockHealthCheckStatus = HealthCheckSuccess
+
+	defer func() {
+
+		Logger.Info("Jayash healthCheck",
+			zap.Any("blockSyncRequired", blockSyncRequired),
+			zap.Any("Starttime", startTime),
+			zap.Any("Endtime", time.Now()))
+
+		sc.hcUpdateBlockStatus(scanMode, &hcStatus)
+
+		endTime := time.Now()
+		if blockSyncRequired {
+			chain.SynchronizedBlocksTimer.Update(endTime.Sub(startTime))
+		}
+	}()
 
 	defer sc.hcUpdateBlockStatus(scanMode, &hcStatus)
 
@@ -422,6 +442,10 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		// Update missing round summary
 		current.roundSummary.Missing++
 
+		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("foundRoundSummary", foundRoundSummary))
+
 		// No round found. Fetch the round summary and round information.
 		r = sc.syncRoundSummary(ctx, rNum, -config.BatchSize, scanMode)
 		if r == nil {
@@ -429,11 +453,13 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		} else {
 			current.roundSummary.RepairSuccess++
 		}
+
 	}
 
 	if !sc.isValidRound(r) {
 		// Unable to get the round summary information.
 		hcStatus = HealthCheckFailure
+
 		return
 	}
 
@@ -442,6 +468,10 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	if !foundBlockSummary {
 		current.blockSummary.Missing++
 
+		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("foundBlockSummary", foundBlockSummary))
+
 		// Missing block summary. Sync the blocks
 		bs = sc.syncBlockSummary(ctx, r, -config.BatchSize, scanMode)
 		if bs != nil {
@@ -449,6 +479,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		} else {
 			current.blockSummary.RepairFailure++
 		}
+
 	}
 
 	if bs == nil {
@@ -466,21 +497,32 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		count, err := sc.getTxnCountForRound(ctx, bs.Round)
 		if err != nil || count != bs.NumTxns {
 			needTxnSummary = true
+			blockSyncRequired = true
+
+			Logger.Info("Missing++", zap.Any("txn", needTxnSummary))
 		}
 	}
 	if needTxnSummary {
 		// Missing txn summary. Need to pull from remote sharder.
 		current.txnSummary.Missing++
+
+		blockSyncRequired = true
 	}
 
 	// The sharder needs txn_summary. Get the block
 	b, foundBlock := sc.hasBlock(bs.Hash, r.Number)
 	if !foundBlock {
+		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("foundBlock", foundBlock))
+
 		if needTxnSummary || canShard {
 			// The sharder doesn't have the block.
 			// It needs a block either to fix txnsummary or missing block
 			// that it should have sharded.
 			current.block.Missing++
+
+			Logger.Info("Missing++", zap.Any("foundBlock", foundBlock))
 
 			b = sc.requestBlock(ctx, r)
 			if b == nil {
@@ -512,10 +554,15 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			}
 			current.block.RepairSuccess++
 		}
+
 	}
 
 	// Check if the sharder needs to store txn summary
 	if needTxnSummary {
+		blockSyncRequired = true
+
+		Logger.Info("Missing++", zap.Any("needTxnSummary", needTxnSummary))
+
 		if b == nil {
 			Logger.Panic("HC-Assertion",
 				zap.String("mode", cc.ScanMode.String()),
@@ -541,5 +588,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			return
 		}
 		current.txnSummary.RepairSuccess++
+
 	}
+
 }

@@ -234,6 +234,11 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteHistogramStatistics(w, c, chain.EventsComputationTimer)
 	fmt.Fprintf(w, "</td></tr>")
 
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h3>Synchronization Block Statistics</h3>")
+	diagnostics.WriteTimerStatistics(w, c, chain.SynchronizedBlocksTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+
 	if c.GetPruneStats() != nil {
 		fmt.Fprintf(w, "<tr><td>")
 		fmt.Fprintf(w, "<h3>Prune Stats</h3>")
