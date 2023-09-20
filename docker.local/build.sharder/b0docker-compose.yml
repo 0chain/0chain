@@ -12,36 +12,19 @@ services:
       - ../sql_script/:/docker-entrypoint-initdb.d/
     networks:
       default:
-
-  zookeeper:
-    image: 'docker.io/bitnami/zookeeper:3.7.0-debian-10-r188'
-    networks:
-      default:
-        aliases:
-          - zookeeper
-    ports:
-      - '2181:2181'
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-
   kafka:
-    image: 'docker.io/bitnami/kafka:2.8.1-debian-10-r31'
+    image: 'bitnami/kafka:latest'
     networks:
       default:
-        aliases:
-          - kafka
-    ports:
-      - '9092:9092'
-      - '9093:9093'
+      testnet0:
     environment:
-      - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://0.0.0.1:9092
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_PLAINTEXT_LISTENER=yes
-    depends_on:
-      - zookeeper
-
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
   sharder:
     image: "sharder"
     # deploy:
@@ -61,6 +44,8 @@ services:
       - ../sharder${SHARDER}/data/blocks:/0chain/data/blocks
     ports:
       - "717${SHARDER}:717${SHARDER}"
+    depends_on:
+      - kafka
     networks:
       default:
       testnet0:
