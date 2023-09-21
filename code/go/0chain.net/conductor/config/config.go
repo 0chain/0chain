@@ -105,7 +105,7 @@ type Command struct {
 // CommandName
 type CommandName struct {
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
-	Params map[string]string `json:"params" yaml:"params" mapstructure:"params"`
+	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
 }
 
 // A Config represents conductor testing configurations.
@@ -121,6 +121,8 @@ type Config struct {
 	Address string `json:"address" yaml:"address" mapstructure:"address"`
 	// Logs is directory for stdin and stdout logs.
 	Logs string `json:"logs" yaml:"logs" mapstructure:"logs"`
+	// AggregateBaseUrl is base url for aggregate service.
+	AggregatesBaseUrl string `json:"aggregate_base_url" yaml:"aggregate_base_url" mapstructure:"aggregate_base_url"`
 	// Nodes for tests.
 	Nodes Nodes `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
 	// Tests cases and related.

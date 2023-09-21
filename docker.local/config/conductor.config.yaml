@@ -14,6 +14,8 @@ view_change: 250 # 100
 skip_wait: ["0dns","0box"]
 stuck_warning_threshold: "2s"
 
+aggregate_base_url: "http://localhost:9081/v2"
+
 #
 # nodes used in tests
 #
@@ -202,8 +204,8 @@ nodes:
     id: "0box"
     work_dir: "../0box/"
     env: ""
-    start_command: "../0box/docker.local/bin/start.sh"
-    stop_command: "cd ../0box && docker compoer -p 0box down && ./docker.local/bin/clean.sh"
+    start_command: "./docker.local/bin/start-dev.sh"
+    stop_command: "docker compoer -p 0box down && ./docker.local/bin/clean.sh"
 
 # named system commands
 commands:
@@ -393,16 +395,22 @@ commands:
         required: true
       recreate_script_workdir:
         required: true
-  check_aggregate_value_change:
+  fill_blobber_validator_wallets:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/check_aggregate_value_change.sh $provider_type $provider_id $key $monotonicity"
+    exec: "sh -x 0chain/docker.local/bin/conductor/fill_blobber_validator_wallets.sh"
+  stake_providers:
+    work_dir: "../"
+    exec: ./0chain/docker.local/bin/conductor/stake_providers.sh $provider_type $provider_ids
     args:
       provider_type:
         required: true
-      provider_id:
+      provider_ids:
         required: true
-      key:
+  update_config:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/update_config.sh $keys $values"
+    args:
+      keys:
         required: true
-      monotonicity:
-        required: false
-        default: INC
+      values:
+        required: true

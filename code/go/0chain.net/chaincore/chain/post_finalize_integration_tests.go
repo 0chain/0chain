@@ -17,7 +17,7 @@ type TxnHandler func(txn *transaction.Transaction, client *crpc.Entity) error
 
 var txnHandlers = map[string] TxnHandler{
 	"generate_challenge": func(txn *transaction.Transaction, client *crpc.Entity) error{
-		client.ChallengeGenerated(client.State().GenerateChallenge.BlobberID)
+		client.ChallengeGenerated(txn.Hash)
 		return nil
 	},
 	"challenge_response": func(txn *transaction.Transaction, client *crpc.Entity) error{

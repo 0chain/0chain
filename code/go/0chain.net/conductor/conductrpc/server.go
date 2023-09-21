@@ -12,6 +12,7 @@ import (
 	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/types"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -102,9 +103,9 @@ type ValidtorTicket struct {
 }
 
 type AggregateMessage struct {
-	ProviderType stats.ProviderType
+	ProviderType types.ProviderType
 	ProviderId string
-	Values stats.Aggregate
+	Values types.Aggregate
 }
 
 type NodeConfig struct {

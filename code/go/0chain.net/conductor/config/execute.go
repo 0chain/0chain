@@ -85,7 +85,7 @@ type Executor interface {
 	Publish(p *Bad) (err error)
 
 	// system command (a bash script, etc)
-	Command(name string, params map[string]string, timeout time.Duration)
+	Command(name string, params map[string]interface{}, timeout time.Duration)
 
 	// Blobber related executors
 	StorageTree(st *Bad) (err error)
@@ -122,11 +122,10 @@ type Executor interface {
 	SetServerState(interface{}) error
 	GenerateChallenge(c *GenerateChallege) error
 	GetNodes() map[NodeName]NodeID
-	MonitorAggregates(cfg *MonitorAggregates) error
-	StopMonitorAggregate() error
-	CheckAggregateValueChange(cfg *CheckAggregateChange) error
-	CheckAggregateValueComparison(cfg *CheckAggregateComparison) error
+	CheckAggregateValueChange(cfg *CheckAggregateChange, tm time.Duration) error
+	CheckAggregateValueComparison(cfg *CheckAggregateComparison, tm time.Duration) error
 	SetNodeCustomConfig(cfg *NodeCustomConfig) error
+	SyncLatestAggregates(cfg *SyncAggregates) error
 }
 
 //

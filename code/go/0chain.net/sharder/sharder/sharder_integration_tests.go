@@ -4,9 +4,6 @@
 package main
 
 import (
-	"context"
-	"fmt"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -14,7 +11,6 @@ import (
 	"0chain.net/chaincore/node"
 	crpc "0chain.net/conductor/conductrpc" // integration tests
 	"0chain.net/conductor/conductrpc/stats"
-	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/logging"
 )
 

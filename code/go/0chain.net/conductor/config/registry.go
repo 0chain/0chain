@@ -755,6 +755,17 @@ func init() {
 		return nil
 	})
 
+	register("generate_all_challenges", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type bool, got %T", val)
+		}
+
+		log.Printf("[INF] generate_all_challenges: %v", cfg)
+
+		return ex.SetServerState(GenerateAllChallenges(cfg))
+	})
+
 	register("generate_challenge", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := NewGenerateChallenge()
 		if err := cfg.Decode(val); err != nil {
@@ -870,19 +881,6 @@ func init() {
 		return ex.CheckFileMetaRoot(&command)
 	})
 
-	register("monitor_aggregates", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		var cfg MonitorAggregates
-		err = mapstructure.Decode(val, &cfg)
-		if err != nil {
-			return fmt.Errorf("error decoding directive data: %v", err)
-		}
-		return ex.MonitorAggregates(&cfg)
-	})
-
-	register("stop_monitor_aggregates", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		return ex.StopMonitorAggregate()
-	})
-
 	register("check_aggregate_value_change", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		var cfg CheckAggregateChange
 		err = mapstructure.Decode(val, &cfg)
@@ -890,7 +888,7 @@ func init() {
 			return
 		}
 
-		return ex.CheckAggregateValueChange(&cfg)
+		return ex.CheckAggregateValueChange(&cfg, tm)
 	})
 
 	register("check_aggregate_value_comparison", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
@@ -900,7 +898,7 @@ func init() {
 			return
 		}
 
-		return ex.CheckAggregateValueComparison(&cfg)
+		return ex.CheckAggregateValueComparison(&cfg, tm)
 	})
 
 	register("set_node_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
@@ -911,5 +909,15 @@ func init() {
 		}
 
 		return ex.SetNodeCustomConfig(&cfg)
+	})
+
+	register("sync_latest_aggregates", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg SyncAggregates
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		return ex.SyncLatestAggregates(&cfg)
 	})
 }

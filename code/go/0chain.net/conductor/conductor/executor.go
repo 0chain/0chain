@@ -16,6 +16,8 @@ import (
 	"0chain.net/conductor/config"
 	"0chain.net/conductor/config/cases"
 	"0chain.net/conductor/dirs"
+	"0chain.net/conductor/services"
+	"0chain.net/conductor/types"
 	"0chain.net/conductor/utils"
 )
 
@@ -410,6 +412,11 @@ func (r *Runner) WaitForChallengeGeneration(timeout time.Duration) {
 		log.Print(" [INF] waiting for blockchain to generate challenge")
 	}
 
+	if r.chalConf == nil {
+		log.Printf(" [ERR] challenge config is not set")
+		return
+	}
+
 	r.setupTimeout(timeout)
 	r.chalConf.WaitOnChallengeGeneration = true
 }
@@ -417,6 +424,11 @@ func (r *Runner) WaitForChallengeGeneration(timeout time.Duration) {
 func (r *Runner) WaitOnBlobberCommit(timeout time.Duration) {
 	if r.verbose {
 		log.Print(" [INF] waiting for blobber to commit writemarker")
+	}
+
+	if r.chalConf == nil {
+		log.Printf(" [ERR] challenge config is not set")
+		return
 	}
 	
 	r.setupTimeout(timeout)
@@ -427,6 +439,11 @@ func (r *Runner) WaitForChallengeStatus(timeout time.Duration) {
 	if r.verbose {
 		log.Print(" [INF] waiting for challenge status from chain")
 	}
+
+	if r.chalConf == nil {
+		log.Printf(" [ERR] challenge config is not set")
+		return
+	}	
 
 	r.setupTimeout(timeout)
 	r.chalConf.WaitForChallengeStatus = true
@@ -846,14 +863,30 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 }
 
 // Command executing.
-func (r *Runner) Command(name string, params map[string]string, tm time.Duration) {
+func (r *Runner) Command(name string, params map[string]interface{}, tm time.Duration) {
 	r.setupTimeout(tm)
 
 	if r.verbose {
 		log.Printf(" [INF] command %q", name)
 	}
 
-	r.waitCommand = r.asyncCommand(name, params)
+	stringParams := make(map[string]string, len(params))
+	for k, v := range params {
+		switch tv := v.(type) {
+		case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+			stringParams[k] = fmt.Sprintf("%v", tv)
+		case []interface{}:
+			stringSlice, err := utils.StringSlice(tv)
+			if err != nil {
+				r.waitCommand = make(chan error)
+				r.waitCommand <- err				
+				return
+			}
+			stringParams[k] = strings.Join(stringSlice, ",")
+		}
+	}
+
+	r.waitCommand = r.asyncCommand(name, stringParams)
 }
 
 func (r *Runner) asyncCommand(name string, params map[string]string) (reply chan error) {
@@ -1095,8 +1128,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.GenerateChallenge = update
 		case config.GetFileMetaRoot:
 			state.GetFileMetaRoot = bool(update)
-		case *config.MonitorAggregates:
-			state.MonitorAggregates = update
+		case config.GenerateAllChallenges:
+			state.GenerateAllChallenges = bool(update)
 		case *config.RenameCommitControl:
 			if update.Fail {
 				state.FailRenameCommit = utils.SliceUnion(state.FailRenameCommit, update.Nodes)
@@ -1123,51 +1156,73 @@ func (r *Runner) SetMagicBlock(configFile string) error {
 	return nil
 }
 
-func (r *Runner) MonitorAggregates(cfg *config.MonitorAggregates) error {
+func (r *Runner) SyncLatestAggregates(cfg *config.SyncAggregates) error {
 	if r.verbose {
-		log.Printf("[INF] started monitoring aggrgetes, %+v\n", cfg)
+		log.Printf("[INF] syncing aggregates, %+v\n", cfg)
 	}
 
-	err := r.SetServerState(cfg)
-	if err != nil {
-		return err
-	}
+	aggService := services.NewAggregateService(r.conf.AggregatesBaseUrl)
 
-	r.monitorAggregates = cfg
-
-	go func() {
-		for r.monitorAggregates != nil {
-			select {
-			case agg := <-r.server.OnAggregate():
-				r.acceptAggregate(agg)
-			}
+	if len(cfg.MinerIds) > 0 {
+		err := aggService.SyncLatestAggregates(types.Miner, cfg.MinerIds)
+		if err != nil && cfg.Required {
+			return fmt.Errorf("error syncing miner aggregates: %v", err)
 		}
-	}()
+	}
+
+	if len(cfg.SharderIds) > 0 {
+		err := aggService.SyncLatestAggregates(types.Sharder, cfg.SharderIds)
+		if err != nil && cfg.Required {
+			return fmt.Errorf("error syncing sharder aggregates: %v", err)
+		}
+	}
+
+	if len(cfg.BlobberIds) > 0 {
+		err := aggService.SyncLatestAggregates(types.Blobber, cfg.BlobberIds)
+		if err != nil && cfg.Required {
+			return fmt.Errorf("error syncing blobber aggregates: %v", err)
+		}
+	}
+
+	if len(cfg.ValidatorIds) > 0 {
+		err := aggService.SyncLatestAggregates(types.Validator, cfg.ValidatorIds)
+		if err != nil && cfg.Required {
+			return fmt.Errorf("error syncing validator aggregates: %v", err)
+		}
+	}
+
+	if len(cfg.AuthorizerIds) > 0 {
+		err := aggService.SyncLatestAggregates(types.Authorizer, cfg.AuthorizerIds)
+		if err != nil && cfg.Required {
+			return fmt.Errorf("error syncing authorizer aggregates: %v", err)
+		}
+	}
+
+	if len(cfg.UserIds) > 0 {
+		err := aggService.SyncLatestAggregates(types.User, cfg.UserIds)
+		if err != nil && cfg.Required {
+			return fmt.Errorf("error syncing user aggregates: %v", err)
+		}
+	}
+
+	if cfg.MonitorGlobal {
+		err := aggService.SyncLatestAggregates(types.Global, []string{})
+		if err != nil && cfg.Required {
+			return fmt.Errorf("error syncing monitor aggregates: %v", err)
+		}
+	}
 
 	return nil
 }
 
-func (r *Runner) StopMonitorAggregate() error {
-	if r.verbose {
-		log.Printf("[INF] stopped monitoring aggregates")
-	}
-
-	err := r.SetServerState(nil)
-	if err != nil {
-		return err
-	}
-
-	r.monitorAggregates = nil
-
-	return nil
-}
-
-func (r *Runner) CheckAggregateValueChange(cfg *config.CheckAggregateChange) error {
+func (r *Runner) CheckAggregateValueChange(cfg *config.CheckAggregateChange, tm time.Duration) error {
 	if r.verbose {
 		log.Printf("[INF] checking aggregate value change: %+v", cfg)
 	}
 
-	check, err := stats.CheckAggregateValueChange(cfg.ProviderType, cfg.ProviderId, cfg.Key, cfg.Monotonicity)
+	aggService := services.NewAggregateService(r.conf.AggregatesBaseUrl)
+
+	check, err := aggService.CheckAggregateValueChange(cfg.ProviderType, cfg.ProviderId, cfg.Key, cfg.Monotonicity, tm)
 	if err != nil {
 		return err
 	}
@@ -1179,12 +1234,14 @@ func (r *Runner) CheckAggregateValueChange(cfg *config.CheckAggregateChange) err
 	return nil
 }
 
-func (r *Runner) CheckAggregateValueComparison(cfg *config.CheckAggregateComparison) error {
+func (r *Runner) CheckAggregateValueComparison(cfg *config.CheckAggregateComparison, tm time.Duration) error {
 	if r.verbose {
 		log.Printf("[INF] checking aggregate value comparison: %+v", cfg)
 	}
+
+	aggService := services.NewAggregateService(r.conf.AggregatesBaseUrl)
 	
-	check, err := stats.CompareAggregateValue(cfg.ProviderType, cfg.ProviderId, cfg.Key, cfg.Comparison, cfg.RValue)
+	check, err := aggService.CompareAggregateValue(cfg.ProviderType, cfg.ProviderId, cfg.Key, cfg.Comparison, cfg.RValue, tm)
 	if err != nil {
 		return err
 	}

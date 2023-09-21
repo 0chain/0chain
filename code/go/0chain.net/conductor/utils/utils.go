@@ -1,6 +1,10 @@
 package utils
 
 import (
+	"fmt"
+	"io"
+	"net/http"
+
 	"0chain.net/core/encryption"
 )
 
@@ -54,4 +58,46 @@ func SliceUnion[T comparable](s1, s2 []T) []T {
 	}
 
 	return out
+}
+
+// StringSlice casts all elements of the array to string. All elements need to be in simple type (numeric, string)
+func StringSlice(s []interface{}) ([]string, error) {
+	result := make([]string, 0, len(s))
+	for i, el := range s {
+		switch tel := el.(type) {
+		case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+			result = append(result, fmt.Sprintf("%v", tel))
+		default:
+			return nil, fmt.Errorf("error in element %v (%v). Not a convertable type", i, el)
+		}
+	}
+
+	return result, nil
+}
+
+func HttpGet(url string, headers map[string]string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("Error in GET request to url %v", url)
+	}
+
+	bdy, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return bdy, nil
 }

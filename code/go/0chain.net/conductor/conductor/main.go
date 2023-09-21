@@ -78,7 +78,6 @@ func main() {
 
 	log.Print("create worker instance")
 	r.conf = conf
-	r.chalConf = config.NewGenerateChallenge()
 	r.verbose = verbose
 	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
 	if err != nil {
@@ -197,7 +196,6 @@ type Runner struct {
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	waitSharderLFB	config.WaitSharderLFB	
 	waitValidatorTicket   config.WaitValidatorTicket
-	monitorAggregates	   *config.MonitorAggregates
 	aggregatesLock		   sync.Mutex
 	chalConf               *config.GenerateChallege
 	fileMetaRoot           fileMetaRoot
@@ -255,11 +253,11 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
 		return tm, true
-	case r.chalConf.WaitOnBlobberCommit:
+	case r.chalConf != nil && r.chalConf.WaitOnBlobberCommit:
 		return tm, true
-	case r.chalConf.WaitOnChallengeGeneration:
+	case r.chalConf != nil && r.chalConf.WaitOnChallengeGeneration:
 		return tm, true
-	case r.chalConf.WaitForChallengeStatus:
+	case r.chalConf != nil && r.chalConf.WaitForChallengeStatus:
 		return tm, true
 	case r.fileMetaRoot.shouldWait:
 		return tm, true
@@ -842,45 +840,6 @@ func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error
 	return nil
 }
 
-func (r *Runner) acceptAggregate(agg *conductrpc.AggregateMessage) (err error) {
-	r.aggregatesLock.Lock()
-	defer r.aggregatesLock.Unlock()
-	
-	var fields []string
-	switch agg.ProviderType {
-	case stats.Miner:
-		fields = r.monitorAggregates.MinerFields
-	case stats.Sharder:
-		fields = r.monitorAggregates.SharderFields
-	case stats.Blobber:
-		fields = r.monitorAggregates.BlobberFields
-	case stats.Validator:
-		fields = r.monitorAggregates.ValidatorFields
-	case stats.Authorizer:
-		fields = r.monitorAggregates.AuthorizerFields
-	default:
-		err = fmt.Errorf("received aggregate with unknown provider type")
-		return
-	}
-	
-	needsNewAgg := false
-	for _, f := range fields {
-		latestAggValue, err := stats.GetLatestAggregateValue(agg.ProviderType, agg.ProviderId, f)
-		if err != nil {
-			return err
-		}
-		if agg.Values[f] != latestAggValue {
-			needsNewAgg = true
-			break
-		}
-	}
-
-	if needsNewAgg {
-		err = stats.AddAggregate(agg.Values, agg.ProviderType, agg.ProviderId)
-	}
-	return
-}
-
 func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
 	if block.GeneratorId != string(minerId) {
 		return 
@@ -936,13 +895,12 @@ func (r *Runner) handleNewBlockWaitingForSharderLFB(block *stats.BlockFromSharde
 	return
 }
 
-func (r *Runner) onChallengeGeneration(blobberID string) {
-	if blobberID != r.chalConf.BlobberID {
-		return
-	}
-	log.Println("Challenge has been generated for blobber ", blobberID)
+func (r *Runner) onChallengeGeneration(txnHash string) {
+	log.Printf("Challenge has been generated in txn: %v\n", txnHash)
 
-	r.chalConf.WaitOnChallengeGeneration = false
+	if r.chalConf != nil {
+		r.chalConf.WaitOnChallengeGeneration = false
+	}
 }
 
 func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
@@ -951,15 +909,17 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 		return errors.New("invalid map on challenge status")
 	}
 
-	if blobberID != r.chalConf.BlobberID {
-		return nil
-	}
+	if r.chalConf != nil {
+		if blobberID != r.chalConf.BlobberID {
+			return nil
+		}
 
-	r.chalConf.WaitForChallengeStatus = false
+		r.chalConf.WaitForChallengeStatus = false
 
-	status := m["status"].(int)
-	if r.chalConf.ExpectedStatus != status {
-		return fmt.Errorf("expected status %d, got %d", r.chalConf.ExpectedStatus, status)
+		status := m["status"].(int)
+		if r.chalConf.ExpectedStatus != status {
+			return fmt.Errorf("expected challenge status %d, got %d", r.chalConf.ExpectedStatus, status)
+		}	
 	}
 
 	return nil
@@ -991,16 +951,19 @@ func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {
 }
 
 func (r *Runner) onBlobberCommit(blobberID string) {
-	if blobberID != r.chalConf.BlobberID {
-		log.Printf("Ignoring blobber: %s\n", blobberID)
-		return
+	if r.chalConf != nil {
+		if blobberID != r.chalConf.BlobberID {
+			log.Printf("Ignoring blobber: %s\n", blobberID)
+			return
+		}
+		log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
+		r.chalConf.WaitOnBlobberCommit = false
 	}
+
 	err := r.SetServerState(config.BlobberCommittedWM(true))
 	if err != nil {
 		log.Printf("error: %s", err.Error())
 	}
-	log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
-	r.chalConf.WaitOnBlobberCommit = false
 }
 
 func (r *Runner) stopAll() {
@@ -1050,8 +1013,6 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.onGettingFileMetaRoot(m)
 		case vt := <-r.server.OnValidatorTicket():
 			err = r.acceptValidatorTicket(vt)
-		case agg := <-r.server.OnAggregate():
-			err = r.acceptAggregate(agg)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)

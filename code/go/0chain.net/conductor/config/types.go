@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/conductor/conductrpc/stats"
+	"0chain.net/conductor/types"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -109,6 +109,8 @@ func NewBlobberDelete() *BlobberDelete {
 func (n *BlobberDelete) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
+
+type GenerateAllChallenges bool
 
 type GenerateChallege struct {
 	BlobberID         string        `json:"blobber_id" mapstructure:"blobber_id"`
@@ -231,7 +233,7 @@ func NewWaitValidatorTicket() *WaitValidatorTicket {
 	return &WaitValidatorTicket{}
 }
 
-type MonitorAggregates struct {
+type SyncAggregates struct {
 	SharderIds []string `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	MinerIds []string	`json:"miners" yaml:"miners" mapstructure:"miners"`
 	BlobberIds []string	`json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
@@ -239,29 +241,22 @@ type MonitorAggregates struct {
 	AuthorizerIds []string	`json:"authorizers" yaml:"authorizers" mapstructure:"authorizers"`
 	MonitorGlobal bool	`json:"global" yaml:"global" mapstructure:"global"`
 	UserIds []string `json:"users" yaml:"users" mapstructure:"users"`
-
-	SharderFields []string	`json:"sharder_fields" yaml:"sharder_fields" mapstructure:"sharder_fields"`
-	MinerFields []string	`json:"miner_fields" yaml:"miner_fields" mapstructure:"miner_fields"`
-	BlobberFields []string	`json:"blobber_fields" yaml:"blobber_fields" mapstructure:"blobber_fields"`
-	ValidatorFields []string	`json:"validator_fields" yaml:"validator_fields" mapstructure:"validator_fields"`
-	AuthorizerFields []string	`json:"authorizer_fields" yaml:"authorizer_fields" mapstructure:"authorizer_fields"`
-	GlobalFields []string	`json:"global_fields" yaml:"global_fields" mapstructure:"global_fields"`
-	UserFields []string `json:"user_fields" yaml:"user_fields" mapstructure:"user_fields"`
+	Required bool `json:"required" yaml:"required" mapstructure:"required"`
 }
 
 type CheckAggregateChange struct {
-	ProviderType stats.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
+	ProviderType types.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
 	ProviderId string `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
 	Key string `json:"key" yaml:"key" mapstructure:"key"`
-	Monotonicity stats.Monotonicity `json:"monotonicity" yaml:"monotonicity" mapstructure:"monotonicity"`
+	Monotonicity types.Monotonicity `json:"monotonicity" yaml:"monotonicity" mapstructure:"monotonicity"`
 }
 
 type CheckAggregateComparison struct {
-	ProviderType stats.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
+	ProviderType types.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
 	ProviderId string `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
 	Key string `json:"key" yaml:"key" mapstructure:"key"`
-	Comparison stats.Comparison `json:"comparison" yaml:"comparison" mapstructure:"comparison"`
-	RValue int64 `json:"rvalue" yaml:"rvalue" mapstructure:"rvalue"`
+	Comparison types.Comparison `json:"comparison" yaml:"comparison" mapstructure:"comparison"`
+	RValue float64 `json:"rvalue" yaml:"rvalue" mapstructure:"rvalue"`
 }
 
 type NodeCustomConfig struct {
