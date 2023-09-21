@@ -16,7 +16,6 @@ func initIntegrationsTests() {
 
 func registerInConductor(id string) {
 	crpc.Client().Register(id)
-	go syncCSConfig(id)
 }
 
 func shutdownIntegrationTests() {
