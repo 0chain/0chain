@@ -6,11 +6,11 @@ enable:
 sets:
   - name: "Node Recovery"
     tests:
-      - "Miner Recovery - Miner should be able to produce blocks after it recovers"
-      - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
+      # - "Miner Recovery - Miner should be able to produce blocks after it recovers"
+      # - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
       # - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
-      # - "Validator Recovery - Validator should generate tickets and gain rewards after it recovers"
-      # - "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it gains rewards"
+      - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
+      # - "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
 
 tests:
   - name: "Miner Recovery - Miner should be able to produce blocks after it recovers"
@@ -73,6 +73,249 @@ tests:
       - wait_sharder_lfb:
           sharder: 'sharder-2'
           timeout: '5m'
+  
+  - name: "Validator Recovery - Validator should still be able to get rewards even after it recovers"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      - sleep: "20s"
+      - start: ['0box']
+      - command:
+          name: "update_config"
+          params:
+            keys: validator_reward
+            values: "0.5"
+      - command:
+          name: "update_config"
+          params:
+            keys: time_unit
+            values: "1h"
+      - command:
+          name: "update_config"
+          params:
+            keys: validators_per_challenge
+            values: "3"
+
+      # Two blobbers would suffice but we need 3 validators and since docker-compose
+      # file raises blobber and validator together we are raising 3 blobbers here.
+      # We need to decouple this behavior later on.
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'validator-1', 'validator-2', 'validator-3']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
+          timeout: '15m'
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: "fill_blobber_validator_wallets"
+      - command:
+          name: "stake_providers"
+          params:
+            provider_type: blobber
+            provider_ids:
+                - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+                - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
+                - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+      - command:
+          name: "stake_providers"
+          params:
+            provider_type: validator
+            provider_ids:
+                - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+                - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
+                - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+      - sync_latest_aggregates:
+          validators:
+            - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+          required: false
+      - command:
+          name: 'init_allocation_only'
+      - generate_all_challenges: true
+      - command:
+          name: "upload"
+      - wait_round:
+          shift: 100
+      - generate_all_challenges: false
+      - check_aggregate_value_comparison:
+          provider_type: validator
+          provider_id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
+          key: total_rewards
+          comparison: gt
+          rvalue: 0
+          timeout: "2m"
+      - command:
+          name: "fill_blobber_validator_wallets"
+      - stop: ['blobber-3']
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./blobber/docker.local/validator4"
+            recreate_script: docker.local/bin/blobber.init.setup.sh
+            recreate_script_workdir: "blobber"
+      - sync_latest_aggregates:
+          validators:
+            - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+          required: 
+      - wait_round:
+          shift: 100
+      - start: ['blobber-3']
+      - generate_all_challenges: true
+      - command:
+          name: "upload"
+          params:
+            remotepath: "/bin/upload2.bin"
+      - wait_validator_ticket:
+          validator_name: "validator-3"
+      - wait_round:
+          shift: 500
+      - check_aggregate_value_change:
+          provider_type: validator
+          provider_id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
+          key: total_rewards
+          monotonicity: increase
+          timeout: "2m"
+  - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      - sleep: "20s"
+      - start: ['0box']
+      - command:
+          name: "update_config"
+          params:
+            keys: time_unit
+            values: "1h"
+      - command:
+          name: "update_config"
+          params:
+            keys: validators_per_challenge
+            values: "3"
+      # Two blobbers would suffice but we need 3 validators and since docker-compose
+      # file raises blobber and validator together we are raising 3 blobbers here.
+      # We need to decouple this behavior later on.
+      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'validator-1', 'validator-2', 'validator-3']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
+          timeout: '15m'
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: "fill_blobber_validator_wallets"
+      - command:
+          name: "stake_providers"
+          params:
+            provider_type: blobber
+            provider_ids:
+                - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+                - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
+                - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+      - command:
+          name: "stake_providers"
+          params:
+            provider_type: validator
+            provider_ids:
+                - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+                - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
+                - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+      - sync_latest_aggregates:
+          blobbers:
+            - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+          required: false
+      - command:
+          name: 'init_allocation_only'
+      - generate_all_challenges: true
+      - command:
+          name: "upload"
+      - wait_round:
+          shift: 100
+      - generate_all_challenges: false
+      - check_aggregate_value_comparison:
+          provider_type: blobber
+          provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+          key: total_rewards
+          comparison: gt
+          rvalue: 0
+          timeout: "2m"
+      - command:
+          name: "fill_blobber_validator_wallets"
+      - stop: ['blobber-3']
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./blobber/docker.local/blobber3"
+            recreate_script: docker.local/bin/blobber.init.setup.sh
+            recreate_script_workdir: "blobber"
+      - sync_latest_aggregates:
+          blobbers:
+            - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+          required: 
+      - wait_round:
+          shift: 100
+      - start: ['blobber-3']
+      - generate_all_challenges: true
+      - command:
+          name: "upload"
+          params:
+            remotepath: "/bin/upload2.bin"
+      - wait_round:
+          shift: 500
+      - check_aggregate_value_change:
+          provider_type: blobber
+          provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+          key: total_rewards
+          monotonicity: increase
+          timeout: "2m"
+  # - name: "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
+  #   flow:
+  #     - set_monitor: "sharder-1"
+  #     - cleanup_bc: {}
+  #     - command:
+  #         name: "cleanup_0dns"
+  #     - wait_add:
+  #         sharders: ['sharder-1','sharder-2']
+  #         miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
+  #         start: true
+  #     - wait_round:
+  #         round: 15 # just wait the BC starts
+  #     - start: ['0dns']
+  #     - sleep: "20s"
+  #     - command:
+  #         name: "register_authorizer"
+  #     - wait_add:
+  #         authorizers: ['authorizer-1','authorizer-2','authorizer-3','authorizer-4']
+  #         start: true
+  #     - wait_round:
+  #         shift: 50
+  #     - start: ['0box']
+  #     - wait_round:
+  #         shift: 100
+    #   - command:
+    #       name: "mint_zcn"
+    #   - command:
+    #       name: "check_aggregate_value_change"
+    #       timeout: "2m"
+    #       params:
+    #         provider_type: "authorizer"
+    #         provider_id: "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
+    #         key: "total_rewards"
+    #         monotonicity: "INC"
+      # - wait_round:
+      #     shift: 10000
 
   # - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
     # flow:

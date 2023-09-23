@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -919,5 +921,13 @@ func init() {
 		}
 
 		return ex.SyncLatestAggregates(&cfg)
+	})
+
+	register("pause", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		// pause execution until the user presses enter
+		log.Println("Press enter to continue...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		log.Printf("Continuing execution...")
+		return nil
 	})
 }

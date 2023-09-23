@@ -315,8 +315,8 @@ func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 
 func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 	if r.verbose {
-		log.Printf(" [INF] wait add miners: %s, sharders: %s, blobbers: %s, authorizers %s",
-			wadd.Miners, wadd.Sharders, wadd.Blobbers, wadd.Authorizers)
+		log.Printf(" [INF] wait add miners: %s, sharders: %s, blobbers: %s, validators: %s, authorizers %s",
+			wadd.Miners, wadd.Sharders, wadd.Blobbers, wadd.Validators, wadd.Authorizers)
 	}
 
 	r.setupTimeout(tm)
@@ -326,6 +326,7 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 		allNodes := append(wadd.Sharders, wadd.Miners...)
 		allNodes = append(allNodes, wadd.Blobbers...)
 		allNodes = append(allNodes, wadd.Authorizers...)
+		allNodes = append(allNodes, wadd.Validators...)
 
 		for _, name := range allNodes {
 			if err := r.doStart(name, false, false); err != nil {

@@ -233,7 +233,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		fmt.Printf("wait for view change %v\n", r.waitViewChange)
 		return tm, true
 	case !r.waitAdd.IsZero():
-		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Authorizers)
+		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v), validators (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Validators, r.waitAdd.Authorizers)
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
 		log.Println("wait for sharder keep")
@@ -706,6 +706,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 
 	switch {
 	case r.waitRound.Round > re.Round:
+		log.Printf("Got round %v\n", re.Round)
 		return // not this round
 	case r.waitRound.ForbidBeyond && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,

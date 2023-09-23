@@ -102,6 +102,7 @@ type WaitAdd struct {
 	Miners      []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
 	Sharders    []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	Blobbers    []NodeName `json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
+	Validators  []NodeName `json:"validators" yaml:"validators" mapstructure:"validators"`
 	Authorizers []NodeName `json:"authorizers" yaml:"authorizers" mapstructure:"authorizers"`
 	Start       bool       `json:"start" yaml:"start" mapstructure:"start"`
 }
@@ -119,6 +120,8 @@ func (wa *WaitAdd) Take(name NodeName) (ok bool) {
 		return wa.TakeBlobber(name)
 	} else if strings.Contains(string(name), "authorizer") {
 		return wa.TakeAuthorizer(name)
+	} else if strings.Contains(string(name), "validator") {
+		return wa.TakeValidator(name)
 	}
 
 	return false
@@ -148,6 +151,16 @@ func (wa *WaitAdd) TakeBlobber(name NodeName) (ok bool) {
 	for i, blobberName := range wa.Blobbers {
 		if blobberName == name {
 			wa.Blobbers = append(wa.Blobbers[:i], wa.Blobbers[i+1:]...)
+			return true
+		}
+	}
+	return
+}
+
+func (wa *WaitAdd) TakeValidator(name NodeName) (ok bool) {
+	for i, validatorName := range wa.Validators {
+		if validatorName == name {
+			wa.Validators = append(wa.Validators[:i], wa.Validators[i+1:]...)
 			return true
 		}
 	}

@@ -139,29 +139,29 @@ nodes:
     id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
     work_dir: "../blobber/docker.local/validator1"
     env: BLOBBER=1,CONFIG_PATH=./conductor-config
-    start_command: "echo \0"
-    stop_command: "echo \0"
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
 
   - name: "validator-2"
     id: ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd
     work_dir: "../blobber/docker.local/validator2"
     env: BLOBBER=2,CONFIG_PATH=./conductor-config
-    start_command: "echo \0"
-    stop_command: "echo \0"
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
 
   - name: "validator-3"
     id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
     work_dir: "../blobber/docker.local/validator3"
     env: BLOBBER=3,CONFIG_PATH=./conductor-config
-    start_command: "echo \0"
-    stop_command: "echo \0"
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
 
   - name: "validator-4"
     id: 823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337
     work_dir: "../blobber/docker.local/validator4"
     env: BLOBBER=4,CONFIG_PATH=./conductor-config
-    start_command: "echo \0"
-    stop_command: "echo \0"
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
 
   # authorizer
   - name: "authorizer-1"
