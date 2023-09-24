@@ -695,7 +695,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, cab.alloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -773,7 +773,7 @@ func (sc *StorageSmartContract) processChallengeFailed(
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, cab.alloc.Stats)
 	if err != nil {
 		return "", err
 	}

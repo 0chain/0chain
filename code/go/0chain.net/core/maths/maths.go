@@ -82,18 +82,18 @@ func SafeMultInt64(a, b int64) (int64, error) {
 }
 
 // ConvertToUint64 converts an int64 to uint64 and throws if the int64 number is negative
-func ConvertToUint64(a int64) (uint64, error) {
+func ConvertToUint64(a int64) (int64, error) {
 	if a < 0 {
 		return 0, fmt.Errorf("int64 %v is negative", a)
 	}
 
-	return uint64(a), nil
+	return a, nil
 }
 
-// ConvertUInt64sToInts converts the given int64 numbers to corresponding unints and return them in the same order.
+// ConvertInt64sToUint64s converts the given int64 numbers to corresponding unints and return them in the same order.
 // throws if any value is less than 0.
-func ConvertUInt64sToInts(numbers ...int64) ([]uint64, error) {
-	convertedNumbers := make([]uint64, len(numbers))
+func ConvertInt64sToUint64s(numbers ...int64) ([]int64, error) {
+	convertedNumbers := make([]int64, len(numbers))
 
 	for i, num := range numbers {
 		converted, err := ConvertToUint64(num)
