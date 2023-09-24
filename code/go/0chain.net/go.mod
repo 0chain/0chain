@@ -41,7 +41,7 @@ require (
 require (
 	github.com/0chain/common v0.0.7-0.20230920071432-fef500aba732
 	github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9
-	github.com/go-faker/faker/v4 v4.1.1
+	github.com/go-faker/faker/v4 v4.2.0
 	github.com/jackc/pgx/v5 v5.4.1
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
