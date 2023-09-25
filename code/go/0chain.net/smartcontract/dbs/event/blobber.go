@@ -528,8 +528,8 @@ func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
 	sql := "UPDATE blobbers \n"
 	sql += "SET "
 	sql += "  open_challenges = open_challenges + v.open,\n"
-	sql += "  challenges_passed = challenges_passed + v.passed\n"
-	sql += "  challenges_completed = challenges_completed + v.completed,\n"
+	sql += "  challenges_passed = challenges_passed + v.passed,\n"
+	sql += "  challenges_completed = challenges_completed + v.completed\n"
 	sql += "FROM ( VALUES "
 	first := true
 	for _, delta := range deltas {
