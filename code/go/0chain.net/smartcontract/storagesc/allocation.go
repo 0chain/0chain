@@ -1217,11 +1217,12 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 
 	var blobbersSettledChallengesCount []int64
 
-	for _, ba := range alloc.BlobberAllocs {
+	for idx, ba := range alloc.BlobberAllocs {
+		blobbersSettledChallengesCount = append(blobbersSettledChallengesCount, 0)
 		if ba.Stats.OpenChallenges > 0 {
 			logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
 
-			blobbersSettledChallengesCount = append(blobbersSettledChallengesCount, ba.Stats.OpenChallenges)
+			blobbersSettledChallengesCount[idx] = ba.Stats.OpenChallenges
 
 			ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
 			alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
