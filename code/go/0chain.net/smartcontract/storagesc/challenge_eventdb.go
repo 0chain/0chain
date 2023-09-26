@@ -60,7 +60,7 @@ func emitAddChallenge(
 	ch *StorageChallengeResponse,
 	expiredN int,
 	balances cstate.StateContextI,
-	allocStats, blobberStats *StorageAllocationStats,
+	allocStats *StorageAllocationStats,
 ) error {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{

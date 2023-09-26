@@ -1279,7 +1279,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
 
 	beforeEmitAddChallenge(challInfo)
-	return emitAddChallenge(challInfo, lenExpired, balances, alloc.Stats, blobAlloc.Stats)
+	return emitAddChallenge(challInfo, lenExpired, balances, alloc.Stats)
 }
 
 func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionRounds int64) bool {
