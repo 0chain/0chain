@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/maths"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"errors"
@@ -72,17 +71,11 @@ func emitAddChallenge(
 		FailedChallenges:     allocStats.FailedChallenges,
 	})
 
-	// Update open challenges count of challenge blobber
-	converted, err := maths.ConvertInt64sToUint64s(blobberStats.OpenChallenges, blobberStats.TotalChallenges, blobberStats.SuccessChallenges)
-	if err != nil {
-		return err
-	}
-
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.ChallengeStatsDeltas{
 		Id:             ch.BlobberID,
-		PassedDelta:    converted[0],
-		CompletedDelta: converted[1],
-		OpenDelta:      converted[2],
+		PassedDelta:    0,
+		CompletedDelta: 1,
+		OpenDelta:      1,
 	})
 
 	logging.Logger.Debug("emitted add_challenge")
