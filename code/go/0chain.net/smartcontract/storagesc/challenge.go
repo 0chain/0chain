@@ -910,7 +910,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	conf *Config,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
-	blobberSelection := challengeBlobberSelection(1) // challengeBlobberSelection(r.Intn(2))
+	blobberSelection := challengeBlobberSelection(0) // challengeBlobberSelection(r.Intn(2))
 	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
 	if err != nil {
 		return nil, common.NewError("add_challenge", err.Error())
