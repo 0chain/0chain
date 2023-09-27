@@ -877,7 +877,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
 		} else {
-			for i := 0; i < maxBlobbersSelect && i < len(challengeBlobbers); i++ {
+			for i := 0; i < maxBlobbersSelect; i++ {
 				randomIndex := r.Intn(len(challengeBlobbers))
 				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
 			}
@@ -889,10 +889,6 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 				challengeBlobber = bc
 			}
 		}
-
-		logging.Logger.Info("Jayash select_random_blobber_for_challenge",
-			zap.Any("challenge_blobbers", challengeBlobbers),
-			zap.String("blobber_id", challengeBlobber.BlobberID))
 
 		return challengeBlobber.BlobberID, nil
 	case randomSelection:
@@ -1279,6 +1275,8 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return common.NewErrorf("add_challenge",
 			"error storing allocation: %v", err)
 	}
+
+	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
 
 	beforeEmitAddChallenge(challInfo)
 	return emitAddChallenge(challInfo, lenExpired, balances, alloc.Stats)
