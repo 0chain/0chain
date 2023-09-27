@@ -565,14 +565,14 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 
 	s.Round = round
 
-	edb.kafka = queueProvider.NewKafkaProvider()
-	
 	data, err := json.Marshal(events)
 	if err != nil {
 		logging.Logger.Error("Getting error while marshalling data", zap.Error(err))
 		return s, err
 	}
-	edb.kafka.PublishToKafka("events", data)
+
+	kafka := edb.GetKafkaProv()
+	kafka.PublishToKafka("events", data)
 
 	err = edb.UpdateSnapshotFromEvents(s, events)
 	if err != nil {
@@ -1081,4 +1081,17 @@ func setEventData[T any](e *Event, data interface{}) error {
 	}
 
 	return ErrInvalidEventData
+}
+
+func (edb *EventDb) kafkaProv() *queueProvider.KafkaProvider {
+	kafka := queueProvider.NewKafkaProvider(edb.dbConfig.KafkaHost)
+	return kafka
+}
+
+func (edb *EventDb) GetKafkaProv() *queueProvider.KafkaProvider {
+	if edb.kafka == nil {
+		kafka := edb.kafkaProv()
+		edb.kafka = kafka
+	}
+	return edb.kafka
 }

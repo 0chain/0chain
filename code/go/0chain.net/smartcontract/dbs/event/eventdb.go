@@ -34,13 +34,12 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 	if err != nil {
 		return nil, err
 	}
-
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
-		kafka:         queueProvider.NewKafkaProvider(),
+		kafka:         queueProvider.NewKafkaProvider(config.KafkaHost),
 	}
 
 	return eventDb, nil

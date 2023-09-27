@@ -582,7 +582,7 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
 	conf.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
 	conf.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
-
+	conf.DbsEvents.KafkaHost = viper.GetString("kafka.host")
 	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
 	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
 	conf.DbsSettings.PartitionChangePeriod = viper.GetInt64("server_chain.dbs.settings.partition_change_period")

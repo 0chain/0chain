@@ -16,11 +16,9 @@ type KafkaProvider struct {
 	eventsWriter *kafka.Writer
 }
 
-func NewKafkaProvider() *KafkaProvider {
-	kafkaHost := KafkaHost
-
+func NewKafkaProvider(host string) *KafkaProvider {
 	eventsWriter := &kafka.Writer{
-		Addr:  kafka.TCP(kafkaHost),
+		Addr:  kafka.TCP(host),
 		Topic: Topic,
 		Async: true,
 	}
