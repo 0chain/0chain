@@ -586,7 +586,7 @@ func (c *ConfigImpl) FromViper() error {
 	if conf.DbsEvents.Slowtablespace == "" {
 		conf.DbsEvents.Slowtablespace = "hddtablespace"
 	}
-
+	conf.DbsEvents.KafkaHost = viper.GetString("kafka.host")
 	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
 	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
 	conf.DbsSettings.PartitionChangePeriod = viper.GetInt64("server_chain.dbs.settings.partition_change_period")

@@ -202,6 +202,7 @@ type DbAccess struct {
 	MaxOpenConns    int           `json:"max_open_conns"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
 	Slowtablespace  string        `json:"slowtablespace"`
+	KafkaHost       string
 }
 
 type DbSettings struct {
