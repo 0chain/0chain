@@ -877,7 +877,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
 		} else {
-			for i := 0; i < maxBlobbersSelect; i++ {
+			for i := 0; i < maxBlobbersSelect && i < len(challengeBlobbers); i++ {
 				randomIndex := r.Intn(len(challengeBlobbers))
 				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
 			}
@@ -889,6 +889,10 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 				challengeBlobber = bc
 			}
 		}
+
+		logging.Logger.Info("Jayash select_random_blobber_for_challenge",
+			zap.Any("challenge_blobbers", challengeBlobbers),
+			zap.String("blobber_id", challengeBlobber.BlobberID))
 
 		return challengeBlobber.BlobberID, nil
 	case randomSelection:
