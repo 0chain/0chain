@@ -858,7 +858,7 @@ const (
 
 // selectBlobberForChallenge select blobber for challenge in random manner
 func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
-	r *rand.Rand, balances cstate.StateContextI) (string, error) {
+	r *rand.Rand, balances cstate.StateContextI, conf *Config) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
 	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
@@ -868,7 +868,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 	switch selection {
 	case randomWeightSelection:
-		const maxBlobbersSelect = 5
+		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
 
 		var challengeBlobber ChallengeReadyBlobber
 		var maxWeight uint64
@@ -915,7 +915,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(0) // challengeBlobberSelection(r.Intn(2))
-	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
+	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
 	if err != nil {
 		return nil, common.NewError("add_challenge", err.Error())
 	}
