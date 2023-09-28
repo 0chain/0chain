@@ -890,10 +890,6 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			}
 		}
 
-		logging.Logger.Info("Jayash select_random_blobber_for_challenge",
-			zap.Any("challenge_blobbers", challengeBlobbers),
-			zap.String("blobber_id", challengeBlobber.BlobberID))
-
 		return challengeBlobber.BlobberID, nil
 	case randomSelection:
 		randomIndex := r.Intn(len(challengeBlobbers))
