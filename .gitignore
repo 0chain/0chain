@@ -89,3 +89,5 @@ code/go/0chain.net/miner/miner/miner
 code/go/0chain.net/sharder/sharder/sharder
 
 docker.local/conductor.backup_logs
+
+go.work*
