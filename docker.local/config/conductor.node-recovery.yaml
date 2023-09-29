@@ -8,8 +8,8 @@ sets:
     tests:
       # - "Miner Recovery - Miner should be able to produce blocks after it recovers"
       # - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
-      # - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
       - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
+      - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
       # - "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
 
 tests:
@@ -81,6 +81,8 @@ tests:
       - command:
           name: "cleanup_blobbers"
       - command:
+          name: "cleanup_0box"
+      - command:
           name: "cleanup_0dns"
       - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
@@ -91,18 +93,13 @@ tests:
       - command:
           name: "update_config"
           params:
-            keys: validator_reward
-            values: "0.5"
+            keys: "validator_reward,time_unit,validators_per_challenge"
+            values: "0.5,1h,3"
       - command:
-          name: "update_config"
+          name: "update_faucet_config"
           params:
-            keys: time_unit
-            values: "1h"
-      - command:
-          name: "update_config"
-          params:
-            keys: validators_per_challenge
-            values: "3"
+            keys: max_pour_amount,periodic_limit
+            values: "1000,10000"
 
       # Two blobbers would suffice but we need 3 validators and since docker-compose
       # file raises blobber and validator together we are raising 3 blobbers here.
@@ -188,6 +185,8 @@ tests:
       - command:
           name: "cleanup_blobbers"
       - command:
+          name: "cleanup_0box"
+      - command:
           name: "cleanup_0dns"
       - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
@@ -205,6 +204,12 @@ tests:
           params:
             keys: validators_per_challenge
             values: "3"
+      - command:
+          name: "update_faucet_config"
+          params:
+            keys: max_pour_amount,periodic_limit
+            values: "1000,10000"
+
       # Two blobbers would suffice but we need 3 validators and since docker-compose
       # file raises blobber and validator together we are raising 3 blobbers here.
       # We need to decouple this behavior later on.
@@ -243,7 +248,6 @@ tests:
           name: "upload"
       - wait_round:
           shift: 100
-      - generate_all_challenges: false
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
@@ -253,27 +257,31 @@ tests:
           timeout: "2m"
       - command:
           name: "fill_blobber_validator_wallets"
-      - stop: ['blobber-3']
-      - command:
-          name: "cleanup_provider"
-          params:
-            path: "./blobber/docker.local/blobber3"
-            recreate_script: docker.local/bin/blobber.init.setup.sh
-            recreate_script_workdir: "blobber"
-      - sync_latest_aggregates:
-          blobbers:
-            - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-          required: 
-      - wait_round:
-          shift: 100
-      - start: ['blobber-3']
-      - generate_all_challenges: true
       - command:
           name: "upload"
           params:
-            remotepath: "/bin/upload2.bin"
+            remotepath: "/bin/uploadb.bin"
+      - stop: ['blobber-3']
       - wait_round:
           shift: 500
+      - sync_latest_aggregates:
+          blobbers:
+            - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+          required: true
+      - start: ['blobber-3']
+      - wait_round:
+          shift: 100
+      - command:
+          name: "upload_repair"
+      - wait_round:
+          shift: 400
+      - check_aggregate_value_comparison:
+          provider_type: blobber
+          provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+          key: total_slashed_stake
+          comparison: gt
+          rvalue: 0
+          timeout: "2m"
       - check_aggregate_value_change:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
@@ -323,3 +331,8 @@ tests:
     # flow:
   # - name: "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it gains rewards"
     # flow:
+
+# 1377933715
+#  934 |             991
+# 5001639452
+# 1545 |            2118

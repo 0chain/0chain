@@ -16,6 +16,7 @@ stuck_warning_threshold: "2s"
 
 aggregate_base_url: "http://localhost:9081/v2"
 
+
 #
 # nodes used in tests
 #
@@ -225,6 +226,10 @@ commands:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/docker-clean.sh"
     can_fail: true
+  cleanup_0box:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/cleanup_0box.sh"
+    can_fail: true
   cleanup_0dns:
     work_dir: "../0dns"
     exec: "../0dns/docker.local/bin/docker-clean.sh"
@@ -409,6 +414,14 @@ commands:
   update_config:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/update_config.sh $keys $values"
+    args:
+      keys:
+        required: true
+      values:
+        required: true
+  update_faucet_config:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/update_faucet_config.sh $keys $values"
     args:
       keys:
         required: true

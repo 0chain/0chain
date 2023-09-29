@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"strings"
 
 	"0chain.net/conductor/stores"
 	"0chain.net/conductor/types"
@@ -249,7 +248,15 @@ func (s *AggregateService) getRemoteAggregate(ptype ProviderType, pid string) (*
 }
 
 func (s *AggregateService) getRemoteAggregates(ptype ProviderType, pids []string) ([]types.Aggregate, error) {
-	url := fmt.Sprintf("%v/%v-aggregates?ids=%v", s.baseUrl, ptype, strings.Join(pids, ","))
+	idsParams := ""
+	for i, pid := range pids {
+		if i > 0 {
+			idsParams += "&"
+		}
+		idsParams += fmt.Sprintf("ids[]=%v", pid)
+	}
+
+	url := fmt.Sprintf("%v/%v-aggregates?%v", s.baseUrl, ptype, idsParams)
 
 	log.Printf("Getting aggregates from %v\n", url)
 
