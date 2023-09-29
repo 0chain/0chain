@@ -30,6 +30,19 @@ jobs:
       with:
         go-version: '1.20'
 
+    - name: Install make
+      id: install_make
+      run: |
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+
     - name: Docker Init Setup.
       run: |
         cd 0chain
@@ -45,12 +58,6 @@ jobs:
       run: |
         bash ./docker.local/bin/build.base.sh
 
-    - name: Install make
-      id: install_make
-      run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
-
     - name: Build Miner Docker Image For Integration Test.
       run: |
         bash ./docker.local/bin/build.miners-integration-tests.sh
@@ -63,11 +70,6 @@ jobs:
       run: |
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
-
-    - name: Go 1.20 setup.
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.20'
 
     - name: Setting Up View Change
       run: |
