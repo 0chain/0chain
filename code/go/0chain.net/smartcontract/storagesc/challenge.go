@@ -749,6 +749,12 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
+	// Clean up challenge on MPT
+	_, err = balances.DeleteTrieNode(storageChallengeKey(sc.ID, cab.challenge.ID))
+	if err != nil {
+		return "", common.NewError("challenge_reward_error", err.Error())
+	}
+
 	if cab.success < cab.threshold {
 		return "challenge passed partially by blobber", nil
 	}
