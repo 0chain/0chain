@@ -130,8 +130,9 @@ type Config struct {
 	ChallengeEnabled bool `json:"challenge_enabled"`
 	// ValidatorsPerChallenge is the number of validators to select per
 	// challenges.
-	ValidatorsPerChallenge int `json:"validators_per_challenge"`
-	NumValidatorsRewarded  int `json:"num_validators_rewarded"`
+	ValidatorsPerChallenge       int `json:"validators_per_challenge"`
+	NumValidatorsRewarded        int `json:"num_validators_rewarded"`
+	MaxBlobberSelectForChallenge int `json:"max_blobber_select_for_challenge"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
@@ -229,6 +230,10 @@ func (conf *Config) validate() (err error) {
 	if conf.NumValidatorsRewarded <= 0 {
 		return fmt.Errorf("invalid num_validators_rewarded <= 0: %v",
 			conf.NumValidatorsRewarded)
+	}
+	if conf.MaxBlobberSelectForChallenge <= 0 {
+		return fmt.Errorf("invalid max_blobber_select_for_challenge <= 0: %v",
+			conf.MaxBlobberSelectForChallenge)
 	}
 	if conf.MaxStake < conf.MinStake {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", conf.MinStake,
@@ -421,6 +426,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
 	conf.ValidatorsPerChallenge = scc.GetInt(pfx + "validators_per_challenge")
 	conf.NumValidatorsRewarded = scc.GetInt(pfx + "num_validators_rewarded")
+	conf.MaxBlobberSelectForChallenge = scc.GetInt(pfx + "max_blobber_select_for_challenge")
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
