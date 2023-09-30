@@ -1963,9 +1963,8 @@ func (sa *StorageAllocation) removeOldChallenges(
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
-
-	var removedChallengeBlobberMap = make(map[string]string)
 	var nonRemovedChallenges []*AllocOpenChallenge
+	var expChalIDs []string
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
@@ -1980,7 +1979,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 			zap.Int64("current_round_created_at", currentChallenge.RoundCreatedAt),
 		)
 
-		removedChallengeBlobberMap[oc.ID] = oc.BlobberID
+		expChalIDs = append(expChalIDs, oc.ID)
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -2007,25 +2006,13 @@ func (sa *StorageAllocation) removeOldChallenges(
 
 	allocChallenges.OpenChallenges = nonRemovedChallenges
 
-	var expChalIDs []string
-	for challengeID := range removedChallengeBlobberMap {
-		expChalIDs = append(expChalIDs, challengeID)
-	}
-
 	// maps blobberID to count of its expiredIDs.
-	expiredCountMap := make(map[string]int)
 
 	for _, challengeID := range expChalIDs {
-		blobberID := removedChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
 			return common.NewErrorf("remove_old_challenges", "could not delete challenge node: %v", err)
 		}
-
-		if _, ok := expiredCountMap[blobberID]; !ok {
-			expiredCountMap[blobberID] = 0
-		}
-		expiredCountMap[blobberID]++
 	}
 
 	return nil
