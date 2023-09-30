@@ -8,6 +8,8 @@ cloud.google.com/go/longrunning v0.4.1 h1:v+yFJOfKC3yZdY6ZUI933pIYdhyhV8S3NpWrXW
 cloud.google.com/go/pubsub v1.3.1 h1:ukjixP1wl0LpnZ6LWtZJ0mX5tBmjp1f8Sqer8Z2OMUU=
 cloud.google.com/go/storage v1.14.0 h1:6RRlFMv1omScs6iq2hfE3IvgE+l6RfJPampq8UZc5TU=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9 h1:VpgP7xuJadIUuKccphEpTJnWhS2jkQyMt6Y7pJCD7fY=
+github.com/0chain/common v0.0.7-0.20230929071845-472780df75b6 h1:6Fc/Dqva+pGNd9yVbl5LGxKqhn3KWHmcl6cgqY15kYA=
+github.com/0chain/common v0.0.7-0.20230929071845-472780df75b6/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 h1:1BDTz0u9nC3//pOCMdNH+CiXJVYJh5UQNCOBG7jbELc=
 github.com/ClickHouse/ch-go v0.56.1 h1:OshO1TWLpWGFFNFvOGDMtqRX38N7qjK9UwQwXzm20pA=
