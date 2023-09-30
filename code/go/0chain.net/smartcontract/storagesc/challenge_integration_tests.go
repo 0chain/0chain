@@ -33,13 +33,14 @@ func selectBlobberForChallenge(
 	challengeBlobbersPartition *partitions.Partitions,
 	r *rand.Rand,
 	balances cstate.StateContextI,
+	conf *Config,
 ) (string, error) {
 
 	s := crpc.Client().State()
 	if s.GenerateChallenge != nil {
 		return s.GenerateChallenge.BlobberID, nil
 	}
-	return selectRandomBlobber(selection, challengeBlobbersPartition, r, balances)
+	return selectRandomBlobber(selection, challengeBlobbersPartition, r, balances, conf)
 }
 
 func (sc *StorageSmartContract) challengePassed(

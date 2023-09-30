@@ -144,6 +144,7 @@ smart_contracts:
     max_blobbers_per_allocation: 40
     validators_per_challenge: 2
     num_validators_rewarded: 10
+    max_blobber_select_for_challenge: 5
     readpool:
       min_lock: 0.3
     writepool:

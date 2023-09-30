@@ -110,9 +110,6 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "MinWritePrice")
 		return
 	}
-	// string "MaxFileSize"
-	o = append(o, 0xab, 0x4d, 0x61, 0x78, 0x46, 0x69, 0x6c, 0x65, 0x53, 0x69, 0x7a, 0x65)
-	o = msgp.AppendInt64(o, z.MaxFileSize)
 	// string "CancellationCharge"
 	o = append(o, 0xb2, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x68, 0x61, 0x72, 0x67, 0x65)
 	o = msgp.AppendFloat64(o, z.CancellationCharge)
@@ -149,6 +146,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "NumValidatorsRewarded"
 	o = append(o, 0xb5, 0x4e, 0x75, 0x6d, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x65, 0x64)
 	o = msgp.AppendInt(o, z.NumValidatorsRewarded)
+	// string "MaxBlobberSelectForChallenge"
+	o = append(o, 0xbc, 0x4d, 0x61, 0x78, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x46, 0x6f, 0x72, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
+	o = msgp.AppendInt(o, z.MaxBlobberSelectForChallenge)
 	// string "MinStake"
 	o = append(o, 0xa8, 0x4d, 0x69, 0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65)
 	o, err = z.MinStake.MarshalMsg(o)
@@ -428,12 +428,6 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MinWritePrice")
 				return
 			}
-		case "MaxFileSize":
-			z.MaxFileSize, bts, err = msgp.ReadInt64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MaxFileSize")
-				return
-			}
 		case "CancellationCharge":
 			z.CancellationCharge, bts, err = msgp.ReadFloat64Bytes(bts)
 			if err != nil {
@@ -480,6 +474,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.NumValidatorsRewarded, bts, err = msgp.ReadIntBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "NumValidatorsRewarded")
+				return
+			}
+		case "MaxBlobberSelectForChallenge":
+			z.MaxBlobberSelectForChallenge, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MaxBlobberSelectForChallenge")
 				return
 			}
 		case "MinStake":
@@ -597,7 +597,7 @@ func (z *Config) Msgsize() (s int) {
 	} else {
 		s += 1 + 14 + msgp.DurationSize + 10 + msgp.Float64Size
 	}
-	s += 16 + msgp.Float64Size + 13 + msgp.Float64Size + 18 + msgp.DurationSize + 25 + msgp.IntSize + 13 + z.MaxReadPrice.Msgsize() + 14 + z.MaxWritePrice.Msgsize() + 14 + z.MinWritePrice.Msgsize() + 12 + msgp.Int64Size + 19 + msgp.Float64Size + 14 + msgp.Float64Size + 23 + z.MaxTotalFreeAllocation.Msgsize() + 28 + z.MaxIndividualFreeAllocation.Msgsize() + 23 + z.FreeAllocationSettings.Msgsize() + 17 + msgp.BoolSize + 23 + msgp.IntSize + 22 + msgp.IntSize + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 13 + msgp.IntSize + 10 + msgp.Float64Size + 12
+	s += 16 + msgp.Float64Size + 13 + msgp.Float64Size + 18 + msgp.DurationSize + 25 + msgp.IntSize + 13 + z.MaxReadPrice.Msgsize() + 14 + z.MaxWritePrice.Msgsize() + 14 + z.MinWritePrice.Msgsize() + 19 + msgp.Float64Size + 14 + msgp.Float64Size + 23 + z.MaxTotalFreeAllocation.Msgsize() + 28 + z.MaxIndividualFreeAllocation.Msgsize() + 23 + z.FreeAllocationSettings.Msgsize() + 17 + msgp.BoolSize + 23 + msgp.IntSize + 22 + msgp.IntSize + 29 + msgp.IntSize + 9 + z.MinStake.Msgsize() + 9 + z.MaxStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 13 + msgp.IntSize + 10 + msgp.Float64Size + 12
 	if z.BlockReward == nil {
 		s += msgp.NilSize
 	} else {
