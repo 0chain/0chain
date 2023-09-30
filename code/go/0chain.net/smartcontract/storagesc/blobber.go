@@ -866,7 +866,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed", "savedData is negative: %v", err)
 	}
-	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, uint64(sd)); err != nil {
+	if err := sc.updateBlobberChallengeReady(balances, blobAlloc, sd); err != nil {
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 
