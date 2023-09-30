@@ -115,6 +115,7 @@ type Config struct {
 	// MaxWrtiePrice
 	MaxWritePrice currency.Coin `json:"max_write_price"`
 	MinWritePrice currency.Coin `json:"min_write_price"`
+	MaxFileSize   int64         `json:"max_file_size"`
 
 	// allocation cancellation
 	CancellationCharge float64 `json:"cancellation_charge"`
@@ -353,6 +354,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.MaxFileSize = scc.GetInt64(pfx + "max_file_size")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "readpool.min_lock"))

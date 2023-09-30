@@ -108,6 +108,7 @@ smart_contracts:
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
+    max_file_size : 40000000000000
     #
     # allocation cancellation
     #
