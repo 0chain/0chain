@@ -185,7 +185,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddChallengePoolsEvents(),
 
 			mergeUpdateBlobberChallengesEvents(),
-			mergeAddChallengesToBlobberEvents(),
 			mergeUpdateAllocChallengesEvents(),
 
 			mergeUpdateBlobbersEvents(),
@@ -848,13 +847,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.addChallengesToAllocations(*as)
-	case TagUpdateBlobberOpenChallenges:
-		updates, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-
-		return edb.updateOpenBlobberChallenges(*updates)
 	case TagUpdateChallenge:
 		chs, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {

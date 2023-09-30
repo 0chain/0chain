@@ -431,41 +431,24 @@ func withBlobberChallengesMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
-	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberOpenChallenges, withBlobberChallengesMerged())
-}
+func (edb *EventDb) updateBlobberChallenges(blobbers []ChallengeStatsDeltas) error {
+	blobberIdList := make([]string, 0, len(blobbers))
+	challengesDeltaOpenList := make([]int64, 0, len(blobbers))
+	challengesDeltaPassedList := make([]int64, 0, len(blobbers))
+	challengesDeltaCompletedList := make([]int64, 0, len(blobbers))
 
-func (edb *EventDb) updateOpenBlobberChallenges(deltas []ChallengeStatsDeltas) error {
-	return edb.Store.Get().Raw(sqlUpdateOpenChallenges(deltas)).Scan(&Blobber{}).Error
-}
-
-func sqlUpdateOpenChallenges(deltas []ChallengeStatsDeltas) string {
-	if len(deltas) == 0 {
-		return ""
+	for _, blobber := range blobbers {
+		blobberIdList = append(blobberIdList, blobber.Id)
+		challengesDeltaOpenList = append(challengesDeltaOpenList, blobber.OpenDelta)
+		challengesDeltaPassedList = append(challengesDeltaPassedList, blobber.PassedDelta)
+		challengesDeltaCompletedList = append(challengesDeltaCompletedList, blobber.CompletedDelta)
 	}
-	sql := "UPDATE blobbers \n"
-	sql += "SET "
-	sql += "  open_challenges = open_challenges + v.open\n"
-	sql += "FROM ( VALUES"
-	first := true
-	for _, delta := range deltas {
-		if first {
-			first = false
-		} else {
-			sql += ","
-		}
-		sql += fmt.Sprintf("('%s', %d)", delta.Id, delta.OpenDelta)
-	}
-	sql += "  )\n"
-	sql += "AS v (id, open)\n"
-	sql += "WHERE\n"
-	sql += "  blobbers.id = v.id"
 
-	return sql
-}
-
-func (edb *EventDb) updateBlobberChallenges(deltas []ChallengeStatsDeltas) error {
-	return edb.Store.Get().Raw(sqlUpdateBlobberChallenges(deltas)).Scan(&Blobber{}).Error
+	return CreateBuilder("blobbers", "id", blobberIdList).
+		AddUpdate("open_challenges", challengesDeltaOpenList, "blobbers.open_challenges + t.open_challenges").
+		AddUpdate("challenges_passed", challengesDeltaPassedList, "blobbers.challenges_passed + t.challenges_passed").
+		AddUpdate("challenges_completed", challengesDeltaCompletedList, "blobbers.challenges_completed + t.challenges_completed").
+		Exec(edb).Error
 }
 
 func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
@@ -518,34 +501,6 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		AddUpdate("total_read_income", totalReadIncome, "blobbers.total_read_income + t.total_read_income").
 		AddUpdate("total_slashed_stake", totalSlashedStake, "blobbers.total_slashed_stake + t.total_slashed_stake").
 		Exec(edb).Debug().Error
-}
-
-// ref https://www.postgresql.org/docs/9.1/sql-values.html
-func sqlUpdateBlobberChallenges(deltas []ChallengeStatsDeltas) string {
-	if len(deltas) == 0 {
-		return ""
-	}
-	sql := "UPDATE blobbers \n"
-	sql += "SET "
-	sql += "  open_challenges = open_challenges + v.open,\n"
-	sql += "  challenges_passed = challenges_passed + v.passed,\n"
-	sql += "  challenges_completed = challenges_completed + v.completed\n"
-	sql += "FROM ( VALUES "
-	first := true
-	for _, delta := range deltas {
-		if first {
-			first = false
-		} else {
-			sql += ",\n"
-		}
-		sql += fmt.Sprintf("('%s', %d, %d, %d)", delta.Id, delta.OpenDelta, delta.PassedDelta, delta.CompletedDelta)
-	}
-	sql += ")\n"
-	sql += "AS v (id, open, passed, completed)\n"
-	sql += "WHERE\n"
-	sql += "blobbers.id = v.id"
-
-	return sql
 }
 
 func mergeBlobberHealthCheckEvents() *eventsMergerImpl[dbs.DbHealthCheck] {

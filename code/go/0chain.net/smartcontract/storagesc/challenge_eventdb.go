@@ -71,7 +71,7 @@ func emitAddChallenge(
 		FailedChallenges:     allocStats.FailedChallenges,
 	})
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.ChallengeStatsDeltas{
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, ch.BlobberID, event.ChallengeStatsDeltas{
 		Id:             ch.BlobberID,
 		PassedDelta:    0,
 		CompletedDelta: 1,
