@@ -16,16 +16,9 @@ import (
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
-	"github.com/rcrowley/go-metrics"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
-
-var (
-	missingNodesCount     = metrics.GetOrRegisterCounter("missing_nodes_count", nil)
-	missingNodesTimer     = metrics.GetOrRegisterTimer("time_to_get_missing_nodes", nil)
-	missingNodesSyncTimer = metrics.GetOrRegisterTimer("time_to_sync_missing_nodes", nil)
-)
 
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
@@ -307,8 +300,8 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		}
 
 		// Record the number of missing nodes and the time it took to acquire them
-		missingNodesCount.Inc(int64(len(missingNodes)))
-		missingNodesTimer.UpdateSince(start)
+		mc.MissingNodesStat.Counter.Inc(int64(len(missingNodes)))
+		mc.MissingNodesStat.Timer.UpdateSince(start)
 
 		logging.Logger.Debug("sync all missing nodes - finish load all missing nodes",
 			zap.Int("num", len(missingNodes)))
@@ -347,7 +340,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		tk.Reset(2 * time.Second)
 	}
 
-	missingNodesSyncTimer.UpdateSince(start)
+	mc.MissingNodesStat.SyncTimer.UpdateSince(start)
 
 	mod := len(missingNodes) % batchSize
 	if mod > 0 {
