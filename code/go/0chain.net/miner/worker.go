@@ -22,8 +22,9 @@ import (
 const minerScMinerHealthCheck = "miner_health_check"
 
 var (
-	missingNodesCount = metrics.GetOrRegisterCounter("missing_nodes_count", nil)
-	missingNodesTimer = metrics.GetOrRegisterTimer("time_to_get_missing_nodes", nil)
+	missingNodesCount     = metrics.GetOrRegisterCounter("missing_nodes_count", nil)
+	missingNodesTimer     = metrics.GetOrRegisterTimer("time_to_get_missing_nodes", nil)
+	missingNodesSyncTimer = metrics.GetOrRegisterTimer("time_to_sync_missing_nodes", nil)
 )
 
 /*SetupWorkers - Setup the miner's workers */
@@ -299,7 +300,6 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		var err error
 		start := time.Now()
 		missingNodes, err = lfb.ClientState.GetAllMissingNodes()
-		elapsed := time.Since(start)
 		if err != nil {
 			logging.Logger.Error("sync all missing nodes - get all missing nodes failed", zap.Error(err))
 			time.Sleep(3 * time.Second)
@@ -308,7 +308,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 
 		// Record the number of missing nodes and the time it took to acquire them
 		missingNodesCount.Inc(int64(len(missingNodes)))
-		missingNodesTimer.Update(elapsed)
+		missingNodesTimer.UpdateSince(start)
 
 		logging.Logger.Debug("sync all missing nodes - finish load all missing nodes",
 			zap.Int("num", len(missingNodes)))
@@ -330,6 +330,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	var (
 		batchSize = 100
 		batchs    = len(missingNodes) / batchSize
+		start     = time.Now()
 	)
 
 	for idx := 1; idx <= batchs; idx++ {
@@ -345,6 +346,8 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 			zap.Int("remaining", len(missingNodes)-end))
 		tk.Reset(2 * time.Second)
 	}
+
+	missingNodesSyncTimer.UpdateSince(start)
 
 	mod := len(missingNodes) % batchSize
 	if mod > 0 {
