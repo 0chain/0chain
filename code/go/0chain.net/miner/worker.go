@@ -16,9 +16,15 @@ import (
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"github.com/rcrowley/go-metrics"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
+
+var (
+	missingNodesCount = metrics.GetOrRegisterCounter("missing_nodes_count", nil)
+	missingNodesTimer = metrics.GetOrRegisterTimer("time_to_get_missing_nodes", nil)
+)
 
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
@@ -291,12 +297,19 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	for {
 		logging.Logger.Debug("sync all missing nodes - loading all missing nodes...")
 		var err error
+		start := time.Now()
 		missingNodes, err = lfb.ClientState.GetAllMissingNodes()
+		elapsed := time.Since(start)
 		if err != nil {
 			logging.Logger.Error("sync all missing nodes - get all missing nodes failed", zap.Error(err))
 			time.Sleep(3 * time.Second)
 			continue
 		}
+
+		// Record the number of missing nodes and the time it took to acquire them
+		missingNodesCount.Inc(int64(len(missingNodes)))
+		missingNodesTimer.Update(elapsed)
+
 		logging.Logger.Debug("sync all missing nodes - finish load all missing nodes",
 			zap.Int("num", len(missingNodes)))
 
