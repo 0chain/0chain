@@ -1714,7 +1714,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<br>")
 
 		fmt.Fprintf(w, "<div>Missing Node Stat</div>")
-		fmt.Fprintf(w, "<table>")
+		fmt.Fprintf(w, "<table style='width:500'>")
 		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
 		fmt.Fprintf(w, "<table style='width:100%%;'>")
 		fmt.Fprintf(w, "<tr><td>Total count</td><td>%d</td></tr>", c.MissingNodesStat.Counter.Count())
