@@ -1712,8 +1712,9 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "</table>")
 
 		fmt.Fprintf(w, "<br>")
-		fmt.Fprintf(w, "<table>")
-		fmt.Fprintf(w, "<tr><td>Missing node stat</td></tr>")
+
+		fmt.Fprintf(w, "<div>Missing node stat</div>")
+		fmt.Fprintf(w, "<table style='width:100%%;'>")
 		fmt.Fprintf(w, "<tr><td>Total count</td><td>%d</td></tr>", c.MissingNodesStat.Counter.Count())
 
 		fmt.Fprintf(w, "<tr><td>Time to find missing nodes</td></tr>")
@@ -1723,6 +1724,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		WriteTimerStatistics(w, c.MissingNodesStat.SyncTimer, 10000)
 
 		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "<div>&nbsp;</div>")
 	}
 }
 
