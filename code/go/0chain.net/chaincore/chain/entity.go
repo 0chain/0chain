@@ -1472,6 +1472,13 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 	c.lfbMutex.Unlock()
 
+	if err := c.StoreLFBRound(b.Round, b.Hash); err != nil {
+		logging.Logger.Warn("set lfb - store round to state DB failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+	}
+
 	// add LFB to blocks cache
 	if b != nil {
 		c.updateConfig(b)

@@ -11,12 +11,15 @@ var (
 	LFBRoundKey = encryption.RawHash("latest_finalized_block_round")
 )
 
+// LfbRound represents the LFB round info
+//
 //go:generate msgp -v -io=false -tests=false
 type LfbRound struct {
 	Round int64  `msg:"r"`
 	Hash  string `msg:"b"`
 }
 
+// StoreLFBRound stores LFB round to state DB
 func (c *Chain) StoreLFBRound(round int64, blockHash string) error {
 	lfbr := &LfbRound{
 		Round: round,
@@ -28,10 +31,11 @@ func (c *Chain) StoreLFBRound(round int64, blockHash string) error {
 	return c.stateDB.PutNode(LFBRoundKey, vn)
 }
 
-func (c *Chain) LoadLFBRound(round int64, blockHash string) (*LfbRound, error) {
+// LoadLFBRound loads LFB round info from state DB
+func (c *Chain) LoadLFBRound() (*LfbRound, error) {
 	nd, err := c.stateDB.GetNode(LFBRoundKey)
 	if err != nil {
-		return nil, fmt.Errorf("cound not found LFB round: %v", err)
+		return nil, err
 	}
 
 	lfbr := &LfbRound{}
