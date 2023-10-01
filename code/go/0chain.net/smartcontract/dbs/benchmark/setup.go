@@ -11,6 +11,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/dbs/model"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
 )
@@ -125,7 +126,9 @@ func AddMockBlocks(
 				StateChangesCount:     33,
 				RunningTxnCount:       "mock running txn count",
 				RoundTimeoutCount:     0,
-				CreatedAt:             time.Now(),
+				UpdatableModel: model.UpdatableModel{
+					CreatedAt: time.Now(),
+				},
 			}
 			_ = eventDb.Store.Get().Create(&block)
 		}

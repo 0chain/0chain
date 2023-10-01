@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/util"
 )
 
@@ -29,7 +30,9 @@ func blockToBlockEvent(block *Block) *event.Block {
 		StateChangesCount:     block.StateChangesCount,
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
-		CreatedAt:             block.CreationDateField.ToTime(),
+		UpdatableModel:        model.UpdatableModel{
+			CreatedAt: block.CreationDateField.ToTime() ,
+		} ,
 		IsFinalised:           block.IsBlockFinalised(),
 	}
 }
