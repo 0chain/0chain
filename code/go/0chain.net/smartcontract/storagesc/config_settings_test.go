@@ -393,6 +393,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"challenge_enabled":                              "true",
 					"validators_per_challenge":                       "2",
 					"num_validators_rewarded":                        "10",
+					"max_blobber_select_for_challenge":               "5",
 					"max_delegates":                                  "100",
 					"owner_id":                                       "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
 					"block_reward.block_reward":                      "1000",
@@ -501,6 +502,7 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.FreeAllocationSettings.WritePriceRange.Max
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
+
 	case ValidatorReward:
 		return conf.ValidatorReward
 	case BlobberSlash:
