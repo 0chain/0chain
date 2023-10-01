@@ -16,6 +16,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
@@ -207,10 +208,18 @@ type Chain struct {
 	blockSyncC            map[string]chan chan *block.Block
 	bscMutex              *sync.Mutex
 
+	MissingNodesStat *missingNodeStat `json:"-"`
+
 	// compute state
 	computeBlockStateC chan struct{}
 
 	OnBlockAdded func(b *block.Block)
+}
+
+type missingNodeStat struct {
+	Counter   metrics.Counter
+	Timer     metrics.Timer
+	SyncTimer metrics.Timer
 }
 
 type syncPathNodes struct {
@@ -502,6 +511,11 @@ func (c *Chain) Initialize() {
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
+	}
+	c.MissingNodesStat = &missingNodeStat{
+		Counter:   metrics.GetOrRegisterCounter("missing_nodes_count", nil),
+		Timer:     metrics.GetOrRegisterTimer("time_to_get_missing_nodes", nil),
+		SyncTimer: metrics.GetOrRegisterTimer("time_to_sync_missing_nodes", nil),
 	}
 }
 

@@ -194,6 +194,7 @@ const (
 	StorageFasReadPoolFraction          = SmartContract + StorageSc + Fas + "read_pool_fraction"
 	StorageMaxMint                      = SmartContract + StorageSc + "max_mint"
 	StorageValidatorsPerChallenge       = SmartContract + StorageSc + "validators_per_challenge"
+	StorageMaxBlobberSelectForChallenge = SmartContract + StorageSc + "max_blobber_select_for_challenge"
 	StorageMaxBlobbersPerAllocation     = SmartContract + StorageSc + "max_blobbers_per_allocation"
 	StorageNumValidatorsRewarded        = SmartContract + StorageSc + "num_validators_rewarded"
 

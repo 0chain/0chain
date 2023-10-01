@@ -224,7 +224,6 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 			TagUpdateBlobberTotalStake,
 			TagUpdateBlobberTotalOffers,
 			TagUpdateBlobberChallenge,
-			TagUpdateBlobberOpenChallenges,
 			TagUpdateBlobberStat:
 			blobbers, ok := fromEvent[[]Blobber](event.Data)
 			if !ok {

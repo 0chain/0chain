@@ -695,7 +695,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, cab.alloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -749,6 +749,12 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
+	// Clean up challenge on MPT
+	_, err = balances.DeleteTrieNode(storageChallengeKey(sc.ID, cab.challenge.ID))
+	if err != nil {
+		return "", common.NewError("challenge_reward_error", err.Error())
+	}
+
 	if cab.success < cab.threshold {
 		return "challenge passed partially by blobber", nil
 	}
@@ -773,7 +779,7 @@ func (sc *StorageSmartContract) processChallengeFailed(
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, cab.alloc.Stats, cab.blobAlloc.Stats)
+	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, cab.alloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -858,7 +864,7 @@ const (
 
 // selectBlobberForChallenge select blobber for challenge in random manner
 func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
-	r *rand.Rand, balances cstate.StateContextI) (string, error) {
+	r *rand.Rand, balances cstate.StateContextI, conf *Config) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
 	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
@@ -868,7 +874,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 	switch selection {
 	case randomWeightSelection:
-		const maxBlobbersSelect = 5
+		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
 
 		var challengeBlobber ChallengeReadyBlobber
 		var maxWeight uint64
@@ -877,7 +883,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
 		} else {
-			for i := 0; i < maxBlobbersSelect; i++ {
+			for i := 0; i < maxBlobbersSelect && i < len(challengeBlobbers); i++ {
 				randomIndex := r.Intn(len(challengeBlobbers))
 				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
 			}
@@ -910,8 +916,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	conf *Config,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
-	blobberSelection := challengeBlobberSelection(1) // challengeBlobberSelection(r.Intn(2))
-	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances)
+	blobberSelection := challengeBlobberSelection(0) // challengeBlobberSelection(r.Intn(2))
+	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
 	if err != nil {
 		return nil, common.NewError("add_challenge", err.Error())
 	}
@@ -1279,7 +1285,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
 
 	beforeEmitAddChallenge(challInfo)
-	return emitAddChallenge(challInfo, lenExpired, balances, alloc.Stats, blobAlloc.Stats)
+	return emitAddChallenge(challInfo, lenExpired, balances, alloc.Stats)
 }
 
 func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionRounds int64) bool {
