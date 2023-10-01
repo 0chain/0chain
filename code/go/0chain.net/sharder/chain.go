@@ -512,13 +512,11 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		logging.Logger.Debug("load_lfb - load from stateDB",
 			zap.Int64("round", bl.lfb.Round),
 			zap.String("block", bl.lfb.Hash))
-	case util.ErrNodeNotFound:
+	default:
 		bl = sc.iterateRoundsLookingForLFB(ctx)
 		logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
 			zap.Int64("round", bl.lfb.Round),
 			zap.String("block", bl.lfb.Hash))
-	default:
-		return fmt.Errorf("unexpected error in loading LFB round: %v", err)
 	}
 
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
