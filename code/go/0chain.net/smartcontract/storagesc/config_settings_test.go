@@ -501,7 +501,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.FreeAllocationSettings.WritePriceRange.Max
 	case FreeAllocationReadPoolFraction:
 		return conf.FreeAllocationSettings.ReadPoolFraction
-
 	case ValidatorReward:
 		return conf.ValidatorReward
 	case BlobberSlash:
@@ -518,6 +517,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.ValidatorsPerChallenge
 	case NumValidatorsRewarded:
 		return conf.NumValidatorsRewarded
+	case MaxBlobberSelectForChallenge:
+		return conf.MaxBlobberSelectForChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:
