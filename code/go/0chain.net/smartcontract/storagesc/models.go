@@ -623,7 +623,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, false, ChallengeRespondedLate, balances, alloc.Stats, d.Stats)
+				}, false, ChallengeRespondedLate, balances, alloc.Stats)
 				if err != nil {
 					return 0.0, err
 				}
@@ -636,7 +636,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, true, ChallengeResponded, balances, alloc.Stats, d.Stats)
+				}, true, ChallengeResponded, balances, alloc.Stats)
 				if err != nil {
 					return 0.0, err
 				}
@@ -664,6 +664,8 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		}
 	}
 
+	blobbersSettledChallengesCount := d.Stats.OpenChallenges
+
 	if d.Stats.OpenChallenges > 0 {
 		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", d.Stats.OpenChallenges))
 
@@ -680,7 +682,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		passRate = float64(d.Stats.SuccessChallenges) / float64(d.Stats.TotalChallenges)
 	}
 
-	emitUpdateAllocationAndBlobberStats(alloc, balances)
+	emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc, d.BlobberID, blobbersSettledChallengesCount, balances)
 
 	return passRate, nil
 }
@@ -1928,7 +1930,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeRespondedLate, balances, sa.Stats)
 
 			if err != nil {
 				return 0, err
@@ -1994,7 +1996,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeOldRemoved, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeOldRemoved, balances, sa.Stats)
 
 			if err != nil {
 				return err

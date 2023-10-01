@@ -308,13 +308,6 @@ func TestAddChallenge(t *testing.T) {
 			// assert the open challenge update events are emitted
 			es = args.balances.GetEvents()[initESLen:]
 			updateOpenChallengeEventMap := make(map[string]int64)
-			//for _, e := range es {
-			//	if e.Tag == event.TagUpdateBlobberOpenChallenges {
-			//		d, ok := e.Data.(event.ChallengeStatsDeltas)
-			//		require.True(t, ok)
-			//		updateOpenChallengeEventMap[d.Id] = d.OpenDelta
-			//	}
-			//}
 
 			for bid, od := range tt.want.openDelta {
 				if od == 0 {
