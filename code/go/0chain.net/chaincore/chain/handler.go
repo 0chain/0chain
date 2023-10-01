@@ -33,6 +33,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"github.com/0chain/common/core/util"
+	metrics "github.com/rcrowley/go-metrics"
 
 	"github.com/0chain/common/core/logging"
 
@@ -1709,7 +1710,55 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
 		}
 		fmt.Fprintf(w, "</table>")
+
+		fmt.Fprintf(w, "<br>")
+
+		fmt.Fprintf(w, "<div>Missing Node Stat</div>")
+		fmt.Fprintf(w, "<table style='width:500'>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
+		fmt.Fprintf(w, "<table style='width:100%%;'>")
+		fmt.Fprintf(w, "<tr><td>Total count</td><td>%d</td></tr>", c.MissingNodesStat.Counter.Count())
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "</td></tr>")
+
+		fmt.Fprintf(w, "<tr><td>Time to find missing nodes</td></tr>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
+		WriteTimerStatistics(w, c.MissingNodesStat.Timer, 10000)
+		fmt.Fprintf(w, "</td></tr>")
+
+		fmt.Fprintf(w, "<tr><td>Time to sync missing nodes</td></tr>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
+		WriteTimerStatistics(w, c.MissingNodesStat.SyncTimer, 10000)
+		fmt.Fprintf(w, "</td></tr>")
+
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "<div>&nbsp;</div>")
 	}
+}
+
+func WriteTimerStatistics(w http.ResponseWriter, timer metrics.Timer, scaleBy float64) {
+	scale := func(n float64) float64 {
+		return (n / scaleBy)
+	}
+	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
+	pvals := timer.Percentiles(percentiles)
+	fmt.Fprintf(w, "<table width='100%%'>")
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Count</td><td>%v</td></tr>", timer.Count())
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Time taken</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Min</td><td>%.2f ms</td></tr>", scale(float64(timer.Min())))
+	fmt.Fprintf(w, "<tr><td>Mean</td><td>%.2f &plusmn;%.2f ms</td></tr>", scale(timer.Mean()), scale(timer.StdDev()))
+	fmt.Fprintf(w, "<tr><td>Max</td><td>%.2f ms</td></tr>", scale(float64(timer.Max())))
+	for idx, p := range percentiles {
+		fmt.Fprintf(w, "<tr><td>%.2f%%</td><td>%.2f ms</td></tr>", 100*p, scale(pvals[idx]))
+	}
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Rate per second</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Last 1-min rate</td><td>%.2f</td></tr>", timer.Rate1())
+	fmt.Fprintf(w, "<tr><td>Last 5-min rate</td><td>%.2f</td></tr>", timer.Rate5())
+	fmt.Fprintf(w, "<tr><td>Last 15-min rate</td><td>%.2f</td></tr>", timer.Rate15())
+	fmt.Fprintf(w, "<tr><td>Overall mean rate</td><td>%.2f</td></tr>", timer.RateMean())
+	fmt.Fprintf(w, "</table>")
 }
 
 func txnIterHandlerFunc(w http.ResponseWriter, lfb *block.Block) func(context.Context, datastore.CollectionEntity) (bool, error) {

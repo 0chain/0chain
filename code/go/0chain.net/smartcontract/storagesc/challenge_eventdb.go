@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/core/maths"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"errors"
@@ -61,7 +60,7 @@ func emitAddChallenge(
 	ch *StorageChallengeResponse,
 	expiredN int,
 	balances cstate.StateContextI,
-	allocStats, blobberStats *StorageAllocationStats,
+	allocStats *StorageAllocationStats,
 ) error {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
 	balances.EmitEvent(event.TypeStats, event.TagAddChallengeToAllocation, ch.AllocationID, event.Allocation{
@@ -72,17 +71,11 @@ func emitAddChallenge(
 		FailedChallenges:     allocStats.FailedChallenges,
 	})
 
-	// Update open challenges count of challenge blobber
-	converted, err := maths.ConvertUInt64sToInts(blobberStats.OpenChallenges, blobberStats.TotalChallenges, blobberStats.SuccessChallenges)
-	if err != nil {
-		return err
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberOpenChallenges, ch.BlobberID, event.Blobber{
-		Provider:            event.Provider{ID: ch.BlobberID},
-		OpenChallenges:      converted[0],
-		ChallengesCompleted: converted[1],
-		ChallengesPassed:    converted[2],
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, ch.BlobberID, event.ChallengeStatsDeltas{
+		Id:             ch.BlobberID,
+		PassedDelta:    0,
+		CompletedDelta: 1,
+		OpenDelta:      1,
 	})
 
 	logging.Logger.Debug("emitted add_challenge")
@@ -94,7 +87,7 @@ func emitUpdateChallenge(
 	passed bool,
 	responded BlobberChallengeResponded,
 	balances cstate.StateContextI,
-	allocStats, blobberStats *StorageAllocationStats,
+	allocStats *StorageAllocationStats,
 ) error {
 	clg := event.Challenge{
 		ChallengeID:    sc.ID,
@@ -114,16 +107,23 @@ func emitUpdateChallenge(
 		LatestClosedChallengeTxn: sc.ID,
 	}
 
-	converted, err := maths.ConvertUInt64sToInts(blobberStats.OpenChallenges, blobberStats.TotalChallenges, blobberStats.SuccessChallenges)
-	if err != nil {
-		return err
+	blobberOpenChallenges := int64(0)
+	if responded == ChallengeNotResponded {
+		blobberOpenChallenges = 1
+	} else {
+		blobberOpenChallenges = -1
 	}
 
-	b := event.Blobber{
-		Provider:            event.Provider{ID: sc.BlobberID},
-		OpenChallenges:      converted[0],
-		ChallengesCompleted: converted[1],
-		ChallengesPassed:    converted[2],
+	blobberPassedChallenges := int64(0)
+	if passed {
+		blobberPassedChallenges = 1
+	}
+
+	b := event.ChallengeStatsDeltas{
+		Id:             sc.BlobberID,
+		OpenDelta:      blobberOpenChallenges,
+		CompletedDelta: 0,
+		PassedDelta:    blobberPassedChallenges,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateChallenge, sc.ID, clg)
@@ -132,7 +132,7 @@ func emitUpdateChallenge(
 	return nil
 }
 
-func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances cstate.StateContextI) {
+func emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc *StorageAllocation, blobbersSettledChallengesCount []int64, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
 		AllocationID:         alloc.ID,
 		OpenChallenges:       alloc.Stats.OpenChallenges,
@@ -141,14 +141,31 @@ func emitUpdateAllocationAndBlobberStats(alloc *StorageAllocation, balances csta
 		FailedChallenges:     alloc.Stats.FailedChallenges,
 	})
 
-	for _, ba := range alloc.BlobberAllocs {
-		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, ba.BlobberID, event.Blobber{
-			Provider:            event.Provider{ID: ba.BlobberID},
-			ChallengesCompleted: uint64(ba.Stats.TotalChallenges),
-			ChallengesPassed:    uint64(ba.Stats.SuccessChallenges),
-			OpenChallenges:      uint64(ba.Stats.OpenChallenges),
+	for idx, ba := range alloc.BlobberAllocs {
+		balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, ba.BlobberID, event.ChallengeStatsDeltas{
+			Id:             ba.BlobberID,
+			OpenDelta:      0,
+			CompletedDelta: 0,
+			PassedDelta:    blobbersSettledChallengesCount[idx],
 		})
 	}
+}
+
+func emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc *StorageAllocation, blobberID string, blobbersSettledChallengesCount int64, balances cstate.StateContextI) {
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
+		AllocationID:         alloc.ID,
+		OpenChallenges:       alloc.Stats.OpenChallenges,
+		TotalChallenges:      alloc.Stats.TotalChallenges,
+		SuccessfulChallenges: alloc.Stats.SuccessChallenges,
+		FailedChallenges:     alloc.Stats.FailedChallenges,
+	})
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberChallenge, blobberID, event.ChallengeStatsDeltas{
+		Id:             blobberID,
+		OpenDelta:      0,
+		CompletedDelta: 0,
+		PassedDelta:    blobbersSettledChallengesCount,
+	})
 
 }
 
