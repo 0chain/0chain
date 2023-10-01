@@ -38,8 +38,18 @@ func (c *Chain) LoadLFBRound() (*LfbRound, error) {
 		return nil, err
 	}
 
+	vn, ok := nd.(*util.ValueNode)
+	if !ok {
+		return nil, fmt.Errorf("invalid node type")
+	}
+
 	lfbr := &LfbRound{}
-	_, err = lfbr.UnmarshalMsg(nd.Encode())
+	d, err := vn.GetValue().MarshalMsg(nil)
+	if err != nil {
+		return nil, fmt.Errorf("encode value node for lfb failed: %v", err)
+	}
+
+	_, err = lfbr.UnmarshalMsg(d)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode LFBRound: %v", err)
 	}
