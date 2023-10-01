@@ -1713,16 +1713,25 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Fprintf(w, "<br>")
 
-		fmt.Fprintf(w, "<div>Missing node stat</div>")
+		fmt.Fprintf(w, "<div>Missing Node Stat</div>")
+		fmt.Fprintf(w, "<table>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
 		fmt.Fprintf(w, "<table style='width:100%%;'>")
 		fmt.Fprintf(w, "<tr><td>Total count</td><td>%d</td></tr>", c.MissingNodesStat.Counter.Count())
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "</td></tr>")
 
 		fmt.Fprintf(w, "<tr><td>Time to find missing nodes</td></tr>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
 		WriteTimerStatistics(w, c.MissingNodesStat.Timer, 10000)
+		fmt.Fprintf(w, "</td></tr>")
 
 		fmt.Fprintf(w, "<tr><td>Time to sync missing nodes</td></tr>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
 		WriteTimerStatistics(w, c.MissingNodesStat.SyncTimer, 10000)
+		fmt.Fprintf(w, "</td></tr>")
 
+		fmt.Fprintf(w, "</table>")
 		fmt.Fprintf(w, "</table>")
 		fmt.Fprintf(w, "<div>&nbsp;</div>")
 	}
