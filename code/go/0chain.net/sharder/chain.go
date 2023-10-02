@@ -505,6 +505,9 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 	lfbr, err := sc.LoadLFBRound()
 	switch err {
 	case nil:
+		if lfbr.Round == 0 {
+			return nil // use genesis
+		}
 		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbr)
 		if err != nil {
 			return err
