@@ -13,7 +13,6 @@ import (
 func TestSnapshotFunctions(t *testing.T) {
 	eventDb, clean := GetTestEventDB(t)
 	defer clean()
-	initialSnapshot := fillSnapshot(t, eventDb)
 
 	blobbers := []Blobber{
 		buildMockBlobber(t, "blobber1"),
@@ -78,7 +77,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		buildMockSharderSnapshot(t, "sharder6"),
 	}
 	err = eventDb.Store.Get().Create(&sharderSnapshots).Error
-	require.NoError(t, err)               
+	require.NoError(t, err)
 
 	validators := []Validator{
 		buildMockValidator(t, OwnerId, "validator1"),
@@ -124,26 +123,25 @@ func TestSnapshotFunctions(t *testing.T) {
 	err = eventDb.Store.Get().Create(&authorizerSnapshots).Error
 	require.NoError(t, err)
 
-
 	t.Run("test ApplyDiffBlobber", func(t *testing.T) {
 		newSnap := Snapshot{}
 		err := newSnap.ApplyDiffBlobber(&blobbers[0], &blobberSnapshots[0], true)
 		require.NoError(t, err)
 
-		require.EqualValues(t, blobbers[0].ChallengesPassed - blobberSnapshots[0].ChallengesPassed, newSnap.SuccessfulChallenges)
-		require.EqualValues(t, blobbers[0].ChallengesCompleted - blobberSnapshots[0].ChallengesCompleted, newSnap.TotalChallenges)
-		require.EqualValues(t, blobbers[0].TotalStake - blobberSnapshots[0].TotalStake, newSnap.TotalStaked)
-		require.EqualValues(t, blobbers[0].TotalStake - blobberSnapshots[0].TotalStake, newSnap.StorageTokenStake)
-		require.EqualValues(t, blobbers[0].Allocated - blobberSnapshots[0].Allocated, newSnap.AllocatedStorage)
-		require.EqualValues(t, blobbers[0].Capacity - blobberSnapshots[0].Capacity, newSnap.MaxCapacityStorage)
-		require.EqualValues(t, blobbers[0].SavedData - blobberSnapshots[0].SavedData, newSnap.UsedStorage)
-		require.EqualValues(t, blobbers[0].Rewards.TotalRewards - blobberSnapshots[0].TotalRewards, newSnap.TotalRewards)
-		require.EqualValues(t, blobbers[0].Rewards.TotalRewards - blobberSnapshots[0].TotalRewards, newSnap.BlobberTotalRewards)
+		require.EqualValues(t, blobbers[0].ChallengesPassed-blobberSnapshots[0].ChallengesPassed, newSnap.SuccessfulChallenges)
+		require.EqualValues(t, blobbers[0].ChallengesCompleted-blobberSnapshots[0].ChallengesCompleted, newSnap.TotalChallenges)
+		require.EqualValues(t, blobbers[0].TotalStake-blobberSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, blobbers[0].TotalStake-blobberSnapshots[0].TotalStake, newSnap.StorageTokenStake)
+		require.EqualValues(t, blobbers[0].Allocated-blobberSnapshots[0].Allocated, newSnap.AllocatedStorage)
+		require.EqualValues(t, blobbers[0].Capacity-blobberSnapshots[0].Capacity, newSnap.MaxCapacityStorage)
+		require.EqualValues(t, blobbers[0].SavedData-blobberSnapshots[0].SavedData, newSnap.UsedStorage)
+		require.EqualValues(t, blobbers[0].Rewards.TotalRewards-blobberSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, blobbers[0].Rewards.TotalRewards-blobberSnapshots[0].TotalRewards, newSnap.BlobberTotalRewards)
 
 		prevSS := int64(float64(blobberSnapshots[0].TotalStake) / float64(blobberSnapshots[0].WritePrice) * GB)
 		newSS := int64(float64(blobbers[0].TotalStake) / float64(blobbers[0].WritePrice) * GB)
 		t.Logf("prevSS: %v, newSS: %v", prevSS, newSS)
-		require.EqualValues(t, newSS - prevSS, newSnap.StakedStorage)
+		require.EqualValues(t, newSS-prevSS, newSnap.StakedStorage)
 		require.EqualValues(t, 1, newSnap.BlobberCount)
 
 		// Test in case of offline blobber
@@ -168,9 +166,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		err := newSnap.ApplyDiffMiner(&miners[0], &minerSnapshots[0], true)
 		require.NoError(t, err)
 
-		require.EqualValues(t, miners[0].Rewards.TotalRewards - minerSnapshots[0].TotalRewards, newSnap.TotalRewards)
-		require.EqualValues(t, miners[0].Rewards.TotalRewards - minerSnapshots[0].TotalRewards, newSnap.MinerTotalRewards)
-		require.EqualValues(t, miners[0].TotalStake - minerSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, miners[0].Rewards.TotalRewards-minerSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, miners[0].Rewards.TotalRewards-minerSnapshots[0].TotalRewards, newSnap.MinerTotalRewards)
+		require.EqualValues(t, miners[0].TotalStake-minerSnapshots[0].TotalStake, newSnap.TotalStaked)
 		require.EqualValues(t, 1, newSnap.MinerCount)
 
 		// Test in case of offline miner
@@ -195,9 +193,9 @@ func TestSnapshotFunctions(t *testing.T) {
 		err := newSnap.ApplyDiffSharder(&sharders[0], &sharderSnapshots[0], true)
 		require.NoError(t, err)
 
-		require.EqualValues(t, sharders[0].Rewards.TotalRewards - sharderSnapshots[0].TotalRewards, newSnap.TotalRewards)
-		require.EqualValues(t, sharders[0].Rewards.TotalRewards - sharderSnapshots[0].TotalRewards, newSnap.SharderTotalRewards)
-		require.EqualValues(t, sharders[0].TotalStake - sharderSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, sharders[0].Rewards.TotalRewards-sharderSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, sharders[0].Rewards.TotalRewards-sharderSnapshots[0].TotalRewards, newSnap.SharderTotalRewards)
+		require.EqualValues(t, sharders[0].TotalStake-sharderSnapshots[0].TotalStake, newSnap.TotalStaked)
 		require.EqualValues(t, 1, newSnap.SharderCount)
 
 		// Test in case of offline sharder
@@ -222,8 +220,8 @@ func TestSnapshotFunctions(t *testing.T) {
 		err := newSnap.ApplyDiffValidator(&validators[0], &validatorSnapshots[0], true)
 		require.NoError(t, err)
 
-		require.EqualValues(t, validators[0].Rewards.TotalRewards - validatorSnapshots[0].TotalRewards, newSnap.TotalRewards)
-		require.EqualValues(t, validators[0].TotalStake - validatorSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, validators[0].Rewards.TotalRewards-validatorSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, validators[0].TotalStake-validatorSnapshots[0].TotalStake, newSnap.TotalStaked)
 		require.EqualValues(t, 1, newSnap.ValidatorCount)
 
 		// Test in case of offline validator
@@ -248,8 +246,8 @@ func TestSnapshotFunctions(t *testing.T) {
 		err := newSnap.ApplyDiffAuthorizer(&authorizers[0], &authorizerSnapshots[0], true)
 		require.NoError(t, err)
 
-		require.EqualValues(t, authorizers[0].Rewards.TotalRewards - authorizerSnapshots[0].TotalRewards, newSnap.TotalRewards)
-		require.EqualValues(t, authorizers[0].TotalStake - authorizerSnapshots[0].TotalStake, newSnap.TotalStaked)
+		require.EqualValues(t, authorizers[0].Rewards.TotalRewards-authorizerSnapshots[0].TotalRewards, newSnap.TotalRewards)
+		require.EqualValues(t, authorizers[0].TotalStake-authorizerSnapshots[0].TotalStake, newSnap.TotalStaked)
 		require.EqualValues(t, 1, newSnap.AuthorizerCount)
 
 		// Test in case of offline authorizer
@@ -262,7 +260,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		err = s2.ApplyDiffOfflineAuthorizer(&authorizerSnapshots[1])
 		require.NoError(t, err)
 		require.EqualValues(t, s1, s2)
-		
+
 		// Test in case of blobber that's not new
 		err = newSnap.ApplyDiffAuthorizer(&Authorizer{}, &AuthorizerSnapshot{}, false)
 		require.NoError(t, err)
@@ -320,7 +318,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.EqualValues(t, -validatorSnapshots[0].TotalStake, newSnap.TotalStaked)
 		require.EqualValues(t, -1, newSnap.ValidatorCount)
 	})
-		
+
 	t.Run("test ApplyDiffOfflineAuthorizer", func(t *testing.T) {
 		newSnap := Snapshot{}
 		err := newSnap.ApplyDiffOfflineAuthorizer(&authorizerSnapshots[0])
@@ -382,94 +380,23 @@ func TestSnapshotFunctions(t *testing.T) {
 
 		snapsAfter := s
 
-		require.EqualValues(t, snapBefore.TotalMint + snapDiff.TotalMint, snapsAfter.TotalMint)
-		require.EqualValues(t, snapBefore.TotalChallengePools + snapDiff.TotalChallengePools, snapsAfter.TotalChallengePools)
-		require.EqualValues(t, snapBefore.ActiveAllocatedDelta + snapDiff.ActiveAllocatedDelta, snapsAfter.ActiveAllocatedDelta)
-		require.EqualValues(t, snapBefore.ZCNSupply + snapDiff.ZCNSupply, snapsAfter.ZCNSupply)
-		require.EqualValues(t, snapBefore.ClientLocks + snapDiff.ClientLocks, snapsAfter.ClientLocks)
-		require.EqualValues(t, snapBefore.MinedTotal + snapDiff.MinedTotal, snapsAfter.MinedTotal)
-		require.EqualValues(t, snapBefore.TotalStaked + snapDiff.TotalStaked, snapsAfter.TotalStaked)
-		require.EqualValues(t, snapBefore.StorageTokenStake + snapDiff.StorageTokenStake, snapsAfter.StorageTokenStake)
-		require.EqualValues(t, snapBefore.TotalRewards + snapDiff.TotalRewards, snapsAfter.TotalRewards)
-		require.EqualValues(t, snapBefore.SuccessfulChallenges + snapDiff.SuccessfulChallenges, snapsAfter.SuccessfulChallenges)
-		require.EqualValues(t, snapBefore.TotalChallenges + snapDiff.TotalChallenges, snapsAfter.TotalChallenges)
-		require.EqualValues(t, snapBefore.AllocatedStorage + snapDiff.AllocatedStorage, snapsAfter.AllocatedStorage)
-		require.EqualValues(t, snapBefore.MaxCapacityStorage + snapDiff.MaxCapacityStorage, snapsAfter.MaxCapacityStorage)
-		require.EqualValues(t, snapBefore.StakedStorage + snapDiff.StakedStorage, snapsAfter.StakedStorage)
-		require.EqualValues(t, snapBefore.UsedStorage + snapDiff.UsedStorage, snapsAfter.UsedStorage)
-		require.EqualValues(t, snapBefore.BlobberCount + snapDiff.BlobberCount, snapsAfter.BlobberCount)
-		require.EqualValues(t, snapBefore.BlobberTotalRewards + snapDiff.BlobberTotalRewards, snapsAfter.BlobberTotalRewards)
-	})
-
-	t.Run("test ApplyDiff", func(t *testing.T) {
-		s, err := eventDb.GetGlobal()
-		require.NoError(t, err)
-
-		snapshotDiff := Snapshot{
-			TotalMint: int64(10),
-			TotalChallengePools: int64(10),
-			ActiveAllocatedDelta: int64(10),
-			ZCNSupply: int64(10),
-			ClientLocks: int64(100),
-			MinedTotal: int64(100),
-			TotalStaked: int64(100),
-			StorageTokenStake: int64(100),
-			TotalRewards: int64(100),
-			SuccessfulChallenges: int64(100),
-			TotalChallenges: int64(100),
-			AllocatedStorage: int64(100),
-			MaxCapacityStorage: int64(100),
-			StakedStorage: int64(100),
-			UsedStorage: int64(100),
-			TransactionsCount: int64(100),
-			UniqueAddresses: int64(100),
-			BlockCount: int64(1000),
-			TotalTxnFee: int64(1000),
-			BlobberCount: int64(1),
-			MinerCount: int64(1),
-			SharderCount: int64(1),
-			AuthorizerCount: int64(1),
-			ValidatorCount: int64(1),
-			BlobberTotalRewards: int64(100),
-			MinerTotalRewards: int64(100),
-			SharderTotalRewards: int64(100),
-		}
-
-		s.ApplyDiff(&snapshotDiff)
-
-		require.Equal(t, initialSnapshot.TotalMint + snapshotDiff.TotalMint, s.TotalMint)
-		require.Equal(t, initialSnapshot.TotalChallengePools + snapshotDiff.TotalChallengePools, s.TotalChallengePools)
-		require.Equal(t, initialSnapshot.ActiveAllocatedDelta + snapshotDiff.ActiveAllocatedDelta, s.ActiveAllocatedDelta)
-		require.Equal(t, initialSnapshot.ZCNSupply + snapshotDiff.ZCNSupply, s.ZCNSupply)
-		require.Equal(t, initialSnapshot.ClientLocks + snapshotDiff.ClientLocks, s.ClientLocks)
-		require.Equal(t, initialSnapshot.MinedTotal + snapshotDiff.MinedTotal, s.MinedTotal)
-		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee , s.TotalTxnFee)
-		require.Equal(t, initialSnapshot.TotalStaked + snapshotDiff.TotalStaked, s.TotalStaked)
-		require.Equal(t, initialSnapshot.StorageTokenStake + snapshotDiff.StorageTokenStake, s.StorageTokenStake)
-		require.Equal(t, initialSnapshot.TotalRewards + snapshotDiff.TotalRewards, s.TotalRewards)
-		require.Equal(t, initialSnapshot.SuccessfulChallenges + snapshotDiff.SuccessfulChallenges, s.SuccessfulChallenges)
-		require.Equal(t, initialSnapshot.TotalChallenges + snapshotDiff.TotalChallenges, s.TotalChallenges)
-		require.Equal(t, initialSnapshot.AllocatedStorage + snapshotDiff.AllocatedStorage, s.AllocatedStorage)
-		require.Equal(t, initialSnapshot.MaxCapacityStorage + snapshotDiff.MaxCapacityStorage, s.MaxCapacityStorage)
-		require.Equal(t, initialSnapshot.StakedStorage + snapshotDiff.StakedStorage, s.StakedStorage)
-		require.Equal(t, initialSnapshot.UsedStorage + snapshotDiff.UsedStorage, s.UsedStorage)
-		require.Equal(t, initialSnapshot.TransactionsCount + snapshotDiff.TransactionsCount, s.TransactionsCount)
-		require.Equal(t, initialSnapshot.UniqueAddresses + snapshotDiff.UniqueAddresses, s.UniqueAddresses)
-		require.Equal(t, initialSnapshot.BlockCount + snapshotDiff.BlockCount, s.BlockCount)
-		require.Equal(t, initialSnapshot.TotalTxnFee + snapshotDiff.TotalTxnFee, s.TotalTxnFee)
-		require.Equal(t, initialSnapshot.BlobberCount + snapshotDiff.BlobberCount, s.BlobberCount)
-		require.Equal(t, initialSnapshot.MinerCount + snapshotDiff.MinerCount, s.MinerCount)
-		require.Equal(t, initialSnapshot.SharderCount + snapshotDiff.SharderCount, s.SharderCount)
-		require.Equal(t, initialSnapshot.AuthorizerCount + snapshotDiff.AuthorizerCount, s.AuthorizerCount)
-		require.Equal(t, initialSnapshot.ValidatorCount + snapshotDiff.ValidatorCount, s.ValidatorCount)
-		require.Equal(t, initialSnapshot.BlobberTotalRewards + snapshotDiff.BlobberTotalRewards, s.BlobberTotalRewards)
-		require.Equal(t, initialSnapshot.MinerTotalRewards + snapshotDiff.MinerTotalRewards, s.MinerTotalRewards)
-		require.Equal(t, initialSnapshot.SharderTotalRewards + snapshotDiff.SharderTotalRewards, s.SharderTotalRewards)
-
-		// Test snapshot StakedStorage will not exceed MaxCapacityStorage
-		snapShotDiff2 := Snapshot{ StakedStorage: s.MaxCapacityStorage + 1 }
-		s.ApplyDiff(&snapShotDiff2)
-		require.Equal(t, s.MaxCapacityStorage, s.StakedStorage)
+		require.EqualValues(t, snapBefore.TotalMint+snapDiff.TotalMint, snapsAfter.TotalMint)
+		require.EqualValues(t, snapBefore.TotalChallengePools+snapDiff.TotalChallengePools, snapsAfter.TotalChallengePools)
+		require.EqualValues(t, snapBefore.ActiveAllocatedDelta+snapDiff.ActiveAllocatedDelta, snapsAfter.ActiveAllocatedDelta)
+		require.EqualValues(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapsAfter.ZCNSupply)
+		require.EqualValues(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapsAfter.ClientLocks)
+		require.EqualValues(t, snapBefore.MinedTotal+snapDiff.MinedTotal, snapsAfter.MinedTotal)
+		require.EqualValues(t, snapBefore.TotalStaked+snapDiff.TotalStaked, snapsAfter.TotalStaked)
+		require.EqualValues(t, snapBefore.StorageTokenStake+snapDiff.StorageTokenStake, snapsAfter.StorageTokenStake)
+		require.EqualValues(t, snapBefore.TotalRewards+snapDiff.TotalRewards, snapsAfter.TotalRewards)
+		require.EqualValues(t, snapBefore.SuccessfulChallenges+snapDiff.SuccessfulChallenges, snapsAfter.SuccessfulChallenges)
+		require.EqualValues(t, snapBefore.TotalChallenges+snapDiff.TotalChallenges, snapsAfter.TotalChallenges)
+		require.EqualValues(t, snapBefore.AllocatedStorage+snapDiff.AllocatedStorage, snapsAfter.AllocatedStorage)
+		require.EqualValues(t, snapBefore.MaxCapacityStorage+snapDiff.MaxCapacityStorage, snapsAfter.MaxCapacityStorage)
+		require.EqualValues(t, snapBefore.StakedStorage+snapDiff.StakedStorage, snapsAfter.StakedStorage)
+		require.EqualValues(t, snapBefore.UsedStorage+snapDiff.UsedStorage, snapsAfter.UsedStorage)
+		require.EqualValues(t, snapBefore.BlobberCount+snapDiff.BlobberCount, snapsAfter.BlobberCount)
+		require.EqualValues(t, snapBefore.BlobberTotalRewards+snapDiff.BlobberTotalRewards, snapsAfter.BlobberTotalRewards)
 	})
 
 	t.Run("test UpdateSnapshot based on direct snapshot updating events", func(t *testing.T) {
@@ -571,44 +498,40 @@ func TestSnapshotFunctions(t *testing.T) {
 				},
 			},
 		}
-		
+
 		snapDiff := Snapshot{
-			TotalChallengePools:
-				events[0].Data.(ChallengePoolLock).Amount -
+			TotalChallengePools: events[0].Data.(ChallengePoolLock).Amount -
 				events[1].Data.(ChallengePoolLock).Amount,
 			TotalMint: int64(events[2].Data.(state.Mint).Amount),
-			ZCNSupply: 
-				int64(events[2].Data.(state.Mint).Amount) -
+			ZCNSupply: int64(events[2].Data.(state.Mint).Amount) -
 				int64(events[3].Data.(state.Burn).Amount),
-			ClientLocks: 
-				int64(events[4].Data.([]WritePoolLock)[0].Amount) +
+			ClientLocks: int64(events[4].Data.([]WritePoolLock)[0].Amount) +
 				int64(events[4].Data.([]WritePoolLock)[1].Amount) -
-				int64(events[5].Data.([]WritePoolLock)[0].Amount) - 
+				int64(events[5].Data.([]WritePoolLock)[0].Amount) -
 				int64(events[5].Data.([]WritePoolLock)[1].Amount) +
 				int64(events[6].Data.([]ReadPoolLock)[0].Amount) +
 				int64(events[6].Data.([]ReadPoolLock)[1].Amount) -
 				int64(events[7].Data.([]ReadPoolLock)[0].Amount) -
 				int64(events[7].Data.([]ReadPoolLock)[1].Amount),
-			BlockCount: 2, // refers to event [8] and [9]
-			UniqueAddresses: 2, // refers to event [10] and [11] 
+			BlockCount:        2, // refers to event [8] and [9]
+			UniqueAddresses:   2, // refers to event [10] and [11]
 			TransactionsCount: int64(len(events[12].Data.([]Transaction))),
-			TotalTxnFee: 
-				int64(events[12].Data.([]Transaction)[0].Fee) +
+			TotalTxnFee: int64(events[12].Data.([]Transaction)[0].Fee) +
 				int64(events[12].Data.([]Transaction)[1].Fee),
 		}
 
 		err = eventDb.UpdateSnapshotFromEvents(&s, events)
-		require.NoError(t, err)	
+		require.NoError(t, err)
 
 		snapAfter := s
-		require.Equal(t, snapBefore.TotalChallengePools + snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
-		require.Equal(t, snapBefore.TotalMint + snapDiff.TotalMint, snapAfter.TotalMint)
-		require.Equal(t, snapBefore.ZCNSupply + snapDiff.ZCNSupply, snapAfter.ZCNSupply)
-		require.Equal(t, snapBefore.ClientLocks + snapDiff.ClientLocks, snapAfter.ClientLocks)
-		require.Equal(t, snapBefore.BlockCount + snapDiff.BlockCount, snapAfter.BlockCount)
-		require.Equal(t, snapBefore.UniqueAddresses + snapDiff.UniqueAddresses, snapAfter.UniqueAddresses)
-		require.Equal(t, snapBefore.TransactionsCount + snapDiff.TransactionsCount, snapAfter.TransactionsCount)
-		require.Equal(t, snapBefore.TotalTxnFee + snapDiff.TotalTxnFee, snapAfter.TotalTxnFee)
+		require.Equal(t, snapBefore.TotalChallengePools+snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
+		require.Equal(t, snapBefore.TotalMint+snapDiff.TotalMint, snapAfter.TotalMint)
+		require.Equal(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapAfter.ZCNSupply)
+		require.Equal(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapAfter.ClientLocks)
+		require.Equal(t, snapBefore.BlockCount+snapDiff.BlockCount, snapAfter.BlockCount)
+		require.Equal(t, snapBefore.UniqueAddresses+snapDiff.UniqueAddresses, snapAfter.UniqueAddresses)
+		require.Equal(t, snapBefore.TransactionsCount+snapDiff.TransactionsCount, snapAfter.TransactionsCount)
+		require.Equal(t, snapBefore.TotalTxnFee+snapDiff.TotalTxnFee, snapAfter.TotalTxnFee)
 	})
 
 	t.Run("test UpdateSnapshot with provider-related events", func(t *testing.T) {
@@ -733,61 +656,61 @@ func TestSnapshotFunctions(t *testing.T) {
 
 		snapAfter := s
 
-		require.EqualValues(t, snapBefore.TotalMint + snapDiff.TotalMint, snapAfter.TotalMint)
-		require.EqualValues(t, snapBefore.TotalChallengePools + snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
-		require.EqualValues(t, snapBefore.ActiveAllocatedDelta + snapDiff.ActiveAllocatedDelta, snapAfter.ActiveAllocatedDelta)
-		require.EqualValues(t, snapBefore.ZCNSupply + snapDiff.ZCNSupply, snapAfter.ZCNSupply)
-		require.EqualValues(t, snapBefore.ClientLocks + snapDiff.ClientLocks, snapAfter.ClientLocks)
-		require.EqualValues(t, snapBefore.MinedTotal + snapDiff.MinedTotal, snapAfter.MinedTotal)
-		require.EqualValues(t, snapBefore.TotalStaked + snapDiff.TotalStaked, snapAfter.TotalStaked)
-		require.EqualValues(t, snapBefore.StorageTokenStake + snapDiff.StorageTokenStake, snapAfter.StorageTokenStake)
-		require.EqualValues(t, snapBefore.TotalRewards + snapDiff.TotalRewards, snapAfter.TotalRewards)
-		require.EqualValues(t, snapBefore.SuccessfulChallenges + snapDiff.SuccessfulChallenges, snapAfter.SuccessfulChallenges)
-		require.EqualValues(t, snapBefore.TotalChallenges + snapDiff.TotalChallenges, snapAfter.TotalChallenges)
-		require.EqualValues(t, snapBefore.AllocatedStorage + snapDiff.AllocatedStorage, snapAfter.AllocatedStorage)
-		require.EqualValues(t, snapBefore.MaxCapacityStorage + snapDiff.MaxCapacityStorage, snapAfter.MaxCapacityStorage)
-		require.EqualValues(t, snapBefore.StakedStorage + snapDiff.StakedStorage, snapAfter.StakedStorage)
-		require.EqualValues(t, snapBefore.UsedStorage + snapDiff.UsedStorage, snapAfter.UsedStorage)
-		require.EqualValues(t, snapBefore.BlobberCount + snapDiff.BlobberCount, snapAfter.BlobberCount)
-		require.EqualValues(t, snapBefore.MinerCount + snapDiff.MinerCount, snapAfter.MinerCount)
-		require.EqualValues(t, snapBefore.SharderCount + snapDiff.SharderCount, snapAfter.SharderCount)
-		require.EqualValues(t, snapBefore.AuthorizerCount + snapDiff.AuthorizerCount, snapAfter.AuthorizerCount)
-		require.EqualValues(t, snapBefore.ValidatorCount + snapDiff.ValidatorCount, snapAfter.ValidatorCount)
-		require.EqualValues(t, snapBefore.BlobberTotalRewards + snapDiff.BlobberTotalRewards, snapAfter.BlobberTotalRewards)
-		require.EqualValues(t, snapBefore.MinerTotalRewards + snapDiff.MinerTotalRewards, snapAfter.MinerTotalRewards)
-		require.EqualValues(t, snapBefore.SharderTotalRewards + snapDiff.SharderTotalRewards, snapAfter.SharderTotalRewards)
+		require.EqualValues(t, snapBefore.TotalMint+snapDiff.TotalMint, snapAfter.TotalMint)
+		require.EqualValues(t, snapBefore.TotalChallengePools+snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
+		require.EqualValues(t, snapBefore.ActiveAllocatedDelta+snapDiff.ActiveAllocatedDelta, snapAfter.ActiveAllocatedDelta)
+		require.EqualValues(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapAfter.ZCNSupply)
+		require.EqualValues(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapAfter.ClientLocks)
+		require.EqualValues(t, snapBefore.MinedTotal+snapDiff.MinedTotal, snapAfter.MinedTotal)
+		require.EqualValues(t, snapBefore.TotalStaked+snapDiff.TotalStaked, snapAfter.TotalStaked)
+		require.EqualValues(t, snapBefore.StorageTokenStake+snapDiff.StorageTokenStake, snapAfter.StorageTokenStake)
+		require.EqualValues(t, snapBefore.TotalRewards+snapDiff.TotalRewards, snapAfter.TotalRewards)
+		require.EqualValues(t, snapBefore.SuccessfulChallenges+snapDiff.SuccessfulChallenges, snapAfter.SuccessfulChallenges)
+		require.EqualValues(t, snapBefore.TotalChallenges+snapDiff.TotalChallenges, snapAfter.TotalChallenges)
+		require.EqualValues(t, snapBefore.AllocatedStorage+snapDiff.AllocatedStorage, snapAfter.AllocatedStorage)
+		require.EqualValues(t, snapBefore.MaxCapacityStorage+snapDiff.MaxCapacityStorage, snapAfter.MaxCapacityStorage)
+		require.EqualValues(t, snapBefore.StakedStorage+snapDiff.StakedStorage, snapAfter.StakedStorage)
+		require.EqualValues(t, snapBefore.UsedStorage+snapDiff.UsedStorage, snapAfter.UsedStorage)
+		require.EqualValues(t, snapBefore.BlobberCount+snapDiff.BlobberCount, snapAfter.BlobberCount)
+		require.EqualValues(t, snapBefore.MinerCount+snapDiff.MinerCount, snapAfter.MinerCount)
+		require.EqualValues(t, snapBefore.SharderCount+snapDiff.SharderCount, snapAfter.SharderCount)
+		require.EqualValues(t, snapBefore.AuthorizerCount+snapDiff.AuthorizerCount, snapAfter.AuthorizerCount)
+		require.EqualValues(t, snapBefore.ValidatorCount+snapDiff.ValidatorCount, snapAfter.ValidatorCount)
+		require.EqualValues(t, snapBefore.BlobberTotalRewards+snapDiff.BlobberTotalRewards, snapAfter.BlobberTotalRewards)
+		require.EqualValues(t, snapBefore.MinerTotalRewards+snapDiff.MinerTotalRewards, snapAfter.MinerTotalRewards)
+		require.EqualValues(t, snapBefore.SharderTotalRewards+snapDiff.SharderTotalRewards, snapAfter.SharderTotalRewards)
 	})
 }
 
 func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 	s := Snapshot{
-		TotalMint: int64(100),
-		TotalChallengePools: int64(100),
+		TotalMint:            int64(100),
+		TotalChallengePools:  int64(100),
 		ActiveAllocatedDelta: int64(100),
-		ZCNSupply: int64(100),
-		ClientLocks: int64(100),
-		MinedTotal: int64(100),
-		TotalStaked: int64(100),
-		StorageTokenStake: int64(100),
-		TotalRewards: int64(100),
+		ZCNSupply:            int64(100),
+		ClientLocks:          int64(100),
+		MinedTotal:           int64(100),
+		TotalStaked:          int64(100),
+		StorageTokenStake:    int64(100),
+		TotalRewards:         int64(100),
 		SuccessfulChallenges: int64(100),
-		TotalChallenges: int64(100),
-		AllocatedStorage: int64(100),
-		MaxCapacityStorage: int64(100),
-		StakedStorage: int64(100),
-		UsedStorage: int64(100),
-		TransactionsCount: int64(100),
-		UniqueAddresses: int64(100),
-		BlockCount: int64(1000),
-		TotalTxnFee: int64(1000),
-		BlobberCount: int64(5),
-		MinerCount: int64(5),
-		SharderCount: int64(5),
-		ValidatorCount: int64(5),
-		AuthorizerCount: int64(5),
-		BlobberTotalRewards: int64(100),
-		MinerTotalRewards: int64(100),
-		SharderTotalRewards: int64(100),
+		TotalChallenges:      int64(100),
+		AllocatedStorage:     int64(100),
+		MaxCapacityStorage:   int64(100),
+		StakedStorage:        int64(100),
+		UsedStorage:          int64(100),
+		TransactionsCount:    int64(100),
+		UniqueAddresses:      int64(100),
+		BlockCount:           int64(1000),
+		TotalTxnFee:          int64(1000),
+		BlobberCount:         int64(5),
+		MinerCount:           int64(5),
+		SharderCount:         int64(5),
+		ValidatorCount:       int64(5),
+		AuthorizerCount:      int64(5),
+		BlobberTotalRewards:  int64(100),
+		MinerTotalRewards:    int64(100),
+		SharderTotalRewards:  int64(100),
 	}
 
 	err := edb.addSnapshot(s)

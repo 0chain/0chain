@@ -53,11 +53,11 @@ type Snapshot struct {
 	ActiveAllocatedDelta int64 `json:"active_allocated_delta"` //496 SUM total amount of new allocation storage in a period (number of allocations active)
 	ZCNSupply            int64 `json:"zcn_supply"`             //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
-	TotalReadPoolLocked	 int64 `json:"total_read_pool_locked"` //487 SUM How many tokens are locked in all read pools
+	TotalReadPoolLocked  int64 `json:"total_read_pool_locked"` //487 SUM How many tokens are locked in all read pools
 	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
 	// updated from blobber snapshot aggregate table
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
-	StorageTokenStake	 int64 `json:"storage_token_stake"`              //*485 SUM of all stake amount for storage blobbers
+	StorageTokenStake    int64 `json:"storage_token_stake"`              //*485 SUM of all stake amount for storage blobbers
 	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
 	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
 	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
@@ -68,15 +68,15 @@ type Snapshot struct {
 	TransactionsCount    int64 `json:"transactions_count"`               // Total number of transactions in a block
 	UniqueAddresses      int64 `json:"unique_addresses"`                 // Total unique address
 	BlockCount           int64 `json:"block_count"`                      // Total number of blocks currently
-	TotalTxnFee        int64 `json:"avg_txn_fee"`                        // Total fees of all transactions
+	TotalTxnFee          int64 `json:"avg_txn_fee"`                      // Total fees of all transactions
 	CreatedAt            int64 `gorm:"autoCreateTime" json:"created_at"` // Snapshot creation date
-	BlobberCount		 int64 `json:"blobber_count"`                    // Total number of blobbers
-	MinerCount			 int64 `json:"miner_count"`                      // Total number of miners
-	SharderCount		 int64 `json:"sharder_count"`                    // Total number of sharders
-	ValidatorCount		 int64 `json:"validator_count"`                  // Total number of validators
-	AuthorizerCount		 int64 `json:"authorizer_count"`                  // Total number of authorizers
-	MinerTotalRewards	 int64 `json:"miner_total_rewards"`              // Total rewards of miners
-	SharderTotalRewards	 int64 `json:"sharder_total_rewards"`            // Total rewards of sharders
+	BlobberCount         int64 `json:"blobber_count"`                    // Total number of blobbers
+	MinerCount           int64 `json:"miner_count"`                      // Total number of miners
+	SharderCount         int64 `json:"sharder_count"`                    // Total number of sharders
+	ValidatorCount       int64 `json:"validator_count"`                  // Total number of validators
+	AuthorizerCount      int64 `json:"authorizer_count"`                 // Total number of authorizers
+	MinerTotalRewards    int64 `json:"miner_total_rewards"`              // Total rewards of miners
+	SharderTotalRewards  int64 `json:"sharder_total_rewards"`            // Total rewards of sharders
 	BlobberTotalRewards  int64 `json:"blobber_total_rewards"`            // Total rewards of blobbers
 }
 
@@ -92,24 +92,24 @@ const GB = float64(1024 * 1024 * 1024)
 // ApplyDiff applies diff values of global snapshot fields to the current snapshot according to each field's update formula.
 //
 // Parameters:
-//	- diff: diff values of global snapshot fields
-//	- gs: current global snapshot.
+//   - diff: diff values of global snapshot fields
+//   - gs: current global snapshot.
 func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snapshot, providers []P) error {
 	var (
-		snaphots []S
+		snaphots     []S
 		snapshotsMap = make(map[string]S)
-		snapIds = make([]string, 0, len(providers))
-		pModel P
-		sModel S
+		snapIds      = make([]string, 0, len(providers))
+		pModel       P
+		sModel       S
 		pReflectType = reflect.TypeOf(pModel).Elem()
 		sReflectType = reflect.TypeOf(sModel).Elem()
-		ptypeName = ProviderTextMapping[pReflectType]
+		ptypeName    = ProviderTextMapping[pReflectType]
 	)
 	for _, provider := range providers {
 		snapIds = append(snapIds, provider.GetID())
 	}
-	
-	err := edb.Store.Get().Where(fmt.Sprintf("%v_id IN (?)", ptypeName), snapIds).Find(&snaphots).Error;
+
+	err := edb.Store.Get().Where(fmt.Sprintf("%v_id IN (?)", ptypeName), snapIds).Find(&snaphots).Error
 	if err != nil {
 		return common.NewError("apply_providers_diff", "error getting providers snapshots from db")
 	}
@@ -127,7 +127,7 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 				snap.SetID(provider.GetID())
 				isNew = true
 			}
-	
+
 			err = gs.ApplySingleProviderDiff(spenum.ToProviderType(ptypeName))(provider, snap, isNew)
 			if err != nil {
 				logging.Logger.Error("error applying provider diff to global snapshot",
@@ -135,46 +135,10 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 				return common.NewError("apply_providers_diff", fmt.Sprintf("error applying provider %v:%v diff to global snapshot", ptypeName, provider.GetID()))
 			}
 			isNew = false
-		}	
+		}
 	}
 
 	return nil
-}
-
-
-func (s *Snapshot) ApplyDiff(diff *Snapshot) {
-	s.TotalMint += diff.TotalMint
-	s.TotalChallengePools += diff.TotalChallengePools
-	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
-	s.ZCNSupply += diff.ZCNSupply
-	s.ClientLocks += diff.ClientLocks
-	s.TotalReadPoolLocked += diff.TotalReadPoolLocked
-	s.MinedTotal += diff.MinedTotal
-	s.TotalStaked += diff.TotalStaked
-	s.TotalRewards += diff.TotalRewards
-	s.MinerTotalRewards += diff.MinerTotalRewards
-	s.SharderTotalRewards += diff.SharderTotalRewards
-	s.BlobberTotalRewards += diff.BlobberTotalRewards
-	s.StorageTokenStake += diff.StorageTokenStake
-	s.SuccessfulChallenges += diff.SuccessfulChallenges
-	s.TotalChallenges += diff.TotalChallenges
-	s.AllocatedStorage += diff.AllocatedStorage
-	s.MaxCapacityStorage += diff.MaxCapacityStorage
-	s.StakedStorage +=  diff.StakedStorage
-	s.UsedStorage += diff.UsedStorage
-	s.TransactionsCount += diff.TransactionsCount
-	s.UniqueAddresses += diff.UniqueAddresses
-	s.BlockCount += diff.BlockCount
-	s.TotalTxnFee += diff.TotalTxnFee
-	s.BlobberCount += diff.BlobberCount
-	s.MinerCount += diff.MinerCount
-	s.SharderCount += diff.SharderCount
-	s.ValidatorCount += diff.ValidatorCount
-	s.AuthorizerCount += diff.AuthorizerCount
-
-	if s.StakedStorage > s.MaxCapacityStorage {
-		s.StakedStorage = s.MaxCapacityStorage
-	}
 }
 
 // Facade for provider-specific diff appliers.
@@ -414,12 +378,12 @@ func (edb *EventDb) GetGlobal() (Snapshot, error) {
 // Parameters:
 // gs: global globale snapshot
 // e: events to apply to the snapshot
-func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) (error) {
+func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 	for _, event := range e {
 		logging.Logger.Debug("update snapshot",
 			zap.String("tag", event.Tag.String()),
 			zap.Int64("block_number", event.BlockNumber))
-		
+
 		switch event.Tag {
 		case TagToChallengePool:
 			cp, ok := fromEvent[ChallengePoolLock](event.Data)
@@ -548,7 +512,7 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) (error) {
 // - gs: the current snapshot
 // - providers: the providers to apply
 func (edb *EventDb) UpdateSnapshotFromProviders(gs *Snapshot, providers ProvidersMap) error {
-	
+
 	blobbers := make([]*Blobber, 0, len(providers[spenum.Blobber]))
 	for _, p := range providers[spenum.Blobber] {
 		b, ok := p.(*Blobber)
@@ -623,12 +587,12 @@ func (edb *EventDb) UpdateSnapshotFromProviders(gs *Snapshot, providers Provider
 }
 
 type ProcessingEntity struct {
-	Entity interface{}
+	Entity    interface{}
 	Processed bool
 }
 
 // MakeProcessingMap wraps map entries into a struct with "Processed" boolean flag
-func MakeProcessingMap[T any](mapIn map[string]T) (map[string]ProcessingEntity) {
+func MakeProcessingMap[T any](mapIn map[string]T) map[string]ProcessingEntity {
 	mpOut := make(map[string]ProcessingEntity)
 	for k, v := range mapIn {
 		mpOut[k] = ProcessingEntity{Entity: v, Processed: false}
