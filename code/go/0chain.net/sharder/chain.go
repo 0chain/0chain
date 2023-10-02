@@ -506,8 +506,8 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 	switch err {
 	case nil:
 		logging.Logger.Debug("load_lfb - load from stateDB",
-			zap.Int64("round", bl.lfb.Round),
-			zap.String("block", bl.lfb.Hash))
+			zap.Int64("round", lfbr.Round),
+			zap.String("block", lfbr.Hash))
 		if lfbr.Round == 0 {
 			return nil // use genesis
 		}
