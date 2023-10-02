@@ -1174,7 +1174,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, false, ChallengeRespondedLate, balances, alloc.Stats, ba.Stats)
+				}, false, ChallengeRespondedLate, balances, alloc.Stats)
 				if err != nil {
 					return nil, err
 				}
@@ -1187,7 +1187,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
+				}, true, ChallengeResponded, balances, alloc.Stats)
 				if err != nil {
 					return nil, err
 				}
@@ -1215,9 +1215,14 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 		}
 	}
 
-	for _, ba := range alloc.BlobberAllocs {
+	var blobbersSettledChallengesCount []int64
+
+	for idx, ba := range alloc.BlobberAllocs {
+		blobbersSettledChallengesCount = append(blobbersSettledChallengesCount, 0)
 		if ba.Stats.OpenChallenges > 0 {
 			logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
+
+			blobbersSettledChallengesCount[idx] = ba.Stats.OpenChallenges
 
 			ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
 			alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
@@ -1235,7 +1240,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 
 	alloc.Stats.OpenChallenges = 0
 
-	emitUpdateAllocationAndBlobberStats(alloc, balances)
+	emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc, blobbersSettledChallengesCount, balances)
 
 	return passRates, nil
 }
