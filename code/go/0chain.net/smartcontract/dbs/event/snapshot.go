@@ -141,6 +141,41 @@ func ApplyProvidersDiff[P IProvider, S IProviderSnapshot](edb *EventDb, gs *Snap
 	return nil
 }
 
+func (s *Snapshot) ApplyDiff(diff *Snapshot) {
+	s.TotalMint += diff.TotalMint
+	s.TotalChallengePools += diff.TotalChallengePools
+	s.ActiveAllocatedDelta += diff.ActiveAllocatedDelta
+	s.ZCNSupply += diff.ZCNSupply
+	s.ClientLocks += diff.ClientLocks
+	s.TotalReadPoolLocked += diff.TotalReadPoolLocked
+	s.MinedTotal += diff.MinedTotal
+	s.TotalStaked += diff.TotalStaked
+	s.TotalRewards += diff.TotalRewards
+	s.MinerTotalRewards += diff.MinerTotalRewards
+	s.SharderTotalRewards += diff.SharderTotalRewards
+	s.BlobberTotalRewards += diff.BlobberTotalRewards
+	s.StorageTokenStake += diff.StorageTokenStake
+	s.SuccessfulChallenges += diff.SuccessfulChallenges
+	s.TotalChallenges += diff.TotalChallenges
+	s.AllocatedStorage += diff.AllocatedStorage
+	s.MaxCapacityStorage += diff.MaxCapacityStorage
+	s.StakedStorage += diff.StakedStorage
+	s.UsedStorage += diff.UsedStorage
+	s.TransactionsCount += diff.TransactionsCount
+	s.UniqueAddresses += diff.UniqueAddresses
+	s.BlockCount += diff.BlockCount
+	s.TotalTxnFee += diff.TotalTxnFee
+	s.BlobberCount += diff.BlobberCount
+	s.MinerCount += diff.MinerCount
+	s.SharderCount += diff.SharderCount
+	s.ValidatorCount += diff.ValidatorCount
+	s.AuthorizerCount += diff.AuthorizerCount
+
+	if s.StakedStorage > s.MaxCapacityStorage {
+		s.StakedStorage = s.MaxCapacityStorage
+	}
+}
+
 // Facade for provider-specific diff appliers.
 func (s *Snapshot) ApplySingleProviderDiff(ptype spenum.Provider) func(provider IProvider, snapshot IProviderSnapshot, isNew bool) error {
 	switch ptype {

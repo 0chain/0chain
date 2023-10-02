@@ -13,6 +13,7 @@ import (
 func TestSnapshotFunctions(t *testing.T) {
 	eventDb, clean := GetTestEventDB(t)
 	defer clean()
+	initialSnapshot := fillSnapshot(t, eventDb)
 
 	blobbers := []Blobber{
 		buildMockBlobber(t, "blobber1"),
@@ -397,6 +398,77 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.EqualValues(t, snapBefore.UsedStorage+snapDiff.UsedStorage, snapsAfter.UsedStorage)
 		require.EqualValues(t, snapBefore.BlobberCount+snapDiff.BlobberCount, snapsAfter.BlobberCount)
 		require.EqualValues(t, snapBefore.BlobberTotalRewards+snapDiff.BlobberTotalRewards, snapsAfter.BlobberTotalRewards)
+	})
+
+	t.Run("test ApplyDiff", func(t *testing.T) {
+		s, err := eventDb.GetGlobal()
+		require.NoError(t, err)
+
+		snapshotDiff := Snapshot{
+			TotalMint:            int64(10),
+			TotalChallengePools:  int64(10),
+			ActiveAllocatedDelta: int64(10),
+			ZCNSupply:            int64(10),
+			ClientLocks:          int64(100),
+			MinedTotal:           int64(100),
+			TotalStaked:          int64(100),
+			StorageTokenStake:    int64(100),
+			TotalRewards:         int64(100),
+			SuccessfulChallenges: int64(100),
+			TotalChallenges:      int64(100),
+			AllocatedStorage:     int64(100),
+			MaxCapacityStorage:   int64(100),
+			StakedStorage:        int64(100),
+			UsedStorage:          int64(100),
+			TransactionsCount:    int64(100),
+			UniqueAddresses:      int64(100),
+			BlockCount:           int64(1000),
+			TotalTxnFee:          int64(1000),
+			BlobberCount:         int64(1),
+			MinerCount:           int64(1),
+			SharderCount:         int64(1),
+			AuthorizerCount:      int64(1),
+			ValidatorCount:       int64(1),
+			BlobberTotalRewards:  int64(100),
+			MinerTotalRewards:    int64(100),
+			SharderTotalRewards:  int64(100),
+		}
+
+		s.ApplyDiff(&snapshotDiff)
+
+		require.Equal(t, initialSnapshot.TotalMint+snapshotDiff.TotalMint, s.TotalMint)
+		require.Equal(t, initialSnapshot.TotalChallengePools+snapshotDiff.TotalChallengePools, s.TotalChallengePools)
+		require.Equal(t, initialSnapshot.ActiveAllocatedDelta+snapshotDiff.ActiveAllocatedDelta, s.ActiveAllocatedDelta)
+		require.Equal(t, initialSnapshot.ZCNSupply+snapshotDiff.ZCNSupply, s.ZCNSupply)
+		require.Equal(t, initialSnapshot.ClientLocks+snapshotDiff.ClientLocks, s.ClientLocks)
+		require.Equal(t, initialSnapshot.MinedTotal+snapshotDiff.MinedTotal, s.MinedTotal)
+		require.Equal(t, initialSnapshot.TotalTxnFee+snapshotDiff.TotalTxnFee, s.TotalTxnFee)
+		require.Equal(t, initialSnapshot.TotalStaked+snapshotDiff.TotalStaked, s.TotalStaked)
+		require.Equal(t, initialSnapshot.StorageTokenStake+snapshotDiff.StorageTokenStake, s.StorageTokenStake)
+		require.Equal(t, initialSnapshot.TotalRewards+snapshotDiff.TotalRewards, s.TotalRewards)
+		require.Equal(t, initialSnapshot.SuccessfulChallenges+snapshotDiff.SuccessfulChallenges, s.SuccessfulChallenges)
+		require.Equal(t, initialSnapshot.TotalChallenges+snapshotDiff.TotalChallenges, s.TotalChallenges)
+		require.Equal(t, initialSnapshot.AllocatedStorage+snapshotDiff.AllocatedStorage, s.AllocatedStorage)
+		require.Equal(t, initialSnapshot.MaxCapacityStorage+snapshotDiff.MaxCapacityStorage, s.MaxCapacityStorage)
+		require.Equal(t, initialSnapshot.StakedStorage+snapshotDiff.StakedStorage, s.StakedStorage)
+		require.Equal(t, initialSnapshot.UsedStorage+snapshotDiff.UsedStorage, s.UsedStorage)
+		require.Equal(t, initialSnapshot.TransactionsCount+snapshotDiff.TransactionsCount, s.TransactionsCount)
+		require.Equal(t, initialSnapshot.UniqueAddresses+snapshotDiff.UniqueAddresses, s.UniqueAddresses)
+		require.Equal(t, initialSnapshot.BlockCount+snapshotDiff.BlockCount, s.BlockCount)
+		require.Equal(t, initialSnapshot.TotalTxnFee+snapshotDiff.TotalTxnFee, s.TotalTxnFee)
+		require.Equal(t, initialSnapshot.BlobberCount+snapshotDiff.BlobberCount, s.BlobberCount)
+		require.Equal(t, initialSnapshot.MinerCount+snapshotDiff.MinerCount, s.MinerCount)
+		require.Equal(t, initialSnapshot.SharderCount+snapshotDiff.SharderCount, s.SharderCount)
+		require.Equal(t, initialSnapshot.AuthorizerCount+snapshotDiff.AuthorizerCount, s.AuthorizerCount)
+		require.Equal(t, initialSnapshot.ValidatorCount+snapshotDiff.ValidatorCount, s.ValidatorCount)
+		require.Equal(t, initialSnapshot.BlobberTotalRewards+snapshotDiff.BlobberTotalRewards, s.BlobberTotalRewards)
+		require.Equal(t, initialSnapshot.MinerTotalRewards+snapshotDiff.MinerTotalRewards, s.MinerTotalRewards)
+		require.Equal(t, initialSnapshot.SharderTotalRewards+snapshotDiff.SharderTotalRewards, s.SharderTotalRewards)
+
+		// Test snapshot StakedStorage will not exceed MaxCapacityStorage
+		snapShotDiff2 := Snapshot{StakedStorage: s.MaxCapacityStorage + 1}
+		s.ApplyDiff(&snapShotDiff2)
+		require.Equal(t, s.MaxCapacityStorage, s.StakedStorage)
 	})
 
 	t.Run("test UpdateSnapshot based on direct snapshot updating events", func(t *testing.T) {
