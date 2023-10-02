@@ -31,12 +31,7 @@ func (c *Chain) StoreLFBRound(round int64, blockHash string) error {
 	vn := util.NewValueNode()
 	vn.SetValue(lfbr)
 
-	if err := c.stateDB.PutNode(LFBRoundKey, vn); err != nil {
-		return err
-	}
-
-	c.stateDB.(*util.PNodeDB).Flush()
-	return nil
+	return c.stateDB.PutNode(LFBRoundKey, vn)
 }
 
 // LoadLFBRound loads LFB round info from state DB

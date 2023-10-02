@@ -1488,11 +1488,15 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 	c.lfbMutex.Unlock()
 
-	if err := c.StoreLFBRound(b.Round, b.Hash); err != nil {
-		logging.Logger.Warn("set lfb - store round to state DB failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Error(err))
+	if b.Round > 0 {
+		// do not store genesis block, otherwise it would re-write the LFB to 0 round every time
+		// on restarting
+		if err := c.StoreLFBRound(b.Round, b.Hash); err != nil {
+			logging.Logger.Warn("set lfb - store round to state DB failed",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Error(err))
+		}
 	}
 
 	// add LFB to blocks cache
