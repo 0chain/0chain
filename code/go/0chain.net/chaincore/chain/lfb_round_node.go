@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 var (
@@ -21,6 +23,7 @@ type LfbRound struct {
 
 // StoreLFBRound stores LFB round to state DB
 func (c *Chain) StoreLFBRound(round int64, blockHash string) error {
+	logging.Logger.Debug("store lfb", zap.Int64("round", round), zap.String("block", blockHash))
 	lfbr := &LfbRound{
 		Round: round,
 		Hash:  blockHash,
