@@ -513,6 +513,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxWritePrice
 	case MinWritePrice:
 		return conf.MinWritePrice
+	case MaxFileSize:
+		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
 	case ValidatorsPerChallenge:
