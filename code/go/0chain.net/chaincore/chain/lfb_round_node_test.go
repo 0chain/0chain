@@ -15,11 +15,8 @@ func TestStoreLFBRound(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify that the LFB round was stored correctly
-	nd, err := c.stateDB.GetNode(LFBRoundKey)
+	nd, err := c.LoadLFBRound()
 	require.NoError(t, err)
-	lfbr := &LfbRound{}
-	_, err = lfbr.UnmarshalMsg(nd.Encode())
-	require.NoError(t, err)
-	require.Equal(t, round, lfbr.Round)
-	require.Equal(t, blockHash, lfbr.Hash)
+	require.Equal(t, round, nd.Round)
+	require.Equal(t, blockHash, nd.Hash)
 }
