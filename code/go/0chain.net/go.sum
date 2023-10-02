@@ -36,16 +36,10 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3fOKtUw0Xmo=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9 h1:ssd/pmPpX56ztnfEWUP/AStwDdSVYwE150pebU2/8RU=
-github.com/0chain/common v0.0.6-0.20230529052949-41994a93b4f9/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
-github.com/0chain/common v0.0.7-0.20230920060003-f65bbe676d39 h1:7SOHI2Oui089GOtteKvu83Bge66RCkZxqEHGvKVoT+s=
-github.com/0chain/common v0.0.7-0.20230920060003-f65bbe676d39/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/common v0.0.7-0.20230920071432-fef500aba732 h1:U15K7FguRE9OCYtDHgvOvOEYQ9O0JJm4z/zDrGzrHjY=
 github.com/0chain/common v0.0.7-0.20230920071432-fef500aba732/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
-github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d h1:G19ZxPbPUX025coYOrj6klljl2zWnumW3ZyrpYTRb0I=
-github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d/go.mod h1:GgqNjoHBO0JN9TcpDAC28/VE2VsZi4MDr4qGdzfWV+I=
 github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9 h1:GHTdYTmhNY9genBkNWLXdn3Z1yCtcbSNkcIFaKrqBRU=
 github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9/go.mod h1:3NKNYzmnMIYqZwwwOgZwMmTW1DT1ZUAmKyVPmYQOiT4=
 github.com/0chain/msgp v1.1.62 h1:D/s/TYygUwQnMlvfHUjh56FEaI0wP2VfPVS0TTGGu9I=
@@ -257,8 +251,8 @@ github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d h1:dg1dEPuWpEqDnvIw251EVy4zlP8gWbsGj4BsUKCRpYs=
 github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
-github.com/hashicorp/golang-lru/v2 v2.0.4 h1:7GHuZcgid37q8o5i3QI9KMT4nCWQQ3Kx3Ov6bb9MfK0=
-github.com/hashicorp/golang-lru/v2 v2.0.4/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
+github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
+github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/herumi/bls v1.37.0 h1:EKPaFujxWsxSMlfN1NeR9GTfVOeAsAaNRGbdBfn9lBE=
