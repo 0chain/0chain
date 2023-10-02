@@ -83,3 +83,4 @@ tests:
           shift: 50
       - command:
           name: "mint_zcn"
+      - stop: ['authorizer-4']

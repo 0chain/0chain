@@ -183,6 +183,13 @@ nodes:
     start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
+  - name: "authorizer-4"
+    id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
+    work_dir: "../token_bridge_authserver/docker.local/auth4"
+    env: AUTHORIZER=4,ETH_MNEMONIC=illegal club robot marriage bleak slice gesture fit glow country govern build,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+    start_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+
   # 0dns (patched version, add docker-clean, start-no-daemon.sh)
   - name: "0dns" #
     id: "0dns" # no real ID used
