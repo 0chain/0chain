@@ -185,10 +185,6 @@ func (sp *stakePool) slash(
 		return // nothing to move
 	}
 
-	if slash > offer {
-		slash = offer // can't move the offer left
-	}
-
 	staked, err := sp.stake()
 	if err != nil {
 		return 0, err
@@ -208,6 +204,10 @@ func (sp *stakePool) slash(
 
 		if dpSlash == 0 {
 			continue
+		}
+
+		if dpSlash > dp.Balance {
+			dpSlash = dp.Balance // Can not exceed the dp balance
 		}
 
 		if balance, err := currency.MinusCoin(dp.Balance, dpSlash); err != nil {

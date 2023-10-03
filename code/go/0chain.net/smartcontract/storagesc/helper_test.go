@@ -391,8 +391,8 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0      // 0 tokens per GB min allowed
 	conf.MaxDelegates = 200
-	conf.MaxChallengeCompletionTime = 3 * time.Minute
-	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "3m")
+	conf.MaxChallengeCompletionRounds = 720
+	config.SmartContractConfig.Set("max_challenge_completion_rounds", 720)
 	conf.MinLockDemand = 0.1
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
@@ -452,7 +452,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	return
 }
 
-func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string, seed int64,
+func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64, challID string, seed int64,
 	valids *partitions.Partitions, allocID string,
 	blobber *StorageNode, balances chainState.StateContextI) {
 
@@ -469,6 +469,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
+	storChall.RoundCreatedAt = roundCreatedAt
 	storChall.ID = challID
 	var valSlice []ValidationPartitionNode
 	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)

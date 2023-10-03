@@ -752,6 +752,7 @@ func (c *Chain) syncBlocksWithCache(ctx context.Context, b *block.Block, opt syn
 			}
 			return pb
 		case <-ctx.Done():
+			logging.Logger.Debug("sync_block - context done", zap.Error(ctx.Err()))
 			return nil
 		}
 	}

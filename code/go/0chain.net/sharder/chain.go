@@ -357,6 +357,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 		logging.Logger.Debug("load_lfb, got block", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
 
 		lfnb, er := func() (*block.Block, error) {
+			logging.Logger.Debug("load_lfb - get notarized block from sharders")
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
@@ -404,6 +405,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 			}
 		}()
 
+		logging.Logger.Debug("load_lfb, find it", zap.Int64("round", lfb.Round))
 		return // got it
 	}
 
@@ -451,6 +453,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
 	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
 
+	logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")
 	// and then, check out related LFMB can be missing
 	bl.lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, bl.lfb)
 	if err != nil {
@@ -524,6 +527,7 @@ func (sc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 }
 
 func (sc *Chain) ValidateState(b *block.Block) bool {
+	logging.Logger.Debug("load_lfb, validate state - init state DB")
 	if err := b.InitStateDB(sc.GetStateDB()); err != nil {
 		logging.Logger.Warn("load_lfb, init block state failed",
 			zap.Int64("round", b.Round),
@@ -543,6 +547,7 @@ func (sc *Chain) ValidateState(b *block.Block) bool {
 		return false
 	}
 
+	logging.Logger.Debug("load_lfb, alidate state - sync msissing nodes done")
 	return true
 }
 
