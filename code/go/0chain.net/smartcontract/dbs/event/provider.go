@@ -233,17 +233,6 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 			for _, b := range *blobbers {
 				ids[spenum.Blobber][b.ID] = nil
 			}
-		case TagUpdateBlobberChallenge:
-			challenges, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				return nil, common.NewError("update_snapshot",
-					fmt.Sprintf("invalid data for event %s", event.Tag.String()))
-			}
-			for _, c := range *challenges {
-				ids[spenum.Blobber][c.Id] = nil
-			}
 		case TagAddMiner,
 			TagUpdateMinerTotalStake:
 			miners, ok := fromEvent[[]Miner](event.Data)

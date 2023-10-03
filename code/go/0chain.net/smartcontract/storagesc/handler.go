@@ -3049,23 +3049,14 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, err)
 		return
 	}
-
-	logging.Logger.Info("Jayash replicateBlobberAggregates", zap.Any("pagination", pagination), zap.Any("r.URL.Query()", r.URL.Query()))
-
 	roundStr := r.URL.Query().Get("round")
-
-	logging.Logger.Info("Jayash 1replicateBlobberAggregates", zap.Any("roundStr", roundStr))
 
 	round, err := strconv.ParseInt(roundStr, 10, 64)
 	if err != nil {
-		logging.Logger.Info("Jayash 2.1replicateBlobberAggregates", zap.Any("err", err))
 		err := common.NewErrBadRequest("invalid round number" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}
-
-	logging.Logger.Info("Jayash 2replicateBlobberAggregates", zap.Any("round", round))
-
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -3074,7 +3065,6 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 	blobbers := []event.BlobberAggregate{}
 	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "blobber", &blobbers)
 	if err != nil {
-		logging.Logger.Info("Jayash 3replicateBlobberAggregates", zap.Any("err", err))
 		err := common.NewErrInternal("cannot get blobber aggregates" + err.Error())
 		common.Respond(w, r, nil, err)
 		return
@@ -3082,8 +3072,6 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 	if len(blobbers) == 0 {
 		blobbers = []event.BlobberAggregate{}
 	}
-
-	logging.Logger.Info("Jayash 4replicateBlobberAggregates", zap.Any("blobbers", blobbers))
 	common.Respond(w, r, blobbers, nil)
 }
 
