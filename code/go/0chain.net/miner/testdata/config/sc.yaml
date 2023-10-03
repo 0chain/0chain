@@ -111,7 +111,7 @@ smart_contracts:
     # min possible allocation duration allowed by the SC
     min_alloc_duration: "5m"
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_time: "3m"
+    max_challenge_completion_rounds: 720
     # min blobber's offer duration allowed by the SC
     min_offer_duration: "10h"
     # min blobber capacity allowed by the SC
@@ -186,6 +186,7 @@ smart_contracts:
     # number of validators per challenge
     validators_per_challenge: 2
     num_validators_rewarded: 10
+    max_blobber_select_for_challenge: 5
     # max delegates per stake pool allowed by SC
     max_delegates: 200
     # max_charge allowed for blobbers; the charge is part of blobber rewards
