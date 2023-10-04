@@ -91,6 +91,10 @@ func SetupDefaultConfig() {
 	viper.SetDefault(GlobalSettingName[DbsAggregateDebug], false)
 	viper.SetDefault(GlobalSettingName[DbsAggregatePeriod], 10)
 	viper.SetDefault(GlobalSettingName[DbsAggregatePageLimit], 50)
+
+	viper.SetDefault("kafka.host", "localhost:9092")
+	viper.SetDefault("kafka.topic", "events")
+	viper.SetDefault("kafka.write_timeout", 10 * time.Second) // seconds
 }
 
 // SetupConfig setups the main configuration system.
@@ -203,6 +207,8 @@ type DbAccess struct {
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
 	Slowtablespace  string        `json:"slowtablespace"`
 	KafkaHost       string
+	KafkaTopic      string
+	KafkaWriteTimeout time.Duration
 }
 
 type DbSettings struct {

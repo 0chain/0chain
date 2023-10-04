@@ -39,7 +39,7 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
-		kafka:         queueProvider.NewKafkaProvider(config.KafkaHost),
+		kafka:         queueProvider.NewKafkaProvider(config.KafkaHost, config.KafkaTopic, config.KafkaWriteTimeout),
 	}
 
 	return eventDb, nil
