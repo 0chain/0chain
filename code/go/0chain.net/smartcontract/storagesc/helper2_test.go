@@ -56,13 +56,12 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 	}
 	sc.events = append(sc.events, e)
 }
-func (sc *mockStateContext) EmitError(error)                                       {}
-func (sc *mockStateContext) GetEvents() []event.Event                              { return sc.events }
-func (sc *mockStateContext) GetEventDB() *event.EventDb                            { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             {}
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }
-func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                 { return nil }
+func (sc *mockStateContext) EmitError(error)                              {}
+func (sc *mockStateContext) GetEvents() []event.Event                     { return sc.events }
+func (sc *mockStateContext) GetEventDB() *event.EventDb                   { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)    {}
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block        { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, error) {
 	return sc.clientBalance, nil
 }
@@ -89,6 +88,11 @@ func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializabl
 
 func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
+	return key, nil
+}
+
+func (sc *mockStateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
+	delete(sc.store, key)
 	return key, nil
 }
 

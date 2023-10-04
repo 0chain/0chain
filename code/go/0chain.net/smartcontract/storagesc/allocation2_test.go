@@ -1,16 +1,17 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/block"
 	"encoding/json"
 	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/block"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/config"
 
@@ -574,6 +575,10 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 
 		cancellationCharges = append(cancellationCharges, int64(reward))
 	}
+
+	// check that the allocation is deleted from MPT
+	err = ctx.GetTrieNode(sAllocation.GetKey(ADDRESS), &sAllocation)
+	require.Error(t, err, util.ErrValueNotPresent)
 
 	confirmFinalizeAllocation(t, f, *newCp, sps, cancellationCharges, *scYaml)
 
