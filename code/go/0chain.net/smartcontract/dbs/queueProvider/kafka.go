@@ -2,36 +2,43 @@ package queueProvider
 
 import (
 	"context"
+	"time"
+
 	"github.com/0chain/common/core/logging"
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 
-const (
-	KafkaHost = "kafka:9092"
-	Topic     = "events"
-)
 
 type KafkaProvider struct {
 	eventsWriter *kafka.Writer
+	Host 	   string
+	Topic 	   string
+	WriteTimeout time.Duration
 }
 
-func NewKafkaProvider(host string) *KafkaProvider {
+func NewKafkaProvider(host string, topic string, writeTimeout time.Duration) *KafkaProvider {
 	eventsWriter := &kafka.Writer{
 		Addr:  kafka.TCP(host),
-		Topic: Topic,
+		Topic: topic,
 		Async: true,
+		WriteTimeout: writeTimeout,
 	}
 	return &KafkaProvider{
 		eventsWriter: eventsWriter,
+		Host:         host,
+		Topic:        topic,
+		WriteTimeout: writeTimeout,
 	}
 }
 
 // Publish publishes data to a Kafka topic
 func (k *KafkaProvider) PublishToKafka(topic string, message []byte) {
+	toutCtx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
+	defer cancel()
 	switch topic {
-	case Topic:
-		err := k.eventsWriter.WriteMessages(context.Background(),
+	case k.Topic:
+		err := k.eventsWriter.WriteMessages(toutCtx,
 			kafka.Message{
 				Value: message,
 			},
@@ -46,11 +53,11 @@ func (k *KafkaProvider) PublishToKafka(topic string, message []byte) {
 }
 
 func (k *KafkaProvider) ReconnectKafka() {
-	kafkaHost := KafkaHost
 
 	k.eventsWriter = &kafka.Writer{
-		Addr:  kafka.TCP(kafkaHost),
-		Topic: Topic,
+		Addr:  kafka.TCP(k.Host),
+		Topic: k.Topic,
+		WriteBackoffMax: k.WriteTimeout,
 	}
 
 }
