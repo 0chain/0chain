@@ -48,6 +48,13 @@ jobs:
         echo ::set-output name=BRANCH::${BRANCH}
         echo "Branch name is ${BRANCH}"
 
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
@@ -138,6 +145,11 @@ jobs:
         cd token_bridge_authserver
         chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
         ./docker.local/bin/build.authorizer-integration-tests.sh
+
+    - name: Changing Authorizer Network
+      run: |
+        cd token_bridge_authserver
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
     - name: Add ZCN config
       run: |

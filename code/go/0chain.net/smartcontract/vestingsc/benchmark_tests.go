@@ -117,6 +117,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[0],
 				Value:        vestingMinLock,
 				CreationDate: creationTime,
+				ToClientID:   data.Clients[1],
 			},
 			input: func() []byte {
 				var dests destinations

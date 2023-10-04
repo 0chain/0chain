@@ -250,6 +250,8 @@ func main() {
 		return
 	}
 
+	Logger.Info("finish load latest blocks from store")
+
 	sharder.SetupWorkers(ctx)
 
 	startBlocksInfoLogs(sc)

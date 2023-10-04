@@ -63,6 +63,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/writemarkers", common.UserRateLimit(srh.getWriteMarker)),
 		rest.MakeEndpoint(storage+"/errors", common.UserRateLimit(srh.getErrors)),
 		rest.MakeEndpoint(storage+"/allocations", common.UserRateLimit(srh.getAllocations)),
+		rest.MakeEndpoint(storage+"/expired-allocations", common.UserRateLimit(srh.getExpiredAllocations)),
 		rest.MakeEndpoint(storage+"/allocation_min_lock", common.UserRateLimit(srh.getAllocationMinLock)),
 		rest.MakeEndpoint(storage+"/allocation-update-min-lock", common.UserRateLimit(srh.getAllocationUpdateMinLock)),
 		rest.MakeEndpoint(storage+"/allocation", common.UserRateLimit(srh.getAllocation)),
@@ -980,8 +981,6 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}
-	spStat := &stakepool.StakePoolStat{}
-	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
 
 	switch spenum.Provider(providerType) {
 	case spenum.Blobber:
@@ -1997,6 +1996,22 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 		return
 	}
 	allocations, err := getClientAllocationsFromDb(clientID, edb, limit)
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
+		return
+	}
+	common.Respond(w, r, allocations, nil)
+}
+
+func (srh *StorageRestHandler) getExpiredAllocations(w http.ResponseWriter, r *http.Request) {
+	blobberID := r.URL.Query().Get("blobber_id")
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	allocations, err := getExpiredAllocationsFromDb(blobberID, edb)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
 		return
