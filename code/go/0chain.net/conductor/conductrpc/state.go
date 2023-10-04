@@ -72,14 +72,19 @@ type State struct {
 	LockNotarizationAndSendNextRoundVRF *config.LockNotarizationAndSendNextRoundVRF
 
 	// Blobbers related states
-	StorageTree     *config.Bad // blobber sends bad files/tree responses
-	ValidatorProof  *config.Bad // blobber sends invalid proof to validators
-	Challenges      *config.Bad // blobber ignores challenges
-	BlobberList     *config.BlobberList
-	BlobberDownload *config.BlobberDownload
-	BlobberUpload   *config.BlobberUpload
-	BlobberDelete   *config.BlobberDelete
-
+	StorageTree             *config.Bad // blobber sends bad files/tree responses
+	ValidatorProof          *config.Bad // blobber sends invalid proof to validators
+	Challenges              *config.Bad // blobber ignores challenges
+	BlobberList             *config.BlobberList
+	BlobberDownload         *config.BlobberDownload
+	BlobberUpload           *config.BlobberUpload
+	BlobberDelete           *config.BlobberDelete
+	GenerateChallenge       *config.GenerateChallege
+	StopWMCommit            bool
+	StopChallengeGeneration bool
+	BlobberCommittedWM      bool
+	GetFileMetaRoot         bool
+	FailRenameCommit        []NodeID
 	// Validators related states
 	CheckChallengeIsValid *cases.CheckChallengeIsValid
 	AdversarialValidator  *config.AdversarialValidator

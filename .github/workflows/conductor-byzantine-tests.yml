@@ -43,6 +43,13 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+
     - name: Docker Init Setup.
       run: |
         export HOME="/root"
@@ -74,16 +81,22 @@ jobs:
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
     - uses: actions/upload-artifact@v3
-      if: failure()
+      if: always()
       with:
-        name: conductor-logs
+        name: byzantine-logs
         path: |
-          conductor/logs/
-          docker.local/
+          conductor/
+          docker.local/miner*/log
+          docker.local/sharder*/log
 
     - name: Cleanup
       run: |
         rm -rf *
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]

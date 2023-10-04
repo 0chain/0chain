@@ -1,14 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
-
-	"0chain.net/smartcontract/provider"
-
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -17,11 +9,16 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
+	"strconv"
+	"strings"
+	"testing"
 )
 
 const (
@@ -58,9 +55,13 @@ var (
 	blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.3,
 		readPrice:     0.01,
+		writePrice:    0.1,
 	}
 	freeReadBlobberYaml = mockBlobberYaml{
 		serviceCharge: 0.3,
+	}
+	validatorYamls = []mockBlobberYaml{
+		{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3},
 	}
 )
 
@@ -96,13 +97,12 @@ func TestCommitBlobberRead(t *testing.T) {
 		)
 		require.NoError(t, err)
 	})
-	// TODO: add back when panic is fixe
-	//t.Run("test commit blobber read empty pool", func(t *testing.T) {
-	//	var err = testCommitBlobberRead(
-	//		t, freeReadBlobberYaml, lastRead, read, allocation, stakes, mockReadPool{},
-	//	)
-	//	require.NoError(t, err)
-	//})
+	t.Run("test commit blobber read empty pool", func(t *testing.T) {
+		var err = testCommitBlobberRead(
+			t, freeReadBlobberYaml, lastRead, read, allocation, stakes, mockReadPool{},
+		)
+		require.NoError(t, err)
+	})
 
 	t.Run("check blobber sort needed", func(t *testing.T) {
 		var bRPool = mockReadPool{11 * 1e10}
@@ -159,12 +159,8 @@ func TestCommitBlobberRead(t *testing.T) {
 	})
 
 	t.Run(errExpiredAllocation, func(t *testing.T) {
-		var conf = Config{
-			MaxChallengeCompletionTime: 30 * time.Minute,
-		}
 		var faultyRead = read
-		faultyRead.timestamp = allocation.expiration +
-			toSeconds(conf.MaxChallengeCompletionTime) + 1
+		faultyRead.timestamp = allocation.expiration + 1
 		var err = testCommitBlobberRead(
 			t, blobberYaml, lastRead, faultyRead, allocation, stakes, rPool,
 		)

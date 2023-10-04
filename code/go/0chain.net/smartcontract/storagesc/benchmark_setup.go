@@ -76,18 +76,19 @@ func addMockAllocation(
 		OwnerPublicKey:  publicKey,
 		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
 		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		StartTime:       balances.GetTransaction().CreationDate,
 		Stats: &StorageAllocationStats{
-			UsedSize:                  1,
+			UsedSize:                  viper.GetInt64(sc.StorageMinAllocSize) / 2,
 			NumWrites:                 1,
 			NumReads:                  1,
-			TotalChallenges:           1,
-			OpenChallenges:            1,
-			SuccessChallenges:         1,
-			FailedChallenges:          1,
+			TotalChallenges:           10,
+			OpenChallenges:            2,
+			SuccessChallenges:         6,
+			FailedChallenges:          2,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
 		MinLockDemand: mockAllocationMinLockDemand,
-		TimeUnit:      1 * time.Hour,
+		TimeUnit:      viper.GetDuration(sc.TimeUnit),
 		Finalized:     i == mockFinalizedAllocationIndex,
 		WritePool:     2e10,
 	}
@@ -97,14 +98,24 @@ func addMockAllocation(
 		bIndex := startBlobbers + j
 		bId := getMockBlobberId(bIndex)
 		ba := BlobberAllocation{
-			BlobberID:       bId,
-			AllocationID:    sa.ID,
-			Size:            viper.GetInt64(sc.StorageMinAllocSize),
-			Stats:           &StorageAllocationStats{},
-			Terms:           getMockBlobberTerms(),
-			MinLockDemand:   mockMinLockDemand,
-			AllocationRoot:  encryption.Hash("allocation root"),
-			LastWriteMarker: &WriteMarker{},
+			BlobberID:    bId,
+			AllocationID: sa.ID,
+			Size:         viper.GetInt64(sc.StorageMinAllocSize),
+			Stats: &StorageAllocationStats{
+				UsedSize:                  (sa.Stats.UsedSize) / 2,
+				NumWrites:                 sa.Stats.NumWrites,
+				NumReads:                  sa.Stats.NumReads,
+				TotalChallenges:           (sa.Stats.TotalChallenges) / 2,
+				OpenChallenges:            (sa.Stats.OpenChallenges) / 2,
+				SuccessChallenges:         (sa.Stats.SuccessChallenges) / 2,
+				FailedChallenges:          (sa.Stats.FailedChallenges) / 2,
+				LastestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
+			},
+			Terms:                         getMockBlobberTerms(),
+			MinLockDemand:                 mockMinLockDemand,
+			AllocationRoot:                encryption.Hash("allocation root"),
+			LastWriteMarker:               &WriteMarker{},
+			LatestFinalizedChallCreatedAt: 0,
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 
@@ -143,7 +154,9 @@ func addMockAllocation(
 			Expiration:               int64(sa.Expiration),
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
+			StartTime:                int64(sa.StartTime),
 			UsedSize:                 sa.Stats.UsedSize,
+			TimeUnit:                 int64(sa.TimeUnit),
 			NumWrites:                sa.Stats.NumWrites,
 			NumReads:                 sa.Stats.NumReads,
 			TotalChallenges:          sa.Stats.TotalChallenges,
@@ -500,7 +513,7 @@ func addMockValidatorSnapshots(validators []event.Validator, edb *event.EventDb)
 	for _, validator := range validators {
 		for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 			aggregate := event.ValidatorAggregate{
-				Round:         int64(i),
+				Round:         i,
 				ValidatorID:   validator.ID,
 				TotalStake:    validator.TotalStake,
 				TotalRewards:  validator.GetTotalRewards(),
@@ -528,7 +541,7 @@ func AddMockSnapshots(edb *event.EventDb) {
 			TotalChallengePools:  int64(currency.Coin(i + (1 * 1e10))),
 			ActiveAllocatedDelta: i,
 			TotalStaked:          int64(currency.Coin(i * (0.001 * 1e10))),
-			SuccessfulChallenges: i - 1/2,
+			SuccessfulChallenges: (i - 1) / 2,
 			TotalChallenges:      i - 1,
 			ZCNSupply:            100000 * int64(i+10),
 			AllocatedStorage:     i * 1024,
@@ -837,8 +850,8 @@ func getMockReadMarkerRound(allocationIndex, readMarkerIndex int) int64 {
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:  currency.Coin(0.1 * 1e10),
-		WritePrice: currency.Coin(0.1 * 1e10),
+		ReadPrice:  currency.Coin(0.01 * 1e10),
+		WritePrice: currency.Coin(0.01 * 1e10),
 	}
 }
 
@@ -910,7 +923,7 @@ func SetMockConfig(
 	conf.NumValidatorsRewarded = viper.GetInt(sc.StorageNumValidatorsRewarded)
 	conf.ValidatorsPerChallenge = viper.GetInt(sc.StorageValidatorsPerChallenge)
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
-	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
+	conf.MaxChallengeCompletionRounds = viper.GetInt64(sc.StorageMaxChallengeCompletionRounds)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
 	conf.MinStake = currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10)
 	conf.MaxStake = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)

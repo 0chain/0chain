@@ -45,6 +45,13 @@ jobs:
         git clone https://github.com/0chain/0chain.git
         cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+
     - name: Docker Init Setup.
       run: |
         sudo apt update -y
@@ -163,33 +170,20 @@ jobs:
         cd 0chain && ./docker.local/bin/start.conductor.sh validator-1
 
     - uses: actions/upload-artifact@v3
-      if: failure()
+      if: always()
       with:
-        name: conductor-logs
+        name: standard-validator-logs
         path: |
           0chain/conductor/logs/
-          0chain/docker.local/
-          blobber/docker.local/
+          0chain/docker.local/miner*/log
+          0chain/docker.local/sharder*/log
+          blobber/docker.local/blobber*/log
+          blobber/docker.local/validator*/log
 
-    # - name: Creating Artifact con-tests-logs.tar.gz file.
-    #   run: |
-    #     find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
-
-    # - name: Uploading artifact con-tests-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-logs.tar.gz
-
-    # - name: Creating Artifact con-tests-backup-logs.tar.gz file.
-    #   run: |
-    #     tar -czvf con-tests-backup-logs.tar.gz ./docker.local/conductor.backup_logs
-
-    # - name: Uploading artifact con-tests-backup-logs.tar.gz file.
-    #   uses: actions/upload-artifact@v2
-    #   with:
-    #     name: Conductor-test-logs
-    #     path: ./con-tests-backup-logs.tar.gz
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
