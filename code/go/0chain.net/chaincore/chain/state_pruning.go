@@ -11,10 +11,10 @@ import (
 	"go.uber.org/zap"
 )
 
-//StatePruneUpdateTimer - a metric that tracks the time it takes to update older nodes still referrred from the given version
+// StatePruneUpdateTimer - a metric that tracks the time it takes to update older nodes still referrred from the given version
 var StatePruneUpdateTimer metrics.Timer
 
-//StatePruneDeleteTimer - a metric that tracks the time it takes to delete all the obsolete nodes w.r.t a given version
+// StatePruneDeleteTimer - a metric that tracks the time it takes to delete all the obsolete nodes w.r.t a given version
 var StatePruneDeleteTimer metrics.Timer
 
 func init() {
@@ -113,6 +113,9 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		zap.Int64("prune_deleted", ps.Deleted),
 		zap.Duration("duration", time.Since(t)), zap.Any("stats", ps),
 		zap.Duration("prune_below_version_after", d))
+
+	sns := gStateNodeStat.Inc(-ps.Deleted)
+	logging.Logger.Debug("MPT state noe stat - prune", zap.Int64("num", sns))
 
 	/*
 		if stateOut != nil {

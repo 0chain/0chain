@@ -74,6 +74,8 @@ const (
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
 
+var gStateNodeStat stateNodeStat
+
 /*SetServerChain - set the server chain object */
 func SetServerChain(c *Chain) {
 	ServerChain = c
@@ -214,6 +216,26 @@ type Chain struct {
 	computeBlockStateC chan struct{}
 
 	OnBlockAdded func(b *block.Block)
+}
+
+type stateNodeStat struct {
+	count int64
+	lock  sync.RWMutex
+}
+
+func (sns *stateNodeStat) Inc(n int64) int64 {
+	sns.lock.Lock()
+	v := sns.count + n
+	sns.count = v
+	sns.lock.Unlock()
+	return v
+}
+
+func (sns *stateNodeStat) Get() int64 {
+	sns.lock.RLock()
+	var v = sns.count
+	sns.lock.RUnlock()
+	return v
 }
 
 type missingNodeStat struct {
