@@ -6,11 +6,11 @@ require (
 	github.com/alicebob/miniredis/v2 v2.30.5
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.26.0
-	github.com/go-playground/validator/v10 v10.15.3
+	github.com/go-playground/validator/v10 v10.15.5
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
-	github.com/hashicorp/golang-lru/v2 v2.0.6
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/herumi/bls v1.37.0
 	github.com/herumi/mcl v1.86.0
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
@@ -27,7 +27,7 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tinylib/msgp v1.1.6
 	github.com/valyala/gozstd v1.20.1
-	github.com/vmihailenco/msgpack/v5 v5.3.5
+	github.com/vmihailenco/msgpack/v5 v5.4.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.13.0
@@ -40,8 +40,8 @@ require (
 
 require (
 	github.com/0chain/common v0.0.7-0.20230929071845-472780df75b6
-	github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9
-	github.com/go-faker/faker/v4 v4.1.1
+	github.com/0chain/gosdk v1.10.2
+	github.com/go-faker/faker/v4 v4.2.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
@@ -116,7 +116,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect; indirect //do not update
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
