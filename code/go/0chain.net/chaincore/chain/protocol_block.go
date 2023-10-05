@@ -355,15 +355,17 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	changeCount := fb.ClientState.GetChangeCount()
-	sns := gStateNodeStat.Inc(int64(changeCount))
-	logging.Logger.Debug("MPT state node stat - inc", zap.Int64("num", sns))
-
 	ssFTs = time.Now()
 
 	var (
 		wg          = waitgroup.New()
 		deletedNode = fb.ClientState.GetDeletes()
+		sns         = gStateNodeStat.Inc(int64(changeCount))
 	)
+
+	logging.Logger.Debug("MPT state node stat - inc",
+		zap.Int64("change num", sns),
+		zap.Int("delete num", len(deletedNode)))
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
 		err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
