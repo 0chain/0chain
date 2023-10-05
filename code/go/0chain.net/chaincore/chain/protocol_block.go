@@ -364,7 +364,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	)
 
 	logging.Logger.Debug("MPT state node stat - inc",
-		zap.Int64("change num", sns),
+		zap.Int64("node num", sns),
+		zap.Int("change num", changeCount),
 		zap.Int("delete num", len(deletedNode)))
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
