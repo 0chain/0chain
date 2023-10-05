@@ -557,10 +557,11 @@ var stateDB *util.PNodeDB
 func SetupStateDB(workdir string) {
 
 	datadir := "data/rocksdb/state"
-	logsdir := "/0chain/log/rocksdb/state"
+	// logsdir := "/0chain/log/rocksdb/state"
+	logsdir := "data/rocksdb/state/log"
 	if len(workdir) > 0 {
 		datadir = filepath.Join(workdir, datadir)
-		logsdir = filepath.Join(workdir, "log/rocksdb/state")
+		logsdir = filepath.Join(workdir, logsdir)
 	}
 
 	db, err := util.NewPNodeDB(datadir, logsdir)
