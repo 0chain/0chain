@@ -122,8 +122,17 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		zap.Duration("duration", time.Since(t)), zap.Any("stats", ps),
 		zap.Duration("prune_below_version_after", d))
 
-	sns := gStateNodeStat.Inc(-(ps.Deleted - beforePrune))
-	logging.Logger.Debug("MPT state node stat - prune", zap.Int64("num", sns))
+	var (
+		pruned = ps.Deleted - beforePrune
+		before = gStateNodeStat.Get()
+		sns    = gStateNodeStat.Inc(-pruned)
+	)
+	logging.Logger.Debug("MPT state node stat - prune",
+		zap.Int64("num", sns),
+		zap.Int64("before", before),
+		zap.Int64("pruned", pruned),
+		zap.Int64("ps - before delete", beforePrune),
+	)
 
 	/*
 		if stateOut != nil {
