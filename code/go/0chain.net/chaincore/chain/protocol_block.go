@@ -356,7 +356,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	changeCount := fb.ClientState.GetChangeCount()
 	sns := gStateNodeStat.Inc(int64(changeCount))
-	logging.Logger.Debug("MPT state noe stat - inc", zap.Int64("num", sns))
+	logging.Logger.Debug("MPT state node stat - inc", zap.Int64("num", sns))
 
 	ssFTs = time.Now()
 

@@ -86,7 +86,15 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return
 	}
 
-	var t = time.Now()
+	var (
+		t           = time.Now()
+		beforePrune int64
+	)
+
+	if ps != nil {
+		beforePrune = ps.Deleted
+	}
+
 	err := c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		logging.Logger.Error("prune client state error", zap.Error(err))
@@ -114,8 +122,8 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		zap.Duration("duration", time.Since(t)), zap.Any("stats", ps),
 		zap.Duration("prune_below_version_after", d))
 
-	sns := gStateNodeStat.Inc(-ps.Deleted)
-	logging.Logger.Debug("MPT state noe stat - prune", zap.Int64("num", sns))
+	sns := gStateNodeStat.Inc(-(ps.Deleted - beforePrune))
+	logging.Logger.Debug("MPT state node stat - prune", zap.Int64("num", sns))
 
 	/*
 		if stateOut != nil {
