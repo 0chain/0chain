@@ -570,8 +570,11 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 		return s, err
 	}
 
-	kafka := edb.GetKafkaProv()
-	kafka.PublishToKafka("events", data)
+	err = edb.GetKafkaProv().PublishToKafka(edb.dbConfig.KafkaTopic, data)
+	if err != nil {
+		logging.Logger.Error("Getting error while publishing data to kafka", zap.Error(err))
+		return s, err
+	}
 
 	err = edb.UpdateSnapshotFromEvents(s, events)
 	if err != nil {
@@ -1076,11 +1079,11 @@ func setEventData[T any](e *Event, data interface{}) error {
 }
 
 func (edb *EventDb) kafkaProv() *queueProvider.KafkaProvider {
-	kafka := queueProvider.NewKafkaProvider(edb.dbConfig.KafkaHost, edb.dbConfig.KafkaTopic, edb.dbConfig.KafkaWriteTimeout)
+	kafka := queueProvider.NewKafkaProvider(edb.dbConfig.KafkaHost, edb.dbConfig.KafkaWriteTimeout)
 	return kafka
 }
 
-func (edb *EventDb) GetKafkaProv() *queueProvider.KafkaProvider {
+func (edb *EventDb) GetKafkaProv() queueProvider.KafkaProviderI {
 	if edb.kafka == nil {
 		kafka := edb.kafkaProv()
 		edb.kafka = kafka

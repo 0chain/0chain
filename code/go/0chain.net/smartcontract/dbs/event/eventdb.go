@@ -39,7 +39,7 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
-		kafka:         queueProvider.NewKafkaProvider(config.KafkaHost, config.KafkaTopic, config.KafkaWriteTimeout),
+		kafka:         queueProvider.NewKafkaProvider(config.KafkaHost, config.KafkaWriteTimeout),
 	}
 
 	return eventDb, nil
@@ -68,7 +68,7 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
-	kafka         *queueProvider.KafkaProvider
+	kafka         queueProvider.KafkaProviderI
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -84,6 +84,10 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 		},
 		dbConfig: edb.dbConfig,
 		settings: edb.settings,
+		kafka: queueProvider.NewKafkaProvider(
+			edb.dbConfig.KafkaHost,
+			edb.dbConfig.KafkaWriteTimeout,
+		),
 	}
 	return &edbTx, nil
 }
