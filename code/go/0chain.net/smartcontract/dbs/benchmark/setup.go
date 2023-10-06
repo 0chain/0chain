@@ -2,7 +2,6 @@ package benchmark
 
 import (
 	"strconv"
-	// "time"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
@@ -12,8 +11,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
-
-	// "0chain.net/smartcontract/dbs/model"
 	"github.com/spf13/viper"
 )
 

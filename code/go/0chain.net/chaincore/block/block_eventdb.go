@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/dbs/event"
-	// "0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/util"
 )
 
