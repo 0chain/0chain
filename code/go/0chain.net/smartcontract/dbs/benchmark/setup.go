@@ -2,6 +2,7 @@ package benchmark
 
 import (
 	"strconv"
+	"time"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
@@ -125,6 +126,7 @@ func AddMockBlocks(
 				RunningTxnCount:       "mock running txn count",
 				RoundTimeoutCount:     0,
 			}
+			block.CreatedAt = time.Now()
 			_ = eventDb.Store.Get().Create(&block)
 		}
 	}
