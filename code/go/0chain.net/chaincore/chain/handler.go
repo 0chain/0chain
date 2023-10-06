@@ -126,6 +126,9 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
+		"/_diagnostics/est_num_keys": common.UserRateLimit(
+			StateDumpAllHandler,
+		),
 		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
@@ -1992,6 +1995,68 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(writer, "END }\n")
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
+}
+
+func StateDumpAllHandler(w http.ResponseWriter, r *http.Request) {
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+	// contract := r.FormValue("smart_contract")
+	mpt := lfb.ClientState
+	if mpt == nil {
+		errMsg := struct {
+			Err string `json:"error"`
+		}{
+			Err: fmt.Sprintf("last finalized block with nil state, round: %d", lfb.Round),
+		}
+
+		out, err := json.MarshalIndent(errMsg, "", "    ")
+		if err != nil {
+			logging.Logger.Error("Dump state failed", zap.Error(err))
+			return
+		}
+		fmt.Fprint(w, string(out))
+		return
+	}
+	a, def, dd := mpt.GetNodeDB().(*util.PNodeDB).EstimateSize()
+
+	fmt.Fprintf(w, "Size: %v, %v, %v\n", a, def, dd)
+
+	// var count int
+	// handler := func(ctx context.Context, path util.Path, key util.Key, node util.Node) error {
+	// 	// if node == nil {
+	// 	// 	paths = append(paths, path)
+	// 	// 	keys = append(keys, key)
+	// 	// 	return ErrMissingNodes
+	// 	// }
+	// 	// return nil
+	// 	count++
+	// 	return nil
+	// }
+	// // mpt.(*util.PNodeDB)
+
+	// err := mpt.Iterate(context.Background(), handler, util.NodeTypeLeafNode|util.NodeTypeFullNode|util.NodeTypeExtensionNode)
+
+	// mptRootHash := util.ToHex(mpt.GetRoot())
+	// fileName := fmt.Sprintf("mpt_%v_%v_%v.txt", contract, lfb.Round, mptRootHash)
+	// file, err := ioutil.TempFile("", fileName)
+	// if err != nil {
+	// 	return
+	// }
+	// go func() {
+	// 	writer := bufio.NewWriter(file)
+	// 	defer func() {
+	// 		writer.Flush()
+	// 		file.Close()
+	// 	}()
+	// 	fmt.Fprintf(writer, "round: %v\n", lfb.Round)
+	// 	fmt.Fprintf(writer, "global state hash: %v\n", util.ToHex(lfb.ClientStateHash))
+	// 	fmt.Fprintf(writer, "mpt state hash: %v\n", mptRootHash)
+	// 	writer.Flush()
+	// 	fmt.Fprintf(writer, "BEGIN {\n")
+	// 	mpt.PrettyPrint(writer)
+	// 	fmt.Fprintf(writer, "END }\n")
+	// }()
+	// fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
 }
 
 // SetupHandlers sets up the necessary API end points for miners

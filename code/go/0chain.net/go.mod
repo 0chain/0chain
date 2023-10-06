@@ -39,7 +39,7 @@ require (
 )
 
 require (
-	github.com/0chain/common v0.0.7-0.20231005102640-613cd093fc64
+	github.com/0chain/common v0.0.7-0.20231006003459-2446e5e16903
 	github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9
 	github.com/go-faker/faker/v4 v4.1.1
 	github.com/jackc/pgx/v5 v5.4.1
