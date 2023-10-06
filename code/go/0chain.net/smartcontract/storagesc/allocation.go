@@ -1442,6 +1442,11 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
+	err = sc.deleteChallengePool(alloc, balances)
+	if err != nil {
+		return fmt.Errorf("could not delete challenge pool of alloc: %s, err: %v", alloc.ID, err)
+	}
+
 	return nil
 }
 
