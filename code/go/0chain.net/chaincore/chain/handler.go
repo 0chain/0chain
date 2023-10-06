@@ -2017,7 +2017,8 @@ func StateDumpAllHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, string(out))
 		return
 	}
-	a, def, dd := mpt.GetNodeDB().(*util.PNodeDB).EstimateSize()
+	// c.stateDB
+	a, def, dd := c.stateDB.(*util.PNodeDB).EstimateSize()
 
 	fmt.Fprintf(w, "Size: %v, %v, %v\n", a, def, dd)
 
