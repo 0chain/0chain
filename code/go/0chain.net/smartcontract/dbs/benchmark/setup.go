@@ -2,7 +2,7 @@ package benchmark
 
 import (
 	"strconv"
-	"time"
+	// "time"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
@@ -12,7 +12,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
-	"0chain.net/smartcontract/dbs/model"
+
+	// "0chain.net/smartcontract/dbs/model"
 	"github.com/spf13/viper"
 )
 
@@ -126,9 +127,6 @@ func AddMockBlocks(
 				StateChangesCount:     33,
 				RunningTxnCount:       "mock running txn count",
 				RoundTimeoutCount:     0,
-				UpdatableModel: model.UpdatableModel{
-					CreatedAt: time.Now(),
-				},
 			}
 			_ = eventDb.Store.Get().Create(&block)
 		}
