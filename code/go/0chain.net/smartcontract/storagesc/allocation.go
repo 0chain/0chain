@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1445,6 +1446,27 @@ func (sc *StorageSmartContract) finishAllocation(
 	err = sc.deleteChallengePool(alloc, balances)
 	if err != nil {
 		return fmt.Errorf("could not delete challenge pool of alloc: %s, err: %v", alloc.ID, err)
+	}
+
+	if alloc.WritePool == 0 {
+		return nil
+	}
+
+	// unlock tokens
+	transfer := state.NewTransfer(sc.ID, t.ClientID, alloc.WritePool)
+	if err = balances.AddTransfer(transfer); err != nil {
+		return common.NewError("write_pool_unlock_failed", err.Error())
+	}
+	i, _ := alloc.WritePool.Int64()
+	alloc.WritePool = 0
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
+		Client:       t.ClientID,
+		AllocationId: alloc.ID,
+		Amount:       i,
+	})
+	if err = alloc.saveUpdatedStakes(balances); err != nil {
+		return common.NewError("write_pool_unlock_failed",
+			"saving allocation pools: "+err.Error())
 	}
 
 	return nil
