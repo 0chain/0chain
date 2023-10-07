@@ -17,8 +17,10 @@ import (
 type mockStateContext struct {
 	cstate.StateContext
 	clientBalance currency.Coin
+	balances      map[string]currency.Coin
 	store         map[datastore.Key]util.MPTSerializable
 	events        []event.Event
+	transfers     []*state.Transfer
 }
 
 type mockBlobberYaml struct {
@@ -62,8 +64,8 @@ func (sc *mockStateContext) GetEventDB() *event.EventDb                   { retu
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)    {}
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block        { return nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, error) {
-	return sc.clientBalance, nil
+func (sc *mockStateContext) GetClientBalance(key datastore.Key) (currency.Coin, error) {
+	return sc.balances[key], nil
 }
 
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
@@ -84,6 +86,15 @@ func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializabl
 
 	_, err = v.UnmarshalMsg(d)
 	return err
+}
+
+func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {
+	sc.transfers = append(sc.transfers, t)
+	return nil
+}
+
+func (sc *mockStateContext) GetTransfers() []*state.Transfer {
+	return sc.transfers
 }
 
 func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {

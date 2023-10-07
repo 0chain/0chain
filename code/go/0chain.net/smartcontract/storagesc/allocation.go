@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
@@ -1440,6 +1441,13 @@ func (sc *StorageSmartContract) finishAllocation(
 			return fmt.Errorf("can't save stake pool of %s: %v", blobberAlloc.BlobberID, err)
 		}
 	}
+
+	transfer := state.NewTransfer(sc.ID, alloc.Owner, alloc.WritePool)
+	if err = balances.AddTransfer(transfer); err != nil {
+		return fmt.Errorf("could not refund lock token: %v", err)
+	}
+
+	alloc.WritePool = 0
 
 	return nil
 }

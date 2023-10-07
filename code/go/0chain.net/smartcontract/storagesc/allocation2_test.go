@@ -39,12 +39,15 @@ type blobberStakes []int64
 
 const (
 	errValueNotPresent  = "value not present"
-	ownerId             = "owin"
 	ErrCancelFailed     = "alloc_cancel_failed"
 	ErrExpired          = "trying to cancel expired allocation"
 	ErrNotOwner         = "only owner can cancel an allocation"
 	ErrFinalizedFailed  = "fini_alloc_failed"
 	ErrFinalizedTooSoon = "allocation is not expired yet"
+)
+
+var (
+	ownerId = encryption.Hash("owin")
 )
 
 func TestNewAllocation(t *testing.T) {
@@ -122,7 +125,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	var ctx = &mockStateContext{
 		clientBalance: zcnToBalance(3.1),
-		store:         make(map[string]util.MPTSerializable),
+		balances: map[string]currency.Coin{
+			ADDRESS: 100e10,
+		},
+		store: make(map[string]util.MPTSerializable),
 	}
 
 	bk := &block.Block{}
@@ -232,7 +238,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 	t.Run("cancel allocation", func(t *testing.T) {
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
-
 		require.NoError(t, err)
 	})
 
@@ -487,11 +492,44 @@ func testCancelAllocation(
 
 	var req lockRequest
 	req.decode(input)
-	allocation, _ := ssc.getAllocation(req.AllocationID, ctx)
-	remainingWritePool, _ := allocation.WritePool.Int64()
-	require.Equal(t, int64(100660834), remainingWritePool)
+	_, err = ssc.getAllocation(req.AllocationID, ctx)
+	require.Error(t, util.ErrValueNotPresent, err)
 
+	for _, ts := range ctx.GetTransfers() {
+		mockTransferAmount(t, t.Name(), ts.ClientID, ts.ToClientID, ts.Amount, ctx)
+	}
+
+	// get alloc owner client balance to see if refund was made
+	amt, _ := ctx.GetClientBalance(sAllocation.Owner)
+	require.Equal(t, currency.Coin(100660834), amt)
 	return nil
+}
+
+func mockTransferAmount(
+	t *testing.T,
+	name, from, to string,
+	amount currency.Coin,
+	balances *mockStateContext,
+) {
+	fromBalance := balances.balances[from]
+	v, err := currency.MinusCoin(fromBalance, amount)
+	if err != nil {
+		fmt.Printf("transfer: %v: from: %v, balance: %v, to: %v, amount: %v\n",
+			name, from, fromBalance, to, amount)
+		panic(err)
+	}
+
+	fromBalance = v
+	balances.balances[from] = fromBalance
+
+	toBalance := balances.balances[to]
+
+	newBal, err := currency.AddCoin(toBalance, amount)
+	if err != nil {
+		return
+	}
+	toBalance = newBal
+	balances.balances[to] = toBalance
 }
 
 func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, challengePoolBalance int64, now common.Timestamp, challenges [][]int64, ctx *mockStateContext) error {
