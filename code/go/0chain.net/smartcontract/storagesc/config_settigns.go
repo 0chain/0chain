@@ -440,6 +440,8 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 
 func (conf *Config) setInt64(key string, change int64) error {
 	switch Settings[key].setting {
+	case ChallengeGenerationGap:
+		conf.ChallengeGenerationGap = change
 	case MaxFileSize:
 		conf.MaxFileSize = change
 	case MinAllocSize:
@@ -696,6 +698,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
+	case ChallengeGenerationGap:
+		return conf.ChallengeGenerationGap
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case NumValidatorsRewarded:
