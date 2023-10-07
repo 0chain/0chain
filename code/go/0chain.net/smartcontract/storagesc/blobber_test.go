@@ -1121,9 +1121,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		require.NoError(t, err)
 
 		// challenge pool should be empty
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-		assert.Zero(t, cp.Balance)
+		_, err = ssc.getChallengePool(allocID, balances)
+		require.Error(t, err, "challenge pool should be deleted")
 
 		// offer balance, stake pool total balance
 		for _, b := range blobs {
@@ -1141,11 +1140,9 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		// values before
 		var (
 			wpa = alloc.WritePool
-			cpa = cp.Balance
 		)
 
 		require.NoError(t, err)
-		require.Zero(t, cpa)
 		require.EqualValues(t, wpb, wpa)
 		require.Equal(t, alloc.MovedBack, cpb)
 

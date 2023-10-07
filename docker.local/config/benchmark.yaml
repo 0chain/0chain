@@ -122,6 +122,7 @@ smart_contracts:
     min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
+    max_file_size : 40000000000000
     max_challenge_completion_rounds: 720
     min_offer_duration: 10h
     max_offer_duration: 744h
