@@ -38,10 +38,11 @@ func init() {
 }
 
 const (
-	roundDataDir    = "round"
-	blockDataDir    = "block"
-	roundSummaryDir = "roundSummary"
-	blockSummaryDir = "blockSummary"
+	roundDataDir     = "round"
+	blockDataDir     = "block"
+	stateDataDir     = "data/rocksdb/state"
+	roundSummaryDir  = "roundSummary"
+	blockSummaryDir  = "blockSummary"
 	magicBlockMapDir = "magicblockmap"
 )
 
@@ -50,9 +51,13 @@ func initDBs(t *testing.T) (closeAndClear func()) {
 	require.NoError(t, err)
 
 	blockDir := filepath.Join(dbDir, blockDataDir)
-	require.NoError(t, err)
 	err = os.MkdirAll(blockDir, 0700)
 	require.NoError(t, err)
+
+	stateDir := filepath.Join(dbDir, stateDataDir)
+	err = os.MkdirAll(stateDir, 0700)
+	require.NoError(t, err)
+	chain.SetupStateDB(dbDir)
 
 	roundDir := filepath.Join(dbDir, roundDataDir)
 	err = os.MkdirAll(roundDir, 0700)
@@ -411,8 +416,8 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 		IDField: datastore.IDField{
 			ID: "10", // Round number but as string
 		},
-		Hash: "AAA0000000",
-		BlockRound: 10, 
+		Hash:       "AAA0000000",
+		BlockRound: 10,
 	})
 	require.NoError(t, err)
 
@@ -420,7 +425,7 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 		IDField: datastore.IDField{
 			ID: "11", // Round number but as string
 		},
-		Hash: "AAA0000001",
+		Hash:       "AAA0000001",
 		BlockRound: 11,
 	})
 	require.NoError(t, err)
@@ -428,7 +433,6 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 	mbm, err := sc.GetMagicBlockMap(ctx, "10")
 	require.NoError(t, err)
 	require.Equal(t, "AAA0000000", mbm.Hash)
-	
 
 	// Get highest block
 	highest, err := sc.GetHighestMagicBlockMap(ctx)
