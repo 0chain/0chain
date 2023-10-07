@@ -710,12 +710,8 @@ func TestCompleteRewardFlow(t *testing.T) {
 			_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
 			require.NoError(t, err)
 
-			cp, err := ssc.getChallengePool(alloc.ID, balances)
-			require.NoError(t, err)
-			require.NotNil(t, cp)
-
-			cpBalance, _ := cp.Balance.Int64()
-			require.Equal(t, int64(0), cpBalance, "All money from challenge pool should be paid to blobbers")
+			_, err = ssc.getChallengePool(alloc.ID, balances)
+			require.Error(t, err, "challenge pool should be deleted")
 
 			alloc, err = ssc.getAllocation(alloc.ID, balances)
 			require.NoError(t, err)
@@ -754,7 +750,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 					validatorStakes:            [][]int64{},
 					wpBalance:                  alloc.WritePool,
 					challengePoolIntegralValue: int64(beforeBlobberAllocs[idx].ChallengePoolIntegralValue),
-					challengePoolBalance:       cpBalance,
+					challengePoolBalance:       0,
 					partial:                    1,
 					lastFinalizedChallenge:     blobberAlloc.LatestFinalizedChallCreatedAt,
 					lastSuccessfulChallenge:    blobberAlloc.LatestSuccessfulChallCreatedAt,
