@@ -2160,7 +2160,6 @@ func Test_finalize_allocation(t *testing.T) {
 	}
 
 	// balances
-	var cp *challengePool
 	_, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
@@ -2181,11 +2180,10 @@ func Test_finalize_allocation(t *testing.T) {
 
 	// check out all the balances
 
-	cp, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
+	_, err = ssc.getChallengePool(allocID, balances)
+	require.Error(t, err, "challenge pool should be removed")
 
 	tp += 720
-	assert.Zero(t, cp.Balance, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
@@ -2343,7 +2341,6 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	}
 
 	// balances
-	var cp *challengePool
 	_, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
@@ -2362,11 +2359,10 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 	// check out all the balances
 
-	cp, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
+	_, err = ssc.getChallengePool(allocID, balances)
+	require.Error(t, err, "challenge pool should be removed")
 
 	tp += int64(alloc.Until(time.Duration(tp)))
-	assert.Zero(t, cp.Balance, "should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)

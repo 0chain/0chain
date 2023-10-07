@@ -147,6 +147,7 @@ func TestUpdateSettings(t *testing.T) {
 					"blobber_slash":                    "0.1",
 					"max_read_price":                   "100",
 					"max_write_price":                  "100",
+					"max_file_size":                    "40000000000000",
 					"challenge_enabled":                "true",
 					"validators_per_challenge":         "2",
 					"num_validators_rewarded":          "10",
@@ -388,6 +389,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"blobber_slash":                                  "0.1",
 					"max_read_price":                                 "100",
 					"max_write_price":                                "100",
+					"max_file_size":                                  "40000000000000",
 					"challenge_enabled":                              "true",
 					"validators_per_challenge":                       "2",
 					"num_validators_rewarded":                        "10",
@@ -511,6 +513,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxWritePrice
 	case MinWritePrice:
 		return conf.MinWritePrice
+	case MaxFileSize:
+		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
 	case ValidatorsPerChallenge:
