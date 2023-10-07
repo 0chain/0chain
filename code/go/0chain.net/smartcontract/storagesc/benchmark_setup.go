@@ -330,6 +330,7 @@ func setupMockChallenge(
 		TotalValidators: totalValidatorsNum,
 		BlobberID:       blobber.ID,
 		ValidatorIDs:    validatorIds[:viper.GetInt(sc.StorageValidatorsPerChallenge)],
+		RoundCreatedAt:  int64(index) - 1,
 	}
 	_, err := balances.InsertTrieNode(challenge.GetKey(ADDRESS), challenge)
 	if err != nil {
