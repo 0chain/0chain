@@ -771,6 +771,7 @@ func BenchmarkTests(
 					"max_read_price":                   "100",
 					"max_write_price":                  "100",
 					"challenge_enabled":                "true",
+					"challenge_generation_gap":         "1",
 					"validators_per_challenge":         "2",
 					"num_validators_rewarded":          "10",
 					"max_blobber_select_for_challenge": "5",

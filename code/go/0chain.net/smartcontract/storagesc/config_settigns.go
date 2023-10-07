@@ -67,6 +67,7 @@ const (
 	MaxWritePrice
 	MinWritePrice
 	ChallengeEnabled
+	ChallengeGenerationGap
 	ValidatorsPerChallenge
 	NumValidatorsRewarded
 	MaxBlobberSelectForChallenge
@@ -171,6 +172,7 @@ func initSettingName() {
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
+	SettingName[ChallengeGenerationGap] = "challenge_generation_gap"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
 	SettingName[NumValidatorsRewarded] = "num_validators_rewarded"
 	SettingName[MaxBlobberSelectForChallenge] = "max_blobber_select_for_challenge"

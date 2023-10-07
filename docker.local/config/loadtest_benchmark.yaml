@@ -133,6 +133,7 @@ smart_contracts:
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true
+    challenge_generation_gap : 1
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000

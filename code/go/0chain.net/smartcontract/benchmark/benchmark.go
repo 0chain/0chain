@@ -181,6 +181,7 @@ const (
 	StorageWritePoolMinLock             = SmartContract + StorageSc + "writepool.min_lock"
 	StorageStakePoolMinLock             = SmartContract + StorageSc + "stakepool.min_lock"
 	StorageChallengeEnabled             = SmartContract + StorageSc + "challenge_enabled"
+	StorageChallengeGenerationGap       = SmartContract + StorageSc + "challenge_generation_gap"
 	StorageMaxTotalFreeAllocation       = SmartContract + StorageSc + "max_total_free_allocation"
 	StorageMaxIndividualFreeAllocation  = SmartContract + StorageSc + "max_individual_free_allocation"
 	StorageFasDataShards                = SmartContract + StorageSc + Fas + "data_shards"
