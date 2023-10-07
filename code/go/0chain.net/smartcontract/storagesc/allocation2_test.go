@@ -458,8 +458,8 @@ func testCancelAllocation(
 	require.EqualValues(t, "canceled", resp)
 
 	require.NoError(t, err)
-	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
-	require.NoError(t, err)
+	_, err = ssc.getChallengePool(sAllocation.ID, ctx)
+	require.Error(t, util.ErrValueNotPresent, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
 		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
@@ -488,7 +488,7 @@ func testCancelAllocation(
 		cancellationCharges = append(cancellationCharges, int64(reward))
 	}
 
-	confirmFinalizeAllocation(t, f, *newCp, sps, cancellationCharges, *scYaml)
+	confirmFinalizeAllocation(t, f, sps, cancellationCharges, *scYaml)
 
 	var req lockRequest
 	req.decode(input)
@@ -583,9 +583,8 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 
 	require.EqualValues(t, "finalized", resp)
 	require.NoError(t, err)
-	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
-	require.NoError(t, err)
-	require.NoError(t, err)
+	_, err = ssc.getChallengePool(sAllocation.ID, ctx)
+	require.Error(t, util.ErrValueNotPresent, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
 		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
@@ -618,7 +617,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 	err = ctx.GetTrieNode(sAllocation.GetKey(ADDRESS), &sAllocation)
 	require.Error(t, err, util.ErrValueNotPresent)
 
-	confirmFinalizeAllocation(t, f, *newCp, sps, cancellationCharges, *scYaml)
+	confirmFinalizeAllocation(t, f, sps, cancellationCharges, *scYaml)
 
 	return nil
 }
@@ -626,12 +625,10 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 func confirmFinalizeAllocation(
 	t *testing.T,
 	f formulaeFinalizeAllocation,
-	challengePool challengePool,
 	sps []*stakePool,
 	cancellationCharge []int64,
 	scYaml Config,
 ) {
-	require.EqualValues(t, 0, challengePool.Balance)
 
 	var rewardDelegateTransfers = [][]bool{}
 	var minLockdelegateTransfers = [][]bool{}
