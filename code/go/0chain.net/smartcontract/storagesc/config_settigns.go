@@ -259,6 +259,7 @@ func initSettings() {
 		MinWritePrice.String():                    {MinWritePrice, config.CurrencyCoin},
 		MaxFileSize.String():                      {MaxFileSize, config.Int64},
 		ChallengeEnabled.String():                 {ChallengeEnabled, config.Boolean},
+		ChallengeGenerationGap.String():           {ChallengeGenerationGap, config.Int64},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, config.Int},
 		NumValidatorsRewarded.String():            {NumValidatorsRewarded, config.Int},
 		MaxBlobberSelectForChallenge.String():     {MaxBlobberSelectForChallenge, config.Int},

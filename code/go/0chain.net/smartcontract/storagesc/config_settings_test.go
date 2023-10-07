@@ -519,6 +519,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
+	case ChallengeGenerationGap:
+		return conf.ChallengeGenerationGap
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case NumValidatorsRewarded:
