@@ -1441,8 +1441,8 @@ func (sc *StorageSmartContract) finishAllocation(
 			return fmt.Errorf("can't save stake pool of %s: %v", blobberAlloc.BlobberID, err)
 		}
 	}
-  
-  err = sc.deleteChallengePool(alloc, balances)
+
+	err = sc.deleteChallengePool(alloc, balances)
 	if err != nil {
 		return fmt.Errorf("could not delete challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
