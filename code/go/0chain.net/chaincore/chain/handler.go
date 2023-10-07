@@ -126,6 +126,9 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
 		),
+		"/_diagnostics/est_num_keys": common.UserRateLimit(
+			StateDumpAllHandler,
+		),
 		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
 				LFBTicketHandler,
@@ -1992,6 +1995,32 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(writer, "END }\n")
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
+}
+
+func StateDumpAllHandler(w http.ResponseWriter, r *http.Request) {
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+	// contract := r.FormValue("smart_contract")
+	mpt := lfb.ClientState
+	if mpt == nil {
+		errMsg := struct {
+			Err string `json:"error"`
+		}{
+			Err: fmt.Sprintf("last finalized block with nil state, round: %d", lfb.Round),
+		}
+
+		out, err := json.MarshalIndent(errMsg, "", "    ")
+		if err != nil {
+			logging.Logger.Error("Dump state failed", zap.Error(err))
+			return
+		}
+		fmt.Fprint(w, string(out))
+		return
+	}
+	// c.stateDB
+	def, dd := c.stateDB.(*util.PNodeDB).EstimateSize()
+
+	fmt.Fprintf(w, "state:%v, \ndead_nodes_rounds: %v\n", def, dd)
 }
 
 // SetupHandlers sets up the necessary API end points for miners
