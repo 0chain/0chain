@@ -2021,43 +2021,6 @@ func StateDumpAllHandler(w http.ResponseWriter, r *http.Request) {
 	def, dd := c.stateDB.(*util.PNodeDB).EstimateSize()
 
 	fmt.Fprintf(w, "state:%v, \ndead_nodes_rounds: %v\n", def, dd)
-
-	// var count int
-	// handler := func(ctx context.Context, path util.Path, key util.Key, node util.Node) error {
-	// 	// if node == nil {
-	// 	// 	paths = append(paths, path)
-	// 	// 	keys = append(keys, key)
-	// 	// 	return ErrMissingNodes
-	// 	// }
-	// 	// return nil
-	// 	count++
-	// 	return nil
-	// }
-	// // mpt.(*util.PNodeDB)
-
-	// err := mpt.Iterate(context.Background(), handler, util.NodeTypeLeafNode|util.NodeTypeFullNode|util.NodeTypeExtensionNode)
-
-	// mptRootHash := util.ToHex(mpt.GetRoot())
-	// fileName := fmt.Sprintf("mpt_%v_%v_%v.txt", contract, lfb.Round, mptRootHash)
-	// file, err := ioutil.TempFile("", fileName)
-	// if err != nil {
-	// 	return
-	// }
-	// go func() {
-	// 	writer := bufio.NewWriter(file)
-	// 	defer func() {
-	// 		writer.Flush()
-	// 		file.Close()
-	// 	}()
-	// 	fmt.Fprintf(writer, "round: %v\n", lfb.Round)
-	// 	fmt.Fprintf(writer, "global state hash: %v\n", util.ToHex(lfb.ClientStateHash))
-	// 	fmt.Fprintf(writer, "mpt state hash: %v\n", mptRootHash)
-	// 	writer.Flush()
-	// 	fmt.Fprintf(writer, "BEGIN {\n")
-	// 	mpt.PrettyPrint(writer)
-	// 	fmt.Fprintf(writer, "END }\n")
-	// }()
-	// fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
 }
 
 // SetupHandlers sets up the necessary API end points for miners
