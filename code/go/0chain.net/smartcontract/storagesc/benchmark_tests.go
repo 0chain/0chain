@@ -770,6 +770,7 @@ func BenchmarkTests(
 					"blobber_slash":                    "0.1",
 					"max_read_price":                   "100",
 					"max_write_price":                  "100",
+					"max_file_size":            "40000000000000",
 					"challenge_enabled":                "true",
 					"challenge_generation_gap":         "1",
 					"validators_per_challenge":         "2",

@@ -66,6 +66,7 @@ const (
 	MaxReadPrice
 	MaxWritePrice
 	MinWritePrice
+	MaxFileSize
 	ChallengeEnabled
 	ChallengeGenerationGap
 	ValidatorsPerChallenge
@@ -171,6 +172,7 @@ func initSettingName() {
 	SettingName[MaxReadPrice] = "max_read_price"
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
+	SettingName[MaxFileSize] = "max_file_size"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
 	SettingName[ChallengeGenerationGap] = "challenge_generation_gap"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
@@ -255,6 +257,7 @@ func initSettings() {
 		MaxReadPrice.String():                     {MaxReadPrice, config.CurrencyCoin},
 		MaxWritePrice.String():                    {MaxWritePrice, config.CurrencyCoin},
 		MinWritePrice.String():                    {MinWritePrice, config.CurrencyCoin},
+		MaxFileSize.String():                      {MaxFileSize, config.Int64},
 		ChallengeEnabled.String():                 {ChallengeEnabled, config.Boolean},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, config.Int},
 		NumValidatorsRewarded.String():            {NumValidatorsRewarded, config.Int},
@@ -437,6 +440,8 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 
 func (conf *Config) setInt64(key string, change int64) error {
 	switch Settings[key].setting {
+	case MaxFileSize:
+		conf.MaxFileSize = change
 	case MinAllocSize:
 		conf.MinAllocSize = change
 	case MinBlobberCapacity:
@@ -687,6 +692,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxWritePrice
 	case MinWritePrice:
 		return conf.MinWritePrice
+	case MaxFileSize:
+		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
 	case ValidatorsPerChallenge:
