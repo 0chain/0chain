@@ -56,6 +56,8 @@ github.com/0chain/common v0.0.7-0.20231006003459-2446e5e16903 h1:OrRx1l9DGrYZk9w
 github.com/0chain/common v0.0.7-0.20231006003459-2446e5e16903/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/common v0.0.7-0.20231006101624-3e52d4af6743 h1:QIwQfUa9TqbuX3ArCXnFEVmN5izHo8gW2TvECz52CNI=
 github.com/0chain/common v0.0.7-0.20231006101624-3e52d4af6743/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
+github.com/0chain/common v0.0.7-0.20231007002049-2d4735fa2552 h1:yXhXD4/yvzCP0MgUcbcgdUbjbkCJGYwg+ofzgOrasmU=
+github.com/0chain/common v0.0.7-0.20231007002049-2d4735fa2552/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
 github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9 h1:GHTdYTmhNY9genBkNWLXdn3Z1yCtcbSNkcIFaKrqBRU=

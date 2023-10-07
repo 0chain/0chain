@@ -2018,9 +2018,9 @@ func StateDumpAllHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// c.stateDB
-	a, def, dd := c.stateDB.(*util.PNodeDB).EstimateSize()
+	def, dd := c.stateDB.(*util.PNodeDB).EstimateSize()
 
-	fmt.Fprintf(w, "Size: %v, %v, %v\n", a, def, dd)
+	fmt.Fprintf(w, "state:%v, \ndead_nodes_rounds: %v\n", def, dd)
 
 	// var count int
 	// handler := func(ctx context.Context, path util.Path, key util.Key, node util.Node) error {
