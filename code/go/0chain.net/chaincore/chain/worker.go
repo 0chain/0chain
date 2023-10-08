@@ -265,6 +265,7 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 					logging.Logger.Debug("finalize block processed",
 						zap.Int64("round", fbr.block.Round),
 						zap.Duration("duration", time.Since(ts)))
+					c.GetEventDb().PublishUnpublishedEvents(cctx)
 				}()
 
 				select {
