@@ -69,6 +69,10 @@ func (_ *StorageSmartContract) killBlobber(
 			return "", common.NewErrorf("kill_blobber_failed", "deleting blobber: %v", err)
 		}
 
+		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+			return "", common.NewErrorf("kill_blobber_failed", "deleting stakepool: %v", err)
+		}
+
 		return "", nil
 	}
 
@@ -139,6 +143,10 @@ func (_ *StorageSmartContract) killValidator(
 		_, err := balances.DeleteTrieNode(validator.GetKey(""))
 		if err != nil {
 			return "", common.NewErrorf("kill_validator_failed", "deleting validator: %v", err)
+		}
+
+		if err = deleteStakepool(balances, validator.ProviderType, validator.Id()); err != nil {
+			return "", common.NewErrorf("kill_validator_failed", "deleting stakepool: %v", err)
 		}
 
 		return "", nil
