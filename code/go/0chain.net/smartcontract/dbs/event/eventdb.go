@@ -66,6 +66,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 type EventDb struct {
 	dbs.Store
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
+	EventCounter  int64
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
 	kafka         queueProvider.KafkaProviderI

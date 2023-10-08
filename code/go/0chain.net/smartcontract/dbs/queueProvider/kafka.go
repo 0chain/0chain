@@ -25,6 +25,10 @@ type KafkaProvider struct {
 	WriteTimeout time.Duration
 }
 
+func init() {
+	writers = make(map[string]*kafka.Writer)
+}
+
 func NewKafkaProvider(host string, writeTimeout time.Duration) *KafkaProvider {
 	return &KafkaProvider{
 		Host:         host,
@@ -99,9 +103,11 @@ func (k *KafkaProvider) CloseAllWriters() error {
 }
 
 func (k *KafkaProvider) createKafkaWriter(topic string) *kafka.Writer {
-	return kafka.NewWriter(kafka.WriterConfig{
-		Brokers: []string{k.Host},
-		Topic:   topic,
+	return &kafka.Writer{
+		Addr:         kafka.TCP(k.Host),
+		Topic:        topic,
+		AllowAutoTopicCreation: true,
 		WriteTimeout: k.WriteTimeout,
-	})
+		Async: 	  true,
+	}
 }

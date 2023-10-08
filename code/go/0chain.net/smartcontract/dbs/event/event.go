@@ -5,6 +5,8 @@ import (
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"gorm.io/gorm/clause"
 )
@@ -67,6 +69,53 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	}
 	result := edb.Store.Get().WithContext(ctx).Find(&events)
 	return events, result.Error
+}
+
+// PublishEvents publishes the unpublished events to kafka, recklessly ignoring errors but logging them.
+func (edb *EventDb) PublishUnpublishedEvents(ctx context.Context) {
+	if edb.Store == nil {
+		logging.Logger.Error("PublishEvents: event database is nil")
+		return
+	}
+	
+	broker := edb.GetKafkaProv()
+	if broker == nil {
+		logging.Logger.Error("PublishEvents: kafka provider is nil")
+		return
+	}
+
+	var unpublishedEvents []Event
+	err := edb.Store.Get().Model(&Event{}).WithContext(ctx).Where("is_published = false").Scan(&unpublishedEvents).Error
+	if err != nil {
+		logging.Logger.Error("PublishEvents: failed to get unpublished events", zap.Error(err))
+		return
+	}
+
+	var publishedEventsIds []uint
+	for _, event := range unpublishedEvents {
+		evsMessage := NewEventMessage(event, edb.EventCounter)
+		edb.EventCounter++
+		rawEvent, err := evsMessage.Encode()
+		if err != nil {
+			logging.Logger.Error("PublishEvents: failed to encode event", zap.Error(err))
+			continue
+		}
+
+		err = broker.PublishToKafka(edb.dbConfig.KafkaTopic, rawEvent)
+		if err != nil {
+			logging.Logger.Error("PublishEvents: failed to publish event", zap.Error(err))
+			continue
+		}
+
+		publishedEventsIds = append(publishedEventsIds, event.ID)
+	}
+
+	if len(publishedEventsIds) > 0 {
+		err = edb.Store.Get().WithContext(ctx).Model(&Event{}).Where("id IN ?", publishedEventsIds).Update("is_published", true).Error
+		if err != nil {
+			logging.Logger.Error("PublishEvents: failed to update published events", zap.Error(err))
+		}
+	}
 }
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
