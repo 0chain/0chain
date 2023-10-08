@@ -94,7 +94,7 @@ func (_ *StorageSmartContract) killValidator(
 
 	var (
 		validator = &ValidationNode{}
-		sp        = stakepool.AbstractStakePool
+		sp        stakepool.AbstractStakePool
 	)
 	err = provider.Kill(
 		input,
