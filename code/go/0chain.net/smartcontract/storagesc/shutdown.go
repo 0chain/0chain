@@ -118,8 +118,10 @@ func (_ *StorageSmartContract) shutdownValidator(
 			}
 
 			if err := validatorPartitions.Remove(balances, validator.Id()); err != nil {
-				return nil, nil, common.NewError("shutdown_validator_failed",
-					"failed to remove validator."+err.Error())
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+					return nil, nil, common.NewErrorf("shutdown_validator_failed",
+						"failed to remove validator: %v", err)
+				}
 			}
 
 			sp, err = getStakePoolAdapter(validator.Type(), validator.Id(), balances)
