@@ -119,3 +119,90 @@ func TestStorageSmartContract_killBlobber(t *testing.T) {
 		})
 	}
 }
+
+func TestStorageSmartContract_killValidator(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		stakePool         *stakePool
+		input             []byte
+		clientID          string
+		expectedStateFunc func(t *testing.T, state *testBalances)
+	}{
+		{
+			name:      "stake pool is empty",
+			stakePool: newStakePool(),
+			input:     []byte(`{"provider_id":"validator_id"}`),
+			clientID:  "validator_id",
+			expectedStateFunc: func(t *testing.T, state *testBalances) {
+				var b StorageNode
+				b.ID = "validator_id"
+				err := state.GetTrieNode(b.GetKey(), &b)
+				require.Error(t, util.ErrValueNotPresent, err)
+
+				var s stakepool.StakePool
+				err = state.GetTrieNode(stakePoolKey(spenum.Validator, "validator_id"), &s)
+				require.Error(t, util.ErrValueNotPresent, err)
+			},
+		},
+		{
+			name: "stake pool is not empty",
+			stakePool: &stakePool{
+				StakePool: &stakepool.StakePool{
+					Pools: map[string]*stakepool.DelegatePool{
+						"stake_pool_1": &stakepool.DelegatePool{},
+						"stake_pool_2": &stakepool.DelegatePool{},
+					},
+				},
+			},
+			input:    []byte(`{"provider_id":"validator_id"}`),
+			clientID: "validator_id",
+			expectedStateFunc: func(t *testing.T, state *testBalances) {
+				var b StorageNode
+				b.ID = "validator_id"
+				b.ProviderType = spenum.Validator
+				err := state.GetTrieNode(b.GetKey(), &b)
+				require.NoError(t, err)
+
+				var sp stakePool
+				err = state.GetTrieNode(stakePoolKey(spenum.Validator, "validator_id"), &sp)
+				require.NoError(t, err)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ssc := &StorageSmartContract{}
+
+			balances := newTestBalances(t, false)
+			balances.txn = &transaction.Transaction{
+				ClientID: tc.clientID,
+			}
+
+			conf := &Config{
+				OwnerId:   tc.clientID,
+				StakePool: &stakePoolConfig{},
+			}
+
+			mustSave(t, scConfigKey(ADDRESS), conf, balances)
+
+			// Create a blobber and a stake pool
+			vn := &ValidationNode{
+				Provider: provider.Provider{
+					ID:           "validator_id",
+					ProviderType: spenum.Validator,
+				},
+			}
+			balances.InsertTrieNode(vn.GetKey(""), vn)
+			balances.InsertTrieNode(stakePoolKey(spenum.Validator, vn.ID), tc.stakePool)
+
+			// Call the killBlobber method
+			_, err := ssc.killValidator(balances.txn, tc.input, balances)
+			require.NoError(t, err)
+
+			tc.expectedStateFunc(t, balances)
+		})
+	}
+}
