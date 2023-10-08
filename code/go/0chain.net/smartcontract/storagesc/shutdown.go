@@ -25,9 +25,16 @@ func (_ *StorageSmartContract) shutdownBlobber(
 		blobber = newBlobber("")
 		sp      stakepool.AbstractStakePool
 	)
-	err := provider.ShutDown(
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewErrorf("shutdown_blobber_failed", "can't get config: %v", err)
+	}
+
+	err = provider.ShutDown(
 		input,
 		tx.ClientID,
+		conf.OwnerId,
 		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if blobber, err = getBlobber(req.ID, balances); err != nil {
@@ -87,9 +94,16 @@ func (_ *StorageSmartContract) shutdownValidator(
 		validator = newValidator("")
 		sp        stakepool.AbstractStakePool
 	)
-	err := provider.ShutDown(
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewErrorf("shutdown_validator_failed", "can't get config: %v", err)
+	}
+
+	err = provider.ShutDown(
 		input,
 		tx.ClientID,
+		conf.OwnerId,
 		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
