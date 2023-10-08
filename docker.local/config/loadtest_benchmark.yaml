@@ -61,6 +61,7 @@ smart_contracts:
     max_delegates: 200
     min_stake: 0.0
     max_stake: 170.0
+    min_stake_per_delegate: 1
     max_n: 7 # 100
     min_n: 3 # 3
     max_s: 2 # 30
