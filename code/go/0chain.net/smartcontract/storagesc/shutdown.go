@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"strings"
+
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -33,7 +36,10 @@ func (_ *StorageSmartContract) shutdownBlobber(
 			}
 
 			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-				return nil, nil, err
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+					return nil, nil, common.NewError("shutdown_blobber_failed",
+						"remove blobber form challenge partition, "+err.Error())
+				}
 			}
 
 			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
