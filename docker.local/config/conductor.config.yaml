@@ -16,7 +16,6 @@ stuck_warning_threshold: "2s"
 
 aggregate_base_url: "http://localhost:9081/v2"
 
-
 #
 # nodes used in tests
 #
@@ -200,13 +199,13 @@ nodes:
     env: "" # no ENV needed
     start_command: "../0dns/docker.local/bin/start-no-daemon.sh" # not demonized instance
     stop_command: "../0dns/docker.local/bin/stop-no-daemon.sh" # not demonized instance
-  
+
   - name: "0box"
     id: "0box"
     work_dir: "../0box/"
     env: ""
-    start_command: "./docker.local/bin/start-dev.sh"
-    stop_command: "docker compoer -p 0box down && ./docker.local/bin/clean.sh"
+    start_command: "../0box/docker.local/bin/build.zbox-integration-tests.sh && ../0box/docker.local/bin/start-dev.sh"
+    stop_command: "../0box/docker-compose -p 0box down && ../0box/docker.local/bin/clean.sh"
 
 # named system commands
 commands:
