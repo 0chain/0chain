@@ -9,6 +9,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -1063,11 +1064,6 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			require.EqualValues(t, 10e10, spTotal)
 		}
 
-		// values before
-		var (
-			wpb = alloc.WritePool
-			cpb = cp.Balance
-		)
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
 
@@ -1117,8 +1113,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		_, err = ssc.cancelAllocationRequest(tx, mustEncode(t, &req), balances)
 		require.NoError(t, err)
 
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
+		_, err = ssc.getAllocation(allocID, balances)
+		require.Error(t, util.ErrValueNotPresent, err)
 
 		// challenge pool should be empty
 		_, err = ssc.getChallengePool(allocID, balances)
@@ -1136,15 +1132,6 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			require.NoError(t, err)
 			require.EqualValues(t, 10e10, spTotal)
 		}
-
-		// values before
-		var (
-			wpa = alloc.WritePool
-		)
-
-		require.NoError(t, err)
-		require.EqualValues(t, wpb, wpa)
-		require.Equal(t, alloc.MovedBack, cpb)
 
 		// no rewards for the blobber
 		for _, b := range blobs {

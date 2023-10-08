@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/tokenpool"
 	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/tokenpool"
 
 	"0chain.net/smartcontract/provider"
 
@@ -2175,7 +2176,7 @@ func Test_finalize_allocation(t *testing.T) {
 	balances.setTransaction(t, tx)
 
 	tx.CreationDate = alloc.Expiration + 10
-	_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
+	alloc, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
 	require.NoError(t, err)
 
 	// check out all the balances
@@ -2184,9 +2185,6 @@ func Test_finalize_allocation(t *testing.T) {
 	require.Error(t, err, "challenge pool should be removed")
 
 	tp += 720
-
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
 
 	assert.True(t, alloc.Finalized)
 	assert.True(t,
@@ -2364,11 +2362,6 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 	tp += int64(alloc.Until(time.Duration(tp)))
 
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
-
-	assert.True(t, alloc.Finalized)
-	assert.True(t,
-		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
-		"should receive min_lock_demand")
+	_, err = ssc.getAllocation(allocID, balances)
+	require.Error(t, util.ErrValueNotPresent, err)
 }

@@ -705,16 +705,15 @@ func TestCompleteRewardFlow(t *testing.T) {
 			var req lockRequest
 			req.AllocationID = alloc.ID
 
+			allocOwnerBalanceBefore, err := balances.GetClientBalance(alloc.Owner)
+			require.NoError(t, err)
 			var tx = newTransaction(client.id, ssc.ID, 0, int64(alloc.Expiration)+2)
 			balances.setTransaction(t, tx)
-			_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
+			alloc, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
 			require.NoError(t, err)
 
 			_, err = ssc.getChallengePool(alloc.ID, balances)
 			require.Error(t, err, "challenge pool should be deleted")
-
-			alloc, err = ssc.getAllocation(alloc.ID, balances)
-			require.NoError(t, err)
 
 			totalReturnedReward := int64(0)
 
@@ -783,12 +782,15 @@ func TestCompleteRewardFlow(t *testing.T) {
 			}
 
 			allocCost, _ := alloc.cost()
-			wpBalance, _ := alloc.WritePool.Int64()
+			// wp will be returned to the owner
+			allocOwnerBalance, err := balances.GetClientBalance(alloc.Owner)
+			require.NoError(t, err)
+			refund := allocOwnerBalance - allocOwnerBalanceBefore
 
 			passRate := float64(alloc.Stats.SuccessChallenges) / float64(alloc.Stats.TotalChallenges)
 
 			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 15)
-			require.InDelta(t, wpBalance, 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
+			require.InDelta(t, int64(refund), 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
 		})
 	}
 }
