@@ -103,6 +103,7 @@ smart_contracts:
     max_charge: 0.2
     min_stake: 0.0
     max_stake: 20000.0
+    min_stake_per_delegate: 1
     max_delegates: 200
     diverse_blobbers: false
     failed_challenges_to_cancel: 0

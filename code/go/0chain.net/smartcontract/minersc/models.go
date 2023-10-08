@@ -271,6 +271,7 @@ func (gn *GlobalNode) readConfig() (err error) {
 		return
 	}
 	gn.MinStakePerDelegate, err = currency.ParseZCN(config2.SmartContractConfig.GetFloat64(pfx + SettingName[MinStakePerDelegate]))
+	logging.Logger.Info("Jayash MinStakePerDelegate", zap.Any("MinStakePerDelegate", gn.MinStakePerDelegate))
 	if err != nil {
 		return
 	}
@@ -380,6 +381,7 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 	case MinStake:
 		return gn.MinStake, nil
 	case MinStakePerDelegate:
+		logging.Logger.Info("Jayash get", zap.Any("MinStakePerDelegate", gn.MinStakePerDelegate))
 		return gn.MinStakePerDelegate, nil
 	case HealthCheckPeriod:
 		return gn.HealthCheckPeriod, nil

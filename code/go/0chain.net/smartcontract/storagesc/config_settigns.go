@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"strconv"
 	"strings"
 	"time"
@@ -393,6 +395,7 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 	case MinStake:
 		conf.MinStake = change
 	case MinStakePerDelegate:
+		logging.Logger.Info("Jayash setting min stake per delegate", zap.Any("change", change))
 		conf.MinStakePerDelegate = change
 	case MaxTotalFreeAllocation:
 		conf.MaxTotalFreeAllocation = change
@@ -640,6 +643,7 @@ func (conf *Config) get(key Setting) interface{} {
 	case MinStake:
 		return conf.MinStake
 	case MinStakePerDelegate:
+		logging.Logger.Info("Jayash getting min stake per delegate", zap.Any("conf", conf.MinStakePerDelegate))
 		return conf.MinStakePerDelegate
 	case TimeUnit:
 		return conf.TimeUnit

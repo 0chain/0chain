@@ -390,6 +390,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 		return err
 	}
 
+	logging.Logger.Info("Jayash DistributeRewardsRandN", zap.Any("Minstake", sp.Settings.MinStake), zap.Any("total", total), zap.Any("value", value), zap.Any("randN", randN))
 	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
 		return nil // nothing to move
 	}

@@ -104,6 +104,7 @@ smart_contracts:
     time_unit: "720h"
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
+    min_stake_per_delegate: 1
     # max_mint
     max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC

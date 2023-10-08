@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"strconv"
 	"strings"
 	"time"
@@ -232,6 +234,7 @@ func (gn *GlobalNode) setBalance(key string, change currency.Coin) error {
 	case MinStake:
 		gn.MinStake = change
 	case MinStakePerDelegate:
+		logging.Logger.Info("Jayash setBalance", zap.Any("change", change))
 		gn.MinStakePerDelegate = change
 	case MaxStake:
 		gn.MaxStake = change
