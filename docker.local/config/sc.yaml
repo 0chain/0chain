@@ -145,12 +145,16 @@ smart_contracts:
     max_read_price: 7.0
     max_write_price: 7.0
     min_write_price: 0.001
+    # max file size on blobber
+    max_file_size: 40000000000000 # 5TB
+    # max number of blobbers per allocation
     max_blobbers_per_allocation: 40
     #
     # challenges
     #
     # enable challenges
     challenge_enabled: true
+    challenge_generation_gap : 1
     # number of validators per challenge
     validators_per_challenge: 2
     num_validators_rewarded: 10

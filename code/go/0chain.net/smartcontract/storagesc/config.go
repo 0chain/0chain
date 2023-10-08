@@ -115,6 +115,7 @@ type Config struct {
 	// MaxWrtiePrice
 	MaxWritePrice currency.Coin `json:"max_write_price"`
 	MinWritePrice currency.Coin `json:"min_write_price"`
+	MaxFileSize   int64         `json:"max_file_size"`
 
 	// allocation cancellation
 	CancellationCharge float64 `json:"cancellation_charge"`
@@ -127,7 +128,8 @@ type Config struct {
 	// challenges generating
 
 	// ChallengeEnabled is challenges generating pin.
-	ChallengeEnabled bool `json:"challenge_enabled"`
+	ChallengeEnabled       bool  `json:"challenge_enabled"`
+	ChallengeGenerationGap int64 `json:"challenge_generation_gap"`
 	// ValidatorsPerChallenge is the number of validators to select per
 	// challenges.
 	ValidatorsPerChallenge       int `json:"validators_per_challenge"`
@@ -358,6 +360,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.MaxFileSize = scc.GetInt64(pfx + "max_file_size")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "readpool.min_lock"))
@@ -424,6 +427,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 
 	// challenges generating
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
+	conf.ChallengeGenerationGap = scc.GetInt64(pfx + "challenge_generation_gap")
 	conf.ValidatorsPerChallenge = scc.GetInt(pfx + "validators_per_challenge")
 	conf.NumValidatorsRewarded = scc.GetInt(pfx + "num_validators_rewarded")
 	conf.MaxBlobberSelectForChallenge = scc.GetInt(pfx + "max_blobber_select_for_challenge")

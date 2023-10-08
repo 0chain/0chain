@@ -970,7 +970,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if t.ClientID != alloc.Owner {
-		if !alloc.ThirdPartyExtendable || request.Extend == false {
+		if !alloc.ThirdPartyExtendable || (request.Extend == false && request.Size <= 0) {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
 		}
@@ -1440,6 +1440,11 @@ func (sc *StorageSmartContract) finishAllocation(
 		if err = sp.Save(spenum.Blobber, blobberAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't save stake pool of %s: %v", blobberAlloc.BlobberID, err)
 		}
+	}
+
+	err = sc.deleteChallengePool(alloc, balances)
+	if err != nil {
+		return fmt.Errorf("could not delete challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
 	return nil
