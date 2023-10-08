@@ -6,11 +6,11 @@ enable:
 sets:
   - name: "Node Recovery"
     tests:
-      - "Miner Recovery - Miner should be able to produce blocks after it recovers"
-      - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
-      - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
-      - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
-      # - "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
+#      - "Miner Recovery - Miner should be able to produce blocks after it recovers"
+#      - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
+#      - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
+#      - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
+      - "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
 
 tests:
   - name: "Miner Recovery - Miner should be able to produce blocks after it recovers"
@@ -288,42 +288,86 @@ tests:
           key: total_rewards
           monotonicity: increase
           timeout: "2m"
-  # - name: "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
-  #   flow:
-  #     - set_monitor: "sharder-1"
-  #     - cleanup_bc: {}
-  #     - command:
-  #         name: "cleanup_0dns"
-  #     - wait_add:
-  #         sharders: ['sharder-1','sharder-2']
-  #         miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
-  #         start: true
-  #     - wait_round:
-  #         round: 15 # just wait the BC starts
-  #     - start: ['0dns']
-  #     - sleep: "20s"
-  #     - command:
-  #         name: "register_authorizer"
-  #     - wait_add:
-  #         authorizers: ['authorizer-1','authorizer-2','authorizer-3','authorizer-4']
-  #         start: true
-  #     - wait_round:
-  #         shift: 50
-  #     - start: ['0box']
-  #     - wait_round:
-  #         shift: 100
-    #   - command:
-    #       name: "mint_zcn"
-    #   - command:
-    #       name: "check_aggregate_value_change"
-    #       timeout: "2m"
-    #       params:
-    #         provider_type: "authorizer"
-    #         provider_id: "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
-    #         key: "total_rewards"
-    #         monotonicity: "INC"
-      # - wait_round:
-      #     shift: 10000
+  - name: "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
+    flow:
+       - set_monitor: "sharder-1"
+       - cleanup_bc: {}
+       - command:
+           name: "cleanup_0dns"
+       - wait_add:
+           sharders: ['sharder-1']
+           miners: ['miner-1', 'miner-2', 'miner-3']
+           start: true
+       - wait_round:
+           round: 15 # just wait the BC starts
+       - start: ['0dns']
+       - sleep: "20s"
+       - command:
+           name: "register_authorizer"
+       - wait_add:
+           authorizers: ['authorizer-1','authorizer-2','authorizer-3','authorizer-4']
+           start: true
+       - wait_round:
+           shift: 50
+       - start: ['0box']
+       - wait_round:
+           shift: 100
+       - sync_latest_aggregates:
+           authorizers:
+             - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
+           required: true
+       - round_random_seed:
+           random_seed: 54
+       - command:
+           name: "mint_zcn"
+       - check_aggregate_value_change:
+           provider_type: authorizer
+           provider_id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
+           key: total_rewards
+           monotonicity: increase
+           timeout: "2m"
+#       - check_aggregate_values_change:
+#           provider_type: authorizer
+#           key: total_rewards
+#           monotonicity: increase
+#           timeout: "2m"
+#           type: "oneof"
+#           provider_ids:
+#            - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
+#            - "7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a"
+#            - "47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a"
+#            - "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+       - stop: ['authorizer-4']
+       - wait_round:
+           shift: 100
+       - wait_add:
+           authorizers: [ 'authorizer-4' ]
+           start: true
+       - sync_latest_aggregates:
+           authorizers:
+             - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
+           required: true
+       - round_random_seed:
+           random_seed: 54
+       - command:
+           name: "mint_zcn"
+       - check_aggregate_value_change:
+           provider_type: authorizer
+           provider_id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
+           key: total_rewards
+           monotonicity: increase
+           timeout: "2m"
+#       - check_aggregate_values_change:
+#           provider_type: authorizer
+#           key: total_rewards
+#           monotonicity: increase
+#           timeout: "2m"
+#           type: "oneof"
+#           provider_ids:
+#             - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
+#             - "7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a"
+#             - "47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a"
+#             - "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 
   # - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
     # flow:

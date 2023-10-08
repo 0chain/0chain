@@ -19,7 +19,7 @@ import (
 )
 
 // Mint inputData - is a MintPayload
-func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []byte, randomSeed int64, ctx cstate.StateContextI) (resp string, err error) {
 	const (
 		code = "failed to mint"
 	)
@@ -171,7 +171,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		Signers:   signers,
 	})
 
-	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
+	// seed to 54
+	rand.Seed(randomSeed)
 	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 
 	sp, err := zcn.getStakePool(sig.ID, ctx)

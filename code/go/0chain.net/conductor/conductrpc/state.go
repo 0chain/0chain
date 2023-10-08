@@ -68,6 +68,7 @@ type State struct {
 	FBRequestor                           *cases.FBRequestor
 	MissingLFBTicket                      *cases.MissingLFBTickets
 	RoundHasFinalizedConfig               *cases.RoundHasFinalized
+	RoundRandomSeed                       *cases.RoundRandomSeed
 
 	LockNotarizationAndSendNextRoundVRF *config.LockNotarizationAndSendNextRoundVRF
 
@@ -93,9 +94,9 @@ type State struct {
 	// Authorizers related states
 	AdversarialAuthorizer *config.AdversarialAuthorizer
 
-	ServerStatsCollectorEnabled bool
-	ClientStatsCollectorEnabled bool
-	NotifyOnBlockGeneration bool
+	ServerStatsCollectorEnabled        bool
+	ClientStatsCollectorEnabled        bool
+	NotifyOnBlockGeneration            bool
 	NotifyOnValidationTicketGeneration bool
 }
 
