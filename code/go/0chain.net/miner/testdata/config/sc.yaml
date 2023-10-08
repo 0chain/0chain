@@ -180,6 +180,7 @@ smart_contracts:
     #
     # enable challenges
     challenge_enabled: true
+    challenge_generation_gap : 1
     # number of challenges for MB per minute
     challenge_rate_per_mb_min: 1
     # max number of challenges can be generated at once
