@@ -72,7 +72,7 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 }
 
 // PublishEvents publishes the unpublished events to kafka, recklessly ignoring errors but logging them.
-func (edb *EventDb) PublishUnpublishedEvents(ctx context.Context) {
+func (edb *EventDb) PublishUnpublishedEvents() {
 	if edb.Store == nil {
 		logging.Logger.Error("PublishEvents: event database is nil")
 		return
@@ -85,7 +85,7 @@ func (edb *EventDb) PublishUnpublishedEvents(ctx context.Context) {
 	}
 
 	var unpublishedEvents []Event
-	err := edb.Store.Get().Model(&Event{}).WithContext(ctx).Where("is_published = false").Scan(&unpublishedEvents).Error
+	err := edb.Store.Get().Model(&Event{}).Where("is_published = false").Scan(&unpublishedEvents).Error
 	if err != nil {
 		logging.Logger.Error("PublishEvents: failed to get unpublished events", zap.Error(err))
 		return
@@ -111,7 +111,7 @@ func (edb *EventDb) PublishUnpublishedEvents(ctx context.Context) {
 	}
 
 	if len(publishedEventsIds) > 0 {
-		err = edb.Store.Get().WithContext(ctx).Model(&Event{}).Where("id IN ?", publishedEventsIds).Update("is_published", true).Error
+		err = edb.Store.Get().Model(&Event{}).Where("id IN ?", publishedEventsIds).Update("is_published", true).Error
 		if err != nil {
 			logging.Logger.Error("PublishEvents: failed to update published events", zap.Error(err))
 		}
