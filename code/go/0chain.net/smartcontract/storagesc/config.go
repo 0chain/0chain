@@ -2,6 +2,8 @@ package storagesc
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/core/config"
@@ -332,6 +334,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.MinStakePerDelegate, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake_per_delegate"))
+	logging.Logger.Info("Jayash getConfiguredConfig", zap.Any("MinStakePerDelegate", conf.MinStakePerDelegate))
 	if err != nil {
 		return nil, err
 	}

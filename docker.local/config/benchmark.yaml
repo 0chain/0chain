@@ -194,6 +194,7 @@ smart_contracts:
     min_mint: 1
     min_burn: 1
     min_stake: 0
+    min_stake_per_delegate : 1
     max_stake: 2.7
     min_lock: 0
     min_authorizers: 1
