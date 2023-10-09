@@ -49,7 +49,7 @@ require (
 	github.com/pressly/goose/v3 v3.13.1
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 	golang.org/x/sys v0.10.0
-	gorm.io/driver/sqlite v1.5.2
+	gorm.io/driver/sqlite v1.5.4
 	moul.io/zapgorm2 v1.3.0
 )
 
