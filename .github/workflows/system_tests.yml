@@ -3,10 +3,6 @@ name: "0Chain System Tests"
 on:
   workflow_dispatch:
     inputs:
-       system_tests_branch:
-        description: 'system_tests branch containing the tests you wish to run'
-        default: 'master'
-        required: true
        repo_snapshots_branch:
         description: 'branch of repo-snapshots to derive images and branches from.'
         default: 'current-sprint'
