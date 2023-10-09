@@ -149,6 +149,7 @@ func TestUpdateSettings(t *testing.T) {
 					"max_write_price":                  "100",
 					"max_file_size":                    "40000000000000",
 					"challenge_enabled":                "true",
+					"challenge_generation_gap":         "1",
 					"validators_per_challenge":         "2",
 					"num_validators_rewarded":          "10",
 					"max_blobber_select_for_challenge": "5",
@@ -391,6 +392,7 @@ func TestCommitSettingChanges(t *testing.T) {
 					"max_write_price":                                "100",
 					"max_file_size":                                  "40000000000000",
 					"challenge_enabled":                              "true",
+					"challenge_generation_gap":                       "1",
 					"validators_per_challenge":                       "2",
 					"num_validators_rewarded":                        "10",
 					"max_blobber_select_for_challenge":               "5",
@@ -517,6 +519,8 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
+	case ChallengeGenerationGap:
+		return conf.ChallengeGenerationGap
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case NumValidatorsRewarded:
