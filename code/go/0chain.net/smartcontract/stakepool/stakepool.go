@@ -540,6 +540,8 @@ func (sp *StakePool) DistributeRewards(
 		return err
 	}
 
+	logging.Logger.Info("DistributeRewards", zap.Any("value", value), zap.Any("total", total), zap.Any("min_stake", sp.Settings.MinStake))
+
 	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
 		return nil // nothing to move
 	}
