@@ -1,15 +1,12 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -326,7 +323,6 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
-	logging.Logger.Info("Jayash getOrCreateStakePool", zap.Any("MinStakePerDelegate", conf.MinStakePerDelegate))
 	sp.Settings.MinStake = conf.MinStakePerDelegate
 	return sp, nil
 }
@@ -344,7 +340,6 @@ func (ssc *StorageSmartContract) createStakePool(
 	sp.Minter = chainstate.MinterStorage
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
-	logging.Logger.Info("Jayash 2getOrCreateStakePool", zap.Any("MinStakePerDelegate", conf.MinStakePerDelegate))
 	sp.Settings.MinStake = conf.MinStakePerDelegate
 
 	return sp, nil

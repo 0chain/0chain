@@ -1,11 +1,6 @@
 package zcnsc
 
 import (
-	"errors"
-	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -13,6 +8,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"errors"
+	"fmt"
 	"github.com/0chain/common/core/util"
 )
 
@@ -139,8 +136,6 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 		changed = true
 	}
-
-	logging.Logger.Info("Jayash getOrCreateStakePool", zap.Any("MinStakePerDelegate", gn.MinStakePerDelegate))
 
 	if sp.Settings.MinStake != gn.MinStakePerDelegate {
 		sp.Settings.MinStake = gn.MinStakePerDelegate

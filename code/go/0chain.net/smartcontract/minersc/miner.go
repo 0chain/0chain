@@ -52,7 +52,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
-	logging.Logger.Info("Jayash add_miner: The new miner info", zap.Any("minStakePerDelegate", gn.MinStakePerDelegate))
 	newMiner.Settings.MinStake = gn.MinStakePerDelegate
 	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
 
