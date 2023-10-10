@@ -176,6 +176,7 @@ const (
 	StorageMaxCharge                    = SmartContract + StorageSc + "max_charge"
 	StorageMinStake                     = SmartContract + StorageSc + "min_stake"
 	StorageMaxStake                     = SmartContract + StorageSc + "max_stake"
+	StorageMinStakePerDelegates         = SmartContract + StorageSc + "min_stake_per_delegate"
 	StorageMaxDelegates                 = SmartContract + StorageSc + "max_delegates"
 	StorageDiverseBlobbers              = SmartContract + StorageSc + "diverse_blobbers"
 	StorageReadPoolMinLock              = SmartContract + StorageSc + "readpool.min_lock"
