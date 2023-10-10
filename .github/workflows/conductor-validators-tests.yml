@@ -45,7 +45,7 @@ jobs:
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
         else        
-           BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
         fi
