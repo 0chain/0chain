@@ -1,6 +1,10 @@
 package event
 
 import (
+	"context"
+	"errors"
+	"fmt"
+
 	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs"
@@ -8,9 +12,6 @@ import (
 	"0chain.net/smartcontract/dbs/postgresql"
 	"0chain.net/smartcontract/dbs/queueProvider"
 	"0chain.net/smartcontract/dbs/sqlite"
-	"context"
-	"errors"
-	"fmt"
 )
 
 func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
@@ -56,6 +57,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
+	
 	go eventDb.addEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
@@ -66,7 +68,6 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 type EventDb struct {
 	dbs.Store
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
-	EventCounter  int64
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
 	kafka         queueProvider.KafkaProviderI
@@ -118,6 +119,9 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
 		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
 		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
+		KafkaHost: 	 edb.dbConfig.KafkaHost,
+		KafkaTopic: 	 edb.dbConfig.KafkaTopic,
+		KafkaWriteTimeout: edb.dbConfig.KafkaWriteTimeout,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
@@ -125,12 +129,15 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		return nil, err
 	}
 
-	return &EventDb{
+	newEdb := &EventDb{
 		Store:         clone,
 		dbConfig:      cloneConfig,
 		eventsChannel: nil,
 		settings:      edb.settings,
-	}, nil
+		kafka:         queueProvider.NewKafkaProvider(cloneConfig.KafkaHost, cloneConfig.KafkaWriteTimeout),
+	}
+	
+	return newEdb, nil
 }
 
 func (edb *EventDb) UpdateSettings(updates map[string]string) error {

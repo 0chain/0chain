@@ -683,7 +683,11 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		if eventDB != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_, err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1, event.CommitNow())
+			_, eventsCtr, err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1, event.CommitNow())
+			if err != nil {
+				panic(err)
+			}
+			err = event.IncrementCounter(eventsCtr)
 			if err != nil {
 				panic(err)
 			}
