@@ -1,7 +1,9 @@
 package event
 
 import (
+	"encoding/json"
 	"errors"
+	"sync/atomic"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -18,7 +20,32 @@ type Event struct {
 	Type        EventType   `json:"type"`
 	Tag         EventTag    `json:"tag"`
 	Index       string      `json:"index"`
+	IsPublished bool        `json:"is_published"`
+	SequenceNumber int64	`json:"sequence_number"`
 	Data        interface{} `json:"data" gorm:"-"`
+}
+
+var eventsCounter atomic.Value
+
+func init() {
+	eventsCounter.Store(int64(0))
+}
+
+func GetEventsCounter() (int64, error) {
+	iec, ok := eventsCounter.Load().(int64)
+	if !ok {
+		return 0, errors.New("failed to load event counter")
+	}
+	return iec, nil
+}
+
+func IncrementCounter(delta int) error {
+	ctr, ok := eventsCounter.Load().(int64)
+	if !ok {
+		return errors.New("failed to load event counter")
+	}
+	eventsCounter.Store(ctr + int64(delta))
+	return nil
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -91,11 +118,11 @@ func (edb *EventDb) PublishUnpublishedEvents() {
 		return
 	}
 
+	logging.Logger.Debug("PublishEvents: publishing events", zap.Any("events", unpublishedEvents))
+
 	var publishedEventsIds []uint
 	for _, event := range unpublishedEvents {
-		evsMessage := NewEventMessage(event, edb.EventCounter)
-		edb.EventCounter++
-		rawEvent, err := evsMessage.Encode()
+		rawEvent, err := json.Marshal(event)
 		if err != nil {
 			logging.Logger.Error("PublishEvents: failed to encode event", zap.Error(err))
 			continue
@@ -108,9 +135,12 @@ func (edb *EventDb) PublishUnpublishedEvents() {
 		}
 
 		publishedEventsIds = append(publishedEventsIds, event.ID)
+
+		logging.Logger.Debug("PublishEvents: published event", zap.Any("message", rawEvent))
 	}
 
 	if len(publishedEventsIds) > 0 {
+		logging.Logger.Debug("PublishEvents: updating published events", zap.Any("ids", publishedEventsIds))
 		err = edb.Store.Get().Model(&Event{}).Where("id IN ?", publishedEventsIds).Update("is_published", true).Error
 		if err != nil {
 			logging.Logger.Error("PublishEvents: failed to update published events", zap.Error(err))
@@ -119,6 +149,7 @@ func (edb *EventDb) PublishUnpublishedEvents() {
 }
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
+	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
 	if edb.Store != nil && len(events.events) > 0 {
 		return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
 	}
