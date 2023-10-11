@@ -2,11 +2,8 @@ package event
 
 import (
 	"fmt"
-	"os"
 	"testing"
-	"time"
 
-	"0chain.net/core/config"
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/stretchr/testify/assert"
@@ -70,34 +67,107 @@ func TestTagAddTransactions(t *testing.T) {
 }
 
 func TestFindTransactionByHash(t *testing.T) {
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	t.Skip("only for local debugging, requires local postgresql")
-	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
-	if err != nil {
-		return
-	}
-	defer eventDb.Close()
-	err = eventDb.AutoMigrate()
-	defer eventDb.Drop()
-	require.NoError(t, err)
+	eventDb, clean := GetTestEventDB(t)
+	defer clean()
+
+	// Add two blocks
+	eventDb.addOrUpdateBlock(Block{Hash: "blockHash", Round: 7, IsFinalised: true})
+	eventDb.addOrUpdateBlock(Block{Hash: "blockHash_unf", Round: 8, IsFinalised: false})
 
 	tr := Transaction{
 		ImmutableModel: model.ImmutableModel{ID: 1},
 		Hash:           "something_0",
 		ClientId:       "someClientID",
+		ToClientId:     "someToClientID",
 		BlockHash:      "blockHash",
 	}
 	SetUpTransactionData(t, eventDb)
+
+	err := eventDb.addTransactions([]Transaction{
+		// Differnt id
+		{
+			Hash: 	"something_0_difId",
+			ClientId: "someClientID2",
+			ToClientId: "someToClientID2",
+			BlockHash: "blockHash",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_1_difId",
+			ClientId: "someClientID2",
+			ToClientId: "someToClientID2",
+			BlockHash: "blockHash",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_2_difId",
+			ClientId: "someClientID2",
+			ToClientId: "someToClientID2",
+			BlockHash: "blockHash",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_3_difId",
+			ClientId: "someClientID2",
+			ToClientId: "someToClientID2",
+			BlockHash: "blockHash",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_4_difId",
+			ClientId: "someClientID2",
+			ToClientId: "someToClientID2",
+			BlockHash: "blockHash",
+			Round: 7,
+		},
+		// Unfinalized block
+		{
+			Hash: 	"something_0_unf",
+			ClientId: "someClientID",
+			ToClientId: "someToClientID",
+			BlockHash: "blockHash_unf",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_1_unf",
+			ClientId: "someClientID",
+			ToClientId: "someToClientID",
+			BlockHash: "blockHash_unf",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_2_unf",
+			ClientId: "someClientID",
+			ToClientId: "someToClientID",
+			BlockHash: "blockHash_unf",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_3_unf",
+			ClientId: "someClientID",
+			ToClientId: "someToClientID",
+			BlockHash: "blockHash_unf",
+			Round: 7,
+		},
+		{
+			Hash: 	"something_4_unf",
+			ClientId: "someClientID",
+			ToClientId: "someToClientID",
+			BlockHash: "blockHash_unf",
+			Round: 7,
+		},
+	})
+	require.NoError(t, err, "Error while inserting Transaction to event Database")
+
+	t.Run("GetTransactions", func(t *testing.T) {
+		gotTrs, err := eventDb.GetTransactions(common.Pagination{Limit: 30, IsDescending: false})
+		require.NoError(t, err)
+		require.Len(t, gotTrs, 15, "All transactions of finalized blocks should be returned")
+		for _, tr := range gotTrs {
+			require.Equal(t, "blockHash", tr.BlockHash, "All transactions should be from finalized blocks")
+		}
+	})
+
 	t.Run("GetTransactionByHash", func(t *testing.T) {
 		gotTr, err := eventDb.GetTransactionByHash("something_0")
 
@@ -110,38 +180,59 @@ func TestFindTransactionByHash(t *testing.T) {
 	})
 
 	t.Run("GetTransactionByClientId", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", common.Pagination{Limit: 10, IsDescending: true})
+		gotTrs, err := eventDb.GetTransactionByClientId("someClientID", common.Pagination{Limit: 20, IsDescending: false})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClient", common.Pagination{Limit: 10, IsDescending: true})
+		gotTrs, err = eventDb.GetTransactionByClientId("wrongID", common.Pagination{Limit: 20, IsDescending: false})
 		require.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", common.Pagination{Limit: 5, IsDescending: true})
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", common.Pagination{Limit: 5, IsDescending: false})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", common.Pagination{Offset: 5, Limit: 5, IsDescending: true})
+		gotTrs, err = eventDb.GetTransactionByClientId("someClientID", common.Pagination{Offset: 5, Limit: 20, IsDescending: false})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 
 	})
 
-	t.Run("GetTransactionByBlockHash", func(t *testing.T) {
-		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Limit: 10, IsDescending: true})
+	t.Run("GetTransactionByToClientId", func(t *testing.T) {
+		gotTrs, err := eventDb.GetTransactionByToClientId("someToClientID", common.Pagination{Limit: 20, IsDescending: false})
 		require.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 10)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("someHash", common.Pagination{Limit: 10, IsDescending: true})
+		gotTrs, err = eventDb.GetTransactionByToClientId("wrongID", common.Pagination{Limit: 20, IsDescending: false})
+		require.NoError(t, err)
+		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
+
+		gotTrs, err = eventDb.GetTransactionByToClientId("someToClientID", common.Pagination{Limit: 5, IsDescending: false})
+		require.NoError(t, err)
+		compareTransactions(t, gotTrs, 0, 5)
+
+		gotTrs, err = eventDb.GetTransactionByToClientId("someToClientID", common.Pagination{Offset: 5, Limit: 20, IsDescending: false})
+		require.NoError(t, err)
+		compareTransactions(t, gotTrs, 5, 5)
+	})
+
+	t.Run("GetTransactionByBlockHash", func(t *testing.T) {
+		gotTrs, err := eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Limit: 20, IsDescending: false})
+		require.NoError(t, err)
+		require.Len(t, gotTrs, 15, "All transactions of blockHash should be returned")
+		for _, tr := range gotTrs {
+			require.Equal(t, "blockHash", tr.BlockHash, "All transactions should be from blockHash")
+		}
+
+		gotTrs, err = eventDb.GetTransactionByBlockHash("wrongHash", common.Pagination{Limit: 10, IsDescending: false})
 		assert.NoError(t, err)
 		require.Equal(t, len(gotTrs), 0, "No Transaction should be returned")
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Limit: 5, IsDescending: true})
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Limit: 5, IsDescending: false})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 0, 5)
 
-		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Offset: 5, Limit: 5, IsDescending: true})
+		gotTrs, err = eventDb.GetTransactionByBlockHash("blockHash", common.Pagination{Offset: 5, Limit: 5, IsDescending: false})
 		assert.NoError(t, err)
 		compareTransactions(t, gotTrs, 5, 5)
 	})
@@ -155,6 +246,7 @@ func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
 		tr := Transaction{
 			Hash:      fmt.Sprintf("something_%d", i),
 			ClientId:  "someClientID",
+			ToClientId: "someToClientID",
 			BlockHash: "blockHash",
 		}
 		tr.ImmutableModel.ID = gotTr[i].ID
@@ -168,6 +260,7 @@ func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
 		tr := Transaction{
 			Hash:      fmt.Sprintf("something_%d", i),
 			ClientId:  "someClientID",
+			ToClientId: "someToClientID",
 			BlockHash: "blockHash",
 		}
 		err := eventDb.addTransactions([]Transaction{tr})
