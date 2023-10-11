@@ -25,8 +25,8 @@ jobs:
     - name: Get Branch
       id: get_branch
       run: |
-        if [[ ${{ inputs.branchname }} ]]; then
-           BRANCH=${{ inputs.branchname }}
+        if [[ -n "${{ inputs.branchname }}" ]]; then
+           BRANCH="${{ inputs.branchname }}"
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
         else        
