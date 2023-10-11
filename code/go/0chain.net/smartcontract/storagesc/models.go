@@ -739,8 +739,9 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 }
 
 func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+	logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
+
 	if now <= d.LatestFinalizedChallCreatedAt {
-		logging.Logger.Info("challenge reward on finalization: no reward", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
 		return 0, nil
 	}
 
@@ -801,8 +802,9 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 }
 
 func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances chainstate.StateContextI, sp *stakePool) (currency.Coin, error) {
+	logging.Logger.Info("challenge penalty on finalization", zap.Any("latest successful challenge created at", d.LatestSuccessfulChallCreatedAt), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
+
 	if d.LatestSuccessfulChallCreatedAt >= d.LatestFinalizedChallCreatedAt {
-		logging.Logger.Info("challenge penalty on finalization: no penalty", zap.Any("latest successful challenge created at", d.LatestSuccessfulChallCreatedAt), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
 		return 0, nil
 	}
 
