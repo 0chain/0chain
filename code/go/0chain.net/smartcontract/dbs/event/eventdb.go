@@ -12,6 +12,7 @@ import (
 	"0chain.net/smartcontract/dbs/postgresql"
 	"0chain.net/smartcontract/dbs/queueProvider"
 	"0chain.net/smartcontract/dbs/sqlite"
+	"go.uber.org/atomic"
 )
 
 func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
@@ -70,6 +71,7 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
+	roundEventsCounter atomic.Uint32
 	kafka         queueProvider.KafkaProviderI
 }
 
@@ -217,4 +219,12 @@ func (edb *EventDb) AutoMigrate() error {
 
 func (edb *EventDb) Config() config.DbAccess {
 	return edb.dbConfig
+}
+
+func (edb *EventDb) GetIncrementedEventsCounter() uint32 {
+	return edb.roundEventsCounter.Inc()
+}
+
+func (edb *EventDb) ResetEventsCounter() {
+	edb.roundEventsCounter.Store(0)
 }

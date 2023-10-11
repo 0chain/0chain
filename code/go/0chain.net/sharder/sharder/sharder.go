@@ -105,11 +105,8 @@ func main() {
 			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
 			defer cancel()
 
-			var (
-				eventsCtr int
-				err       error
-			)
-			if _, eventsCtr, err = serverChain.GetEventDb().ProcessEvents(
+			var err error
+			if _, err = serverChain.GetEventDb().ProcessEvents(
 				ctx,
 				[]event.Event{ev},
 				b.Round,
@@ -121,11 +118,6 @@ func main() {
 					zap.Error(err),
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash))
-			}
-
-			err = event.IncrementCounter(eventsCtr)
-			if err != nil {
-				logging.Logger.Error("increment counter failed", zap.Error(err))
 			}
 		}()
 	}

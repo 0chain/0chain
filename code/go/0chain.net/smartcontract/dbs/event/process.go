@@ -48,29 +48,21 @@ func (edb *EventDb) ProcessEvents(
 	block string,
 	blockSize int,
 	opts ...ProcessEventsOptionsFunc,
-) (*EventDb, int, error) {
+) (*EventDb, error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
-		return nil, 0, err
-	}
-
-	// Stamp the events with the sequence number
-	roundEventsCounter := 0
-	latestCounter, err := GetEventsCounter()
-	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	for i := range es {
-		roundEventsCounter++
-		es[i].SequenceNumber = latestCounter + int64(roundEventsCounter)
+		es[i].SequenceNumber = int64(edb.GetIncrementedEventsCounter())
 	}
 
 	pdu := time.Since(ts)
 	tx, err := edb.Begin(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	event := BlockEvents{
@@ -93,9 +85,9 @@ func (edb *EventDb) ProcessEvents(
 		err := tx.Rollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, 0, ctx.Err()
+			return nil, ctx.Err()
 		}
-		return nil, 0, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
 	select {
@@ -113,10 +105,10 @@ func (edb *EventDb) ProcessEvents(
 		if !commit {
 			err := tx.Rollback()
 			if err != nil {
-				return nil, 0, err
+				return nil, err
 			}
 
-			return nil, 0, err
+			return nil, err
 		}
 
 		var opt ProcessEventsOptions
@@ -125,10 +117,10 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if opt.CommitNow {
-			return nil, roundEventsCounter, tx.Commit()
+			return nil, tx.Commit()
 		}
 
-		return tx, roundEventsCounter, nil
+		return tx, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -140,9 +132,9 @@ func (edb *EventDb) ProcessEvents(
 		err := tx.Rollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, 0, ctx.Err()
+			return nil, ctx.Err()
 		}
-		return nil, roundEventsCounter, ctx.Err()
+		return nil, ctx.Err()
 	}
 }
 

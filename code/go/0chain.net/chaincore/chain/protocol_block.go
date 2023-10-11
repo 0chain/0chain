@@ -386,21 +386,20 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return nil
 	})
 
-	var (
-		eventTx *event.EventDb
-		eventsCtr int
-	)
+	var eventTx *event.EventDb
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() error {
 			fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
 			ts := time.Now()
-			eventTx, eventsCtr, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
+			eventTx, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
 			if err != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
 			}
+
+			c.GetEventDb().ResetEventsCounter()
 
 			EventsComputationTimer.Update(time.Since(ts).Microseconds())
 			fb.Events = nil
@@ -484,16 +483,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.String("block", fb.Hash))
 		}
 	}
-
-	err = event.IncrementCounter(eventsCtr)
-	if err != nil {
-		logging.Logger.Error("finalize block - increment counter failed",
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash),
-			zap.Error(err))
-		panic(err)
-	}
-	
 
 	wg.Run("finalize block - delete dead blocks", fb.Round, func() error {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
