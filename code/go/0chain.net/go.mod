@@ -30,8 +30,8 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.11.0
-	golang.org/x/net v0.12.0
+	golang.org/x/crypto v0.13.0
+	golang.org/x/net v0.15.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.5.2
@@ -42,13 +42,13 @@ require (
 	github.com/0chain/common v0.0.7-0.20230920071432-fef500aba732
 	github.com/0chain/gosdk v1.8.18-0.20230901213317-53d640a9b7f9
 	github.com/go-faker/faker/v4 v4.1.1
-	github.com/jackc/pgx/v5 v5.4.1
+	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
 	github.com/ory/dockertest/v3 v3.10.0
-	github.com/pressly/goose/v3 v3.13.1
+	github.com/pressly/goose/v3 v3.15.1
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
-	golang.org/x/sys v0.10.0
+	golang.org/x/sys v0.13.0
 	gorm.io/driver/sqlite v1.5.2
 	moul.io/zapgorm2 v1.3.0
 )
@@ -61,10 +61,10 @@ require (
 	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/containerd/continuity v0.4.1 // indirect
+	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/docker/cli v24.0.2+incompatible // indirect
-	github.com/docker/docker v24.0.2+incompatible // indirect
+	github.com/docker/cli v24.0.6+incompatible // indirect
+	github.com/docker/docker v24.0.6+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -82,7 +82,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
@@ -100,8 +100,8 @@ require (
 	github.com/moby/term v0.5.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
-	github.com/opencontainers/runc v1.1.7 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
+	github.com/opencontainers/runc v1.1.9 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/philhofer/fwd v1.1.2-0.20210722190033-5c56ac6d0bb9 // indirect
@@ -116,11 +116,11 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/mod v0.11.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.10.0 // indirect
+	golang.org/x/tools v0.13.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
