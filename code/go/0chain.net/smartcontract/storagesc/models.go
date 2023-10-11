@@ -739,6 +739,9 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 }
 
 func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+	if now <= d.LatestSuccessfulChallCreatedAt {
+		return 0, nil
+	}
 
 	payment := currency.Coin(0)
 
