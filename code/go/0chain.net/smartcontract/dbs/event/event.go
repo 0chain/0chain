@@ -3,7 +3,6 @@ package event
 import (
 	"encoding/json"
 	"errors"
-	"sync/atomic"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -23,29 +22,6 @@ type Event struct {
 	IsPublished bool        `json:"is_published"`
 	SequenceNumber int64	`json:"sequence_number"`
 	Data        interface{} `json:"data" gorm:"-"`
-}
-
-var eventsCounter atomic.Value
-
-func init() {
-	eventsCounter.Store(int64(0))
-}
-
-func GetEventsCounter() (int64, error) {
-	iec, ok := eventsCounter.Load().(int64)
-	if !ok {
-		return 0, errors.New("failed to load event counter")
-	}
-	return iec, nil
-}
-
-func IncrementCounter(delta int) error {
-	ctr, ok := eventsCounter.Load().(int64)
-	if !ok {
-		return errors.New("failed to load event counter")
-	}
-	eventsCounter.Store(ctr + int64(delta))
-	return nil
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
