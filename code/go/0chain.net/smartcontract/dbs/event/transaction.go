@@ -72,11 +72,11 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagin
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "round"},
+			Column: clause.Column{Name: "transactions.round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "hash"},
+			Column: clause.Column{Name: "transactions.hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&tr)
@@ -96,11 +96,11 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "round"},
+			Column: clause.Column{Name: "transactions.round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "hash"},
+			Column: clause.Column{Name: "transactions.hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&tr)
@@ -120,11 +120,11 @@ func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pag
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "round"},
+			Column: clause.Column{Name: "transactions.round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "hash"},
+			Column: clause.Column{Name: "transactions.hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&tr)
@@ -142,11 +142,11 @@ func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, err
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "round"},
+			Column: clause.Column{Name: "transactions.round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "hash"},
+			Column: clause.Column{Name: "transactions.hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Find(&tr)
@@ -165,11 +165,11 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "round"},
+			Column: clause.Column{Name: "transactions.round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "hash"},
+			Column: clause.Column{Name: "transactions.hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Find(&tr)
