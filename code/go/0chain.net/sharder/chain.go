@@ -442,18 +442,12 @@ func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, lfbr *chain.LfbRound
 	}
 
 	if err != nil {
-		if err == context.DeadlineExceeded {
-			// means there's no available sharders in the network yet, so use the local LFB to start
-			//
-			// why not try get from miners? when the network is restarting, miners do not have
-			// blocks persisted, so it will fail as well.
-			return &bl, nil
-		}
-
-		logging.Logger.Warn("load_lfb, could not sync LFB from remote",
+		logging.Logger.Debug("load_lfb, could not sync LFB from remote, use local LFB",
 			zap.Int64("round", lfb.Round),
-			zap.String("lfb", lfb.Hash))
-		return nil, fmt.Errorf("load_lfb - could not sync LFB from remote: %v", err)
+			zap.String("lfb", lfb.Hash),
+			zap.Error(err))
+
+		return &bl, nil
 	}
 
 	logging.Logger.Debug("load_lfb, got notarized block from remote and compare with local")
