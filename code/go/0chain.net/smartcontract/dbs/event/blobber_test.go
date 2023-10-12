@@ -1,14 +1,17 @@
 package event
 
 import (
+	"fmt"
+	"testing"
+	"time"
+
 	"0chain.net/core/common"
+	"0chain.net/core/config"
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"fmt"
-	"gorm.io/gorm/clause"
-	"testing"
-
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -300,3 +303,119 @@ func buildMockBlobber(t *testing.T, pid string) Blobber {
 	curBlobber.Rewards = ProviderRewards{}
 	return curBlobber
 }
+
+// -------------------------------------------------------------------------------------------------------------------------------------------
+
+func TestGetBlobbersFromParams(t *testing.T) {
+	// testConfig := config.DbAccess{}
+	// testSettings := config.DbSettings{}
+
+	// edb, err := NewInMemoryEventDb(testConfig, testSettings)
+	edb, err := GetTestEventDB(t)
+
+	if err != nil {
+		t.Fatalf("failed to initialize in-memory DB: %v", err)
+	}
+	// Created a mock Database now.
+
+	blobbers := []Blobber{
+		// Blobber 1 (Matched with the AllocationQuery)
+		{
+			Provider: Provider{
+				ID: "B000",
+			},
+			BaseURL:    "https://blobber.zero",
+			ReadPrice:  currency.Coin(50), // between 1 and 100
+			WritePrice: currency.Coin(50), // between 1 and 100
+			Capacity:   5000,
+			Allocated:  3000, // Capacity - Allocated = 2000 > 1000 (AllocationSize)
+		},
+		// Blobber 2 (Matched with the AllocationQuery)
+		{
+			Provider: Provider{
+				ID: "B001",
+			},
+			BaseURL:    "https://blobber.one",
+			ReadPrice:  currency.Coin(20),
+			WritePrice: currency.Coin(80),
+			Capacity:   7000,
+			Allocated:  4000,
+		},
+		// Blobber 3 (Matched with the AllocationQuery)
+		{
+			Provider: Provider{
+				ID: "B002",
+			},
+			BaseURL:    "https://blobber.two",
+			ReadPrice:  currency.Coin(90),
+			WritePrice: currency.Coin(10),
+			Capacity:   1100,
+			Allocated:  50,
+		},
+		// Blobber 4 (Not matched, ReadPrice is too low)
+		{
+			Provider: Provider{
+				ID: "B003",
+			},
+			BaseURL:    "https://blobber.three",
+			ReadPrice:  currency.Coin(0),
+			WritePrice: currency.Coin(50),
+			Capacity:   2000,
+			Allocated:  500,
+		},
+		// Blobber 5 (Not matched, WritePrice is too high)
+		{
+			Provider: Provider{
+				ID: "B004",
+			},
+			BaseURL:    "https://blobber.four",
+			ReadPrice:  currency.Coin(50),
+			WritePrice: currency.Coin(150),
+			Capacity:   3000,
+			Allocated:  1500,
+			//... other required fields ...
+		},
+	}
+	// Adding 5 blobbers, 3 will have parameters in line 2 shall not have and then the 2 will help me complete the function.
+
+	for _, blobber := range blobbers {
+		if err := edb.Store.Get().Create(&blobber).Error; err != nil {
+			t.Fatalf("Failed to insert blobber: %v", err)
+		}
+	}
+
+	// Creating curated Query
+	allocation := AllocationQuery{
+		MaxOfferDuration: 24 * time.Hour,
+		ReadPriceRange: struct {
+			Min int64
+			Max int64
+		}{1, 100},
+		WritePriceRange: struct {
+			Min int64
+			Max int64
+		}{1, 100},
+		AllocationSize:     1000,
+		AllocationSizeInGB: 1.0,
+		NumberOfDataShards: 10,
+	}
+
+	pagination := common2.Pagination{
+		Limit:        10,
+		Offset:       0,
+		IsDescending: true,
+	}
+
+	now := common.Timestamp(time.Now().Unix())
+	healthCheckPeriod := 1 * time.Hour
+
+	matchedBlobbers, err := edb.GetBlobbersFromParams(allocation, pagination, now, healthCheckPeriod)
+	if err != nil {
+		t.Fatalf("Error while retrieving blobbers: %v", err)
+	}
+
+	// Assert
+	assert.Equal(t, 3, len(matchedBlobbers), "Expected 3 blobbers to match criteria")
+}
+
+// -------------------------------------------------------------------------------------------------------------------------------------------
