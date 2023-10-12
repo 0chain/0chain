@@ -436,11 +436,18 @@ func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, lfbr *chain.LfbRound
 		return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
 	}()
 
+	bl := blocksLoaded{
+		r:   r,
+		lfb: lfb,
+	}
+
 	if err != nil {
-		logging.Logger.Warn("load_lfb, could not sync LFB from remote",
+		logging.Logger.Debug("load_lfb, could not sync LFB from remote, use local LFB",
 			zap.Int64("round", lfb.Round),
-			zap.String("lfb", lfb.Hash))
-		return nil, fmt.Errorf("load_lfb - could not sync LFB from remote: %v", err)
+			zap.String("lfb", lfb.Hash),
+			zap.Error(err))
+
+		return &bl, nil
 	}
 
 	logging.Logger.Debug("load_lfb, got notarized block from remote and compare with local")
@@ -453,10 +460,7 @@ func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, lfbr *chain.LfbRound
 		return nil, errors.New("load_lfb - see different lfb and notarized lfb")
 	}
 
-	return &blocksLoaded{
-		r:   r,
-		lfb: lfb,
-	}, nil
+	return &bl, nil
 }
 
 // iterate over rounds from latest to zero looking for LFB and ignoring
