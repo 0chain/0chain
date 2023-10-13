@@ -14,7 +14,7 @@ view_change: 250 # 100
 skip_wait: ["0dns","0box"]
 stuck_warning_threshold: "2s"
 
-aggregate_base_url: "http://localhost:9081/v2"
+aggregate_base_url: "http://198.18.0.98:9081/v2"
 
 #
 # nodes used in tests
@@ -204,8 +204,8 @@ nodes:
     id: "0box"
     work_dir: "../0box/"
     env: ""
-    start_command: "../0box/docker.local/bin/build.zbox-integration-tests.sh && ../0box/docker.local/bin/start-dev.sh"
-    stop_command: "../0box/docker-compose -p 0box down && ../0box/docker.local/bin/clean.sh"
+    start_command: "../0box/docker.local/bin/start-dev.sh"
+    stop_command: "docker-compose -p 0box down && ../0box/docker.local/bin/clean.sh"
 
 # named system commands
 commands:

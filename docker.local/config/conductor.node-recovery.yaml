@@ -302,6 +302,9 @@ tests:
            round: 15 # just wait the BC starts
        - start: ['0dns']
        - sleep: "20s"
+       - start: ['0box']
+       - sleep: "20s"
+       - pause: {}
        - command:
            name: "register_authorizer"
        - wait_add:
@@ -309,7 +312,6 @@ tests:
            start: true
        - wait_round:
            shift: 50
-       - start: ['0box']
        - sync_latest_aggregates:
            authorizers:
              - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
