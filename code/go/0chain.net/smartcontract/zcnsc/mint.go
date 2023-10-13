@@ -171,7 +171,6 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 		Signers:   signers,
 	})
 
-	// seed to 54
 	rand.Seed(randomSeed)
 	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 
