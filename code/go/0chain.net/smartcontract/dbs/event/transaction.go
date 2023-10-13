@@ -161,7 +161,7 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 		Model(&Transaction{}).
 		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
 		Where("blocks.is_finalised = ?", true).
-		Where("round >= ? AND round < ?", blockStart, blockEnd).
+		Where("transactions.round >= ? AND transactions.round < ?", blockStart, blockEnd).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
@@ -183,9 +183,9 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 		Model(&Transaction{}).
 		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
 		Where("blocks.is_finalised = ?", true).
-		Where("round >= ? AND round < ?", blockStart, blockEnd).
-		Order("round asc").
-		Order("hash desc").
+		Where("transactions.round >= ? AND transactions.round < ?", blockStart, blockEnd).
+		Order("transactions.round asc").
+		Order("transactions.hash desc").
 		Find(&tr)
 	return tr, res.Error
 }
