@@ -66,17 +66,15 @@ func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagin
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
-		Where("blocks.is_finalised = ?", true).
 		Where(Transaction{ClientId: clientID}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.round"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.hash"},
+			Column: clause.Column{Name: "hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&tr)
@@ -90,17 +88,15 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
-		Where("blocks.is_finalised = ?", true).
 		Where(Transaction{ToClientId: toClientID}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.round"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.hash"},
+			Column: clause.Column{Name: "hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Scan(&tr)
@@ -114,19 +110,9 @@ func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pag
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
-		Where("blocks.is_finalised = ?", true).
 		Where(Transaction{BlockHash: blockHash}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.round"},
-			Desc:   limit.IsDescending,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.hash"},
-			Desc:   limit.IsDescending,
-		}).
 		Scan(&tr)
 	return tr, res.Error
 }
@@ -137,16 +123,14 @@ func (edb *EventDb) GetTransactions(limit common.Pagination) ([]Transaction, err
 	res := edb.Store.
 		Get().
 		Model(&Transaction{}).
-		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
-		Where("blocks.is_finalised = ?", true).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.round"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.hash"},
+			Column: clause.Column{Name: "hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Find(&tr)
@@ -159,17 +143,15 @@ func (edb *EventDb) GetTransactionByBlockNumbers(blockStart, blockEnd int64, lim
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(&Transaction{}).
-		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
-		Where("blocks.is_finalised = ?", true).
-		Where("transactions.round >= ? AND transactions.round < ?", blockStart, blockEnd).
+		Where("round >= ? AND round < ?", blockStart, blockEnd).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.round"},
+			Column: clause.Column{Name: "round"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "transactions.hash"},
+			Column: clause.Column{Name: "hash"},
 			Desc:   limit.IsDescending,
 		}).
 		Find(&tr)
@@ -181,11 +163,9 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 	tr := []Transaction{}
 	res := edb.Store.Get().
 		Model(&Transaction{}).
-		Joins("JOIN blocks ON blocks.hash = transactions.block_hash").
-		Where("blocks.is_finalised = ?", true).
-		Where("transactions.round >= ? AND transactions.round < ?", blockStart, blockEnd).
-		Order("transactions.round asc").
-		Order("transactions.hash desc").
+		Where("round >= ? AND round < ?", blockStart, blockEnd).
+		Order("round asc").
+		Order("hash desc").
 		Find(&tr)
 	return tr, res.Error
 }
