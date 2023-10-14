@@ -564,6 +564,8 @@ func newBlobberAllocation(
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin, err error) {
 
+	logging.Logger.Info("Jayash upload", zap.Any("size", size), zap.Any("now", now), zap.Any("rdtu", rdtu), zap.Any("d", d), zap.Any("d.ChallengePoolIntegralValue", d.ChallengePoolIntegralValue))
+
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
@@ -894,6 +896,8 @@ func (d *BlobberAllocation) Offer() currency.Coin {
 func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin) {
 
+	logging.Logger.Info("Jayash delete", zap.Any("size", size), zap.Any("now", now), zap.Any("rdtu", rdtu), zap.Any("d", d), zap.Any("d.ChallengePoolIntegralValue", d.ChallengePoolIntegralValue))
+
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue -= move
 	return
@@ -1109,6 +1113,8 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	cp *challengePool,
 	value currency.Coin,
 ) error {
+	logging.Logger.Info("move from challenge pool", zap.Any("challenge pool", cp), zap.Any("value", value))
+
 	if cp == nil {
 		return errors.New("invalid challenge pool")
 	}

@@ -666,6 +666,8 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		return 0, fmt.Errorf("can't get related challenge pool: %v", err)
 	}
 
+	logging.Logger.Info("Jayash test commitMoveTokens", zap.Any("cp", cp.Balance), zap.Any("size", size), zap.Any("wmTime", wmTime), zap.Any("now", now))
+
 	var move currency.Coin
 	if size > 0 {
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
@@ -677,6 +679,9 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
+
+		logging.Logger.Info("Jayash test commitMoveTokens+", zap.Any("move", move))
+
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
@@ -706,6 +711,9 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		}
 
 		move = details.delete(-size, wmTime, rdtu)
+
+		logging.Logger.Info("Jayash test commitMoveTokens-", zap.Any("move", move))
+
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
@@ -802,9 +810,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	changeSize := commitConnection.WriteMarker.Size
+
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
-		changeSize := blobAlloc.LastWriteMarker.Size
+		changeSize = blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize - changeSize
@@ -850,7 +860,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	movedTokens, err := sc.commitMoveTokens(conf, alloc, commitConnection.WriteMarker.Size, blobAlloc,
+	movedTokens, err := sc.commitMoveTokens(conf, alloc, changeSize, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
