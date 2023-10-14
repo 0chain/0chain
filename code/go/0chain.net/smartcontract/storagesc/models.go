@@ -746,7 +746,7 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 
 	payment := currency.Coin(0)
 
-	rdtu, err := alloc.restDurationInTimeUnits(d.LatestFinalizedChallCreatedAt, timeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, timeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("blobber reward failed: %v", err)
 	}
@@ -805,7 +805,7 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 		return 0, nil
 	}
 
-	rdtu, err := alloc.restDurationInTimeUnits(d.LatestSuccessfulChallCreatedAt, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("blobber penalty failed: %v", err)
 	}
