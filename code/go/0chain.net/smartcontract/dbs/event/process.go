@@ -458,10 +458,6 @@ func (edb *EventDb) dropPartitions(round int64) {
 	}
 }
 
-func isNotAddBlockEvent(es BlockEvents) bool {
-	return !(len(es.events) == 1 && es.events[0].Type == TypeChain && es.events[0].Tag == TagAddBlock)
-}
-
 func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, error) {
 	if gs != nil {
 		return tx.updateHistoricData(es, gs)
@@ -691,12 +687,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addTransactions(*txns)
-	case TagAddBlock:
-		block, ok := fromEvent[Block](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addOrUpdateBlock(*block)
 	case TagFinalizeBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {
