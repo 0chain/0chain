@@ -102,7 +102,7 @@ func (edb *EventDb) GetExpiredAllocation(blobberID string) ([]string, error) {
 	var allocationIDs []string
 
 	err := db.Model(&AllocationBlobberTerm{}).
-		Joins("JOIN allocations ON allocation_blobber_terms.allocation_id = allocations.id").
+		Joins("JOIN allocations ON allocation_blobber_terms.alloc_id = allocations.id").
 		Where("allocation_blobber_terms.blobber_id = ? AND allocations.finalized = ? AND allocations.expiration > ?", blobberID, false, time.Now().Unix()).
 		Pluck("allocations.allocation_id", &allocationIDs).Error
 	if err != nil {
