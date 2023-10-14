@@ -116,37 +116,3 @@ func TestGetRoundFromTime(t *testing.T) {
 	_, err = eventDb.GetRoundFromTime(time.Now(), false)
 	require.NoError(t, err, "Error while getting rounds from DB")
 }
-
-func TestGetBlocks(t *testing.T) {
-	eventDb, clean := GetTestEventDB(t)
-	defer clean()
-
-	if err := eventDb.addPartition(0, "user_aggregates"); err != nil {
-		t.Error()
-	}
-
-	block := Block{
-		Hash:           "blockHash",
-		Round:          7,
-		IsFinalised:    true,
-	}
-	err := eventDb.addOrUpdateBlock(block)
-	require.NoError(t, err, "Error while inserting Block to event Database")
-
-	block2 := Block{
-		Hash:           "blockHash_unf",
-		Round:          8,
-		IsFinalised:    false,
-	}
-
-	err = eventDb.addOrUpdateBlock(block2)
-	require.NoError(t, err, "Error while inserting Block to event Database")
-
-	blocks, err := eventDb.GetBlocks(common.Pagination{Limit: 10})
-	require.NoError(t, err, "Error while getting blocks from DB")
-
-	require.Equal(t, 1, len(blocks), "found more than one block")
-	require.Equal(t, "blockHash", blocks[0].Hash, "found wrong block")
-	require.Equal(t, int64(7), blocks[0].Round, "found wrong block")
-	require.Equal(t, true, blocks[0].IsFinalised, "found wrong block")
-}

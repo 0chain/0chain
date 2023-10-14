@@ -90,7 +90,6 @@ func (edb *EventDb) GetBlocksByBlockNumbers(start, end int64, limit common.Pagin
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").
 		Where("round >= ? AND round < ?", start, end).
-		Where("is_finalised = ?", true).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
@@ -103,7 +102,6 @@ func (edb *EventDb) GetBlocksByBlockNumbers(start, end int64, limit common.Pagin
 func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").
-		Where("is_finalised = ?", true).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
