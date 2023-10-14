@@ -40,8 +40,16 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
+		eventsCounter: *atomic.NewUint64(0),
 		settings:      settings,
 		kafka:         queueProvider.NewKafkaProvider(config.KafkaHost, config.KafkaWriteTimeout),
+	}
+
+	// Load last sequence number. Useful when the sharder is restarted.
+	var maxSequenceNumber uint64
+	err = eventDb.Get().Model(&Event{}).Select("max(sequence_number)").Scan(&maxSequenceNumber).Error
+	if err == nil && maxSequenceNumber > 0 {
+		eventDb.eventsCounter.Store(maxSequenceNumber)
 	}
 
 	return eventDb, nil
@@ -71,7 +79,7 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
-	roundEventsCounter atomic.Uint32
+	eventsCounter atomic.Uint64
 	kafka         queueProvider.KafkaProviderI
 }
 
@@ -221,10 +229,14 @@ func (edb *EventDb) Config() config.DbAccess {
 	return edb.dbConfig
 }
 
-func (edb *EventDb) GetIncrementedEventsCounter() uint32 {
-	return edb.roundEventsCounter.Inc()
+func (edb *EventDb) GetEventsCounter() uint64 {
+	return edb.eventsCounter.Load()
 }
 
-func (edb *EventDb) ResetEventsCounter() {
-	edb.roundEventsCounter.Store(0)
+func (edb *EventDb) SetEventsCounter(value uint64) {
+	edb.eventsCounter.Store(value)
+}
+
+func (edb *EventDb) AddToEventsCounter(value uint64) uint64 {
+	return edb.eventsCounter.Add(value)
 }

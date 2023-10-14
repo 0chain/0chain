@@ -18,7 +18,6 @@ import (
 	"0chain.net/core/config"
 	"0chain.net/rest"
 	"0chain.net/sharder/blockstore"
-	"0chain.net/smartcontract/dbs/event"
 
 	"go.uber.org/zap"
 
@@ -93,33 +92,6 @@ func main() {
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
 		logging.Logger.Panic("Error setting up events database", zap.Error(err))
-	}
-
-	serverChain.OnBlockAdded = func(b *block.Block) {
-		err, ev := block.CreateBlockEvent(b)
-		if err != nil {
-			logging.Logger.Error("emit block event error", zap.Error(err))
-		}
-		go func() {
-			rootContext := common.GetRootContext()
-			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
-			defer cancel()
-
-			var err error
-			if _, err = serverChain.GetEventDb().ProcessEvents(
-				ctx,
-				[]event.Event{ev},
-				b.Round,
-				b.Hash,
-				len(b.Txns),
-				event.CommitNow(),
-			); err != nil {
-				logging.Logger.Error("process block saving event failed",
-					zap.Error(err),
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash))
-			}
-		}()
 	}
 
 	sharder.SetupSharderChain(serverChain)

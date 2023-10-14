@@ -48,21 +48,24 @@ func (edb *EventDb) ProcessEvents(
 	block string,
 	blockSize int,
 	opts ...ProcessEventsOptionsFunc,
-) (*EventDb, error) {
+) (*EventDb, uint32, error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
+	latestGlobalCounter := edb.GetEventsCounter()
+	localCounter := uint32(0)
 	for i := range es {
-		es[i].SequenceNumber = int64(edb.GetIncrementedEventsCounter())
+		localCounter++
+		es[i].SequenceNumber = int64(latestGlobalCounter) + int64(localCounter)
 	}
 
 	pdu := time.Since(ts)
 	tx, err := edb.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	event := BlockEvents{
@@ -85,9 +88,9 @@ func (edb *EventDb) ProcessEvents(
 		err := tx.Rollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
-		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+		return nil, 0, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
 	select {
@@ -105,10 +108,10 @@ func (edb *EventDb) ProcessEvents(
 		if !commit {
 			err := tx.Rollback()
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
-			return nil, err
+			return nil, 0, err
 		}
 
 		var opt ProcessEventsOptions
@@ -117,10 +120,10 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if opt.CommitNow {
-			return nil, tx.Commit()
+			return nil, localCounter, tx.Commit()
 		}
 
-		return tx, nil
+		return tx, localCounter, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -132,9 +135,9 @@ func (edb *EventDb) ProcessEvents(
 		err := tx.Rollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
-		return nil, ctx.Err()
+		return nil, 0, ctx.Err()
 	}
 }
 
