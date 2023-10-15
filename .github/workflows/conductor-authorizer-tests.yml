@@ -48,7 +48,7 @@ jobs:
     - name: Get Branch
       id: get_branch
       run: |
-        if [[ -z "${{ inputs.branchname }}" ]]; then
+        if [[ ! -z "${{ inputs.branchname }}" ]]; then
            BRANCH="${{ inputs.branchname }}"
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
@@ -56,7 +56,7 @@ jobs:
           #  BRANCH=$(echo ${GITHUB_REF#refs/heads/})
            BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
            echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
+           echo "Sprint Branch name is ${BRANCH}"
         fi
 
     - name: Install herumi/bls and herumi/mcl
