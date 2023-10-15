@@ -69,6 +69,7 @@ jobs:
       run: |
         git clone https://github.com/0chain/0chain.git
         cd 0chain
+        git checkout sprint-1.10
         BRANCH="${{ inputs.branchname }}"
         if [[ $BRANCH -eq "" ]]; then
           echo "inside"
