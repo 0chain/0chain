@@ -817,6 +817,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	changeSize := commitConnection.WriteMarker.Size
 
+	if blobAlloc.LatestFinalizedChallCreatedAt == alloc.StartTime {
+		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
+	}
+
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize = -blobAlloc.LastWriteMarker.Size
