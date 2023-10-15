@@ -7,7 +7,7 @@ on:
       inputs:
         branchname:
           description: 'enter your branch name'
-          required: true
+          required: false
 
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
@@ -18,6 +18,8 @@ jobs:
     - name: Cleanup before restarting conductor tests.
       run: |
         rm -rf *
+
+    - uses: actions/checkout@v3
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -48,16 +50,13 @@ jobs:
     - name: Get Branch
       id: get_branch
       run: |
-        if [[ -n "${{ inputs.branchname }}" ]]; then
-           BRANCH="${{ inputs.branchname }}"
-           echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
-        else        
-          #  BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        BRANCH="${{ inputs.branchname }}"
+        if [[ $BRANCH -eq "" ]]; then
+           echo "inside"
            BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
            echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
         fi
+        echo "Branch name is ${BRANCH}"
 
     - name: Install herumi/bls and herumi/mcl
       run: |
