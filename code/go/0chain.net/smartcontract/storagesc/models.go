@@ -898,6 +898,10 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 	logging.Logger.Info("Jayash delete", zap.Any("size", size), zap.Any("now", now), zap.Any("rdtu", rdtu), zap.Any("d", d), zap.Any("d.ChallengePoolIntegralValue", d.ChallengePoolIntegralValue))
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+	if move > d.ChallengePoolIntegralValue {
+		move = d.ChallengePoolIntegralValue
+	}
+
 	d.ChallengePoolIntegralValue -= move
 	return
 }
