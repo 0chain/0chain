@@ -69,7 +69,7 @@ jobs:
       run: |
         git clone https://github.com/0chain/0chain.git
         cd 0chain
-        git checkout sprint-1.10
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done
         BRANCH="${{ inputs.branchname }}"
         if [[ $BRANCH -eq "" ]]; then
           echo "inside"
