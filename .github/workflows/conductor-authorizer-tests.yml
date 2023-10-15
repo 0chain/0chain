@@ -53,7 +53,7 @@ jobs:
         BRANCH="${{ inputs.branchname }}"
         if [[ $BRANCH -eq "" ]]; then
            echo "inside"
-           BRANCH=$(git branch --sort=-committerdate | grep "sprint-1.*" | head -1)
+           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
            echo ::set-output name=BRANCH::${BRANCH}
         fi
         echo "Branch name is ${BRANCH}"
