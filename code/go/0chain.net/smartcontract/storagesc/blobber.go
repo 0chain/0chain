@@ -656,6 +656,8 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
+	logging.Logger.Info("Jayash test commitMoveTokens", zap.Any("size", size), zap.Any("wmTime", wmTime), zap.Any("now", now))
+
 	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
@@ -665,8 +667,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	if err != nil {
 		return 0, fmt.Errorf("can't get related challenge pool: %v", err)
 	}
-
-	logging.Logger.Info("Jayash test commitMoveTokens", zap.Any("cp", cp.Balance), zap.Any("size", size), zap.Any("wmTime", wmTime), zap.Any("now", now))
 
 	var move currency.Coin
 	if size > 0 {
@@ -680,7 +680,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 
-		logging.Logger.Info("Jayash test commitMoveTokens+", zap.Any("move", move))
+		logging.Logger.Info("Jayash test commitMoveTokens+", zap.Any("move", move), zap.Any("cp", cp.Balance))
 
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
@@ -692,6 +692,8 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
+
+		logging.Logger.Info("Jayash test commitMoveTokens+", zap.Any("move", move), zap.Any("cp", cp.Balance))
 
 		movedToChallenge, err := currency.AddCoin(alloc.MovedToChallenge, move)
 		if err != nil {
@@ -712,7 +714,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 		move = details.delete(-size, wmTime, rdtu)
 
-		logging.Logger.Info("Jayash test commitMoveTokens-", zap.Any("move", move))
+		logging.Logger.Info("Jayash test commitMoveTokens-", zap.Any("move", move), zap.Any("cp", cp.Balance))
 
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
@@ -724,6 +726,9 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
+
+		logging.Logger.Info("Jayash test commitMoveTokens-", zap.Any("move", move), zap.Any("cp", cp.Balance))
+
 		movedBack, err := currency.AddCoin(alloc.MovedBack, move)
 		if err != nil {
 			return 0, err
