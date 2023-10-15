@@ -79,7 +79,7 @@ jobs:
           echo ::set-output name=BRANCH::${BRANCH}
         fi
         echo "Branch name is ${BRANCH}"
-        git checkout ${{ steps.get_branch.outputs.BRANCH }}
+        git checkout ${BRANCH}
 
     - name: Docker Init Setup.
       run: |
