@@ -19,6 +19,8 @@ jobs:
       run: |
         rm -rf *
 
+    - uses: actions/checkout@v3
+
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
       run: |
