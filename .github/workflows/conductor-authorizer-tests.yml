@@ -7,7 +7,7 @@ on:
       inputs:
         branchname:
           description: 'enter your branch name'
-          required: true
+          required: false
 
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
