@@ -47,16 +47,16 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Get Branch
-      id: get_branch
-      run: |
-        BRANCH="${{ inputs.branchname }}"
-        # if [[ $BRANCH -eq "" ]]; then
-        #    echo "inside"
-        #    BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-        #    echo ::set-output name=BRANCH::${BRANCH}
-        # fi
-        echo "Branch name is ${BRANCH}"
+    # - name: Get Branch
+    #   id: get_branch
+    #   run: |
+    #     BRANCH="${{ inputs.branchname }}"
+    #     if [[ $BRANCH -eq "" ]]; then
+    #        echo "inside"
+    #        BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+    #        echo ::set-output name=BRANCH::${BRANCH}
+    #     fi
+    #     echo "Branch name is ${BRANCH}"
 
     - name: Install herumi/bls and herumi/mcl
       run: |
@@ -66,21 +66,19 @@ jobs:
         make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
+      id: get_branch
       run: |
         git clone https://github.com/0chain/0chain.git
         cd 0chain
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         BRANCH="${{ inputs.branchname }}"
         if [[ $BRANCH -eq "" ]]; then
-          echo "inside"
+          echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
           echo ::set-output name=BRANCH::${BRANCH}
-          echo "Branch name is ${BRANCH}"
         fi
         echo "Branch name is ${BRANCH}"
-        echo "Branch name is $BRANCH"
-        exit 1
         git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
     - name: Docker Init Setup.
