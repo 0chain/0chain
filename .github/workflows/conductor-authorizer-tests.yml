@@ -49,7 +49,8 @@ jobs:
       id: get_branch
       run: |
         BRANCH="${{ inputs.branchname }}"
-        if [[ -z "${BRANCH}" ]]; then
+        if [[ -n "${BRANCH}" ]]; then
+           echo "inside"
            BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
            echo ::set-output name=BRANCH::${BRANCH}
         fi
