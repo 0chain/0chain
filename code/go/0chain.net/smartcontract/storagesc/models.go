@@ -529,7 +529,6 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	TotalBlobberChallengePoolValue currency.Coin    `json:"total_blobber_challenge_pool_value"`
 	ChallengePoolIntegralValue     currency.Coin    `json:"challenge_pool_integral_value"`
 	LatestSuccessfulChallCreatedAt common.Timestamp `json:"latest_successful_chall_created_at"`
 	LatestFinalizedChallCreatedAt  common.Timestamp `json:"latest_finalized_chall_created_att"`
@@ -565,16 +564,14 @@ func newBlobberAllocation(
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin, err error) {
 
-	logging.Logger.Info("Jayash upload", zap.Any("size", size), zap.Any("now", now), zap.Any("rdtu", rdtu), zap.Any("d", d), zap.Any("d.ChallengePoolIntegralValue", d.ChallengePoolIntegralValue), zap.Any("d.TotalBlobberChallengePoolValue", d.TotalBlobberChallengePoolValue))
+	logging.Logger.Info("Jayash upload", zap.Any("size", size), zap.Any("now", now), zap.Any("rdtu", rdtu), zap.Any("d", d), zap.Any("d.ChallengePoolIntegralValue", d.ChallengePoolIntegralValue))
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
-	totalChallengePoolIntegralValue, err := currency.AddCoin(d.TotalBlobberChallengePoolValue, move)
 	if err != nil {
 		return
 	}
 	d.ChallengePoolIntegralValue = challengePoolIntegralValue
-	d.TotalBlobberChallengePoolValue = totalChallengePoolIntegralValue
 
 	return
 }
@@ -751,7 +748,7 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 
 	payment := currency.Coin(0)
 
-	rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, timeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(d.LatestFinalizedChallCreatedAt, timeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("blobber reward failed: %v", err)
 	}
@@ -765,7 +762,7 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 		dtu = rdtu // now can be more for finalization
 	}
 
-	move := currency.Coin((dtu / rdtu) * float64(d.TotalBlobberChallengePoolValue))
+	move := currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
 
 	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {
 		reward, err := currency.MultFloat64(move, passRate)
@@ -773,7 +770,7 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 			return payment, err
 		}
 
-		challengePoolIntegralValue, err := currency.MinusCoin(d.ChallengePoolIntegralValue, reward)
+		cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, reward)
 		if err != nil {
 			logging.Logger.Warn("challenge minus failed",
 				zap.Error(err),
@@ -784,7 +781,7 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 			err = fmt.Errorf("minus challenge pool value failed: %v", err)
 			return 0, err
 		}
-		d.ChallengePoolIntegralValue = challengePoolIntegralValue
+		d.ChallengePoolIntegralValue = cv
 
 		err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
 		if err != nil {
@@ -810,7 +807,7 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 		return 0, nil
 	}
 
-	rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(d.LatestSuccessfulChallCreatedAt, conf.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("blobber penalty failed: %v", err)
 	}
@@ -898,16 +895,10 @@ func (d *BlobberAllocation) Offer() currency.Coin {
 // negative).
 func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin) {
-	logging.Logger.Info("Jayash delete", zap.Any("size", size), zap.Any("now", now), zap.Any("rdtu", rdtu), zap.Any("d", d), zap.Any("d.ChallengePoolIntegralValue", d.ChallengePoolIntegralValue), zap.Any("d.TotalBlobberChallengePoolValue", d.TotalBlobberChallengePoolValue))
+	logging.Logger.Info("Jayash delete", zap.Any("size", size), zap.Any("now", now), zap.Any("rdtu", rdtu), zap.Any("d", d), zap.Any("d.ChallengePoolIntegralValue", d.ChallengePoolIntegralValue))
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
-	challengePoolIntegralValue, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
-	totalBlobberChallengePoolValue, err := currency.MinusCoin(d.TotalBlobberChallengePoolValue, move)
-	if err != nil {
-		return
-	}
-	d.ChallengePoolIntegralValue = challengePoolIntegralValue
-	d.TotalBlobberChallengePoolValue = totalBlobberChallengePoolValue
+	d.ChallengePoolIntegralValue -= move
 	return
 }
 
@@ -917,7 +908,7 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // previous challenge time. And the DTU should be based on previous - current
 // challenge time.
 func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move currency.Coin, err error) {
-	move = currency.Coin((dtu / rdtu) * float64(d.TotalBlobberChallengePoolValue))
+	move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
 	cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
 		logging.Logger.Warn("challenge minus failed",

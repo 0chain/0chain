@@ -126,7 +126,7 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(latestFinalizedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
@@ -271,7 +271,7 @@ func (sc *StorageSmartContract) blobberPenalty(
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(latestSuccessfulChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber penalty failed: %v", err)
 	}

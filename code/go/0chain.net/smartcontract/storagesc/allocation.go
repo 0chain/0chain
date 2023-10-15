@@ -738,7 +738,6 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			err = alloc.moveToChallengePool(cp, ch.Value)
 			addedToCP += ch.Value
 
-			alloc.BlobberAllocs[i].TotalBlobberChallengePoolValue += ch.Value
 			alloc.BlobberAllocs[i].ChallengePoolIntegralValue += ch.Value
 			alloc.MovedToChallenge += ch.Value
 			totalChanges += int(changeValueInInt64)
@@ -746,7 +745,6 @@ func (sc *StorageSmartContract) adjustChallengePool(
 			err = alloc.moveFromChallengePool(cp, ch.Value)
 			removedFromCP += ch.Value
 
-			alloc.BlobberAllocs[i].TotalBlobberChallengePoolValue -= ch.Value
 			alloc.BlobberAllocs[i].ChallengePoolIntegralValue -= ch.Value
 			alloc.MovedBack += ch.Value
 			totalChanges -= int(changeValueInInt64)
