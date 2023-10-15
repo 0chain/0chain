@@ -1088,6 +1088,9 @@ func (sa *StorageAllocation) moveToChallengePool(
 	cp *challengePool,
 	value currency.Coin,
 ) error {
+
+	logging.Logger.Info("Jayash move to challenge pool", zap.Any("challenge pool", cp.Balance), zap.Any("value", value))
+
 	if cp == nil {
 		return errors.New("invalid challenge pool")
 	}
@@ -1105,6 +1108,8 @@ func (sa *StorageAllocation) moveToChallengePool(
 	} else {
 		sa.WritePool = writePool
 	}
+
+	logging.Logger.Info("Jayash move to challenge pool", zap.Any("challenge pool", cp.Balance), zap.Any("value", value))
 
 	return nil
 }
