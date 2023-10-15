@@ -1270,8 +1270,6 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 		blobberClient := testGetBlobber(blobs, alloc, i)
 		require.NotNil(t, blobberClient)
 
-		fmt.Println(tp)
-
 		_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
 
 		blobber, err := ssc.getBlobber(blobberClient.id, balances)

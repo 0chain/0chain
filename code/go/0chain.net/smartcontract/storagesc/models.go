@@ -1088,7 +1088,6 @@ func (sa *StorageAllocation) moveToChallengePool(
 	cp *challengePool,
 	value currency.Coin,
 ) error {
-
 	if cp == nil {
 		return errors.New("invalid challenge pool")
 	}
@@ -1114,7 +1113,6 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	cp *challengePool,
 	value currency.Coin,
 ) error {
-
 	if cp == nil {
 		return errors.New("invalid challenge pool")
 	}
@@ -1134,7 +1132,6 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	} else {
 		sa.WritePool = writePool
 	}
-
 	return nil
 }
 
