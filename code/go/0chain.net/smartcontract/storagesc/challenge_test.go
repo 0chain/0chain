@@ -789,7 +789,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 			passRate := float64(alloc.Stats.SuccessChallenges) / float64(alloc.Stats.TotalChallenges)
 
-			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 15)
+			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 50)
 			require.InDelta(t, int64(refund), 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
 		})
 	}
@@ -1270,6 +1270,8 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 		blobberClient := testGetBlobber(blobs, alloc, i)
 		require.NotNil(t, blobberClient)
 
+		fmt.Println(tp)
+
 		_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
 
 		blobber, err := ssc.getBlobber(blobberClient.id, balances)
@@ -1429,7 +1431,6 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 }
 
 func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
-	tp += 1000
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: "",

@@ -808,6 +808,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	changeSize := commitConnection.WriteMarker.Size
 
 	if blobAlloc.LatestFinalizedChallCreatedAt == alloc.StartTime {
+		fmt.Println("Latest finalized challenge created at is equal to allocation start time", blobAlloc.LatestFinalizedChallCreatedAt, alloc.StartTime, commitConnection.WriteMarker.Timestamp)
 		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
 	}
 
