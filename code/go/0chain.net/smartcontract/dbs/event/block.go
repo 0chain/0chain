@@ -12,25 +12,24 @@ import (
 type Block struct {
 	model.UpdatableModel
 
-	Hash                  string    `json:"hash" gorm:"uniqueIndex:idx_bhash"`
-	Version               string    `json:"version"`
-	CreationDate          int64     `json:"creation_date"`
-	Round                 int64     `json:"round" gorm:"index:idx_bround"`
-	MinerID               string    `json:"miner_id"`
-	RoundRandomSeed       int64     `json:"round_random_seed"`
-	MerkleTreeRoot        string    `json:"merkle_tree_root"`
-	StateHash             string    `json:"state_hash"`
-	ReceiptMerkleTreeRoot string    `json:"receipt_merkle_tree_root"`
-	NumTxns               int       `json:"num_txns"`
-	MagicBlockHash        string    `json:"magic_block_hash"`
-	PrevHash              string    `json:"prev_hash"`
-	Signature             string    `json:"signature"`
-	ChainId               string    `json:"chain_id"`
-	StateChangesCount     int       `json:"state_changes_count"`
-	RunningTxnCount       string    `json:"running_txn_count"`
-	RoundTimeoutCount     int       `json:"round_timeout_count"`
-	CreatedAt             time.Time `json:"created_at"`
-	IsFinalised           bool      `json:"is_finalised"`
+	Hash                  string `json:"hash" gorm:"uniqueIndex:idx_bhash"`
+	Version               string `json:"version"`
+	CreationDate          int64  `json:"creation_date"`
+	Round                 int64  `json:"round" gorm:"index:idx_bround"`
+	MinerID               string `json:"miner_id"`
+	RoundRandomSeed       int64  `json:"round_random_seed"`
+	MerkleTreeRoot        string `json:"merkle_tree_root"`
+	StateHash             string `json:"state_hash"`
+	ReceiptMerkleTreeRoot string `json:"receipt_merkle_tree_root"`
+	NumTxns               int    `json:"num_txns"`
+	MagicBlockHash        string `json:"magic_block_hash"`
+	PrevHash              string `json:"prev_hash"`
+	Signature             string `json:"signature"`
+	ChainId               string `json:"chain_id"`
+	StateChangesCount     int    `json:"state_changes_count"`
+	RunningTxnCount       string `json:"running_txn_count"`
+	RoundTimeoutCount     int    `json:"round_timeout_count"`
+	IsFinalised           bool   `json:"is_finalised"`
 }
 
 func (edb *EventDb) GetRoundFromTime(at time.Time, asc bool) (int64, error) {
@@ -91,7 +90,6 @@ func (edb *EventDb) GetBlocksByBlockNumbers(start, end int64, limit common.Pagin
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").
 		Where("round >= ? AND round < ?", start, end).
-		Where("is_finalised = ?", true).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
@@ -104,7 +102,6 @@ func (edb *EventDb) GetBlocksByBlockNumbers(start, end int64, limit common.Pagin
 func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").
-		Where("is_finalised = ?", true).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
