@@ -26,7 +26,6 @@ func blockToBlockEvent(block *Block) *event.Block {
 		StateChangesCount:     block.StateChangesCount,
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
-		IsFinalised:           block.IsBlockFinalised(),
 	}
 }
 
