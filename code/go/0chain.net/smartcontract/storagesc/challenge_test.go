@@ -1552,7 +1552,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx, allocationId)
+	err = ssc.blobberReward(allocation, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}
