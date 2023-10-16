@@ -22,18 +22,22 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Get Branch
+    - name: Git clone 0chain
       id: get_branch
       run: |
-        if [[ -n "${{ inputs.branchname }}" ]]; then
-           BRANCH="${{ inputs.branchname }}"
-           echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
-        else        
-           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-           echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
+        git clone https://github.com/0chain/0chain.git
+        cd 0chain
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        BRANCH="${{ inputs.branchname }}"
+        if [[ $BRANCH -eq "" ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=BRANCH::${BRANCH}
         fi
+        echo "Branch name is ${BRANCH}"
+        git checkout ${BRANCH}
+
     - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:

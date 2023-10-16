@@ -22,18 +22,22 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Get Branch
+    - name: Git clone 0chain
       id: get_branch
       run: |
-        if [[ -n "${{ inputs.branchname }}" ]]; then
-           BRANCH="${{ inputs.branchname }}"
-           echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
-        else        
-           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-           echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
+        git clone https://github.com/0chain/0chain.git
+        cd 0chain
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        BRANCH="${{ inputs.branchname }}"
+        if [[ $BRANCH -eq "" ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=BRANCH::${BRANCH}
         fi
+        echo "Branch name is ${BRANCH}"
+        git checkout ${BRANCH}
+
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -124,7 +128,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS FAILED on $(echo ${BRANCH})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR FAULT_TOLERANCE TEST FAILED ⚠️",
@@ -134,7 +138,7 @@ jobs:
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS FAILED on $(echo ${BRANCH})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
@@ -144,7 +148,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS PASSING on $(echo ${BRANCH})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR FAULT_TOLERANCE TESTS PASSED ✅",
@@ -154,4 +158,4 @@ jobs:
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS ARE PASSING on $(echo ${BRANCH})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
