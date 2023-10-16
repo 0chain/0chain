@@ -84,7 +84,7 @@ jobs:
         cd 0chain
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         CHAIN_BRANCH="${{ inputs.chain_branch }}"
-        if [[ $CHAIN_BRANCH -eq "" ]]; then
+        if [[ -z $CHAIN_BRANCH -eq "" ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -132,7 +132,7 @@ jobs:
         cd token_bridge_authserver
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         AUTH_BRANCH="${{ inputs.auth_branch }}"
-        if [[ $AUTH_BRANCH -eq "" ]]; then
+        if [[ -z $AUTH_BRANCH ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -147,7 +147,7 @@ jobs:
         cd zboxcli
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
-        if [[ $ZBOXCLI_BRANCH -eq "" ]]; then
+        if [[ -z $ZBOXCLI_BRANCH ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -162,7 +162,7 @@ jobs:
         cd zwalletcli
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
-        if [[ $ZWALLETCLI_BRANCH -eq "" ]]; then
+        if [[ -z $ZWALLETCLI_BRANCH ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
