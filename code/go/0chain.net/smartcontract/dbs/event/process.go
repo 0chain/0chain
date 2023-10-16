@@ -375,25 +375,23 @@ func (edb *EventDb) WorkAggregates(
 	gSnapshot *Snapshot,
 	blockEvents BlockEvents,
 ) (*Snapshot, error) {
-	if isNotAddBlockEvent(blockEvents) {
-		var err error
-		gSnapshot, err = updateSnapshots(gSnapshot, blockEvents, edb)
-		if err != nil {
-			logging.Logger.Error("snapshot could not be processed",
-				zap.Int64("round", blockEvents.round),
-				zap.String("block", blockEvents.block),
-				zap.Int("block size", blockEvents.blockSize),
-				zap.Error(err),
-			)
-			return nil, err
-		}
-		err = edb.updateUserAggregates(&blockEvents)
-		if err != nil {
-			logging.Logger.Error("user aggregate could not be processed",
-				zap.Error(err),
-			)
-			return nil, err
-		}
+	var err error
+	gSnapshot, err = updateSnapshots(gSnapshot, blockEvents, edb)
+	if err != nil {
+		logging.Logger.Error("snapshot could not be processed",
+			zap.Int64("round", blockEvents.round),
+			zap.String("block", blockEvents.block),
+			zap.Int("block size", blockEvents.blockSize),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+	err = edb.updateUserAggregates(&blockEvents)
+	if err != nil {
+		logging.Logger.Error("user aggregate could not be processed",
+			zap.Error(err),
+		)
+		return nil, err
 	}
 	return gSnapshot, nil
 }
@@ -456,10 +454,6 @@ func (edb *EventDb) dropPartitions(round int64) {
 	if err := edb.dropPartition(round, "user_aggregates"); err != nil {
 		logging.Logger.Error("error dropping partition", zap.Error(err))
 	}
-}
-
-func isNotAddBlockEvent(es BlockEvents) bool {
-	return !(len(es.events) == 1 && es.events[0].Type == TypeChain && es.events[0].Tag == TagAddBlock)
 }
 
 func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, error) {
@@ -691,12 +685,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addTransactions(*txns)
-	case TagAddBlock:
-		block, ok := fromEvent[Block](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addOrUpdateBlock(*block)
 	case TagFinalizeBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {
