@@ -112,14 +112,17 @@ jobs:
     - name: Git clone blobber
       run: |
         git clone https://github.com/0chain/blobber.git
+        git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
     - name: Git clone zboxcli
       run: |
         git clone https://github.com/0chain/zboxcli.git
+        git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
     - name: Git clone zwalletcli
       run: |
         git clone https://github.com/0chain/zwalletcli.git
+        git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
     - name: Git clone 0dns
       run: |
