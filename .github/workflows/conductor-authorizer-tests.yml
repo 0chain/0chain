@@ -115,7 +115,9 @@ jobs:
 
       - name: 0box Patching
         run: |
-          cd 0box && ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+          cd 0box
+          chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+          ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
 
       - name: Build 0box Docker Image For Integration Test.
         run: |
