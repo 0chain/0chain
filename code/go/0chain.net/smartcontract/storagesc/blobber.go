@@ -802,12 +802,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	changeSize := commitConnection.WriteMarker.Size
-
-	if blobAlloc.LatestFinalizedChallCreatedAt == alloc.StartTime {
-		fmt.Println("Latest finalized challenge created at is equal to allocation start time", blobAlloc.LatestFinalizedChallCreatedAt, alloc.StartTime, commitConnection.WriteMarker.Timestamp)
+	if alloc.Stats.UsedSize == 0 {
 		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
 	}
+
+	changeSize := commitConnection.WriteMarker.Size
 
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
