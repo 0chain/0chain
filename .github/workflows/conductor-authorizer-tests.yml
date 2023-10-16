@@ -84,7 +84,7 @@ jobs:
         cd 0chain
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         CHAIN_BRANCH="${{ inputs.chain_branch }}"
-        if [[ -z $CHAIN_BRANCH -eq "" ]]; then
+        if [[ $CHAIN_BRANCH -eq "" ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -132,7 +132,7 @@ jobs:
         cd token_bridge_authserver
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         AUTH_BRANCH="${{ inputs.auth_branch }}"
-        if [[ -z $AUTH_BRANCH ]]; then
+        if [[ $AUTH_BRANCH -eq "" ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -147,7 +147,7 @@ jobs:
         cd zboxcli
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
-        if [[ -z $ZBOXCLI_BRANCH ]]; then
+        if [[ $ZBOXCLI_BRANCH -eq "" ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -162,7 +162,7 @@ jobs:
         cd zwalletcli
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
-        if [[ -z $ZWALLETCLI_BRANCH ]]; then
+        if [[ $ZWALLETCLI_BRANCH -eq "" ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -290,8 +290,7 @@ jobs:
               }
           ]
           }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
+          # curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
