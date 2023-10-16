@@ -5,8 +5,21 @@ on:
     - cron: '0 10 * * *'
   workflow_dispatch:
       inputs:
-        branchname:
-          description: 'enter your branch name'
+        chain_branch:
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
+        auth_branch:
+          description: 'Input branch for authorizer repo'
+          default: ''
+          required: false
+        zboxcli_branch:
+          description: 'Input branch for zboxcli repo'
+          default: ''
+          required: false
+        zwalletcli_branch:
+          description: 'Input branch for zwalletcli repo'
+          default: ''
           required: false
 
 jobs:
@@ -50,7 +63,7 @@ jobs:
     # - name: Get Branch
     #   id: get_branch
     #   run: |
-    #     BRANCH="${{ inputs.branchname }}"
+    #     BRANCH="${{ inputs.chain_branch }}"
     #     if [[ $BRANCH -eq "" ]]; then
     #        echo "inside"
     #        BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
@@ -66,20 +79,19 @@ jobs:
         make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
-      id: get_branch
       run: |
         git clone https://github.com/0chain/0chain.git
         cd 0chain
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
-        BRANCH="${{ inputs.branchname }}"
-        if [[ $BRANCH -eq "" ]]; then
+        CHAIN_BRANCH="${{ inputs.chain_branch }}"
+        if [[ $CHAIN_BRANCH -eq "" ]]; then
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
-          BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo ::set-output name=BRANCH::${BRANCH}
+          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
         fi
-        echo "Branch name is ${BRANCH}"
-        git checkout ${BRANCH}
+        echo "Branch name is ${CHAIN_BRANCH}"
+        git checkout ${CHAIN_BRANCH}
 
     - name: Docker Init Setup.
       run: |
@@ -118,19 +130,46 @@ jobs:
       run: |
         git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
         cd token_bridge_authserver
-        git checkout ${{ steps.get_branch.outputs.BRANCH }}
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        AUTH_BRANCH="${{ inputs.auth_branch }}"
+        if [[ $AUTH_BRANCH -eq "" ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=AUTH_BRANCH::${AUTH_BRANCH}
+        fi
+        echo "Branch name is ${AUTH_BRANCH}"
+        git checkout ${AUTH_BRANCH}
 
     - name: Git clone zboxcli
       run: |
         git clone https://github.com/0chain/zboxcli.git
         cd zboxcli
-        git checkout ${{ steps.get_branch.outputs.BRANCH }}
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
+        if [[ $ZBOXCLI_BRANCH -eq "" ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZBOXCLI_BRANCH::${ZBOXCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZBOXCLI_BRANCH}"
+        git checkout ${ZBOXCLI_BRANCH}
 
     - name: Git clone zwalletcli
       run: |
         git clone https://github.com/0chain/zwalletcli.git
         cd zwalletcli
-        git checkout ${{ steps.get_branch.outputs.BRANCH }}
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
+        if [[ $ZWALLETCLI_BRANCH -eq "" ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZWALLETCLI_BRANCH::${ZWALLETCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZWALLETCLI_BRANCH}"
+        git checkout ${ZWALLETCLI_BRANCH}
 
     - name: Git clone 0dns
       run: |
