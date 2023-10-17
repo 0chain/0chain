@@ -817,25 +817,25 @@ func TestRollBack(t *testing.T) {
 	blobberClient := testGetBlobber(blobs, alloc, 0)
 	require.NotNil(t, blobberClient)
 
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 0, tp, blobberClient.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 0, tp, blobberClient.id, ssc, "root-1")
 
 	cp, err := ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 	require.Equal(t, 0, int(cp.Balance))
 
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 100*1024*1024, tp, blobberClient.id, ssc, "root-1")
 
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
-	require.Greater(t, 0, int(cp.Balance))
+	require.Equal(t, 4882812500, int(cp.Balance))
 
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", -100*1024*1024, tp, blobberClient.id, ssc)
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 0, tp, blobberClient.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-3", -100*1024*1024, tp, blobberClient.id, ssc, "root-2")
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-3", 0, tp, blobberClient.id, ssc, "root-3")
 
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
-	require.Greater(t, 0, int(cp.Balance))
+	require.Equal(t, 4882812500, int(cp.Balance))
 }
 
 func TestBlobberPenalty(t *testing.T) {
@@ -1313,7 +1313,7 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 		blobberClient := testGetBlobber(blobs, alloc, i)
 		require.NotNil(t, blobberClient)
 
-		_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
+		_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
 
 		blobber, err := ssc.getBlobber(blobberClient.id, balances)
 		require.NoError(t, err)
@@ -1371,7 +1371,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	b2 := testGetBlobber(blobs, alloc, 1)
 	require.NotNil(t, b2)
 
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, b2.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, b2.id, ssc, "")
 
 	b3 := testGetBlobber(blobs, alloc, 2)
 	require.NotNil(t, b3)
@@ -1385,7 +1385,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	const allocRoot = "alloc-root-1"
 
 	// write 100MB
-	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc, "")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
@@ -1471,13 +1471,13 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 	return tp
 }
 
-func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
+func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract, prevAllocRoot string) (*transaction.Transaction, int64) {
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
-		PrevAllocationRoot: "",
+		PrevAllocationRoot: prevAllocRoot,
 		WriteMarker: &WriteMarker{
 			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: "",
+			PreviousAllocationRoot: prevAllocRoot,
 			AllocationID:           allocID,
 			//Size:                   100 * 1024 * 1024, // 100 MB
 			Size:      size,
