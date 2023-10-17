@@ -305,7 +305,7 @@ tests:
        - start: ['0box']
        - sleep: "20s"
        - wait_round:
-           shift: 100000
+           shift: 50
        - command:
            name: "register_authorizer"
        - wait_add:
