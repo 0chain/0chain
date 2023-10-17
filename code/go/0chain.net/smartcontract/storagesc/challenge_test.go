@@ -795,6 +795,49 @@ func TestCompleteRewardFlow(t *testing.T) {
 	}
 }
 
+func TestRollBack(t *testing.T) {
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, true)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
+
+		// no owner
+		err error
+	)
+
+	// new allocation
+	tp += 1000
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	blobberClient := testGetBlobber(blobs, alloc, 0)
+	require.NotNil(t, blobberClient)
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 0, tp, blobberClient.id, ssc)
+
+	cp, err := ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 0, int(cp.Balance))
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Greater(t, 0, int(cp.Balance))
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", -100*1024*1024, tp, blobberClient.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 0, tp, blobberClient.id, ssc)
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Greater(t, 0, int(cp.Balance))
+}
+
 func TestBlobberPenalty(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = currency.Coin(73000000)
