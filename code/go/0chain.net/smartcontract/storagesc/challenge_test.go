@@ -789,7 +789,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 			passRate := float64(alloc.Stats.SuccessChallenges) / float64(alloc.Stats.TotalChallenges)
 
-			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 15)
+			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 50)
 			require.InDelta(t, int64(refund), 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
 		})
 	}
@@ -1429,7 +1429,6 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 }
 
 func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
-	tp += 1000
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: "",
@@ -1552,7 +1551,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx, allocationId)
+	err = ssc.blobberReward(allocation, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}

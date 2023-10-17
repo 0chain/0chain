@@ -1029,7 +1029,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 					AllocationID:           allocID,
 					Size:                   100 * 1024 * 1024, // 100 MB
 					BlobberID:              b.id,
-					Timestamp:              common.Timestamp(tp),
+					Timestamp:              alloc.StartTime,
 					ClientID:               client.id,
 				},
 			}
@@ -1130,7 +1130,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, spTotal)
+			require.EqualValues(t, 10e10, float64(spTotal))
 		}
 
 		// no rewards for the blobber
