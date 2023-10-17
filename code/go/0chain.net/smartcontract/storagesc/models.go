@@ -895,10 +895,6 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
-	if move > d.ChallengePoolIntegralValue {
-		move = d.ChallengePoolIntegralValue
-	}
-
 	d.ChallengePoolIntegralValue -= move
 	return
 }
