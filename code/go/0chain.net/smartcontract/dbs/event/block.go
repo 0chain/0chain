@@ -29,7 +29,6 @@ type Block struct {
 	StateChangesCount     int    `json:"state_changes_count"`
 	RunningTxnCount       string `json:"running_txn_count"`
 	RoundTimeoutCount     int    `json:"round_timeout_count"`
-	IsFinalised           bool   `json:"is_finalised"`
 }
 
 func (edb *EventDb) GetRoundFromTime(at time.Time, asc bool) (int64, error) {
