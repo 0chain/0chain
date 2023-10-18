@@ -871,10 +871,10 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		}
 		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Description, nd.Description)
 		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Info.BuildTag, nd.Info.BuildTag)
-		if nd.Info.StateMissingNodes < 0 {
+		if nd.Info.GetStateMissingNodes() < 0 {
 			fmt.Fprintf(w, "<td>pending</td>")
 		} else {
-			fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.StateMissingNodes)
+			fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.GetStateMissingNodes())
 		}
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.MinersMedianNetworkTime)
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.AvgBlockTxns)

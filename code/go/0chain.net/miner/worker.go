@@ -302,6 +302,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		// Record the number of missing nodes and the time it took to acquire them
 		mc.MissingNodesStat.Counter.Inc(int64(len(missingNodes)))
 		mc.MissingNodesStat.Timer.UpdateSince(start)
+		node.Self.Underlying().Info.SetStateMissingNodes(int64(len(missingNodes)))
 
 		logging.Logger.Debug("sync all missing nodes - finish load all missing nodes",
 			zap.Int("num", len(missingNodes)))
