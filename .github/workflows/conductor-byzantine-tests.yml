@@ -77,7 +77,7 @@ jobs:
         fi
         echo "BRANCH_OUT=$CHAIN_BRANCH" >>$GITHUB_OUTPUT
         echo "Branch name is ${CHAIN_BRANCH}"
-        git checkout ${CHAIN_BRANCH}
+        # git checkout ${CHAIN_BRANCH}
 
     # - name: Docker Init Setup.
     #   run: |
