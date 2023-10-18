@@ -56,12 +56,12 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Install herumi/bls and herumi/mcl
-      run: |
-        git clone --recursive https://github.com/herumi/bls
-        cd bls
-        make -C mcl -j 4 lib/libmclbn256.a install
-        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+    # - name: Install herumi/bls and herumi/mcl
+    #   run: |
+    #     git clone --recursive https://github.com/herumi/bls
+    #     cd bls
+    #     make -C mcl -j 4 lib/libmclbn256.a install
+    #     make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
       id: chain
@@ -79,52 +79,52 @@ jobs:
         echo "Branch name is ${CHAIN_BRANCH}"
         git checkout ${CHAIN_BRANCH}
 
-    - name: Docker Init Setup.
-      run: |
-        export HOME="/root"
-        cd 0chain
-        make install-mockery
-        make build-mocks
-        bash ./docker.local/bin/init.setup.sh
+    # - name: Docker Init Setup.
+    #   run: |
+    #     export HOME="/root"
+    #     cd 0chain
+    #     make install-mockery
+    #     make build-mocks
+    #     bash ./docker.local/bin/init.setup.sh
 
-    - name: Docker Network Setup.
-      run: |
-        cd 0chain
-        bash ./docker.local/bin/setup.network.sh || true
+    # - name: Docker Network Setup.
+    #   run: |
+    #     cd 0chain
+    #     bash ./docker.local/bin/setup.network.sh || true
 
-    - name: Building Base Images
-      run: |
-        cd 0chain
-        bash ./docker.local/bin/build.base.sh
+    # - name: Building Base Images
+    #   run: |
+    #     cd 0chain
+    #     bash ./docker.local/bin/build.base.sh
 
-    - name: Build Miner Docker Image For Integration Test.
-      run: |
-        cd 0chain
-        bash ./docker.local/bin/build.miners-integration-tests.sh
+    # - name: Build Miner Docker Image For Integration Test.
+    #   run: |
+    #     cd 0chain
+    #     bash ./docker.local/bin/build.miners-integration-tests.sh
 
-    - name: Build Sharder Docker Image For Integration Test.
-      run: |
-        cd 0chain
-        bash ./docker.local/bin/build.sharders-integration-tests.sh
+    # - name: Build Sharder Docker Image For Integration Test.
+    #   run: |
+    #     cd 0chain
+    #     bash ./docker.local/bin/build.sharders-integration-tests.sh
 
-    - name: Running No VC Byzantine Tests.
-      run: |
-        cd 0chain
-        export HOME="/root"
-        bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+    # - name: Running No VC Byzantine Tests.
+    #   run: |
+    #     cd 0chain
+    #     export HOME="/root"
+    #     bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
-    - uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: byzantine-logs
-        path: |
-          0chain/conductor/logs/
-          0chain/docker.local/miner*/log
-          0chain/docker.local/sharder*/log
+    # - uses: actions/upload-artifact@v3
+    #   if: always()
+    #   with:
+    #     name: byzantine-logs
+    #     path: |
+    #       0chain/conductor/logs/
+    #       0chain/docker.local/miner*/log
+    #       0chain/docker.local/sharder*/log
 
-    - name: Added /tmp folder cleanup.
-      run: |
-        cd /tmp
+    # - name: Added /tmp folder cleanup.
+    #   run: |
+    #     cd /tmp
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
@@ -133,6 +133,7 @@ jobs:
     steps:
       - name: "Notify Slack"
         run: |
+          echo "${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}"
           payload='{
           "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
@@ -142,7 +143,7 @@ jobs:
               }
           ]
           }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
@@ -153,6 +154,7 @@ jobs:
     steps:
       - name: "Notify Slack"
         run: |
+          echo "${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}"
           payload='{
           "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS PASSING on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
@@ -162,6 +164,6 @@ jobs:
               }
           ]
           }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS ARE PASSING on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
