@@ -818,20 +818,20 @@ func TestRollBack(t *testing.T) {
 	require.NotNil(t, blobberClient)
 
 	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 0, tp, blobberClient.id, ssc, "root-1")
+	_, tp = testCommitWrite(t, balances, client, allocID, "", 0, tp, blobberClient.id, ssc, "")
 
 	cp, err := ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 	require.Equal(t, 0, int(cp.Balance))
 
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 100*1024*1024, tp, blobberClient.id, ssc, "root-1")
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 100*1024*1024, tp, blobberClient.id, ssc, "")
 
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 	require.Equal(t, 4882812500, int(cp.Balance))
 
 	_, tp = testCommitWrite(t, balances, client, allocID, "root-3", -100*1024*1024, tp, blobberClient.id, ssc, "root-2")
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-3", 0, tp, blobberClient.id, ssc, "root-3")
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 0, tp, blobberClient.id, ssc, "root-2")
 
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
