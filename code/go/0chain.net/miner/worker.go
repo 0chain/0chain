@@ -338,6 +338,8 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
 			zap.Int("num", batchSize),
 			zap.Int("remaining", len(missingNodes)-end))
+
+		node.Self.Underlying().Info.SetStateMissingNodes(int64(len(missingNodes) - end))
 		tk.Reset(2 * time.Second)
 	}
 
