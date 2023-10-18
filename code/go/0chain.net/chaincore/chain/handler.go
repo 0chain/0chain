@@ -524,12 +524,11 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "State missing nodes")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	ps := c.GetPruneStats()
-	if ps != nil {
-		fmt.Fprintf(w, "%v", node.Self.Underlying().Info.GetStateMissingNodes())
-	} else {
-		fmt.Fprintf(w, "pending")
+	var missingNodes int64
+	if !node.Self.IsSharder() {
+		missingNodes = node.Self.Underlying().Info.GetStateMissingNodes()
 	}
+	fmt.Fprintf(w, "%v", missingNodes)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
