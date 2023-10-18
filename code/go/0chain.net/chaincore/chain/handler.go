@@ -526,7 +526,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td class='number'>")
 	ps := c.GetPruneStats()
 	if ps != nil {
-		fmt.Fprintf(w, "%v", ps.MissingNodes)
+		fmt.Fprintf(w, "%v", node.Self.Underlying().Info.GetStateMissingNodes())
 	} else {
 		fmt.Fprintf(w, "pending")
 	}
@@ -820,7 +820,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	lfb := c.GetLatestFinalizedBlock()
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td rowspan='2'>Set Index</td><td rowspan='2'>Node</td><td rowspan='2'>Sent</td><td rowspan='2'>Send Errors</td><td rowspan='2'>Received</td><td rowspan='2'>Last Active</td><td colspan='3' style='text-align:center'>Message Time</td><td rowspan='2'>Description</td><td colspan='4' style='text-align:center'>Remote Data</td></tr>")
-	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
 	nodes := np.CopyNodes()
 	sort.SliceStable(nodes, func(i, j int) bool {
 		return nodes[i].SetIndex < nodes[j].SetIndex
@@ -871,11 +871,11 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		}
 		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Description, nd.Description)
 		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Info.BuildTag, nd.Info.BuildTag)
-		if nd.Info.GetStateMissingNodes() < 0 {
-			fmt.Fprintf(w, "<td>pending</td>")
-		} else {
-			fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.GetStateMissingNodes())
-		}
+		// if nd.Info.GetStateMissingNodes() < 0 {
+		// 	fmt.Fprintf(w, "<td>pending</td>")
+		// } else {
+		// 	fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.GetStateMissingNodes())
+		// }
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.MinersMedianNetworkTime)
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.AvgBlockTxns)
 		fmt.Fprintf(w, "</tr>")
