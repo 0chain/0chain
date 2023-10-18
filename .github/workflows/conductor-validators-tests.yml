@@ -11,7 +11,7 @@ on:
         default: ''
         required: false
       blobber_branch:
-        description: 'Input branch for authorizer repo'
+        description: 'Input branch for blobber repo'
         default: ''
         required: false
       zboxcli_branch:
