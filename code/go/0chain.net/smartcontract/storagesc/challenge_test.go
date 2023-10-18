@@ -817,12 +817,29 @@ func TestRollBack(t *testing.T) {
 	blobberClient := testGetBlobber(blobs, alloc, 0)
 	require.NotNil(t, blobberClient)
 
+	wpBalance := alloc.WritePool
+
 	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
-	_, tp = testCommitWrite(t, balances, client, allocID, "", 0, tp, blobberClient.id, ssc, "")
 
 	cp, err := ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
+	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "", 0, tp, blobberClient.id, ssc, "")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
 	require.Equal(t, 0, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
 
 	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 100*1024*1024, tp, blobberClient.id, ssc, "")
 
@@ -830,17 +847,32 @@ func TestRollBack(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 4882812500, int(cp.Balance))
 
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
 	_, tp = testCommitWrite(t, balances, client, allocID, "root-3", -100*1024*1024, tp, blobberClient.id, ssc, "root-2")
 
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 	require.Equal(t, 0, int(cp.Balance))
 
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
 	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 0, tp, blobberClient.id, ssc, "root-2")
 
 	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
 }
 
 func TestBlobberPenalty(t *testing.T) {
