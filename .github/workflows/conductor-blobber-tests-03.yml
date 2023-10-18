@@ -134,7 +134,7 @@ jobs:
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
     - name: Git clone blobber
-      id: blobber_branch
+      id: blobber
       run: |
         git clone https://github.com/0chain/blobber.git
         cd blobber
