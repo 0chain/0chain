@@ -103,6 +103,16 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 					return nil
 				}
 			}
+
+			if b.RoundRank == 0 {
+				// highest rank, finalize it
+				logging.Logger.Debug("finalize block - LFB from highest rank",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+				)
+				prevNotarizedBlocks = append(prevNotarizedBlocks, b)
+				break
+			}
 			if isIn(prevNotarizedBlocks, b.PrevHash) {
 				continue
 			}
@@ -119,7 +129,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 	}
 
 	fb := notarizedBlocks[0]
-	if fb.Round == r.GetRoundNumber() {
+	if fb.Round == r.GetRoundNumber() && fb.RoundRank != 0 {
 		return nil
 	}
 	return fb
@@ -323,8 +333,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			zap.String("lfb block", lfb.Hash))
 		for idx := range frchain {
 			fb := frchain[len(frchain)-1-idx]
-			if roundNumber-fb.Round < 3 {
-				// finalize the block only when it has at least 3 confirmation
+			if fb.RoundRank > 0 && roundNumber-fb.Round < 3 {
+				// if the block is not the highest ranked, finalize the block only when it has at least 3 confirmation
 				continue
 			}
 
