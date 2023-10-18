@@ -114,7 +114,7 @@ func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tabl
 }
 
 func (edb *EventDb) ReplicateProviderAggregates(round int64, limit int, offset int, provider string, scanInto interface{}) error {
-	query := fmt.Sprintf("SELECT * FROM %v_aggregates WHERE round >= %v ORDER BY round, %v_id ASC LIMIT %v OFFSET %v", provider, round, provider, limit, offset)
+	query := fmt.Sprintf("SELECT * FROM %v_aggregates WHERE round > %v ORDER BY round, %v_id ASC LIMIT %v OFFSET %v", provider, round, provider, limit, offset)
 	result := edb.Store.Get().
 		Raw(query).Scan(scanInto)
 	if result.Error != nil {
