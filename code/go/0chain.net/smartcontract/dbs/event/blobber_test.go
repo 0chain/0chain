@@ -327,8 +327,9 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			BaseURL:    "https://blobber.zero",
 			ReadPrice:  currency.Coin(50), // between 1 and 100
 			WritePrice: currency.Coin(50), // between 1 and 100
-			Capacity:   5000,
-			Allocated:  3000, // Capacity - Allocated = 2000 > 1000 (AllocationSize)
+			Capacity:   5000000000000,
+			Allocated:  0,
+			LastHealthCheck: common.Timestamp(time.Now().Unix()), // Capacity - Allocated = 2000 > 1000 (AllocationSize)
 		},
 		// Blobber 2 (Matched with the AllocationQuery)
 		{
@@ -338,8 +339,8 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			BaseURL:    "https://blobber.one",
 			ReadPrice:  currency.Coin(20),
 			WritePrice: currency.Coin(80),
-			Capacity:   7000,
-			Allocated:  4000,
+			Capacity:   700000,
+			Allocated:  300000,
 		},
 		// Blobber 3 (Matched with the AllocationQuery)
 		{
@@ -349,8 +350,8 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			BaseURL:    "https://blobber.two",
 			ReadPrice:  currency.Coin(90),
 			WritePrice: currency.Coin(10),
-			Capacity:   1100,
-			Allocated:  50,
+			Capacity:   11000,
+			Allocated:  50000,
 		},
 		// Blobber 4 (Not matched, ReadPrice is too low)
 		{
@@ -373,10 +374,13 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			WritePrice: currency.Coin(150),
 			Capacity:   3000,
 			Allocated:  1500,
+
 			//... other required fields ...
 		},
 	}
 	// Adding 5 blobbers, 3 will have parameters in line 2 shall not have and then the 2 will help me complete the function.
+
+
 
 	for _, blobber := range blobbers {
 		if err := edb.Store.Get().Create(&blobber).Error; err != nil {
@@ -384,19 +388,20 @@ func TestGetBlobbersFromParams(t *testing.T) {
 		}
 	}
 
+
 	// Creating curated Query
 	allocation := AllocationQuery{
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
-		}{1, 100},
+		}{1, 1e13},
 		WritePriceRange: struct {
 			Min int64
 			Max int64
-		}{1, 100},
-		AllocationSize:     1000,
+		}{1, 1e13},
+		AllocationSize:     1*1024*1024*1024,
 		AllocationSizeInGB: 1.0,
-		NumberOfDataShards: 10,
+		NumberOfDataShards: 1,
 	}
 
 	pagination := common2.Pagination{
@@ -404,6 +409,9 @@ func TestGetBlobbersFromParams(t *testing.T) {
 		Offset:       0,
 		IsDescending: true,
 	}
+
+	fmt.Println("Here are your blobbers: ")
+	fmt.Println(edb.GetBlobbers(pagination))
 
 	now := common.Timestamp(time.Now().Unix())
 	healthCheckPeriod := 1 * time.Hour
@@ -419,3 +427,6 @@ func TestGetBlobbersFromParams(t *testing.T) {
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
 // Get the basic understading of SQL then use docker to see whats inside. 
+
+// So basically, I am trying to say, lets say we have n blobbers the sum of them together is 1.2 gb
+// Now, if we put up a allocation query as asking for 1.1 gb so will we get error, 
