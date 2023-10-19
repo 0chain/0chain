@@ -117,7 +117,7 @@ jobs:
         run: |
           cd 0box
           chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
-          ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+          ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }}
 
       - name: Build 0box Docker Image For Integration Test.
         run: |
