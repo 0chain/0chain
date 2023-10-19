@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"0chain.net/core/common"
-	"0chain.net/core/config"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -311,11 +310,12 @@ func TestGetBlobbersFromParams(t *testing.T) {
 	// testSettings := config.DbSettings{}
 
 	// edb, err := NewInMemoryEventDb(testConfig, testSettings)
-	edb, err := GetTestEventDB(t)
+	edb, clean := GetTestEventDB(t)
+	defer clean()
 
-	if err != nil {
-		t.Fatalf("failed to initialize in-memory DB: %v", err)
-	}
+	// if err != nil {
+	// 	t.Fatalf("failed to initialize in-memory DB: %v", err)
+	// }
 	// Created a mock Database now.
 
 	blobbers := []Blobber{
@@ -386,7 +386,6 @@ func TestGetBlobbersFromParams(t *testing.T) {
 
 	// Creating curated Query
 	allocation := AllocationQuery{
-		MaxOfferDuration: 24 * time.Hour,
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
@@ -419,3 +418,4 @@ func TestGetBlobbersFromParams(t *testing.T) {
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
+// Get the basic understading of SQL then use docker to see whats inside. 
