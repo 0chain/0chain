@@ -27,6 +27,7 @@ tests:
       - sleep: "20s"
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
@@ -74,6 +75,7 @@ tests:
       - sleep: "20s"
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock

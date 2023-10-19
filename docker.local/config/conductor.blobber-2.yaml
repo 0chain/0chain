@@ -42,10 +42,11 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
+          validators: ['validator-1', 'validator-2']
           timeout: '15m'
+          start: true
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_pour_allocation'
@@ -94,10 +95,11 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
+          validators: ['validator-1', 'validator-2']
           timeout: '15m'
+          start: true
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_pour_allocation'
@@ -122,14 +124,16 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
+          validators: ['validator-1', 'validator-2']
           timeout: '5m'
-      - start: ['blobber-3', 'blobber-4']
+          start: true
       - wait_add:
           blobbers: ['blobber-3', 'blobber-4']
+          validators: ['validator-3', 'validator-4']
           timeout: '5m'
+          start: true
       - command:
           name: 'repair_allocation'
           timeout: '15m'
@@ -148,5 +152,3 @@ tests:
       - command:
           name: 'repair'
           timeout: '20m'
-
-...
