@@ -730,10 +730,14 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 		return 0, 0, common.NewError("challenge_penalty_on_finalization_error", err.Error())
 	}
 
+	logging.Logger.Info("challenge penalty paid", zap.Any("challenge_penalty_paid", challengePenaltyPaid), zap.Any("blobber_id", d.BlobberID))
+
 	challengeRewardPaid, err := d.challengeRewardOnFinalization(conf.TimeUnit, now, sp, cp, passRate, balances, alloc)
 	if err != nil {
 		return 0, 0, common.NewError("challenge_reward_on_finalization_error", err.Error())
 	}
+
+	logging.Logger.Info("challenge reward paid", zap.Any("challenge_reward_paid", challengeRewardPaid), zap.Any("blobber_id", d.BlobberID))
 
 	return challengeRewardPaid, challengePenaltyPaid, nil
 }
@@ -742,6 +746,10 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 	if now <= d.LatestFinalizedChallCreatedAt {
 		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
 		return 0, nil
+	}
+
+	if now > alloc.Expiration {
+		now = alloc.Expiration
 	}
 
 	payment := currency.Coin(0)
