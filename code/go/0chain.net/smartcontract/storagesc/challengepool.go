@@ -230,3 +230,11 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 
 	return
 }
+
+func (ssc *StorageSmartContract) deleteChallengePool(alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
+	if _, err = balances.DeleteTrieNode(challengePoolKey(ssc.ID, alloc.ID)); err != nil {
+		return fmt.Errorf("can't delete challenge pool: %v", err)
+	}
+
+	return nil
+}

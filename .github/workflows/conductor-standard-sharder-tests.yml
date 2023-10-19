@@ -5,6 +5,10 @@ on:
     # Runs everyday at 12:00 am
     - cron: '0 0 * * *'
   workflow_dispatch:
+      inputs:
+        branchname:
+          description: 'enter your branch name'
+          required: true
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -21,9 +25,15 @@ jobs:
     - name: Get Branch
       id: get_branch
       run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo "Branch name is ${BRANCH}"
+        if [[ -n "${{ inputs.branchname }}" ]]; then
+           BRANCH="${{ inputs.branchname }}"
+           echo ::set-output name=BRANCH::${BRANCH}
+           echo "Branch name is ${BRANCH}"
+        else        
+           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+           echo ::set-output name=BRANCH::${BRANCH}
+           echo "Branch name is ${BRANCH}"
+        fi
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -50,6 +60,13 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
     
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+
     - name: Docker Init Setup.
       run: |
         export HOME="/root"
@@ -91,8 +108,8 @@ jobs:
         name: standard-sharder-logs
         path: |
           conductor/logs/
-          docker.local/miner*
-          docker.local/sharder*
+          docker.local/miner*/log
+          docker.local/sharder*/log
 
     - name: Cleanup
       run: |
@@ -120,7 +137,7 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
+
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_SHARDER_STANDARD_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:

@@ -27,9 +27,10 @@ func selectBlobberForChallenge(
 	challengeBlobbersPartition *partitions.Partitions,
 	r *rand.Rand,
 	balances cstate.StateContextI,
+	conf *Config,
 ) (string, error) {
 
-	return selectRandomBlobber(selection, challengeBlobbersPartition, r, balances)
+	return selectRandomBlobber(selection, challengeBlobbersPartition, r, balances, conf)
 }
 
 func (sc *StorageSmartContract) challengePassed(

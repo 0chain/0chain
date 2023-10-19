@@ -125,8 +125,8 @@ func AddMockBlocks(
 				StateChangesCount:     33,
 				RunningTxnCount:       "mock running txn count",
 				RoundTimeoutCount:     0,
-				CreatedAt:             time.Now(),
 			}
+			block.CreatedAt = time.Now()
 			_ = eventDb.Store.Get().Create(&block)
 		}
 	}
