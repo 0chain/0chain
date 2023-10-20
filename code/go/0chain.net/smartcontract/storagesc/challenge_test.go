@@ -795,6 +795,86 @@ func TestCompleteRewardFlow(t *testing.T) {
 	}
 }
 
+func TestRollBack(t *testing.T) {
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, true)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
+
+		// no owner
+		err error
+	)
+
+	// new allocation
+	tp += 1000
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	blobberClient := testGetBlobber(blobs, alloc, 0)
+	require.NotNil(t, blobberClient)
+
+	wpBalance := alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
+
+	cp, err := ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "", 0, tp, blobberClient.id, ssc, "")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 0, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 100*1024*1024, tp, blobberClient.id, ssc, "")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-3", -100*1024*1024, tp, blobberClient.id, ssc, "root-2")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 0, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 0, tp, blobberClient.id, ssc, "root-2")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+}
+
 func TestBlobberPenalty(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = currency.Coin(73000000)
@@ -1270,7 +1350,7 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 		blobberClient := testGetBlobber(blobs, alloc, i)
 		require.NotNil(t, blobberClient)
 
-		_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc)
+		_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
 
 		blobber, err := ssc.getBlobber(blobberClient.id, balances)
 		require.NoError(t, err)
@@ -1328,7 +1408,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	b2 := testGetBlobber(blobs, alloc, 1)
 	require.NotNil(t, b2)
 
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, b2.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, b2.id, ssc, "")
 
 	b3 := testGetBlobber(blobs, alloc, 2)
 	require.NotNil(t, b3)
@@ -1342,7 +1422,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	const allocRoot = "alloc-root-1"
 
 	// write 100MB
-	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc, "")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
@@ -1428,13 +1508,13 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 	return tp
 }
 
-func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
+func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract, prevAllocRoot string) (*transaction.Transaction, int64) {
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
-		PrevAllocationRoot: "",
+		PrevAllocationRoot: prevAllocRoot,
 		WriteMarker: &WriteMarker{
 			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: "",
+			PreviousAllocationRoot: prevAllocRoot,
 			AllocationID:           allocID,
 			//Size:                   100 * 1024 * 1024, // 100 MB
 			Size:      size,
