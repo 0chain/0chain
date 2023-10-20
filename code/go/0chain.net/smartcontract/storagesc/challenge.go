@@ -843,6 +843,10 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			}
 		}
 
+		if len(blobbersSelected) == 0 {
+			return "", errors.New("no blobbers available for challenge")
+		}
+
 		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
 			totalWeight += bc.Weight
