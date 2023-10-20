@@ -161,7 +161,7 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 	return ExplorerStats{BlockFinality: chain.SteadyStateFinalizationTimer.Mean() / 1000000.0,
 		LastFinalizedRound: c.GetLatestFinalizedBlock().Round,
 		BlocksFinalized:    total,
-		StateHealth:        node.Self.Underlying().Info.StateMissingNodes,
+		StateHealth:        node.Self.Underlying().Info.GetStateMissingNodes(),
 		CurrentRound:       c.GetCurrentRound(),
 		RoundTimeout:       rtoc,
 		Timeouts:           c.RoundTimeoutsCount,
