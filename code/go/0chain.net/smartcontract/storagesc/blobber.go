@@ -804,6 +804,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	if alloc.Stats.UsedSize == 0 {
 		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
+		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
 	}
 
 	changeSize := commitConnection.WriteMarker.Size
