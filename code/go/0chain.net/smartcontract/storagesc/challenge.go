@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -831,7 +832,14 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 	switch selection {
 	case randomWeightSelection:
+
+		uniqueIdForLogging := uuid.New().String()
+
+		logging.Logger.Info("Jayash randomWeightSelection "+uniqueIdForLogging, zap.Any("challengeBlobbers", challengeBlobbers))
+
 		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
+
+		logging.Logger.Info("Jayash maxBlobbersSelect "+uniqueIdForLogging, zap.Any("maxBlobbersSelect", maxBlobbersSelect))
 
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
@@ -843,23 +851,43 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			}
 		}
 
+		logging.Logger.Info("Jayash blobbersSelected "+uniqueIdForLogging, zap.Any("blobbersSelected", blobbersSelected))
+
+		if len(blobbersSelected) == 0 {
+			return "", errors.New("no blobbers available for challenge")
+		}
+
+		logging.Logger.Info("Jayash blobbersSelected2 "+uniqueIdForLogging, zap.Any("blobbersSelected", blobbersSelected))
+
 		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
 			totalWeight += bc.Weight
 		}
+
+		logging.Logger.Info("Jayash totalWeight "+uniqueIdForLogging, zap.Any("totalWeight", totalWeight))
 
 		source := rand.NewSource(time.Now().UnixNano())
 		generator := rand.New(source)
 
 		randValue := generator.Float64() * float64(totalWeight)
 
+		logging.Logger.Info("Jayash randValue "+uniqueIdForLogging, zap.Any("randValue", randValue))
+
 		var cumulativeWeight uint64
 		for _, bc := range blobbersSelected {
 			cumulativeWeight += bc.Weight
+
+			logging.Logger.Info("Jayash cumulativeWeight "+uniqueIdForLogging, zap.Any("cumulativeWeight", cumulativeWeight))
+
 			if float64(cumulativeWeight) >= randValue {
+
+				logging.Logger.Info("Jayash bc.BlobberID "+uniqueIdForLogging, zap.Any("bc.BlobberID", bc.BlobberID))
+
 				return bc.BlobberID, nil
 			}
 		}
+
+		logging.Logger.Info("Jayash blobbersSelected3 "+uniqueIdForLogging, zap.Any("blobbersSelected", blobbersSelected))
 
 		return blobbersSelected[len(blobbersSelected)-1].BlobberID, nil
 	case randomSelection:
@@ -884,6 +912,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	blobberSelection := challengeBlobberSelection(0) // challengeBlobberSelection(r.Intn(2))
 	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
 	if err != nil {
+		logging.Logger.Info("Jayash select blobber for challenge", zap.String("challenge_id", challengeID), zap.Any("blobberID", blobberID), zap.Error(err))
 		return nil, common.NewError("add_challenge", err.Error())
 	}
 
