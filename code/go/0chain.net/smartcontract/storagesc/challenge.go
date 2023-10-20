@@ -833,9 +833,6 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 	case randomWeightSelection:
 		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
 
-		var challengeBlobber ChallengeReadyBlobber
-		var maxWeight uint64
-
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
@@ -846,14 +843,25 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			}
 		}
 
+		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
-			if bc.Weight > maxWeight {
-				maxWeight = bc.Weight
-				challengeBlobber = bc
+			totalWeight += bc.Weight
+		}
+
+		source := rand.NewSource(time.Now().UnixNano())
+		generator := rand.New(source)
+
+		randValue := generator.Float64() * float64(totalWeight)
+
+		var cumulativeWeight uint64
+		for _, bc := range blobbersSelected {
+			cumulativeWeight += bc.Weight
+			if float64(cumulativeWeight) >= randValue {
+				return bc.BlobberID, nil
 			}
 		}
 
-		return challengeBlobber.BlobberID, nil
+		return blobbersSelected[len(blobbersSelected)-1].BlobberID, nil
 	case randomSelection:
 		randomIndex := r.Intn(len(challengeBlobbers))
 		return challengeBlobbers[randomIndex].BlobberID, nil
