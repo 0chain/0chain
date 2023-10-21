@@ -331,7 +331,7 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			WritePrice: currency.Coin(50), // between 1 and 100
 			Capacity:   5000000000000,
 			Allocated:  0,
-			 // Capacity - Allocated = 2000 > 1000 (AllocationSize)
+			 // Capacity - Allocated = 5000000000000 (AllocationSize)
 		},
 		// Blobber 2 (Matched with the AllocationQuery)
 		{
@@ -428,7 +428,3 @@ func TestGetBlobbersFromParams(t *testing.T) {
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
-// Get the basic understading of SQL then use docker to see whats inside. 
-
-// So basically, I am trying to say, lets say we have n blobbers the sum of them together is 1.2 gb
-// Now, if we put up a allocation query as asking for 1.1 gb so will we get error, 
