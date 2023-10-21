@@ -2,8 +2,9 @@ package event
 
 import (
 	"fmt"
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
 
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"

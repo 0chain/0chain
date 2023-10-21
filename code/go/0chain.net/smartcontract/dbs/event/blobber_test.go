@@ -306,54 +306,53 @@ func buildMockBlobber(t *testing.T, pid string) Blobber {
 // -------------------------------------------------------------------------------------------------------------------------------------------
 
 func TestGetBlobbersFromParams(t *testing.T) {
-	// testConfig := config.DbAccess{}
-	// testSettings := config.DbSettings{}
 
-	// edb, err := NewInMemoryEventDb(testConfig, testSettings)
 	edb, clean := GetTestEventDB(t)
 	defer clean()
-
-	// if err != nil {
-	// 	t.Fatalf("failed to initialize in-memory DB: %v", err)
-	// }
-	// Created a mock Database now.
 
 	blobbers := []Blobber{
 		// Blobber 1 (Matched with the AllocationQuery)
 		{
 			Provider: Provider{
-				ID: "B000",
+				ID:              "B000",
 				LastHealthCheck: common.Timestamp(time.Now().Unix()),
-				TotalStake:
+				TotalStake:      currency.Coin(100),
 			},
-			BaseURL:    "https://blobber.zero",
-			ReadPrice:  currency.Coin(50), // between 1 and 100
-			WritePrice: currency.Coin(50), // between 1 and 100
-			Capacity:   5000000000000,
-			Allocated:  0,
-			 // Capacity - Allocated = 5000000000000 (AllocationSize)
+			BaseURL:     "https://blobber.zero",
+			ReadPrice:   currency.Coin(50), // between 1 and 100
+			WritePrice:  currency.Coin(50), // between 1 and 100
+			Capacity:    5000000000000,
+			Allocated:   0,
+			OffersTotal: currency.Coin(1),
+			// Capacity - Allocated = 5000000000000 (AllocationSize)
 		},
 		// Blobber 2 (Matched with the AllocationQuery)
 		{
 			Provider: Provider{
-				ID: "B001",
+				ID:              "B001",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(100),
 			},
-			BaseURL:    "https://blobber.one",
-			ReadPrice:  currency.Coin(20),
-			WritePrice: currency.Coin(80),
-			Capacity:   700000,
-			Allocated:  300000,
+			BaseURL:     "https://blobber.one",
+			ReadPrice:   currency.Coin(20),
+			WritePrice:  currency.Coin(80),
+			Capacity:    4000000000000,
+			Allocated:   300000,
+			OffersTotal: currency.Coin(1),
 		},
 		// Blobber 3 (Matched with the AllocationQuery)
 		{
 			Provider: Provider{
-				ID: "B002",
+				ID:              "B002",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(100),
 			},
-			BaseURL:    "https://blobber.two",
-			ReadPrice:  currency.Coin(90),
-			WritePrice: currency.Coin(10),
-			Capacity:   11000,
-			Allocated:  50000,
+			BaseURL:     "https://blobber.two",
+			ReadPrice:   currency.Coin(90),
+			WritePrice:  currency.Coin(10),
+			Capacity:    3000000000000,
+			Allocated:   50000,
+			OffersTotal: currency.Coin(1),
 		},
 		// Blobber 4 (Not matched, ReadPrice is too low)
 		{
@@ -382,14 +381,11 @@ func TestGetBlobbersFromParams(t *testing.T) {
 	}
 	// Adding 5 blobbers, 3 will have parameters in line 2 shall not have and then the 2 will help me complete the function.
 
-
-
 	for _, blobber := range blobbers {
 		if err := edb.Store.Get().Create(&blobber).Error; err != nil {
 			t.Fatalf("Failed to insert blobber: %v", err)
 		}
 	}
-
 
 	// Creating curated Query
 	allocation := AllocationQuery{
@@ -401,7 +397,7 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			Min int64
 			Max int64
 		}{1, 1e13},
-		AllocationSize:     1*1024*1024*1024,
+		AllocationSize:     1 * 1024 * 1024 * 1024,
 		AllocationSizeInGB: 1.0,
 		NumberOfDataShards: 1,
 	}
