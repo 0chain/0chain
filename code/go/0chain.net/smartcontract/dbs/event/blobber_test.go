@@ -323,13 +323,15 @@ func TestGetBlobbersFromParams(t *testing.T) {
 		{
 			Provider: Provider{
 				ID: "B000",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:
 			},
 			BaseURL:    "https://blobber.zero",
 			ReadPrice:  currency.Coin(50), // between 1 and 100
 			WritePrice: currency.Coin(50), // between 1 and 100
 			Capacity:   5000000000000,
 			Allocated:  0,
-			LastHealthCheck: common.Timestamp(time.Now().Unix()), // Capacity - Allocated = 2000 > 1000 (AllocationSize)
+			 // Capacity - Allocated = 2000 > 1000 (AllocationSize)
 		},
 		// Blobber 2 (Matched with the AllocationQuery)
 		{
