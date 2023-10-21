@@ -308,13 +308,6 @@ func TestAddChallenge(t *testing.T) {
 			// assert the open challenge update events are emitted
 			es = args.balances.GetEvents()[initESLen:]
 			updateOpenChallengeEventMap := make(map[string]int64)
-			//for _, e := range es {
-			//	if e.Tag == event.TagUpdateBlobberOpenChallenges {
-			//		d, ok := e.Data.(event.ChallengeStatsDeltas)
-			//		require.True(t, ok)
-			//		updateOpenChallengeEventMap[d.Id] = d.OpenDelta
-			//	}
-			//}
 
 			for bid, od := range tt.want.openDelta {
 				if od == 0 {
@@ -712,20 +705,15 @@ func TestCompleteRewardFlow(t *testing.T) {
 			var req lockRequest
 			req.AllocationID = alloc.ID
 
+			allocOwnerBalanceBefore, err := balances.GetClientBalance(alloc.Owner)
+			require.NoError(t, err)
 			var tx = newTransaction(client.id, ssc.ID, 0, int64(alloc.Expiration)+2)
 			balances.setTransaction(t, tx)
-			_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
+			alloc, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
 			require.NoError(t, err)
 
-			cp, err := ssc.getChallengePool(alloc.ID, balances)
-			require.NoError(t, err)
-			require.NotNil(t, cp)
-
-			cpBalance, _ := cp.Balance.Int64()
-			require.Equal(t, int64(0), cpBalance, "All money from challenge pool should be paid to blobbers")
-
-			alloc, err = ssc.getAllocation(alloc.ID, balances)
-			require.NoError(t, err)
+			_, err = ssc.getChallengePool(alloc.ID, balances)
+			require.Error(t, err, "challenge pool should be deleted")
 
 			totalReturnedReward := int64(0)
 
@@ -761,7 +749,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 					validatorStakes:            [][]int64{},
 					wpBalance:                  alloc.WritePool,
 					challengePoolIntegralValue: int64(beforeBlobberAllocs[idx].ChallengePoolIntegralValue),
-					challengePoolBalance:       cpBalance,
+					challengePoolBalance:       0,
 					partial:                    1,
 					lastFinalizedChallenge:     blobberAlloc.LatestFinalizedChallCreatedAt,
 					lastSuccessfulChallenge:    blobberAlloc.LatestSuccessfulChallCreatedAt,
@@ -794,12 +782,15 @@ func TestCompleteRewardFlow(t *testing.T) {
 			}
 
 			allocCost, _ := alloc.cost()
-			wpBalance, _ := alloc.WritePool.Int64()
+			// wp will be returned to the owner
+			allocOwnerBalance, err := balances.GetClientBalance(alloc.Owner)
+			require.NoError(t, err)
+			refund := allocOwnerBalance - allocOwnerBalanceBefore
 
 			passRate := float64(alloc.Stats.SuccessChallenges) / float64(alloc.Stats.TotalChallenges)
 
-			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 15)
-			require.InDelta(t, wpBalance, 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
+			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 50)
+			require.InDelta(t, int64(refund), 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
 		})
 	}
 }
@@ -1438,7 +1429,6 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 }
 
 func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
-	tp += 1000
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: "",
@@ -1561,7 +1551,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, ctx, allocationId)
+	err = ssc.blobberReward(allocation, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}

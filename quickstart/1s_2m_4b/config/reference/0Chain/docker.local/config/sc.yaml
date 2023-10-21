@@ -30,6 +30,7 @@ smart_contracts:
     # etc
     min_stake: 0.0 # 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
+    min_stake_per_delegate : 1
     start_rounds: 50
     contribute_rounds: 50
     share_rounds: 50
@@ -108,6 +109,7 @@ smart_contracts:
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
+    max_file_size : 40000000000000
     #
     # allocation cancellation
     #
@@ -123,6 +125,7 @@ smart_contracts:
     #
     # enable challenges
     challenge_enabled: true
+    challenge_generation_gap : 1
     # number of challenges for MB per minute
     challenge_rate_per_mb_min: 1
     # max number of challenges can be generated at once

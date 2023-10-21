@@ -16,6 +16,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
@@ -72,6 +73,8 @@ const (
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
+
+var gStateNodeStat stateNodeStat
 
 /*SetServerChain - set the server chain object */
 func SetServerChain(c *Chain) {
@@ -207,10 +210,38 @@ type Chain struct {
 	blockSyncC            map[string]chan chan *block.Block
 	bscMutex              *sync.Mutex
 
+	MissingNodesStat *missingNodeStat `json:"-"`
+
 	// compute state
 	computeBlockStateC chan struct{}
 
 	OnBlockAdded func(b *block.Block)
+}
+
+type stateNodeStat struct {
+	count int64
+	lock  sync.RWMutex
+}
+
+func (sns *stateNodeStat) Inc(n int64) int64 {
+	sns.lock.Lock()
+	v := sns.count + n
+	sns.count = v
+	sns.lock.Unlock()
+	return v
+}
+
+func (sns *stateNodeStat) Get() int64 {
+	sns.lock.RLock()
+	var v = sns.count
+	sns.lock.RUnlock()
+	return v
+}
+
+type missingNodeStat struct {
+	Counter   metrics.Counter
+	Timer     metrics.Timer
+	SyncTimer metrics.Timer
 }
 
 type syncPathNodes struct {
@@ -503,6 +534,11 @@ func (c *Chain) Initialize() {
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
 	}
+	c.MissingNodesStat = &missingNodeStat{
+		Counter:   metrics.GetOrRegisterCounter("missing_nodes_count", nil),
+		Timer:     metrics.GetOrRegisterTimer("time_to_get_missing_nodes", nil),
+		SyncTimer: metrics.GetOrRegisterTimer("time_to_sync_missing_nodes", nil),
+	}
 }
 
 /*SetupEntity - setup the entity */
@@ -521,10 +557,11 @@ var stateDB *util.PNodeDB
 func SetupStateDB(workdir string) {
 
 	datadir := "data/rocksdb/state"
-	logsdir := "/0chain/log/rocksdb/state"
+	// logsdir := "/0chain/log/rocksdb/state"
+	logsdir := "data/rocksdb/state/log"
 	if len(workdir) > 0 {
 		datadir = filepath.Join(workdir, datadir)
-		logsdir = filepath.Join(workdir, "log/rocksdb/state")
+		logsdir = filepath.Join(workdir, logsdir)
 	}
 
 	db, err := util.NewPNodeDB(datadir, logsdir)
@@ -1456,34 +1493,43 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 
 // SetLatestFinalizedBlock - set the latest finalized block.
 func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
+	if b == nil {
+		return
+	}
+
 	c.lfbMutex.Lock()
 	c.LatestFinalizedBlock = b
-	if b != nil {
-		logging.Logger.Debug("set lfb",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Bool("state_computed", b.IsStateComputed()))
-		bs := b.GetSummary()
-		c.lfbSummary = bs
-		c.BroadcastLFBTicket(context.Background(), b)
-		if !node.Self.IsSharder() {
-			go c.notifyToSyncFinalizedRoundState(bs)
-		}
-	}
+	logging.Logger.Debug("set lfb",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.Bool("state_computed", b.IsStateComputed()))
+	bs := b.GetSummary()
+	c.lfbSummary = bs
+	c.BroadcastLFBTicket(context.Background(), b)
+	go c.notifyToSyncFinalizedRoundState(bs)
 	c.lfbMutex.Unlock()
 
+	if b.Round > 0 {
+		// do not store genesis block, otherwise it would re-write the LFB to 0 round every time
+		// on restarting
+		if err := c.StoreLFBRound(b.Round, b.Hash); err != nil {
+			logging.Logger.Warn("set lfb - store round to state DB failed",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Error(err))
+		}
+	}
+
 	// add LFB to blocks cache
-	if b != nil {
-		c.updateConfig(b)
-		c.blocksMutex.Lock()
-		defer c.blocksMutex.Unlock()
-		cb, ok := c.blocks[b.Hash]
-		if !ok {
-			c.blocks[b.Hash] = b
-		} else {
-			if b.ClientState != nil && cb.ClientState != b.ClientState {
-				cb.ClientState = b.ClientState
-			}
+	c.updateConfig(b)
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	cb, ok := c.blocks[b.Hash]
+	if !ok {
+		c.blocks[b.Hash] = b
+	} else {
+		if b.ClientState != nil && cb.ClientState != b.ClientState {
+			cb.ClientState = b.ClientState
 		}
 	}
 }

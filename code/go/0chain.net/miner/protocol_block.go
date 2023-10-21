@@ -1349,7 +1349,7 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 		txns = append(txns, feeTxn)
 	}
 
-	if config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled") {
+	if config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled") && b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.challenge_generation_gap") == 0 {
 		gcTxn, err := mc.createGenerateChallengeTxn(b)
 		if err != nil {
 			return nil, 0, err

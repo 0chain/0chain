@@ -5,6 +5,10 @@ on:
   #   # Runs everyday at 02:00 am
     - cron: '0 2 * * *'
   workflow_dispatch:
+      inputs:
+        branchname:
+          description: 'enter your branch name'
+          required: true
 
 jobs:
   CONDUCTOR_BLOBBERS_01_TESTS:
@@ -45,9 +49,22 @@ jobs:
     - name: Get Branch
       id: get_branch
       run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo "Branch name is ${BRANCH}"
+        if [[ -n "${{ inputs.branchname }}" ]]; then
+           BRANCH="${{ inputs.branchname }}"
+           echo ::set-output name=BRANCH::${BRANCH}
+           echo "Branch name is ${BRANCH}"
+        else        
+           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+           echo ::set-output name=BRANCH::${BRANCH}
+           echo "Branch name is ${BRANCH}"
+        fi
+ 
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
       run: |
@@ -183,10 +200,10 @@ jobs:
         name: blobber-01-logs
         path: |
           0chain/conductor/logs/
-          0chain/docker.local/miner*
-          0chain/docker.local/sharder*
-          blobber/docker.local/blobber*
-          blobber/docker.local/validator*
+          0chain/docker.local/miner*/log
+          0chain/docker.local/sharder*/log
+          blobber/docker.local/blobber*/log
+          blobber/docker.local/validator*/log
 
     - name: Added /tmp folder cleanup.
       run: |

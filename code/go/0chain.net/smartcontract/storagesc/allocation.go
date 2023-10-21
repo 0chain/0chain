@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
@@ -970,7 +971,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if t.ClientID != alloc.Owner {
-		if !alloc.ThirdPartyExtendable || request.Extend == false {
+		if !alloc.ThirdPartyExtendable || (request.Extend == false && request.Size <= 0) {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
 		}
@@ -1174,7 +1175,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, false, ChallengeRespondedLate, balances, alloc.Stats, ba.Stats)
+				}, false, ChallengeRespondedLate, balances, alloc.Stats)
 				if err != nil {
 					return nil, err
 				}
@@ -1187,7 +1188,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
+				}, true, ChallengeResponded, balances, alloc.Stats)
 				if err != nil {
 					return nil, err
 				}
@@ -1215,9 +1216,14 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 		}
 	}
 
-	for _, ba := range alloc.BlobberAllocs {
+	var blobbersSettledChallengesCount []int64
+
+	for idx, ba := range alloc.BlobberAllocs {
+		blobbersSettledChallengesCount = append(blobbersSettledChallengesCount, 0)
 		if ba.Stats.OpenChallenges > 0 {
 			logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
+
+			blobbersSettledChallengesCount[idx] = ba.Stats.OpenChallenges
 
 			ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
 			alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
@@ -1235,7 +1241,7 @@ func (sc *StorageSmartContract) settleOpenChallengesAndGetPassRates(
 
 	alloc.Stats.OpenChallenges = 0
 
-	emitUpdateAllocationAndBlobberStats(alloc, balances)
+	emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc, blobbersSettledChallengesCount, balances)
 
 	return passRates, nil
 }
@@ -1300,10 +1306,10 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	alloc.Expiration = t.CreationDate
 	alloc.Finalized, alloc.Canceled = true, true
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+
+	_, err = balances.DeleteTrieNode(alloc.GetKey(sc.ID))
 	if err != nil {
-		return "", common.NewError("alloc_cancel_failed",
-			"saving allocation: "+err.Error())
+		return "", common.NewErrorf("alloc_cancel_failed", "could not delete allocation: %v", err)
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
@@ -1324,44 +1330,65 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	t *transaction.Transaction, input []byte,
 	balances chainstate.StateContextI) (resp string, err error) {
 
-	var req lockRequest
+	alloc, err := sc.finalizeAllocationInternal(t, input, balances)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = balances.DeleteTrieNode(alloc.GetKey(sc.ID))
+	if err != nil {
+		return "", common.NewErrorf("fini_alloc_failed", "could not delete allocation: %v", err)
+	}
+
+	return "finalized", nil
+}
+
+// finalizeAllocationInternal finalize allocation without deleting it, which
+// could be used in unit test to verify the challenges pass rate, rewards, etc.
+func (sc *StorageSmartContract) finalizeAllocationInternal(
+	t *transaction.Transaction, input []byte,
+	balances chainstate.StateContextI) (*StorageAllocation, error) {
+	var (
+		req lockRequest
+		err error
+	)
 	if err = req.decode(input); err != nil {
-		return "", common.NewError("fini_alloc_failed", err.Error())
+		return nil, common.NewError("fini_alloc_failed", err.Error())
 	}
 
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(req.AllocationID, balances)
 	if err != nil {
-		return "", common.NewError("fini_alloc_failed", err.Error())
+		return nil, common.NewError("fini_alloc_failed", err.Error())
 	}
 
 	// should be owner or one of blobbers of the allocation
 	if !alloc.IsValidFinalizer(t.ClientID) {
-		return "", common.NewError("fini_alloc_failed",
+		return nil, common.NewError("fini_alloc_failed",
 			"not allowed, unknown finalization initiator")
 	}
 
 	// should not be finalized
 	if alloc.Finalized {
-		return "", common.NewError("fini_alloc_failed",
+		return nil, common.NewError("fini_alloc_failed",
 			"allocation already finalized")
 	}
 
 	conf, err := getConfig(balances)
 	if err != nil {
-		return "", common.NewError("can't get config", err.Error())
+		return nil, common.NewError("can't get config", err.Error())
 	}
 
 	// should be expired
 	if alloc.Expiration > t.CreationDate {
-		return "", common.NewError("fini_alloc_failed",
+		return nil, common.NewError("fini_alloc_failed",
 			"allocation is not expired yet")
 	}
 
 	var passRates []float64
 	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionRounds, balances)
 	if err != nil {
-		return "", common.NewError("fini_alloc_failed",
+		return nil, common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
 
@@ -1369,11 +1396,11 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	for _, d := range alloc.BlobberAllocs {
 		var sp *stakePool
 		if sp, err = sc.getStakePool(spenum.Blobber, d.BlobberID, balances); err != nil {
-			return "", common.NewError("fini_alloc_failed",
+			return nil, common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
 		if err := sp.reduceOffer(d.Offer()); err != nil {
-			return "", common.NewError("fini_alloc_failed",
+			return nil, common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
 		sps = append(sps, sp)
@@ -1381,19 +1408,13 @@ func (sc *StorageSmartContract) finalizeAllocation(
 
 	err = sc.finishAllocation(t, alloc, passRates, sps, balances, conf)
 	if err != nil {
-		return "", common.NewError("fini_alloc_failed", err.Error())
+		return nil, common.NewError("fini_alloc_failed", err.Error())
 	}
 
 	alloc.Finalized = true
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return "", common.NewError("alloc_cancel_failed",
-			"saving allocation: "+err.Error())
-	}
-
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
-	return "finalized", nil
+	return alloc, nil
 }
 
 func (sc *StorageSmartContract) finishAllocation(
@@ -1437,6 +1458,17 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 
+	err = sc.deleteChallengePool(alloc, balances)
+	if err != nil {
+		return fmt.Errorf("could not delete challenge pool of alloc: %s, err: %v", alloc.ID, err)
+	}
+
+	transfer := state.NewTransfer(sc.ID, alloc.Owner, alloc.WritePool)
+	if err = balances.AddTransfer(transfer); err != nil {
+		return fmt.Errorf("could not refund lock token: %v", err)
+	}
+
+	alloc.WritePool = 0
 	return nil
 }
 

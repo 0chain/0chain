@@ -3,16 +3,16 @@ module 0chain.net
 go 1.20
 
 require (
-	github.com/alicebob/miniredis/v2 v2.30.4
+	github.com/alicebob/miniredis/v2 v2.30.5
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.26.0
-	github.com/go-playground/validator/v10 v10.14.1
+	github.com/go-playground/validator/v10 v10.15.5
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
-	github.com/hashicorp/golang-lru/v2 v2.0.4
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/herumi/bls v1.37.0
-	github.com/herumi/mcl v1.84.0
+	github.com/herumi/mcl v1.86.0
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
@@ -27,29 +27,29 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/tinylib/msgp v1.1.6
 	github.com/valyala/gozstd v1.20.1
-	github.com/vmihailenco/msgpack/v5 v5.3.5
+	github.com/vmihailenco/msgpack/v5 v5.4.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.11.0
-	golang.org/x/net v0.12.0
+	golang.org/x/crypto v0.13.0
+	golang.org/x/net v0.15.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.5.2
-	gorm.io/gorm v1.25.2
+	gorm.io/gorm v1.25.4
 )
 
 require (
-	github.com/0chain/common v0.0.7-0.20230825051950-34936ea9ea1f
-	github.com/0chain/gosdk v1.8.17-0.20230710001344-ddb60b46059d
-	github.com/go-faker/faker/v4 v4.1.1
-	github.com/jackc/pgx/v5 v5.4.1
+	github.com/0chain/common v0.0.7-0.20231011103824-e584282bea0c
+	github.com/0chain/gosdk v1.10.2
+	github.com/go-faker/faker/v4 v4.2.0
+	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
 	github.com/ory/dockertest/v3 v3.10.0
-	github.com/pressly/goose/v3 v3.13.1
+	github.com/pressly/goose/v3 v3.15.0
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
-	golang.org/x/sys v0.10.0
-	gorm.io/driver/sqlite v1.5.2
+	golang.org/x/sys v0.12.0
+	gorm.io/driver/sqlite v1.5.3
 	moul.io/zapgorm2 v1.3.0
 )
 
@@ -100,7 +100,7 @@ require (
 	github.com/moby/term v0.5.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/opencontainers/runc v1.1.7 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
@@ -116,9 +116,9 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/mod v0.11.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect; indirect //do not update
+	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.10.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

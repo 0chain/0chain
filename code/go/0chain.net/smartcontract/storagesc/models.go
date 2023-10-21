@@ -623,7 +623,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, false, ChallengeRespondedLate, balances, alloc.Stats, d.Stats)
+				}, false, ChallengeRespondedLate, balances, alloc.Stats)
 				if err != nil {
 					return 0.0, err
 				}
@@ -636,7 +636,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, true, ChallengeResponded, balances, alloc.Stats, d.Stats)
+				}, true, ChallengeResponded, balances, alloc.Stats)
 				if err != nil {
 					return 0.0, err
 				}
@@ -664,6 +664,8 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		}
 	}
 
+	blobbersSettledChallengesCount := d.Stats.OpenChallenges
+
 	if d.Stats.OpenChallenges > 0 {
 		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", d.Stats.OpenChallenges))
 
@@ -680,7 +682,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		passRate = float64(d.Stats.SuccessChallenges) / float64(d.Stats.TotalChallenges)
 	}
 
-	emitUpdateAllocationAndBlobberStats(alloc, balances)
+	emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc, d.BlobberID, blobbersSettledChallengesCount, balances)
 
 	return passRate, nil
 }
@@ -737,6 +739,10 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 }
 
 func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+	if now <= d.LatestFinalizedChallCreatedAt {
+		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
+		return 0, nil
+	}
 
 	payment := currency.Coin(0)
 
@@ -1928,7 +1934,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeRespondedLate, balances, sa.Stats)
 
 			if err != nil {
 				return 0, err
@@ -1961,9 +1967,8 @@ func (sa *StorageAllocation) removeOldChallenges(
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
-
-	var removedChallengeBlobberMap = make(map[string]string)
 	var nonRemovedChallenges []*AllocOpenChallenge
+	var expChalIDs []string
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
@@ -1978,7 +1983,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 			zap.Int64("current_round_created_at", currentChallenge.RoundCreatedAt),
 		)
 
-		removedChallengeBlobberMap[oc.ID] = oc.BlobberID
+		expChalIDs = append(expChalIDs, oc.ID)
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -1995,7 +2000,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeOldRemoved, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeOldRemoved, balances, sa.Stats)
 
 			if err != nil {
 				return err
@@ -2005,25 +2010,13 @@ func (sa *StorageAllocation) removeOldChallenges(
 
 	allocChallenges.OpenChallenges = nonRemovedChallenges
 
-	var expChalIDs []string
-	for challengeID := range removedChallengeBlobberMap {
-		expChalIDs = append(expChalIDs, challengeID)
-	}
-
 	// maps blobberID to count of its expiredIDs.
-	expiredCountMap := make(map[string]int)
 
 	for _, challengeID := range expChalIDs {
-		blobberID := removedChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
 			return common.NewErrorf("remove_old_challenges", "could not delete challenge node: %v", err)
 		}
-
-		if _, ok := expiredCountMap[blobberID]; !ok {
-			expiredCountMap[blobberID] = 0
-		}
-		expiredCountMap[blobberID]++
 	}
 
 	return nil

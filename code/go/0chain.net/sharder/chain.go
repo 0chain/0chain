@@ -354,6 +354,8 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 			continue // TODO: can we use os.IsNotExist(err) or should not
 		}
 
+		logging.Logger.Debug("load_lfb, got block", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+
 		lfnb, er := func() (*block.Block, error) {
 			logging.Logger.Debug("load_lfb - get notarized block from sharders")
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -367,6 +369,8 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 				zap.String("lfb", lfb.Hash))
 			return
 		}
+
+		logging.Logger.Debug("load_lfb, got notarized block from remote and compare with local")
 
 		if lfnb.Hash != lfb.Hash {
 			logging.Logger.Warn("load_lfb, see different lfb, roll back",
@@ -382,7 +386,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 		// Don't check the state. It can be missing if the state had synced.
 		// But it works fine anyway.
 
-		logging.Logger.Debug("load_lfb, check if client state stored")
+		logging.Logger.Debug("load_lfb, check if LFB state is in store")
 		if !sc.HasClientStateStored(lfb.ClientStateHash) {
 			logging.Logger.Warn("load_lfb, missing corresponding state",
 				zap.Int64("round", r.Number),
@@ -392,16 +396,14 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 			continue
 		}
 
-		logging.Logger.Debug("load_lfb, validate state")
-		// check if lfb has full state
-		if !sc.ValidateState(lfb) {
-			logging.Logger.Warn("load_lfb, lfb state missing nodes",
-				zap.Int64("round", r.Number),
-				zap.String("block_hash", r.BlockHash))
-			rollBackCount++
-
-			continue
-		}
+		go func() {
+			// check if lfb has full state and sync all missing nodes
+			if !sc.ValidateState(lfb) {
+				logging.Logger.Warn("load_lfb, lfb state missing nodes",
+					zap.Int64("round", r.Number),
+					zap.String("block_hash", r.BlockHash))
+			}
+		}()
 
 		logging.Logger.Debug("load_lfb, find it", zap.Int64("round", lfb.Round))
 		return // got it
@@ -410,26 +412,76 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 	return nil, common.NewError("load_lfb", "no valid lfb found")
 }
 
+func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, lfbr *chain.LfbRound) (*blocksLoaded, error) {
+	r, err := sc.GetRoundFromStore(ctx, lfbr.Round)
+	if err != nil {
+		return nil, fmt.Errorf("load_lfb - could not load round from store: %v", err)
+	}
+	if r.BlockHash != lfbr.Hash {
+		return nil, errors.New("load_lfb - block hash does not match")
+	}
+
+	lfb, err := sc.GetBlockFromStore(r.BlockHash, r.Number)
+	if err != nil {
+		logging.Logger.Error("load_lfb, could not get block from store", zap.Error(err))
+		return nil, fmt.Errorf("load_lfb - could not load lfb block from store: %v", err)
+	}
+
+	logging.Logger.Debug("load_lfb, got block", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+
+	lfnb, err := func() (*block.Block, error) {
+		logging.Logger.Debug("load_lfb - get notarized block from sharders")
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		return sc.GetNotarizedBlockFromSharders(ctx, "", lfb.Round)
+	}()
+
+	bl := blocksLoaded{
+		r:   r,
+		lfb: lfb,
+	}
+
+	if err != nil {
+		logging.Logger.Debug("load_lfb, could not sync LFB from remote, use local LFB",
+			zap.Int64("round", lfb.Round),
+			zap.String("lfb", lfb.Hash),
+			zap.Error(err))
+
+		return &bl, nil
+	}
+
+	logging.Logger.Debug("load_lfb, got notarized block from remote and compare with local")
+
+	if lfnb.Hash != lfb.Hash {
+		logging.Logger.Warn("load_lfb, see different lfb",
+			zap.Int64("round", lfb.Round),
+			zap.String("local lfb", lfb.Hash),
+			zap.String("remote lfb", lfnb.Hash))
+		return nil, errors.New("load_lfb - see different lfb and notarized lfb")
+	}
+
+	return &bl, nil
+}
+
 // iterate over rounds from latest to zero looking for LFB and ignoring
 // missing blocks in blockstore
 func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
-	bl := new(blocksLoaded)
-
 	var (
+		bl   = new(blocksLoaded)
 		remd = datastore.GetEntityMetadata("round")
 		rctx = ememorystore.WithEntityConnection(ctx, remd)
+		conn = ememorystore.GetEntityCon(rctx, remd)
+		iter = conn.Conn.NewIterator(conn.ReadOptions)
 
 		// the error is internal, we are using logs and rolling back to
 		// genesis blocks on error
 		err error
 	)
-	defer ememorystore.Close(rctx)
 
-	var (
-		conn = ememorystore.GetEntityCon(rctx, remd)
-		iter = conn.Conn.NewIterator(conn.ReadOptions)
-	)
-	defer iter.Close()
+	defer func() {
+		ememorystore.Close(rctx)
+		iter.Close()
+	}()
 
 	bl.r = remd.Instance().(*round.Round) //
 
@@ -444,6 +496,37 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 			zap.Int64("round_stopped", bl.r.Number),
 			zap.Error(err))
 		return nil // the nil is 'use genesis'
+	}
+
+	logging.Logger.Debug("load_lfb, finish walk down looking")
+	return bl
+}
+
+// LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
+// to corresponding fields of the sharder's Chain.
+func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
+	var bl *blocksLoaded
+	lfbr, err := sc.LoadLFBRound()
+	switch err {
+	case nil:
+		logging.Logger.Debug("load_lfb - load from stateDB",
+			zap.Int64("round", lfbr.Round),
+			zap.String("block", lfbr.Hash))
+		if lfbr.Round == 0 {
+			return nil // use genesis
+		}
+		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbr)
+		if err != nil {
+			return err
+		}
+		logging.Logger.Debug("load_lfb - load round and block",
+			zap.Int64("round", bl.lfb.Round),
+			zap.String("block", bl.lfb.Hash))
+	default:
+		bl = sc.iterateRoundsLookingForLFB(ctx)
+		logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
+			zap.Int64("round", bl.lfb.Round),
+			zap.String("block", bl.lfb.Hash))
 	}
 
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
@@ -472,19 +555,12 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 		logging.Logger.Warn("load_lfb, loading highest magic block", zap.Error(err))
 	}
 
-	return bl // got them all (or excluding the nlfmb)
-}
+	// return bl // got them all (or excluding the nlfmb)
 
-// LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
-// to corresponding fields of the sharder's Chain.
-func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
-
-	var bl = sc.iterateRoundsLookingForLFB(ctx)
-
-	if bl == nil || bl.r == nil || bl.r.Number == 0 || bl.r.Number == 1 {
-		logging.Logger.Debug("load_lfb, could not load LFB from store")
-		return // use genesis blocks
-	}
+	// if bl == nil || bl.r == nil || bl.r.Number == 0 || bl.r.Number == 1 {
+	// 	logging.Logger.Debug("load_lfb, use genesis block")
+	// 	return // use genesis blocks
+	// }
 
 	logging.Logger.Debug("load_lfb from store",
 		zap.Int64("round", bl.lfb.Round),
@@ -534,7 +610,7 @@ func (sc *Chain) ValidateState(b *block.Block) bool {
 		return false
 	}
 
-	logging.Logger.Debug("load_lfb, validate state - sync msissing nodes")
+	logging.Logger.Debug("load_lfb, sync missing nodes")
 	if err := sc.syncLFBMissingNodes(b); err != nil {
 		logging.Logger.Warn("load_lfb, sync missing nodes failed",
 			zap.Int64("round", b.Round),
