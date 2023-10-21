@@ -829,31 +829,42 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
 
+	if len(challengeBlobbers) == 0 {
+		return "", errors.New("no blobbers available for challenge")
+	}
+
 	switch selection {
 	case randomWeightSelection:
 		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
 
-		var challengeBlobber ChallengeReadyBlobber
-		var maxWeight uint64
+		// shuffle challenge blobbers
+		r.Shuffle(len(challengeBlobbers), func(i, j int) {
+			challengeBlobbers[i], challengeBlobbers[j] = challengeBlobbers[j], challengeBlobbers[i]
+		})
 
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
 		} else {
-			for i := 0; i < maxBlobbersSelect && i < len(challengeBlobbers); i++ {
-				randomIndex := r.Intn(len(challengeBlobbers))
-				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
-			}
+			blobbersSelected = challengeBlobbers[:maxBlobbersSelect]
 		}
 
+		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
-			if bc.Weight > maxWeight {
-				maxWeight = bc.Weight
-				challengeBlobber = bc
+			totalWeight += bc.Weight
+		}
+
+		randValue := r.Float64() * float64(totalWeight)
+
+		var cumulativeWeight uint64
+		for _, bc := range blobbersSelected {
+			cumulativeWeight += bc.Weight
+			if float64(cumulativeWeight) >= randValue {
+				return bc.BlobberID, nil
 			}
 		}
 
-		return challengeBlobber.BlobberID, nil
+		return blobbersSelected[len(blobbersSelected)-1].BlobberID, nil
 	case randomSelection:
 		randomIndex := r.Intn(len(challengeBlobbers))
 		return challengeBlobbers[randomIndex].BlobberID, nil
