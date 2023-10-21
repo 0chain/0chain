@@ -350,33 +350,37 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			BaseURL:     "https://blobber.two",
 			ReadPrice:   currency.Coin(90),
 			WritePrice:  currency.Coin(10),
-			Capacity:    3000000000000,
+			Capacity:    500000000000,
 			Allocated:   50000,
 			OffersTotal: currency.Coin(1),
 		},
 		// Blobber 4 (Not matched, ReadPrice is too low)
 		{
 			Provider: Provider{
-				ID: "B003",
+				ID:              "B003",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(100),
 			},
-			BaseURL:    "https://blobber.three",
-			ReadPrice:  currency.Coin(0),
-			WritePrice: currency.Coin(50),
-			Capacity:   2000,
-			Allocated:  500,
+			BaseURL:     "https://blobber.three",
+			ReadPrice:   currency.Coin(0),
+			WritePrice:  currency.Coin(50),
+			Capacity:    4000000000000,
+			Allocated:   3999999999999,
+			OffersTotal: currency.Coin(1),
 		},
 		// Blobber 5 (Not matched, WritePrice is too high)
 		{
 			Provider: Provider{
-				ID: "B004",
+				ID:              "B004",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(10),
 			},
-			BaseURL:    "https://blobber.four",
-			ReadPrice:  currency.Coin(50),
-			WritePrice: currency.Coin(150),
-			Capacity:   3000,
-			Allocated:  1500,
-
-			//... other required fields ...
+			BaseURL:     "https://blobber.four",
+			ReadPrice:   currency.Coin(50),
+			WritePrice:  currency.Coin(150),
+			Capacity:    3000,
+			Allocated:   1500,
+			OffersTotal: currency.Coin(9),
 		},
 	}
 	// Adding 5 blobbers, 3 will have parameters in line 2 shall not have and then the 2 will help me complete the function.
@@ -419,7 +423,6 @@ func TestGetBlobbersFromParams(t *testing.T) {
 		t.Fatalf("Error while retrieving blobbers: %v", err)
 	}
 
-	// Assert
 	assert.Equal(t, 3, len(matchedBlobbers), "Expected 3 blobbers to match criteria")
 }
 
