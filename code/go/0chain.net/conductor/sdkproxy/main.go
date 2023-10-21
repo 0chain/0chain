@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -425,7 +426,7 @@ func main() {
 	var (
 		markers string = ""              // markers arriving order
 		filter  string = ""              // filter multipart forms fields
-		addr    string = "0.0.0.0:15211" // bind
+		addr    string = fmt.Sprintf("0.0.0.0:%v", rand.Intn(65535-10000) + 10000) // bind
 
 		back = context.Background() //
 
