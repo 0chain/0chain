@@ -354,7 +354,7 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			Allocated:   50000,
 			OffersTotal: currency.Coin(1),
 		},
-		// Blobber 4 (Not matched, ReadPrice is too low)
+		// Blobber 4 (Doesn't have the capacity required)
 		{
 			Provider: Provider{
 				ID:              "B003",
@@ -362,7 +362,7 @@ func TestGetBlobbersFromParams(t *testing.T) {
 				TotalStake:      currency.Coin(100),
 			},
 			BaseURL:     "https://blobber.three",
-			ReadPrice:   currency.Coin(0),
+			ReadPrice:   currency.Coin(50),
 			WritePrice:  currency.Coin(50),
 			Capacity:    4000000000000,
 			Allocated:   3999999999999,
@@ -378,8 +378,8 @@ func TestGetBlobbersFromParams(t *testing.T) {
 			BaseURL:     "https://blobber.four",
 			ReadPrice:   currency.Coin(50),
 			WritePrice:  currency.Coin(150),
-			Capacity:    3000,
-			Allocated:   1500,
+			Capacity:    500000000000,
+			Allocated:   50000,
 			OffersTotal: currency.Coin(9),
 		},
 	}
@@ -396,11 +396,11 @@ func TestGetBlobbersFromParams(t *testing.T) {
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
-		}{1, 1e13},
+		}{1, 1e13},     
 		WritePriceRange: struct {
 			Min int64
 			Max int64
-		}{1, 1e13},
+		}{1, 1e13},  
 		AllocationSize:     1 * 1024 * 1024 * 1024,
 		AllocationSizeInGB: 1.0,
 		NumberOfDataShards: 1,
@@ -411,9 +411,6 @@ func TestGetBlobbersFromParams(t *testing.T) {
 		Offset:       0,
 		IsDescending: true,
 	}
-
-	fmt.Println("Here are your blobbers: ")
-	fmt.Println(edb.GetBlobbers(pagination))
 
 	now := common.Timestamp(time.Now().Unix())
 	healthCheckPeriod := 1 * time.Hour
