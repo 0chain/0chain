@@ -43,8 +43,6 @@ type Challenge struct {
 func (edb *EventDb) GetChallengesCountByQuery(whereQuery string) (map[string]int64, error) {
 	var total, passed, failed, open int64
 
-	logging.Logger.Info("GetChallengesCountByQuery", zap.String("whereQuery", whereQuery))
-
 	whereQuery, err := url.QueryUnescape(whereQuery)
 	if err != nil {
 		return nil, err
