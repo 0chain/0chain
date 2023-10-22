@@ -18,7 +18,6 @@ import (
 	"0chain.net/core/config"
 	"0chain.net/rest"
 	"0chain.net/sharder/blockstore"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"

@@ -95,7 +95,6 @@ func (sc *StorageSmartContract) blobberReward(
 	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
-	partial float64,
 	balances cstate.StateContextI,
 	allocationID string,
 ) error {
@@ -142,7 +141,7 @@ func (sc *StorageSmartContract) blobberReward(
 		return err
 	}
 
-	logging.Logger.Info("Paying challenge reward", zap.Any("challenge reward", move), zap.Any("challengeCompletedTime", challengeCompletedTime), zap.Any("latestFinalizedChallTime", latestFinalizedChallTime), zap.Any("rdtu", rdtu), zap.Any("dtu", dtu), zap.Any("partial", partial))
+	logging.Logger.Info("Paying challenge reward", zap.Any("challenge reward", move), zap.Any("challengeCompletedTime", challengeCompletedTime), zap.Any("latestFinalizedChallTime", latestFinalizedChallTime), zap.Any("rdtu", rdtu), zap.Any("dtu", dtu))
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
@@ -151,46 +150,9 @@ func (sc *StorageSmartContract) blobberReward(
 		return err
 	}
 
-	move, err = currency.MinusCoin(move, validatorsReward)
+	blobberReward, err := currency.MinusCoin(move, validatorsReward)
 	if err != nil {
 		return err
-	}
-
-	// for a case of a partial verification
-	blobberReward, err := currency.MultFloat64(move, partial) // blobber (partial) reward
-	if err != nil {
-		return err
-	}
-
-	back, err := currency.MinusCoin(move, blobberReward) // return back to write pool
-	if err != nil {
-		return err
-	}
-
-	if back > 0 {
-		err = alloc.moveFromChallengePool(cp, back)
-		if err != nil {
-			return fmt.Errorf("moving partial challenge to write pool: %v", err)
-		}
-		newMoved, err := currency.AddCoin(alloc.MovedBack, back)
-		if err != nil {
-			return err
-		}
-		alloc.MovedBack = newMoved
-
-		newReturned, err := currency.AddCoin(blobAlloc.Returned, back)
-		if err != nil {
-			return err
-		}
-		blobAlloc.Returned = newReturned
-
-		coin, _ := move.Int64()
-		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
-			Client:       alloc.Owner,
-			AllocationId: alloc.ID,
-			Amount:       coin,
-		})
-
 	}
 
 	var sp *stakePool
@@ -716,10 +678,6 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("verify_challenge", err.Error())
 	}
 
-	var partial = 1.0
-	if cab.success < cab.threshold {
-		partial = float64(cab.success) / float64(cab.threshold)
-	}
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 
 	if cab.latestFinalizedChallTime > cab.latestSuccessfulChallTime {
@@ -736,7 +694,6 @@ func (sc *StorageSmartContract) processChallengePassed(
 	err = sc.blobberReward(
 		cab.alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
 		validators,
-		partial,
 		balances,
 		cab.challenge.AllocationID,
 	)
@@ -872,31 +829,42 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
 
+	if len(challengeBlobbers) == 0 {
+		return "", errors.New("no blobbers available for challenge")
+	}
+
 	switch selection {
 	case randomWeightSelection:
 		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
 
-		var challengeBlobber ChallengeReadyBlobber
-		var maxWeight uint64
+		// shuffle challenge blobbers
+		r.Shuffle(len(challengeBlobbers), func(i, j int) {
+			challengeBlobbers[i], challengeBlobbers[j] = challengeBlobbers[j], challengeBlobbers[i]
+		})
 
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
 		} else {
-			for i := 0; i < maxBlobbersSelect && i < len(challengeBlobbers); i++ {
-				randomIndex := r.Intn(len(challengeBlobbers))
-				blobbersSelected = append(blobbersSelected, challengeBlobbers[randomIndex])
-			}
+			blobbersSelected = challengeBlobbers[:maxBlobbersSelect]
 		}
 
+		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
-			if bc.Weight > maxWeight {
-				maxWeight = bc.Weight
-				challengeBlobber = bc
+			totalWeight += bc.Weight
+		}
+
+		randValue := r.Float64() * float64(totalWeight)
+
+		var cumulativeWeight uint64
+		for _, bc := range blobbersSelected {
+			cumulativeWeight += bc.Weight
+			if float64(cumulativeWeight) >= randValue {
+				return bc.BlobberID, nil
 			}
 		}
 
-		return challengeBlobber.BlobberID, nil
+		return blobbersSelected[len(blobbersSelected)-1].BlobberID, nil
 	case randomSelection:
 		randomIndex := r.Intn(len(challengeBlobbers))
 		return challengeBlobbers[randomIndex].BlobberID, nil

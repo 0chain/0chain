@@ -147,7 +147,6 @@ func initTagString() {
 	TagString[TagAddTransactions] = "TagAddTransactions"
 	TagString[TagAddOrOverwriteUser] = "TagAddOrOverwriteUser"
 	TagString[TagAddWriteMarker] = "TagAddWriteMarker"
-	TagString[TagAddBlock] = "TagAddBlock"
 	TagString[TagFinalizeBlock] = "TagFinalizeBlock"
 	TagString[TagAddOrOverwiteValidator] = "TagAddOrOverwiteValidator"
 	TagString[TagUpdateValidator] = "TagUpdateValidator"

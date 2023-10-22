@@ -29,7 +29,6 @@ type Block struct {
 	StateChangesCount     int    `json:"state_changes_count"`
 	RunningTxnCount       string `json:"running_txn_count"`
 	RoundTimeoutCount     int    `json:"round_timeout_count"`
-	IsFinalised           bool   `json:"is_finalised"`
 }
 
 func (edb *EventDb) GetRoundFromTime(at time.Time, asc bool) (int64, error) {
@@ -90,7 +89,6 @@ func (edb *EventDb) GetBlocksByBlockNumbers(start, end int64, limit common.Pagin
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").
 		Where("round >= ? AND round < ?", start, end).
-		Where("is_finalised = ?", true).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{
@@ -103,7 +101,6 @@ func (edb *EventDb) GetBlocksByBlockNumbers(start, end int64, limit common.Pagin
 func (edb *EventDb) GetBlocks(limit common.Pagination) ([]Block, error) {
 	var blocks []Block
 	res := edb.Store.Get().Table("blocks").
-		Where("is_finalised = ?", true).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{

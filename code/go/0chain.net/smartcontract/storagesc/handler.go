@@ -2433,6 +2433,9 @@ type storageNodeResponse struct {
 	RewardRound             RewardRound            `json:"reward_round"`
 	NotAvailable            bool                   `json:"not_available"`
 
+	ChallengesPassed    int64 `json:"challenges_passed"`
+	ChallengesCompleted int64 `json:"challenges_completed"`
+
 	TotalStake               currency.Coin `json:"total_stake"`
 	CreationRound            int64         `json:"creation_round"`
 	ReadData                 int64         `json:"read_data"`
@@ -2508,6 +2511,10 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			MaxNumDelegates:    blobber.NumDelegates,
 			ServiceChargeRatio: blobber.ServiceCharge,
 		},
+
+		ChallengesPassed:    int64(blobber.ChallengesPassed),
+		ChallengesCompleted: int64(blobber.ChallengesCompleted),
+
 		TotalStake:               blobber.TotalStake,
 		CreationRound:            blobber.CreationRound,
 		ReadData:                 blobber.ReadData,
