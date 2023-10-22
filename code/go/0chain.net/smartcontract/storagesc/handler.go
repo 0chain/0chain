@@ -3069,6 +3069,9 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+
+	logging.Logger.Info("replicateBlobberAggregates", zap.Any("round", round), zap.Any("limit", pagination.Limit), zap.Any("offset", pagination.Offset))
+
 	blobbers := []event.BlobberAggregate{}
 	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "blobber", &blobbers)
 	if err != nil {
