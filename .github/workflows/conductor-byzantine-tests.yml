@@ -5,6 +5,11 @@ on:
     # Runs everyday at 01:00 am
     - cron: '0 5 * * * '
   workflow_dispatch:
+    inputs:
+      chain_branch:
+        description: 'Input branch for 0chain repo'
+        default: ''
+        required: false
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -15,8 +20,15 @@ jobs:
     name: CONDUCTOR-BYZANTINE-TESTS
     runs-on: [self-hosted, conductor-test03]
 
+    outputs:
+      branch: ${{ steps.chain.outputs.BRANCH_OUT }}
+
     steps:
-    - uses: actions/checkout@v1
+    - name: Cleanup before restarting conductor tests.
+      run: |
+        rm -rf *
+
+    # - uses: actions/checkout@v1
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -25,6 +37,7 @@ jobs:
         [ -d /usr/local/go ] &&  rm -rf /usr/local/go
         [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
         tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
+
         echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
         export PATH=$PATH:/usr/local/go/bin
         export HOME="/root"
@@ -50,33 +63,53 @@ jobs:
         make -C mcl -j 4 lib/libmclbn256.a install
         make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
+    - name: Git clone 0chain
+      id: chain
+      run: |
+        git clone https://github.com/0chain/0chain.git
+        cd 0chain
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        CHAIN_BRANCH="${{ inputs.chain_branch }}"
+        if [[ -z $CHAIN_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+        fi
+        echo "BRANCH_OUT=$CHAIN_BRANCH" >>$GITHUB_OUTPUT
+        echo "Branch name is ${CHAIN_BRANCH}"
+        git checkout ${CHAIN_BRANCH}
+
     - name: Docker Init Setup.
       run: |
         export HOME="/root"
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+        cd 0chain
         make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
       run: |
+        cd 0chain
         bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.base.sh
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Running No VC Byzantine Tests.
       run: |
+        cd 0chain
         export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
@@ -85,18 +118,13 @@ jobs:
       with:
         name: byzantine-logs
         path: |
-          conductor/
-          docker.local/miner*/log
-          docker.local/sharder*/log
-
-    - name: Cleanup
-      run: |
-        rm -rf *
+          0chain/conductor/logs/
+          0chain/docker.local/miner*/log
+          0chain/docker.local/sharder*/log
 
     - name: Added /tmp folder cleanup.
       run: |
         cd /tmp
-        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
@@ -106,7 +134,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR BYZANTINE TEST FAILED ⚠️",
@@ -115,8 +143,8 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
@@ -126,7 +154,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS PASSING on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR BYZANTINE TESTS PASSED ✅",
@@ -135,5 +163,5 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS ARE PASSING on ${{ needs.CONDUCTOR_BYZANTINE_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
