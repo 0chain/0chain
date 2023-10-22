@@ -28,9 +28,6 @@ jobs:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
     runs-on: [self-hosted, conductor-test]
 
-    outputs:
-      branch: ${{ steps.chain.outputs.BRANCH_OUT }}
-
     steps:
     - name: Setup Environment Variables
       run: |
@@ -91,22 +88,18 @@ jobs:
 
     - name: Docker Network Setup.
       run: |
-        cd 0chain
         bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.base.sh
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Update max faucet limit
@@ -117,7 +110,6 @@ jobs:
   
     - name: Running No VC Fault Tolerance Tests.
       run: |
-        cd 0chain
         export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 

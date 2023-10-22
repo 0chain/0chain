@@ -51,9 +51,6 @@ jobs:
     name: CONDUCTOR-AUTHORIZER-TESTS
     runs-on: [self-hosted, conductor-test]
 
-    outputs:
-      branch: ${{ steps.auth_branch.outputs.BRANCH_OUT }}
-
     steps:
     - name: Setup Environment Variables
       run: |
@@ -144,7 +141,6 @@ jobs:
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
     - name: Git clone authorizer
-      id: auth_branch
       run: |
         git clone https://${{ secrets.SVC_ACCOUNT_USER }}:${{ secrets.SVC_ACCOUNT_SECRET }}@github.com/0chain/token_bridge_authserver.git
         cd token_bridge_authserver
@@ -154,7 +150,7 @@ jobs:
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo "BRANCH_OUT=$AUTH_BRANCH" >>$GITHUB_OUTPUT
+          echo ::set-output name=AUTH_BRANCH::${AUTH_BRANCH}
         fi
         echo "Branch name is ${AUTH_BRANCH}"
         git checkout ${AUTH_BRANCH}
@@ -409,3 +405,44 @@ jobs:
       run: |
         cd /tmp
         rm -rf ./*
+<<<<<<< HEAD
+=======
+
+  notify_slack_on_failure:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_AUTHORIZER_TESTS]
+    if: always() && (needs.CONDUCTOR_AUTHORIZER_TESTS.result == 'failure')
+    steps:
+      - name: "Notify Slack"
+        run: |
+          payload='{
+          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "attachments": [
+              {
+              "text": "CONDUCTOR AUTHORIZER TEST FAILED ⚠️",
+              "color": "#ff0000"
+              }
+          ]
+          }'
+          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+
+  notify_slack_on_success:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_AUTHORIZER_TESTS]
+    if: always() && (needs.CONDUCTOR_AUTHORIZER_TESTS.result == 'success')
+    steps:
+      - name: "Notify Slack"
+        run: |
+          payload='{
+          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "attachments": [
+              {
+              "text": "CONDUCTOR AUTHORIZER TEST PASSED ✅",
+              "color": "#22bb33"
+              }
+          ]
+          }'
+          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+>>>>>>> 862850e5e (revert)

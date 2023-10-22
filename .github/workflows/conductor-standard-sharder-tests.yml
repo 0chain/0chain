@@ -25,9 +25,6 @@ jobs:
     name: CONDUCTOR-SHARDER-STANDARD-TESTS
     runs-on: [self-hosted, conductor-test]
 
-    outputs:
-      branch: ${{ steps.chain.outputs.BRANCH_OUT }}
-
     steps:
     - name: Setup Environment Variables
       run: |
@@ -88,22 +85,18 @@ jobs:
 
     - name: Docker Network Setup.
       run: |
-        cd 0chain
         bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.base.sh
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
-        cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Update max faucet limit
@@ -114,13 +107,11 @@ jobs:
   
     - name: View Change Rounds
       run: |
-        cd 0chain
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
     - name: Running Standard Tests for Sharders.
       run: |
-        cd 0chain
         export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh sharders
 
