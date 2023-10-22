@@ -5,10 +5,6 @@ on:
     # Runs everyday at 01:00 am
     - cron: '0 1 * * *'
   workflow_dispatch:
-      inputs:
-        branchname:
-          description: 'enter your branch name'
-          required: true
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -25,15 +21,9 @@ jobs:
     - name: Get Branch
       id: get_branch
       run: |
-        if [[ ${{ inputs.branchname }} ]]; then
-           BRANCH=${{ inputs.branchname }}
-           echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
-        else        
-           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-           echo ::set-output name=BRANCH::${BRANCH}
-           echo "Branch name is ${BRANCH}"
-        fi
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo "Branch name is ${BRANCH}"
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
