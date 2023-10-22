@@ -42,6 +42,10 @@ on:
         default: ''
         required: false
       
+  schedule:
+    - cron: '0 10 * * * '
+
+
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
     name: CONDUCTOR-AUTHORIZER-TESTS
@@ -71,6 +75,20 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Get Branch
+      id: get_branch
+      run: |
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo "Branch name is ${BRANCH}"
+
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
       run: |

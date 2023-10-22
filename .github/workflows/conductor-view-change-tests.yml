@@ -5,10 +5,6 @@ on:
   #   # Runs everyday at 03:00 am
   #   - cron: '0 8 * * * '
   workflow_dispatch:
-    inputs:
-      branchname:
-        description: 'enter your branch name'
-        required: true
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -34,6 +30,7 @@ jobs:
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
         fi
+
     - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:

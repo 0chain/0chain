@@ -105,6 +105,13 @@ jobs:
     #        echo ::set-output name=BRANCH::${BRANCH}
     #        echo "Branch name is ${BRANCH}"
     #     fi
+    
+    - name: Get Branch
+      id: get_branch
+      run: |
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo "Branch name is ${BRANCH}"
 
     - name: Install herumi/bls and herumi/mcl
       run: |
