@@ -422,8 +422,14 @@ func TestGetBlobbersFromParams(t *testing.T) {
 
 	assert.Equal(t, 3, len(matchedBlobbers), "Expected 3 blobbers to match criteria")
 
+	cleanupBlobbers(t, edb, blobbers)
+}
+
+func cleanupBlobbers(t *testing.T, edb *EventDb, blobbers []Blobber) {
 	for _, blobber := range blobbers {
-		edb.Store.Get().Delete(&blobber)
+		if err := edb.deleteBlobber(blobber.Provider.ID); err != nil {
+			t.Logf("Warning: Failed to cleanup blobber %v: %v", blobber.Provider.ID, err)
+		}
 	}
 }
 
