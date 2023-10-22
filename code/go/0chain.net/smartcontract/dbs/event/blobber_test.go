@@ -396,11 +396,11 @@ func TestGetBlobbersFromParams(t *testing.T) {
 		ReadPriceRange: struct {
 			Min int64
 			Max int64
-		}{1, 1e13},     
+		}{1, 1e13},
 		WritePriceRange: struct {
 			Min int64
 			Max int64
-		}{1, 1e13},  
+		}{1, 1e13},
 		AllocationSize:     1 * 1024 * 1024 * 1024,
 		AllocationSizeInGB: 1.0,
 		NumberOfDataShards: 1,
@@ -421,6 +421,10 @@ func TestGetBlobbersFromParams(t *testing.T) {
 	}
 
 	assert.Equal(t, 3, len(matchedBlobbers), "Expected 3 blobbers to match criteria")
+
+	for _, blobber := range blobbers {
+		edb.Store.Get().Delete(&blobber)
+	}
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
