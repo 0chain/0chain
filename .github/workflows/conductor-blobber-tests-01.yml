@@ -5,32 +5,15 @@ on:
   #   # Runs everyday at 02:00 am
     - cron: '0 2 * * *'
   workflow_dispatch:
-    inputs:
-      chain_branch:
-        description: 'Input branch for 0chain repo'
-        default: ''
-        required: false
-      blobber_branch:
-        description: 'Input branch for blobber repo'
-        default: ''
-        required: false
-      zboxcli_branch:
-        description: 'Input branch for zboxcli repo'
-        default: ''
-        required: false
-      zwalletcli_branch:
-        description: 'Input branch for zwalletcli repo'
-        default: ''
-        required: false
-
+      inputs:
+        branchname:
+          description: 'enter your branch name'
+          required: true
 
 jobs:
   CONDUCTOR_BLOBBERS_01_TESTS:
     name: CONDUCTOR-BLOBBERS-01-TESTS
     runs-on: [self-hosted, conductor-test03]
-
-    outputs:
-      branch: ${{ steps.blobber.outputs.BRANCH_OUT }}
 
     steps:
     - name: Cleanup before restarting conductor tests.
@@ -50,7 +33,7 @@ jobs:
         export HOME="/root"
         which go
         go env
-
+      
     - name: Docker Compose Setup.
       run: |
         sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
@@ -62,20 +45,20 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-    # - name: Get Branch
-    #   id: get_branch
-    #   run: |
-    #     if [[ -n "${{ inputs.branchname }}" ]]; then
-    #        BRANCH="${{ inputs.branchname }}"
-    #        echo ::set-output name=BRANCH::${BRANCH}
-    #        echo "Branch name is ${BRANCH}"
-    #     else
-    #        BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-    #        echo ::set-output name=BRANCH::${BRANCH}
-    #        echo "Branch name is ${BRANCH}"
-    #     fi
-
+    
+    - name: Get Branch
+      id: get_branch
+      run: |
+        if [[ -n "${{ inputs.branchname }}" ]]; then
+           BRANCH="${{ inputs.branchname }}"
+           echo ::set-output name=BRANCH::${BRANCH}
+           echo "Branch name is ${BRANCH}"
+        else        
+           BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+           echo ::set-output name=BRANCH::${BRANCH}
+           echo "Branch name is ${BRANCH}"
+        fi
+ 
     - name: Install herumi/bls and herumi/mcl
       run: |
         git clone --recursive https://github.com/herumi/bls
@@ -86,17 +69,7 @@ jobs:
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
-        cd 0chain
-        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
-        CHAIN_BRANCH="${{ inputs.chain_branch }}"
-        if [[ -z $CHAIN_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
-        fi
-        echo "Branch name is ${CHAIN_BRANCH}"
-        git checkout ${CHAIN_BRANCH}
+        cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
     - name: Docker Init Setup.
       run: |
@@ -134,49 +107,16 @@ jobs:
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
     - name: Git clone blobber
-      id: blobber
       run: |
         git clone https://github.com/0chain/blobber.git
-        cd blobber
-        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
-        BLOBBER_BRANCH="${{ inputs.blobber_branch }}"
-        if [[ -z $BLOBBER_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          BLOBBER_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-        fi
-        echo "BRANCH_OUT=$BLOBBER_BRANCH" >>$GITHUB_OUTPUT
-        echo "Branch name is ${BLOBBER_BRANCH}"
-        git checkout ${BLOBBER_BRANCH}
 
     - name: Git clone zboxcli
       run: |
         git clone https://github.com/0chain/zboxcli.git
-        cd zboxcli
-        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
-        ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
-        if [[ -z $ZBOXCLI_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo ::set-output name=ZBOXCLI_BRANCH::${ZBOXCLI_BRANCH}
-        fi
-        echo "Branch name is ${ZBOXCLI_BRANCH}"
-        git checkout ${ZBOXCLI_BRANCH}
 
     - name: Git clone zwalletcli
       run: |
         git clone https://github.com/0chain/zwalletcli.git
-        cd zwalletcli
-        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
-        ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
-        if [[ -z $ZWALLETCLI_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-        fi
-        echo "Branch name is ${ZWALLETCLI_BRANCH}"
-        git checkout ${ZWALLETCLI_BRANCH}
 
     - name: Git clone 0dns
       run: |
@@ -278,7 +218,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR BLOBBER01 TEST FAILED ⚠️",
@@ -287,8 +227,8 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+        
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
     needs: [CONDUCTOR_BLOBBERS_01_TESTS]
@@ -297,7 +237,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS PASSING on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR BLOBBERS_01 TEST PASSED ✅",
@@ -306,5 +246,5 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS ARE PASSING on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

@@ -5,6 +5,10 @@ on:
   #   # Runs everyday at 03:00 am
   #   - cron: '0 8 * * * '
   workflow_dispatch:
+    inputs:
+      branchname:
+        description: 'enter your branch name'
+        required: true
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
