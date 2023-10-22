@@ -22,10 +22,6 @@ type Blobber struct {
 	Provider
 	BaseURL string `json:"url" gorm:"uniqueIndex"`
 
-	// geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-
 	// terms
 	ReadPrice  currency.Coin `json:"read_price"`
 	WritePrice currency.Coin `json:"write_price"`

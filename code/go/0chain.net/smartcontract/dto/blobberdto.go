@@ -13,7 +13,6 @@ import (
 type StorageDtoNode struct {
 	provider.Provider
 	BaseURL                 *string                 `json:"url,omitempty"`
-	Geolocation             *StorageNodeGeolocation `json:"geolocation,omitempty"`
 	Terms                   *Terms                  `json:"terms,omitempty"`
 	Capacity                *int64                  `json:"capacity,omitempty"`
 	Allocated               *int64                  `json:"allocated,omitempty"`
@@ -30,10 +29,6 @@ type RewardRound struct {
 	Timestamp  *common.Timestamp `json:"timestamp,omitempty"`
 }
 
-type StorageNodeGeolocation struct {
-	Latitude  *float64 `json:"latitude,omitempty"`
-	Longitude *float64 `json:"longitude,omitempty"`
-}
 
 type Terms struct {
 	ReadPrice  *currency.Coin `json:"read_price,omitempty"`

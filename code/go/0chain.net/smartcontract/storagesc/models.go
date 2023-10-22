@@ -300,25 +300,6 @@ const (
 	MinLongitude = -180
 )
 
-// Move to the core, in case of multi-entity use of geo data
-type StorageNodeGeolocation struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	// reserved / Accuracy float64 `mapstructure:"accuracy"`
-}
-
-func (sng StorageNodeGeolocation) validate() error {
-	if sng.Latitude < MinLatitude || MaxLatitude < sng.Latitude {
-		return common.NewErrorf("out_of_range_geolocation",
-			"latitude %f should be in range [-90, 90]", sng.Latitude)
-	}
-	if sng.Longitude < MinLongitude || MaxLongitude < sng.Longitude {
-		return common.NewErrorf("out_of_range_geolocation",
-			"latitude %f should be in range [-180, 180]", sng.Longitude)
-	}
-	return nil
-}
-
 type RewardRound struct {
 	StartRound int64            `json:"start_round"`
 	Timestamp  common.Timestamp `json:"timestamp"`
@@ -336,7 +317,6 @@ type Info struct {
 type StorageNode struct {
 	provider.Provider
 	BaseURL                 string                 `json:"url"`
-	Geolocation             StorageNodeGeolocation `json:"geolocation"`
 	Terms                   Terms                  `json:"terms"`     // terms
 	Capacity                int64                  `json:"capacity"`  // total blobber capacity
 	Allocated               int64                  `json:"allocated"` // allocated capacity
@@ -364,10 +344,6 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 	}
 
 	if err := validateBaseUrl(&sn.BaseURL); err != nil {
-		return err
-	}
-
-	if err := sn.Geolocation.validate(); err != nil {
 		return err
 	}
 

@@ -201,10 +201,6 @@ type authorizerResponse struct {
 	// Configuration
 	Fee currency.Coin `json:"fee"`
 
-	// Geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-
 	// Stats
 	LastHealthCheck int64 `json:"last_health_check"`
 

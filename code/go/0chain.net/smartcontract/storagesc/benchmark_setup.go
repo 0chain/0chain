@@ -378,10 +378,6 @@ func AddMockBlobbers(
 				LastHealthCheck: balances.GetTransaction().CreationDate,
 			},
 			BaseURL: getMockBlobberUrl(i),
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  latitudeStep*float64(i) - maxLatitude,
-				Longitude: longitudeStep*float64(i) - maxLongitude,
-			},
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
@@ -402,8 +398,6 @@ func AddMockBlobbers(
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
 				BaseURL:    blobber.BaseURL,
-				Latitude:   blobber.Geolocation.Latitude,
-				Longitude:  blobber.Geolocation.Longitude,
 				ReadPrice:  blobber.Terms.ReadPrice,
 				WritePrice: blobber.Terms.WritePrice,
 				Capacity:   blobber.Capacity,
