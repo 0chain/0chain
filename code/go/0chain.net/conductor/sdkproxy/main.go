@@ -398,17 +398,20 @@ func waitSigInt() {
 
 func execute(r, address string, codes chan int) {
 	var (
-		ctx, _ = context.WithTimeout(context.Background(), 2 * time.Minute)
+		ctx, cancel = context.WithTimeout(context.Background(), 2 * time.Minute)
 		cmd  = exec.CommandContext(ctx, "sh", "-x", r)
 		err  error
 		code int
 	)
+
+	defer cancel()
 
 	log.Print("execute: ", r)
 	defer func() { log.Printf("executed (%s) with %d exit code", r, code) }()
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.WaitDelay = 1 * time.Second
 	cmd.Env = append(os.Environ(), "HTTP_PROXY=http://"+address)
 
 	err = cmd.Run()
