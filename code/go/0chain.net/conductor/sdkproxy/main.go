@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 const (
@@ -397,7 +398,8 @@ func waitSigInt() {
 
 func execute(r, address string, codes chan int) {
 	var (
-		cmd  = exec.Command("sh", "-x", r)
+		ctx, _ = context.WithTimeout(context.Background(), 2 * time.Minute)
+		cmd  = exec.CommandContext(ctx, "sh", "-x", r)
 		err  error
 		code int
 	)
@@ -470,14 +472,10 @@ func main() {
 
 	// start the proxy
 	go func() { log.Fatal(s.ListenAndServe()) }()
-	defer func() {
-		if err := s.Shutdown(back); err != nil {
-			log.Printf("shutdown error: %\ns", err)
-		}
-	}()
 
 	if len(run) == 0 {
 		waitSigInt()
+		cleanup(back, &s)
 		return
 	}
 
@@ -494,9 +492,17 @@ func main() {
 		}
 	}
 
+	cleanup(back, &s)
 	os.Exit(code)
 }
 
+
+func cleanup(ctx context.Context, s *http.Server) {
+	log.Println("shutdown server")
+	if err := s.Shutdown(ctx); err != nil {
+		log.Printf("shutdown error: %\ns", err)
+	}
+}
 // ========================================================================== //
 //                                    note                                    //
 // ========================================================================== //

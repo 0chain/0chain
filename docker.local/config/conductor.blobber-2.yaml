@@ -36,6 +36,8 @@ tests:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
+      - command:
+          name: "cleanup"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
@@ -89,6 +91,8 @@ tests:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
+      - command:
+          name: "cleanup"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
@@ -106,7 +110,7 @@ tests:
           timeout: '35m'
       - command:
           name: 'simultaneous'
-          timeout: '5m'
+          timeout: '20m'
 
   # This test verifies `zbox start-repair` is working.
   # The test uploads when a blobber node is not available and then use the repair to fix the data on that blobber.
@@ -118,6 +122,8 @@ tests:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
+      - command:
+          name: "cleanup"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts

@@ -397,3 +397,7 @@ commands:
       destname:
         required: false
         default: upload_renamed.bin
+  cleanup:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/cleanup.sh"
+    should_fail: false
