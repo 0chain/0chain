@@ -21,6 +21,8 @@ import (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
+const SLOWTABLESPACE = "slowtablespace"
+
 type (
 	ProcessEventsOptions struct {
 		CommitNow bool
@@ -399,7 +401,37 @@ func (edb *EventDb) WorkAggregates(
 func (edb *EventDb) managePartitions(round int64) {
 	logging.Logger.Info("managing partitions", zap.Int64("round", round))
 	edb.AddPartitions(round)
-	edb.dropPartitions(round)
+	edb.movePartitions(round)
+}
+
+func (edb *EventDb) movePartitions(round int64) {
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "events"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "events"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "snapshots"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "blobber_aggregates"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "miner_aggregates"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "sharder_aggregates"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "validator_aggregates"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "authorizer_aggregates"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "user_aggregates"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
 }
 
 func (edb *EventDb) AddPartitions(round int64) {
