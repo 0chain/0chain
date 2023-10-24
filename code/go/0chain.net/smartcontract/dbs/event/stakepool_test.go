@@ -163,8 +163,6 @@ func TestEventDb_rewardProviders(t *testing.T) {
 			},
 
 			Fees:      mn.Stat.GeneratorFees,
-			Longitude: 0,
-			Latitude:  0,
 		}
 	}
 	// Miner - Add Event

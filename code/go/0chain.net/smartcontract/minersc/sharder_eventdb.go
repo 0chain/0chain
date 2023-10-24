@@ -27,10 +27,6 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		TotalStaked:     edbSharder.TotalStake,
 		Delete:          edbSharder.Delete,
 		LastHealthCheck: edbSharder.LastHealthCheck,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbSharder.Latitude,
-			Longitude: edbSharder.Longitude,
-		},
 		NodeType:                      NodeTypeSharder,
 		Status:                        status,
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
@@ -95,8 +91,6 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		},
 
 		Active:    sn.Status == node.NodeStatusActive,
-		Longitude: sn.Geolocation.Longitude,
-		Latitude:  sn.Geolocation.Latitude,
 	}
 }
 
@@ -131,8 +125,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"service_charge":    sn.Settings.ServiceChargeRatio,
 			"num_delegates":     sn.Settings.MaxNumDelegates,
 			"last_health_check": sn.LastHealthCheck,
-			"longitude":         sn.SimpleNode.Geolocation.Longitude,
-			"latitude":          sn.SimpleNode.Geolocation.Latitude,
 		},
 	}
 

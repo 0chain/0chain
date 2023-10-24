@@ -22,7 +22,6 @@ type SimpleDtoNode struct {
 	N2NHost     string                `json:"n2n_host"`
 	Host        string                `json:"host"`
 	Port        int                   `json:"port"`
-	Geolocation SimpleNodeGeolocation `json:"geolocation"`
 	Path        string                `json:"path"`
 	PublicKey   string                `json:"public_key"`
 	ShortName   string                `json:"short_name"`
@@ -43,12 +42,6 @@ type SimpleDtoNode struct {
 
 	//LastSettingUpdateRound will be set to round number when settings were updated
 	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
-}
-
-// swagger:model SimpleNodeGeolocation
-type SimpleNodeGeolocation struct {
-	Latitude  *float64 `json:"latitude,omitempty"`
-	Longitude *float64 `json:"longitude,omitempty"`
 }
 
 func NewMinerDtoNode() *MinerDtoNode {

@@ -45,8 +45,6 @@ func TestAuthorizers(t *testing.T) {
 
 	authorizer_1 := Authorizer{
 		URL:       "http://localhost:8080",
-		Latitude:  0.0,
-		Longitude: 0.0,
 		Provider: Provider{
 			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(0)),
 			DelegateWallet:  "delegate wallet",
@@ -58,8 +56,6 @@ func TestAuthorizers(t *testing.T) {
 
 	authorizer_2 := Authorizer{
 		URL:       "http://localhost:8888",
-		Latitude:  1.0,
-		Longitude: 1.0,
 		Provider: Provider{
 			ID:              encryption.Hash("mockAuthorizer_" + strconv.Itoa(1)),
 			DelegateWallet:  "delegate wallet",

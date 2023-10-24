@@ -16,7 +16,6 @@ type SimpleNodeResponse struct {
 	N2NHost                       string                `json:"n2n_host"`
 	Host                          string                `json:"host"`
 	Port                          int                   `json:"port"`
-	Geolocation                   SimpleNodeGeolocation `json:"geolocation"`
 	Path                          string                `json:"path"`
 	PublicKey                     string                `json:"public_key"`
 	ShortName                     string                `json:"short_name"`
@@ -64,10 +63,6 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		BuildTag:    edbMiner.BuildTag,
 		TotalStaked: edbMiner.Provider.TotalStake,
 		Delete:      edbMiner.Delete,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbMiner.Latitude,
-			Longitude: edbMiner.Longitude,
-		},
 		NodeType:                      NodeTypeMiner,
 		LastHealthCheck:               edbMiner.LastHealthCheck,
 		Status:                        status,
@@ -132,8 +127,6 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		},
 
 		Active:    mn.Status == node.NodeStatusActive,
-		Longitude: mn.Geolocation.Longitude,
-		Latitude:  mn.Geolocation.Latitude,
 	}
 }
 
@@ -172,8 +165,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"service_charge":    mn.Settings.ServiceChargeRatio,
 			"num_delegates":     mn.Settings.MaxNumDelegates,
 			"last_health_check": mn.LastHealthCheck,
-			"longitude":         mn.SimpleNode.Geolocation.Longitude,
-			"latitude":          mn.SimpleNode.Geolocation.Latitude,
 		},
 	}
 

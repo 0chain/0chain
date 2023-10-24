@@ -25,17 +25,9 @@ type Miner struct {
 	Delete        bool
 	Fees          currency.Coin
 	Active        bool
-	Longitude     float64
-	Latitude      float64
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
 }
 
-// swagger:model MinerGeolocation
-type MinerGeolocation struct {
-	MinerID   string  `json:"miner_id"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
 
 func (m Miner) GetID() string {
 	return m.ID
@@ -114,8 +106,6 @@ type MinerQuery struct {
 	Rewards           null.Int
 	Fees              null.Int
 	Active            null.Bool
-	Longitude         null.Float
-	Latitude          null.Float
 	IsKilled          null.Bool
 }
 
@@ -165,24 +155,6 @@ func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p commo
 	return miners, query.Scan(&miners).Error
 }
 
-func (edb *EventDb) GetMinerGeolocations(filter MinerQuery, p common2.Pagination) ([]MinerGeolocation, error) {
-	var minerLocations []MinerGeolocation
-	query := edb.Get().Model(&Miner{}).
-		Where(&filter).
-		Offset(p.Offset).
-		Limit(p.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_round"},
-			Desc:   p.IsDescending,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
-			Desc:   p.IsDescending,
-		})
-	result := query.Scan(&minerLocations)
-
-	return minerLocations, result.Error
-}
 
 func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
 	var miners []Miner

@@ -144,29 +144,6 @@ func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error
 	return blobberIDs, result.Error
 }
 
-func (edb *EventDb) GeBlobberByLatLong(
-	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit common2.Pagination,
-) ([]string, error) {
-	var blobberIDs []string
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Select("id").
-		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).
-		Offset(limit.Offset).
-		Limit(limit.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "capacity"},
-			Desc:   true,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
-			Desc:   true,
-		}).
-		Find(&blobberIDs)
-
-	return blobberIDs, result.Error
-}
 
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	var blobbers []Blobber
@@ -282,8 +259,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 
 	// fields match storagesc.emitUpdateBlobber
 	updateColumns := []string{
-		"latitude",
-		"longitude",
 		"read_price",
 		"write_price",
 		"min_lock_demand",

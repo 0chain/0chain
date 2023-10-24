@@ -293,13 +293,6 @@ func validateWritePrice(writePrice currency.Coin, conf *Config) error {
 	return nil
 }
 
-const (
-	MaxLatitude  = 90
-	MinLatitude  = -90
-	MaxLongitude = 180
-	MinLongitude = -180
-)
-
 type RewardRound struct {
 	StartRound int64            `json:"start_round"`
 	Timestamp  common.Timestamp `json:"timestamp"`

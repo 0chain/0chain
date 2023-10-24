@@ -225,8 +225,6 @@ func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 		AuthorizerID:    auth.ID,
 		URL:             auth.URL,
 		Fee:             auth.Fee,
-		Latitude:        auth.Latitude,
-		Longitude:       auth.Longitude,
 		LastHealthCheck: int64(auth.LastHealthCheck),
 		DelegateWallet:  auth.DelegateWallet,
 		NumDelegates:    auth.NumDelegates,

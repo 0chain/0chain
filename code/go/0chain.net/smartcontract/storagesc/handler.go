@@ -2400,21 +2400,21 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 // swagger:model storageNodeResponse
 type storageNodeResponse struct {
-	ID                      string                 `json:"id" validate:"hexadecimal,len=64"`
-	BaseURL                 string                 `json:"url"`
-	Terms                   Terms                  `json:"terms"`     // terms
-	Capacity                int64                  `json:"capacity"`  // total blobber capacity
-	Allocated               int64                  `json:"allocated"` // allocated capacity
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
-	IsKilled                bool                   `json:"is_killed"`
-	IsShutdown              bool                   `json:"is_shutdown"`
-	PublicKey               string                 `json:"-"`
-	SavedData               int64                  `json:"saved_data"`
-	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
-	StakePoolSettings       stakepool.Settings     `json:"stake_pool_settings"`
-	RewardRound             RewardRound            `json:"reward_round"`
-	NotAvailable            bool                   `json:"not_available"`
+	ID                      string             `json:"id" validate:"hexadecimal,len=64"`
+	BaseURL                 string             `json:"url"`
+	Terms                   Terms              `json:"terms"`     // terms
+	Capacity                int64              `json:"capacity"`  // total blobber capacity
+	Allocated               int64              `json:"allocated"` // allocated capacity
+	LastHealthCheck         common.Timestamp   `json:"last_health_check"`
+	IsKilled                bool               `json:"is_killed"`
+	IsShutdown              bool               `json:"is_shutdown"`
+	PublicKey               string             `json:"-"`
+	SavedData               int64              `json:"saved_data"`
+	DataReadLastRewardRound float64            `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64              `json:"last_reward_data_read_round"` // last round when data read was updated
+	StakePoolSettings       stakepool.Settings `json:"stake_pool_settings"`
+	RewardRound             RewardRound        `json:"reward_round"`
+	NotAvailable            bool               `json:"not_available"`
 
 	TotalStake               currency.Coin `json:"total_stake"`
 	CreationRound            int64         `json:"creation_round"`

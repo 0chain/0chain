@@ -56,8 +56,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/nodeStat", common.UserRateLimit(mrh.getNodeStat)),
 		rest.MakeEndpoint(miner+"/nodePoolStat", common.UserRateLimit(mrh.getNodePoolStat)),
 		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
-		rest.MakeEndpoint(miner+"/get_miner_geolocations", common.UserRateLimit(mrh.getMinerGeolocations)),
-		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
 		rest.MakeEndpoint(miner+"/provider-rewards", common.UserRateLimit(mrh.getProviderRewards)),
 		rest.MakeEndpoint(miner+"/delegate-rewards", common.UserRateLimit(mrh.getDelegateRewards)),
 
@@ -207,42 +205,6 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 //	200: SharderGeolocation
 //	400:
 //	484:
-func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *http.Request) {
-	var (
-		activeString = r.URL.Query().Get("active")
-	)
-
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	filter := event.SharderQuery{
-		IsKilled: null.BoolFrom(false),
-	}
-	if activeString != "" {
-		active, err := strconv.ParseBool(activeString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
-			return
-		}
-		filter.Active = null.BoolFrom(active)
-	}
-
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	geolocations, err := edb.GetSharderGeolocations(filter, pagination)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, geolocations, nil)
-}
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations get_miner_geolocations
 // list minersc config settings
@@ -271,42 +233,6 @@ func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *ht
 //	200: MinerGeolocation
 //	400:
 //	484:
-func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http.Request) {
-	var (
-		activeString = r.URL.Query().Get("active")
-	)
-
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	filter := event.MinerQuery{
-		IsKilled: null.BoolFrom(false),
-	}
-	if activeString != "" {
-		active, err := strconv.ParseBool(activeString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
-			return
-		}
-		filter.Active = null.BoolFrom(active)
-	}
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	geolocations, err := edb.GetMinerGeolocations(filter, pagination)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, geolocations, nil)
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs configs
 // list minersc config settings
 //

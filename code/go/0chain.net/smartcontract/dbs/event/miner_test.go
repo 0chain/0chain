@@ -163,8 +163,6 @@ func TestMinersBatchUpdate(t *testing.T) {
 			},
 
 			Fees:      mn.Stat.GeneratorFees,
-			Longitude: 0,
-			Latitude:  0,
 		}
 	}
 
@@ -350,8 +348,6 @@ func TestMiners(t *testing.T) {
 				},
 			},
 			Fees:      mn.Stat.GeneratorFees,
-			Longitude: 0,
-			Latitude:  0,
 		}
 	}
 
@@ -571,70 +567,6 @@ func TestGetMiners(t *testing.T) {
 	})
 }
 
-func TestGetMinerLocations(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
-	require.NoError(t, err)
-	defer eventDb.Close()
-	err = eventDb.Drop()
-	require.NoError(t, err)
-	err = eventDb.AutoMigrate()
-	require.NoError(t, err)
-
-	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
-		AggregatePeriod:       10,
-		PartitionKeepCount:    10,
-		PartitionChangePeriod: 100,
-	}}}
-
-	assert.NoError(t, err, "error while migrating database")
-	createMinersWithLocation(t, eventDb, 12)
-	t.Run("miner locations without any filters", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{}, common2.Pagination{Limit: 20})
-		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 12, len(locations), "all miners should be returned")
-		for _, location := range locations {
-			id, err := strconv.ParseInt(location.MinerID, 10, 0)
-			assert.NoError(t, err, "miner id should be parsed to integer")
-			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
-			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
-		}
-	})
-	t.Run("locations for miners which are active", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
-		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
-		for _, location := range locations {
-			id, err := strconv.ParseInt(location.MinerID, 10, 0)
-			assert.NoError(t, err, "miner id should be parsed to integer")
-			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
-			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
-		}
-	})
-	t.Run("locations for miners which are inactive", func(t *testing.T) {
-		locations, err := eventDb.GetMinerGeolocations(MinerQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
-		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 6, len(locations), "locations of only active miners should be returned")
-		for _, location := range locations {
-			id, err := strconv.ParseInt(location.MinerID, 10, 0)
-			assert.NoError(t, err, "miner id should be parsed to integer")
-			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
-			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
-		}
-	})
-}
-
 func createMiners(t *testing.T, eventDb *EventDb, count int) []string {
 	var ids []string
 	for i := 0; i < count; i++ {
@@ -670,7 +602,7 @@ func createMiners(t *testing.T, eventDb *EventDb, count int) []string {
 
 func createMinersWithLocation(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
-		s := Miner{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
+		s := Miner{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}}
 		err := eventDb.addMiner([]Miner{s})
 		assert.NoError(t, err, "There should be no error")
 	}

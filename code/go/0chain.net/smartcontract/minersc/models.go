@@ -673,11 +673,6 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	return
 }
 
-// swagger:model SimpleNodeGeolocation
-type SimpleNodeGeolocation struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
 
 // swagger:model SimpleNode
 type SimpleNode struct {
@@ -685,7 +680,6 @@ type SimpleNode struct {
 	N2NHost     string                `json:"n2n_host"`
 	Host        string                `json:"host"`
 	Port        int                   `json:"port"`
-	Geolocation SimpleNodeGeolocation `json:"geolocation"`
 	Path        string                `json:"path"`
 	PublicKey   string                `json:"public_key"`
 	ShortName   string                `json:"short_name"`

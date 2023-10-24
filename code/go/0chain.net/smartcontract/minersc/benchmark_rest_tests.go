@@ -125,25 +125,6 @@ func BenchmarkRestTests(
 				},
 				Endpoint: mrh.getNodePoolStat,
 			},
-
-			{
-				FuncName: "get_miner_geolocations",
-				Params: map[string]string{
-					"offset": "",
-					"limit":  "",
-					"active": "",
-				},
-				Endpoint: mrh.getMinerGeolocations,
-			},
-			{
-				FuncName: "get_sharder_geolocations",
-				Params: map[string]string{
-					"offset": "",
-					"limit":  "",
-					"active": "",
-				},
-				Endpoint: mrh.getSharderGeolocations,
-			},
 			{
 				FuncName: "configs",
 				Endpoint: mrh.getConfigs,
