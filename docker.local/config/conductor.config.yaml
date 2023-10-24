@@ -401,3 +401,14 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/cleanup.sh"
     should_fail: false
+  init_allocation_3_blobbers_no_read_tokens:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation_3_blobbers_no_read_tokens.sh $data_shards $parity_shards"
+    should_fail: false
+    args:
+      data_shards:
+        required: false
+        default: "1"
+      parity_shards:
+        required: false
+        default: "2"

@@ -45,13 +45,15 @@ tests:
       # wait the 0dns starts
       - sleep: "20s"
       - wait_add:
-          blobbers: ['blobber-1', 'blobber-2']
-          validators: ['validator-1', 'validator-2']
+          blobbers: ['blobber-1', 'blobber-2','blobber-3']
+          validators: ['validator-1', 'validator-2','validator-3']
           timeout: '15m'
           start: true
+      - wait_round:
+          shift: 100
       # setup blobbers and create allocation with minimum write pool lock
       - command:
-          name: 'init_pour_allocation'
+          name: 'init_allocation_3_blobbers_no_read_tokens'
           timeout: '35m'
       # upload failure without enough tokens in write pool
       # NOTE: cannot be done as upload allowed at this point due to lock added on new allocation
@@ -100,13 +102,13 @@ tests:
       # wait the 0dns starts
       - sleep: "20s"
       - wait_add:
-          blobbers: ['blobber-1', 'blobber-2']
-          validators: ['validator-1', 'validator-2']
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
       - command:
-          name: 'init_pour_allocation'
+          name: 'init_allocation_only'
           timeout: '35m'
       - command:
           name: 'simultaneous'
