@@ -40,7 +40,7 @@ tests:
           name: "upload_can_fail"
           params:
             remotepath: /remote/upload.bin
-      - sleep: "1m" # simple wait for blobbers to pick up state
+      - sleep: "100000m" # simple wait for blobbers to pick up state
       - wait_for_file_meta_root: { }
       - check_file_meta_root:
           require_same_root: true
