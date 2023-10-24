@@ -265,6 +265,14 @@ commands:
       remotepath:
         required: false
         default: /remote/upload.bin
+  upload_can_fail:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh $remotepath"
+    should_fail: true
+    args:
+      remotepath:
+        required: false
+        default: /remote/upload.bin
   unverified_transaction:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/unverified_transaction.sh"
