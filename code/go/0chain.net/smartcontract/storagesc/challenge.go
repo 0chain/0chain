@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -849,20 +850,30 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			blobbersSelected = challengeBlobbers[:maxBlobbersSelect]
 		}
 
+		uniqueIDForLogging := uuid.New().String()
+
+		logging.Logger.Info("Jayash selecting blobber for challenge : "+uniqueIDForLogging, zap.Any("blobbers", len(blobbersSelected)))
+
 		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
+			logging.Logger.Info("Jayash selecting single blobber : "+uniqueIDForLogging, zap.Any("blobber", bc.BlobberID), zap.Any("weight", bc.Weight))
 			totalWeight += bc.Weight
 		}
 
 		randValue := r.Float64() * float64(totalWeight)
 
+		logging.Logger.Info("Jayash selecting blobber for challenge : "+uniqueIDForLogging, zap.Any("randValue", randValue), zap.Any("totalWeight", totalWeight))
+
 		var cumulativeWeight uint64
 		for _, bc := range blobbersSelected {
 			cumulativeWeight += bc.Weight
 			if float64(cumulativeWeight) >= randValue {
+				logging.Logger.Info("Jayash selected blobber for challenge : "+uniqueIDForLogging, zap.Any("blobber", bc.BlobberID))
 				return bc.BlobberID, nil
 			}
 		}
+
+		logging.Logger.Info("Jayash issue : "+uniqueIDForLogging, zap.Any("blobber", blobbersSelected[len(blobbersSelected)-1].BlobberID))
 
 		return blobbersSelected[len(blobbersSelected)-1].BlobberID, nil
 	case randomSelection:
