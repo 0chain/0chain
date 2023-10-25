@@ -530,3 +530,41 @@ func TestUpdateHistoricData(t *testing.T) {
 		assert.Equal(t, *snapExpected, authorizerSnapshotFromDb)
 	}
 }
+
+func TestBlobberSnapshotsWithMultipleAllocations(t *testing.T) {
+	eventDb, clean := GetTestEventDB(t)
+	defer clean()
+
+	blobbers := []Blobber{
+		buildMockBlobber(t, "blobber1"),
+		buildMockBlobber(t, "blobber2"),
+		buildMockBlobber(t, "blobber3"),
+		buildMockBlobber(t, "blobber4"),
+		buildMockBlobber(t, "blobber5"),
+		buildMockBlobber(t, "blobber6"),
+	}
+	err := eventDb.Store.Get().Omit(clause.Associations).Create(&blobbers).Error
+	require.NoError(t, err)
+
+	blobberSnapshots := []BlobberSnapshot{
+		buildMockBlobberSnapshot(t, "blobber1"),
+		buildMockBlobberSnapshot(t, "blobber2"),
+		buildMockBlobberSnapshot(t, "blobber3"),
+		buildMockBlobberSnapshot(t, "blobber4"),
+		buildMockBlobberSnapshot(t, "blobber5"),
+		buildMockBlobberSnapshot(t, "blobber6"),
+	}
+	err = eventDb.Store.Get().Create(&blobberSnapshots).Error
+
+	//events := []Event{
+	//	// Events changing blobbers
+	//	{
+	//		Type: TypeStats,
+	//		Tag:  TagUpdateBlobber,
+	//		Data: []Blobber{
+	//			{Provider: Provider{ID: "blobber1"}},
+	//			{Provider: Provider{ID: "blobber2"}},
+	//		},
+	//	},
+	//}
+}
