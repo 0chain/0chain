@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -396,7 +397,7 @@ func waitSigInt() {
 	log.Printf("got signal %s, exiting...", <-c)
 }
 
-func execute(r, address string, codes chan int) {
+func execute(r, address string, codes chan int, logsDir string) {
 	var (
 		ctx, cancel = context.WithTimeout(context.Background(), 2 * time.Minute)
 		cmd  = exec.CommandContext(ctx, "sh", "-x", r)
@@ -409,14 +410,34 @@ func execute(r, address string, codes chan int) {
 	log.Print("execute: ", r)
 	defer func() { log.Printf("executed (%s) with %d exit code", r, code) }()
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	executableName := filepath.Base(r)
+	logFileBaseName := fmt.Sprintf("%v-%v.log", executableName, time.Now().Local().Format("2006-01-02_15-04-05"))
+
+	foutPath := filepath.Join(logsDir, fmt.Sprintf("sdkproxy/stdout-%v.log", logFileBaseName))
+	fout, err := os.Create(foutPath)
+	if err != nil {
+		log.Printf("creating temp file: %v", err)
+		return
+	}
+	defer fout.Close()
+
+	ferrPath := filepath.Join(logsDir, fmt.Sprintf("sdkproxy/stderr-%v.log", logFileBaseName))
+	ferr, err := os.Create(ferrPath)
+	if err != nil {
+		log.Printf("creating temp file: %v", err)
+		return
+	}
+	defer ferr.Close()
+
+	cmd.Stdout = fout
+	cmd.Stderr = ferr
 	cmd.WaitDelay = 1 * time.Second
 	cmd.Env = append(os.Environ(), "HTTP_PROXY=http://"+address)
 
 	err = cmd.Run()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
+
 			code = ee.ExitCode()
 		}
 		log.Printf("executing %s: %v", r, err)
@@ -429,6 +450,7 @@ func main() {
 
 	// address
 	var (
+		logsDir string = ""				 // logs directory
 		markers string = ""              // markers arriving order
 		filter  string = ""              // filter multipart forms fields
 		addr    string = fmt.Sprintf("0.0.0.0:%v", rand.Intn(65535-10000) + 10000) // bind
@@ -439,6 +461,7 @@ func main() {
 		run Run         // run parallel with HTTP_PROXY
 	)
 
+	flag.StringVar(&logsDir, "l", logsDir, "logs directory")
 	flag.StringVar(&markers, "m", markers, "markers arriving order")
 	flag.StringVar(&filter, "f", filter, "filter multipart form fields")
 	flag.StringVar(&addr, "a", addr, "bind proxy address")
@@ -484,7 +507,7 @@ func main() {
 
 	var codes = make(chan int, len(run))
 	for _, r := range run {
-		go execute(r, addr, codes)
+		go execute(r, addr, codes, logsDir)
 	}
 
 	var code int

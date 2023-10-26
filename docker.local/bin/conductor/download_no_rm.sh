@@ -9,5 +9,5 @@ set -e
 # ./zboxcli/zbox --wallet testing-auth.json rp-lock \
 #     --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
 
-go run 0chain/code/go/0chain.net/conductor/sdkproxy/main.go -f read_marker \
+go run 0chain/code/go/0chain.net/conductor/sdkproxy/main.go -f read_marker -l "0chain/conductor/logs" \
     -run 0chain/docker.local/bin/conductor/proxied/download_b.sh

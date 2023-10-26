@@ -100,6 +100,16 @@ func main() {
 	var success bool
 	// not always error means failure
 
+	// Clean contents of sdxproxy logs directory but keep the directory itself
+	err = os.RemoveAll(conf.Logs + "/sdkproxy")
+	if err != nil {
+		log.Printf("Error while cleaning sdxproxy logs directory: %v", err)
+	}
+	err = os.MkdirAll(conf.Logs+"/sdkproxy", 0777)
+	if err != nil {
+		log.Printf("Error while creating sdxproxy logs directory: %v", err)
+	}
+
 	err, success = r.Run()
 	if err != nil {
 		log.Print("[ERR] ", err)
