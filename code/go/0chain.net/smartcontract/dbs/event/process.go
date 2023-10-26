@@ -439,12 +439,12 @@ func (edb *EventDb) AddPartitions(round int64) {
 	if err := edb.addPartition(round, "user_aggregates"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
-	if err := edb.addPartition(round, "transactions"); err != nil {
-		logging.Logger.Error("error creating partition", zap.Error(err))
-	}
-	if err := edb.addPartition(round, "blocks"); err != nil {
-		logging.Logger.Error("error creating partition", zap.Error(err))
-	}
+	// if err := edb.addPartition(round, "transactions"); err != nil {
+	// 	logging.Logger.Error("error creating partition", zap.Error(err))
+	// }
+	// if err := edb.addPartition(round, "blocks"); err != nil {
+	// 	logging.Logger.Error("error creating partition", zap.Error(err))
+	// }
 }
 
 func (edb *EventDb) dropPartitions(round int64) {
