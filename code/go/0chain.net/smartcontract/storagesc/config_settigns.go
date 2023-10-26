@@ -36,7 +36,7 @@ const (
 	MinStakePerDelegate Setting = iota
 	TimeUnit
 	MinAllocSize
-	MaxChallengeCompletionTime
+	MaxChallengeCompletionRounds
 	MinBlobberCapacity
 
 	ReadPoolMinLock
@@ -66,9 +66,12 @@ const (
 	MaxReadPrice
 	MaxWritePrice
 	MinWritePrice
+	MaxFileSize
 	ChallengeEnabled
+	ChallengeGenerationGap
 	ValidatorsPerChallenge
 	NumValidatorsRewarded
+	MaxBlobberSelectForChallenge
 	MaxDelegates
 
 	BlockRewardBlockReward
@@ -143,7 +146,7 @@ func initSettingName() {
 	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
 	SettingName[TimeUnit] = "time_unit"
 	SettingName[MinAllocSize] = "min_alloc_size"
-	SettingName[MaxChallengeCompletionTime] = "max_challenge_completion_time"
+	SettingName[MaxChallengeCompletionRounds] = "max_challenge_completion_rounds"
 	SettingName[MinBlobberCapacity] = "min_blobber_capacity"
 	SettingName[MaxCharge] = "max_charge"
 	SettingName[ReadPoolMinLock] = "readpool.min_lock"
@@ -169,9 +172,12 @@ func initSettingName() {
 	SettingName[MaxReadPrice] = "max_read_price"
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
+	SettingName[MaxFileSize] = "max_file_size"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
+	SettingName[ChallengeGenerationGap] = "challenge_generation_gap"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
 	SettingName[NumValidatorsRewarded] = "num_validators_rewarded"
+	SettingName[MaxBlobberSelectForChallenge] = "max_blobber_select_for_challenge"
 	SettingName[MaxDelegates] = "max_delegates"
 	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
 	SettingName[BlockRewardQualifyingStake] = "block_reward.qualifying_stake"
@@ -226,7 +232,7 @@ func initSettings() {
 		MaxCharge.String():                        {MaxCharge, config.Float64},
 		TimeUnit.String():                         {TimeUnit, config.Duration},
 		MinAllocSize.String():                     {MinAllocSize, config.Int64},
-		MaxChallengeCompletionTime.String():       {MaxChallengeCompletionTime, config.Duration},
+		MaxChallengeCompletionRounds.String():     {MaxChallengeCompletionRounds, config.Int64},
 		MinBlobberCapacity.String():               {MinBlobberCapacity, config.Int64},
 		ReadPoolMinLock.String():                  {ReadPoolMinLock, config.CurrencyCoin},
 		WritePoolMinLock.String():                 {WritePoolMinLock, config.CurrencyCoin},
@@ -251,9 +257,12 @@ func initSettings() {
 		MaxReadPrice.String():                     {MaxReadPrice, config.CurrencyCoin},
 		MaxWritePrice.String():                    {MaxWritePrice, config.CurrencyCoin},
 		MinWritePrice.String():                    {MinWritePrice, config.CurrencyCoin},
+		MaxFileSize.String():                      {MaxFileSize, config.Int64},
 		ChallengeEnabled.String():                 {ChallengeEnabled, config.Boolean},
+		ChallengeGenerationGap.String():           {ChallengeGenerationGap, config.Int64},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, config.Int},
 		NumValidatorsRewarded.String():            {NumValidatorsRewarded, config.Int},
+		MaxBlobberSelectForChallenge.String():     {MaxBlobberSelectForChallenge, config.Int},
 		MaxDelegates.String():                     {MaxDelegates, config.Int},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, config.CurrencyCoin},
 		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, config.CurrencyCoin},
@@ -364,6 +373,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.ValidatorsPerChallenge = change
 	case NumValidatorsRewarded:
 		conf.NumValidatorsRewarded = change
+	case MaxBlobberSelectForChallenge:
+		conf.MaxBlobberSelectForChallenge = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
@@ -430,12 +441,18 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 
 func (conf *Config) setInt64(key string, change int64) error {
 	switch Settings[key].setting {
+	case ChallengeGenerationGap:
+		conf.ChallengeGenerationGap = change
+	case MaxFileSize:
+		conf.MaxFileSize = change
 	case MinAllocSize:
 		conf.MinAllocSize = change
 	case MinBlobberCapacity:
 		conf.MinBlobberCapacity = change
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
+	case MaxChallengeCompletionRounds:
+		conf.MaxChallengeCompletionRounds = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
@@ -499,8 +516,6 @@ func (conf *Config) setDuration(key string, change time.Duration) error {
 	switch Settings[key].setting {
 	case TimeUnit:
 		conf.TimeUnit = change
-	case MaxChallengeCompletionTime:
-		conf.MaxChallengeCompletionTime = change
 	case StakePoolMinLockPeriod:
 		if conf.StakePool == nil {
 			conf.StakePool = &stakePoolConfig{}
@@ -630,8 +645,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.TimeUnit
 	case MinAllocSize:
 		return conf.MinAllocSize
-	case MaxChallengeCompletionTime:
-		return conf.MaxChallengeCompletionTime
+	case MaxChallengeCompletionRounds:
+		return conf.MaxChallengeCompletionRounds
 	case MinBlobberCapacity:
 		return conf.MinBlobberCapacity
 	case ReadPoolMinLock:
@@ -680,12 +695,18 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxWritePrice
 	case MinWritePrice:
 		return conf.MinWritePrice
+	case MaxFileSize:
+		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
+	case ChallengeGenerationGap:
+		return conf.ChallengeGenerationGap
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case NumValidatorsRewarded:
 		return conf.NumValidatorsRewarded
+	case MaxBlobberSelectForChallenge:
+		return conf.MaxBlobberSelectForChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:

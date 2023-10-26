@@ -107,39 +107,41 @@ type UserPoolStat struct {
 }
 
 func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
-	spStat := new(StakePoolStat)
-	spStat.ID = provider.ID
-	spStat.StakeTotal = provider.TotalStake
-	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
-	spStat.Settings = Settings{
-		DelegateWallet:     provider.DelegateWallet,
-		MaxNumDelegates:    provider.NumDelegates,
-		ServiceChargeRatio: provider.ServiceCharge,
+	spStat := &StakePoolStat{
+		ID:         provider.ID,
+		StakeTotal: provider.TotalStake,
+		Settings: Settings{
+			DelegateWallet:     provider.DelegateWallet,
+			MaxNumDelegates:    provider.NumDelegates,
+			ServiceChargeRatio: provider.ServiceCharge,
+		},
+		Rewards:  provider.Rewards.TotalRewards,
+		Delegate: make([]DelegatePoolStat, 0, len(delegatePools)),
 	}
-	spStat.Rewards = provider.Rewards.TotalRewards
+
 	for _, dp := range delegatePools {
-		if spenum.PoolStatus(dp.Status) == spenum.Deleted {
+		poolStatus := spenum.PoolStatus(dp.Status)
+		if poolStatus == spenum.Deleted {
 			continue
 		}
+
 		dpStats := DelegatePoolStat{
 			ID:           dp.PoolID,
 			DelegateID:   dp.DelegateID,
-			Status:       spenum.PoolStatus(dp.Status).String(),
+			Status:       poolStatus.String(),
 			RoundCreated: dp.RoundCreated,
 			StakedAt:     dp.StakedAt,
+			Balance:      dp.Balance,
+			Rewards:      dp.Reward,
+			TotalPenalty: dp.TotalPenalty,
+			TotalReward:  dp.TotalReward,
 		}
-		dpStats.Balance = dp.Balance
-
-		dpStats.Rewards = dp.Reward
-
-		dpStats.TotalPenalty = dp.TotalPenalty
-
-		dpStats.TotalReward = dp.TotalReward
 
 		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
 		if err != nil {
 			return nil, err
 		}
+
 		spStat.Balance = newBal
 		spStat.Delegate = append(spStat.Delegate, dpStats)
 	}

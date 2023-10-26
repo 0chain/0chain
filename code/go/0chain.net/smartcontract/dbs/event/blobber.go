@@ -412,45 +412,43 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
+type ChallengeStatsDeltas struct {
+	Id             string `json:"id"`
+	PassedDelta    int64  `json:"passed_delta"`
+	CompletedDelta int64  `json:"completed_delta"`
+	OpenDelta      int64  `json:"open_delta"`
 }
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
+func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
 }
 
-func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
+func withBlobberChallengesMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
+		a.CompletedDelta += b.CompletedDelta
+		a.PassedDelta += b.PassedDelta
+		a.OpenDelta += b.OpenDelta
+		return a, nil
+	})
+}
 
+func (edb *EventDb) updateBlobberChallenges(blobbers []ChallengeStatsDeltas) error {
 	blobberIdList := make([]string, 0, len(blobbers))
-	openChallengesList := make([]uint64, 0, len(blobbers))
+	challengesDeltaOpenList := make([]int64, 0, len(blobbers))
+	challengesDeltaPassedList := make([]int64, 0, len(blobbers))
+	challengesDeltaCompletedList := make([]int64, 0, len(blobbers))
 
 	for _, blobber := range blobbers {
-		blobberIdList = append(blobberIdList, blobber.ID)
-		openChallengesList = append(openChallengesList, blobber.OpenChallenges)
+		blobberIdList = append(blobberIdList, blobber.Id)
+		challengesDeltaOpenList = append(challengesDeltaOpenList, blobber.OpenDelta)
+		challengesDeltaPassedList = append(challengesDeltaPassedList, blobber.PassedDelta)
+		challengesDeltaCompletedList = append(challengesDeltaCompletedList, blobber.CompletedDelta)
 	}
 
 	return CreateBuilder("blobbers", "id", blobberIdList).
-		AddUpdate("open_challenges", openChallengesList).Exec(edb).Error
-}
-
-func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
-	blobberIdList := make([]string, 0, len(blobbers))
-	challengesPassedList := make([]uint64, 0, len(blobbers))
-	challengesCompletedList := make([]uint64, 0, len(blobbers))
-	challengesOpenList := make([]uint64, 0, len(blobbers))
-
-	for _, blobber := range blobbers {
-		blobberIdList = append(blobberIdList, blobber.ID)
-		challengesPassedList = append(challengesPassedList, blobber.ChallengesPassed)
-		challengesCompletedList = append(challengesCompletedList, blobber.ChallengesCompleted)
-		challengesOpenList = append(challengesOpenList, blobber.OpenChallenges)
-	}
-
-	return CreateBuilder("blobbers", "id", blobberIdList).
-		AddUpdate("challenges_passed", challengesPassedList).
-		AddUpdate("challenges_completed", challengesCompletedList).
-		AddUpdate("open_challenges", challengesOpenList).
+		AddUpdate("open_challenges", challengesDeltaOpenList, "blobbers.open_challenges + t.open_challenges").
+		AddUpdate("challenges_passed", challengesDeltaPassedList, "blobbers.challenges_passed + t.challenges_passed").
+		AddUpdate("challenges_completed", challengesDeltaCompletedList, "blobbers.challenges_completed + t.challenges_completed").
 		Exec(edb).Error
 }
 

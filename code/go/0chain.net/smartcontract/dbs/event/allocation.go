@@ -96,6 +96,23 @@ func (edb *EventDb) GetClientsAllocation(clientID string, limit common.Paginatio
 	return allocs, nil
 }
 
+func (edb *EventDb) GetExpiredAllocation(blobberID string) ([]string, error) {
+	db := edb.Store.Get()
+
+	var allocationIDs []string
+
+	err := db.Model(&AllocationBlobberTerm{}).
+		Joins("JOIN allocations ON allocation_blobber_terms.alloc_id = allocations.id").
+		Where("allocation_blobber_terms.blobber_id = ? AND allocations.finalized = ? AND allocations.expiration < ?", blobberID, false, time.Now().Unix()).
+		Pluck("allocations.allocation_id", &allocationIDs).Error
+	if err != nil {
+		logging.Logger.Error("error retrieving finalized allocation for blobber", zap.Error(err))
+		return nil, fmt.Errorf("error retrieving finalized allocation for blobber: %v, error: %v", blobberID, err)
+	}
+
+	return allocationIDs, nil
+}
+
 func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 	var count int64
 	result := edb.Store.Get().Model(&Allocation{}).Where("finalized = ? AND cancelled = ?", false, false).Count(&count)

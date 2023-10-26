@@ -61,6 +61,7 @@ smart_contracts:
     max_delegates: 200
     min_stake: 0.0
     max_stake: 170.0
+    min_stake_per_delegate: 1
     max_n: 7 # 100
     min_n: 3 # 3
     max_s: 2 # 30
@@ -95,13 +96,15 @@ smart_contracts:
     min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
-    max_challenge_completion_time: 3m
+    max_file_size : 40000000000000
+    max_challenge_completion_rounds: 720
     min_offer_duration: 10h
     max_offer_duration: 10h
     min_blobber_capacity: 1024
     max_charge: 0.2
     min_stake: 0.0
     max_stake: 20000.0
+    min_stake_per_delegate: 1
     max_delegates: 200
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
@@ -111,6 +114,7 @@ smart_contracts:
     max_blobbers_per_allocation: 40
     validators_per_challenge: 2
     num_validators_rewarded: 10
+    max_blobber_select_for_challenge: 5
     readpool:
       min_lock: 0.3
     writepool:
@@ -128,10 +132,11 @@ smart_contracts:
       write_price_range:
         min: 0.0
         max: 0.1
-      max_challenge_completion_time: 3m
+      max_challenge_completion_rounds: 720
       read_pool_fraction: 0.2
     max_mint: 1500000.0
     challenge_enabled: true
+    challenge_generation_gap : 1
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000
@@ -153,6 +158,7 @@ smart_contracts:
     min_mint: 1
     min_burn: 1
     min_stake: 3
+    min_stake_per_delegate : 1
     min_lock: 0
     min_authorizers: 1
     percent_authorizers: 0

@@ -51,7 +51,7 @@ func TestAddChallenge(t *testing.T) {
 		allocID      string
 		challengesTS []blobberTS
 		add          challengeAdd
-		cct          time.Duration
+		cct          int64
 		challInfo    *StorageChallengeResponse
 	}
 
@@ -78,7 +78,7 @@ func TestAddChallenge(t *testing.T) {
 		ssc := &StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
-		config.SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_time", p.cct)
+		config.SmartContractConfig.SetDefault("smart_contracts.storagesc.max_challenge_completion_rounds", p.cct)
 
 		balances := &mockStateContext{
 			store: make(map[datastore.Key]util.MPTSerializable),
@@ -136,7 +136,7 @@ func TestAddChallenge(t *testing.T) {
 				AllocationRoot:   alloc.BlobberAllocsMap[bid].AllocationRoot,
 			}
 			var conf = &Config{
-				MaxChallengeCompletionTime: p.cct,
+				MaxChallengeCompletionRounds: p.cct,
 			}
 			err = ssc.addChallenge(alloc, c, allocChallenges, challInfo, conf, balances)
 			require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				add: challengeAdd{"blobber_1", common.Timestamp(10)},
 			},
 			want: want{
@@ -189,7 +189,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK - more than one open challenges",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				challengesTS: []blobberTS{
 					{"blobber_1", 10},
 					{"blobber_2", 20},
@@ -207,7 +207,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK - one challenge expired",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				challengesTS: []blobberTS{
 					{"blobber_1", 10},
 					{"blobber_2", 20},
@@ -225,7 +225,7 @@ func TestAddChallenge(t *testing.T) {
 		{
 			name: "OK - more challenges expired, multiple blobbers",
 			parameters: parameters{
-				cct: 100 * time.Second,
+				cct: 720,
 				challengesTS: []blobberTS{
 					{"blobber_1", 10},
 					{"blobber_2", 20},
@@ -265,7 +265,7 @@ func TestAddChallenge(t *testing.T) {
 			// add new challenge
 			c, challInfo := newChallenge(args.alloc.ID, tt.parameters.add.blobberID, tt.parameters.add.ts)
 			var conf = &Config{
-				MaxChallengeCompletionTime: tt.parameters.cct,
+				MaxChallengeCompletionRounds: tt.parameters.cct,
 			}
 			err := ssc.addChallenge(args.alloc,
 				c,
@@ -308,13 +308,6 @@ func TestAddChallenge(t *testing.T) {
 			// assert the open challenge update events are emitted
 			es = args.balances.GetEvents()[initESLen:]
 			updateOpenChallengeEventMap := make(map[string]int64)
-			//for _, e := range es {
-			//	if e.Tag == event.TagUpdateBlobberOpenChallenges {
-			//		d, ok := e.Data.(event.ChallengeStatsDeltas)
-			//		require.True(t, ok)
-			//		updateOpenChallengeEventMap[d.Id] = d.OpenDelta
-			//	}
-			//}
 
 			for bid, od := range tt.want.openDelta {
 				if od == 0 {
@@ -344,10 +337,10 @@ func TestBlobberReward(t *testing.T) {
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
 	var writePoolBalance currency.Coin = 23423 + 33333333 + 234234234
 	var scYaml = Config{
-		MaxMint:                    zcnToBalance(4000000.0),
-		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 5 * time.Minute,
-		TimeUnit:                   720 * time.Hour,
+		MaxMint:                      zcnToBalance(4000000.0),
+		ValidatorReward:              0.025,
+		MaxChallengeCompletionRounds: 720,
+		TimeUnit:                     720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
@@ -361,26 +354,15 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
-		//require.EqualValues(t, true, false)
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
+		var thisChallenge = thisExpires + 1
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
-	})
-
-	t.Run("test challengeTime more than Allocation expiry but not exceeding maxChallengeCompletionLimit", func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) - toSeconds(1*time.Minute)
-
-		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
-
-		require.NoError(t, err)
 	})
 
 	t.Run("test old challenge", func(t *testing.T) {
@@ -438,10 +420,465 @@ func TestBlobberReward(t *testing.T) {
 
 }
 
+func TestCompleteRewardFlow(t *testing.T) {
+	tt := []struct {
+		name                      string
+		ticketNum                 int
+		hasDuplicateTicket        bool
+		hasNonceSelectedValidator bool
+		wrongClientID             bool
+		numChallenges             int64
+		ignoreChallengeRange      []int64
+		errors                    []error
+	}{
+		{
+			name:          "ok",
+			ticketNum:     10,
+			numChallenges: 20,
+		},
+		{
+			name:                 "expired middle challenges",
+			ticketNum:            10,
+			numChallenges:        10,
+			ignoreChallengeRange: []int64{2, 8},
+		},
+		{
+			name:                 "never return response",
+			ticketNum:            10,
+			numChallenges:        10,
+			ignoreChallengeRange: []int64{2, 9},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ssc, balances, tp, alloc, blobberClients, valids, validators, blobbers, client := prepareAllocChallengesForCompleteRewardFlow(t, 10)
+
+			totalExpectedReward := int64(0)
+			totalPaidReward := int64(0)
+			totalPenalty := int64(0)
+			settledChallengePassed := int64(0)
+
+			if tc.name == "never return response" {
+				settledChallengePassed = 3
+			}
+
+			conf, err := getConfig(balances)
+			require.NoError(t, err)
+
+			totalOpenChallengesLeftInAllocation := int64(0)
+
+			for idx := 0; idx < len(blobberClients); idx++ {
+				bk := &block.Block{}
+				bk.Round = 50000
+				balances.setBlock(t, bk)
+
+				blobberClient := blobberClients[idx]
+				blobber := blobbers[idx]
+
+				blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+				require.NoError(t, err)
+				require.NotNil(t, blobberSP)
+
+				var validatorString []string
+				for _, v := range valids {
+					validatorString = append(validatorString, v.id)
+				}
+
+				step := int64(alloc.Expiration) - tp
+				initialTime := tp
+
+				var generatedChallenges []string
+				lastFinalizedChallenge := alloc.StartTime
+				lastSuccessfulChallenge := alloc.StartTime
+				lastVerifiedChallengeRound := balances.GetBlock().Round
+
+				collectedBlobberReward := currency.Coin(0)
+				totalExpectedReward += int64(alloc.BlobberAllocs[idx].ChallengePoolIntegralValue)
+				lastChallengeIgnored := false
+
+				for i := int64(0); i < tc.numChallenges; i++ {
+					// Challenge Timing details
+					bk.Round += 200
+					balances.setBlock(t, bk)
+					currentRound := balances.GetBlock().Round
+
+					challengeGenerationTime := initialTime + (step*(i+1))/tc.numChallenges
+
+					challID := fmt.Sprintf("%s-chall-%d", blobber.ID, i)
+
+					challengeRoundCreatedAt := currentRound - 200
+
+					// Setting allocations details
+
+					alloc, err = ssc.getAllocation(alloc.ID, balances)
+					require.NoError(t, err)
+
+					blobberAlloc := alloc.BlobberAllocs[idx]
+
+					cp, err := ssc.getChallengePool(alloc.ID, balances)
+					require.NoError(t, err)
+
+					cpBalance, _ := cp.Balance.Int64()
+
+					var f = formulaeBlobberReward{
+						t:           t,
+						scYaml:      *conf,
+						blobberYaml: blobberYaml,
+						validatorYamls: []mockBlobberYaml{
+							{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3}, {serviceCharge: 0.35}, {serviceCharge: 0.4}, {serviceCharge: 0.45}, {serviceCharge: 0.5}, {serviceCharge: 0.55}, {serviceCharge: 0.6}, {serviceCharge: 0.65},
+						},
+						stakes:     []int64{10 * x10},
+						validators: validatorString,
+						validatorStakes: [][]int64{
+							{1},
+							{1},
+							{1},
+							{1},
+							{1},
+							{1},
+							{1},
+							{1},
+							{1},
+							{1},
+						},
+						wpBalance:                  alloc.WritePool,
+						challengePoolIntegralValue: int64(blobberAlloc.ChallengePoolIntegralValue),
+						challengePoolBalance:       cpBalance,
+						partial:                    1,
+						lastFinalizedChallenge:     lastFinalizedChallenge,
+						lastSuccessfulChallenge:    lastSuccessfulChallenge,
+						thisChallange:              common.Timestamp(challengeGenerationTime),
+						thisExpires:                alloc.Expiration,
+						now:                        common.Timestamp(challengeGenerationTime + 10),
+						collectedReward:            collectedBlobberReward,
+						size:                       blobberAlloc.Size,
+					}
+
+					allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
+					if err != nil {
+						require.Equal(t, util.ErrValueNotPresent, err)
+						allocChallenges = &AllocationChallenges{}
+						allocChallenges.AllocationID = alloc.ID
+					}
+
+					countExpiredChallenges, err := alloc.removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances, ssc)
+					require.NoError(t, err)
+					if currentRound-lastVerifiedChallengeRound > conf.MaxChallengeCompletionRounds {
+						roundDiff := currentRound - lastVerifiedChallengeRound - conf.MaxChallengeCompletionRounds
+						expectedOpenChallenges := roundDiff / 200
+						if expectedOpenChallenges > 1 {
+							expectedOpenChallenges = 1
+						}
+						require.Equal(t, int(expectedOpenChallenges), countExpiredChallenges)
+					} else {
+						require.Equal(t, 0, countExpiredChallenges)
+					}
+					// Save the allocation challenges to MPT
+					err = allocChallenges.Save(balances, ssc.ID)
+					require.NoError(t, err)
+
+					err = alloc.save(balances, ssc.ID)
+					require.NoError(t, err)
+
+					genChall(t, ssc, challengeGenerationTime, challengeRoundCreatedAt, challID, 0, validators, alloc.ID, blobber, balances)
+					generatedChallenges = append(generatedChallenges, challID)
+					lastFinalizedChallenge = common.Timestamp(challengeGenerationTime)
+
+					allocChallenges, err = ssc.getAllocationChallenges(alloc.ID, balances)
+					require.NoError(t, err)
+
+					if tc.ignoreChallengeRange != nil && (i >= tc.ignoreChallengeRange[0] && i <= tc.ignoreChallengeRange[1]+1) {
+						expectedOpenChallenges := int64(math.Min(float64(i-tc.ignoreChallengeRange[0]+1), float64(3)))
+						expectedOpenChallenges += totalOpenChallengesLeftInAllocation
+						require.Equal(t, expectedOpenChallenges, int64(len(allocChallenges.OpenChallenges)))
+					} else {
+						require.Equal(t, totalOpenChallengesLeftInAllocation+1, int64(len(allocChallenges.OpenChallenges)))
+					}
+
+					chall := &ChallengeResponse{
+						ID: challID,
+					}
+
+					for i := 0; i < tc.ticketNum; i++ {
+						chall.ValidationTickets = append(chall.ValidationTickets,
+							valids[i].validTicket(t, chall.ID, blobberClient.id, true, challengeGenerationTime))
+					}
+
+					if tc.hasDuplicateTicket {
+						chall.ValidationTickets[0] = chall.ValidationTickets[1]
+					}
+
+					if tc.hasNonceSelectedValidator {
+						tp += 10
+						var newValids []*Client
+						newValids, tp = testAddValidators(t, balances, ssc, 1, challengeGenerationTime)
+						// replace the last ticket with the new none selected validator
+						chall.ValidationTickets[len(chall.ValidationTickets)-1] = newValids[0].validTicket(t, chall.ID, blobberClient.id, true, tp)
+					}
+
+					var tx *transaction.Transaction
+					if tc.wrongClientID {
+						tx = newTransaction(blobberAlloc.BlobberID, ssc.ID, 0, challengeGenerationTime)
+					} else {
+						tx = newTransaction(blobberClient.id, ssc.ID, 0, challengeGenerationTime)
+					}
+
+					balances.setTransaction(t, tx)
+
+					if tc.ignoreChallengeRange != nil {
+						if i >= tc.ignoreChallengeRange[0] && i <= tc.ignoreChallengeRange[1] {
+							lastChallengeIgnored = true
+							continue
+						} else if i == tc.ignoreChallengeRange[1]+2 {
+							lastChallengeIgnored = false
+						}
+					}
+
+					var resp string
+					resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+					if tc.errors != nil {
+						require.Equal(t, tc.errors[i], err)
+						continue
+					}
+					lastSuccessfulChallenge = common.Timestamp(challengeGenerationTime)
+					lastVerifiedChallengeRound = challengeRoundCreatedAt
+
+					require.NoError(t, err)
+					require.Equal(t, "challenge passed by blobber", resp)
+
+					cp, err = ssc.getChallengePool(alloc.ID, balances)
+					require.NoError(t, err)
+
+					vsp, err := ssc.validatorsStakePools(validatorString, balances)
+					require.NoError(t, err)
+
+					blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+					require.NoError(t, err)
+
+					if lastChallengeIgnored {
+						blobberReward, validatorsReward, penaltyPaid := confirmBlobberPenalty(t, f, *cp, vsp, *blobberSP, true)
+						totalPaidReward += blobberReward + validatorsReward - penaltyPaid
+						totalPenalty += penaltyPaid
+					} else {
+						totalPaidReward += confirmBlobberReward(t, f, *cp, vsp, *blobberSP)
+					}
+
+					collectedBlobberReward = blobberSP.Reward
+				}
+
+				alloc, err = ssc.getAllocation(alloc.ID, balances)
+				require.NoError(t, err)
+
+				//bk.Round += 200000
+				//balances.setBlock(t, bk)
+				//
+				allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
+				if err != nil {
+					require.Equal(t, util.ErrValueNotPresent, err)
+					allocChallenges = &AllocationChallenges{}
+					allocChallenges.AllocationID = alloc.ID
+				}
+				totalOpenChallengesLeftInAllocation = int64(len(allocChallenges.OpenChallenges))
+				//lenOpenChallenges := len(allocChallenges.OpenChallenges)
+				//countExpiredChallenges, err := alloc.removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances, ssc)
+				//require.NoError(t, err)
+				//require.Equal(t, lenOpenChallenges, countExpiredChallenges)
+				//require.Equal(t, 0, len(allocChallenges.OpenChallenges))
+				//
+				// Save the allocation challenges to MPT
+				err = allocChallenges.Save(balances, ssc.ID)
+				require.NoError(t, err)
+
+				err = alloc.save(balances, ssc.ID)
+				require.NoError(t, err)
+			}
+
+			beforeBlobberSPs := make(map[string]*stakePool)
+			for _, blobber := range blobbers {
+				beforeBlobberSPs[blobber.ID], err = ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+				require.NoError(t, err)
+			}
+
+			beforeBlobberAllocs := alloc.BlobberAllocs
+
+			var req lockRequest
+			req.AllocationID = alloc.ID
+
+			allocOwnerBalanceBefore, err := balances.GetClientBalance(alloc.Owner)
+			require.NoError(t, err)
+			var tx = newTransaction(client.id, ssc.ID, 0, int64(alloc.Expiration)+2)
+			balances.setTransaction(t, tx)
+			alloc, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
+			require.NoError(t, err)
+
+			_, err = ssc.getChallengePool(alloc.ID, balances)
+			require.Error(t, err, "challenge pool should be deleted")
+
+			totalReturnedReward := int64(0)
+
+			for idx, blobberAlloc := range alloc.BlobberAllocs {
+				beforeBlobberSP, ok := beforeBlobberSPs[blobberAlloc.BlobberID]
+				require.True(t, ok)
+
+				blobberSP, err := ssc.getStakePool(spenum.Blobber, blobberAlloc.BlobberID, balances)
+				require.NoError(t, err)
+				require.NotNil(t, blobberSP)
+
+				require.Equal(t, 0, int(blobberSP.TotalOffers))
+
+				require.Equal(t, tc.numChallenges, blobberAlloc.Stats.TotalChallenges)
+				if tc.ignoreChallengeRange != nil {
+					require.Equal(t, tc.numChallenges-tc.ignoreChallengeRange[1]+tc.ignoreChallengeRange[0]-1+settledChallengePassed, blobberAlloc.Stats.SuccessChallenges)
+					require.Equal(t, tc.ignoreChallengeRange[1]-tc.ignoreChallengeRange[0]+1-settledChallengePassed, blobberAlloc.Stats.FailedChallenges)
+				} else {
+					require.Equal(t, tc.numChallenges, blobberAlloc.Stats.SuccessChallenges)
+					require.Equal(t, int64(0), blobberAlloc.Stats.FailedChallenges)
+				}
+				require.Equal(t, int64(0), blobberAlloc.Stats.OpenChallenges)
+
+				var f = formulaeBlobberReward{
+					t:           t,
+					scYaml:      *conf,
+					blobberYaml: blobberYaml,
+					validatorYamls: []mockBlobberYaml{
+						{serviceCharge: 0.2}, {serviceCharge: 0.25}, {serviceCharge: 0.3}, {serviceCharge: 0.35}, {serviceCharge: 0.4}, {serviceCharge: 0.45}, {serviceCharge: 0.5}, {serviceCharge: 0.55}, {serviceCharge: 0.6}, {serviceCharge: 0.65},
+					},
+					stakes:                     []int64{10 * x10},
+					validators:                 []string{},
+					validatorStakes:            [][]int64{},
+					wpBalance:                  alloc.WritePool,
+					challengePoolIntegralValue: int64(beforeBlobberAllocs[idx].ChallengePoolIntegralValue),
+					challengePoolBalance:       0,
+					partial:                    1,
+					lastFinalizedChallenge:     blobberAlloc.LatestFinalizedChallCreatedAt,
+					lastSuccessfulChallenge:    blobberAlloc.LatestSuccessfulChallCreatedAt,
+					thisChallange:              alloc.Expiration,
+					thisExpires:                alloc.Expiration,
+					now:                        common.Timestamp(tp + 10),
+					collectedReward:            beforeBlobberSP.Reward,
+					size:                       blobberAlloc.Size,
+				}
+
+				finalBlobberReward := int64(0)
+				passRate := float64(blobberAlloc.Stats.SuccessChallenges) / float64(blobberAlloc.Stats.TotalChallenges)
+				allocCost, _ := alloc.cost()
+				expectedCancellationCharge := int64(float64(allocCost)*conf.CancellationCharge*passRate) / int64(len(alloc.BlobberAllocs))
+
+				if blobberAlloc.LatestSuccessfulChallCreatedAt < blobberAlloc.LatestFinalizedChallCreatedAt {
+					blobberReward, penaltyPaid := confirmBlobberPenaltyOnFinalization(t, f, int64(blobberAlloc.ChallengePoolIntegralValue), *blobberSP, true, passRate, expectedCancellationCharge)
+					totalPaidReward += blobberReward - penaltyPaid
+					totalPenalty += penaltyPaid
+					finalBlobberReward = blobberReward
+				} else {
+					blobberReward := confirmBlobberRewardOnFinalization(t, f, *blobberSP, passRate, int64(blobberAlloc.ChallengePoolIntegralValue), expectedCancellationCharge)
+					totalPaidReward += blobberReward
+					finalBlobberReward = blobberReward
+				}
+
+				totalReturnedReward += int64(blobberAlloc.ChallengePoolIntegralValue)
+
+				require.InDelta(t, finalBlobberReward, int64(blobberAlloc.ChallengePoolIntegralValue), errDelta)
+			}
+
+			allocCost, _ := alloc.cost()
+			// wp will be returned to the owner
+			allocOwnerBalance, err := balances.GetClientBalance(alloc.Owner)
+			require.NoError(t, err)
+			refund := allocOwnerBalance - allocOwnerBalanceBefore
+
+			passRate := float64(alloc.Stats.SuccessChallenges) / float64(alloc.Stats.TotalChallenges)
+
+			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 50)
+			require.InDelta(t, int64(refund), 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
+		})
+	}
+}
+
+func TestRollBack(t *testing.T) {
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, true)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
+
+		// no owner
+		err error
+	)
+
+	// new allocation
+	tp += 1000
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	blobberClient := testGetBlobber(blobs, alloc, 0)
+	require.NotNil(t, blobberClient)
+
+	wpBalance := alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
+
+	cp, err := ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "", 0, tp, blobberClient.id, ssc, "")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 0, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 100*1024*1024, tp, blobberClient.id, ssc, "")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-3", -100*1024*1024, tp, blobberClient.id, ssc, "root-2")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 0, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-2", 0, tp, blobberClient.id, ssc, "root-2")
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, 4882812500, int(cp.Balance))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
+	wpBalance = alloc.WritePool
+}
+
 func TestBlobberPenalty(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = currency.Coin(73000000)
-	var challengePoolBalance = currency.Coin(700000)
+	var challengePoolBalance = currency.Coin(7000000000)
 	var partial = 0.9
 	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
@@ -454,11 +891,11 @@ func TestBlobberPenalty(t *testing.T) {
 	var writePoolBalance currency.Coin = 234234234
 	var size = int64(123000)
 	var scYaml = Config{
-		MaxMint:                    zcnToBalance(4000000.0),
-		BlobberSlash:               0.1,
-		ValidatorReward:            0.025,
-		MaxChallengeCompletionTime: 5 * time.Minute,
-		TimeUnit:                   720 * time.Hour,
+		MaxMint:                      zcnToBalance(4000000.0),
+		BlobberSlash:                 0.1,
+		ValidatorReward:              0.025,
+		MaxChallengeCompletionRounds: 720,
+		TimeUnit:                     720 * time.Hour,
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge: 0.30,
@@ -481,24 +918,6 @@ func TestBlobberPenalty(t *testing.T) {
 			writePoolBalance, challengePoolIntegralValue,
 			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
-	})
-
-	t.Run(errLate, func(t *testing.T) {
-		var thisChallenge = thisExpires + toSeconds(scYaml.MaxChallengeCompletionTime) + 1
-		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
-		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errLate)
-	})
-
-	t.Run("old challenge", func(t *testing.T) {
-		var thisChallenge = previousChallenge - 1
-		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-			writePoolBalance, challengePoolIntegralValue,
-			challengePoolBalance, partial, size, previousChallenge, thisChallenge, thisExpires, now)
-		require.Error(t, err)
-		require.EqualValues(t, err.Error(), "old challenge response on blobber penalty")
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {
@@ -526,101 +945,197 @@ func TestVerifyChallenge(t *testing.T) {
 		hasDuplicateTicket        bool
 		hasNonceSelectedValidator bool
 		wrongClientID             bool
-		err                       error
+		numChallenges             int
+		ignoreChallengeRange      []int
+		errors                    []error
 	}{
 		{
-			name:      "ok",
-			ticketNum: 10,
+			name:          "ok",
+			ticketNum:     10,
+			numChallenges: 10,
+		},
+		{
+			name:          "should return expired challenge error",
+			ticketNum:     10,
+			numChallenges: 1,
+			errors:        []error{common.NewError("verify_challenge", "challenge expired")},
+		},
+		{
+			name:                 "expired middle challenges",
+			ticketNum:            10,
+			numChallenges:        10,
+			ignoreChallengeRange: []int{2, 8},
+		},
+		{
+			name:                 "never return response",
+			ticketNum:            10,
+			numChallenges:        10,
+			ignoreChallengeRange: []int{2, 80},
+		},
+		{
+			name:          "old challenge",
+			ticketNum:     10,
+			numChallenges: 2,
+			errors:        []error{nil, common.NewError("verify_challenge", "old challenge response")},
 		},
 		{
 			name:               "duplicate ticket",
 			ticketNum:          10,
 			hasDuplicateTicket: true,
-			err:                common.NewError("verify_challenge", "found duplicate validation tickets"),
+			numChallenges:      1,
+			errors:             []error{common.NewError("verify_challenge", "found duplicate validation tickets")},
 		},
 		{
-			name:      "not enough tickets",
-			ticketNum: 4, // threshold is 5
-			err:       common.NewError("verify_challenge", "validation tickets less than threshold: 5, tickets: 4"),
+			name:          "not enough tickets",
+			ticketNum:     4, // threshold is 5
+			numChallenges: 1,
+			errors:        []error{common.NewError("verify_challenge", "validation tickets less than threshold: 5, tickets: 4")},
 		},
 		{
 			name:                      "ticket signed with unauthorized validator",
 			ticketNum:                 5,
 			hasNonceSelectedValidator: true,
-			err:                       common.NewError("verify_challenge", "found invalid validator id in validation ticket"),
+			numChallenges:             1,
+			errors:                    []error{common.NewError("verify_challenge", "found invalid validator id in validation ticket")},
 		},
 		{
 			name:          "wrong txn client id",
 			ticketNum:     5,
 			wrongClientID: true,
-			err:           errors.New("challenge blobber id does not match"),
+			numChallenges: 1,
+			errors:        []error{errors.New("challenge blobber id does not match")},
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ssc, balances, tp, alloc, b3, valids, validators, blobber, _ := prepareAllocChallenges(t, 10)
+			ssc, balances, tp, alloc, b3, valids, validators, blobber, _, _ := prepareAllocChallenges(t, 10)
 			step := (int64(alloc.Expiration) - tp) / 10
 			tp += step / 2
 
-			challID := fmt.Sprintf("chall-0")
-			genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
-
-			chall := &ChallengeResponse{
-				ID: challID,
-			}
-
-			for i := 0; i < tc.ticketNum; i++ {
-				chall.ValidationTickets = append(chall.ValidationTickets,
-					valids[i].validTicket(t, chall.ID, b3.id, true, tp))
-			}
-
-			if tc.hasDuplicateTicket {
-				chall.ValidationTickets[0] = chall.ValidationTickets[1]
-			}
-
-			if tc.hasNonceSelectedValidator {
-				tp += 10
-				var newValids []*Client
-				newValids, tp = testAddValidators(t, balances, ssc, 1, tp)
-				// replace the last ticket with the new none selected validator
-				chall.ValidationTickets[len(chall.ValidationTickets)-1] = newValids[0].validTicket(t, chall.ID, b3.id, true, tp)
-			}
-
-			var tx *transaction.Transaction
-			if tc.wrongClientID {
-				tx = newTransaction(alloc.BlobberAllocs[0].BlobberID, ssc.ID, 0, tp)
-			} else {
-				tx = newTransaction(b3.id, ssc.ID, 0, tp)
-			}
-
-			balances.setTransaction(t, tx)
-
 			bk := &block.Block{}
-			bk.Round = 500
+			bk.Round = 50000
 			balances.setBlock(t, bk)
 
-			var resp string
-			resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-			require.Equal(t, tc.err, err)
-			if err != nil {
-				return
+			currentRound := balances.GetBlock().Round
+
+			var generatedChallenges []string
+
+			now := tp + 10
+
+			for i := 0; i < tc.numChallenges; i++ {
+				challID := fmt.Sprintf("chall-%d", i)
+
+				challengeRoundCreatedAt := currentRound - 10*(20-int64(i))
+
+				if tc.name == "should return expired challenge error" {
+					challengeRoundCreatedAt = currentRound - 1000*(20-int64(i))
+				} else if tc.name == "old challenge" {
+					challengeRoundCreatedAt = currentRound - 100*(int64(i)+1)
+					now--
+				}
+
+				genChall(t, ssc, now, challengeRoundCreatedAt, challID, 0, validators, alloc.ID, blobber, balances)
+				generatedChallenges = append(generatedChallenges, challID)
+
+				allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
+				require.NoError(t, err)
+
+				if tc.ignoreChallengeRange != nil && (i >= tc.ignoreChallengeRange[0] && i <= tc.ignoreChallengeRange[1]+1) {
+					require.Equal(t, i-tc.ignoreChallengeRange[0]+1, len(allocChallenges.OpenChallenges))
+				} else {
+					require.Equal(t, 1, len(allocChallenges.OpenChallenges))
+				}
+
+				chall := &ChallengeResponse{
+					ID: challID,
+				}
+
+				for i := 0; i < tc.ticketNum; i++ {
+					chall.ValidationTickets = append(chall.ValidationTickets,
+						valids[i].validTicket(t, chall.ID, b3.id, true, tp))
+				}
+
+				if tc.hasDuplicateTicket {
+					chall.ValidationTickets[0] = chall.ValidationTickets[1]
+				}
+
+				if tc.hasNonceSelectedValidator {
+					tp += 10
+					var newValids []*Client
+					newValids, tp = testAddValidators(t, balances, ssc, 1, tp)
+					// replace the last ticket with the new none selected validator
+					chall.ValidationTickets[len(chall.ValidationTickets)-1] = newValids[0].validTicket(t, chall.ID, b3.id, true, tp)
+				}
+
+				var tx *transaction.Transaction
+				if tc.wrongClientID {
+					tx = newTransaction(alloc.BlobberAllocs[0].BlobberID, ssc.ID, 0, tp)
+				} else {
+					tx = newTransaction(b3.id, ssc.ID, 0, tp)
+				}
+
+				balances.setTransaction(t, tx)
+
+				if tc.ignoreChallengeRange != nil {
+					if i >= tc.ignoreChallengeRange[0] && i <= tc.ignoreChallengeRange[1] {
+						continue
+					}
+				}
+
+				var resp string
+				resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+				if tc.errors != nil {
+					require.Equal(t, tc.errors[i], err)
+					continue
+				}
+
+				require.NoError(t, err)
+				require.Equal(t, "challenge passed by blobber", resp)
 			}
 
-			require.Equal(t, "challenge passed by blobber", resp)
+			if tc.ignoreChallengeRange != nil {
+				for i := tc.ignoreChallengeRange[0]; i <= tc.ignoreChallengeRange[1] && i < tc.numChallenges; i++ {
+					challID := generatedChallenges[i]
+
+					_, err := ssc.getStorageChallenge(challID, balances)
+
+					if tc.ignoreChallengeRange[1] >= tc.numChallenges-1 {
+						require.NoError(t, err)
+					} else {
+						require.Error(t, err)
+					}
+				}
+
+				allocChallenges, err := ssc.getAllocationChallenges(alloc.ID, balances)
+				require.NoError(t, err)
+
+				if tc.ignoreChallengeRange[1] >= tc.numChallenges-1 {
+					require.Equal(t, tc.numChallenges-tc.ignoreChallengeRange[0], len(allocChallenges.OpenChallenges))
+				} else {
+					require.Equal(t, 0, len(allocChallenges.OpenChallenges))
+				}
+			}
 		})
 	}
 
 }
 
 func TestVerifyChallengeOldChallenge(t *testing.T) {
-	ssc, balances, tp, alloc, b3, valids, validators, blobber, blobbers := prepareAllocChallenges(t, 10)
+	ssc, balances, tp, alloc, b3, valids, validators, blobber, blobbers, _ := prepareAllocChallenges(t, 10)
 	step := (int64(alloc.Expiration) - tp) / 10
 
 	t.Run("verify challenge first time", func(t *testing.T) {
 		challID := fmt.Sprintf("chall-0")
 		tp += step / 2
-		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+
+		currentRound := balances.GetBlock().Round
+
+		genChall(t, ssc, tp, currentRound-100, challID, 0, validators, alloc.ID, blobber, balances)
 
 		chall := &ChallengeResponse{
 			ID: challID,
@@ -633,9 +1148,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 
 		tx := newTransaction(b3.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
-		bk := &block.Block{}
-		bk.Round = 500
-		balances.setBlock(t, bk)
+
 		var resp string
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
@@ -650,10 +1163,16 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 			blobber1 *StorageNode
 		)
 
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+
 		blobber1, err := ssc.getBlobber(b1.id, balances)
 		// reduce timestamp to generate challenge with older create time
 		tp := tp - 10
-		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber1, balances)
+		currentRound := balances.GetBlock().Round
+
+		genChall(t, ssc, tp, currentRound-200, challID, 0, validators, alloc.ID, blobber1, balances)
 
 		chall1 := &ChallengeResponse{
 			ID: challID,
@@ -674,12 +1193,18 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 	t.Run("same alloc, same blobber, older timestamp, should fail", func(t *testing.T) {
 		b1 := testGetBlobber(blobbers, alloc, 0)
 
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+
 		challID := fmt.Sprintf("chall-1")
 		var blobber1 *StorageNode
 		blobber1, err := ssc.getBlobber(b1.id, balances)
 		// reduce timestamp to generate challenge with older create time
 		tp := tp - 20
-		genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber1, balances)
+		currentRound := balances.GetBlock().Round
+
+		genChall(t, ssc, tp, currentRound-300, challID, 0, validators, alloc.ID, blobber1, balances)
 
 		chall1 := &ChallengeResponse{
 			ID: challID,
@@ -693,11 +1218,9 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 		tx := newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		// update block round to ignore the ongoing blobber reward checking
-		bk := &block.Block{}
-		bk.Round = 500
-		balances.setBlock(t, bk)
+
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall1), balances)
-		require.EqualError(t, err, "challenge_reward_error: old challenge response on blobber rewarding")
+		require.EqualError(t, err, "verify_challenge: old challenge response")
 	})
 }
 
@@ -708,12 +1231,18 @@ func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 }
 
 func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
-	ssc, balances, tp, alloc, b3, valids, validators, blobber, _ := prepareAllocChallenges(t, 10)
+	ssc, balances, tp, alloc, b3, valids, validators, blobber, _, _ := prepareAllocChallenges(t, 10)
 	step := (int64(alloc.Expiration) - tp) / 10
 	tp += step / 2
 
+	bk := &block.Block{}
+	bk.Round = 500
+	balances.setBlock(t, bk)
+
+	currentRound := balances.GetBlock().Round
+
 	challID := fmt.Sprintf("chall-0")
-	genChall(t, ssc, tp, challID, 0, validators, alloc.ID, blobber, balances)
+	genChall(t, ssc, tp, currentRound-100, challID, 0, validators, alloc.ID, blobber, balances)
 
 	chall := &ChallengeResponse{
 		ID: challID,
@@ -793,8 +1322,59 @@ func TestGetRandomSubSlice(t *testing.T) {
 	})
 }
 
+func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
+	*StorageAllocation, []*Client, []*Client, *partitions.Partitions, []*StorageNode, *Client) {
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, true)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
+
+		// no owner
+		err error
+	)
+
+	// new allocation
+	tp += 1000
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+
+	// blobbers: stake 10k, balance 40k
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	var blobbers []*StorageNode
+	var blobberClients []*Client
+	for i := 0; i < len(alloc.BlobberAllocs); i++ {
+		blobberClient := testGetBlobber(blobs, alloc, i)
+		require.NotNil(t, blobberClient)
+
+		_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, blobberClient.id, ssc, "")
+
+		blobber, err := ssc.getBlobber(blobberClient.id, balances)
+		require.NoError(t, err)
+
+		blobbers = append(blobbers, blobber)
+		blobberClients = append(blobberClients, blobberClient)
+	}
+
+	// add 10 validators
+	valids, tp := testAddValidators(t, balances, ssc, validatorsNum, tp)
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	// load validators
+	validators, err := getValidatorsList(balances)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+	return ssc, balances, tp, alloc, blobberClients, valids, validators, blobbers, client
+}
+
 func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
-	*StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode, []*Client) {
+	*StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode, []*Client, *Client) {
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, true)
@@ -828,7 +1408,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	b2 := testGetBlobber(blobs, alloc, 1)
 	require.NotNil(t, b2)
 
-	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, b2.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, "root-1", 100*1024*1024, tp, b2.id, ssc, "")
 
 	b3 := testGetBlobber(blobs, alloc, 2)
 	require.NotNil(t, b3)
@@ -842,7 +1422,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	const allocRoot = "alloc-root-1"
 
 	// write 100MB
-	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc)
+	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc, "")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
@@ -855,7 +1435,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	var blobber *StorageNode
 	blobber, err = ssc.getBlobber(b3.id, balances)
 	require.NoError(t, err)
-	return ssc, balances, tp, alloc, b3, valids, validators, blobber, blobs
+	return ssc, balances, tp, alloc, b3, valids, validators, blobber, blobs, client
 }
 
 func testAddValidators(t *testing.T, balances *testBalances, ssc *StorageSmartContract, num int, tp int64) ([]*Client, int64) {
@@ -928,14 +1508,13 @@ func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client
 	return tp
 }
 
-func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract) (*transaction.Transaction, int64) {
-	tp += 1000
+func testCommitWrite(t *testing.T, balances *testBalances, client *Client, allocID, allocRoot string, size int64, tp int64, blobberID string, ssc *StorageSmartContract, prevAllocRoot string) (*transaction.Transaction, int64) {
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
-		PrevAllocationRoot: "",
+		PrevAllocationRoot: prevAllocRoot,
 		WriteMarker: &WriteMarker{
 			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: "",
+			PreviousAllocationRoot: prevAllocRoot,
 			AllocationID:           allocID,
 			//Size:                   100 * 1024 * 1024, // 100 MB
 			Size:      size,
@@ -987,7 +1566,8 @@ func testBlobberPenalty(
 		challengePoolIntegralValue: int64(challengePoolIntegralValue),
 		challengePoolBalance:       int64(challengePoolBalance),
 		partial:                    partial,
-		previousChallange:          previous,
+		lastFinalizedChallenge:     previous,
+		lastSuccessfulChallenge:    0,
 		size:                       size,
 		thisChallange:              thisChallange,
 		thisExpires:                thisExpires,
@@ -997,7 +1577,7 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, previous, details, validators, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
+	err = ssc.blobberPenalty(allocation, 0, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}
@@ -1011,7 +1591,7 @@ func testBlobberPenalty(
 	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
-	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, ctx)
+	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, false)
 	return nil
 }
 
@@ -1042,7 +1622,7 @@ func testBlobberReward(
 		challengePoolIntegralValue: int64(challengePoolIntegralValue),
 		challengePoolBalance:       int64(challengePoolBalance),
 		partial:                    partial,
-		previousChallange:          previous,
+		lastFinalizedChallenge:     previous,
 		thisChallange:              thisChallange,
 		thisExpires:                thisExpires,
 		now:                        now,
@@ -1051,7 +1631,7 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, partial, scYaml.MaxChallengeCompletionTime, ctx, allocationId)
+	err = ssc.blobberReward(allocation, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}
@@ -1065,7 +1645,7 @@ func testBlobberReward(
 	afterBlobber, err := ssc.getStakePool(spenum.Blobber, blobberId, ctx)
 	require.NoError(t, err)
 
-	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber, ctx)
+	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber)
 	return nil
 }
 
@@ -1099,10 +1679,8 @@ func setupChallengeMocks(
 		Terms: Terms{
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
-		Size: size,
-		LatestCompletedChallenge: &StorageChallenge{
-			Created: thisChallange,
-		},
+		Size:                          size,
+		LatestFinalizedChallCreatedAt: thisChallange,
 	}
 
 	var txn = &transaction.Transaction{
@@ -1180,28 +1758,69 @@ func setupChallengeMocks(
 }
 
 type formulaeBlobberReward struct {
-	t                                                  *testing.T
-	scYaml                                             Config
-	blobberYaml                                        mockBlobberYaml
-	validatorYamls                                     []mockBlobberYaml
-	stakes                                             []int64
-	validators                                         []string
-	validatorStakes                                    [][]int64
-	wpBalance                                          currency.Coin
-	challengePoolIntegralValue, challengePoolBalance   int64
-	partial                                            float64
-	previousChallange, thisChallange, thisExpires, now common.Timestamp
-	size                                               int64
+	t                                                                                *testing.T
+	scYaml                                                                           Config
+	blobberYaml                                                                      mockBlobberYaml
+	validatorYamls                                                                   []mockBlobberYaml
+	stakes                                                                           []int64
+	validators                                                                       []string
+	validatorStakes                                                                  [][]int64
+	wpBalance                                                                        currency.Coin
+	challengePoolIntegralValue, challengePoolBalance                                 int64
+	partial                                                                          float64
+	lastFinalizedChallenge, lastSuccessfulChallenge, thisChallange, thisExpires, now common.Timestamp
+	size                                                                             int64
+	collectedReward                                                                  currency.Coin
 }
 
 func (f formulaeBlobberReward) reward() int64 {
 	var challengePool = float64(f.challengePoolIntegralValue)
-	var passedPrevious = float64(f.previousChallange)
+	var lastFinalizedChallenge = float64(f.lastFinalizedChallenge)
 	var passedCurrent = math.Min(float64(f.thisChallange), float64(f.thisExpires))
 	var currentExpires = float64(f.thisExpires)
-	var interpolationFraction = (passedCurrent - passedPrevious) / (currentExpires - passedPrevious)
+	var interpolationFraction = (passedCurrent - lastFinalizedChallenge) / (currentExpires - lastFinalizedChallenge)
 
 	return int64(challengePool * interpolationFraction)
+}
+
+func (f formulaeBlobberReward) rewardOnFinalization(challengePool, passRate float64) int64 {
+	if challengePool == 0 {
+		return 0
+	}
+
+	var lastFinalizedChallenge = float64(f.lastFinalizedChallenge)
+	var passedCurrent = math.Min(float64(f.thisChallange), float64(f.thisExpires))
+	var currentExpires = float64(f.thisExpires)
+	var interpolationFraction = (passedCurrent - lastFinalizedChallenge) / (currentExpires - lastFinalizedChallenge)
+
+	return int64(challengePool * interpolationFraction * passRate)
+}
+
+func (f formulaeBlobberReward) penalty() (int64, int64) {
+	var challengePool = float64(f.challengePoolIntegralValue)
+	var lastFinalizedChallenge = float64(f.lastFinalizedChallenge)
+	var lastSuccessfulChallenge = float64(f.lastSuccessfulChallenge)
+	var currentExpires = float64(f.thisExpires)
+	var interpolationFraction = (lastFinalizedChallenge - lastSuccessfulChallenge) / (currentExpires - lastSuccessfulChallenge)
+
+	move := float64(challengePool * interpolationFraction)
+
+	penaltyPaid := move * (1.0 - f.scYaml.ValidatorReward)
+	validatorReward := move * f.scYaml.ValidatorReward
+
+	return int64(penaltyPaid), int64(validatorReward)
+}
+
+func (f formulaeBlobberReward) penaltyOnFinalization() int64 {
+	var challengePool = float64(f.challengePoolIntegralValue)
+	var lastFinalizedChallenge = float64(f.lastFinalizedChallenge)
+	var lastSuccessfulChallenge = float64(f.lastSuccessfulChallenge)
+	var currentExpires = float64(f.thisExpires)
+	var interpolationFraction = (lastFinalizedChallenge - lastSuccessfulChallenge) / (currentExpires - lastSuccessfulChallenge)
+
+	penaltyPaid := challengePool * interpolationFraction
+
+	return int64(penaltyPaid)
 }
 
 func (f formulaeBlobberReward) validatorsReward() int64 {
@@ -1236,9 +1855,27 @@ func (f formulaeBlobberReward) blobberServiceCharge() int64 {
 	return int64(blobberRewards * serviceCharge)
 }
 
+func (f formulaeBlobberReward) blobberServiceChargeOnFinalization() int64 {
+	if len(f.stakes) == 0 {
+		return f.reward()
+	}
+
+	var serviceCharge = blobberYaml.serviceCharge
+	var blobberRewards = float64(f.reward())
+
+	return int64(blobberRewards * serviceCharge)
+}
+
 func (f formulaeBlobberReward) validatorServiceCharge(validator string) int64 {
 	var serviceCharge = f.validatorYamls[f.indexFromValidator(validator)].serviceCharge
 	var rewardPerValidator = float64(f.validatorsReward()) / float64(len(f.validators))
+
+	return int64(rewardPerValidator * serviceCharge)
+}
+
+func (f formulaeBlobberReward) validatorServiceChargeForBlobberPenalty(validator string, validatorsReward int64) int64 {
+	var serviceCharge = f.validatorYamls[f.indexFromValidator(validator)].serviceCharge
+	var rewardPerValidator = float64(validatorsReward) / float64(len(f.validators))
 
 	return int64(rewardPerValidator * serviceCharge)
 }
@@ -1265,7 +1902,20 @@ func (f formulaeBlobberReward) validatorDelegateReward(validator string, delegat
 	return int64(deleatesReward * delegateStake / totalStake)
 }
 
-func (f formulaeBlobberReward) delegatePenalty(index int) int64 {
+func (f formulaeBlobberReward) validatorDelegateRewardForBlobberPenalty(validator string, delegate int, validatorsReward int64) int64 {
+	var vIndex = f.indexFromValidator(validator)
+
+	var totalStake = 0.0
+	for _, stake := range f.validatorStakes[vIndex] {
+		totalStake += float64(stake)
+	}
+	var delegateStake = float64(f.validatorStakes[vIndex][delegate])
+	var validatorReward = float64(validatorsReward) / float64(len(f.validators))
+	var deleatesReward = validatorReward - float64(f.validatorServiceChargeForBlobberPenalty(validator, validatorsReward))
+	return int64(deleatesReward * delegateStake / totalStake)
+}
+
+func (f formulaeBlobberReward) delegatePenalty(index int, penaltyPaid int64) int64 {
 	require.True(f.t, index < len(f.stakes))
 	var totalStake = 0.0
 	for _, stake := range f.stakes {
@@ -1274,17 +1924,9 @@ func (f formulaeBlobberReward) delegatePenalty(index int) int64 {
 	var delegateStake = float64(f.stakes[index])
 	var slash = f.scYaml.BlobberSlash
 
-	var totalAction = float64(f.reward())
-	var validatorReward = float64(f.validatorsReward())
-	var blobberRisk = totalAction - validatorReward
-	var slashedAmount = int64(blobberRisk * slash)
-	var offer = int64(sizeInGB(f.size) * float64(zcnToInt64(f.blobberYaml.writePrice)))
+	var slashedAmount = int64(float64(penaltyPaid) * slash)
 
-	if offer <= slashedAmount {
-		return int64(float64(offer) * delegateStake / totalStake)
-	} else {
-		return int64(float64(slashedAmount) * delegateStake / totalStake)
-	}
+	return int64(float64(slashedAmount) * delegateStake / totalStake)
 }
 
 func confirmBlobberPenalty(
@@ -1293,36 +1935,71 @@ func confirmBlobberPenalty(
 	challengePool challengePool,
 	validatorsSPs []*stakePool,
 	blobber stakePool,
-	ctx cstate.StateContextI,
-) {
-	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
-
-	require.EqualValues(t, 0, int64(blobber.Reward))
-	require.EqualValues(t, 0, int64(blobber.Reward))
+	includeBlobberReward bool,
+) (int64, int64, int64) {
+	penaltyPaid, validatorsReward := f.penalty()
+	f.challengePoolIntegralValue -= penaltyPaid + validatorsReward
+	blobberReward := int64(0)
+	if includeBlobberReward {
+		blobberReward = f.reward()
+	}
+	require.InDelta(t, f.challengePoolBalance-penaltyPaid-validatorsReward-blobberReward, int64(challengePool.Balance), errDelta)
 
 	for _, sp := range validatorsSPs {
 		orderedPoolIds := sp.OrderedPoolIds()
 		for _, wallet := range orderedPoolIds {
 			pool := sp.Pools[wallet]
 			var wSplit = strings.Split(wallet, " ")
-			require.InDelta(t, f.validatorServiceCharge(wSplit[0]), int64(sp.Reward), errDelta)
+			require.InDelta(t, f.validatorServiceChargeForBlobberPenalty(wSplit[0], validatorsReward), int64(sp.Reward), errDelta)
 			index, err := strconv.Atoi(wSplit[2])
 			require.NoError(t, err)
-			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Reward), errDelta)
+			require.InDelta(t, f.validatorDelegateRewardForBlobberPenalty(wSplit[0], index, validatorsReward), int64(pool.Reward), errDelta)
 		}
 	}
 
 	if f.scYaml.BlobberSlash > 0.0 {
 		blobberOrderedPoolIds := blobber.OrderedPoolIds()
-		for _, id := range blobberOrderedPoolIds {
+		for idx, id := range blobberOrderedPoolIds {
 			pool := blobber.Pools[id]
-			var delegate = strings.Split(pool.DelegateID, " ")
-			index, err := strconv.Atoi(delegate[1])
-			require.NoError(t, err)
 
-			require.InDelta(t, f.stakes[index]-f.delegatePenalty(index), int64(pool.Balance), errDelta)
+			delegatePenalty := f.delegatePenalty(idx, penaltyPaid)
+			require.InDelta(t, f.stakes[idx]-delegatePenalty, int64(pool.Balance), errDelta)
 		}
 	}
+
+	return blobberReward, validatorsReward, penaltyPaid
+}
+
+func confirmBlobberPenaltyOnFinalization(
+	t *testing.T,
+	f formulaeBlobberReward,
+	challengePoolIntergalValue int64,
+	blobber stakePool,
+	includeBlobberReward bool,
+	passRate float64,
+	expectedCancellationCharge int64,
+) (int64, int64) {
+	penaltyPaid := f.penaltyOnFinalization()
+	blobberReward := int64(0)
+	if includeBlobberReward {
+		blobberReward = f.rewardOnFinalization(float64(f.challengePoolIntegralValue-penaltyPaid), passRate)
+	}
+	require.InDelta(t, f.challengePoolIntegralValue-penaltyPaid-blobberReward, challengePoolIntergalValue, errDelta)
+
+	blobberCollectedReward, _ := f.collectedReward.Int64()
+	require.InDelta(t, int64(float64(blobberReward)*blobberYaml.serviceCharge+float64(expectedCancellationCharge)*blobberYaml.serviceCharge), int64(blobber.Reward)-blobberCollectedReward, errDelta)
+
+	if f.scYaml.BlobberSlash > 0.0 {
+		blobberOrderedPoolIds := blobber.OrderedPoolIds()
+		for idx, id := range blobberOrderedPoolIds {
+			pool := blobber.Pools[id]
+
+			delegatePenalty := f.delegatePenalty(idx, penaltyPaid)
+			require.InDelta(t, f.stakes[idx]-delegatePenalty, int64(pool.Balance), errDelta)
+		}
+	}
+
+	return blobberReward, penaltyPaid
 }
 
 func confirmBlobberReward(
@@ -1331,11 +2008,12 @@ func confirmBlobberReward(
 	challengePool challengePool,
 	validatorsSPs []*stakePool,
 	blobber stakePool,
-	ctx cstate.StateContextI,
-) {
+) int64 {
+
+	blobberCollectedReward, _ := f.collectedReward.Int64()
+
 	require.InDelta(t, f.challengePoolBalance-f.blobberReward()-f.rewardReturned()-f.validatorsReward(), int64(challengePool.Balance), errDelta)
-	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
-	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward), errDelta)
+	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Reward)-blobberCollectedReward, errDelta)
 
 	for _, sp := range validatorsSPs {
 		orderedPoolIds := sp.OrderedPoolIds()
@@ -1348,4 +2026,25 @@ func confirmBlobberReward(
 			require.InDelta(t, f.validatorDelegateReward(wSplit[0], index), int64(pool.Reward), errDelta)
 		}
 	}
+
+	return f.blobberReward() + f.rewardReturned() + f.validatorsReward()
+}
+
+func confirmBlobberRewardOnFinalization(
+	t *testing.T,
+	f formulaeBlobberReward,
+	blobber stakePool,
+	passRate float64,
+	challengePoolIntergalValue int64,
+	expectedCancellationCharge int64,
+) int64 {
+
+	blobberCollectedReward, _ := f.collectedReward.Int64()
+	blobberReward := f.rewardOnFinalization(float64(f.challengePoolIntegralValue), passRate)
+
+	require.InDelta(t, f.challengePoolIntegralValue-blobberReward, challengePoolIntergalValue, errDelta)
+
+	require.InDelta(t, int64(float64(blobberReward)*blobberYaml.serviceCharge+float64(expectedCancellationCharge)*blobberYaml.serviceCharge), int64(blobber.Reward)-blobberCollectedReward, errDelta)
+
+	return blobberReward
 }

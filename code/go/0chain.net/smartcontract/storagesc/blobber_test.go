@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/config"
-
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -661,7 +660,9 @@ func Test_flow_penalty(t *testing.T) {
 			}
 
 			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+
+			currentRound := balances.GetBlock().Round
+			genChall(t, ssc, tp, currentRound-200*(i-2), challID, i, validators, alloc.ID, blobber, balances)
 
 			var chall = new(ChallengeResponse)
 			chall.ID = challID
@@ -866,13 +867,15 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+				currentRound := balances.GetBlock().Round
+				genChall(t, ssc, tp, currentRound-100, challID, 0, validators, alloc.ID, blobber, balances)
 				gfc++
 			}
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)))
+		balances.block.Round += int64(MaxChallengeCompletionRounds)
+		tp += 180
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -962,6 +965,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		err error
 	)
 
+	balances.block.Round = 100000
+
 	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	require.NoError(t, err)
 
@@ -974,9 +979,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 	for _, ba := range alloc.BlobberAllocs {
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: 0,
-		}
+		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
 
@@ -1026,7 +1029,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 					AllocationID:           allocID,
 					Size:                   100 * 1024 * 1024, // 100 MB
 					BlobberID:              b.id,
-					Timestamp:              common.Timestamp(tp),
+					Timestamp:              alloc.StartTime,
 					ClientID:               client.id,
 				},
 			}
@@ -1061,11 +1064,6 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			require.EqualValues(t, 10e10, spTotal)
 		}
 
-		// values before
-		var (
-			wpb = alloc.WritePool
-			cpb = cp.Balance
-		)
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
 
@@ -1096,12 +1094,14 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 				var challID string
 				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
-				genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+				currentRound := balances.GetBlock().Round
+				genChall(t, ssc, tp, currentRound-10000+i, challID, i, validators, alloc.ID, blobber, balances)
 			}
 		}
 
 		// let expire all the challenges
-		tp += int64(toSeconds(config.SmartContractConfig.GetDuration(confMaxChallengeCompletionTime)))
+		balances.block.Round += int64(MaxChallengeCompletionRounds)
+		tp += 180
 
 		tp += 10 // a not expired allocation to cancel
 
@@ -1113,13 +1113,12 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		_, err = ssc.cancelAllocationRequest(tx, mustEncode(t, &req), balances)
 		require.NoError(t, err)
 
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
+		_, err = ssc.getAllocation(allocID, balances)
+		require.Error(t, util.ErrValueNotPresent, err)
 
 		// challenge pool should be empty
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-		assert.Zero(t, cp.Balance)
+		_, err = ssc.getChallengePool(allocID, balances)
+		require.Error(t, err, "challenge pool should be deleted")
 
 		// offer balance, stake pool total balance
 		for _, b := range blobs {
@@ -1131,19 +1130,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			require.NoError(t, err)
 			spTotal, err := stakePoolTotal(sp)
 			require.NoError(t, err)
-			require.EqualValues(t, 10e10, spTotal)
+			require.EqualValues(t, 10e10, float64(spTotal))
 		}
-
-		// values before
-		var (
-			wpa = alloc.WritePool
-			cpa = cp.Balance
-		)
-
-		require.NoError(t, err)
-		require.Zero(t, cpa)
-		require.Equal(t, wpb, wpa)
-		require.Equal(t, alloc.MovedBack, cpb)
 
 		// no rewards for the blobber
 		for _, b := range blobs {
