@@ -98,6 +98,8 @@ func (sc *StorageSmartContract) blobberReward(
 	balances cstate.StateContextI,
 	allocationID string,
 ) error {
+	logging.Logger.Info("Jayash blobAlloc", zap.Any("ba", blobAlloc))
+
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())

@@ -722,6 +722,9 @@ func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stake
 }
 
 func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp, sc *StorageSmartContract) (currency.Coin, currency.Coin, error) {
+
+	logging.Logger.Info("Jayash pay challenge pool pass payments", zap.Any("Jayash ba", d))
+
 	if d.LatestFinalizedChallCreatedAt == 0 {
 		return 0, 0, nil
 	}
@@ -740,6 +743,8 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 }
 
 func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+	logging.Logger.Info("Jayash challengeRewardOnFinalization", zap.Any("Jayash ba", d))
+
 	if now <= d.LatestFinalizedChallCreatedAt {
 		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
 		return 0, nil
@@ -802,6 +807,9 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 }
 
 func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances chainstate.StateContextI, sp *stakePool) (currency.Coin, error) {
+
+	logging.Logger.Info("Jayash challenge penalty on finalization", zap.Any("Jayash ba", d))
+
 	if d.LatestSuccessfulChallCreatedAt >= d.LatestFinalizedChallCreatedAt {
 		return 0, nil
 	}
@@ -1183,6 +1191,8 @@ func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, bala
 
 func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract, now common.Timestamp) error {
 	var passPayments currency.Coin
+
+	logging.Logger.Info("Jayash payChallengePoolPassPayments", zap.Any("passRates", passRates), zap.Any("ba", sa.BlobberAllocs))
 
 	for i, d := range sa.BlobberAllocs {
 		blobberPassPayment, _, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf, now, sc)
