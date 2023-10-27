@@ -1444,7 +1444,7 @@ ALTER TABLE ONLY public.blobbers
 --
 
 ALTER TABLE ONLY public.blocks
-    ADD CONSTRAINT blocks_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT blocks_pkey PRIMARY KEY (id, round);
 
 
 --
@@ -1573,7 +1573,7 @@ ALTER TABLE ONLY public.snapshots
 --
 
 ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT transactions_pkey PRIMARY KEY (id, round);
 
 
 --
