@@ -674,10 +674,6 @@ func (sc *StorageSmartContract) processChallengePassed(
 			"error saving ongoing blobber reward partition: %v", err)
 	}
 
-	if err := cab.allocChallenges.Save(balances, sc.ID); err != nil {
-		return "", common.NewError("verify_challenge", err.Error())
-	}
-
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 
 	if cab.latestFinalizedChallTime > cab.latestSuccessfulChallTime {

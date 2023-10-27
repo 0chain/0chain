@@ -245,3 +245,22 @@ func (srh *StorageRestHandler) getBlobberPartitionSelectionFrequency(w http.Resp
 
 	common.Respond(w, r, result, nil)
 }
+
+func (srh *StorageRestHandler) getFirstWMTime(w http.ResponseWriter, r *http.Request) {
+	// read all data from block_rewards table and return
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	allocationID := r.URL.Query().Get("allocation_id")
+
+	result, err := edb.GetFirstWMTime(allocationID)
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, result, nil)
+}

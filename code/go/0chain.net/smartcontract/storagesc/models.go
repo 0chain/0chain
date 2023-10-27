@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math"
 	"strings"
 	"time"
@@ -1970,13 +1971,15 @@ func (sa *StorageAllocation) removeOldChallenges(
 	var nonRemovedChallenges []*AllocOpenChallenge
 	var expChalIDs []string
 
+	uniqueIdForLogging := uuid.New().String()
+
 	for _, oc := range allocChallenges.OpenChallenges {
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
 			nonRemovedChallenges = append(nonRemovedChallenges, oc)
 			continue
 		}
 
-		logging.Logger.Info("removeOldChallenges",
+		logging.Logger.Info("removeOldChallenges : "+uniqueIdForLogging,
 			zap.String("challenge_id", oc.ID),
 			zap.String("blobber_id", oc.BlobberID),
 			zap.Int64("round_created_at", oc.RoundCreatedAt),
