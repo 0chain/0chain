@@ -350,7 +350,7 @@ CREATE TABLE public.blocks (
                                running_txn_count text,
                                round_timeout_count bigint,
                                is_finalised boolean
-);
+) PARTITION BY RANGE (round);
 
 
 ALTER TABLE public.blocks OWNER TO zchain_user;
@@ -1000,7 +1000,7 @@ CREATE TABLE public.transactions (
                                      transaction_output text,
                                      output_hash text,
                                      status bigint
-);
+) PARTITION BY RANGE (round);
 
 
 ALTER TABLE public.transactions OWNER TO zchain_user;
