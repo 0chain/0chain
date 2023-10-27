@@ -40,6 +40,7 @@ tests:
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_allocation_only'
+          timeout: '25m'
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           expected_status: 1 # 1 --> pass, 0 --> fail
@@ -86,6 +87,7 @@ tests:
           miner: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929" # generate challenge by this miner
       - command:
           name: 'init_allocation'
+          timeout: '25m'
       - wait_blobber_commit:
           timeout: "5m"
       - stop_challenge_generation: false
