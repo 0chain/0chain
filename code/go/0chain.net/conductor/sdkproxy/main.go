@@ -431,7 +431,6 @@ func execute(r, address string, codes chan int, logsDir string) {
 
 	cmd.Stdout = fout
 	cmd.Stderr = ferr
-	cmd.WaitDelay = 1 * time.Second
 	cmd.Env = append(os.Environ(), "HTTP_PROXY=http://"+address)
 
 	err = cmd.Run()
