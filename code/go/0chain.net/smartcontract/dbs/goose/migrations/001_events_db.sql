@@ -335,7 +335,7 @@ CREATE TABLE public.blocks (
                                hash text,
                                version text,
                                creation_date bigint,
-                               round bigint,
+                               round bigint NOT NULL,
                                miner_id text,
                                round_random_seed bigint,
                                merkle_tree_root text,
@@ -986,7 +986,7 @@ CREATE TABLE public.transactions (
                                      created_at timestamp with time zone,
                                      hash text,
                                      block_hash text,
-                                     round bigint,
+                                     round bigint NOT NULL,
                                      version text,
                                      client_id text,
                                      to_client_id text,
@@ -1696,7 +1696,7 @@ CREATE INDEX idx_bcreation_date ON public.blocks USING btree (creation_date);
 -- Name: idx_bhash; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE UNIQUE INDEX idx_bhash ON public.blocks USING btree (hash);
+CREATE UNIQUE INDEX idx_bhash ON public.blocks USING btree (round, hash);
 
 
 --
@@ -1941,7 +1941,7 @@ CREATE INDEX idx_tcreation_date ON public.transactions USING btree (creation_dat
 -- Name: idx_thash; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE UNIQUE INDEX idx_thash ON public.transactions USING btree (hash);
+CREATE UNIQUE INDEX idx_thash ON public.transactions USING btree (hash, round);
 
 
 --
