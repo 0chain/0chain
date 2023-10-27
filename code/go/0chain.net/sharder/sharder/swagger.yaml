@@ -717,21 +717,6 @@ definitions:
                 x-go-name: T
         type: object
         x-go-package: 0chain.net/chaincore/block
-    MinerGeolocation:
-        properties:
-            latitude:
-                format: double
-                type: number
-                x-go-name: Latitude
-            longitude:
-                format: double
-                type: number
-                x-go-name: Longitude
-            miner_id:
-                type: string
-                x-go-name: MinerID
-        type: object
-        x-go-package: 0chain.net/smartcontract/dbs/event
     MinerGlobalSettings:
         properties:
             fields:
@@ -754,8 +739,6 @@ definitions:
             delete:
                 type: boolean
                 x-go-name: Delete
-            geolocation:
-                $ref: '#/definitions/SimpleNodeGeolocation'
             host:
                 type: string
                 x-go-name: Host
@@ -1140,21 +1123,6 @@ definitions:
                 x-go-name: ServiceChargeRatio
         type: object
         x-go-package: 0chain.net/smartcontract/stakepool
-    SharderGeolocation:
-        properties:
-            latitude:
-                format: double
-                type: number
-                x-go-name: Latitude
-            longitude:
-                format: double
-                type: number
-                x-go-name: Longitude
-            sharder_id:
-                type: string
-                x-go-name: SharderID
-        type: object
-        x-go-package: 0chain.net/smartcontract/dbs/event
     ShareOrSigns:
         properties:
             id:
@@ -1175,8 +1143,6 @@ definitions:
             delete:
                 type: boolean
                 x-go-name: Delete
-            geolocation:
-                $ref: '#/definitions/SimpleNodeGeolocation'
             host:
                 type: string
                 x-go-name: Host
@@ -1210,18 +1176,6 @@ definitions:
                 x-go-name: ShortName
             total_stake:
                 $ref: '#/definitions/Coin'
-        type: object
-        x-go-package: 0chain.net/smartcontract/minersc
-    SimpleNodeGeolocation:
-        properties:
-            latitude:
-                format: double
-                type: number
-                x-go-name: Latitude
-            longitude:
-                format: double
-                type: number
-                x-go-name: Longitude
         type: object
         x-go-package: 0chain.net/smartcontract/minersc
     SimpleNodes:
@@ -1466,8 +1420,6 @@ definitions:
                 format: double
                 type: number
                 x-go-name: DataReadLastRewardRound
-            geolocation:
-                $ref: '#/definitions/StorageNodeGeolocation'
             id:
                 type: string
                 x-go-name: ID
@@ -1493,19 +1445,6 @@ definitions:
                 type: string
                 x-go-name: BaseURL
         title: StorageNode represents Blobber configurations.
-        type: object
-        x-go-package: 0chain.net/smartcontract/storagesc
-    StorageNodeGeolocation:
-        description: Move to the core, in case of multi-entity use of geo data
-        properties:
-            latitude:
-                format: double
-                type: number
-                x-go-name: Latitude
-            longitude:
-                format: double
-                type: number
-                x-go-name: Longitude
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     StringMap:
@@ -1774,15 +1713,6 @@ definitions:
                 format: int64
                 type: integer
                 x-go-name: LastHealthCheck
-            latitude:
-                description: Geolocation
-                format: double
-                type: number
-                x-go-name: Latitude
-            longitude:
-                format: double
-                type: number
-                x-go-name: Longitude
             max_stake:
                 $ref: '#/definitions/Coin'
             min_stake:
@@ -1928,8 +1858,6 @@ definitions:
             delete:
                 type: boolean
                 x-go-name: Delete
-            geolocation:
-                $ref: '#/definitions/SimpleNodeGeolocation'
             host:
                 type: string
                 x-go-name: Host
@@ -2060,8 +1988,6 @@ definitions:
                 format: double
                 type: number
                 x-go-name: DataReadLastRewardRound
-            geolocation:
-                $ref: '#/definitions/StorageNodeGeolocation'
             id:
                 type: string
                 x-go-name: ID
@@ -2591,48 +2517,6 @@ paths:
                         $ref: '#/definitions/stringArray'
                 "400":
                     description: ""
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation:
-        get:
-            description: |-
-                + name: max_latitude
-                description: maximum latitude value, defaults to 90
-                in: query
-                type: string
-                + name: min_latitude
-                description:  minimum latitude value, defaults to -90
-                in: query
-                type: string
-                + name: max_longitude
-                description: maximum max_longitude value, defaults to 180
-                in: query
-                type: string
-                + name: min_longitude
-                description: minimum max_longitude value, defaults to -180
-                in: query
-                type: string
-                + name: offset
-                description: offset
-                in: query
-                type: string
-                + name: limit
-                description: limit
-                in: query
-                type: string
-                + name: sort
-                description: desc or asc
-                in: query
-                type: string
-            operationId: blobbers-by-geolocation
-            responses:
-                "200":
-                    description: stringArray
-                    schema:
-                        $ref: '#/definitions/stringArray'
-                "500":
-                    description: ""
-            tags:
-            - Blobber
-            summary: Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank:
         get:
             tags:
@@ -3562,42 +3446,6 @@ paths:
                     description: ""
                 "484":
                     description: ""
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations:
-        get:
-            tags:
-            - Miners
-            summary: Get Miner Geolocation
-            description: list minersc config settings
-            operationId: get_miner_geolocations
-            parameters:
-                - description: offset
-                  in: query
-                  name: offset
-                  required: true
-                  type: string
-                - description: limit
-                  in: query
-                  name: limit
-                  required: true
-                  type: string
-                - description: desc or asc
-                  in: query
-                  name: sort
-                  type: string
-                - description: active
-                  in: query
-                  name: active
-                  required: true
-                  type: string
-            responses:
-                "200":
-                    description: MinerGeolocation
-                    schema:
-                        $ref: '#/definitions/MinerGeolocation'
-                "400":
-                    description: ""
-                "484":
-                    description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake:
         get:
             tags:
@@ -3625,42 +3473,6 @@ paths:
                     schema:
                         $ref: '#/definitions/Int64Map'
                 "404":
-                    description: ""
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations:
-        get:
-            tags:
-            - Sharders
-            summary: Get Sharder Geolocation
-            description: list minersc config settings
-            operationId: get_sharder_geolocations
-            parameters:
-                - description: offset
-                  in: query
-                  name: offset
-                  required: true
-                  type: string
-                - description: limit
-                  in: query
-                  name: limit
-                  required: true
-                  type: string
-                - description: desc or asc
-                  in: query
-                  name: sort
-                  type: string
-                - description: active
-                  in: query
-                  name: active
-                  required: true
-                  type: string
-            responses:
-                "200":
-                    description: SharderGeolocation
-                    schema:
-                        $ref: '#/definitions/SharderGeolocation'
-                "400":
-                    description: ""
-                "484":
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake:
         get:

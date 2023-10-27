@@ -21,10 +21,6 @@ type Authorizer struct {
 	// Configuration
 	Fee currency.Coin `json:"fee"`
 
-	// Geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-
 	TotalMint currency.Coin `json:"total_mint"`
 	TotalBurn currency.Coin `json:"total_burn"`
 

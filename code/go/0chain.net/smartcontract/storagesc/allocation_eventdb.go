@@ -45,12 +45,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &storageNodeResponse{
-			ID:      b.ID,
-			BaseURL: b.BaseURL,
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  b.Latitude,
-				Longitude: b.Longitude,
-			},
+			ID:              b.ID,
+			BaseURL:         b.BaseURL,
 			Terms:           blobberTermsMap[b.ID],
 			Capacity:        b.Capacity,
 			Allocated:       b.Allocated,

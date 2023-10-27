@@ -34,16 +34,6 @@ func BenchmarkRestTests(
 	return bk.GetRestTests(
 		[]bk.TestParameters{
 			{
-				FuncName: "blobbers-by-geolocation",
-				Params: map[string]string{
-					"max_latitude":  "40",
-					"min_latitude":  "-40",
-					"max_longitude": "40",
-					"min_longitude": "-40",
-				},
-				Endpoint: srh.getBlobbersByGeoLocation,
-			},
-			{
 				FuncName: "storage-config",
 				Endpoint: srh.getConfig,
 			},
