@@ -775,12 +775,15 @@ func (edb *EventDb) addStat(event Event) (err error) {
 	case TagStakePoolReward:
 		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 		if !ok {
+			logging.Logger.Info("Jayash could not update reward1", zap.Error(err))
 			return ErrInvalidEventData
 		}
 		if err := edb.rewardUpdate(*spus, event.BlockNumber); err != nil {
+			logging.Logger.Info("Jayash could not update reward2", zap.Error(err))
 			return err
 		}
 		if err := edb.blobberSpecificRevenue(*spus); err != nil {
+			logging.Logger.Info("Jayash could not update reward3", zap.Error(err))
 			return fmt.Errorf("could not update blobber specific revenue: %v", err)
 		}
 		return nil
