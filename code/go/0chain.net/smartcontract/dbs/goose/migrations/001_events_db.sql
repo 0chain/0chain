@@ -1696,7 +1696,7 @@ CREATE INDEX idx_bcreation_date ON public.blocks USING btree (creation_date);
 -- Name: idx_bhash; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE UNIQUE INDEX idx_bhash ON public.blocks USING btree (round, hash);
+CREATE UNIQUE INDEX idx_bhash ON public.blocks USING btree (hash, round);
 
 
 --
