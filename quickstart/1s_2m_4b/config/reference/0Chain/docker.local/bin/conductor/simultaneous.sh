@@ -26,7 +26,7 @@ head -c 32428800 < /dev/urandom > b2.bin
     --localpath=b1.bin \
     --remotepath=/remote/b1.bin
 
-go run 0chain/code/go/0chain.net/conductor/sdkproxy/main.go -l "0chain/conductor/logs" \
+go run 0chain/code/go/0chain.net/conductor/sdkproxy/main.go      \
     -run 0chain/docker.local/bin/conductor/proxied/update_b.sh   \
     -run 0chain/docker.local/bin/conductor/proxied/update_s.sh   \
     -run 0chain/docker.local/bin/conductor/proxied/download_b.sh \

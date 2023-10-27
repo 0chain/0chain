@@ -31,7 +31,7 @@ head -c 32430848 < /dev/urandom > b2.bin
     --remotepath=/remote/b1.bin
 
 # then update both files, download and delete then
-go run 0chain/code/go/0chain.net/conductor/sdkproxy/main.go -m 'dm-rm-wm' -l "0chain/conductor/logs" \
+go run 0chain/code/go/0chain.net/conductor/sdkproxy/main.go -m 'dm-rm-wm' \
     -run 0chain/docker.local/bin/conductor/proxied/update_b.sh            \
     -run 0chain/docker.local/bin/conductor/proxied/download_b.sh          \
     -run 0chain/docker.local/bin/conductor/proxied/delete_b.sh
