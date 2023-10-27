@@ -21,8 +21,6 @@ import (
 
 var ErrInvalidEventData = errors.New("invalid event data")
 
-const SLOWTABLESPACE = "slowtablespace"
-
 type (
 	ProcessEventsOptions struct {
 		CommitNow bool
@@ -406,10 +404,10 @@ func (edb *EventDb) managePartitions(round int64) {
 }
 
 func (edb *EventDb) movePartitions(round int64) {
-	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "transactions", round); err != nil {
+	if err := edb.movePartitionToSlowTableSpace(round, "transactions"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
-	if err := edb.movePartitionToSlowTableSpace(SLOWTABLESPACE, "blocks", round); err != nil {
+	if err := edb.movePartitionToSlowTableSpace(round, "blocks"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
 }

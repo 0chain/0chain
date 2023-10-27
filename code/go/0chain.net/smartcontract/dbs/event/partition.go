@@ -24,13 +24,14 @@ func (edb *EventDb) dropPartition(round int64, table string) error {
 	return edb.Store.Get().Exec(raw).Error
 }
 
-func (edb *EventDb) movePartitionToSlowTableSpace(tablespace, table string, round int64) error {
+func (edb *EventDb) movePartitionToSlowTableSpace(round int64, table string) error {
 	number := round / edb.settings.PartitionChangePeriod
 	toMove := number - edb.settings.PartitionKeepCount
 	if toMove < 0 {
 		return nil
 	}
 
+	tablespace := edb.dbConfig.Slowtablespace
 	// identify the partition table that needs to be moved to slow partition
 	raw := fmt.Sprintf("ALTER TABLE %v_%v SET TABLESPACE %v;", table, toMove, tablespace)
 	return edb.Store.Get().Exec(raw).Error
