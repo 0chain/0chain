@@ -98,7 +98,7 @@ func (sc *StorageSmartContract) blobberReward(
 	balances cstate.StateContextI,
 	allocationID string,
 ) error {
-	logging.Logger.Info("Jayash blobAlloc", zap.Any("ba", blobAlloc))
+	logging.Logger.Info("Jayash blobAlloc", zap.Any("ba", blobAlloc), zap.Any("latestFinalizedChallTime", latestFinalizedChallTime), zap.Any("Alloc.expiration", alloc.Expiration))
 
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
@@ -143,7 +143,7 @@ func (sc *StorageSmartContract) blobberReward(
 		return err
 	}
 
-	logging.Logger.Info("Paying challenge reward", zap.Any("challenge reward", move), zap.Any("challengeCompletedTime", challengeCompletedTime), zap.Any("latestFinalizedChallTime", latestFinalizedChallTime), zap.Any("rdtu", rdtu), zap.Any("dtu", dtu))
+	logging.Logger.Info("Jayash Paying challenge reward", zap.Any("ba", blobAlloc), zap.Any("challenge reward", move), zap.Any("challengeCompletedTime", challengeCompletedTime), zap.Any("latestFinalizedChallTime", latestFinalizedChallTime), zap.Any("rdtu", rdtu), zap.Any("dtu", dtu))
 
 	// part of tokens goes to related validators
 	var validatorsReward currency.Coin
@@ -700,6 +700,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 		cab.challenge.AllocationID,
 	)
 	if err != nil {
+		logging.Logger.Info("Jayash blobberReward failed", zap.Any("err", err))
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
