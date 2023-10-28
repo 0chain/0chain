@@ -51,5 +51,3 @@ VALIDATOR3=86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
     --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 \
     --data $data_shards --parity $parity_shards
 
-# add to read pools
-./zboxcli/zbox --wallet testing.json rp-lock --tokens 4.0

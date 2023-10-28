@@ -12,27 +12,21 @@ import (
 // The corresponding model is storagesc.StorageNode.
 type StorageDtoNode struct {
 	provider.Provider
-	BaseURL                 *string                 `json:"url,omitempty"`
-	Geolocation             *StorageNodeGeolocation `json:"geolocation,omitempty"`
-	Terms                   *Terms                  `json:"terms,omitempty"`
-	Capacity                *int64                  `json:"capacity,omitempty"`
-	Allocated               *int64                  `json:"allocated,omitempty"`
-	SavedData               *int64                  `json:"saved_data,omitempty"`
-	DataReadLastRewardRound *float64                `json:"data_read_last_reward_round,omitempty"`
-	LastRewardDataReadRound *int64                  `json:"last_reward_data_read_round,omitempty"`
-	StakePoolSettings       *Settings               `json:"stake_pool_settings,omitempty"`
-	RewardRound             *RewardRound            `json:"reward_round,omitempty"`
-	NotAvailable            *bool                   `json:"not_available,omitempty"`
+	BaseURL                 *string      `json:"url,omitempty"`
+	Terms                   *Terms       `json:"terms,omitempty"`
+	Capacity                *int64       `json:"capacity,omitempty"`
+	Allocated               *int64       `json:"allocated,omitempty"`
+	SavedData               *int64       `json:"saved_data,omitempty"`
+	DataReadLastRewardRound *float64     `json:"data_read_last_reward_round,omitempty"`
+	LastRewardDataReadRound *int64       `json:"last_reward_data_read_round,omitempty"`
+	StakePoolSettings       *Settings    `json:"stake_pool_settings,omitempty"`
+	RewardRound             *RewardRound `json:"reward_round,omitempty"`
+	NotAvailable            *bool        `json:"not_available,omitempty"`
 }
 
 type RewardRound struct {
 	StartRound *int64            `json:"start_round,omitempty"`
 	Timestamp  *common.Timestamp `json:"timestamp,omitempty"`
-}
-
-type StorageNodeGeolocation struct {
-	Latitude  *float64 `json:"latitude,omitempty"`
-	Longitude *float64 `json:"longitude,omitempty"`
 }
 
 type Terms struct {
