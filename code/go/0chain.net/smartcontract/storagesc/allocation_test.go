@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/tokenpool"
 	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/tokenpool"
 
 	"0chain.net/smartcontract/provider"
 
@@ -371,10 +372,8 @@ func TestChangeBlobbers(t *testing.T) {
 					TotalChallenges:   102,
 					OpenChallenges:    0,
 				},
-				LatestCompletedChallenge: &StorageChallenge{
-					Created: mockAllocationExpiry,
-				},
-				ChallengePoolIntegralValue: 0,
+				LatestFinalizedChallCreatedAt: now - 200,
+				ChallengePoolIntegralValue:    0,
 			}
 			if i < arg.blobberInChallenge {
 				err := bcPart.Add(balances, &ChallengeReadyBlobber{BlobberID: ba.BlobberID})
@@ -1049,7 +1048,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	balances.setTransaction(t, &tx)
 
 	conf = setConfig(t, balances)
-	conf.MaxChallengeCompletionTime = 3 * time.Minute
+	conf.MaxChallengeCompletionRounds = 720
 	conf.MinAllocSize = 10 * GB
 	conf.TimeUnit = 720 * time.Hour
 
@@ -1407,7 +1406,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	balances.(*testBalances).setTransaction(t, &tx)
 
-	conf.MaxChallengeCompletionTime = 20 * time.Second
+	conf.MaxChallengeCompletionRounds = 720
 	conf.MinAllocSize = 10 * GB
 	conf.MaxBlobbersPerAllocation = 4
 	conf.TimeUnit = 20 * time.Second
@@ -1669,9 +1668,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 			OpenChallenges:    0,
 		}
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: alloc.Expiration / 2,
-		}
+		ba.LatestFinalizedChallCreatedAt = alloc.Expiration / 2
 		ba.ChallengePoolIntegralValue = 0
 	}
 
@@ -1823,9 +1820,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		OpenChallenges:    0,
 	}
 
-	alloc.BlobberAllocsMap[nb.id].LatestCompletedChallenge = &StorageChallenge{
-		Created: alloc.Expiration,
-	}
+	alloc.BlobberAllocsMap[nb.id].LatestFinalizedChallCreatedAt = common.Timestamp(tp)
 
 	alloc.BlobberAllocsMap[nb.id].ChallengePoolIntegralValue = 0
 
@@ -1930,9 +1925,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		OpenChallenges:    0,
 	}
 
-	alloc.BlobberAllocsMap[nb2.id].LatestCompletedChallenge = &StorageChallenge{
-		Created: alloc.Expiration,
-	}
+	alloc.BlobberAllocsMap[nb2.id].LatestFinalizedChallCreatedAt = common.Timestamp(tp)
 
 	alloc.BlobberAllocsMap[nb2.id].ChallengePoolIntegralValue = 0
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
@@ -2064,9 +2057,7 @@ func Test_finalize_allocation(t *testing.T) {
 			OpenChallenges:    0,
 		}
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: 0,
-		}
+		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
 
@@ -2147,7 +2138,9 @@ func Test_finalize_allocation(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+
+		currentRound := balances.GetBlock().Round
+		genChall(t, ssc, tp, currentRound-200*(i-2), challID, i, validators, alloc.ID, blobber, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID
@@ -2168,17 +2161,11 @@ func Test_finalize_allocation(t *testing.T) {
 	}
 
 	// balances
-	var cp *challengePool
 	_, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
 	// expire the allocation
-	var conf *Config
-	conf, err = getConfig(balances)
-	require.NoError(t, err)
-
-	require.NoError(t, err)
-	tp += int64(alloc.Until(conf.MaxChallengeCompletionTime))
+	tp += int64(alloc.Until(time.Duration(tp)))
 
 	// finalize it
 
@@ -2188,20 +2175,16 @@ func Test_finalize_allocation(t *testing.T) {
 	tx = newTransaction(client.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 
-	tx.CreationDate = alloc.Expiration + common.Timestamp(conf.MaxChallengeCompletionTime.Seconds())
-	_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
+	tx.CreationDate = alloc.Expiration + 10
+	alloc, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
 	require.NoError(t, err)
 
 	// check out all the balances
 
-	cp, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
+	_, err = ssc.getChallengePool(allocID, balances)
+	require.Error(t, err, "challenge pool should be removed")
 
-	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
-	assert.Zero(t, cp.Balance, "should be drained")
-
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
+	tp += 720
 
 	assert.True(t, alloc.Finalized)
 	assert.True(t,
@@ -2251,9 +2234,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 			OpenChallenges:    0,
 		}
 
-		ba.LatestCompletedChallenge = &StorageChallenge{
-			Created: 0,
-		}
+		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
 
@@ -2337,7 +2318,8 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, tp, challID, i, validators, alloc.ID, blobber, balances)
+		currentRound := balances.GetBlock().Round
+		genChall(t, ssc, tp, currentRound-200*(i-2), challID, i, validators, alloc.ID, blobber, balances)
 
 		var chall = new(ChallengeResponse)
 		chall.ID = challID
@@ -2357,17 +2339,11 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	}
 
 	// balances
-	var cp *challengePool
 	_, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
 	// expire the allocation
-	var conf *Config
-	conf, err = getConfig(balances)
-	require.NoError(t, err)
-
-	require.NoError(t, err)
-	tp += int64(alloc.Until(conf.MaxChallengeCompletionTime))
+	tp += int64(alloc.Until(time.Duration(tp)))
 
 	// finalize it
 
@@ -2381,17 +2357,11 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 	// check out all the balances
 
-	cp, err = ssc.getChallengePool(allocID, balances)
-	require.NoError(t, err)
+	_, err = ssc.getChallengePool(allocID, balances)
+	require.Error(t, err, "challenge pool should be removed")
 
-	tp += int64(toSeconds(conf.MaxChallengeCompletionTime))
-	assert.Zero(t, cp.Balance, "should be drained")
+	tp += int64(alloc.Until(time.Duration(tp)))
 
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
-
-	assert.True(t, alloc.Finalized)
-	assert.True(t,
-		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
-		"should receive min_lock_demand")
+	_, err = ssc.getAllocation(allocID, balances)
+	require.Error(t, util.ErrValueNotPresent, err)
 }

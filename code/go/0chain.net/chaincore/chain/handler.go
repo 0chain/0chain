@@ -33,6 +33,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"github.com/0chain/common/core/util"
+	metrics "github.com/rcrowley/go-metrics"
 
 	"github.com/0chain/common/core/logging"
 
@@ -124,6 +125,9 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 		)),
 		"/_diagnostics/state_dump": common.UserRateLimit(
 			StateDumpHandler,
+		),
+		"/_diagnostics/est_num_keys": common.UserRateLimit(
+			StateDumpAllHandler,
 		),
 		"/v1/block/get/latest_finalized_ticket": common.N2NRateLimit(
 			common.ToJSONResponse(
@@ -308,7 +312,9 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	phase := "N/A"
 	var mb = c.GetMagicBlock(rn)
 
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
+	n := node.Self.Underlying()
+
+	if n.Type == node.NodeTypeMiner {
 		var shares int
 		check := "✗"
 		if cr != nil {
@@ -333,7 +339,12 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "<a style='display:flex;' href='_diagnostics/round_info'><span style='flex:1;'></span>%d</a>", rn)
+
+	if len(n.Path) > 0 {
+		fmt.Fprintf(w, "<a style='display:flex;' href='https://%v/%v/_diagnostics/round_info'><span style='flex:1;'></span>%d</a>", n.Host, n.Path, rn)
+	} else {
+		fmt.Fprintf(w, "<a style='display:flex;' href='http://%v:%v/_diagnostics/round_info'><span style='flex:1;'></span>%d</a>", n.Host, n.Port, rn)
+	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
@@ -513,15 +524,16 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "State missing nodes")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	ps := c.GetPruneStats()
-	if ps != nil {
-		fmt.Fprintf(w, "%v", ps.MissingNodes)
-	} else {
-		fmt.Fprintf(w, "pending")
+	var missingNodes int64
+	if !node.Self.IsSharder() {
+		missingNodes = node.Self.Underlying().Info.GetStateMissingNodes()
 	}
+	fmt.Fprintf(w, "%v", missingNodes)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
-	if snt := node.Self.Underlying().Type; snt == node.NodeTypeMiner {
+
+	n := node.Self.Underlying()
+	if snt := n.Type; snt == node.NodeTypeMiner {
 		txn, ok := transaction.Provider().(*transaction.Transaction)
 		if ok {
 			transactionEntityMetadata := txn.GetEntityMetadata()
@@ -533,7 +545,11 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 			if ok {
 				fmt.Fprintf(w, "<tr class='active'>")
 				fmt.Fprintf(w, "<td>")
-				fmt.Fprintf(w, "<a href='_diagnostics/txns_in_pool'>Redis Collection</a>")
+				if len(n.Path) > 0 {
+					fmt.Fprintf(w, "<a href='https://%v/%v/_diagnostics/txns_in_pool'>Redis Collection</a>", n.Host, n.Path)
+				} else {
+					fmt.Fprintf(w, "<a href='http://%v:%v/_diagnostics/txns_in_pool'>Redis Collection</a>", n.Host, n.Port)
+				}
 				fmt.Fprintf(w, "</td>")
 				fmt.Fprintf(w, "<td class='number'>")
 				fmt.Fprintf(w, "%v", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName))
@@ -763,16 +779,13 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
-	if node.NodeType(selfNodeType) == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
-	}
 	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
-	if node.NodeType(selfNodeType) == node.NodeTypeMiner {
+	if selfNodeType == node.NodeTypeMiner {
 		// ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
@@ -806,7 +819,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	lfb := c.GetLatestFinalizedBlock()
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td rowspan='2'>Set Index</td><td rowspan='2'>Node</td><td rowspan='2'>Sent</td><td rowspan='2'>Send Errors</td><td rowspan='2'>Received</td><td rowspan='2'>Last Active</td><td colspan='3' style='text-align:center'>Message Time</td><td rowspan='2'>Description</td><td colspan='4' style='text-align:center'>Remote Data</td></tr>")
-	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
 	nodes := np.CopyNodes()
 	sort.SliceStable(nodes, func(i, j int) bool {
 		return nodes[i].SetIndex < nodes[j].SetIndex
@@ -857,11 +870,11 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		}
 		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Description, nd.Description)
 		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Info.BuildTag, nd.Info.BuildTag)
-		if nd.Info.StateMissingNodes < 0 {
-			fmt.Fprintf(w, "<td>pending</td>")
-		} else {
-			fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.StateMissingNodes)
-		}
+		// if nd.Info.GetStateMissingNodes() < 0 {
+		// 	fmt.Fprintf(w, "<td>pending</td>")
+		// } else {
+		// 	fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.GetStateMissingNodes())
+		// }
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.MinersMedianNetworkTime)
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.AvgBlockTxns)
 		fmt.Fprintf(w, "</tr>")
@@ -1699,7 +1712,55 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
 		}
 		fmt.Fprintf(w, "</table>")
+
+		fmt.Fprintf(w, "<br>")
+
+		fmt.Fprintf(w, "<div>Missing Node Stat</div>")
+		fmt.Fprintf(w, "<table style='width:500'>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
+		fmt.Fprintf(w, "<table style='width:100%%;'>")
+		fmt.Fprintf(w, "<tr><td>Total count</td><td>%d</td></tr>", c.MissingNodesStat.Counter.Count())
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "</td></tr>")
+
+		fmt.Fprintf(w, "<tr><td>Time to find missing nodes</td></tr>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
+		WriteTimerStatistics(w, c.MissingNodesStat.Timer, 10000)
+		fmt.Fprintf(w, "</td></tr>")
+
+		fmt.Fprintf(w, "<tr><td>Time to sync missing nodes</td></tr>")
+		fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
+		WriteTimerStatistics(w, c.MissingNodesStat.SyncTimer, 10000)
+		fmt.Fprintf(w, "</td></tr>")
+
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "</table>")
+		fmt.Fprintf(w, "<div>&nbsp;</div>")
 	}
+}
+
+func WriteTimerStatistics(w http.ResponseWriter, timer metrics.Timer, scaleBy float64) {
+	scale := func(n float64) float64 {
+		return (n / scaleBy)
+	}
+	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
+	pvals := timer.Percentiles(percentiles)
+	fmt.Fprintf(w, "<table width='100%%'>")
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Count</td><td>%v</td></tr>", timer.Count())
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Time taken</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Min</td><td>%.2f ms</td></tr>", scale(float64(timer.Min())))
+	fmt.Fprintf(w, "<tr><td>Mean</td><td>%.2f &plusmn;%.2f ms</td></tr>", scale(timer.Mean()), scale(timer.StdDev()))
+	fmt.Fprintf(w, "<tr><td>Max</td><td>%.2f ms</td></tr>", scale(float64(timer.Max())))
+	for idx, p := range percentiles {
+		fmt.Fprintf(w, "<tr><td>%.2f%%</td><td>%.2f ms</td></tr>", 100*p, scale(pvals[idx]))
+	}
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Rate per second</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Last 1-min rate</td><td>%.2f</td></tr>", timer.Rate1())
+	fmt.Fprintf(w, "<tr><td>Last 5-min rate</td><td>%.2f</td></tr>", timer.Rate5())
+	fmt.Fprintf(w, "<tr><td>Last 15-min rate</td><td>%.2f</td></tr>", timer.Rate15())
+	fmt.Fprintf(w, "<tr><td>Overall mean rate</td><td>%.2f</td></tr>", timer.RateMean())
+	fmt.Fprintf(w, "</table>")
 }
 
 func txnIterHandlerFunc(w http.ResponseWriter, lfb *block.Block) func(context.Context, datastore.CollectionEntity) (bool, error) {
@@ -1933,6 +1994,32 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(writer, "END }\n")
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
+}
+
+func StateDumpAllHandler(w http.ResponseWriter, r *http.Request) {
+	c := GetServerChain()
+	lfb := c.GetLatestFinalizedBlock()
+	// contract := r.FormValue("smart_contract")
+	mpt := lfb.ClientState
+	if mpt == nil {
+		errMsg := struct {
+			Err string `json:"error"`
+		}{
+			Err: fmt.Sprintf("last finalized block with nil state, round: %d", lfb.Round),
+		}
+
+		out, err := json.MarshalIndent(errMsg, "", "    ")
+		if err != nil {
+			logging.Logger.Error("Dump state failed", zap.Error(err))
+			return
+		}
+		fmt.Fprint(w, string(out))
+		return
+	}
+	// c.stateDB
+	def, dd := c.stateDB.(*util.PNodeDB).EstimateSize()
+
+	fmt.Fprintf(w, "state:%v, \ndead_nodes_rounds: %v\n", def, dd)
 }
 
 // SetupHandlers sets up the necessary API end points for miners

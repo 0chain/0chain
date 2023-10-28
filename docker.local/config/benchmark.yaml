@@ -21,6 +21,10 @@ simulation:
   num_reward_partition_blobber: 5
   num_blocks: 300
   num_transactions_per_block: 10
+  num_write_redeem_allocation: 2
+  num_read_markers_allocation: 10
+  num_rounds_between_writes: 5
+  num_rounds_between_reads: 10
 
 options:
   verbose: true
@@ -32,6 +36,10 @@ options:
   omitted_tests:
   save_path: /saved_data # do not add a load_path key, this is read from command line options
   load_concurrency: 4
+  event_database_benchmarks: true
+  smart_contract_event_file: "edb_in.json"
+  event_database_event_file: "edb_in.json"
+  verify_burned_tokens: false
 
 dbs:
   events:
@@ -59,6 +67,7 @@ smart_contracts:
     max_delegates: 200
     min_stake: 0.0
     max_stake: 170.0
+    min_stake_per_delegate: 1
     max_n: 7 # 100
     min_n: 3 # 3
     max_s: 2 # 30
@@ -114,13 +123,15 @@ smart_contracts:
     min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
-    max_challenge_completion_time: 3m
+    max_file_size : 40000000000000
+    max_challenge_completion_rounds: 720
     min_offer_duration: 10h
     max_offer_duration: 744h
     min_blobber_capacity: 1024
     max_charge: 0.2
     min_stake: 0.0
     max_stake: 20000.0
+    min_stake_per_delegate: 1
     max_delegates: 200
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
@@ -130,6 +141,7 @@ smart_contracts:
     max_blobbers_per_allocation: 40
     validators_per_challenge: 2
     num_validators_rewarded: 10
+    max_blobber_select_for_challenge: 5
     readpool:
       min_lock: 0.3
     writepool:
@@ -139,7 +151,7 @@ smart_contracts:
     free_allocation_settings:
       data_shards: 2
       duration: 50h
-      max_challenge_completion_time: 1m
+      max_challenge_completion_rounds: 720
       parity_shards: 2
       read_pool_fraction: 0.2
       mint_amount: 0.5
@@ -152,6 +164,7 @@ smart_contracts:
         min: 0
     max_mint: 1500000.0
     challenge_enabled: true
+    challenge_generation_gap : 1
     block_reward:
       block_reward: 1
       block_reward_change_period: 10000
@@ -180,7 +193,9 @@ smart_contracts:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_mint: 1
     min_burn: 1
-    min_stake: 3
+    min_stake: 0
+    min_stake_per_delegate : 1
+    max_stake: 2.7
     min_lock: 0
     min_authorizers: 1
     percent_authorizers: 0

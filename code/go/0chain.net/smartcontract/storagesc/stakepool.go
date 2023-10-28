@@ -1,13 +1,12 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -185,10 +184,6 @@ func (sp *stakePool) slash(
 		return // nothing to move
 	}
 
-	if slash > offer {
-		slash = offer // can't move the offer left
-	}
-
 	staked, err := sp.stake()
 	if err != nil {
 		return 0, err
@@ -208,6 +203,10 @@ func (sp *stakePool) slash(
 
 		if dpSlash == 0 {
 			continue
+		}
+
+		if dpSlash > dp.Balance {
+			dpSlash = dp.Balance // Can not exceed the dp balance
 		}
 
 		if balance, err := currency.MinusCoin(dp.Balance, dpSlash); err != nil {

@@ -130,6 +130,8 @@ func (msc *MinerSmartContract) AddSharder(
 
 	newSharder.NodeType = NodeTypeSharder // set node type
 	newSharder.ProviderType = spenum.Sharder
+	newSharder.Settings.MinStake = gn.MinStakePerDelegate
+
 	exist, err := msc.getSharderNode(newSharder.ID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("add_sharder", "unexpected error: %v", err)

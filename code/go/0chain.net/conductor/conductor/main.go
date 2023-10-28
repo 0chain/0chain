@@ -14,6 +14,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -75,6 +76,7 @@ func main() {
 
 	log.Print("create worker instance")
 	r.conf = conf
+	r.chalConf = config.NewGenerateChallenge()
 	r.verbose = verbose
 	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
 	if err != nil {
@@ -97,6 +99,16 @@ func main() {
 
 	var success bool
 	// not always error means failure
+
+	// Clean contents of sdxproxy logs directory but keep the directory itself
+	err = os.RemoveAll(conf.Logs + "/sdkproxy")
+	if err != nil {
+		log.Printf("Error while cleaning sdxproxy logs directory: %v", err)
+	}
+	err = os.MkdirAll(conf.Logs+"/sdkproxy", 0777)
+	if err != nil {
+		log.Printf("Error while creating sdxproxy logs directory: %v", err)
+	}
 
 	err, success = r.Run()
 	if err != nil {
@@ -146,15 +158,21 @@ func appendTests(conf *config.Config, tests *config.Config) {
 }
 
 type reportTestCase struct {
-	name       string
-	s, e       time.Time // start at, end at
-	directives []reportFlowDirective
+	name               string
+	startedAt, endedAt time.Time // start at, end at
+	directives         []reportFlowDirective
 }
 
 type reportFlowDirective struct {
 	success   bool
 	err       error
 	directive string
+}
+
+type fileMetaRoot struct {
+	fmrs         map[string]string // blobberID:fileMetaRoot
+	totalBlobers int
+	shouldWait   bool
 }
 
 type Runner struct {
@@ -184,6 +202,8 @@ type Runner struct {
 	waitNoProgress         config.WaitNoProgress         // no new rounds expected
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	waitCommand            chan error                    // wait a command
+	chalConf               *config.GenerateChallege
+	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -218,7 +238,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		fmt.Printf("wait for view change %v\n", r.waitViewChange)
 		return tm, true
 	case !r.waitAdd.IsZero():
-		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Authorizers)
+		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v), validators (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Validators, r.waitAdd.Authorizers)
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
 		log.Println("wait for sharder keep")
@@ -231,6 +251,14 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		return tm, true
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
+		return tm, true
+	case r.chalConf.WaitOnBlobberCommit:
+		return tm, true
+	case r.chalConf.WaitOnChallengeGeneration:
+		return tm, true
+	case r.chalConf.WaitForChallengeStatus:
+		return tm, true
+	case r.fileMetaRoot.shouldWait:
 		return tm, true
 	}
 
@@ -537,6 +565,38 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 	return
 }
 
+func (r *Runner) acceptAddValidator(addv *conductrpc.AddValidatorEvent) (
+	err error) {
+
+	if addv.Sender != r.monitor {
+		return // not the monitor node
+	}
+	var (
+		sender, sok = r.conf.Nodes.NodeByName(addv.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(addv.Validator)
+	)
+	if !sok {
+		return fmt.Errorf("unexpected add_validator sender: %q", addv.Sender)
+	}
+	if !aok {
+		return fmt.Errorf("unexpected validator %q added by add_validator of %q",
+			addv.Validator, sender.Name)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] add_validator ", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	if r.waitAdd.TakeValidator(added.Name) {
+		log.Print("[OK] add_validator ", added.Name)
+	}
+	return
+}
+
 func (r *Runner) acceptAddAuthorizer(addb *conductrpc.AddAuthorizerEvent) (
 	err error) {
 	if addb.Sender != r.monitor {
@@ -761,6 +821,73 @@ func (r *Runner) acceptShareOrSignsShares(
 	return
 }
 
+func (r *Runner) onChallengeGeneration(blobberID string) {
+	if blobberID != r.chalConf.BlobberID {
+		return
+	}
+	log.Println("Challenge has been generated for blobber ", blobberID)
+
+	r.chalConf.WaitOnChallengeGeneration = false
+}
+
+func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
+	blobberID, ok := m["blobber_id"].(string)
+	if !ok {
+		return errors.New("invalid map on challenge status")
+	}
+
+	if blobberID != r.chalConf.BlobberID {
+		return nil
+	}
+
+	r.chalConf.WaitForChallengeStatus = false
+
+	status := m["status"].(int)
+	if r.chalConf.ExpectedStatus != status {
+		return fmt.Errorf("expected status %d, got %d", r.chalConf.ExpectedStatus, status)
+	}
+
+	return nil
+}
+
+func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {	
+	blobberId, ok := m["blobber_id"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks blobber_id")
+	}
+
+	fileMetaRoot, ok := m["file_meta_root"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks file_meta_root")
+	}
+
+	if r.fileMetaRoot.fmrs == nil {
+		r.fileMetaRoot.fmrs = make(map[string]string)
+	}
+
+	r.fileMetaRoot.fmrs[blobberId] = fileMetaRoot
+
+	if len(r.fileMetaRoot.fmrs) >= r.fileMetaRoot.totalBlobers {
+		r.fileMetaRoot.shouldWait = false
+		cfg := config.GetFileMetaRoot(false)
+		return r.SetServerState(cfg)
+	}
+	return nil
+}
+
+func (r *Runner) onBlobberCommit(blobberID string) {
+	if blobberID != r.chalConf.BlobberID {
+		log.Printf("Ignoring blobber: %s\n", blobberID)
+		return
+	}
+	err := r.SetServerState(config.BlobberCommittedWM(true))
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
+	log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
+	r.chalConf.WaitOnBlobberCommit = false
+}
+
 func (r *Runner) stopAll() {
 	log.Print("stop all nodes")
 	for _, n := range r.conf.Nodes {
@@ -784,6 +911,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddSharder(adds)
 		case addb := <-r.server.OnAddBlobber():
 			err = r.acceptAddBlobber(addb)
+		case addv := <-r.server.OnAddValidator():
+			err = r.acceptAddValidator(addv)
 		case adda := <-r.server.OnAddAuthorizer():
 			err = r.acceptAddAuthorizer(adda)
 		case sk := <-r.server.OnSharderKeep():
@@ -796,6 +925,14 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
+		case blobberID := <-r.server.OnBlobberCommit():
+			r.onBlobberCommit(blobberID)
+		case blobberID := <-r.server.OnGenerateChallenge():
+			r.onChallengeGeneration(blobberID)
+		case m := <-r.server.OnChallengeStatus():
+			err = r.onChallengeStatus(m)
+		case m := <-r.server.OnGettingFileMetaRoot():
+			err = r.onGettingFileMetaRoot(m)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)
@@ -836,7 +973,7 @@ func (r *Runner) processReport() (success bool) {
 
 		var caseError error = nil
 		var caseSuccess bool = true
-		totalDuration += testCase.e.Sub(testCase.s)
+		totalDuration += testCase.endedAt.Sub(testCase.startedAt)
 
 		for i, flowDirective := range testCase.directives {
 			caseSuccess = caseSuccess && flowDirective.success
@@ -850,7 +987,7 @@ func (r *Runner) processReport() (success bool) {
 		}
 
 		fmt.Printf("  %s after %s\n", okString(caseSuccess),
-			testCase.e.Sub(testCase.s).Round(time.Second))
+			testCase.endedAt.Sub(testCase.startedAt).Round(time.Second))
 
 		success = success && caseSuccess
 
@@ -913,7 +1050,7 @@ func (r *Runner) Run() (err error, success bool) {
 			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name
-			report.s = time.Now()
+			report.startedAt = time.Now()
 
 			log.Print("=======================================================")
 			log.Printf("Test case %d: %s", i, testCase.Name)
@@ -934,7 +1071,7 @@ func (r *Runner) Run() (err error, success bool) {
 						directive: d.GetName(),
 					})
 
-					report.e = time.Now()
+					report.endedAt = time.Now()
 					r.report = append(r.report, report) // add to report
 					r.stopAll()
 					r.resetWaiters()
@@ -960,7 +1097,7 @@ func (r *Runner) Run() (err error, success bool) {
 				})
 			}
 
-			report.e = time.Now()
+			report.endedAt = time.Now()
 			r.report = append(r.report, report)
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}

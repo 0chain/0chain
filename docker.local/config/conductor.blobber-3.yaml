@@ -32,11 +32,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_list:
           send_wrong_data: true
@@ -58,11 +58,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_list:
           send_wrong_metadata: true
@@ -84,11 +84,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_list:
           not_respond: true
@@ -110,11 +110,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_download:
           not_respond: true
@@ -136,11 +136,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_upload:
           not_respond: true
@@ -162,11 +162,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_delete:
           not_respond: true
@@ -188,11 +188,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_list:
           return_error: true
@@ -214,11 +214,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_download:
           return_error: true
@@ -240,11 +240,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_upload:
           return_error: true
@@ -266,11 +266,11 @@ tests:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
       - blobber_delete:
           return_error: true

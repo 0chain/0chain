@@ -36,20 +36,24 @@ tests:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
+      - command:
+          name: "cleanup"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
-      - start: ['blobber-1', 'blobber-2']
+      - sleep: "20s"
       - wait_add:
-          blobbers: ['blobber-1', 'blobber-2']
+          blobbers: ['blobber-1', 'blobber-2','blobber-3']
+          validators: ['validator-1', 'validator-2','validator-3']
           timeout: '15m'
+          start: true
+      - wait_round:
+          shift: 100
       # setup blobbers and create allocation with minimum write pool lock
       - command:
-          name: 'init_pour_allocation'
+          name: 'init_allocation_3_blobbers_no_read_tokens'
           timeout: '35m'
       # upload failure without enough tokens in write pool
       # NOTE: cannot be done as upload allowed at this point due to lock added on new allocation
@@ -89,24 +93,26 @@ tests:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
+      - command:
+          name: "cleanup"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
-      - start: ['blobber-1', 'blobber-2']
+      - sleep: "20s"
       - wait_add:
-          blobbers: ['blobber-1', 'blobber-2']
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           timeout: '15m'
+          start: true
       # setup blobbers and create allocation with minimum write pool lock
       - command:
-          name: 'init_pour_allocation'
+          name: 'init_allocation_only'
           timeout: '35m'
       - command:
           name: 'simultaneous'
-          timeout: '5m'
+          timeout: '20m'
 
   # This test verifies `zbox start-repair` is working.
   # The test uploads when a blobber node is not available and then use the repair to fix the data on that blobber.
@@ -118,21 +124,24 @@ tests:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
+      - command:
+          name: "cleanup"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
-      - command:
-          name: "sleep_20s"
-      - start: ['blobber-1', 'blobber-2']
+      - sleep: "20s"
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2']
+          validators: ['validator-1', 'validator-2']
           timeout: '5m'
-      - start: ['blobber-3', 'blobber-4']
+          start: true
       - wait_add:
           blobbers: ['blobber-3', 'blobber-4']
+          validators: ['validator-3', 'validator-4']
           timeout: '5m'
+          start: true
       - command:
           name: 'repair_allocation'
           timeout: '15m'
@@ -151,5 +160,3 @@ tests:
       - command:
           name: 'repair'
           timeout: '20m'
-
-...

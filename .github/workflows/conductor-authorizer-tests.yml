@@ -2,8 +2,25 @@ name: CONDUCTOR AUTHORIZER TESTS
 
 on:
   schedule:
-    - cron: '0 10 * * * '
+    - cron: '0 10 * * *'
   workflow_dispatch:
+      inputs:
+        chain_branch:
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
+        auth_branch:
+          description: 'Input branch for authorizer repo'
+          default: ''
+          required: false
+        zboxcli_branch:
+          description: 'Input branch for zboxcli repo'
+          default: ''
+          required: false
+        zwalletcli_branch:
+          description: 'Input branch for zwalletcli repo'
+          default: ''
+          required: false
 
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
@@ -14,6 +31,8 @@ jobs:
     - name: Cleanup before restarting conductor tests.
       run: |
         rm -rf *
+
+    # - uses: actions/checkout@v1
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -41,12 +60,16 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Get Branch
-      id: get_branch
-      run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo "Branch name is ${BRANCH}"
+    # - name: Get Branch
+    #   id: get_branch
+    #   run: |
+    #     BRANCH="${{ inputs.chain_branch }}"
+    #     if [[ -z $BRANCH ]]; then
+    #        echo "inside"
+    #        BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+    #        echo ::set-output name=BRANCH::${BRANCH}
+    #     fi
+    #     echo "Branch name is ${BRANCH}"
 
     - name: Install herumi/bls and herumi/mcl
       run: |
@@ -58,7 +81,17 @@ jobs:
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
-        cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
+        cd 0chain
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        CHAIN_BRANCH="${{ inputs.chain_branch }}"
+        if [[ -z $CHAIN_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
+        fi
+        echo "Branch name is ${CHAIN_BRANCH}"
+        git checkout ${CHAIN_BRANCH}
 
     - name: Docker Init Setup.
       run: |
@@ -96,14 +129,47 @@ jobs:
     - name: Git clone authorizer
       run: |
         git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
+        cd token_bridge_authserver
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        AUTH_BRANCH="${{ inputs.auth_branch }}"
+        if [[ -z $AUTH_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=AUTH_BRANCH::${AUTH_BRANCH}
+        fi
+        echo "Branch name is ${AUTH_BRANCH}"
+        git checkout ${AUTH_BRANCH}
 
     - name: Git clone zboxcli
       run: |
         git clone https://github.com/0chain/zboxcli.git
+        cd zboxcli
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
+        if [[ -z $ZBOXCLI_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZBOXCLI_BRANCH::${ZBOXCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZBOXCLI_BRANCH}"
+        git checkout ${ZBOXCLI_BRANCH}
 
     - name: Git clone zwalletcli
       run: |
         git clone https://github.com/0chain/zwalletcli.git
+        cd zwalletcli
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
+        if [[ -z $ZWALLETCLI_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZWALLETCLI_BRANCH::${ZWALLETCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZWALLETCLI_BRANCH}"
+        git checkout ${ZWALLETCLI_BRANCH}
 
     - name: Git clone 0dns
       run: |
@@ -145,6 +211,11 @@ jobs:
         cd token_bridge_authserver
         chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
         ./docker.local/bin/build.authorizer-integration-tests.sh
+
+    - name: Changing Authorizer Network
+      run: |
+        cd token_bridge_authserver
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
     - name: Add ZCN config
       run: |
@@ -225,7 +296,6 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
           # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:

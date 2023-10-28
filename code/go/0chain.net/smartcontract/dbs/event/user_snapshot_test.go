@@ -33,7 +33,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		},
 		{
 			UserID:          "user3",
-			Round: 		 	 100,
+			Round:           100,
 			CollectedReward: 100,
 			PayedFees:       200,
 			TotalStake:      300,
@@ -44,8 +44,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 	err := edb.Store.Get().Create(testSnapshots).Error
 	require.NoError(t, err)
 
-	t.Run("GetUserSnapshotsByIds", func (t *testing.T) {
-		edb.Store.Get().Exec("DROP TABLE IF EXISTS user_snapshot_ids_temp")
+	t.Run("GetUserSnapshotsByIds", func(t *testing.T) {
 		snapshots, err := edb.GetUserSnapshotsByIds([]string{"user1", "user2", "user3"})
 		require.NoError(t, err)
 		require.Len(t, snapshots, 3)
@@ -72,8 +71,7 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 		assert.Len(t, uniqueSnaps, 3)
 	})
 
-	t.Run("AddOrOverwriteUserSnapshots", func (t *testing.T) {
-		edb.Store.Get().Exec("DROP TABLE IF EXISTS user_snapshot_ids_temp")
+	t.Run("AddOrOverwriteUserSnapshots", func(t *testing.T) {
 		testSnapshots[1].Round *= 2
 		testSnapshots[1].CollectedReward *= 2
 		testSnapshots[1].PayedFees *= 2
@@ -125,9 +123,8 @@ func TestEventDb_userSnapshotFunctions(t *testing.T) {
 			assert.Equal(t, expectedSnapshot.TotalStake, snap.TotalStake)
 			assert.Equal(t, expectedSnapshot.ReadPoolTotal, snap.ReadPoolTotal)
 			assert.Equal(t, expectedSnapshot.WritePoolTotal, snap.WritePoolTotal)
-			assert.WithinDuration(t, time.Now(), snap.UpdatedAt, 2 * time.Second)
+			assert.WithinDuration(t, time.Now(), snap.UpdatedAt, 2*time.Second)
 		}
 		assert.Len(t, uniqueSnaps, 4)
 	})
 }
-

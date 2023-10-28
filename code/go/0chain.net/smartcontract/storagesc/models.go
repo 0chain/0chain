@@ -33,8 +33,6 @@ import (
 	"0chain.net/core/encryption"
 )
 
-const confMaxChallengeCompletionTime = "smart_contracts.storagesc.max_challenge_completion_time"
-
 //msgp:ignore StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
 
@@ -85,9 +83,10 @@ type ChallengeResponse struct {
 }
 
 type AllocOpenChallenge struct {
-	ID        string           `json:"id"`
-	CreatedAt common.Timestamp `json:"created_at"`
-	BlobberID string           `json:"blobber_id"` // blobber id
+	ID             string           `json:"id"`
+	CreatedAt      common.Timestamp `json:"created_at"`
+	RoundCreatedAt int64            `json:"round_created_at"`
+	BlobberID      string           `json:"blobber_id"` // blobber id
 }
 
 type AllocationChallenges struct {
@@ -128,9 +127,10 @@ func (acs *AllocationChallenges) addChallenge(challenge *StorageChallenge) bool 
 
 	if _, ok := acs.ChallengeMap[challenge.ID]; !ok {
 		oc := &AllocOpenChallenge{
-			ID:        challenge.ID,
-			BlobberID: challenge.BlobberID,
-			CreatedAt: challenge.Created,
+			ID:             challenge.ID,
+			BlobberID:      challenge.BlobberID,
+			CreatedAt:      challenge.Created,
+			RoundCreatedAt: challenge.RoundCreatedAt,
 		}
 		acs.OpenChallenges = append(acs.OpenChallenges, oc)
 		acs.ChallengeMap[challenge.ID] = oc
@@ -498,8 +498,9 @@ type BlobberAllocation struct {
 	// For any case, total value of all ChallengePoolIntegralValue of all
 	// blobber of an allocation should be equal to related challenge pool
 	// balance.
-	ChallengePoolIntegralValue currency.Coin     `json:"challenge_pool_integral_value"`
-	LatestCompletedChallenge   *StorageChallenge `json:"latest_completed_challenge"`
+	ChallengePoolIntegralValue     currency.Coin    `json:"challenge_pool_integral_value"`
+	LatestSuccessfulChallCreatedAt common.Timestamp `json:"latest_successful_chall_created_at"`
+	LatestFinalizedChallCreatedAt  common.Timestamp `json:"latest_finalized_chall_created_att"`
 }
 
 func newBlobberAllocation(
@@ -515,6 +516,8 @@ func newBlobberAllocation(
 	ba.Terms = blobber.Terms
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
+	ba.LatestFinalizedChallCreatedAt = date
+	ba.LatestSuccessfulChallCreatedAt = date
 
 	rdtu, err := allocation.restDurationInTimeUnits(date, timeUnit)
 	if err != nil {
@@ -540,7 +543,7 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	return
 }
 
-func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now common.Timestamp, maxChallengeCompletionTime time.Duration, balances chainstate.StateContextI, sc *StorageSmartContract, ba *BlobberAllocation) (float64, error) {
+func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionRounds int64, balances chainstate.StateContextI, sc *StorageSmartContract) (float64, error) {
 
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
@@ -549,67 +552,106 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, now
 	passRate := 0.0
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	if err != nil {
+		if err == util.ErrValueNotPresent {
+			return 1, nil
+		} else {
+			return 0, common.NewError("remove_blobber_pass_rates",
+				"error fetching allocation challenge: "+err.Error())
+		}
+	}
+
+	var nonRemovedChallenges []*AllocOpenChallenge
+	var removedChallengeIds []string
+
 	switch err {
 	case util.ErrValueNotPresent:
 		return 1, nil
 	case nil:
 		for _, oc := range allocChallenges.OpenChallenges {
-			if oc.BlobberID != ba.BlobberID {
+			if oc.BlobberID != d.BlobberID {
+				nonRemovedChallenges = append(nonRemovedChallenges, oc)
 				continue
 			}
 
-			ba, ok := alloc.BlobberAllocsMap[oc.BlobberID]
-			if !ok {
-				continue
+			if d.Stats == nil {
+				d.Stats = new(StorageAllocationStats) // make sure
 			}
 
-			if ba.Stats == nil {
-				ba.Stats = new(StorageAllocationStats) // make sure
-			}
+			var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
+			currentRound := balances.GetBlock().Round
 
-			var expire = oc.CreatedAt + toSeconds(maxChallengeCompletionTime)
-			if expire < now {
-				ba.Stats.FailedChallenges++
-				alloc.Stats.FailedChallenges++
-			} else {
-				ba.Stats.SuccessChallenges++
-				alloc.Stats.SuccessChallenges++
-			}
-			ba.Stats.OpenChallenges--
+			d.Stats.OpenChallenges--
 			alloc.Stats.OpenChallenges--
 
-			err := emitUpdateChallenge(&StorageChallenge{
-				ID:           oc.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    oc.BlobberID,
-			}, true, ChallengeResponded, balances, alloc.Stats, ba.Stats)
-			if err != nil {
-				return 0.0, err
+			if expire < currentRound {
+				d.Stats.FailedChallenges++
+				alloc.Stats.FailedChallenges++
+
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, false, ChallengeRespondedLate, balances, alloc.Stats)
+				if err != nil {
+					return 0.0, err
+				}
+
+			} else {
+				d.Stats.SuccessChallenges++
+				alloc.Stats.SuccessChallenges++
+
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, true, ChallengeResponded, balances, alloc.Stats)
+				if err != nil {
+					return 0.0, err
+				}
 			}
 
+			removedChallengeIds = append(removedChallengeIds, oc.ID)
 		}
 
 	default:
 		return 0.0, fmt.Errorf("getting allocation challenge: %v", err)
 	}
 
-	if ba.Stats.OpenChallenges > 0 {
-		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", ba.Stats.OpenChallenges))
+	allocChallenges.OpenChallenges = nonRemovedChallenges
 
-		ba.Stats.SuccessChallenges += ba.Stats.OpenChallenges
-		alloc.Stats.SuccessChallenges += ba.Stats.OpenChallenges
-		alloc.Stats.OpenChallenges -= ba.Stats.OpenChallenges
-
-		ba.Stats.OpenChallenges = 0
+	// Save the allocation challenges to MPT
+	if err := allocChallenges.Save(balances, sc.ID); err != nil {
+		return 0, common.NewErrorf("remove_blobber_failed",
+			"error storing alloc challenge: %v", err)
 	}
 
-	if ba.Stats.TotalChallenges == 0 {
+	for _, challengeID := range removedChallengeIds {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
+		if err != nil {
+			return 0, common.NewErrorf("remove_blobber_failed", "could not delete challenge node: %v", err)
+		}
+	}
+
+	blobbersSettledChallengesCount := d.Stats.OpenChallenges
+
+	if d.Stats.OpenChallenges > 0 {
+		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", d.Stats.OpenChallenges))
+
+		d.Stats.SuccessChallenges += d.Stats.OpenChallenges
+		alloc.Stats.SuccessChallenges += d.Stats.OpenChallenges
+		alloc.Stats.OpenChallenges -= d.Stats.OpenChallenges
+
+		d.Stats.OpenChallenges = 0
+	}
+
+	if d.Stats.TotalChallenges == 0 {
 		passRate = 1
 	} else {
-		passRate = float64(ba.Stats.SuccessChallenges) / float64(ba.Stats.TotalChallenges)
+		passRate = float64(d.Stats.SuccessChallenges) / float64(d.Stats.TotalChallenges)
 	}
 
-	emitUpdateAllocationAndBlobberStats(alloc, balances)
+	emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc, d.BlobberID, blobbersSettledChallengesCount, balances)
 
 	return passRate, nil
 }
@@ -647,31 +689,66 @@ func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stake
 	return currency.Coin(0), nil
 }
 
-func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp) (currency.Coin, error) {
-	payment := currency.Coin(0)
-	var move currency.Coin
-
-	if now+common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()) <= alloc.Expiration {
-		rdtu, err := alloc.restDurationInTimeUnits(now, conf.TimeUnit)
-		if err != nil {
-			return 0, fmt.Errorf("blobber reward failed: %v", err)
-		}
-
-		dtu, err := alloc.durationInTimeUnits(common.Timestamp(conf.MaxChallengeCompletionTime.Seconds()), conf.TimeUnit)
-		if err != nil {
-			return 0, fmt.Errorf("blobber reward failed: %v", err)
-		}
-
-		move = currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
-	} else {
-		move = d.ChallengePoolIntegralValue
+func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp, sc *StorageSmartContract) (currency.Coin, currency.Coin, error) {
+	if d.LatestFinalizedChallCreatedAt == 0 {
+		return 0, 0, nil
 	}
+
+	challengePenaltyPaid, err := d.challengePenaltyOnFinalization(conf, alloc, balances, sp)
+	if err != nil {
+		return 0, 0, common.NewError("challenge_penalty_on_finalization_error", err.Error())
+	}
+
+	challengeRewardPaid, err := d.challengeRewardOnFinalization(conf.TimeUnit, now, sp, cp, passRate, balances, alloc)
+	if err != nil {
+		return 0, 0, common.NewError("challenge_reward_on_finalization_error", err.Error())
+	}
+
+	return challengeRewardPaid, challengePenaltyPaid, nil
+}
+
+func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+	if now <= d.LatestFinalizedChallCreatedAt {
+		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
+		return 0, nil
+	}
+
+	payment := currency.Coin(0)
+
+	rdtu, err := alloc.restDurationInTimeUnits(d.LatestFinalizedChallCreatedAt, timeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("blobber reward failed: %v", err)
+	}
+
+	dtu, err := alloc.durationInTimeUnits(now-d.LatestFinalizedChallCreatedAt, timeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("blobber reward failed: %v", err)
+	}
+
+	if dtu > rdtu {
+		dtu = rdtu // now can be more for finalization
+	}
+
+	move := currency.Coin((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
 
 	if alloc.Stats.UsedSize > 0 && cp.Balance > 0 && passRate > 0 && d.Stats != nil {
 		reward, err := currency.MultFloat64(move, passRate)
 		if err != nil {
 			return payment, err
 		}
+
+		cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, reward)
+		if err != nil {
+			logging.Logger.Warn("challenge minus failed",
+				zap.Error(err),
+				zap.Any("dtu", dtu),
+				zap.Any("rdtu", rdtu),
+				zap.Any("challenge value", d.ChallengePoolIntegralValue),
+				zap.Any("move", move))
+			err = fmt.Errorf("minus challenge pool value failed: %v", err)
+			return 0, err
+		}
+		d.ChallengePoolIntegralValue = cv
 
 		err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.ChallengePassReward, balances, alloc.ID)
 		if err != nil {
@@ -686,9 +763,66 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 		if err != nil {
 			return payment, fmt.Errorf("pass payments: %v", err)
 		}
+
 	}
 
 	return payment, nil
+}
+
+func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances chainstate.StateContextI, sp *stakePool) (currency.Coin, error) {
+	if d.LatestSuccessfulChallCreatedAt >= d.LatestFinalizedChallCreatedAt {
+		return 0, nil
+	}
+
+	rdtu, err := alloc.restDurationInTimeUnits(d.LatestSuccessfulChallCreatedAt, conf.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("blobber penalty failed: %v", err)
+	}
+
+	dtu, err := alloc.durationInTimeUnits(d.LatestFinalizedChallCreatedAt-d.LatestSuccessfulChallCreatedAt, conf.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("blobber penalty failed: %v", err)
+	}
+
+	if dtu > rdtu {
+		dtu = rdtu // now can be more for finalization
+	}
+
+	move, err := d.challenge(dtu, rdtu)
+	if err != nil {
+		return 0, err
+	}
+
+	blobReturned, err := currency.AddCoin(d.Returned, move)
+	if err != nil {
+		return 0, err
+	}
+	d.Returned = blobReturned
+
+	slash, err := currency.MultFloat64(move, conf.BlobberSlash)
+	if err != nil {
+		return 0, err
+	}
+
+	// blobber stake penalty
+	if conf.BlobberSlash > 0 && move > 0 &&
+		slash > 0 {
+
+		dpMove, err := sp.slash(d.BlobberID, d.Offer(), slash, balances, alloc.ID)
+		if err != nil {
+			return 0, fmt.Errorf("can't slash tokens: %v", err)
+		}
+
+		penalty, err := currency.AddCoin(d.Penalty, dpMove) // penalty statistic
+		if err != nil {
+			return 0, err
+		}
+		d.Penalty = penalty
+
+		logging.Logger.Info("Paying blobber penalty", zap.Any("penalty", dpMove), zap.Any("slash", slash), zap.Any("move", move), zap.Any("blobber", d.BlobberID))
+	}
+
+	return move, nil
 }
 
 func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI, sc *StorageSmartContract, passRate float64, totalWritePrice, cancellationCharge currency.Coin) (currency.Coin, error) {
@@ -698,10 +832,6 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 	err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", d.BlobberID, err)
-	}
-
-	if err = sp.Save(spenum.Blobber, d.BlobberID, balances); err != nil {
-		return reward, fmt.Errorf("failed to save stake pool: %s, err: %v", d.BlobberID, err)
 	}
 
 	blobber, err := sc.getBlobber(d.BlobberID, balances)
@@ -1021,8 +1151,9 @@ func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, bala
 
 func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract, now common.Timestamp) error {
 	var passPayments currency.Coin
+
 	for i, d := range sa.BlobberAllocs {
-		blobberPassPayment, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf, now)
+		blobberPassPayment, _, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf, now, sc)
 		if err != nil {
 			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 		}
@@ -1069,23 +1200,23 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 }
 
 func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, cp *challengePool, passRate float64, conf *Config, sc *StorageSmartContract, ba *BlobberAllocation, now common.Timestamp) error {
-	passPayments, err := ba.payChallengePoolPassPayments(sa, sp, cp, passRate, balances, conf, now)
+	passPayment, penaltyPayment, err := ba.payChallengePoolPassPayments(sa, sp, cp, passRate, balances, conf, now, sc)
 	if err != nil {
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
-	balance, err := currency.MinusCoin(cp.Balance, passPayments)
+	balance, err := currency.MinusCoin(cp.Balance, passPayment)
 	if err != nil {
 		return err
 	}
 	cp.Balance = balance
 
-	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, ba.ChallengePoolIntegralValue-passPayments)
+	sa.MovedBack, err = currency.AddCoin(sa.MovedBack, ba.ChallengePoolIntegralValue+penaltyPayment)
 	if err != nil {
 		return err
 	}
 
-	err = sa.moveFromChallengePool(cp, ba.ChallengePoolIntegralValue-passPayments)
+	err = sa.moveFromChallengePool(cp, ba.ChallengePoolIntegralValue+penaltyPayment)
 	if err != nil {
 		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
 	}
@@ -1094,7 +1225,8 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
-	i, err := ba.ChallengePoolIntegralValue.Int64()
+	fromChallengePool := ba.ChallengePoolIntegralValue + passPayment + penaltyPayment
+	i, err := fromChallengePool.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to convert balance: %v", err)
 	}
@@ -1316,7 +1448,14 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				}
 			}
 
-			passRate, err := d.removeBlobberPassRates(sa, common.Now(), conf.MaxChallengeCompletionTime, balances, sc, d)
+			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc)
+			if err != nil {
+				logging.Logger.Info("error removing blobber pass rates",
+					zap.Any("allocation", sa.ID),
+					zap.Any("blobber", d.BlobberID),
+					zap.Error(err))
+				return fmt.Errorf("error removing blobber pass rates: %v", err)
+			}
 
 			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
 			if err != nil {
@@ -1547,8 +1686,8 @@ func (sa *StorageAllocation) validateEachBlobber(
 }
 
 // Until returns allocation expiration.
-func (sa *StorageAllocation) Until(maxChallengeCompletionTime time.Duration) common.Timestamp {
-	return sa.Expiration + toSeconds(maxChallengeCompletionTime)
+func (sa *StorageAllocation) Until(duration time.Duration) common.Timestamp {
+	return sa.Expiration + toSeconds(duration)
 }
 
 // The durationInTimeUnits returns given duration (represented as
@@ -1732,33 +1871,22 @@ func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 // the expired challenge ids could be used to delete the challenge node from MPT when needed
 func (sa *StorageAllocation) removeExpiredChallenges(
 	allocChallenges *AllocationChallenges,
-	now common.Timestamp,
-	cct time.Duration,
+	cct int64,
 	balances cstate.StateContextI,
-) (map[string]string, error) {
+	sc *StorageSmartContract,
+) (int, error) {
+
 	var expiredChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
-	logging.Logger.Info("removeExpiredChallenges found open challenges",
-		zap.Int("count", len(allocChallenges.OpenChallenges)), zap.String("allocID", allocChallenges.AllocationID))
 
 	for _, oc := range allocChallenges.OpenChallenges {
-		// TODO: The next line writes the id of the challenge to process, in order to find out the duplicate challenge.
-		// should be removed when this issue is fixed. See https://github.com/0chain/0chain/pull/2025#discussion_r1080697805
-		//logging.Logger.Debug("removeExpiredChallenges processing open challenge:", zap.String("challengeID", oc.ID))
-		if _, ok := expiredChallengeBlobberMap[oc.ID]; ok {
-			logging.Logger.Error("removeExpiredChallenges found duplicate expired challenge", zap.String("challengeID", oc.ID))
-			return nil, common.NewError("removeExpiredChallenges", "found duplicates expired challenge")
-		}
-
-		if !isChallengeExpired(now, oc.CreatedAt, cct) {
+		if !isChallengeExpired(balances.GetBlock().Round, oc.RoundCreatedAt, cct) {
 			nonExpiredChallenges = append(nonExpiredChallenges, oc)
 			continue
 		}
 
 		// expired
 		expiredChallengeBlobberMap[oc.ID] = oc.BlobberID
-		logging.Logger.Info("removeExpiredChallenges found expired challenge",
-			zap.String("challengeID", oc.ID), zap.String("blobberID", oc.BlobberID))
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -1767,21 +1895,100 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 			sa.Stats.FailedChallenges++
 			sa.Stats.OpenChallenges--
 
+			if ba.LatestFinalizedChallCreatedAt < oc.CreatedAt {
+				ba.LatestFinalizedChallCreatedAt = oc.CreatedAt
+			}
+
 			err := emitUpdateChallenge(&StorageChallenge{
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeRespondedLate, balances, sa.Stats)
 
 			if err != nil {
-				return nil, err
+				return 0, err
 			}
 		}
 	}
 
 	allocChallenges.OpenChallenges = nonExpiredChallenges
 
-	return expiredChallengeBlobberMap, nil
+	var expChalIDs []string
+	for challengeID := range expiredChallengeBlobberMap {
+		expChalIDs = append(expChalIDs, challengeID)
+	}
+
+	// maps blobberID to count of its expiredIDs.
+	for _, challengeID := range expChalIDs {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
+		if err != nil {
+			return 0, common.NewErrorf("remove_expired_challenges", "could not delete challenge node: %v", err)
+		}
+	}
+
+	return len(expChalIDs), nil
+}
+
+// removeOldChallenges removes all open challenges from the allocation that are old
+func (sa *StorageAllocation) removeOldChallenges(
+	allocChallenges *AllocationChallenges,
+	balances cstate.StateContextI,
+	currentChallenge *StorageChallenge,
+	sc *StorageSmartContract,
+) error {
+	var nonRemovedChallenges []*AllocOpenChallenge
+	var expChalIDs []string
+
+	for _, oc := range allocChallenges.OpenChallenges {
+		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
+			nonRemovedChallenges = append(nonRemovedChallenges, oc)
+			continue
+		}
+
+		logging.Logger.Info("removeOldChallenges",
+			zap.String("challenge_id", oc.ID),
+			zap.String("blobber_id", oc.BlobberID),
+			zap.Int64("round_created_at", oc.RoundCreatedAt),
+			zap.Int64("current_round_created_at", currentChallenge.RoundCreatedAt),
+		)
+
+		expChalIDs = append(expChalIDs, oc.ID)
+
+		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
+		if ok {
+			ba.Stats.FailedChallenges++
+			ba.Stats.OpenChallenges--
+			sa.Stats.FailedChallenges++
+			sa.Stats.OpenChallenges--
+
+			if ba.LatestFinalizedChallCreatedAt < oc.CreatedAt {
+				ba.LatestFinalizedChallCreatedAt = oc.CreatedAt
+			}
+
+			err := emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: sa.ID,
+				BlobberID:    oc.BlobberID,
+			}, false, ChallengeOldRemoved, balances, sa.Stats)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	allocChallenges.OpenChallenges = nonRemovedChallenges
+
+	// maps blobberID to count of its expiredIDs.
+
+	for _, challengeID := range expChalIDs {
+		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
+		if err != nil {
+			return common.NewErrorf("remove_old_challenges", "could not delete challenge node: %v", err)
+		}
+	}
+
+	return nil
 }
 
 type BlobberCloseConnection struct {
