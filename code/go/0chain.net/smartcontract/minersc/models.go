@@ -673,25 +673,18 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	return
 }
 
-// swagger:model SimpleNodeGeolocation
-type SimpleNodeGeolocation struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 // swagger:model SimpleNode
 type SimpleNode struct {
 	provider.Provider
-	N2NHost     string                `json:"n2n_host"`
-	Host        string                `json:"host"`
-	Port        int                   `json:"port"`
-	Geolocation SimpleNodeGeolocation `json:"geolocation"`
-	Path        string                `json:"path"`
-	PublicKey   string                `json:"public_key"`
-	ShortName   string                `json:"short_name"`
-	BuildTag    string                `json:"build_tag"`
-	TotalStaked currency.Coin         `json:"total_stake"`
-	Delete      bool                  `json:"delete"`
+	N2NHost     string        `json:"n2n_host"`
+	Host        string        `json:"host"`
+	Port        int           `json:"port"`
+	Path        string        `json:"path"`
+	PublicKey   string        `json:"public_key"`
+	ShortName   string        `json:"short_name"`
+	BuildTag    string        `json:"build_tag"`
+	TotalStaked currency.Coin `json:"total_stake"`
+	Delete      bool          `json:"delete"`
 
 	// settings and statistic
 

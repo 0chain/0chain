@@ -56,7 +56,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getBlobber", common.UserRateLimit(srh.getBlobber)),
 		rest.MakeEndpoint(storage+"/getblobbers", common.UserRateLimit(srh.getBlobbers)),
 		rest.MakeEndpoint(storage+"/blobbers-by-rank", common.UserRateLimit(srh.getBlobbersByRank)),
-		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", common.UserRateLimit(srh.getBlobbersByGeoLocation)),
 		rest.MakeEndpoint(storage+"/transaction", common.UserRateLimit(srh.getTransactionByHash)),
 		rest.MakeEndpoint(storage+"/transactions", common.UserRateLimit(srh.getTransactionByFilter)),
 
@@ -2416,22 +2415,21 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 // swagger:model storageNodeResponse
 type storageNodeResponse struct {
-	ID                      string                 `json:"id" validate:"hexadecimal,len=64"`
-	BaseURL                 string                 `json:"url"`
-	Geolocation             StorageNodeGeolocation `json:"geolocation"`
-	Terms                   Terms                  `json:"terms"`     // terms
-	Capacity                int64                  `json:"capacity"`  // total blobber capacity
-	Allocated               int64                  `json:"allocated"` // allocated capacity
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
-	IsKilled                bool                   `json:"is_killed"`
-	IsShutdown              bool                   `json:"is_shutdown"`
-	PublicKey               string                 `json:"-"`
-	SavedData               int64                  `json:"saved_data"`
-	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
-	StakePoolSettings       stakepool.Settings     `json:"stake_pool_settings"`
-	RewardRound             RewardRound            `json:"reward_round"`
-	NotAvailable            bool                   `json:"not_available"`
+	ID                      string             `json:"id" validate:"hexadecimal,len=64"`
+	BaseURL                 string             `json:"url"`
+	Terms                   Terms              `json:"terms"`     // terms
+	Capacity                int64              `json:"capacity"`  // total blobber capacity
+	Allocated               int64              `json:"allocated"` // allocated capacity
+	LastHealthCheck         common.Timestamp   `json:"last_health_check"`
+	IsKilled                bool               `json:"is_killed"`
+	IsShutdown              bool               `json:"is_shutdown"`
+	PublicKey               string             `json:"-"`
+	SavedData               int64              `json:"saved_data"`
+	DataReadLastRewardRound float64            `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64              `json:"last_reward_data_read_round"` // last round when data read was updated
+	StakePoolSettings       stakepool.Settings `json:"stake_pool_settings"`
+	RewardRound             RewardRound        `json:"reward_round"`
+	NotAvailable            bool               `json:"not_available"`
 
 	ChallengesPassed    int64 `json:"challenges_passed"`
 	ChallengesCompleted int64 `json:"challenges_completed"`
@@ -2450,7 +2448,6 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 	return storageNodeResponse{
 		ID:                      sn.ID,
 		BaseURL:                 sn.BaseURL,
-		Geolocation:             sn.Geolocation,
 		Terms:                   sn.Terms,
 		Capacity:                sn.Capacity,
 		Allocated:               sn.Allocated,
@@ -2477,7 +2474,6 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 			HasBeenShutDown: snr.IsShutdown,
 		},
 		BaseURL:                 snr.BaseURL,
-		Geolocation:             snr.Geolocation,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
 		Allocated:               snr.Allocated,
@@ -2495,10 +2491,6 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		ID:      blobber.ID,
 		BaseURL: blobber.BaseURL,
-		Geolocation: StorageNodeGeolocation{
-			Latitude:  blobber.Latitude,
-			Longitude: blobber.Longitude,
-		},
 		Terms: Terms{
 			ReadPrice:  blobber.ReadPrice,
 			WritePrice: blobber.WritePrice,
@@ -2660,128 +2652,6 @@ func (srh *StorageRestHandler) getBlobbersByRank(w http.ResponseWriter, r *http.
 	blobbers, err := edb.GetBlobbersByRank(limit)
 	if err != nil {
 		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, blobbers, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation blobbers-by-geolocation
-//
-//	Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values.
-//
-//	  +name: max_latitude
-//	   description: maximum latitude value, defaults to 90
-//	   in: query
-//	   type: string
-//	  +name: min_latitude
-//	   description:  minimum latitude value, defaults to -90
-//	   in: query
-//	   type: string
-//	  +name: max_longitude
-//	   description: maximum max_longitude value, defaults to 180
-//	   in: query
-//	   type: string
-//	  +name: min_longitude
-//	   description: minimum max_longitude value, defaults to -180
-//	   in: query
-//	   type: string
-//	  +name: offset
-//	   description: offset
-//	   in: query
-//	   type: string
-//	  +name: limit
-//	   description: limit
-//	   in: query
-//	   type: string
-//	  +name: sort
-//	   description: desc or asc
-//	   in: query
-//	   type: string
-//
-// responses:
-//
-//	200: stringArray
-//	500:
-func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r *http.Request) {
-	var maxLatitude, minLatitude, maxLongitude, minLongitude float64
-	var err error
-
-	maxLatitudeString := r.URL.Query().Get("max_latitude")
-	if len(maxLatitudeString) > 0 {
-		maxLatitude, err = strconv.ParseFloat(maxLatitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
-			return
-		}
-		if maxLatitude > MaxLatitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+maxLatitudeString+" out of range -90,+90"))
-			return
-		}
-	} else {
-		maxLatitude = MaxLatitude
-	}
-
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	minLatitudeString := r.URL.Query().Get("min_latitude")
-	if len(minLatitudeString) > 0 {
-		minLatitude, err = strconv.ParseFloat(minLatitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
-			return
-		}
-		if minLatitude < MinLatitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+minLatitudeString+" out of range -90,+90"))
-			return
-		}
-	} else {
-		minLatitude = MinLatitude
-	}
-
-	maxLongitudeString := r.URL.Query().Get("max_longitude")
-	if len(maxLongitudeString) > 0 {
-		maxLongitude, err = strconv.ParseFloat(maxLongitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max longitude: "+err.Error()))
-			return
-		}
-		if maxLongitude > MaxLongitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max max longitude "+maxLongitudeString+" out of range -180,80"))
-			return
-		}
-	} else {
-		maxLongitude = MaxLongitude
-	}
-
-	minLongitudeString := r.URL.Query().Get("min_longitude")
-	if len(minLongitudeString) > 0 {
-		minLongitude, err = strconv.ParseFloat(minLongitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad min longitude: "+err.Error()))
-			return
-		}
-		if minLongitude < MinLongitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("min longitude "+minLongitudeString+" out of range -180,180"))
-			return
-		}
-	} else {
-		minLongitude = MinLongitude
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobbers, err := edb.GeBlobberByLatLong(maxLatitude, minLatitude, maxLongitude, minLongitude, limit)
-	if err != nil {
-		err := common.NewErrInternal("cannot get blobber geolocation: " + err.Error())
 		common.Respond(w, r, nil, err)
 		return
 	}

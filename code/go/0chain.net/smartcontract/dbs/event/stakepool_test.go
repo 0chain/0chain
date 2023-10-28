@@ -162,9 +162,7 @@ func TestEventDb_rewardProviders(t *testing.T) {
 				LastHealthCheck: mn.LastHealthCheck,
 			},
 
-			Fees:      mn.Stat.GeneratorFees,
-			Longitude: 0,
-			Latitude:  0,
+			Fees: mn.Stat.GeneratorFees,
 		}
 	}
 	// Miner - Add Event

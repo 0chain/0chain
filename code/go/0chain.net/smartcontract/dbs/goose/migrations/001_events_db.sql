@@ -193,8 +193,6 @@ CREATE TABLE public.authorizers (
                                     last_health_check bigint,
                                     url text,
                                     fee bigint,
-                                    latitude numeric,
-                                    longitude numeric,
                                     creation_round bigint
 );
 
@@ -297,8 +295,6 @@ CREATE TABLE public.blobbers (
                                  downtime bigint,
                                  last_health_check bigint,
                                  base_url text,
-                                 latitude numeric,
-                                 longitude numeric,
                                  read_price bigint,
                                  write_price bigint,
                                  min_lock_demand numeric,
@@ -641,8 +637,6 @@ CREATE TABLE public.miners (
                                delete boolean,
                                fees bigint,
                                active boolean,
-                               longitude numeric,
-                               latitude numeric,
                                creation_round bigint
 );
 
@@ -937,8 +931,6 @@ CREATE TABLE public.sharders (
                                  delete boolean,
                                  fees bigint,
                                  active boolean,
-                                 longitude numeric,
-                                 latitude numeric,
                                  creation_round bigint
 );
 
