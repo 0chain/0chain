@@ -6,6 +6,8 @@ import (
 	"0chain.net/smartcontract/dbs/model"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 )
 
@@ -33,6 +35,10 @@ func (edb *EventDb) insertProviderReward(inserts []dbs.StakePoolReward, round in
 			AllocationID: sp.AllocationID,
 		}
 		prs = append(prs, pr)
+
+		if sp.RewardType == 9 {
+			logging.Logger.Info("Jayash insertProviderReward", zap.Any("pr", pr), zap.Any("sp", sp))
+		}
 	}
 	return edb.Get().Create(&prs).Error
 }
