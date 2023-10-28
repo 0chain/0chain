@@ -310,7 +310,7 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 		case TagStakePoolReward:
 			spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 			if !ok {
-				logging.Logger.Error("snapshot",
+				logging.Logger.Error("Jayash snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				return nil, common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}

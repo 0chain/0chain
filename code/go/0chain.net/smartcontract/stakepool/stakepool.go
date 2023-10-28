@@ -650,7 +650,10 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 	}
+
+	logging.Logger.Info("Jayash stake pool reward", zap.Any("value", value), zap.Any("providerId", providerId), zap.Any("providerType", providerType), zap.Any("options", options))
 	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+		logging.Logger.Info("Jayash stake pool reward error", zap.Any("err", err))
 		return err
 	}
 

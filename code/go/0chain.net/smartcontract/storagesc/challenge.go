@@ -164,6 +164,7 @@ func (sc *StorageSmartContract) blobberReward(
 
 	err = cp.moveToBlobbers(sc.ID, blobberReward, blobAlloc.BlobberID, sp, balances, allocationID)
 	if err != nil {
+		logging.Logger.Info("Jayash err rewarding blobbers", zap.Any("blobberReward", blobberReward), zap.Any("blobber", blobAlloc.BlobberID), zap.Error(err), zap.Any("balances", balances), zap.Any("allocationID", allocationID))
 		return fmt.Errorf("rewarding blobbers: %v", err)
 	}
 
