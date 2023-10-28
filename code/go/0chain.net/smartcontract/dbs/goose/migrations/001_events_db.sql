@@ -193,8 +193,6 @@ CREATE TABLE public.authorizers (
                                     last_health_check bigint,
                                     url text,
                                     fee bigint,
-                                    latitude numeric,
-                                    longitude numeric,
                                     creation_round bigint
 );
 
@@ -297,8 +295,6 @@ CREATE TABLE public.blobbers (
                                  downtime bigint,
                                  last_health_check bigint,
                                  base_url text,
-                                 latitude numeric,
-                                 longitude numeric,
                                  read_price bigint,
                                  write_price bigint,
                                  min_lock_demand numeric,
@@ -641,8 +637,6 @@ CREATE TABLE public.miners (
                                delete boolean,
                                fees bigint,
                                active boolean,
-                               longitude numeric,
-                               latitude numeric,
                                creation_round bigint
 );
 
@@ -937,8 +931,6 @@ CREATE TABLE public.sharders (
                                  delete boolean,
                                  fees bigint,
                                  active boolean,
-                                 longitude numeric,
-                                 latitude numeric,
                                  creation_round bigint
 );
 
@@ -2030,14 +2022,6 @@ ALTER TABLE ONLY public.allocation_blobber_terms
 
 
 --
--- Name: allocations fk_allocations_user; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.allocations
-    ADD CONSTRAINT fk_allocations_user FOREIGN KEY (owner) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
 -- Name: read_markers fk_blobbers_read_markers; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
 --
 
@@ -2061,23 +2045,6 @@ ALTER TABLE ONLY public.write_markers
 ALTER TABLE ONLY public.read_markers
     ADD CONSTRAINT fk_read_markers_allocation FOREIGN KEY (allocation_id) REFERENCES public.allocations(allocation_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
-
---
--- Name: read_markers fk_read_markers_owner; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.read_markers
-    ADD CONSTRAINT fk_read_markers_owner FOREIGN KEY (owner_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: read_markers fk_read_markers_user; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.read_markers
-    ADD CONSTRAINT fk_read_markers_user FOREIGN KEY (client_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
 --
 -- Name: write_markers fk_write_markers_allocation; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
 --
@@ -2085,13 +2052,6 @@ ALTER TABLE ONLY public.read_markers
 ALTER TABLE ONLY public.write_markers
     ADD CONSTRAINT fk_write_markers_allocation FOREIGN KEY (allocation_id) REFERENCES public.allocations(allocation_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
-
---
--- Name: write_markers fk_write_markers_user; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.write_markers
-    ADD CONSTRAINT fk_write_markers_user FOREIGN KEY (client_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 --
 -- PostgreSQL database dump complete
