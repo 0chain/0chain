@@ -36,11 +36,14 @@ tests:
       - sleep: "20s"
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           start: true
       - command:
           name: 'init_allocation'
           timeout: '15m'
       - stop: ['blobber-3']
+      - wait_round:
+          shift: 1000
       - command:
           name: 'list'
       - command:
