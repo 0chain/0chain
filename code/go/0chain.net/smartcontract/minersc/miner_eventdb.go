@@ -12,23 +12,22 @@ import (
 )
 
 type SimpleNodeResponse struct {
-	ID                            string                `json:"id" validate:"hexadecimal,len=64"`
-	N2NHost                       string                `json:"n2n_host"`
-	Host                          string                `json:"host"`
-	Port                          int                   `json:"port"`
-	Geolocation                   SimpleNodeGeolocation `json:"geolocation"`
-	Path                          string                `json:"path"`
-	PublicKey                     string                `json:"public_key"`
-	ShortName                     string                `json:"short_name"`
-	BuildTag                      string                `json:"build_tag"`
-	TotalStaked                   currency.Coin         `json:"total_stake"`
-	Delete                        bool                  `json:"delete"`
-	NodeType                      NodeType              `json:"node_type,omitempty"`
-	LastHealthCheck               common.Timestamp      `json:"last_health_check"`
-	Status                        int                   `json:"-" msg:"-"`
-	LastSettingUpdateRound        int64                 `json:"last_setting_update_round"`
-	RoundServiceChargeLastUpdated int64                 `json:"round_service_charge_last_updated"`
-	IsKilled                      bool                  `json:"is_killed"`
+	ID                            string           `json:"id" validate:"hexadecimal,len=64"`
+	N2NHost                       string           `json:"n2n_host"`
+	Host                          string           `json:"host"`
+	Port                          int              `json:"port"`
+	Path                          string           `json:"path"`
+	PublicKey                     string           `json:"public_key"`
+	ShortName                     string           `json:"short_name"`
+	BuildTag                      string           `json:"build_tag"`
+	TotalStaked                   currency.Coin    `json:"total_stake"`
+	Delete                        bool             `json:"delete"`
+	NodeType                      NodeType         `json:"node_type,omitempty"`
+	LastHealthCheck               common.Timestamp `json:"last_health_check"`
+	Status                        int              `json:"-" msg:"-"`
+	LastSettingUpdateRound        int64            `json:"last_setting_update_round"`
+	RoundServiceChargeLastUpdated int64            `json:"round_service_charge_last_updated"`
+	IsKilled                      bool             `json:"is_killed"`
 }
 
 type DelegatePoolResponse struct {
@@ -54,20 +53,16 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNodeResponse{
-		ID:          edbMiner.ID,
-		N2NHost:     edbMiner.N2NHost,
-		Host:        edbMiner.Host,
-		Port:        edbMiner.Port,
-		Path:        edbMiner.Path,
-		PublicKey:   edbMiner.PublicKey,
-		ShortName:   edbMiner.ShortName,
-		BuildTag:    edbMiner.BuildTag,
-		TotalStaked: edbMiner.Provider.TotalStake,
-		Delete:      edbMiner.Delete,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbMiner.Latitude,
-			Longitude: edbMiner.Longitude,
-		},
+		ID:                            edbMiner.ID,
+		N2NHost:                       edbMiner.N2NHost,
+		Host:                          edbMiner.Host,
+		Port:                          edbMiner.Port,
+		Path:                          edbMiner.Path,
+		PublicKey:                     edbMiner.PublicKey,
+		ShortName:                     edbMiner.ShortName,
+		BuildTag:                      edbMiner.BuildTag,
+		TotalStaked:                   edbMiner.Provider.TotalStake,
+		Delete:                        edbMiner.Delete,
 		NodeType:                      NodeTypeMiner,
 		LastHealthCheck:               edbMiner.LastHealthCheck,
 		Status:                        status,
@@ -131,9 +126,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 			IsKilled:        mn.Provider.IsKilled(),
 		},
 
-		Active:    mn.Status == node.NodeStatusActive,
-		Longitude: mn.Geolocation.Longitude,
-		Latitude:  mn.Geolocation.Latitude,
+		Active: mn.Status == node.NodeStatusActive,
 	}
 }
 
@@ -172,8 +165,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 			"service_charge":    mn.Settings.ServiceChargeRatio,
 			"num_delegates":     mn.Settings.MaxNumDelegates,
 			"last_health_check": mn.LastHealthCheck,
-			"longitude":         mn.SimpleNode.Geolocation.Longitude,
-			"latitude":          mn.SimpleNode.Geolocation.Latitude,
 		},
 	}
 

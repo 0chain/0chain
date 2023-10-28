@@ -16,21 +16,17 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 		status = node.NodeStatusActive
 	}
 	msn := SimpleNodeResponse{
-		ID:              edbSharder.ID,
-		N2NHost:         edbSharder.N2NHost,
-		Host:            edbSharder.Host,
-		Port:            edbSharder.Port,
-		Path:            edbSharder.Path,
-		PublicKey:       edbSharder.PublicKey,
-		ShortName:       edbSharder.ShortName,
-		BuildTag:        edbSharder.BuildTag,
-		TotalStaked:     edbSharder.TotalStake,
-		Delete:          edbSharder.Delete,
-		LastHealthCheck: edbSharder.LastHealthCheck,
-		Geolocation: SimpleNodeGeolocation{
-			Latitude:  edbSharder.Latitude,
-			Longitude: edbSharder.Longitude,
-		},
+		ID:                            edbSharder.ID,
+		N2NHost:                       edbSharder.N2NHost,
+		Host:                          edbSharder.Host,
+		Port:                          edbSharder.Port,
+		Path:                          edbSharder.Path,
+		PublicKey:                     edbSharder.PublicKey,
+		ShortName:                     edbSharder.ShortName,
+		BuildTag:                      edbSharder.BuildTag,
+		TotalStaked:                   edbSharder.TotalStake,
+		Delete:                        edbSharder.Delete,
+		LastHealthCheck:               edbSharder.LastHealthCheck,
 		NodeType:                      NodeTypeSharder,
 		Status:                        status,
 		RoundServiceChargeLastUpdated: edbSharder.Rewards.RoundServiceChargeLastUpdated,
@@ -94,9 +90,7 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 			IsKilled:        sn.IsKilled(),
 		},
 
-		Active:    sn.Status == node.NodeStatusActive,
-		Longitude: sn.Geolocation.Longitude,
-		Latitude:  sn.Geolocation.Latitude,
+		Active: sn.Status == node.NodeStatusActive,
 	}
 }
 
@@ -131,8 +125,6 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 			"service_charge":    sn.Settings.ServiceChargeRatio,
 			"num_delegates":     sn.Settings.MaxNumDelegates,
 			"last_health_check": sn.LastHealthCheck,
-			"longitude":         sn.SimpleNode.Geolocation.Longitude,
-			"latitude":          sn.SimpleNode.Geolocation.Latitude,
 		},
 	}
 

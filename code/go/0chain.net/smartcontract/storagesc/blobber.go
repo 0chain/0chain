@@ -102,10 +102,6 @@ func (sc *StorageSmartContract) updateBlobber(
 		return err
 	}
 
-	if err = validateAndSaveGeoLoc(updateBlobber, existingBlobber); err != nil {
-		return err
-	}
-
 	if updateBlobber.NotAvailable != nil {
 		existingBlobber.NotAvailable = *updateBlobber.NotAvailable
 	}
@@ -213,27 +209,6 @@ func validateAndSaveTerms(
 			}
 			existingBlobber.Terms.WritePrice = *updatedBlobber.Terms.WritePrice
 		}
-	}
-
-	return nil
-}
-
-func validateAndSaveGeoLoc(
-	updatedBlobberRequest *dto.StorageDtoNode,
-	existingBlobber *StorageNode,
-) error {
-	if updatedBlobberRequest.Geolocation != nil {
-		if updatedBlobberRequest.Geolocation.Latitude != nil {
-			existingBlobber.Geolocation.Latitude = *updatedBlobberRequest.Geolocation.Latitude
-		}
-
-		if updatedBlobberRequest.Geolocation.Longitude != nil {
-			existingBlobber.Geolocation.Longitude = *updatedBlobberRequest.Geolocation.Longitude
-		}
-	}
-
-	if err := existingBlobber.Geolocation.validate(); err != nil {
-		return err
 	}
 
 	return nil

@@ -377,10 +377,6 @@ func AddMockBlobbers(
 	}.ID
 	var blobbers StorageNodes
 	var rtvBlobbers []*StorageNode
-	const maxLatitude float64 = 88
-	const maxLongitude float64 = 175
-	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
-	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
 	blobbersDb := make([]event.Blobber, 0, viper.GetInt(sc.NumBlobbers))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
@@ -391,11 +387,7 @@ func AddMockBlobbers(
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: balances.GetTransaction().CreationDate,
 			},
-			BaseURL: getMockBlobberUrl(i),
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  latitudeStep*float64(i) - maxLatitude,
-				Longitude: longitudeStep*float64(i) - maxLongitude,
-			},
+			BaseURL:           getMockBlobberUrl(i),
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
@@ -416,8 +408,6 @@ func AddMockBlobbers(
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
 				BaseURL:    blobber.BaseURL,
-				Latitude:   blobber.Geolocation.Latitude,
-				Longitude:  blobber.Geolocation.Longitude,
 				ReadPrice:  blobber.Terms.ReadPrice,
 				WritePrice: blobber.Terms.WritePrice,
 				Capacity:   blobber.Capacity,
