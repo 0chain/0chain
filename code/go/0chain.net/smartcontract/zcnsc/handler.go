@@ -201,10 +201,6 @@ type authorizerResponse struct {
 	// Configuration
 	Fee currency.Coin `json:"fee"`
 
-	// Geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-
 	// Stats
 	LastHealthCheck int64 `json:"last_health_check"`
 
@@ -229,8 +225,6 @@ func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 		AuthorizerID:    auth.ID,
 		URL:             auth.URL,
 		Fee:             auth.Fee,
-		Latitude:        auth.Latitude,
-		Longitude:       auth.Longitude,
 		LastHealthCheck: int64(auth.LastHealthCheck),
 		DelegateWallet:  auth.DelegateWallet,
 		NumDelegates:    auth.NumDelegates,

@@ -135,7 +135,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 56,
+			restpoints: 55,
 		},
 		{
 			name:       "multisig",
@@ -145,7 +145,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "miner",
 			address:    minersc.ADDRESS,
-			restpoints: 23,
+			restpoints: 21,
 		},
 		{
 			name:       "vesting",
@@ -441,7 +441,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					},
 				},
 			},
-			want:    "{\"simple_miner\":{\"id\":\"\",\"is_shut_down\":false,\"is_killed\":false,\"provider_type\":1,\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"geolocation\":{\"latitude\":0,\"longitude\":0},\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":{\"pools\":{},\"rewards\":0,\"settings\":{\"delegate_wallet\":\"\",\"num_delegates\":0,\"min_stake\":0,\"service_charge\":0},\"minter\":0,\"is_dead\":false}}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"is_shut_down\":false,\"is_killed\":false,\"provider_type\":1,\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delete\":false,\"last_health_check\":0,\"last_setting_update_round\":0},\"stake_pool\":{\"pools\":{},\"rewards\":0,\"settings\":{\"delegate_wallet\":\"\",\"num_delegates\":0,\"min_stake\":0,\"service_charge\":0},\"minter\":0,\"is_dead\":false}}",
 			wantErr: false,
 		},
 	}

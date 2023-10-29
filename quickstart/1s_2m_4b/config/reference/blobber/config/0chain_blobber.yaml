@@ -36,7 +36,6 @@ challenge_completion_time: 2m # duration to complete a challenge
 # a task and redeem tokens, it should be big enough
 read_lock_timeout: 1m
 write_lock_timeout: 1m
-max_file_size: 10485760 #10MB
 
 # update_allocations_interval used to refresh known allocation objects from SC
 update_allocations_interval: 1m

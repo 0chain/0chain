@@ -101,6 +101,16 @@ func main() {
 	var success bool
 	// not always error means failure
 
+	// Clean contents of sdxproxy logs directory but keep the directory itself
+	err = os.RemoveAll(conf.Logs + "/sdkproxy")
+	if err != nil {
+		log.Printf("Error while cleaning sdxproxy logs directory: %v", err)
+	}
+	err = os.MkdirAll(conf.Logs+"/sdkproxy", 0777)
+	if err != nil {
+		log.Printf("Error while creating sdxproxy logs directory: %v", err)
+	}
+
 	err, success = r.Run()
 	if err != nil {
 		log.Print("[ERR] ", err)
@@ -568,6 +578,38 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 	return
 }
 
+func (r *Runner) acceptAddValidator(addv *conductrpc.AddValidatorEvent) (
+	err error) {
+
+	if addv.Sender != r.monitor {
+		return // not the monitor node
+	}
+	var (
+		sender, sok = r.conf.Nodes.NodeByName(addv.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(addv.Validator)
+	)
+	if !sok {
+		return fmt.Errorf("unexpected add_validator sender: %q", addv.Sender)
+	}
+	if !aok {
+		return fmt.Errorf("unexpected validator %q added by add_validator of %q",
+			addv.Validator, sender.Name)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] add_validator ", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	if r.waitAdd.TakeValidator(added.Name) {
+		log.Print("[OK] add_validator ", added.Name)
+	}
+	return
+}
+
 func (r *Runner) acceptAddAuthorizer(addb *conductrpc.AddAuthorizerEvent) (
 	err error) {
 	if addb.Sender != r.monitor {
@@ -990,6 +1032,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddSharder(adds)
 		case addb := <-r.server.OnAddBlobber():
 			err = r.acceptAddBlobber(addb)
+		case addv := <-r.server.OnAddValidator():
+			err = r.acceptAddValidator(addv)
 		case adda := <-r.server.OnAddAuthorizer():
 			err = r.acceptAddAuthorizer(adda)
 		case sk := <-r.server.OnSharderKeep():

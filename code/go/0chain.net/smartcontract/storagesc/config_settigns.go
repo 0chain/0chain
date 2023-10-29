@@ -66,9 +66,12 @@ const (
 	MaxReadPrice
 	MaxWritePrice
 	MinWritePrice
+	MaxFileSize
 	ChallengeEnabled
+	ChallengeGenerationGap
 	ValidatorsPerChallenge
 	NumValidatorsRewarded
+	MaxBlobberSelectForChallenge
 	MaxDelegates
 
 	BlockRewardBlockReward
@@ -169,9 +172,12 @@ func initSettingName() {
 	SettingName[MaxReadPrice] = "max_read_price"
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
+	SettingName[MaxFileSize] = "max_file_size"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
+	SettingName[ChallengeGenerationGap] = "challenge_generation_gap"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
 	SettingName[NumValidatorsRewarded] = "num_validators_rewarded"
+	SettingName[MaxBlobberSelectForChallenge] = "max_blobber_select_for_challenge"
 	SettingName[MaxDelegates] = "max_delegates"
 	SettingName[BlockRewardBlockReward] = "block_reward.block_reward"
 	SettingName[BlockRewardQualifyingStake] = "block_reward.qualifying_stake"
@@ -251,9 +257,12 @@ func initSettings() {
 		MaxReadPrice.String():                     {MaxReadPrice, config.CurrencyCoin},
 		MaxWritePrice.String():                    {MaxWritePrice, config.CurrencyCoin},
 		MinWritePrice.String():                    {MinWritePrice, config.CurrencyCoin},
+		MaxFileSize.String():                      {MaxFileSize, config.Int64},
 		ChallengeEnabled.String():                 {ChallengeEnabled, config.Boolean},
+		ChallengeGenerationGap.String():           {ChallengeGenerationGap, config.Int64},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, config.Int},
 		NumValidatorsRewarded.String():            {NumValidatorsRewarded, config.Int},
+		MaxBlobberSelectForChallenge.String():     {MaxBlobberSelectForChallenge, config.Int},
 		MaxDelegates.String():                     {MaxDelegates, config.Int},
 		BlockRewardBlockReward.String():           {BlockRewardBlockReward, config.CurrencyCoin},
 		BlockRewardQualifyingStake.String():       {BlockRewardQualifyingStake, config.CurrencyCoin},
@@ -364,6 +373,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.ValidatorsPerChallenge = change
 	case NumValidatorsRewarded:
 		conf.NumValidatorsRewarded = change
+	case MaxBlobberSelectForChallenge:
+		conf.MaxBlobberSelectForChallenge = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
@@ -430,6 +441,10 @@ func (conf *Config) setCoin(key string, change currency.Coin) error {
 
 func (conf *Config) setInt64(key string, change int64) error {
 	switch Settings[key].setting {
+	case ChallengeGenerationGap:
+		conf.ChallengeGenerationGap = change
+	case MaxFileSize:
+		conf.MaxFileSize = change
 	case MinAllocSize:
 		conf.MinAllocSize = change
 	case MinBlobberCapacity:
@@ -680,12 +695,18 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxWritePrice
 	case MinWritePrice:
 		return conf.MinWritePrice
+	case MaxFileSize:
+		return conf.MaxFileSize
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
+	case ChallengeGenerationGap:
+		return conf.ChallengeGenerationGap
 	case ValidatorsPerChallenge:
 		return conf.ValidatorsPerChallenge
 	case NumValidatorsRewarded:
 		return conf.NumValidatorsRewarded
+	case MaxBlobberSelectForChallenge:
+		return conf.MaxBlobberSelectForChallenge
 	case MaxDelegates:
 		return conf.MaxDelegates
 	case BlockRewardBlockReward:

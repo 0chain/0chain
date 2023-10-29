@@ -8,6 +8,7 @@ import (
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
+	"net/url"
 )
 
 type BlobberChallengeResponded int
@@ -41,6 +42,11 @@ type Challenge struct {
 
 func (edb *EventDb) GetChallengesCountByQuery(whereQuery string) (map[string]int64, error) {
 	var total, passed, failed, open int64
+
+	whereQuery, err := url.QueryUnescape(whereQuery)
+	if err != nil {
+		return nil, err
+	}
 
 	response := make(map[string]int64)
 

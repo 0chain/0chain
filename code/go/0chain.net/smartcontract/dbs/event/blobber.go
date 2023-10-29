@@ -22,10 +22,6 @@ type Blobber struct {
 	Provider
 	BaseURL string `json:"url" gorm:"uniqueIndex"`
 
-	// geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-
 	// terms
 	ReadPrice  currency.Coin `json:"read_price"`
 	WritePrice currency.Coin `json:"write_price"`
@@ -137,30 +133,6 @@ func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error
 		Offset(limit.Offset).Limit(limit.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "rank_metric"},
-			Desc:   true,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
-			Desc:   true,
-		}).
-		Find(&blobberIDs)
-
-	return blobberIDs, result.Error
-}
-
-func (edb *EventDb) GeBlobberByLatLong(
-	maxLatitude, minLatitude, maxLongitude, minLongitude float64, limit common2.Pagination,
-) ([]string, error) {
-	var blobberIDs []string
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Select("id").
-		Where("latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ",
-			maxLatitude, minLatitude, maxLongitude, minLongitude).
-		Offset(limit.Offset).
-		Limit(limit.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "capacity"},
 			Desc:   true,
 		}).
 		Order(clause.OrderByColumn{
@@ -286,8 +258,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 
 	// fields match storagesc.emitUpdateBlobber
 	updateColumns := []string{
-		"latitude",
-		"longitude",
 		"read_price",
 		"write_price",
 		"min_lock_demand",
@@ -411,45 +381,43 @@ func withBlobberStatsMerged() eventMergeMiddleware {
 	})
 }
 
-func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberChallenge, withUniqueEventOverwrite())
+type ChallengeStatsDeltas struct {
+	Id             string `json:"id"`
+	PassedDelta    int64  `json:"passed_delta"`
+	CompletedDelta int64  `json:"completed_delta"`
+	OpenDelta      int64  `json:"open_delta"`
 }
 
-func mergeAddChallengesToBlobberEvents() *eventsMergerImpl[Blobber] {
-	return newEventsMerger[Blobber](TagUpdateBlobberOpenChallenges, withUniqueEventOverwrite())
+func mergeUpdateBlobberChallengesEvents() *eventsMergerImpl[ChallengeStatsDeltas] {
+	return newEventsMerger[ChallengeStatsDeltas](TagUpdateBlobberChallenge, withBlobberChallengesMerged())
 }
 
-func (edb *EventDb) updateOpenBlobberChallenges(blobbers []Blobber) error {
+func withBlobberChallengesMerged() eventMergeMiddleware {
+	return withEventMerge(func(a, b *ChallengeStatsDeltas) (*ChallengeStatsDeltas, error) {
+		a.CompletedDelta += b.CompletedDelta
+		a.PassedDelta += b.PassedDelta
+		a.OpenDelta += b.OpenDelta
+		return a, nil
+	})
+}
 
+func (edb *EventDb) updateBlobberChallenges(blobbers []ChallengeStatsDeltas) error {
 	blobberIdList := make([]string, 0, len(blobbers))
-	openChallengesList := make([]uint64, 0, len(blobbers))
+	challengesDeltaOpenList := make([]int64, 0, len(blobbers))
+	challengesDeltaPassedList := make([]int64, 0, len(blobbers))
+	challengesDeltaCompletedList := make([]int64, 0, len(blobbers))
 
 	for _, blobber := range blobbers {
-		blobberIdList = append(blobberIdList, blobber.ID)
-		openChallengesList = append(openChallengesList, blobber.OpenChallenges)
+		blobberIdList = append(blobberIdList, blobber.Id)
+		challengesDeltaOpenList = append(challengesDeltaOpenList, blobber.OpenDelta)
+		challengesDeltaPassedList = append(challengesDeltaPassedList, blobber.PassedDelta)
+		challengesDeltaCompletedList = append(challengesDeltaCompletedList, blobber.CompletedDelta)
 	}
 
 	return CreateBuilder("blobbers", "id", blobberIdList).
-		AddUpdate("open_challenges", openChallengesList).Exec(edb).Error
-}
-
-func (edb *EventDb) updateBlobberChallenges(blobbers []Blobber) error {
-	blobberIdList := make([]string, 0, len(blobbers))
-	challengesPassedList := make([]uint64, 0, len(blobbers))
-	challengesCompletedList := make([]uint64, 0, len(blobbers))
-	challengesOpenList := make([]uint64, 0, len(blobbers))
-
-	for _, blobber := range blobbers {
-		blobberIdList = append(blobberIdList, blobber.ID)
-		challengesPassedList = append(challengesPassedList, blobber.ChallengesPassed)
-		challengesCompletedList = append(challengesCompletedList, blobber.ChallengesCompleted)
-		challengesOpenList = append(challengesOpenList, blobber.OpenChallenges)
-	}
-
-	return CreateBuilder("blobbers", "id", blobberIdList).
-		AddUpdate("challenges_passed", challengesPassedList).
-		AddUpdate("challenges_completed", challengesCompletedList).
-		AddUpdate("open_challenges", challengesOpenList).
+		AddUpdate("open_challenges", challengesDeltaOpenList, "blobbers.open_challenges + t.open_challenges").
+		AddUpdate("challenges_passed", challengesDeltaPassedList, "blobbers.challenges_passed + t.challenges_passed").
+		AddUpdate("challenges_completed", challengesDeltaCompletedList, "blobbers.challenges_completed + t.challenges_completed").
 		Exec(edb).Error
 }
 
