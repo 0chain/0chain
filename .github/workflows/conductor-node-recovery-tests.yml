@@ -4,6 +4,9 @@ on:
   schedule:
     # Runs everyday at 02:00 am
     - cron: '0 4 * * *'
+  push:
+    branches:
+      - "feature/ct-auth-crash-and-reward"
   workflow_dispatch:
       inputs:
         branchname:
