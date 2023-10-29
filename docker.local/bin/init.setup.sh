@@ -21,3 +21,6 @@ do
   mkdir -p docker.local/sharder"$i"/log
   mkdir -p docker.local/sharder"$i"/data/postgresql
 done
+
+mkdir -p docker.local/kafka
+chmod -R 777 docker.local/kafka

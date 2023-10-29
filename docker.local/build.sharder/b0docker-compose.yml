@@ -12,7 +12,6 @@ services:
       - ../sql_script/:/docker-entrypoint-initdb.d/
     networks:
       default:
-
   sharder:
     image: "sharder"
     # deploy:

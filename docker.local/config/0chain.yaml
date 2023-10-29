@@ -184,3 +184,8 @@ integration_tests:
   # lock_interval used by nodes to request server to connect to blockchain
   # after start
   lock_interval: 1s
+
+kafka:
+  host: "198.19.0.99:9092"
+  topic: "events"
+  write_timeout: 10s
