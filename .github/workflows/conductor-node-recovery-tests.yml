@@ -125,11 +125,13 @@ jobs:
 
     - name: Git clone 0dns
       run: |
+        export HOME="/root"
         git clone https://github.com/0chain/0dns.git
         git config --global user.name
 
     - name: Git clone 0box
       run: |
+        export HOME="/root"
         git config --global user.name
         git clone https://github.com/0chain/0box.git
   
