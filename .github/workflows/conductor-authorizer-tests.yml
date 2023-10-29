@@ -124,7 +124,9 @@ jobs:
     - name: Update max faucet limit
       run: |
         cd 0chain
-        sed -i 's/max_pour_amount: 10/max_pour_amount: 1000/g' docker.local/config/sc.yaml
+        bash -c 'sed -i "s/max_pour_amount: 10/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
+        bash -c 'cat docker.local/config/sc.yaml | grep max_pour_amount'
+
 
     - name: View Change Rounds
       run: |
