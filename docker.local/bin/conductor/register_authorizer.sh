@@ -10,7 +10,6 @@ printf '{"client_id":"1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7
 
 ./zwalletcli/zwallet getbalance --wallet wallet.json
 
-./zwalletcli/zwallet send --tokens 10 --desc 'to auth 1' --to_client_id 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
 ./zwalletcli/zwallet send --tokens 10 --desc 'to auth 2' --to_client_id 47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a
 ./zwalletcli/zwallet send --tokens 10 --desc 'to auth 3' --to_client_id 7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a
 
