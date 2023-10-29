@@ -325,6 +325,7 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 		// start nodes that haven't been started yet
 		allNodes := append(wadd.Sharders, wadd.Miners...)
 		allNodes = append(allNodes, wadd.Blobbers...)
+		allNodes = append(allNodes, wadd.Validators...)
 		allNodes = append(allNodes, wadd.Authorizers...)
 		allNodes = append(allNodes, wadd.Validators...)
 

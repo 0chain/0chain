@@ -2,8 +2,25 @@ name: CONDUCTOR AUTHORIZER TESTS
 
 on:
   schedule:
-    - cron: '0 10 * * * '
+    - cron: '0 10 * * *'
   workflow_dispatch:
+      inputs:
+        chain_branch:
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
+        auth_branch:
+          description: 'Input branch for authorizer repo'
+          default: ''
+          required: false
+        zboxcli_branch:
+          description: 'Input branch for zboxcli repo'
+          default: ''
+          required: false
+        zwalletcli_branch:
+          description: 'Input branch for zwalletcli repo'
+          default: ''
+          required: false
 
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
@@ -11,23 +28,282 @@ jobs:
     runs-on: [self-hosted, conductor-test03]
 
     steps:
-      - name: Cleanup before restarting conductor tests.
-        run: |
-          rm -rf *
+    - name: Cleanup before restarting conductor tests.
+      run: |
+        rm -rf *
 
-      - name: "Setup Go"
-        shell: 'script --return --quiet --command "bash {0}"'
+    # - uses: actions/checkout@v1
+
+    - name: "Setup Go"
+      shell: 'script --return --quiet --command "bash {0}"'
+      run: |
+        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
+        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
+        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
+        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
+
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        export HOME="/root"
+        which go
+        go env
+
+    - name: Docker Compose Setup.
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    # - name: Get Branch
+    #   id: get_branch
+    #   run: |
+    #     BRANCH="${{ inputs.chain_branch }}"
+    #     if [[ -z $BRANCH ]]; then
+    #        echo "inside"
+    #        BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+    #        echo ::set-output name=BRANCH::${BRANCH}
+    #     fi
+    #     echo "Branch name is ${BRANCH}"
+
+    - name: Install herumi/bls and herumi/mcl
+      run: |
+        git clone --recursive https://github.com/herumi/bls
+        cd bls
+        make -C mcl -j 4 lib/libmclbn256.a install
+        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+
+    - name: Git clone 0chain
+      run: |
+        git clone https://github.com/0chain/0chain.git
+        cd 0chain
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        CHAIN_BRANCH="${{ inputs.chain_branch }}"
+        if [[ -z $CHAIN_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
+        fi
+        echo "Branch name is ${CHAIN_BRANCH}"
+        git checkout ${CHAIN_BRANCH}
+
+    - name: Docker Init Setup.
+      run: |
+        export HOME="/root"
+        cd 0chain
+        make install-mockery
+        make build-mocks
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
+    - name: Update max faucet limit
+      run: |
+        cd 0chain
+        bash -c 'sed -i "s/max_pour_amount: 10/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
+        bash -c 'cat docker.local/config/sc.yaml | grep max_pour_amount'
+
+
+    - name: View Change Rounds
+      run: |
+        awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
+
+    - name: Git clone authorizer
+      run: |
+        git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
+        cd token_bridge_authserver
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        AUTH_BRANCH="${{ inputs.auth_branch }}"
+        if [[ -z $AUTH_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=AUTH_BRANCH::${AUTH_BRANCH}
+        fi
+        echo "Branch name is ${AUTH_BRANCH}"
+        git checkout ${AUTH_BRANCH}
+
+    - name: Git clone zboxcli
+      run: |
+        git clone https://github.com/0chain/zboxcli.git
+        cd zboxcli
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
+        if [[ -z $ZBOXCLI_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZBOXCLI_BRANCH::${ZBOXCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZBOXCLI_BRANCH}"
+        git checkout ${ZBOXCLI_BRANCH}
+
+    - name: Git clone zwalletcli
+      run: |
+        git clone https://github.com/0chain/zwalletcli.git
+        cd zwalletcli
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
+        if [[ -z $ZWALLETCLI_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZWALLETCLI_BRANCH::${ZWALLETCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZWALLETCLI_BRANCH}"
+        git checkout ${ZWALLETCLI_BRANCH}
+
+    - name: Git clone 0dns
+      run: |
+        git clone https://github.com/0chain/0dns.git
+
+    - name: list pwd
+      run: |
+        ls -lha
+        cd 0chain && git status
+        cd ../0dns && git status
+        pwd
+
+    - name: Install zboxcli
+      run: |
+        export HOME="/root"
+        cd zboxcli && make install
+
+    - name: Install zwalletcli
+      run: |
+        export HOME="/root"
+        cd zwalletcli && make install
+
+    - name: 0dns Patching
+      run: |
+        cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
+
+    - name: Build 0dns
+      run: |
+        cd 0dns
+        ./docker.local/bin/init.sh
+        ./docker.local/bin/build.sh
+
+    - name: Init setup for authorizers
+      run: |
+        cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
+
+    - name: Build authorizer
+      run: |
+        cd token_bridge_authserver
+        chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
+        ./docker.local/bin/build.authorizer-integration-tests.sh
+
+    - name: Changing Authorizer Network
+      run: |
+        cd token_bridge_authserver
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
+
+    - name: Add ZCN config
+      run: |
+        rm -rf ~/.zcn || true
+        mkdir ~/.zcn
+        cat <<\EOF > ~/.zcn/config.yaml
+        block_worker: http://127.0.0.1:9091
+        signature_scheme: bls0chain
+        min_submit: 50
+        min_confirmation: 50
+        confirmation_chain_length: 3
+        max_txn_query: 5
+        query_sleep_time: 5
+        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/94MznalgOkINSqTNiS65FNMnkn8vLUpv
+        bridge:
+          bridge_address: 0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+          token_address: 0xC79aD1e07f790d0Cf6AA3D09FeC393A09DC53d64
+          authorizers_address: 0xd5867B4a1F8e7BD91276b5C85a4EDC9D33400496
+          ethereum_address: 0xD8c9156e782C68EE671C09b6b92de76C97948432
+          password: "02289b9"
+        EOF
+
+    - name: List pwd zcn
+      run: |
+        pwd
+        ls -lha ./
+        ls -lha ~/.zcn
+        cat ~/.zcn/config.yaml
+
+    - name: Add Address
+      run: |
+        cd ~/.zcn
+        mkdir wallets
+        cd wallets
+        cat <<\EOF > UTC--2023-05-22T11-45-59.391983000Z--d8c9156e782c68ee671c09b6b92de76c97948432
+        {"address":"d8c9156e782c68ee671c09b6b92de76c97948432","crypto":{"cipher":"aes-128-ctr","ciphertext":"26133146fa7a880226f6259b960b4234b1280583f98ee71c120d239673681110","cipherparams":{"iv":"d834890aabcb3e0d9ae3309a71a8ff27"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"143d2eae97b837ca163e651223b92042f2acc20340629cf9de56646e5d59ae92"},"mac":"86cd6646c767e056e497c975a6fa4557d68b85b19a9ea0ec0062e7b7dc78df7f"},"id":"155f80d0-48d9-4bc7-bc60-7294a3ea3edc","version":3}
+        EOF
+
+    - name: Cat Address
+      run: |
+        cat ~/.zcn/wallets/UTC--2023-05-22T11-45-59.391983000Z--d8c9156e782c68ee671c09b6b92de76c97948432
+
+    - name: Starting authorizer Tests.
+      run: |
+        export HOME="/root"
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh authorizer
+
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: authorizers-logs
+        path: |
+          0chain/conductor/logs/
+          0chain/docker.local/miner*/log
+          0chain/docker.local/sharder*/log
+          token_bridge_authserver/docker.local/auth*/log
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
+
+  notify_slack_on_failure:
+    runs-on: [self-hosted, arc-runner]
+    needs: [CONDUCTOR_AUTHORIZER_TESTS]
+    if: always() && (needs.CONDUCTOR_AUTHORIZER_TESTS.result == 'failure')
+    steps:
+      - name: "Notify Slack"
         run: |
-          [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
-          [ -d /usr/local/go ] &&  rm -rf /usr/local/go
-          [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
-          tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
-          
-          echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
-          export PATH=$PATH:/usr/local/go/bin
-          export HOME="/root"
-          which go
-          go env
+          payload='{
+          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "attachments": [
+              {
+              "text": "CONDUCTOR AUTHORIZER TEST FAILED ⚠️",
+              "color": "#ff0000"
+              }
+          ]
+          }'
+          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
       - name: Docker Compose Setup.
         run: |

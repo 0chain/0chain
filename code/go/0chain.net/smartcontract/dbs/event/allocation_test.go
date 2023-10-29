@@ -101,12 +101,6 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 
 func TestAllocations(t *testing.T) {
 
-	type StorageNodeGeolocation struct {
-		Latitude  float64 `json:"latitude"`
-		Longitude float64 `json:"longitude"`
-		// reserved / Accuracy float64 `mapstructure:"accuracy"`
-	}
-
 	type stakePoolSettings struct {
 		// DelegateWallet for pool owner.
 		DelegateWallet string `json:"delegate_wallet"`
@@ -132,14 +126,13 @@ func TestAllocations(t *testing.T) {
 	}
 
 	type StorageNode struct {
-		ID              string                 `json:"id"`
-		BaseURL         string                 `json:"url"`
-		Geolocation     StorageNodeGeolocation `json:"geolocation"`
-		Terms           Terms                  `json:"terms"`     // terms
-		Capacity        int64                  `json:"capacity"`  // total blobber capacity
-		Allocated       int64                  `json:"allocated"` // allocated capacity
-		LastHealthCheck common.Timestamp       `json:"last_health_check"`
-		PublicKey       string                 `json:"-"`
+		ID              string           `json:"id"`
+		BaseURL         string           `json:"url"`
+		Terms           Terms            `json:"terms"`     // terms
+		Capacity        int64            `json:"capacity"`  // total blobber capacity
+		Allocated       int64            `json:"allocated"` // allocated capacity
+		LastHealthCheck common.Timestamp `json:"last_health_check"`
+		PublicKey       string           `json:"-"`
 		// StakePoolSettings used initially to create and setup stake pool.
 		StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
 	}
@@ -312,10 +305,6 @@ func TestAllocations(t *testing.T) {
 				{
 					ID:      "blobber_1",
 					BaseURL: "base_url",
-					Geolocation: StorageNodeGeolocation{
-						Latitude:  120,
-						Longitude: 141,
-					},
 					Terms: Terms{
 						ReadPrice:  10,
 						WritePrice: 10,

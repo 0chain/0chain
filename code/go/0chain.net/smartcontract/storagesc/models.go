@@ -293,32 +293,6 @@ func validateWritePrice(writePrice currency.Coin, conf *Config) error {
 	return nil
 }
 
-const (
-	MaxLatitude  = 90
-	MinLatitude  = -90
-	MaxLongitude = 180
-	MinLongitude = -180
-)
-
-// Move to the core, in case of multi-entity use of geo data
-type StorageNodeGeolocation struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	// reserved / Accuracy float64 `mapstructure:"accuracy"`
-}
-
-func (sng StorageNodeGeolocation) validate() error {
-	if sng.Latitude < MinLatitude || MaxLatitude < sng.Latitude {
-		return common.NewErrorf("out_of_range_geolocation",
-			"latitude %f should be in range [-90, 90]", sng.Latitude)
-	}
-	if sng.Longitude < MinLongitude || MaxLongitude < sng.Longitude {
-		return common.NewErrorf("out_of_range_geolocation",
-			"latitude %f should be in range [-180, 180]", sng.Longitude)
-	}
-	return nil
-}
-
 type RewardRound struct {
 	StartRound int64            `json:"start_round"`
 	Timestamp  common.Timestamp `json:"timestamp"`
@@ -335,15 +309,14 @@ type Info struct {
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
 	provider.Provider
-	BaseURL                 string                 `json:"url"`
-	Geolocation             StorageNodeGeolocation `json:"geolocation"`
-	Terms                   Terms                  `json:"terms"`     // terms
-	Capacity                int64                  `json:"capacity"`  // total blobber capacity
-	Allocated               int64                  `json:"allocated"` // allocated capacity
-	PublicKey               string                 `json:"-"`
-	SavedData               int64                  `json:"saved_data"`
-	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
+	BaseURL                 string  `json:"url"`
+	Terms                   Terms   `json:"terms"`     // terms
+	Capacity                int64   `json:"capacity"`  // total blobber capacity
+	Allocated               int64   `json:"allocated"` // allocated capacity
+	PublicKey               string  `json:"-"`
+	SavedData               int64   `json:"saved_data"`
+	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
 	// StakePoolSettings used initially to create and setup stake pool.
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
@@ -364,10 +337,6 @@ func (sn *StorageNode) validate(conf *Config) (err error) {
 	}
 
 	if err := validateBaseUrl(&sn.BaseURL); err != nil {
-		return err
-	}
-
-	if err := sn.Geolocation.validate(); err != nil {
 		return err
 	}
 
@@ -623,7 +592,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, false, ChallengeRespondedLate, balances, alloc.Stats, d.Stats)
+				}, false, ChallengeRespondedLate, balances, alloc.Stats)
 				if err != nil {
 					return 0.0, err
 				}
@@ -636,7 +605,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 					ID:           oc.ID,
 					AllocationID: alloc.ID,
 					BlobberID:    oc.BlobberID,
-				}, true, ChallengeResponded, balances, alloc.Stats, d.Stats)
+				}, true, ChallengeResponded, balances, alloc.Stats)
 				if err != nil {
 					return 0.0, err
 				}
@@ -664,6 +633,8 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		}
 	}
 
+	blobbersSettledChallengesCount := d.Stats.OpenChallenges
+
 	if d.Stats.OpenChallenges > 0 {
 		logging.Logger.Warn("not all challenges canceled", zap.Int64("remaining", d.Stats.OpenChallenges))
 
@@ -680,7 +651,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 		passRate = float64(d.Stats.SuccessChallenges) / float64(d.Stats.TotalChallenges)
 	}
 
-	emitUpdateAllocationAndBlobberStats(alloc, balances)
+	emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc, d.BlobberID, blobbersSettledChallengesCount, balances)
 
 	return passRate, nil
 }
@@ -737,6 +708,10 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 }
 
 func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+	if now <= d.LatestFinalizedChallCreatedAt {
+		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
+		return 0, nil
+	}
 
 	payment := currency.Coin(0)
 
@@ -1928,7 +1903,7 @@ func (sa *StorageAllocation) removeExpiredChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeRespondedLate, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeRespondedLate, balances, sa.Stats)
 
 			if err != nil {
 				return 0, err
@@ -1961,9 +1936,8 @@ func (sa *StorageAllocation) removeOldChallenges(
 	currentChallenge *StorageChallenge,
 	sc *StorageSmartContract,
 ) error {
-
-	var removedChallengeBlobberMap = make(map[string]string)
 	var nonRemovedChallenges []*AllocOpenChallenge
+	var expChalIDs []string
 
 	for _, oc := range allocChallenges.OpenChallenges {
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
@@ -1978,7 +1952,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 			zap.Int64("current_round_created_at", currentChallenge.RoundCreatedAt),
 		)
 
-		removedChallengeBlobberMap[oc.ID] = oc.BlobberID
+		expChalIDs = append(expChalIDs, oc.ID)
 
 		ba, ok := sa.BlobberAllocsMap[oc.BlobberID]
 		if ok {
@@ -1995,7 +1969,7 @@ func (sa *StorageAllocation) removeOldChallenges(
 				ID:           oc.ID,
 				AllocationID: sa.ID,
 				BlobberID:    oc.BlobberID,
-			}, false, ChallengeOldRemoved, balances, sa.Stats, ba.Stats)
+			}, false, ChallengeOldRemoved, balances, sa.Stats)
 
 			if err != nil {
 				return err
@@ -2005,25 +1979,13 @@ func (sa *StorageAllocation) removeOldChallenges(
 
 	allocChallenges.OpenChallenges = nonRemovedChallenges
 
-	var expChalIDs []string
-	for challengeID := range removedChallengeBlobberMap {
-		expChalIDs = append(expChalIDs, challengeID)
-	}
-
 	// maps blobberID to count of its expiredIDs.
-	expiredCountMap := make(map[string]int)
 
 	for _, challengeID := range expChalIDs {
-		blobberID := removedChallengeBlobberMap[challengeID]
 		_, err := balances.DeleteTrieNode(storageChallengeKey(sc.ID, challengeID))
 		if err != nil {
 			return common.NewErrorf("remove_old_challenges", "could not delete challenge node: %v", err)
 		}
-
-		if _, ok := expiredCountMap[blobberID]; !ok {
-			expiredCountMap[blobberID] = 0
-		}
-		expiredCountMap[blobberID]++
 	}
 
 	return nil

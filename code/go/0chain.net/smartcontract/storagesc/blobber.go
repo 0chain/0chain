@@ -102,10 +102,6 @@ func (sc *StorageSmartContract) updateBlobber(
 		return err
 	}
 
-	if err = validateAndSaveGeoLoc(updateBlobber, existingBlobber); err != nil {
-		return err
-	}
-
 	if updateBlobber.NotAvailable != nil {
 		existingBlobber.NotAvailable = *updateBlobber.NotAvailable
 	}
@@ -213,27 +209,6 @@ func validateAndSaveTerms(
 			}
 			existingBlobber.Terms.WritePrice = *updatedBlobber.Terms.WritePrice
 		}
-	}
-
-	return nil
-}
-
-func validateAndSaveGeoLoc(
-	updatedBlobberRequest *dto.StorageDtoNode,
-	existingBlobber *StorageNode,
-) error {
-	if updatedBlobberRequest.Geolocation != nil {
-		if updatedBlobberRequest.Geolocation.Latitude != nil {
-			existingBlobber.Geolocation.Latitude = *updatedBlobberRequest.Geolocation.Latitude
-		}
-
-		if updatedBlobberRequest.Geolocation.Longitude != nil {
-			existingBlobber.Geolocation.Longitude = *updatedBlobberRequest.Geolocation.Longitude
-		}
-	}
-
-	if err := existingBlobber.Geolocation.validate(); err != nil {
-		return err
 	}
 
 	return nil
@@ -802,15 +777,22 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	if alloc.Stats.UsedSize == 0 {
+		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
+		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
+	}
+
+	changeSize := commitConnection.WriteMarker.Size
+
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
-		changeSize := blobAlloc.LastWriteMarker.Size
+		changeSize = -blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize - changeSize
+		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize + changeSize
 		blobAlloc.Stats.NumWrites++
-		blobber.SavedData -= changeSize
-		alloc.Stats.UsedSize -= int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+		blobber.SavedData += changeSize
+		alloc.Stats.UsedSize += int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 
 		alloc.Stats.NumWrites++
 	} else {
@@ -850,7 +832,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	movedTokens, err := sc.commitMoveTokens(conf, alloc, commitConnection.WriteMarker.Size, blobAlloc,
+	movedTokens, err := sc.commitMoveTokens(conf, alloc, changeSize, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
@@ -974,7 +956,7 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if err != nil {
 		return fmt.Errorf("unable to total stake pool: %v", err)
 	}
-	weight := uint64(stakedAmount) * blobUsedCapacity
+	weight := uint64((float64(stakedAmount) * float64(blobUsedCapacity)) / 1e10)
 	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
 	}

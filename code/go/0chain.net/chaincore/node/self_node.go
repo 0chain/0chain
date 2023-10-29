@@ -134,7 +134,6 @@ func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
 	}
 
 	sn.Node = node
-	sn.Node.Info.StateMissingNodes = -1
 	sn.Node.Info.BuildTag = build.BuildTag
 	sn.Node.Status = NodeStatusActive
 }
