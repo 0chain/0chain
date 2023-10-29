@@ -930,4 +930,15 @@ func init() {
 		log.Printf("Continuing execution...")
 		return nil
 	})
+
+	register("wait_sharders_finalize_near_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command WaitShardersFinalizeNearBlocks
+		err = mapstructure.Decode(val, &command)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		ex.WaitShardersFinalizeNearBlocks(command, tm)
+		return nil
+	})
 }

@@ -18,6 +18,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,6 +96,7 @@ func main() {
 	defer r.server.Close()
 
 	r.waitNodes = make(map[config.NodeName]struct{})
+	r.latestBlock = make(map[NodeName]Number)
 	r.rounds = make(map[config.RoundName]config.Round)
 	r.setupTimeout(0)
 
@@ -202,6 +204,7 @@ type Runner struct {
 	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
 	waitNoProgress         config.WaitNoProgress         // no new rounds expected
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
+	waitShardersFinalizeNearBlocks config.WaitShardersFinalizeNearBlocks // wait for sharders to finalize blocks near each other
 	waitCommand            chan error                    // wait a command
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	waitSharderLFB	config.WaitSharderLFB	
@@ -215,6 +218,9 @@ type Runner struct {
 
 	// remembered rounds: name -> round number
 	rounds map[config.RoundName]config.Round // named rounds (the remember_round)
+
+	// List of latest block numbers received from sharders
+	latestBlock map[NodeName]Number
 
 	// final report
 	report []reportTestCase
@@ -272,6 +278,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case r.fileMetaRoot.shouldWait:
 		return tm, true
 	case r.waitValidatorTicket.ValidatorName != "":
+		return tm, true
+	case len(r.waitShardersFinalizeNearBlocks.Sharders) > 0:
 		return tm, true
 	}
 
@@ -860,6 +868,8 @@ func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err 
 
 		err = r.handleNewBlockWaitingForSharderLFB(block, string(sharder.ID))
 		return
+	case len(r.waitShardersFinalizeNearBlocks.Sharders) > 0:
+		err = r.handleNewBlockWaitingForShardersFinalizeNearBlocks(block)
 	}
 
 	return
@@ -881,6 +891,49 @@ func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error
 	r.waitValidatorTicket = config.WaitValidatorTicket{}
 	r.SetServerState(config.NotifyOnValidationTicketGeneration(false))
 	return nil
+}
+
+func (r *Runner) handleNewBlockWaitingForShardersFinalizeNearBlocks(block *stats.BlockFromSharder) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] got block %v from sharder %v\n", block.Round, block.SenderId)
+	}
+
+	node, ok := r.conf.Nodes.NodeByID(config.NodeID(block.SenderId))
+	if !ok {
+		log.Printf(" [WARN] received block from unknown sharder %v\n", block.SenderId)
+		return
+	}
+
+	r.latestBlock[node.Name] = config.Number(block.Round)
+
+	if len(r.latestBlock) < len(r.waitShardersFinalizeNearBlocks.Sharders) {
+		return
+	}
+
+	max := config.Number(0)
+	min := config.Number(math.MaxInt64)
+	for _, v := range r.latestBlock {
+		if v > max {
+			max = v
+		}
+		if v < min {
+			min = v
+		}
+	}
+
+	if max - min < 5 {
+		if r.verbose {
+			log.Printf(" [INF] ✅ sharders finalized near blocks\n")
+		}
+
+		r.waitShardersFinalizeNearBlocks = config.WaitShardersFinalizeNearBlocks{}
+
+		err = r.SetServerState(&config.NotifyOnBlockGeneration{
+			Enable: false,
+		})
+	}
+
+	return
 }
 
 func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
