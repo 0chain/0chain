@@ -106,6 +106,12 @@ jobs:
         cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
+    - name: Update max faucet limit
+      run: |
+        cd 0chain
+        bash -c 'sed -i "s/max_pour_amount: [0-9]*/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
+        bash -c 'grep max_pour_amount ./docker.local/config/sc.yaml'
+  
     - name: View Change Rounds
       run: |
         cd 0chain
