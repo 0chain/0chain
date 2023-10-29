@@ -12,7 +12,7 @@ services:
     volumes:
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/
-      - ../sharder${SHARDER}/data/postgresql2:/var/lib/postgresql/hdd_ts
+      # - ../sharder${SHARDER}/data/postgresql2:/var/lib/postgresql/hdd_ts
     networks:
       default:
 
