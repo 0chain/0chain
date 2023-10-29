@@ -68,11 +68,11 @@ jobs:
     #     git clone https://github.com/0chain/0chain.git
     #     cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
 
-    # - name: Docker Init Setup.
-    #   run: |
-    #     export HOME="/root"
-    #     sudo apt update -y
-    #     sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+    - name: Docker Init Setup.
+      run: |
+        export HOME="/root"
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
     #     cd 0chain
     #     make install-mockery
     #     make build-mocks
