@@ -777,7 +777,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	if alloc.Stats.UsedSize == 0 {
+	if blobAlloc.Stats.UsedSize == 0 {
 		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
 	}
