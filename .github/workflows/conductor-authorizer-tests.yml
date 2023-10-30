@@ -3,6 +3,9 @@ name: CONDUCTOR AUTHORIZER TESTS
 on:
   schedule:
     - cron: '0 10 * * *'
+  push:
+    branches:
+      - "feature/ct-auth-crash-and-reward"
   workflow_dispatch:
       inputs:
         chain_branch:
@@ -18,6 +21,10 @@ on:
           default: ''
           required: false
         zwalletcli_branch:
+          description: 'Input branch for zwalletcli repo'
+          default: ''
+          required: false
+        zbox_branch:
           description: 'Input branch for zwalletcli repo'
           default: ''
           required: false
@@ -181,6 +188,21 @@ jobs:
     - name: Git clone 0dns
       run: |
         git clone https://github.com/0chain/0dns.git
+    
+    - name: Git clone 0box
+      run: |
+        git clone https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PAT }}@github.com/0chain/0box.git
+        cd 0box
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZBOX_BRANCH="${{ inputs.zbox_branch }}"
+        if [[ -z $ZBOX_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZBOX_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZBOX_BRANCH::${ZBOX_BRANCH}
+        fi
+        echo "Branch name is ${ZBOX_BRANCH}"
+        git checkout ${ZBOX_BRANCH}
 
     - name: list pwd
       run: |
@@ -269,7 +291,8 @@ jobs:
       run: |
         export HOME="/root"
         cd 0chain
-        ./docker.local/bin/start.conductor.sh authorizer
+        # ./docker.local/bin/start.conductor.sh authorizer
+        ./docker.local/bin/start.conductor.sh node-recovery
 
     - uses: actions/upload-artifact@v3
       if: always()

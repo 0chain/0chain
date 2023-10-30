@@ -4,14 +4,23 @@ on:
   schedule:
     # Runs everyday at 02:00 am
     - cron: '0 4 * * *'
-  push:
-    branches:
-      - "feature/ct-auth-crash-and-reward"
   workflow_dispatch:
       inputs:
         branchname:
           description: 'enter your branch name'
           required: true
+        auth_branch:
+          description: 'Input branch for authorizer repo'
+          default: 'sprint-1.11'
+          required: false
+        zboxcli_branch:
+          description: 'Input branch for zboxcli repo'
+          default: 'sprint-1.11'
+          required: false
+        zwalletcli_branch:
+          description: 'Input branch for zwalletcli repo'
+          default: 'sprint-1.11'
+          required: false
 
 jobs:
   CONDUCTOR_NODE_RECOVERY_TESTS:
