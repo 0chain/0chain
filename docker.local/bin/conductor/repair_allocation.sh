@@ -39,17 +39,3 @@ BLOBBER4=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
 # add to read pools
 ./zboxcli/zbox --wallet testing.json rp-lock \
     --tokens 2.0
-
-# create random file
-head -c 5M < /dev/urandom > random.bin
-
-# upload initial file
-./zboxcli/zbox --wallet testing.json upload \
-    --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --localpath=random.bin \
-    --remotepath=/remote/random.bin
-
-# and delete it then
-./zboxcli/zbox --wallet testing.json delete \
-    --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --remotepath=/remote/random.bin

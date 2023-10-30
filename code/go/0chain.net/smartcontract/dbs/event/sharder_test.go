@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -154,9 +153,7 @@ func TestSharders(t *testing.T) {
 				LastHealthCheck: sn.LastHealthCheck,
 			},
 
-			Fees:      sn.Stat.GeneratorFees,
-			Longitude: 0,
-			Latitude:  0,
+			Fees: sn.Stat.GeneratorFees,
 		}
 	}
 
@@ -328,66 +325,6 @@ func TestSharderFilter(t *testing.T) {
 	})
 }
 
-func TestGetSharderLocations(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	eventDb, err := NewEventDbWithoutWorker(access, config.DbSettings{})
-	if err != nil {
-		t.Skip("only for local debugging, requires local postgresql")
-	}
-	defer eventDb.Close()
-	err = eventDb.AutoMigrate()
-	defer func() {
-		err = eventDb.Drop()
-		assert.NoError(t, err, "error while dropping database")
-	}()
-	assert.NoError(t, err, "error while migrating database")
-	createShardersWithLocation(t, eventDb, 12)
-	t.Run("sharder locations without any filters", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{}, common2.Pagination{})
-		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 12, len(locations), "all sharders should be returned")
-		for _, location := range locations {
-			id, err := strconv.ParseInt(location.ID, 10, 0)
-			assert.NoError(t, err, "sharder id should be parsed to integer")
-			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
-			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
-		}
-	})
-	t.Run("locations for sharders which are active", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
-		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
-		for _, location := range locations {
-			id, err := strconv.ParseInt(location.ID, 10, 0)
-			assert.NoError(t, err, "sharder id should be parsed to integer")
-			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
-			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
-		}
-	})
-	t.Run("locations for sharders which are inactive", func(t *testing.T) {
-		locations, err := eventDb.GetSharderGeolocations(SharderQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
-		assert.NoError(t, err, "There should be no error")
-		assert.Equal(t, 6, len(locations), "locations of only active sharders should be returned")
-		for _, location := range locations {
-			id, err := strconv.ParseInt(location.ID, 10, 0)
-			assert.NoError(t, err, "sharder id should be parsed to integer")
-			assert.Equal(t, location.Longitude, float64(100+id), "longitude should match")
-			assert.Equal(t, location.Latitude, float64(100-id), "longitude should match")
-		}
-	})
-}
-
 func createSharders(t *testing.T, eventDb *EventDb, count int) {
 	for i := 0; i < count; i++ {
 		id := fmt.Sprintf("%d", i)
@@ -398,14 +335,6 @@ func createSharders(t *testing.T, eventDb *EventDb, count int) {
 		require.NoError(t, eventDb.Get().Create(&ProviderRewards{
 			ProviderID: id,
 		}).Error)
-	}
-}
-
-func createShardersWithLocation(t *testing.T, eventDb *EventDb, count int) {
-	for i := 0; i < count; i++ {
-		s := Sharder{Active: i%2 == 0, Provider: Provider{ID: fmt.Sprintf("%d", i)}, Longitude: float64(100 + i), Latitude: float64(100 - i)}
-		err := eventDb.addSharders([]Sharder{s})
-		assert.NoError(t, err, "There should be no error")
 	}
 }
 

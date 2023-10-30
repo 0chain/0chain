@@ -34,8 +34,6 @@ func TestUpdateBlobber(t *testing.T) {
 	ids := setUpBlobbers(t, edb, 10, false)
 	var blobber1, blobber2 Blobber
 	blobber1.ID = ids[0]
-	blobber1.Latitude = 7
-	blobber1.Longitude = -31
 	blobber1.WritePrice = 176
 	blobber1.ReadPrice = 1111
 	blobber1.TotalStake = 23
@@ -43,8 +41,6 @@ func TestUpdateBlobber(t *testing.T) {
 	blobber1.LastHealthCheck = common.Timestamp(123)
 
 	blobber2.ID = ids[1]
-	blobber2.Latitude = -87
-	blobber2.Longitude = 3
 	blobber2.WritePrice = 17
 	blobber2.ReadPrice = 1
 	blobber2.TotalStake = 14783
@@ -259,8 +255,6 @@ func TestEventDb_updateBlobbersAllocatedSavedAndHealth(t *testing.T) {
 
 func compareBlobbers(t *testing.T, b1, b2 Blobber) {
 	require.Equal(t, b1.ID, b2.ID)
-	require.Equal(t, b1.Latitude, b2.Latitude)
-	require.Equal(t, b1.Longitude, b2.Longitude)
 	require.Equal(t, b1.WritePrice, b2.WritePrice)
 	require.Equal(t, b1.ReadPrice, b2.ReadPrice)
 	require.Equal(t, b1.TotalStake, b2.TotalStake)

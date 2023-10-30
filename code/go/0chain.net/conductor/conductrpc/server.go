@@ -61,6 +61,12 @@ type AddBlobberEvent struct {
 	Blobber NodeName // the added blobber
 }
 
+// AddValidatorEvent in miner SC.
+type AddValidatorEvent struct {
+	Sender  NodeName // event emitter
+	Validator NodeName // the added validator
+}
+
 // AddAuthorizerEvent in miner SC.
 type AddAuthorizerEvent struct {
 	Sender     NodeName // event emitter
@@ -114,6 +120,8 @@ type Server struct {
 	onAddSharder chan *AddSharderEvent
 	// onAddBlobber occurs where blobber added in storage SC
 	onAddBlobber chan *AddBlobberEvent
+	// onAddValidator occurs where blobber added in storage SC
+	onAddValidator chan *AddValidatorEvent
 	// onAddAuthorizer occurs where authorizer added in storage SC
 	onAddAuthorizer chan *AddAuthorizerEvent
 	// onSharderKeep occurs where miner SC proceed sharder_keep function
@@ -299,6 +307,10 @@ func (s *Server) OnAddSharder() chan *AddSharderEvent {
 
 func (s *Server) OnAddBlobber() chan *AddBlobberEvent {
 	return s.onAddBlobber
+}
+
+func (s *Server) OnAddValidator() chan *AddValidatorEvent {
+	return s.onAddValidator
 }
 
 func (s *Server) OnAddAuthorizer() chan *AddAuthorizerEvent {
