@@ -10,7 +10,7 @@ on:
       inputs:
         chain_branch:
           description: 'Input branch for 0chain repo'
-          default: ''
+          default: 'feature/ct-auth-crash-and-reward'
           required: false
         auth_branch:
           description: 'Input branch for authorizer repo'
