@@ -193,8 +193,6 @@ CREATE TABLE public.authorizers (
                                     last_health_check bigint,
                                     url text,
                                     fee bigint,
-                                    latitude numeric,
-                                    longitude numeric,
                                     creation_round bigint
 );
 
@@ -297,8 +295,6 @@ CREATE TABLE public.blobbers (
                                  downtime bigint,
                                  last_health_check bigint,
                                  base_url text,
-                                 latitude numeric,
-                                 longitude numeric,
                                  read_price bigint,
                                  write_price bigint,
                                  min_lock_demand numeric,
@@ -335,7 +331,7 @@ CREATE TABLE public.blocks (
                                hash text,
                                version text,
                                creation_date bigint,
-                               round bigint,
+                               round bigint NOT NULL,
                                miner_id text,
                                round_random_seed bigint,
                                merkle_tree_root text,
@@ -350,7 +346,7 @@ CREATE TABLE public.blocks (
                                running_txn_count text,
                                round_timeout_count bigint,
                                is_finalised boolean
-);
+) PARTITION BY RANGE (round);
 
 
 ALTER TABLE public.blocks OWNER TO zchain_user;
@@ -641,8 +637,6 @@ CREATE TABLE public.miners (
                                delete boolean,
                                fees bigint,
                                active boolean,
-                               longitude numeric,
-                               latitude numeric,
                                creation_round bigint
 );
 
@@ -937,8 +931,6 @@ CREATE TABLE public.sharders (
                                  delete boolean,
                                  fees bigint,
                                  active boolean,
-                                 longitude numeric,
-                                 latitude numeric,
                                  creation_round bigint
 );
 
@@ -986,7 +978,7 @@ CREATE TABLE public.transactions (
                                      created_at timestamp with time zone,
                                      hash text,
                                      block_hash text,
-                                     round bigint,
+                                     round bigint NOT NULL,
                                      version text,
                                      client_id text,
                                      to_client_id text,
@@ -1000,7 +992,7 @@ CREATE TABLE public.transactions (
                                      transaction_output text,
                                      output_hash text,
                                      status bigint
-);
+) PARTITION BY RANGE (round);
 
 
 ALTER TABLE public.transactions OWNER TO zchain_user;
@@ -1444,7 +1436,7 @@ ALTER TABLE ONLY public.blobbers
 --
 
 ALTER TABLE ONLY public.blocks
-    ADD CONSTRAINT blocks_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT blocks_pkey PRIMARY KEY (id, round);
 
 
 --
@@ -1573,7 +1565,7 @@ ALTER TABLE ONLY public.snapshots
 --
 
 ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT transactions_pkey PRIMARY KEY (id, round);
 
 
 --
@@ -1696,7 +1688,7 @@ CREATE INDEX idx_bcreation_date ON public.blocks USING btree (creation_date);
 -- Name: idx_bhash; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE UNIQUE INDEX idx_bhash ON public.blocks USING btree (hash);
+CREATE UNIQUE INDEX idx_bhash ON public.blocks USING btree (hash, round);
 
 
 --
@@ -1941,7 +1933,7 @@ CREATE INDEX idx_tcreation_date ON public.transactions USING btree (creation_dat
 -- Name: idx_thash; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE UNIQUE INDEX idx_thash ON public.transactions USING btree (hash);
+CREATE UNIQUE INDEX idx_thash ON public.transactions USING btree (hash, round);
 
 
 --
@@ -2030,14 +2022,6 @@ ALTER TABLE ONLY public.allocation_blobber_terms
 
 
 --
--- Name: allocations fk_allocations_user; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.allocations
-    ADD CONSTRAINT fk_allocations_user FOREIGN KEY (owner) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
 -- Name: read_markers fk_blobbers_read_markers; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
 --
 
@@ -2061,23 +2045,6 @@ ALTER TABLE ONLY public.write_markers
 ALTER TABLE ONLY public.read_markers
     ADD CONSTRAINT fk_read_markers_allocation FOREIGN KEY (allocation_id) REFERENCES public.allocations(allocation_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
-
---
--- Name: read_markers fk_read_markers_owner; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.read_markers
-    ADD CONSTRAINT fk_read_markers_owner FOREIGN KEY (owner_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: read_markers fk_read_markers_user; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.read_markers
-    ADD CONSTRAINT fk_read_markers_user FOREIGN KEY (client_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
 --
 -- Name: write_markers fk_write_markers_allocation; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
 --
@@ -2085,13 +2052,6 @@ ALTER TABLE ONLY public.read_markers
 ALTER TABLE ONLY public.write_markers
     ADD CONSTRAINT fk_write_markers_allocation FOREIGN KEY (allocation_id) REFERENCES public.allocations(allocation_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
-
---
--- Name: write_markers fk_write_markers_user; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY public.write_markers
-    ADD CONSTRAINT fk_write_markers_user FOREIGN KEY (client_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 --
 -- PostgreSQL database dump complete

@@ -91,7 +91,6 @@ const (
 	TagFromChallengePool
 	TagAddMint
 	TagBurn
-	TagUpdateBlobberOpenChallenges
 	TagUpdateValidatorStakeTotal
 	TagUpdateMinerTotalStake
 	TagUpdateSharderTotalStake
@@ -148,7 +147,6 @@ func initTagString() {
 	TagString[TagAddTransactions] = "TagAddTransactions"
 	TagString[TagAddOrOverwriteUser] = "TagAddOrOverwriteUser"
 	TagString[TagAddWriteMarker] = "TagAddWriteMarker"
-	TagString[TagAddBlock] = "TagAddBlock"
 	TagString[TagFinalizeBlock] = "TagFinalizeBlock"
 	TagString[TagAddOrOverwiteValidator] = "TagAddOrOverwiteValidator"
 	TagString[TagUpdateValidator] = "TagUpdateValidator"
@@ -189,7 +187,6 @@ func initTagString() {
 	TagString[TagFromChallengePool] = "TagFromChallengePool"
 	TagString[TagAddMint] = "TagAddMint"
 	TagString[TagBurn] = "TagBurn"
-	TagString[TagUpdateBlobberOpenChallenges] = "TagUpdateBlobberOpenChallenges"
 	TagString[TagUpdateValidatorStakeTotal] = "TagUpdateValidatorStakeTotal"
 	TagString[TagUniqueAddress] = "TagUniqueAddress"
 	TagString[TagMinerHealthCheck] = "TagMinerHealthCheck"

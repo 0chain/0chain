@@ -28,21 +28,14 @@ func HealthCheckWriter(w http.ResponseWriter, r *http.Request) {
 	sc.WriteMinioStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 
-	fmt.Fprintf(w, "<tr><td valign='top'><h2>Deep Scan Configuration</h2>")
-	sc.WriteHealthCheckConfiguration(w, DeepScan)
 	fmt.Fprintf(w, "</td><td valign='top'><h2>Proximity Scan Configuration</h2>")
 	sc.WriteHealthCheckConfiguration(w, ProximityScan)
 	fmt.Fprintf(w, "</td></tr>")
 
-	fmt.Fprintf(w, "<tr><td valign='top'><h2>Deep Scan Results - Block Summary</h2>")
-	sc.WriteHealthCheckBlockSummary(w, DeepScan)
 	fmt.Fprintf(w, "</td><td valign='top'><h2>Proximity Scan Results - Block Summary</h2>")
 	sc.WriteHealthCheckBlockSummary(w, ProximityScan)
 	fmt.Fprintf(w, "</td></tr>")
 
-	fmt.Fprintf(w, "<tr><td><h2>Deep Scan Block Statistics</h2>")
-	sc.WriteBlockSyncStatistics(w, DeepScan)
-	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td><h2>Proximity Scan Block Statistics</h2>")
 	sc.WriteBlockSyncStatistics(w, ProximityScan)
 	fmt.Fprintf(w, "</td></tr>")

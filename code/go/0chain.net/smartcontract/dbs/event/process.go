@@ -185,7 +185,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 			mergeAddChallengePoolsEvents(),
 
 			mergeUpdateBlobberChallengesEvents(),
-			mergeAddChallengesToBlobberEvents(),
 			mergeUpdateAllocChallengesEvents(),
 
 			mergeUpdateBlobbersEvents(),
@@ -376,25 +375,23 @@ func (edb *EventDb) WorkAggregates(
 	gSnapshot *Snapshot,
 	blockEvents BlockEvents,
 ) (*Snapshot, error) {
-	if isNotAddBlockEvent(blockEvents) {
-		var err error
-		gSnapshot, err = updateSnapshots(gSnapshot, blockEvents, edb)
-		if err != nil {
-			logging.Logger.Error("snapshot could not be processed",
-				zap.Int64("round", blockEvents.round),
-				zap.String("block", blockEvents.block),
-				zap.Int("block size", blockEvents.blockSize),
-				zap.Error(err),
-			)
-			return nil, err
-		}
-		err = edb.updateUserAggregates(&blockEvents)
-		if err != nil {
-			logging.Logger.Error("user aggregate could not be processed",
-				zap.Error(err),
-			)
-			return nil, err
-		}
+	var err error
+	gSnapshot, err = updateSnapshots(gSnapshot, blockEvents, edb)
+	if err != nil {
+		logging.Logger.Error("snapshot could not be processed",
+			zap.Int64("round", blockEvents.round),
+			zap.String("block", blockEvents.block),
+			zap.Int("block size", blockEvents.blockSize),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+	err = edb.updateUserAggregates(&blockEvents)
+	if err != nil {
+		logging.Logger.Error("user aggregate could not be processed",
+			zap.Error(err),
+		)
+		return nil, err
 	}
 	return gSnapshot, nil
 }
@@ -403,6 +400,16 @@ func (edb *EventDb) managePartitions(round int64) {
 	logging.Logger.Info("managing partitions", zap.Int64("round", round))
 	edb.AddPartitions(round)
 	edb.dropPartitions(round)
+	edb.movePartitions(round)
+}
+
+func (edb *EventDb) movePartitions(round int64) {
+	if err := edb.movePartitionToSlowTableSpace(round, "transactions"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.movePartitionToSlowTableSpace(round, "blocks"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
 }
 
 func (edb *EventDb) AddPartitions(round int64) {
@@ -428,6 +435,12 @@ func (edb *EventDb) AddPartitions(round int64) {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
 	if err := edb.addPartition(round, "user_aggregates"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.addPartition(round, "transactions"); err != nil {
+		logging.Logger.Error("error creating partition", zap.Error(err))
+	}
+	if err := edb.addPartition(round, "blocks"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
 }
@@ -457,10 +470,6 @@ func (edb *EventDb) dropPartitions(round int64) {
 	if err := edb.dropPartition(round, "user_aggregates"); err != nil {
 		logging.Logger.Error("error dropping partition", zap.Error(err))
 	}
-}
-
-func isNotAddBlockEvent(es BlockEvents) bool {
-	return !(len(es.events) == 1 && es.events[0].Type == TypeChain && es.events[0].Tag == TagAddBlock)
 }
 
 func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, error) {
@@ -692,12 +701,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 			return ErrInvalidEventData
 		}
 		return edb.addTransactions(*txns)
-	case TagAddBlock:
-		block, ok := fromEvent[Block](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-		return edb.addOrUpdateBlock(*block)
 	case TagFinalizeBlock:
 		block, ok := fromEvent[Block](event.Data)
 		if !ok {
@@ -848,13 +851,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 
 		return edb.addChallengesToAllocations(*as)
-	case TagUpdateBlobberOpenChallenges:
-		updates, ok := fromEvent[[]Blobber](event.Data)
-		if !ok {
-			return ErrInvalidEventData
-		}
-
-		return edb.updateOpenBlobberChallenges(*updates)
 	case TagUpdateChallenge:
 		chs, ok := fromEvent[[]Challenge](event.Data)
 		if !ok {
@@ -862,7 +858,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateChallenges(*chs)
 	case TagUpdateBlobberChallenge:
-		bs, ok := fromEvent[[]Blobber](event.Data)
+		bs, ok := fromEvent[[]ChallengeStatsDeltas](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}

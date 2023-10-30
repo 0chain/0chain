@@ -32,13 +32,15 @@ tests:
       # Two blobbers would suffice but we need 3 validators and since docker-compose
       # file raises blobber and validator together we are raising 3 blobbers here.
       # We need to decouple this behavior later on.
-      - start: ['blobber-1', 'blobber-2', 'blobber-3']
       - wait_add:
-          blobbers: ['blobber-1', 'blobber-2']
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           timeout: '15m'
+          start: true
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_allocation_only'
+          timeout: '25m'
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           expected_status: 1 # 1 --> pass, 0 --> fail
@@ -74,16 +76,18 @@ tests:
       # Two blobbers would suffice but we need 3 validators and since docker-compose
       # file raises blobber and validator together we are raising 3 blobbers here.
       # We need to decouple this behavior later on.
-      - start: ['blobber-1', 'blobber-2', 'blobber-3']
       - wait_add:
-          blobbers: ['blobber-1', 'blobber-2']
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           timeout: '15m'
+          start: true
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           expected_status: 1 # 1 --> pass, 0 --> fail
           miner: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929" # generate challenge by this miner
       - command:
           name: 'init_allocation'
+          timeout: '25m'
       - wait_blobber_commit:
           timeout: "5m"
       - stop_challenge_generation: false

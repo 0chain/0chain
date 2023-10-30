@@ -354,12 +354,25 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return err
 	}
 
+	changeCount := fb.ClientState.GetChangeCount()
 	ssFTs = time.Now()
 
 	var (
 		wg          = waitgroup.New()
 		deletedNode = fb.ClientState.GetDeletes()
+		sns         = gStateNodeStat.Inc(int64(changeCount))
 	)
+
+	// remove duplicate delete nodes if any
+	deleteMap := make(map[string]struct{}, len(deletedNode))
+	for _, dn := range deletedNode {
+		deleteMap[dn.GetHash()] = struct{}{}
+	}
+
+	logging.Logger.Debug("MPT state node stat - inc",
+		zap.Int64("node num", sns),
+		zap.Int("change num", changeCount),
+		zap.Int("delete num", len(deleteMap)))
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
 		err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
