@@ -139,6 +139,7 @@ func readConfig(configFile string) (conf *config.Config) {
 func readConfigs(configFile string, testsFilesArr []string) (conf *config.Config) {
 	conf = readConfig(configFile)
 
+	fmt.Println("testFilesArr:", testsFilesArr)
 	for _, testsFile := range testsFilesArr {
 		matches, err := filepath.Glob(testsFile)
 		if err != nil {
@@ -192,23 +193,23 @@ type Runner struct {
 	}
 
 	// wait for
-	waitPhase              config.WaitPhase              //
-	waitViewChange         config.WaitViewChange         //
-	waitNodes              map[config.NodeName]struct{}  // (start a node)
-	waitRound              config.WaitRound              //
-	waitContributeMPK      config.WaitContributeMpk      //
-	waitShareSignsOrShares config.WaitShareSignsOrShares //
-	waitAdd                config.WaitAdd                // add_miner, add_sharder
-	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
-	waitNoProgress         config.WaitNoProgress         // no new rounds expected
-	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
-	waitCommand            chan error                    // wait a command
+	waitPhase               config.WaitPhase              //
+	waitViewChange          config.WaitViewChange         //
+	waitNodes               map[config.NodeName]struct{}  // (start a node)
+	waitRound               config.WaitRound              //
+	waitContributeMPK       config.WaitContributeMpk      //
+	waitShareSignsOrShares  config.WaitShareSignsOrShares //
+	waitAdd                 config.WaitAdd                // add_miner, add_sharder
+	waitSharderKeep         config.WaitSharderKeep        // sharder_keep
+	waitNoProgress          config.WaitNoProgress         // no new rounds expected
+	waitNoViewChange        config.WaitNoViewChainge      // no VC expected
+	waitCommand             chan error                    // wait a command
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
-	waitSharderLFB	config.WaitSharderLFB	
-	waitValidatorTicket   config.WaitValidatorTicket
-	aggregatesLock		   sync.Mutex
-	chalConf               *config.GenerateChallege
-	fileMetaRoot           fileMetaRoot
+	waitSharderLFB          config.WaitSharderLFB
+	waitValidatorTicket     config.WaitValidatorTicket
+	aggregatesLock          sync.Mutex
+	chalConf                *config.GenerateChallege
+	fileMetaRoot            fileMetaRoot
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -845,11 +846,11 @@ func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err 
 		if !ok {
 			return fmt.Errorf("expecting block from unknown miner: %s", miner.ID)
 		}
-	
+
 		if r.verbose {
 			log.Printf(" [INF] got sharder block for miner %v, looking for miner %v\n", block.GeneratorId, miner.ID)
 		}
-	
+
 		err = r.handleNewBlockWaitingForMinerBlockGeneration(block, string(miner.ID))
 		return
 	case r.waitSharderLFB.Target != "":
@@ -885,7 +886,7 @@ func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error
 
 func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
 	if block.GeneratorId != string(minerId) {
-		return 
+		return
 	}
 
 	if r.verbose {
@@ -916,13 +917,13 @@ func (r *Runner) handleNewBlockWaitingForSharderLFB(block *stats.BlockFromSharde
 			}
 		}
 
-		if minDiff <=5 {
+		if minDiff <= 5 {
 			if r.verbose {
 				log.Printf(" [INF] ✅ sharder sent LFB %+v\n", block)
 			}
 
 			r.waitSharderLFB = config.WaitSharderLFB{}
-			
+
 			err = r.SetServerState(&config.NotifyOnBlockGeneration{
 				Enable: false,
 			})
@@ -962,13 +963,13 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 		status := m["status"].(int)
 		if r.chalConf.ExpectedStatus != status {
 			return fmt.Errorf("expected challenge status %d, got %d", r.chalConf.ExpectedStatus, status)
-		}	
+		}
 	}
 
 	return nil
 }
 
-func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {	
+func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {
 	blobberId, ok := m["blobber_id"]
 	if !ok {
 		return fmt.Errorf("onGettingFileMetaRoot error: response lacks blobber_id")
@@ -1046,7 +1047,7 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
-		case block := <- r.server.OnSharderBlock():
+		case block := <-r.server.OnSharderBlock():
 			err = r.acceptSharderBlockForMiner(block)
 		case blobberID := <-r.server.OnBlobberCommit():
 			r.onBlobberCommit(blobberID)

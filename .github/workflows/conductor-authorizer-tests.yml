@@ -291,7 +291,6 @@ jobs:
       run: |
         export HOME="/root"
         cd 0chain
-        # ./docker.local/bin/start.conductor.sh authorizer
         ./docker.local/bin/start.conductor.sh node-recovery
 
     - uses: actions/upload-artifact@v3
