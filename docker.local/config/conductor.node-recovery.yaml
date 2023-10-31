@@ -309,7 +309,7 @@ tests:
            authorizers: ['authorizer-1','authorizer-2','authorizer-3','authorizer-4']
            start: true
        - wait_round:
-           shift: 3000
+           shift: 300
        - sync_latest_aggregates:
            authorizers:
              - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
