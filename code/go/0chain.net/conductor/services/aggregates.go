@@ -140,22 +140,19 @@ func (s *AggregateService) CheckAggregateValueChange(ptype ProviderType, pid str
 	
 	cancel := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case <-t.C:
-				if time.Since(ts) > tm {
-					close(cancel)
-					return
-				}
-
-				resp, err := s.getRemoteAggregate(ptype, pid)
-				if err != nil {
-					log.Printf("Error getting aggregates: %v, %v, %v\n", ptype, pid, err)
-					continue
-				}
-
-				s.recv_aggrs <- resp
+		for range t.C {
+			if time.Since(ts) > tm {
+				close(cancel)
+				return
 			}
+
+			resp, err := s.getRemoteAggregate(ptype, pid)
+			if err != nil {
+				log.Printf("Error getting aggregates: %v, %v, %v\n", ptype, pid, err)
+				continue
+			}
+
+			s.recv_aggrs <- resp
 		}
 	}()
 
@@ -191,22 +188,19 @@ func (s *AggregateService) CompareAggregateValue(ptype ProviderType, pid string,
 	
 	cancel := make(chan struct{})
 	go func() {
-		for {
-			select {
-			case <-t.C:
-				if time.Since(ts) > tm {
-					close(cancel)
-					return
-				}
-
-				resp, err := s.getRemoteAggregate(ptype, pid)
-				if err != nil {
-					log.Printf("Error getting aggregates: %v, %v, %v\n", ptype, pid, err)
-					continue
-				}
-
-				s.recv_aggrs <- resp
+		for range t.C {
+			if time.Since(ts) > tm {
+				close(cancel)
+				return
 			}
+
+			resp, err := s.getRemoteAggregate(ptype, pid)
+			if err != nil {
+				log.Printf("Error getting aggregates: %v, %v, %v\n", ptype, pid, err)
+				continue
+			}
+
+			s.recv_aggrs <- resp
 		}
 	}()
 
