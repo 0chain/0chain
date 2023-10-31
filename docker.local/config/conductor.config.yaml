@@ -14,7 +14,7 @@ view_change: 250 # 100
 skip_wait: ["0dns"]
 stuck_warning_threshold: "2s"
 
-aggregate_base_url: "http://198.18.0.95:9081/v2"
+aggregate_base_url: "http://198.18.0.150:9081/v2"
 
 #
 # nodes used in tests

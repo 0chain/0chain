@@ -104,29 +104,29 @@ jobs:
       run: |
         export HOME="/root"
         cd 0chain
+        make install-mockery
+        make build-mocks
         bash ./docker.local/bin/init.setup.sh
-    #     make install-mockery
-    #     make build-mocks
 
     - name: Docker Network Setup.
       run: |
         cd 0chain
         bash ./docker.local/bin/setup.network.sh || true
 
-    # - name: Building Base Images
-    #   run: |
-    #     cd 0chain
-    #     bash ./docker.local/bin/build.base.sh
+    - name: Building Base Images
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.base.sh
 
-    # - name: Build Miner Docker Image For Integration Test.
-    #   run: |
-    #     cd 0chain
-    #     bash ./docker.local/bin/build.miners-integration-tests.sh
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.miners-integration-tests.sh
 
-    # - name: Build Sharder Docker Image For Integration Test.
-    #   run: |
-    #     cd 0chain
-    #     bash ./docker.local/bin/build.sharders-integration-tests.sh
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Update max faucet limit
       run: |
@@ -191,7 +191,7 @@ jobs:
     
     - name: Git clone 0box
       run: |
-        git clone https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PAT }}@github.com/0chain/0box.git
+        git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/0box.git
         cd 0box
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZBOX_BRANCH="${{ inputs.zbox_branch }}"
@@ -203,6 +203,19 @@ jobs:
         fi
         echo "Branch name is ${ZBOX_BRANCH}"
         git checkout ${ZBOX_BRANCH}
+
+    - name: 0box Patching
+      run: |
+        cd 0box
+        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }}
+
+    - name: Build 0box Docker Image For Integration Test.
+      run: |
+        cd 0box
+        ./docker.local/bin/build.base.sh
+        ./docker.local/bin/build.zbox-integration-tests.sh
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' ./docker.local/config/0box.yaml
 
     - name: list pwd
       run: |
@@ -258,7 +271,7 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
-        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/94MznalgOkINSqTNiS65FNMnkn8vLUpv
+        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/VTT3Q9SUeQf4v38EjaHoZwsh6FPh300b
         bridge:
           bridge_address: 0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
           token_address: 0xC79aD1e07f790d0Cf6AA3D09FeC393A09DC53d64
