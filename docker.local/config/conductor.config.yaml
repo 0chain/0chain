@@ -14,7 +14,7 @@ view_change: 250 # 100
 skip_wait: ["0dns"]
 stuck_warning_threshold: "2s"
 
-aggregate_base_url: "http://198.18.0.150:9081/v2"
+aggregate_base_url: "http://198.18.0.95:9081/v2"
 
 #
 # nodes used in tests
@@ -223,28 +223,28 @@ nodes:
   - name: "authorizer-1"
     id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     work_dir: "../token_bridge_authserver/docker.local/auth1"
-    env: AUTHORIZER=1,ETH_MNEMONIC=symbol alley celery diesel donate moral almost opinion achieve since diamond page,ETH_UNLOCKPASSWORD="02289b9",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+    env: AUTHORIZER=1,ETH_MNEMONIC=symbol alley celery diesel donate moral almost opinion achieve since diamond page,ETH_UNLOCKPASSWORD="02289b9",ETH_BRIDGE_ADDRESS=0x71660175fb4639Ae35946b5f86Fb6CeC3DFD15ae
     start_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   - name: "authorizer-2"
     id: 47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a
     work_dir: "../token_bridge_authserver/docker.local/auth2"
-    env: AUTHORIZER=2,ETH_MNEMONIC=office peanut sail help sword minor gospel shoot execute prosper flip know,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+    env: AUTHORIZER=2,ETH_MNEMONIC=office peanut sail help sword minor gospel shoot execute prosper flip know,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x71660175fb4639Ae35946b5f86Fb6CeC3DFD15ae
     start_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   - name: "authorizer-3"
     id: 7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a
     work_dir: "../token_bridge_authserver/docker.local/auth3"
-    env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+    env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x71660175fb4639Ae35946b5f86Fb6CeC3DFD15ae
     start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
   
   - name: "authorizer-4"
     id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
     work_dir: "../token_bridge_authserver/docker.local/auth4"
-    env: AUTHORIZER=4,ETH_MNEMONIC=prize tennis people canoe tongue reform main ghost jelly prefer swear nurse,ETH_UNLOCKPASSWORD="L9gwnf#Gm)bpZLP7",ETH_ADDRESS=0xD21073e6DC7E65aABc8763b9B34AAd9Eb4c8cE65,ETH_PK=0x8f86829881c924854a3ed32e986cb64bde652eb7431cc693a38d20da90319a88
+    env: AUTHORIZER=4,ETH_MNEMONIC=prize tennis people canoe tongue reform main ghost jelly prefer swear nurse,ETH_UNLOCKPASSWORD="L9gwnf#Gm)bpZLP7",ETH_ADDRESS=0xD21073e6DC7E65aABc8763b9B34AAd9Eb4c8cE65,ETH_PK=0x8f86829881c924854a3ed32e986cb64bde652eb7431cc693a38d20da90319a88,ETH_BRIDGE_ADDRESS=0x71660175fb4639Ae35946b5f86Fb6CeC3DFD15ae
     start_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
@@ -260,7 +260,8 @@ nodes:
     id: "0box"
     work_dir: "../0box/"
     env: ""
-    start_command: "../0box/docker.local/bin/start-dev.sh"
+    # start_command: "../0box/docker.local/bin/start-dev.sh"
+    start_command: "docker-compose -p 0box -f ../0box/docker.local/docker-compose-dev.yml up"
     stop_command: "docker-compose -p 0box down && ../0box/docker.local/bin/clean.sh"
 
 # named system commands
