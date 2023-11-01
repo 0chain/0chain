@@ -180,6 +180,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	logging.Logger.Info("Jayash minting", zap.Any("sign", int64(len(payload.Signatures))), zap.Any("sp", sp), zap.Any("share", share), zap.Any("sig", sig.ID))
+
 	err = sp.DistributeRewards(share, sig.ID, spenum.Authorizer, spenum.FeeRewardAuthorizer, ctx)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("failed to retrieve stake pool for authorizer %s", sig.ID))
