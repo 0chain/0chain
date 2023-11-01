@@ -20,6 +20,13 @@ jobs:
     runs-on: [self-hosted, conductor-test03]
 
     steps:
+    - name: Cleanup before restarting conductor tests.
+      run: |
+        docker rm -f $(docker ps -a -q)
+        rm -rf *
+        rm -rf /mnt/hdd/*
+        rm -rf /mnt/ssd/*
+
     - uses: actions/checkout@v1
 
     - name: Get Branch
@@ -106,10 +113,6 @@ jobs:
           conductor/logs/
           docker.local/miner*/log
           docker.local/sharder*/log
-
-    - name: Cleanup
-      run: |
-        rm -rf *
 
     - name: Added /tmp folder cleanup.
       run: |
