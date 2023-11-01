@@ -1,12 +1,12 @@
 version: '3'
 services:
   postgres:
-    container_name: postgres${SHARDER}
+    container_name: sharder-postgres-${SHARDER}
     image: postgres:14
     environment:
       POSTGRES_DB: events_db
       POSTGRES_PORT: 5432
-      POSTGRES_HOST: postgres${SHARDER}
+      POSTGRES_HOST: sharder-postgres-${SHARDER}
       POSTGRES_USER: zchain_user
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_PASSWORD: zchian
@@ -22,10 +22,10 @@ services:
       default:
 
   sharder:
-    container_name: sharder${SHARDER}
+    container_name: sharder-${SHARDER}
     image: "sharder"
     environment:
-      - POSTGRES_HOST=postgres${SHARDER}
+      - POSTGRES_HOST=sharder-postgres-${SHARDER}
       - DOCKER=true
     depends_on:
       - postgres

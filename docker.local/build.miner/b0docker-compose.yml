@@ -1,7 +1,7 @@
 version: '3'
 services:
   redis:
-    container_name: redis${MINER}
+    container_name: redis-${MINER}
     image: "redis:alpine"
     volumes:
       - ../config:/0chain/config
@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
 
   redis_txns:
-    container_name: redis_txns${MINER}
+    container_name: redis_txns-${MINER}
     image: "redis:alpine"
     volumes:
       - ../config:/0chain/config
@@ -27,12 +27,12 @@ services:
     restart: unless-stopped
 
   miner:
-    container_name: miner${MINER}
+    container_name: miner-${MINER}
     image: "miner"
     environment:
       - DOCKER=true
-      - REDIS_HOST=redis${MINER}
-      - REDIS_TXNS=redis_txns${MINER}
+      - REDIS_HOST=redis-${MINER}
+      - REDIS_TXNS=redis_txns-${MINER}
     depends_on:
      - redis
      - redis_txns
