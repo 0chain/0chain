@@ -878,7 +878,7 @@ func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error
 
 	r.waitValidatorTicket = config.WaitValidatorTicket{}
 	err = r.SetServerState(config.NotifyOnValidationTicketGeneration(false))
-	return nil
+	return err
 }
 
 func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
