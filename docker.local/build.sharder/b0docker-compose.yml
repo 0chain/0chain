@@ -11,7 +11,7 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_PASSWORD: zchian
       SLOW_TABLESPACE_PATH: /var/lib/postgresql/hdd_ts
-      SLOW_TABLESPACE: hddtablespace # this should match with the dbs.events.slowtablespace in 0chain.yaml
+      SLOW_TABLESPACE: hdd_tablespace # this should match with the dbs.events.slowtablespace in 0chain.yaml
     volumes:
       - ../config/postgresql.conf:/etc/postgresql/postgresql.conf
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
