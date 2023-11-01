@@ -17,6 +17,7 @@ services:
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    restart: unless-stopped
     networks:
       default:
 
@@ -26,6 +27,8 @@ services:
     environment:
       - POSTGRES_HOST=postgres${SHARDER}
       - DOCKER=true
+    depends_on:
+      - postgres
     volumes:
       - ../config:/0chain/config
       - ../sharder${SHARDER}/log:/0chain/log
@@ -38,6 +41,7 @@ services:
       testnet0:
         ipv4_address: 198.18.0.8${SHARDER}
     command: ./bin/sharder --deployment_mode 0 --keys_file config${KEYS_CONFIG_PATH}/b0snode${SHARDER}_keys.txt ${CLI_ARGS}
+    restart: unless-stopped
 
 networks:
   default:

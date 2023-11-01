@@ -11,6 +11,7 @@ services:
     sysctls:
       net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/state.redis.conf
+    restart: unless-stopped
 
   redis_txns:
     container_name: redis_txns${MINER}
@@ -23,6 +24,7 @@ services:
     sysctls:
       net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/transactions.redis.conf
+    restart: unless-stopped
 
   miner:
     container_name: miner${MINER}
@@ -49,6 +51,7 @@ services:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
     command: ./bin/miner  --deployment_mode 0 --keys_file config${KEYS_CONFIG_PATH}/b0mnode${MINER}_keys.txt --dkg_file config${DKG_CONFIG_PATH}/b0mnode${MINER}_${DKG_AFFIX}dkg.json ${CLI_ARGS}
+    restart: unless-stopped
 
 networks:
   default:
