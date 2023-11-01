@@ -229,6 +229,7 @@ jobs:
       run: |
         cd 0box
         ./docker.local/bin/init.sh
+        ./docker.local/bin/build.base.sh
         ./docker.local/bin/build.zbox-integration-tests.sh
 
     - name: Init setup for blobbers
