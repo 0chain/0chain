@@ -1,31 +1,30 @@
 version: '3'
 services:
   postgres:
+    container_name: postgres${SHARDER}
     image: postgres:14
     environment:
+      POSTGRES_DB: events_db
       POSTGRES_PORT: 5432
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: postgres
+      POSTGRES_HOST: postgres${SHARDER}
+      POSTGRES_USER: zchain_user
       POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_PASSWORD: zchian
       SLOW_TABLESPACE_PATH: /var/lib/postgresql/hdd_ts
       SLOW_TABLESPACE: hddtablespace # this should match with the dbs.events.slowtablespace in 0chain.yaml
     volumes:
+      - ../config/postgresql.conf:/etc/postgresql/postgresql.conf
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     networks:
       default:
 
   sharder:
+    container_name: sharder${SHARDER}
     image: "sharder"
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.5'
-    #       memory: 500M
-    #     reservations:
-    #       cpus: '0.1'
-    #       memory: 100M
     environment:
+      - POSTGRES_HOST=postgres${SHARDER}
       - DOCKER=true
     volumes:
       - ../config:/0chain/config

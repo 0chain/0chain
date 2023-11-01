@@ -1,6 +1,7 @@
 version: '3'
 services:
   redis:
+    container_name: redis${MINER}
     image: "redis:alpine"
     volumes:
       - ../config:/0chain/config
@@ -12,6 +13,7 @@ services:
     command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
+    container_name: redis_txns${MINER}
     image: "redis:alpine"
     volumes:
       - ../config:/0chain/config
@@ -23,19 +25,12 @@ services:
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
+    container_name: miner${MINER}
     image: "miner"
-    # deploy:
-    #   resources:
-    #     limits:
-    #       cpus: '0.25'
-    #       memory: 250M
-    #     reservations:
-    #       cpus: '0.1'
-    #       memory: 100M
     environment:
       - DOCKER=true
-      - REDIS_HOST=redis
-      - REDIS_TXNS=redis_txns
+      - REDIS_HOST=redis${MINER}
+      - REDIS_TXNS=redis_txns${MINER}
     depends_on:
      - redis
      - redis_txns
