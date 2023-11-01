@@ -20,6 +20,12 @@ import (
 
 // Mint inputData - is a MintPayload
 func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (resp string, err error) {
+	logging.Logger.Info("Jayash Minting", zap.Any("inputData", string(inputData)))
+
+	defer func() {
+		logging.Logger.Info("Jayash differ", zap.Any("resp", resp), zap.Any("err", err))
+	}()
+
 	const (
 		code = "failed to mint"
 	)
