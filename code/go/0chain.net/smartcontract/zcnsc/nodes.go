@@ -364,8 +364,15 @@ func (an *AuthorizerNode) ToEvent() *event.Authorizer {
 		an.Config = new(AuthorizerConfig)
 	}
 	return &event.Authorizer{
-		Provider: event.Provider{ID: an.ID},
-		Fee:      an.Config.Fee,
+		Provider: event.Provider{
+			ID: an.ID,
+			Rewards: event.ProviderRewards{
+				ProviderID: an.ID,
+			},
+			LastHealthCheck: an.LastHealthCheck,
+			IsKilled:        an.Provider.IsKilled(),
+		},
+		Fee: an.Config.Fee,
 
 		URL: an.URL,
 	}
