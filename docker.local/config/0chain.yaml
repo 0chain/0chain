@@ -135,7 +135,7 @@ server_chain:
       max_idle_conns: 100
       max_open_conns: 200
       conn_max_lifetime: 20s
-      slowtablespace: hddtablespace
+      slowtablespace: hdd_tablespace
     settings:
       # event database settings blockchain
       debug: false
