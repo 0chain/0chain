@@ -18,12 +18,24 @@ jobs:
     steps:
     - name: Cleanup before restarting conductor tests.
       run: |
+        docker rm -f $(docker ps -a -q)
         rm -rf *
-      
-    - name: Go 1.20 setup.
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.20'
+        rm -rf /mnt/hdd/*
+        rm -rf /mnt/ssd/*
+
+    - name: "Setup Go"
+      shell: 'script --return --quiet --command "bash {0}"'
+      run: |
+        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
+        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
+        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
+        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
+
+        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+        export PATH=$PATH:/usr/local/go/bin
+        export HOME="/root"
+        which go
+        go env
 
     - name: Docker Compose Setup.
       run: |
@@ -44,7 +56,7 @@ jobs:
            BRANCH="${{ inputs.branchname }}"
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
-        else        
+        else
            BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
@@ -194,7 +206,6 @@ jobs:
     - name: Added /tmp folder cleanup.
       run: |
         cd /tmp
-        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
