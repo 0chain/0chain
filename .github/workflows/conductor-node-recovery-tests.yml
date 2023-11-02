@@ -36,7 +36,7 @@ jobs:
     steps:
     - name: Cleanup before restarting conductor tests.
       run: |
-        docker rm -f $(docker ps -a -q)
+        [ $(docker ps -a -q) ] && docker rm -f $(docker ps -a -q)
         rm -rf *
         rm -rf /mnt/hdd/*
         rm -rf /mnt/ssd/*
