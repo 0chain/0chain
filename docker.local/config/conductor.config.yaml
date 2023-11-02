@@ -11,7 +11,7 @@ cleanup_command: "./docker.local/bin/docker-clean.sh"
 # number of rounds per view change
 view_change: 250 # 100
 # skip 0dns from initialization message waiting
-skip_wait: ["0dns","0box"]
+skip_wait: ["0dns"]
 stuck_warning_threshold: "2s"
 
 aggregate_base_url: "http://localhost:9081/v2"
@@ -261,7 +261,7 @@ nodes:
     id: "0box"
     work_dir: "../0box/"
     env: ""
-    start_command: "./docker.local/bin/start-dev.sh"
+    start_command: "./docker.local/bin/start-dev-no-auth.sh"
     stop_command: "docker compoer -p 0box down && ./docker.local/bin/clean.sh"
 
 # named system commands
