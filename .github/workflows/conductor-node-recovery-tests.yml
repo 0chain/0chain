@@ -197,7 +197,13 @@ jobs:
         fi
         echo "Branch name is ${ZBOX_BRANCH}"
         git checkout ${ZBOX_BRANCH}
-  
+
+    - name: 0box Patching
+      run: |
+        cd 0box
+        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }}
+
     - name: list pwd
       run: |
         ls -lha
