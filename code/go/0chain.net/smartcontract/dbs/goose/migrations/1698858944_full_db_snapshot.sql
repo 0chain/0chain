@@ -177,27 +177,6 @@ ALTER TABLE authorizer_aggregates_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE authorizer_aggregates_id_seq OWNED BY authorizer_aggregates.id;
 
-
---
--- Name: authorizer_aggregates_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE authorizer_aggregates_0 (
-    id bigint DEFAULT nextval('authorizer_aggregates_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    authorizer_id text,
-    round bigint NOT NULL,
-    fee bigint,
-    total_stake bigint,
-    total_rewards bigint,
-    service_charge numeric,
-    total_mint bigint DEFAULT 0 NOT NULL,
-    total_burn bigint DEFAULT 0 NOT NULL
-);
-
-
-ALTER TABLE authorizer_aggregates_0 OWNER TO zchain_user;
-
 --
 -- Name: authorizer_snapshots; Type: TABLE; Schema: public; Owner: zchain_user
 --
@@ -301,39 +280,6 @@ ALTER TABLE blobber_aggregates_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE blobber_aggregates_id_seq OWNED BY blobber_aggregates.id;
 
-
---
--- Name: blobber_aggregates_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE blobber_aggregates_0 (
-    id bigint DEFAULT nextval('blobber_aggregates_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    blobber_id text,
-    round bigint NOT NULL,
-    write_price bigint,
-    capacity bigint,
-    allocated bigint,
-    saved_data bigint,
-    read_data bigint,
-    offers_total bigint,
-    total_stake bigint,
-    total_service_charge bigint,
-    total_rewards bigint,
-    challenges_passed bigint,
-    challenges_completed bigint,
-    open_challenges bigint,
-    inactive_rounds bigint,
-    rank_metric numeric,
-    downtime bigint,
-    total_storage_income bigint DEFAULT 0 NOT NULL,
-    total_read_income bigint DEFAULT 0 NOT NULL,
-    total_slashed_stake bigint DEFAULT 0 NOT NULL,
-    total_block_rewards bigint DEFAULT 0 NOT NULL
-);
-
-
-ALTER TABLE blobber_aggregates_0 OWNER TO zchain_user;
 
 --
 -- Name: blobber_snapshots; Type: TABLE; Schema: public; Owner: zchain_user
@@ -468,37 +414,6 @@ ALTER TABLE blocks_id_seq OWNER TO zchain_user;
 --
 
 ALTER SEQUENCE blocks_id_seq OWNED BY blocks.id;
-
-
---
--- Name: blocks_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE blocks_0 (
-    id bigint DEFAULT nextval('blocks_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
-    hash text,
-    version text,
-    creation_date bigint,
-    round bigint NOT NULL,
-    miner_id text,
-    round_random_seed bigint,
-    merkle_tree_root text,
-    state_hash text,
-    receipt_merkle_tree_root text,
-    num_txns bigint,
-    magic_block_hash text,
-    prev_hash text,
-    signature text,
-    chain_id text,
-    state_changes_count bigint,
-    running_txn_count text,
-    round_timeout_count bigint
-);
-
-
-ALTER TABLE blocks_0 OWNER TO zchain_user;
 
 --
 -- Name: burn_tickets; Type: TABLE; Schema: public; Owner: zchain_user
@@ -718,24 +633,6 @@ ALTER TABLE events_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE events_id_seq OWNED BY events.id;
 
-
---
--- Name: events_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE events_0 (
-    id bigint DEFAULT nextval('events_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    block_number bigint NOT NULL,
-    tx_hash text,
-    type bigint,
-    tag bigint,
-    index text
-);
-
-
-ALTER TABLE events_0 OWNER TO zchain_user;
-
 --
 -- Name: miner_aggregates; Type: TABLE; Schema: public; Owner: zchain_user
 --
@@ -774,25 +671,6 @@ ALTER TABLE miner_aggregates_id_seq OWNER TO zchain_user;
 --
 
 ALTER SEQUENCE miner_aggregates_id_seq OWNED BY miner_aggregates.id;
-
-
---
--- Name: miner_aggregates_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE miner_aggregates_0 (
-    id bigint DEFAULT nextval('miner_aggregates_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    miner_id text,
-    round bigint NOT NULL,
-    fees bigint,
-    total_stake bigint,
-    total_rewards bigint,
-    service_charge numeric
-);
-
-
-ALTER TABLE miner_aggregates_0 OWNER TO zchain_user;
 
 --
 -- Name: miner_snapshots; Type: TABLE; Schema: public; Owner: zchain_user
@@ -1124,25 +1002,6 @@ ALTER TABLE sharder_aggregates_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE sharder_aggregates_id_seq OWNED BY sharder_aggregates.id;
 
-
---
--- Name: sharder_aggregates_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE sharder_aggregates_0 (
-    id bigint DEFAULT nextval('sharder_aggregates_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    sharder_id text,
-    round bigint NOT NULL,
-    fees bigint,
-    total_stake bigint,
-    total_rewards bigint,
-    service_charge numeric
-);
-
-
-ALTER TABLE sharder_aggregates_0 OWNER TO zchain_user;
-
 --
 -- Name: sharder_snapshots; Type: TABLE; Schema: public; Owner: zchain_user
 --
@@ -1240,48 +1099,6 @@ PARTITION BY RANGE (round);
 ALTER TABLE snapshots OWNER TO zchain_user;
 
 --
--- Name: snapshots_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE snapshots_0 (
-    round bigint NOT NULL,
-    total_mint bigint,
-    total_challenge_pools bigint,
-    active_allocated_delta bigint,
-    zcn_supply bigint,
-    total_value_locked bigint,
-    client_locks bigint,
-    mined_total bigint,
-    total_staked bigint,
-    total_rewards bigint,
-    successful_challenges bigint,
-    total_challenges bigint,
-    allocated_storage bigint,
-    max_capacity_storage bigint,
-    staked_storage bigint,
-    used_storage bigint,
-    transactions_count bigint,
-    unique_addresses bigint,
-    block_count bigint,
-    created_at bigint,
-    miner_count bigint DEFAULT 0,
-    sharder_count bigint DEFAULT 0,
-    blobber_count bigint DEFAULT 0,
-    authorizer_count bigint DEFAULT 0,
-    validator_count bigint DEFAULT 0,
-    total_txn_fee bigint DEFAULT 0,
-    blobbers_stake bigint DEFAULT 0,
-    storage_token_stake bigint DEFAULT 0 NOT NULL,
-    miner_total_rewards bigint DEFAULT 0 NOT NULL,
-    sharder_total_rewards bigint DEFAULT 0 NOT NULL,
-    blobber_total_rewards bigint DEFAULT 0 NOT NULL,
-    total_read_pool_locked bigint DEFAULT 0 NOT NULL
-);
-
-
-ALTER TABLE snapshots_0 OWNER TO zchain_user;
-
---
 -- Name: transaction_errors; Type: TABLE; Schema: public; Owner: zchain_user
 --
 
@@ -1366,35 +1183,6 @@ ALTER TABLE transactions_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE transactions_id_seq OWNED BY transactions.id;
 
-
---
--- Name: transactions_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE transactions_0 (
-    id bigint DEFAULT nextval('transactions_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    hash text,
-    block_hash text,
-    round bigint NOT NULL,
-    version text,
-    client_id text,
-    to_client_id text,
-    transaction_data text,
-    value bigint,
-    signature text,
-    creation_date bigint,
-    fee bigint,
-    nonce bigint,
-    transaction_type bigint,
-    transaction_output text,
-    output_hash text,
-    status bigint
-);
-
-
-ALTER TABLE transactions_0 OWNER TO zchain_user;
-
 --
 -- Name: user_aggregates; Type: TABLE; Schema: public; Owner: zchain_user
 --
@@ -1413,24 +1201,6 @@ PARTITION BY RANGE (round);
 
 
 ALTER TABLE user_aggregates OWNER TO zchain_user;
-
---
--- Name: user_aggregates_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE user_aggregates_0 (
-    user_id text NOT NULL,
-    round bigint NOT NULL,
-    collected_reward bigint,
-    total_stake bigint,
-    read_pool_total bigint,
-    write_pool_total bigint,
-    payed_fees bigint,
-    created_at timestamp with time zone
-);
-
-
-ALTER TABLE user_aggregates_0 OWNER TO zchain_user;
 
 --
 -- Name: user_snapshots; Type: TABLE; Schema: public; Owner: zchain_user
@@ -1530,24 +1300,6 @@ ALTER TABLE validator_aggregates_id_seq OWNER TO zchain_user;
 
 ALTER SEQUENCE validator_aggregates_id_seq OWNED BY validator_aggregates.id;
 
-
---
--- Name: validator_aggregates_0; Type: TABLE; Schema: public; Owner: zchain_user
---
-
-CREATE TABLE validator_aggregates_0 (
-    id bigint DEFAULT nextval('validator_aggregates_id_seq'::regclass) NOT NULL,
-    created_at timestamp with time zone,
-    validator_id text,
-    round bigint NOT NULL,
-    total_stake bigint,
-    total_rewards bigint,
-    service_charge numeric
-);
-
-
-ALTER TABLE validator_aggregates_0 OWNER TO zchain_user;
-
 --
 -- Name: validator_snapshots; Type: TABLE; Schema: public; Owner: zchain_user
 --
@@ -1635,77 +1387,6 @@ ALTER TABLE write_markers_id_seq OWNER TO zchain_user;
 --
 
 ALTER SEQUENCE write_markers_id_seq OWNED BY write_markers.id;
-
-
---
--- Name: authorizer_aggregates_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY authorizer_aggregates ATTACH PARTITION authorizer_aggregates_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: blobber_aggregates_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY blobber_aggregates ATTACH PARTITION blobber_aggregates_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: blocks_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY blocks ATTACH PARTITION blocks_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: events_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY events ATTACH PARTITION events_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: miner_aggregates_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY miner_aggregates ATTACH PARTITION miner_aggregates_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: sharder_aggregates_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY sharder_aggregates ATTACH PARTITION sharder_aggregates_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: snapshots_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY snapshots ATTACH PARTITION snapshots_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: transactions_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY transactions ATTACH PARTITION transactions_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: user_aggregates_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY user_aggregates ATTACH PARTITION user_aggregates_0 FOR VALUES FROM ('0') TO ('100000');
-
-
---
--- Name: validator_aggregates_0; Type: TABLE ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY validator_aggregates ATTACH PARTITION validator_aggregates_0 FOR VALUES FROM ('0') TO ('100000');
-
 
 --
 -- Name: allocation_blobber_terms id; Type: DEFAULT; Schema: public; Owner: zchain_user
@@ -1887,14 +1568,6 @@ ALTER TABLE ONLY authorizer_aggregates
 
 
 --
--- Name: authorizer_aggregates_0 authorizer_aggregates_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY authorizer_aggregates_0
-    ADD CONSTRAINT authorizer_aggregates_0_pkey PRIMARY KEY (id, round);
-
-
---
 -- Name: authorizers authorizers_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
 --
 
@@ -1908,15 +1581,6 @@ ALTER TABLE ONLY authorizers
 
 ALTER TABLE ONLY blobber_aggregates
     ADD CONSTRAINT blobber_aggregates_pkey PRIMARY KEY (id, round);
-
-
---
--- Name: blobber_aggregates_0 blobber_aggregates_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY blobber_aggregates_0
-    ADD CONSTRAINT blobber_aggregates_0_pkey PRIMARY KEY (id, round);
-
 
 --
 -- Name: blobbers blobbers_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
@@ -1932,15 +1596,6 @@ ALTER TABLE ONLY blobbers
 
 ALTER TABLE ONLY blocks
     ADD CONSTRAINT blocks_pkey PRIMARY KEY (id, round);
-
-
---
--- Name: blocks_0 blocks_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY blocks_0
-    ADD CONSTRAINT blocks_0_pkey PRIMARY KEY (id, round);
-
 
 --
 -- Name: challenge_pools challenge_pools_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
@@ -1981,29 +1636,12 @@ ALTER TABLE ONLY errors
 ALTER TABLE ONLY events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id, block_number);
 
-
---
--- Name: events_0 events_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY events_0
-    ADD CONSTRAINT events_0_pkey PRIMARY KEY (id, block_number);
-
 --
 -- Name: miner_aggregates miner_aggregates_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
 --
 
 ALTER TABLE ONLY miner_aggregates
     ADD CONSTRAINT miner_aggregates_pkey PRIMARY KEY (id, round);
-
-
---
--- Name: miner_aggregates_0 miner_aggregates_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY miner_aggregates_0
-    ADD CONSTRAINT miner_aggregates_0_pkey PRIMARY KEY (id, round);
-
 
 --
 -- Name: miners miners_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
@@ -2068,15 +1706,6 @@ ALTER TABLE ONLY reward_providers
 ALTER TABLE ONLY sharder_aggregates
     ADD CONSTRAINT sharder_aggregates_pkey PRIMARY KEY (id, round);
 
-
---
--- Name: sharder_aggregates_0 sharder_aggregates_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY sharder_aggregates_0
-    ADD CONSTRAINT sharder_aggregates_0_pkey PRIMARY KEY (id, round);
-
-
 --
 -- Name: sharders sharders_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
 --
@@ -2091,15 +1720,6 @@ ALTER TABLE ONLY sharders
 
 ALTER TABLE ONLY snapshots
     ADD CONSTRAINT snapshots_pkey PRIMARY KEY (round);
-
-
---
--- Name: snapshots_0 snapshots_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY snapshots_0
-    ADD CONSTRAINT snapshots_0_pkey PRIMARY KEY (round);
-
 
 --
 -- Name: transaction_errors transaction_errors_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
@@ -2116,30 +1736,12 @@ ALTER TABLE ONLY transaction_errors
 ALTER TABLE ONLY transactions
     ADD CONSTRAINT transactions_pkey PRIMARY KEY (id, round);
 
-
---
--- Name: transactions_0 transactions_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY transactions_0
-    ADD CONSTRAINT transactions_0_pkey PRIMARY KEY (id, round);
-
-
 --
 -- Name: user_aggregates user_aggregates_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
 --
 
 ALTER TABLE ONLY user_aggregates
     ADD CONSTRAINT user_aggregates_pkey PRIMARY KEY (user_id, round);
-
-
---
--- Name: user_aggregates_0 user_aggregates_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY user_aggregates_0
-    ADD CONSTRAINT user_aggregates_0_pkey PRIMARY KEY (user_id, round);
-
 
 --
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
@@ -2155,15 +1757,6 @@ ALTER TABLE ONLY users
 
 ALTER TABLE ONLY validator_aggregates
     ADD CONSTRAINT validator_aggregates_pkey PRIMARY KEY (id, round);
-
-
---
--- Name: validator_aggregates_0 validator_aggregates_0_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
---
-
-ALTER TABLE ONLY validator_aggregates_0
-    ADD CONSTRAINT validator_aggregates_0_pkey PRIMARY KEY (id, round);
-
 
 --
 -- Name: validators validators_pkey; Type: CONSTRAINT; Schema: public; Owner: zchain_user
@@ -2187,27 +1780,11 @@ ALTER TABLE ONLY write_markers
 
 CREATE UNIQUE INDEX idx_authorizer_aggregate ON ONLY authorizer_aggregates USING btree (authorizer_id, round);
 
-
---
--- Name: authorizer_aggregates_0_authorizer_id_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX authorizer_aggregates_0_authorizer_id_round_idx ON authorizer_aggregates_0 USING btree (authorizer_id, round);
-
-
 --
 -- Name: idx_authorizer_aggregates_repl; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
 CREATE INDEX idx_authorizer_aggregates_repl ON ONLY authorizer_aggregates USING btree (round, authorizer_id);
-
-
---
--- Name: authorizer_aggregates_0_round_authorizer_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX authorizer_aggregates_0_round_authorizer_id_idx ON authorizer_aggregates_0 USING btree (round, authorizer_id);
-
 
 --
 -- Name: authorizer_snapshots_authorizer_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
@@ -2222,27 +1799,11 @@ CREATE UNIQUE INDEX authorizer_snapshots_authorizer_id_idx ON authorizer_snapsho
 
 CREATE UNIQUE INDEX idx_blobber_aggregate ON ONLY blobber_aggregates USING btree (round, blobber_id);
 
-
---
--- Name: blobber_aggregates_0_round_blobber_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX blobber_aggregates_0_round_blobber_id_idx ON blobber_aggregates_0 USING btree (round, blobber_id);
-
-
 --
 -- Name: idx_blobber_aggregates_repl; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
 CREATE INDEX idx_blobber_aggregates_repl ON ONLY blobber_aggregates USING btree (round, blobber_id);
-
-
---
--- Name: blobber_aggregates_0_round_blobber_id_idx1; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX blobber_aggregates_0_round_blobber_id_idx1 ON blobber_aggregates_0 USING btree (round, blobber_id);
-
 
 --
 -- Name: blobber_snapshots_blobber_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
@@ -2257,27 +1818,11 @@ CREATE UNIQUE INDEX blobber_snapshots_blobber_id_idx ON blobber_snapshots USING 
 
 CREATE UNIQUE INDEX idx_bhash ON ONLY blocks USING btree (hash, round);
 
-
---
--- Name: blocks_0_hash_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX blocks_0_hash_round_idx ON blocks_0 USING btree (hash, round);
-
-
 --
 -- Name: idx_bround; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
 CREATE INDEX idx_bround ON ONLY blocks USING btree (round);
-
-
---
--- Name: blocks_0_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX blocks_0_round_idx ON blocks_0 USING btree (round);
-
 
 --
 -- Name: idx_alloc_blob; Type: INDEX; Schema: public; Owner: zchain_user
@@ -2544,21 +2089,6 @@ CREATE INDEX idx_wblocknum ON write_markers USING btree (block_number);
 
 CREATE UNIQUE INDEX idx_write_markers_transaction_id ON write_markers USING btree (transaction_id);
 
-
---
--- Name: miner_aggregates_0_miner_id_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX miner_aggregates_0_miner_id_round_idx ON miner_aggregates_0 USING btree (miner_id, round);
-
-
---
--- Name: miner_aggregates_0_round_miner_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX miner_aggregates_0_round_miner_id_idx ON miner_aggregates_0 USING btree (round, miner_id);
-
-
 --
 -- Name: miner_snapshots_miner_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
 --
@@ -2572,300 +2102,17 @@ CREATE UNIQUE INDEX miner_snapshots_miner_id_idx ON miner_snapshots USING btree 
 
 CREATE UNIQUE INDEX ppp ON delegate_pools USING btree (pool_id, provider_type, provider_id);
 
-
---
--- Name: sharder_aggregates_0_round_sharder_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX sharder_aggregates_0_round_sharder_id_idx ON sharder_aggregates_0 USING btree (round, sharder_id);
-
-
---
--- Name: sharder_aggregates_0_sharder_id_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX sharder_aggregates_0_sharder_id_round_idx ON sharder_aggregates_0 USING btree (sharder_id, round);
-
-
 --
 -- Name: sharder_snapshots_sharder_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
 CREATE UNIQUE INDEX sharder_snapshots_sharder_id_idx ON sharder_snapshots USING btree (sharder_id);
 
-
---
--- Name: transactions_0_block_hash_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX transactions_0_block_hash_idx ON transactions_0 USING btree (block_hash);
-
-
---
--- Name: transactions_0_client_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX transactions_0_client_id_idx ON transactions_0 USING btree (client_id);
-
-
---
--- Name: transactions_0_hash_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX transactions_0_hash_round_idx ON transactions_0 USING btree (hash, round);
-
-
---
--- Name: transactions_0_round_hash_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX transactions_0_round_hash_idx ON transactions_0 USING btree (round, hash);
-
-
---
--- Name: transactions_0_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX transactions_0_round_idx ON transactions_0 USING btree (round);
-
-
---
--- Name: transactions_0_to_client_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX transactions_0_to_client_id_idx ON transactions_0 USING btree (to_client_id);
-
-
---
--- Name: user_aggregates_0_round_user_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX user_aggregates_0_round_user_id_idx ON user_aggregates_0 USING btree (round, user_id);
-
-
---
--- Name: validator_aggregates_0_round_validator_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE INDEX validator_aggregates_0_round_validator_id_idx ON validator_aggregates_0 USING btree (round, validator_id);
-
-
---
--- Name: validator_aggregates_0_validator_id_round_idx; Type: INDEX; Schema: public; Owner: zchain_user
---
-
-CREATE UNIQUE INDEX validator_aggregates_0_validator_id_round_idx ON validator_aggregates_0 USING btree (validator_id, round);
-
-
 --
 -- Name: validator_snapshots_validator_id_idx; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
 CREATE UNIQUE INDEX validator_snapshots_validator_id_idx ON validator_snapshots USING btree (validator_id);
-
-
---
--- Name: authorizer_aggregates_0_authorizer_id_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_authorizer_aggregate ATTACH PARTITION authorizer_aggregates_0_authorizer_id_round_idx;
-
-
---
--- Name: authorizer_aggregates_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX authorizer_aggregates_pkey ATTACH PARTITION authorizer_aggregates_0_pkey;
-
-
---
--- Name: authorizer_aggregates_0_round_authorizer_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_authorizer_aggregates_repl ATTACH PARTITION authorizer_aggregates_0_round_authorizer_id_idx;
-
-
---
--- Name: blobber_aggregates_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX blobber_aggregates_pkey ATTACH PARTITION blobber_aggregates_0_pkey;
-
-
---
--- Name: blobber_aggregates_0_round_blobber_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_blobber_aggregate ATTACH PARTITION blobber_aggregates_0_round_blobber_id_idx;
-
-
---
--- Name: blobber_aggregates_0_round_blobber_id_idx1; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_blobber_aggregates_repl ATTACH PARTITION blobber_aggregates_0_round_blobber_id_idx1;
-
-
---
--- Name: blocks_0_hash_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_bhash ATTACH PARTITION blocks_0_hash_round_idx;
-
-
---
--- Name: blocks_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX blocks_pkey ATTACH PARTITION blocks_0_pkey;
-
-
---
--- Name: blocks_0_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_bround ATTACH PARTITION blocks_0_round_idx;
-
-
---
--- Name: events_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX events_pkey ATTACH PARTITION events_0_pkey;
-
-
---
--- Name: miner_aggregates_0_miner_id_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_miner_aggregate ATTACH PARTITION miner_aggregates_0_miner_id_round_idx;
-
-
---
--- Name: miner_aggregates_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX miner_aggregates_pkey ATTACH PARTITION miner_aggregates_0_pkey;
-
-
---
--- Name: miner_aggregates_0_round_miner_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_miner_aggregates_repl ATTACH PARTITION miner_aggregates_0_round_miner_id_idx;
-
-
---
--- Name: sharder_aggregates_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX sharder_aggregates_pkey ATTACH PARTITION sharder_aggregates_0_pkey;
-
-
---
--- Name: sharder_aggregates_0_round_sharder_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_sharder_aggregates_repl ATTACH PARTITION sharder_aggregates_0_round_sharder_id_idx;
-
-
---
--- Name: sharder_aggregates_0_sharder_id_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_sharder_aggregate ATTACH PARTITION sharder_aggregates_0_sharder_id_round_idx;
-
-
---
--- Name: snapshots_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX snapshots_pkey ATTACH PARTITION snapshots_0_pkey;
-
-
---
--- Name: transactions_0_block_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_tblock_hash ATTACH PARTITION transactions_0_block_hash_idx;
-
-
---
--- Name: transactions_0_client_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_tclient_id ATTACH PARTITION transactions_0_client_id_idx;
-
-
---
--- Name: transactions_0_hash_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_thash ATTACH PARTITION transactions_0_hash_round_idx;
-
-
---
--- Name: transactions_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX transactions_pkey ATTACH PARTITION transactions_0_pkey;
-
-
---
--- Name: transactions_0_round_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_tround_thash ATTACH PARTITION transactions_0_round_hash_idx;
-
-
---
--- Name: transactions_0_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_tround ATTACH PARTITION transactions_0_round_idx;
-
-
---
--- Name: transactions_0_to_client_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_tto_client_id ATTACH PARTITION transactions_0_to_client_id_idx;
-
-
---
--- Name: user_aggregates_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX user_aggregates_pkey ATTACH PARTITION user_aggregates_0_pkey;
-
-
---
--- Name: user_aggregates_0_round_user_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_user_aggregate ATTACH PARTITION user_aggregates_0_round_user_id_idx;
-
-
---
--- Name: validator_aggregates_0_pkey; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX validator_aggregates_pkey ATTACH PARTITION validator_aggregates_0_pkey;
-
-
---
--- Name: validator_aggregates_0_round_validator_id_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_validator_aggregates_repl ATTACH PARTITION validator_aggregates_0_round_validator_id_idx;
-
-
---
--- Name: validator_aggregates_0_validator_id_round_idx; Type: INDEX ATTACH; Schema: public; Owner: zchain_user
---
-
-ALTER INDEX idx_validator_aggregate ATTACH PARTITION validator_aggregates_0_validator_id_round_idx;
-
 
 --
 -- Name: allocation_blobber_terms fk_allocations_terms; Type: FK CONSTRAINT; Schema: public; Owner: zchain_user
