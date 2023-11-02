@@ -752,7 +752,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			tii.futureTxns[txn.ClientID] = list
 			if debugTxn {
 				logging.Logger.Debug("generate block - future transaction",
-					zap.Any("txn", txn),
+					zap.String("txn", txn.Hash),
 					zap.Int64("round", b.Round),
 					zap.Int32("iterate count", tii.count))
 			}
