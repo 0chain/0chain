@@ -261,7 +261,7 @@ nodes:
     id: "0box"
     work_dir: "../0box/"
     env: ""
-    start_command: "./docker.local/bin/start-dev-no-auth.sh"
+    start_command: "./docker.local/bin/start-dev.sh"
     stop_command: "docker compoer -p 0box down && ./docker.local/bin/clean.sh"
 
 # named system commands
