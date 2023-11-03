@@ -22,7 +22,8 @@ import (
 var ErrInvalidEventData = errors.New("invalid event data")
 
 const ERROR_CREATING_PARTITION = "error creating partition"
-const ERROR_DROPPING_PARTITION = "error creating partition"
+const ERROR_DROPPING_PARTITION = "error dropping partition"
+const ERROR_MOVING_PARTITION = "error moving partition"
 
 type (
 	ProcessEventsOptions struct {
@@ -408,10 +409,10 @@ func (edb *EventDb) managePartitions(round int64) {
 
 func (edb *EventDb) movePartitions(round int64) {
 	if err := edb.movePartitionToSlowTableSpace(round, "transactions"); err != nil {
-		logging.Logger.Error(ERROR_CREATING_PARTITION, zap.Error(err))
+		logging.Logger.Error(ERROR_MOVING_PARTITION, zap.Error(err))
 	}
 	if err := edb.movePartitionToSlowTableSpace(round, "blocks"); err != nil {
-		logging.Logger.Error(ERROR_CREATING_PARTITION, zap.Error(err))
+		logging.Logger.Error(ERROR_MOVING_PARTITION, zap.Error(err))
 	}
 }
 
