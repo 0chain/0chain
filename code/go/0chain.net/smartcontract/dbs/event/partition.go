@@ -31,12 +31,8 @@ func (edb *EventDb) dropPartition(round int64, table string) error {
 
 func (edb *EventDb) movePartitionToSlowTableSpace(round int64, table string) error {
 	var results []TableInfo
-	raw := fmt.Sprintf(
-		"select tablename, pg_relation_size(quote_ident(tablename)) from pg_tables WHERE tablename LIKE '%v_%%'",
-		table,
-	)
-
-	if err := edb.Store.Get().Exec(raw).Scan(&results).Error; err != nil {
+	err := edb.Store.Get().Table("pg_tables").Where("tablename LIKE ?", fmt.Sprintf("'%v_%%'", table)).Find(&results).Error
+	if err != nil {
 		return err
 	}
 
@@ -44,7 +40,7 @@ func (edb *EventDb) movePartitionToSlowTableSpace(round int64, table string) err
 	for _, partionedTable := range results {
 		if partionedTable.Size > edb.dbConfig.PartitionedTableMaxSize {
 			// identify the partition table that needs to be moved to slow partition
-			raw = fmt.Sprintf("ALTER TABLE %v SET TABLESPACE %v", partionedTable.Name, tablespace)
+			raw := fmt.Sprintf("ALTER TABLE %v SET TABLESPACE %v", partionedTable.Name, tablespace)
 			return edb.Store.Get().Exec(raw).Error
 		}
 	}
