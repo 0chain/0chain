@@ -129,6 +129,12 @@ func (edb *EventDb) DeleteAuthorizer(id string) error {
 	result := edb.Store.Get().
 		Where("id = ?", id).
 		Delete(&Authorizer{})
+
+	if result.Error == nil {
+		result = edb.Store.Get().
+			Where("provider_id = ?", id).
+			Delete(&ProviderRewards{})
+	}
 	return result.Error
 }
 
