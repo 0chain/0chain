@@ -27,6 +27,8 @@ on:
           default: ''
           required: false
 
+env:
+  ZDNS_URL: http://198.18.0.98:9091
 
 jobs:
   CONDUCTOR_NODE_RECOVERY_TESTS:
@@ -198,12 +200,6 @@ jobs:
         echo "Branch name is ${ZBOX_BRANCH}"
         git checkout ${ZBOX_BRANCH}
 
-    - name: 0box Patching
-      run: |
-        cd 0box
-        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
-        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }}
-
     - name: list pwd
       run: |
         ls -lha
@@ -228,7 +224,12 @@ jobs:
     - name: Blobbers Patching
       run: |
         cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
-
+    - name: 0box Patching
+      run: |
+        cd 0box
+        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
+  
     - name: Build 0dns
       run: |
         cd 0dns
