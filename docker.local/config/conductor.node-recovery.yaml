@@ -137,7 +137,7 @@ tests:
       - command:
           name: "upload"
       - wait_round:
-          shift: 2000
+          shift: 100
       - generate_all_challenges: false
       - check_aggregate_value_comparison:
           provider_type: validator
