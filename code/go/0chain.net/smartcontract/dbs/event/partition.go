@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+type TableInfo struct {
+	Name string
+	Size uint64
+}
+
 func (edb *EventDb) addPartition(round int64, table string) error {
 	number := round / edb.settings.PartitionChangePeriod
 	from := number * edb.settings.PartitionChangePeriod
@@ -25,14 +30,23 @@ func (edb *EventDb) dropPartition(round int64, table string) error {
 }
 
 func (edb *EventDb) movePartitionToSlowTableSpace(round int64, table string) error {
-	number := round / edb.settings.PartitionChangePeriod
-	toMove := number - edb.settings.PartitionKeepCount
-	if toMove < 0 {
-		return nil
+	var results []TableInfo
+	raw := fmt.Sprintf(
+		"select tablename, pg_relation_size(quote_ident(tablename)) from pg_tables WHERE tablename LIKE '%v_%%'",
+		table,
+	)
+
+	if err := edb.Store.Get().Exec(raw).Scan(&results).Error; err != nil {
+		return err
 	}
 
 	tablespace := edb.dbConfig.Slowtablespace
-	// identify the partition table that needs to be moved to slow partition
-	raw := fmt.Sprintf("ALTER TABLE %v_%v SET TABLESPACE %v", table, toMove, tablespace)
-	return edb.Store.Get().Exec(raw).Error
+	for _, partionedTable := range results {
+		if partionedTable.Size > edb.dbConfig.PartitionedTableMaxSize {
+			// identify the partition table that needs to be moved to slow partition
+			raw = fmt.Sprintf("ALTER TABLE %v SET TABLESPACE %v", partionedTable.Name, tablespace)
+			return edb.Store.Get().Exec(raw).Error
+		}
+	}
+	return nil
 }

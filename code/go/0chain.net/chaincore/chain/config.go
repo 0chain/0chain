@@ -586,6 +586,10 @@ func (c *ConfigImpl) FromViper() error {
 	if conf.DbsEvents.Slowtablespace == "" {
 		conf.DbsEvents.Slowtablespace = "hddtablespace"
 	}
+	conf.DbsEvents.PartitionedTableMaxSize = viper.GetUint64("server_chain.dbs.events.partitioned_table_max_size")
+	if conf.DbsEvents.PartitionedTableMaxSize == 0 {
+		conf.DbsEvents.PartitionedTableMaxSize = 104857600
+	}
 
 	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
 	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")

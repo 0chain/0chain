@@ -136,6 +136,7 @@ server_chain:
       max_open_conns: 200
       conn_max_lifetime: 20s
       slowtablespace: hdd_tablespace
+      partitioned_table_max_size: 104857600 # 100 MB. The  maximum size of the partitioned table
     settings:
       # event database settings blockchain
       debug: false
