@@ -261,8 +261,8 @@ nodes:
     id: "0box"
     work_dir: "../0box/"
     env: ""
-    start_command: "./docker.local/bin/start-dev.sh"
-    stop_command: "docker-compose -p 0box -f ./docker.local/docker-compose-dev.yml down && ./docker.local/bin/clean.sh"
+    start_command: "./docker.local/bin/start-ct.sh"
+    stop_command: "./docker.local/bin/stop-ct.sh"
 
 # named system commands
 commands:
