@@ -263,7 +263,3 @@ type NodeCustomConfig struct {
 	NodeName NodeName               `json:"node" yaml:"node" mapstructure:"node"`
 	Config   map[string]interface{} `json:"config" yaml:"config" mapstructure:"config"`
 }
-
-type CheckRollbackTokenomics struct {
-	AllocationID string `json:"allocation_id" yaml:"allocation_id" mapstructure:"allocation_id"`
-}

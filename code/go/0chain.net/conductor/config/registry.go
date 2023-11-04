@@ -904,13 +904,7 @@ func init() {
 	})
 
 	register("check_rollback_tokenomics", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		var cfg CheckRollbackTokenomics
-		err = mapstructure.Decode(val, &cfg)
-		if err != nil {
-			return
-		}
-
-		return ex.CheckRollbackTokenomicsComparison(&cfg)
+		return ex.CheckRollbackTokenomicsComparison()
 	})
 
 	register("set_node_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 )
 
 var allocationStore = stores.GetAllocationStore()
@@ -23,7 +25,21 @@ func NewAllocationService(baseUrl string) *AllocationService {
 	}
 }
 
-func (s *AllocationService) CompareAllocationsValue(allocationID string) (bool, error) {
+func (s *AllocationService) CompareAllocationsValue() (bool, error) {
+	// Read allocationID from file
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return false, err
+	}
+
+	filePath := filepath.Join(homeDir, ".zcn", "allocation.txt")
+	allocationIDBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return false, err
+	}
+
+	allocationID := string(allocationIDBytes)
+
 	remoteAllocation, err := s.getRemoteAllocation(allocationID)
 	if err != nil {
 		return false, err
@@ -38,13 +54,12 @@ func (s *AllocationService) CompareAllocationsValue(allocationID string) (bool, 
 	movedBackDiffInFloat64 := float64(remoteAllocation.MovedBack - localAllocation.MovedBack)
 
 	if movedToChallengeDiffInFloat64 <= 1.05*movedBackDiffInFloat64 &&
-		movedToChallengeDiffInFloat64 >= .95*movedBackDiffInFloat64 {
+		movedToChallengeDiffInFloat64 >= 0.95*movedBackDiffInFloat64 {
 		return true, nil
 	}
 
 	return false, nil
 }
-
 func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.Allocation, error) {
 	url := fmt.Sprintf("%v/allocation?allocation_id=%s", s.baseUrl, allocationID)
 

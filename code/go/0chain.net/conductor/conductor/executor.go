@@ -1258,20 +1258,20 @@ func (r *Runner) CheckAggregateValueComparison(cfg *config.CheckAggregateCompari
 	return nil
 }
 
-func (r *Runner) CheckRollbackTokenomicsComparison(cfg *config.CheckRollbackTokenomics) error {
+func (r *Runner) CheckRollbackTokenomicsComparison() error {
 	if r.verbose {
-		log.Printf("[INF] checking rollback tokenomics comparison: %+v", cfg)
+		log.Printf("[INF] checking rollback tokenomics comparison")
 	}
 
 	allocationService := services.NewAllocationService(r.conf.AggregatesBaseUrl)
 
-	check, err := allocationService.CompareAllocationsValue(cfg.AllocationID)
+	check, err := allocationService.CompareAllocationsValue()
 	if err != nil {
 		return err
 	}
 
 	if !check {
-		return fmt.Errorf("aggregate comparison failed: %v", cfg)
+		return fmt.Errorf("aggregate comparison failed")
 	}
 
 	return nil
