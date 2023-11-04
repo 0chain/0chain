@@ -200,7 +200,6 @@ type DbAccess struct {
 	MaxOpenConns    int           `json:"max_open_conns"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
 	Slowtablespace  string        `json:"slowtablespace"`
-	PartitionedTableMaxSize uint64 `json:"partitioned_table_max_size"`
 }
 
 type DbSettings struct {
