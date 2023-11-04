@@ -432,7 +432,7 @@ func (r *Runner) WaitOnBlobberCommit(timeout time.Duration) {
 		log.Printf(" [ERR] challenge config is not set")
 		return
 	}
-	
+
 	r.setupTimeout(timeout)
 	r.chalConf.WaitOnBlobberCommit = true
 }
@@ -445,7 +445,7 @@ func (r *Runner) WaitForChallengeStatus(timeout time.Duration) {
 	if r.chalConf == nil {
 		log.Printf(" [ERR] challenge config is not set")
 		return
-	}	
+	}
 
 	r.setupTimeout(timeout)
 	r.chalConf.WaitForChallengeStatus = true
@@ -884,7 +884,7 @@ func (r *Runner) Command(name string, params map[string]interface{}, tm time.Dur
 			stringSlice, err := utils.StringSlice(tv)
 			if err != nil {
 				r.waitCommand = make(chan error)
-				r.waitCommand <- err				
+				r.waitCommand <- err
 				return
 			}
 			stringParams[k] = strings.Join(stringSlice, ",")
@@ -1245,7 +1245,7 @@ func (r *Runner) CheckAggregateValueComparison(cfg *config.CheckAggregateCompari
 	}
 
 	aggService := services.NewAggregateService(r.conf.AggregatesBaseUrl)
-	
+
 	check, err := aggService.CompareAggregateValue(cfg.ProviderType, cfg.ProviderId, cfg.Key, cfg.Comparison, cfg.RValue, tm)
 	if err != nil {
 		return err
@@ -1255,7 +1255,26 @@ func (r *Runner) CheckAggregateValueComparison(cfg *config.CheckAggregateCompari
 		return fmt.Errorf("aggregate comparison failed: %v", cfg)
 	}
 
-	return nil	
+	return nil
+}
+
+func (r *Runner) CheckRollbackTokenomicsComparison(cfg *config.CheckRollbackTokenomics) error {
+	if r.verbose {
+		log.Printf("[INF] checking rollback tokenomics comparison: %+v", cfg)
+	}
+
+	allocationService := services.NewAllocationService(r.conf.AggregatesBaseUrl)
+
+	check, err := allocationService.CompareAllocationsValue(cfg.AllocationID)
+	if err != nil {
+		return err
+	}
+
+	if !check {
+		return fmt.Errorf("aggregate comparison failed: %v", cfg)
+	}
+
+	return nil
 }
 
 func (r *Runner) SetNodeCustomConfig(cfg *config.NodeCustomConfig) error {

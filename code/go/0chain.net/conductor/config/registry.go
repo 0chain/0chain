@@ -903,11 +903,21 @@ func init() {
 		return ex.CheckAggregateValueComparison(&cfg, tm)
 	})
 
+	register("check_rollback_tokenomics", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg CheckRollbackTokenomics
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return
+		}
+
+		return ex.CheckRollbackTokenomicsComparison(&cfg)
+	})
+
 	register("set_node_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		var cfg NodeCustomConfig
 		err = mapstructure.Decode(val, &cfg)
 		if err != nil {
-			return 
+			return
 		}
 
 		return ex.SetNodeCustomConfig(&cfg)
