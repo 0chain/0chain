@@ -712,7 +712,7 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 }
 
 func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
-	logging.Logger.Info("Jayash challengeRewardOnFinalization", zap.Any("Jayash ba", d))
+	logging.Logger.Info("Jayash challengeRewardOnFinalization start", zap.Any("Jayash ba", d))
 
 	if now <= d.LatestFinalizedChallCreatedAt {
 		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
@@ -769,8 +769,9 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 		if err != nil {
 			return payment, fmt.Errorf("pass payments: %v", err)
 		}
-
 	}
+
+	logging.Logger.Info("Jayash challengeRewardOnFinalization end", zap.Any("payment", payment), zap.Any("Jayash ba", d))
 
 	return payment, nil
 }
