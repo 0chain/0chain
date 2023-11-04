@@ -6,7 +6,7 @@ import (
 )
 
 type TableInfo struct {
-	TableName  string
+	Tablename  string
 	Tablespace string
 }
 
@@ -36,13 +36,12 @@ func (edb *EventDb) movePartitionToSlowTableSpace(round int64, table string) err
 	var results []TableInfo
 	err := edb.Store.Get().Table("pg_tables").
 							Select("tablename, tablespace").
-							Where("tablename LIKE ?", fmt.Sprintf("'%v_%%'", table)).
+							Where("tablename LIKE ?", table+"_%%").
 							Find(&results).Error
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("results", results)
 	// remove tables that are part of cold storage
 	var hotTables []TableInfo
 	for i, table := range results {
@@ -51,23 +50,19 @@ func (edb *EventDb) movePartitionToSlowTableSpace(round int64, table string) err
 		}
 	}
 
-	fmt.Println("move to hot table only if there are more than 10 tables", hotTables)
-
 	if len(hotTables) < 10 {
 		// move to hot table only if there are more than 10 tables
-		fmt.Println("move to hot table only if there are more than 10 tables")
 		return nil
 	}
 
 	// sort by tablename
 	sort.Slice(hotTables, func(i, j int) bool {
-		return hotTables[i].TableName > hotTables[j].TableName
+		return hotTables[i].Tablename > hotTables[j].Tablename
 	})
 
 	for _, table := range hotTables[10:] {
-		fmt.Println("moving table to cold storage ", table)
 		// identify the partition table that needs to be moved to slow partition
-		raw := fmt.Sprintf("ALTER TABLE %v SET TABLESPACE %v", table.TableName, tablespace)
+		raw := fmt.Sprintf("ALTER TABLE %v SET TABLESPACE %v", table.Tablename, tablespace)
 		return edb.Store.Get().Exec(raw).Error
 	}
 	return nil
