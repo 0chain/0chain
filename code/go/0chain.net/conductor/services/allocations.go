@@ -25,8 +25,28 @@ func NewAllocationService(baseUrl string) *AllocationService {
 	}
 }
 
+func (s *AllocationService) StoreAllocationsData() error {
+	allocationID, err := getAllocationIDFromFile()
+	if err != nil {
+		return err
+	}
+
+	remoteAllocation, err := s.getRemoteAllocation(allocationID)
+	if err != nil {
+		return err
+	}
+
+	allocationStore.Add(*remoteAllocation)
+
+	return nil
+}
+
 func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 	allocationID, err := getAllocationIDFromFile()
+	if err != nil {
+		return false, err
+	}
+
 	remoteAllocation, err := s.getRemoteAllocation(allocationID)
 	if err != nil {
 		return false, err
@@ -47,6 +67,7 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 
 	return false, nil
 }
+
 func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.Allocation, error) {
 	url := fmt.Sprintf("%v/allocation?allocation_id=%s", s.baseUrl, allocationID)
 

@@ -37,6 +37,8 @@ tests:
           params:
             data_shards: "2"
             parity_shards: "1"
+      - sleep: "1m"
+      - store_allocations_data: { }
       - stop: [ 'blobber-3' ]
       - command:
           name: "upload_can_fail"

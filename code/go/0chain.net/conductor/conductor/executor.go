@@ -1277,6 +1277,21 @@ func (r *Runner) CheckRollbackTokenomicsComparison() error {
 	return nil
 }
 
+func (r *Runner) StoreAllocationsData() error {
+	if r.verbose {
+		log.Printf("[INF] storing allocations data")
+	}
+
+	allocationService := services.NewAllocationService(r.conf.AggregatesBaseUrl)
+
+	err := allocationService.StoreAllocationsData()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *Runner) SetNodeCustomConfig(cfg *config.NodeCustomConfig) error {
 	if r.verbose {
 		log.Printf("[INF] setting node custom config: %+v", cfg)

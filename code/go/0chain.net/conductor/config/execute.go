@@ -124,6 +124,7 @@ type Executor interface {
 	GetNodes() map[NodeName]NodeID
 	CheckAggregateValueChange(cfg *CheckAggregateChange, tm time.Duration) error
 	CheckAggregateValueComparison(cfg *CheckAggregateComparison, tm time.Duration) error
+	StoreAllocationsData() error
 	CheckRollbackTokenomicsComparison() error
 	SetNodeCustomConfig(cfg *NodeCustomConfig) error
 	SyncLatestAggregates(cfg *SyncAggregates) error

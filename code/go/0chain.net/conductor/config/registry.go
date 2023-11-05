@@ -903,6 +903,10 @@ func init() {
 		return ex.CheckAggregateValueComparison(&cfg, tm)
 	})
 
+	register("store_allocations_data", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		return ex.StoreAllocationsData()
+	})
+
 	register("check_rollback_tokenomics", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		return ex.CheckRollbackTokenomicsComparison()
 	})
