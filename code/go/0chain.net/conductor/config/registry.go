@@ -926,7 +926,10 @@ func init() {
 	register("pause", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		// pause execution until the user presses enter
 		log.Println("Press enter to continue...")
-		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		_, err = bufio.NewReader(os.Stdin).ReadBytes('\n')
+		if err != nil {
+			return
+		}
 		log.Printf("Continuing execution...")
 		return nil
 	})

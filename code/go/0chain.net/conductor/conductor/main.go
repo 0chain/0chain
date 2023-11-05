@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -209,7 +208,6 @@ type Runner struct {
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	waitSharderLFB	config.WaitSharderLFB	
 	waitValidatorTicket   config.WaitValidatorTicket
-	aggregatesLock		   sync.Mutex
 	chalConf               *config.GenerateChallege
 	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
@@ -889,8 +887,8 @@ func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error
 	}
 
 	r.waitValidatorTicket = config.WaitValidatorTicket{}
-	r.SetServerState(config.NotifyOnValidationTicketGeneration(false))
-	return nil
+	err = r.SetServerState(config.NotifyOnValidationTicketGeneration(false))
+	return err
 }
 
 func (r *Runner) handleNewBlockWaitingForShardersFinalizeNearBlocks(block *stats.BlockFromSharder) (err error) {

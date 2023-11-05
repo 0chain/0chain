@@ -478,7 +478,10 @@ func (r *Runner) WaitValidatorTicket(wvt config.WaitValidatorTicket, timeout tim
 		log.Printf(" [INF] waiting for ticket from validator %v (%v)", wvt.ValidatorName, validator.ID)
 	}
 
-	r.SetServerState(config.NotifyOnValidationTicketGeneration(true))
+	err = r.SetServerState(config.NotifyOnValidationTicketGeneration(true))
+	if err != nil {
+		return
+	}
 
 	r.setupTimeout(timeout)
 	r.waitValidatorTicket.ValidatorId = string(validator.ID)

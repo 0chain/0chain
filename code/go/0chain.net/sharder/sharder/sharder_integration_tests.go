@@ -31,4 +31,3 @@ func readMagicBlock(magicBlockConfig string) (*block.MagicBlock, error) {
 
 	return chain.ReadMagicBlockFile(magicBlockConfig)
 }
-

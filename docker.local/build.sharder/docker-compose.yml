@@ -7,9 +7,12 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_USER: postgres
       POSTGRES_HOST_AUTH_METHOD: trust
+      SLOW_TABLESPACE_PATH: /var/lib/postgresql/hdd_ts
+      SLOW_TABLESPACE: hddtablespace # this should match with the dbs.events.slowtablespace in 0chain.yaml
     volumes:
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/
+      # - ../sharder${SHARDER}/data/postgresql2:/var/lib/postgresql/hdd_ts
     networks:
       default:
 
