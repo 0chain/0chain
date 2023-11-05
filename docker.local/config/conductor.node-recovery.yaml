@@ -69,12 +69,15 @@ tests:
       - wait_round:
           shift: 15
       - start: ['sharder-2']
+      - wait_round:
+          shift: 100
       - wait_sharder_lfb:
           sharder: 'sharder-2'
           timeout: '5m'
   
   - name: "Validator Recovery - Validator should still be able to get rewards even after it recovers"
     flow:
+      - sleep: "30s"
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -179,6 +182,7 @@ tests:
           timeout: "2m"
   - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
     flow:
+      - sleep: "30s"
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
