@@ -239,13 +239,13 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
-        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/94MznalgOkINSqTNiS65FNMnkn8vLUpv
+        ethereum_node_url: ${{ secrets.ETHEREUM_NODE_URL }}
         bridge:
-          bridge_address: 0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
-          token_address: 0xC79aD1e07f790d0Cf6AA3D09FeC393A09DC53d64
-          authorizers_address: 0xd5867B4a1F8e7BD91276b5C85a4EDC9D33400496
-          ethereum_address: 0xD8c9156e782C68EE671C09b6b92de76C97948432
-          password: "02289b9"
+          bridge_address: 0x7700D773022b19622095118Fadf46f7B9448Be9b
+          token_address: 0xb9EF770B6A5e12E45983C5D80545258aA38F3B78
+          authorizers_address: 0x481daB4407b9880DE0A68dc62E6aF611c4949E42
+          ethereum_address: 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97
+          password: "12345678"
         EOF
 
     - name: List pwd zcn
@@ -260,8 +260,8 @@ jobs:
         cd ~/.zcn
         mkdir wallets
         cd wallets
-        cat <<\EOF > UTC--2023-05-22T11-45-59.391983000Z--d8c9156e782c68ee671c09b6b92de76c97948432
-        {"address":"d8c9156e782c68ee671c09b6b92de76c97948432","crypto":{"cipher":"aes-128-ctr","ciphertext":"26133146fa7a880226f6259b960b4234b1280583f98ee71c120d239673681110","cipherparams":{"iv":"d834890aabcb3e0d9ae3309a71a8ff27"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"143d2eae97b837ca163e651223b92042f2acc20340629cf9de56646e5d59ae92"},"mac":"86cd6646c767e056e497c975a6fa4557d68b85b19a9ea0ec0062e7b7dc78df7f"},"id":"155f80d0-48d9-4bc7-bc60-7294a3ea3edc","version":3}
+        cat <<\EOF > UTC--2023-10-26T00-34-42.327566000Z--8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97
+        {"address":"8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97","crypto":{"cipher":"aes-128-ctr","ciphertext":"3e6a7c7fc1875e9437fb1b19d8195b707d2143f5aa40615b02efce3ef0422619","cipherparams":{"iv":"ab9d87b14b8593112338abc7da502866"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"94cdd599dd1c4a9eb24f837ca0dbd02d30a33b890bd43eca936c0ca25fd2e983"},"mac":"f07cf9a0c324e8449a1f7c17f5d7f6d3a942ec47b1ee73e157dfc3f325cbb9d3"},"id":"db1bba38-3573-4d53-905f-f075458da3d4","version":3}
         EOF
 
     - name: Cat Address
