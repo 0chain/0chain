@@ -247,7 +247,6 @@ tests:
           name: "upload"
       - wait_round:
           shift: 100
-      - generate_all_challenges: false
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
@@ -257,32 +256,26 @@ tests:
           timeout: "2m"
       - command:
           name: "fill_blobber_validator_wallets"
+      - command:
+          name: "upload"
+          params:
+            remotepath: "/bin/uploadb.bin"
       - stop: ['blobber-3']
+      - wait_round:
+          shift: 500
       - sync_latest_aggregates:
           blobbers:
             - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-      - wait_round:
-          shift: 100
           required: true
-      - generate_all_challenges: true
-      - command:
-          name: "upload"
-          params:
-            remotepath: "/bin/upload2.bin"
-      - wait_round:
-          shift: 100
-      - generate_all_challenges: false
       - start: ['blobber-3']
       - wait_round:
           shift: 100
-      - generate_all_challenges: true
       - command:
           name: "upload"
           params:
-            remotepath: "/bin/upload3.bin"
+            remotepath: "/bin/uploadc.bin"
       - wait_round:
-          shift: 100
-      - generate_all_challenges: false
+          shift: 400
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
