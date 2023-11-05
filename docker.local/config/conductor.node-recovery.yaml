@@ -175,8 +175,7 @@ tests:
             remotepath: "/bin/upload2.bin"
       - wait_validator_ticket:
           validator_name: "validator-3"
-      - wait_round:
-          shift: 100
+          timeout: "2m"
       - check_aggregate_value_change:
           provider_type: validator
           provider_id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
