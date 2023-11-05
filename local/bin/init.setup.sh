@@ -14,5 +14,4 @@ mkdir -p $RepoRoot/local/sharder/data/rocksdb
 mkdir -p $RepoRoot/local/sharder/log
 mkdir -p $RepoRoot/local/sharder/config
 cp $RepoRoot/docker.local/config/sc.yaml $RepoRoot/local/sharder/config/sc.yaml
-cp $RepoRoot/docker.local/config/minio_config.txt $RepoRoot/local/sharder/config/minio_config.txt
 cp $RepoRoot/docker.local/config/initial_state.yaml $RepoRoot/local/miner/config/initial_state.yaml

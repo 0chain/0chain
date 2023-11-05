@@ -24,9 +24,6 @@ func HealthCheckWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr><td valign='top'><h2>General Info</h2>")
 	diagnostics.WriteConfiguration(w, c)
 	diagnostics.WriteCurrentStatus(w, c)
-	fmt.Fprintf(w, "</td><td valign='top'><h2>Minio Info</h2>")
-	sc.WriteMinioStats(w)
-	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "</td><td valign='top'><h2>Proximity Scan Configuration</h2>")
 	sc.WriteHealthCheckConfiguration(w, ProximityScan)
