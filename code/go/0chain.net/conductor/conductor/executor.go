@@ -1265,7 +1265,7 @@ func (r *Runner) CheckRollbackTokenomicsComparison() error {
 
 	allocationService := services.NewAllocationService(r.conf.AggregatesBaseUrl)
 
-	check, err := allocationService.CompareAllocationsValue()
+	check, err := allocationService.CompareRollBackTokens()
 	if err != nil {
 		return err
 	}

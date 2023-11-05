@@ -25,21 +25,8 @@ func NewAllocationService(baseUrl string) *AllocationService {
 	}
 }
 
-func (s *AllocationService) CompareAllocationsValue() (bool, error) {
-	// Read allocationID from file
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return false, err
-	}
-
-	filePath := filepath.Join(homeDir, ".zcn", "allocation.txt")
-	allocationIDBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		return false, err
-	}
-
-	allocationID := string(allocationIDBytes)
-
+func (s *AllocationService) CompareRollBackTokens() (bool, error) {
+	allocationID, err := getAllocationIDFromFile()
 	remoteAllocation, err := s.getRemoteAllocation(allocationID)
 	if err != nil {
 		return false, err
@@ -77,4 +64,22 @@ func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.All
 	}
 
 	return alloc, nil
+}
+
+func getAllocationIDFromFile() (string, error) {
+	// Read allocationID from file
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	filePath := filepath.Join(homeDir, ".zcn", "allocation.txt")
+	allocationIDBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	allocationID := string(allocationIDBytes)
+
+	return allocationID, nil
 }
