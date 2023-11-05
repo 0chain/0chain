@@ -177,7 +177,6 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -239,7 +238,6 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx      context.Context
@@ -303,7 +301,6 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -356,7 +353,6 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -408,7 +404,6 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 		BlockTxnCache:  cache.NewLRUCache[string, *transaction.TransactionSummary](10),
 		SharderStats:   Stats{},
 		BlockSyncStats: &SyncStats{},
-		TieringStats:   &MinioStats{},
 	}
 
 	// Add 2 blocks

@@ -82,7 +82,6 @@ func TestChain_AcceptMessage(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		entityName string

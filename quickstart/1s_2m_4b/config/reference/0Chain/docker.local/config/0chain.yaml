@@ -102,7 +102,7 @@ server_chain:
     proximity_scan:
       enabled: true
       settle_secs: 30
-      window: 100000 #number of blocks, Do not make 0 with minio ON, Should be less than minio old block round range
+      window: 100000
       repeat_interval_mins: 1 #minutes
       report_status_mins: 1 #minutes
       batch_size: 50
@@ -143,13 +143,6 @@ min_stake: 0.0 # tokens
 # SC max_stake
 max_stake: 20000.0 # tokens
 
-minio:
-  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
-  worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
-  use_ssl: false # Use SSL for connection or not
-  old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
-  delete_local_copy: true # Delete local copy of block once it's moved to cloud
 
 cassandra:
   connection:
