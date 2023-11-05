@@ -285,8 +285,8 @@ tests:
       - generate_all_challenges: true
       - command:
           name: "upload"
-            params:
-                remotepath: "/bin/upload3.bin"
+          params:
+            remotepath: "/bin/upload3.bin"
       - wait_round:
           shift: 100
       - generate_all_challenges: false
