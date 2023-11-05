@@ -207,7 +207,6 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			got, err := sc.GetBlockBySummary(tt.args.ctx, tt.args.bs)
 			if (err != nil) != tt.wantErr {
@@ -270,7 +269,6 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			got, err := sc.GetBlockFromHash(tt.args.ctx, tt.args.hash, tt.args.roundNum)
 			if (err != nil) != tt.wantErr {
@@ -329,7 +327,6 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			if err := sc.StoreBlockSummaryFromBlock(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummaryFromBlock() error = %v, wantErr %v", err, tt.wantErr)
@@ -381,7 +378,6 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			if err := sc.StoreBlockSummary(tt.args.ctx, tt.args.bs); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummary() error = %v, wantErr %v", err, tt.wantErr)

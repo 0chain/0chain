@@ -128,7 +128,6 @@ func TestChain_AcceptMessage(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			if got := sc.AcceptMessage(tt.args.entityName, tt.args.entityID); got != tt.want {
 				t.Errorf("AcceptMessage() = %v, want %v", got, tt.want)
