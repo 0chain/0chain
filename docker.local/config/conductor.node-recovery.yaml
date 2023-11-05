@@ -272,13 +272,6 @@ tests:
       - wait_round:
           shift: 100
       - generate_all_challenges: false
-      - check_aggregate_value_comparison:
-          provider_type: blobber
-          provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
-          key: total_slashed_stake
-          comparison: gt
-          rvalue: 0
-          timeout: "2m"
       - start: ['blobber-3']
       - wait_round:
           shift: 100
@@ -290,6 +283,13 @@ tests:
       - wait_round:
           shift: 100
       - generate_all_challenges: false
+      - check_aggregate_value_comparison:
+          provider_type: blobber
+          provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+          key: total_slashed_stake
+          comparison: gt
+          rvalue: 0
+          timeout: "2m"
       - check_aggregate_value_change:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
