@@ -6,8 +6,8 @@ enable:
 sets:
   - name: "Node Recovery"
     tests:
-    #   - "Miner Recovery - Miner should be able to produce blocks after it recovers"
-    #   - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
+      - "Miner Recovery - Miner should be able to produce blocks after it recovers"
+      - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
       - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
       - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
 
