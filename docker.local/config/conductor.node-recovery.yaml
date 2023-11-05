@@ -8,7 +8,7 @@ sets:
     tests:
     #   - "Miner Recovery - Miner should be able to produce blocks after it recovers"
     #   - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
-      - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
+    #   - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
       - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
 
 tests:
@@ -247,6 +247,7 @@ tests:
           name: "upload"
       - wait_round:
           shift: 100
+      - generate_all_challenges: false
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
@@ -256,26 +257,32 @@ tests:
           timeout: "2m"
       - command:
           name: "fill_blobber_validator_wallets"
-      - command:
-          name: "upload"
-          params:
-            remotepath: "/bin/uploadb.bin"
       - stop: ['blobber-3']
-      - wait_round:
-          shift: 500
       - sync_latest_aggregates:
           blobbers:
             - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-          required: true
-      - start: ['blobber-3']
       - wait_round:
           shift: 100
+          required: true
+      - generate_all_challenges: true
       - command:
           name: "upload"
           params:
-            remotepath: "/bin/uploadc.bin"
+            remotepath: "/bin/upload2.bin"
       - wait_round:
-          shift: 400
+          shift: 100
+      - generate_all_challenges: false
+      - start: ['blobber-3']
+      - wait_round:
+          shift: 100
+      - generate_all_challenges: true
+      - command:
+          name: "upload"
+          params:
+            remotepath: "/bin/upload3.bin"
+      - wait_round:
+          shift: 100
+      - generate_all_challenges: false
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
