@@ -111,6 +111,7 @@ func (n *BlobberDelete) Decode(val interface{}) error {
 }
 
 type GenerateAllChallenges bool
+type MissUpDownload bool
 
 type GenerateChallege struct {
 	BlobberID         string        `json:"blobber_id" mapstructure:"blobber_id"`

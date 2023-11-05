@@ -933,4 +933,13 @@ func init() {
 		log.Printf("Continuing execution...")
 		return nil
 	})
+
+	register("set_miss_up_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg, ok := val.(MissUpDownload)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type MissUpDownload, got %T", val)
+		}
+
+		return ex.SetMissUpDownload(&cfg)
+	})
 }

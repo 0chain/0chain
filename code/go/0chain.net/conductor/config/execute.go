@@ -126,6 +126,7 @@ type Executor interface {
 	CheckAggregateValueComparison(cfg *CheckAggregateComparison, tm time.Duration) error
 	SetNodeCustomConfig(cfg *NodeCustomConfig) error
 	SyncLatestAggregates(cfg *SyncAggregates) error
+	SetMissUpDownload(cfg *MissUpDownload) error
 }
 
 //
