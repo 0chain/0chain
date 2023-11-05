@@ -1,13 +1,16 @@
 enable:
-  - "Node Recovery"
-  - "Client Operation"
+  - "Active set"
+  - "Storage providers"
 
 # sets of test cases
 sets:
-  - name: "Node Recovery"
+  - name: "Active set"
     tests:
-    #   - "Miner Recovery - Miner should be able to produce blocks after it recovers"
-    #   - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
+      - "Miner Recovery - Miner should be able to produce blocks after it recovers"
+      - "Sharder Recovery - Sharder should sync LFB with other sharders after it recovers"
+  
+  - name: "Storage providers"
+    tests:
       - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
       - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
 
@@ -69,12 +72,15 @@ tests:
       - wait_round:
           shift: 15
       - start: ['sharder-2']
+      - wait_round:
+          shift: 100
       - wait_sharder_lfb:
           sharder: 'sharder-2'
           timeout: '5m'
   
   - name: "Validator Recovery - Validator should still be able to get rewards even after it recovers"
     flow:
+      - sleep: "30s"
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -170,7 +176,7 @@ tests:
       - wait_validator_ticket:
           validator_name: "validator-3"
       - wait_round:
-          shift: 500
+          shift: 100
       - check_aggregate_value_change:
           provider_type: validator
           provider_id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
@@ -179,6 +185,7 @@ tests:
           timeout: "2m"
   - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
     flow:
+      - sleep: "30s"
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -262,7 +269,7 @@ tests:
             remotepath: "/bin/uploadb.bin"
       - stop: ['blobber-3']
       - wait_round:
-          shift: 500
+          shift: 100
       - sync_latest_aggregates:
           blobbers:
             - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
@@ -275,7 +282,7 @@ tests:
           params:
             remotepath: "/bin/uploadc.bin"
       - wait_round:
-          shift: 400
+          shift: 100
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
