@@ -222,6 +222,11 @@ jobs:
         chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
         ./docker.local/bin/build.authorizer-integration-tests.sh
 
+    - name: Changing Authorizer Network
+      run: |
+        cd token_bridge_authserver
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
+
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
