@@ -266,7 +266,7 @@ jobs:
 
     - name: Cat Address
       run: |
-        cat ~/.zcn/wallets/UTC--2023-05-22T11-45-59.391983000Z--d8c9156e782c68ee671c09b6b92de76c97948432
+        cat ~/.zcn/wallets/UTC--2023-05-22T11-45-59.391983000Z--8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97
 
     - name: Starting authorizer Tests.
       run: |
