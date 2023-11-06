@@ -74,7 +74,9 @@ func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.All
 	log.Printf("Getting allocation from %v\n", url)
 
 	resp, err := utils.HttpGet(url, map[string]string{})
+	log.Printf("Response: %v\n", string(resp))
 	if err != nil {
+		log.Println("Error getting allocation from remote", err)
 		return nil, err
 	}
 
