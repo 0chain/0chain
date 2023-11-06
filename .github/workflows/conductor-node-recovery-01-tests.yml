@@ -1,27 +1,20 @@
-name: CONDUCTOR FAULT TOLERANCE TESTS
+name: CONDUCTOR NODE-RECOVERY-01 TESTS
 
 on:
   schedule:
-    # Runs everyday at 01:00 am
-    - cron: '0 7 * * *'
+    # Runs everyday at 02:00 am
+    - cron: '0 8 * * *'
   workflow_dispatch:
     inputs:
-      chain_branch:
-        description: 'Input branch for 0chain repo'
-        default: ''
-        required: false
-
-env:
-  ZCHAIN_BUILDBASE: zchain_build_base
-  ZCHAIN_BUILDRUN: zchain_run_base
+        chain_branch:
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
 
 jobs:
-  CONDUCTOR_FAULT_TOLERANCE_TESTS:
-    name: CONDUCTOR-FAULT-TOLERANCE-TESTS
+  CONDUCTOR_NODE_RECOVERY_01_TESTS:
+    name: CONDUCTOR-NODE-RECOVERY-01-TESTS
     runs-on: [self-hosted, conductor-test03]
-
-    outputs:
-      branch: ${{ steps.chain.outputs.BRANCH_OUT }}
 
     steps:
     - name: Cleanup before restarting conductor tests.
@@ -29,8 +22,6 @@ jobs:
         rm -rf *
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
         
-    # - uses: actions/checkout@v1
-
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
       run: |
@@ -38,21 +29,21 @@ jobs:
         [ -d /usr/local/go ] &&  rm -rf /usr/local/go
         [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
         tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
+
         echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
         export PATH=$PATH:/usr/local/go/bin
         export HOME="/root"
         which go
         go env
-
+      
     - name: Docker Compose Setup.
       run: |
-        sudo rm /usr/local/bin/docker-compose || true
-        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
         docker-compose --version
 
     - name: Login to Docker Hub
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -65,24 +56,25 @@ jobs:
         make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
-      id: chain
       run: |
         git clone https://github.com/0chain/0chain.git
         cd 0chain
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         CHAIN_BRANCH="${{ inputs.chain_branch }}"
         if [[ -z $CHAIN_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo "Checking for latest sprint branch"
+            git branch --sort=-committerdate | grep "sprint-*" | head -1
+            CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
         fi
-          echo "BRANCH_OUT=$CHAIN_BRANCH" >>$GITHUB_OUTPUT
         echo "Branch name is ${CHAIN_BRANCH}"
         git checkout ${CHAIN_BRANCH}
 
     - name: Docker Init Setup.
       run: |
         export HOME="/root"
+        sudo apt update -y
+        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
         make install-mockery
         make build-mocks
@@ -113,62 +105,70 @@ jobs:
         cd 0chain
         bash -c 'sed -i "s/max_pour_amount: [0-9]*/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
         bash -c 'grep max_pour_amount ./docker.local/config/sc.yaml'
-  
-    - name: Running No VC Fault Tolerance Tests.
+
+    - name: View Change Rounds
       run: |
-        cd 0chain
+        awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
+
+    - name: Starting Node Recovery 01 Tests.
+      run: |
         export HOME="/root"
-        bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh node-recovery-1
 
     - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: fault-tolerance-logs
+        name: node-recovery-01-logs
         path: |
           0chain/conductor/logs/
           0chain/docker.local/miner*/log
           0chain/docker.local/sharder*/log
+          blobber/docker.local/blobber*/log
+          blobber/docker.local/validator*/log
 
     - name: Added /tmp folder cleanup.
       run: |
         cd /tmp
+        rm -rf ./*
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_FAULT_TOLERANCE_TESTS]
-    if: always() && (needs.CONDUCTOR_FAULT_TOLERANCE_TESTS.result == 'failure')
+    needs: [CONDUCTOR_NODE_RECOVERY_01_TESTS]
+    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_01_TESTS.result == 'failure')
     steps:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS FAILED on ${{ needs.CONDUCTOR_FAULT_TOLERANCE_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
-              "text": "CONDUCTOR FAULT_TOLERANCE TEST FAILED ⚠️",
+              "text": "CONDUCTOR NODE_RECOVERY_01 TEST FAILED ⚠️",
               "color": "#ff0000"
               }
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS FAILED on ${{ needs.CONDUCTOR_FAULT_TOLERANCE_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_01_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_FAULT_TOLERANCE_TESTS]
-    if: always() && (needs.CONDUCTOR_FAULT_TOLERANCE_TESTS.result == 'success')
+    needs: [CONDUCTOR_NODE_RECOVERY_01_TESTS]
+    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_01_TESTS.result == 'success')
     steps:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS PASSING on ${{ needs.CONDUCTOR_FAULT_TOLERANCE_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_01_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
-              "text": "CONDUCTOR FAULT_TOLERANCE TESTS PASSED ✅",
+              "text": "CONDUCTOR NODE_RECOVERY_01 TEST PASSED ✅",
               "color": "#22bb33"
               }
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_FAULT_TOLERANCE_TESTS ARE PASSING on ${{ needs.CONDUCTOR_FAULT_TOLERANCE_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_01_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
