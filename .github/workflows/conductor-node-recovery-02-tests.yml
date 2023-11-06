@@ -27,6 +27,8 @@ on:
           default: ''
           required: false
 
+env:
+  ZDNS_URL: http://198.18.0.98:9091
 
 jobs:
   CONDUCTOR_NODE_RECOVERY_02_TESTS:
