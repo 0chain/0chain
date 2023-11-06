@@ -1,9 +1,9 @@
-name: CONDUCTOR NODE-RECOVERY 2 TESTS
+name: CONDUCTOR NODE-RECOVERY-02 TESTS
 
 on:
   schedule:
     # Runs everyday at 02:00 am
-    - cron: '0 4 * * *'
+    - cron: '0 9 * * *'
   workflow_dispatch:
     inputs:
         chain_branch:
@@ -27,17 +27,21 @@ on:
           default: ''
           required: false
 
+env:
+  ZDNS_URL: http://198.18.0.98:9091
 
 jobs:
-  CONDUCTOR_NODE_RECOVERY_2_TESTS:
-    name: CONDUCTOR-NODE-RECOVERY-2-TESTS
+  CONDUCTOR_NODE_RECOVERY_02_TESTS:
+    name: CONDUCTOR-NODE-RECOVERY-02-TESTS
     runs-on: [self-hosted, conductor-test03]
 
     steps:
     - name: Cleanup before restarting conductor tests.
       run: |
-        rm -rf *
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
+        rm -rf *
+        rm -rf /mnt/hdd/*
+        rm -rf /mnt/ssd/*
 
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
@@ -182,7 +186,7 @@ jobs:
     - name: Git clone 0box
       run: |
         export HOME="/root"
-        git clone https://github.com/0chain/0box.git
+        git clone https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PAT }}@github.com/0chain/0box.git
         cd 0box
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZBOX_BRANCH="${{ inputs.zbox_branch }}"
@@ -194,7 +198,7 @@ jobs:
         fi
         echo "Branch name is ${ZBOX_BRANCH}"
         git checkout ${ZBOX_BRANCH}
-  
+
     - name: list pwd
       run: |
         ls -lha
@@ -219,7 +223,12 @@ jobs:
     - name: Blobbers Patching
       run: |
         cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
-
+    - name: 0box Patching
+      run: |
+        cd 0box
+        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
+  
     - name: Build 0dns
       run: |
         cd 0dns
@@ -230,6 +239,7 @@ jobs:
       run: |
         cd 0box
         ./docker.local/bin/init.sh
+        ./docker.local/bin/build.base.sh
         ./docker.local/bin/build.zbox-integration-tests.sh
 
     - name: Init setup for blobbers
@@ -269,7 +279,7 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    - name: Starting blobber Tests.
+    - name: Starting Node Recovery Tests.
       run: |
         export HOME="/root"
         cd 0chain
@@ -278,7 +288,7 @@ jobs:
     - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: node-recovery-2-logs
+        name: node-recovery-02-logs
         path: |
           0chain/conductor/logs/
           0chain/docker.local/miner*/log
@@ -293,40 +303,40 @@ jobs:
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_NODE_RECOVERY_2_TESTS]
-    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_2_TESTS.result == 'failure')
+    needs: [CONDUCTOR_NODE_RECOVERY_02_TESTS]
+    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_02_TESTS.result == 'failure')
     steps:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_2_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
-              "text": "CONDUCTOR NODE_RECOVERY_2 TEST FAILED ⚠️",
+              "text": "CONDUCTOR NODE_RECOVERY_02 TEST FAILED ⚠️",
               "color": "#ff0000"
               }
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_2_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_02_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_NODE_RECOVERY_2_TESTS]
-    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_2_TESTS.result == 'success')
+    needs: [CONDUCTOR_NODE_RECOVERY_02_TESTS]
+    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_02_TESTS.result == 'success')
     steps:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_2_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_02_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
-              "text": "CONDUCTOR NODE_RECOVERY_2 TEST PASSED ✅",
+              "text": "CONDUCTOR NODE_RECOVERY_02 TEST PASSED ✅",
               "color": "#22bb33"
               }
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_2_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_02_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
