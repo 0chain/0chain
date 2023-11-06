@@ -177,7 +177,6 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -208,7 +207,6 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			got, err := sc.GetBlockBySummary(tt.args.ctx, tt.args.bs)
 			if (err != nil) != tt.wantErr {
@@ -239,7 +237,6 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx      context.Context
@@ -272,7 +269,6 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			got, err := sc.GetBlockFromHash(tt.args.ctx, tt.args.hash, tt.args.roundNum)
 			if (err != nil) != tt.wantErr {
@@ -303,7 +299,6 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -332,7 +327,6 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			if err := sc.StoreBlockSummaryFromBlock(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummaryFromBlock() error = %v, wantErr %v", err, tt.wantErr)
@@ -356,7 +350,6 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -385,7 +378,6 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			if err := sc.StoreBlockSummary(tt.args.ctx, tt.args.bs); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummary() error = %v, wantErr %v", err, tt.wantErr)
@@ -408,7 +400,6 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 		BlockTxnCache:  cache.NewLRUCache[string, *transaction.TransactionSummary](10),
 		SharderStats:   Stats{},
 		BlockSyncStats: &SyncStats{},
-		TieringStats:   &MinioStats{},
 	}
 
 	// Add 2 blocks
