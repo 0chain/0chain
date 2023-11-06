@@ -807,7 +807,8 @@ func init() {
 			return
 		}
 
-		return ex.WaitValidatorTicket(*cfg, tm)
+		ex.WaitValidatorTicket(*cfg, tm)
+		return nil
 	})
 
 	// stop_challenge_generation directs miner to stop/resume generating challenge for any blobber

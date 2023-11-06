@@ -80,12 +80,14 @@ func (s *AggregateService) SyncLatestAggregates(ptype types.ProviderType, pids [
 	switch ptype {
 	case Miner, Sharder, Blobber, Validator, Authorizer:
 		aggrs, err = s.getRemoteAggregates(ptype, pids)
+		log.Printf("Got aggregate for (%v, %v): %v\n", ptype, pids, aggrs)
 		if err != nil {
 			return fmt.Errorf("Error getting aggregates: %v, %v, %v\n", ptype, pids, err)
 		}
 	case User:
 		for _, pid := range pids {
 			resp, err := s.getRemoteAggregate(ptype, pid)
+			log.Printf("Got aggregate for (%v, %v): %v\n", ptype, pid, resp)
 			if err != nil {
 				log.Printf("Error getting aggregates: %v, %v, %v\n", ptype, pid, err)
 				continue
@@ -95,6 +97,7 @@ func (s *AggregateService) SyncLatestAggregates(ptype types.ProviderType, pids [
 		}
 	case Global:
 		aggr, err := s.getRemoteSnapshot()
+		log.Printf("Got snapshot: %v\n", aggr)
 		if err != nil {
 			return fmt.Errorf("Error getting snapshot: %v\n", err)
 		}
