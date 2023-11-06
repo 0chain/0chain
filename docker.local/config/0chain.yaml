@@ -112,7 +112,7 @@ server_chain:
     proximity_scan:
       enabled: true
       settle_secs: 30s
-      window: 100000 #number of blocks, Do not make 0 with minio ON, Should be less than minio old block round range
+      window: 100000
       repeat_interval_mins: 1m #minutes
       report_status_mins: 1m #minutes
       batch_size: 50
@@ -135,6 +135,7 @@ server_chain:
       max_idle_conns: 100
       max_open_conns: 200
       conn_max_lifetime: 20s
+      slowtablespace: hdd_tablespace
     settings:
       # event database settings blockchain
       debug: false
@@ -178,6 +179,9 @@ storage:
 #    path: "/path/to/cache"
 #    total_blocks: 1000 # Total number of blocks this cache will store
 # integration tests related configurations
+
+
+
 integration_tests:
   # address of the server
   address: host.docker.internal:15210

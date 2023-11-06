@@ -86,14 +86,6 @@ db:
   host: postgres
   port: 5432
 
-minio:
-  # Enable or disable minio backup service
-  start: false
-  # The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  worker_frequency: 3600 # In Seconds
-  # Use SSL for connection or not
-  use_ssl: false
-
 cold_storage:
   # Minimum file size to be considered for moving to cloud
   min_file_size: 1048576 #in bytes

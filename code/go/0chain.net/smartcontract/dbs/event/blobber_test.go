@@ -1,14 +1,16 @@
 package event
 
 import (
+	"fmt"
+	"testing"
+	"time"
+
 	"0chain.net/core/common"
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"fmt"
-	"gorm.io/gorm/clause"
-	"testing"
-
 	"go.uber.org/zap"
+	"gorm.io/gorm/clause"
 
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
@@ -294,3 +296,135 @@ func buildMockBlobber(t *testing.T, pid string) Blobber {
 	curBlobber.Rewards = ProviderRewards{}
 	return curBlobber
 }
+
+// -------------------------------------------------------------------------------------------------------------------------------------------
+
+func TestGetBlobbersFromParams(t *testing.T) {
+
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	blobbers := []Blobber{
+		// Blobber 1 (Matched with the AllocationQuery)
+		{
+			Provider: Provider{
+				ID:              "B000",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(100),
+			},
+			BaseURL:     "https://blobber.zero",
+			ReadPrice:   currency.Coin(50), // between 1 and 100
+			WritePrice:  currency.Coin(50), // between 1 and 100
+			Capacity:    5000000000000,
+			Allocated:   0,
+			OffersTotal: currency.Coin(1),
+			// Capacity - Allocated = 5000000000000 (AllocationSize)
+		},
+		// Blobber 2 (Matched with the AllocationQuery)
+		{
+			Provider: Provider{
+				ID:              "B001",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(100),
+			},
+			BaseURL:     "https://blobber.one",
+			ReadPrice:   currency.Coin(20),
+			WritePrice:  currency.Coin(80),
+			Capacity:    4000000000000,
+			Allocated:   300000,
+			OffersTotal: currency.Coin(1),
+		},
+		// Blobber 3 (Matched with the AllocationQuery)
+		{
+			Provider: Provider{
+				ID:              "B002",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(100),
+			},
+			BaseURL:     "https://blobber.two",
+			ReadPrice:   currency.Coin(90),
+			WritePrice:  currency.Coin(10),
+			Capacity:    500000000000,
+			Allocated:   50000,
+			OffersTotal: currency.Coin(1),
+		},
+		// Blobber 4 (Doesn't have the capacity required)
+		{
+			Provider: Provider{
+				ID:              "B003",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(100),
+			},
+			BaseURL:     "https://blobber.three",
+			ReadPrice:   currency.Coin(50),
+			WritePrice:  currency.Coin(50),
+			Capacity:    4000000000000,
+			Allocated:   3999999999999,
+			OffersTotal: currency.Coin(1),
+		},
+		// Blobber 5 (Not matched, WritePrice is too high)
+		{
+			Provider: Provider{
+				ID:              "B004",
+				LastHealthCheck: common.Timestamp(time.Now().Unix()),
+				TotalStake:      currency.Coin(10),
+			},
+			BaseURL:     "https://blobber.four",
+			ReadPrice:   currency.Coin(50),
+			WritePrice:  currency.Coin(150),
+			Capacity:    500000000000,
+			Allocated:   50000,
+			OffersTotal: currency.Coin(9),
+		},
+	}
+	// Adding 5 blobbers, 3 will have parameters in line 2 shall not have and then the 2 will help me complete the function.
+
+	for _, blobber := range blobbers {
+		if err := edb.Store.Get().Create(&blobber).Error; err != nil {
+			t.Fatalf("Failed to insert blobber: %v", err)
+		}
+	}
+
+	// Creating curated Query
+	allocation := AllocationQuery{
+		ReadPriceRange: struct {
+			Min int64
+			Max int64
+		}{1, 1e13},
+		WritePriceRange: struct {
+			Min int64
+			Max int64
+		}{1, 1e13},
+		AllocationSize:     1 * 1024 * 1024 * 1024,
+		AllocationSizeInGB: 1.0,
+		NumberOfDataShards: 1,
+	}
+
+	pagination := common2.Pagination{
+		Limit:        10,
+		Offset:       0,
+		IsDescending: true,
+	}
+
+	now := common.Timestamp(time.Now().Unix())
+	healthCheckPeriod := 1 * time.Hour
+
+	matchedBlobbers, err := edb.GetBlobbersFromParams(allocation, pagination, now, healthCheckPeriod)
+	if err != nil {
+		t.Fatalf("Error while retrieving blobbers: %v", err)
+	}
+
+	assert.Equal(t, 3, len(matchedBlobbers), "Expected 3 blobbers to match criteria")
+
+	cleanupBlobbers(t, edb, blobbers)
+}
+
+func cleanupBlobbers(t *testing.T, edb *EventDb, blobbers []Blobber) {
+	for _, blobber := range blobbers {
+		if err := edb.deleteBlobber(blobber.Provider.ID); err != nil {
+			t.Logf("Warning: Failed to cleanup blobber %v: %v", blobber.Provider.ID, err)
+		}
+	}
+}
+
+// -------------------------------------------------------------------------------------------------------------------------------------------
