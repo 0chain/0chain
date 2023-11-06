@@ -17,7 +17,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/go-faker/faker/v4"
-	"github.com/guregu/null"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -549,7 +548,7 @@ func TestGetMiners(t *testing.T) {
 	_ = createMiners(t, eventDb, 10)
 
 	t.Run("Inactive miners should be returned", func(t *testing.T) {
-		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(false)}, common2.Pagination{Limit: 10})
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(false, false, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "Error should not be returned")
 		for _, miner := range miners {
 			assert.Equal(t, false, miner.Active, "Miner is active")
@@ -557,7 +556,7 @@ func TestGetMiners(t *testing.T) {
 		assert.Equal(t, 5, len(miners), "All miners were not returned")
 	})
 	t.Run("Active miners should be returned", func(t *testing.T) {
-		miners, err := eventDb.GetMinersWithFiltersAndPagination(MinerQuery{Active: null.BoolFrom(true)}, common2.Pagination{Limit: 10})
+		miners, err := eventDb.GetMinersWithFiltersAndPagination(true, false, common2.Pagination{Limit: 10})
 		assert.NoError(t, err, "Error should not be returned")
 		for _, miner := range miners {
 			assert.Equal(t, true, miner.Active, "Miner is not active")

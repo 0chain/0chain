@@ -740,25 +740,22 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	filter := event.MinerQuery{
-		IsKilled: null.BoolFrom(false),
-	}
+	active := false
+	killed := false
 	if isKilledString != "" {
-		active, err := strconv.ParseBool(isKilledString)
+		killed, err = strconv.ParseBool(isKilledString)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("killed parameter is not valid: "+err.Error()))
 			return
 		}
-		filter.IsKilled = null.BoolFrom(active)
 	}
 
 	if activeString != "" {
-		active, err := strconv.ParseBool(activeString)
+		active, err = strconv.ParseBool(activeString)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid: "+err.Error()))
 			return
 		}
-		filter.Active = null.BoolFrom(active)
 	}
 	sCtx := mrh.GetQueryStateContext()
 	edb := sCtx.GetEventDB()
@@ -766,7 +763,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	miners, err := edb.GetMinersWithFiltersAndPagination(filter, pagination)
+	miners, err := edb.GetMinersWithFiltersAndPagination(active, killed, pagination)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return

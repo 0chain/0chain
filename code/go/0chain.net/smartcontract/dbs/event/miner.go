@@ -136,12 +136,12 @@ func (m *Miner) SetTotalRewards(value currency.Coin) {
 	m.Rewards.TotalRewards = value
 }
 
-func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p common2.Pagination) ([]Miner, error) {
+func (edb *EventDb) GetMinersWithFiltersAndPagination(active, killed bool, p common2.Pagination) ([]Miner, error) {
 	var miners []Miner
 	query := edb.Get().
 		Preload("Rewards").
 		Model(&Miner{}).
-		Where(&filter).Offset(p.Offset).Limit(p.Limit).
+		Where(&Miner{Active: active, Provider: Provider{IsKilled: killed}}).Offset(p.Offset).Limit(p.Limit).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "creation_round"},
 			Desc:   p.IsDescending,
