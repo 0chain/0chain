@@ -41,7 +41,6 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetAfterFetcher(sharderChain)
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
-	sharderChain.TieringStats = &MinioStats{}
 	sharderChain.processingBlocks = cache.NewLRUCache[string, struct{}](1000)
 	c.RoundF = SharderRoundFactory{}
 }
@@ -49,12 +48,6 @@ func SetupSharderChain(c *chain.Chain) {
 /*GetSharderChain - get the sharder's chain */
 func GetSharderChain() *Chain {
 	return sharderChain
-}
-
-type MinioStats struct {
-	TotalBlocksUploaded int64
-	LastRoundUploaded   int64
-	LastUploadTime      time.Time
 }
 
 /*Chain - A chain structure to manage the sharder activities */
@@ -66,7 +59,6 @@ type Chain struct {
 	BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
-	TieringStats   *MinioStats
 
 	processingBlocks *cache.LRU[string, struct{}]
 	pbMutex          sync.RWMutex

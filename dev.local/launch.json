@@ -14,7 +14,6 @@
           "args": [
               "--deployment_mode", "1",
               "--keys_file", "../../../../../dev.local/data/sharder1/config/b0snode1_keys.txt", 
-              "--minio_file", "../../../../../dev.local/data/sharder1/config/minio_config.txt",
               "--work_dir", "../../../../../dev.local/data/sharder1"
           ],
           "env": {
