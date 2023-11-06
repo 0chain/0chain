@@ -5,8 +5,8 @@ enable:
 sets:  
   - name: "Storage providers"
     tests:
-      - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
       - "Validator Recovery - Validator should still be able to get rewards even after it recovers"
+      - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
 
 tests:
   - name: "Validator Recovery - Validator should still be able to get rewards even after it recovers"
