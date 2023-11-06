@@ -37,7 +37,7 @@ jobs:
     - name: Cleanup before restarting conductor tests.
       run: |
         rm -rf *
-        [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q)
+        [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
         
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
