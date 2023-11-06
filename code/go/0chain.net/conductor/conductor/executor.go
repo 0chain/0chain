@@ -1279,10 +1279,10 @@ func (r *Runner) CheckRollbackTokenomicsComparison() error {
 
 func (r *Runner) StoreAllocationsData() error {
 	if r.verbose {
-		log.Printf("[INF] storing allocations data : ", r.conf.AggregatesBaseUrl+"/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/")
+		log.Printf("[INF] storing allocations data : " + r.conf.Sharder1BaseURL)
 	}
 
-	allocationService := services.NewAllocationService(r.conf.AggregatesBaseUrl + "/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/")
+	allocationService := services.NewAllocationService(r.conf.Sharder1BaseURL)
 
 	err := allocationService.StoreAllocationsData()
 	if err != nil {

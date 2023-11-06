@@ -16,6 +16,8 @@ stuck_warning_threshold: "2s"
 
 aggregate_base_url: "http://localhost:9081/v2"
 
+sharder1_base_url: "http://localhost:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+
 
 #
 # nodes used in tests
