@@ -12,6 +12,7 @@ import (
 	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/types"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -103,6 +104,48 @@ type nodeState struct {
 	counter int         // used when node appears
 }
 
+type ValidtorTicket struct {
+	ValidatorId string
+}
+
+type AggregateMessage struct {
+	ProviderType types.ProviderType
+	ProviderId string
+	Values types.Aggregate
+}
+
+type NodeConfig struct {
+	Version int
+	Map map[string]interface{}
+	mutex *sync.RWMutex
+}
+
+func (nc *NodeConfig) Get(key string) map[string]interface{} {
+	nc.mutex.RLock()
+	defer nc.mutex.Unlock()
+
+	return nc.Map
+}
+
+func (nc *NodeConfig) Update(config map[string]interface{}) {
+	nc.mutex.Lock()
+	defer nc.mutex.Unlock()
+
+	for k, v := range config {
+		nc.Map[k] = v
+	}
+
+	nc.Version++
+}
+
+func NewNodeConfig(config map[string]interface{}) *NodeConfig {
+	return &NodeConfig{
+		Version: 1,
+		Map: config,
+		mutex: &sync.RWMutex{},
+	}
+}
+
 type Server struct {
 	server  *rpc.Server
 	address string
@@ -126,6 +169,13 @@ type Server struct {
 	onAddAuthorizer chan *AddAuthorizerEvent
 	// onSharderKeep occurs where miner SC proceed sharder_keep function
 	onSharderKeep chan *SharderKeepEvent
+	// onSharderBlock occurs when the sharder is send an add_block request
+	onSharderBlock chan *stats.BlockFromSharder
+	// onValidatorTicket occurs when the validator sends a ticket
+	onValidatorTicket chan *ValidtorTicket
+	// onAggregate occurs when the sharder sends an aggregate if the aggregates are being monitored
+	onAggregate chan *AggregateMessage
+
 	// onNodeReady used by miner/sharder to notify the server that the node
 	// has started and ready to register (if needed) in miner SC and start
 	// it work. E.g. the node has started and waits the conductor to enter BC.
@@ -148,6 +198,7 @@ type Server struct {
 
 	// node id -> node name mapping
 	names map[NodeID]NodeName
+	nodeCustomConfig map[NodeID]*NodeConfig
 
 	NodesServerStatsCollector *stats.NodesServerStats
 	NodesClientStatsCollector *stats.NodesClientStats
@@ -161,6 +212,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 	s = &Server{
 		quit:                      make(chan struct{}),
 		names:                     names,
+		nodeCustomConfig: 		   make(map[config.NodeID]*NodeConfig),
 		onViewChange:              make(chan *ViewChangeEvent, 10),
 		onPhase:                   make(chan *PhaseEvent, 10),
 		onAddMiner:                make(chan *AddMinerEvent, 10),
@@ -168,6 +220,8 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		onAddBlobber:              make(chan *AddBlobberEvent, 10),
 		onAddAuthorizer:           make(chan *AddAuthorizerEvent, 10),
 		onSharderKeep:             make(chan *SharderKeepEvent, 10),
+		onSharderBlock: 		   make(chan *stats.BlockFromSharder),
+		onValidatorTicket: 		   make(chan *ValidtorTicket, 10),
 		onNodeReady:               make(chan NodeName, 10),
 		onRoundEvent:              make(chan *RoundEvent, 100),
 		onContributeMPKEvent:      make(chan *ContributeMPKEvent, 10),
@@ -225,6 +279,17 @@ func (s *Server) AddNode(name NodeName, lock bool) {
 
 	ns.state.send(ns.poll) // initial state sending
 	s.nodes[name] = ns
+}
+
+func (s *Server) SetNodeConfig(id NodeID, config map[string]interface{}) (err error) {
+	nc, ok := s.nodeCustomConfig[id]
+	if !ok {
+		s.nodeCustomConfig[id] = NewNodeConfig(config)
+		return
+	}
+	
+	nc.Update(config)
+	return
 }
 
 // not for updating
@@ -321,6 +386,10 @@ func (s *Server) OnSharderKeep() chan *SharderKeepEvent {
 	return s.onSharderKeep
 }
 
+func (s *Server) OnSharderBlock() chan *stats.BlockFromSharder {
+	return s.onSharderBlock
+}
+
 // OnNodeReady used by nodes to notify the server that the node has started
 // and ready to register (if needed) in miner SC and start it work. E.g.
 // the node has started and waits the conductor to enter BC.
@@ -354,6 +423,14 @@ func (s *Server) OnChallengeStatus() chan map[string]interface{} {
 
 func (s *Server) OnGettingFileMetaRoot() chan map[string]string {
 	return s.onGettingFileMetaRoot
+}
+
+func (s *Server) OnValidatorTicket() chan *ValidtorTicket {
+	return s.onValidatorTicket
+}
+
+func (s *Server) OnAggregate() chan *AggregateMessage {
+	return s.onAggregate
 }
 
 func (s *Server) Nodes() map[config.NodeName]*nodeState {
@@ -433,6 +510,14 @@ func (s *Server) SharderKeep(sk *SharderKeepEvent, _ *struct{}) (err error) {
 	return
 }
 
+func (s *Server) SharderBlock(block *stats.BlockFromSharder, _ *struct{}) (err error) {
+	select {
+	case s.onSharderBlock <- block:
+	case <- s.quit:
+	}
+	return
+}
+
 func (s *Server) Round(rnd *RoundEvent, _ *struct{}) (err error) {
 	select {
 	case s.onRoundEvent <- rnd:
@@ -465,9 +550,25 @@ func (s *Server) ChallengeGenerated(blobberID *string, _ *struct{}) error {
 	return nil
 }
 
+func (s *Server) AggregateMessage(agg *AggregateMessage, _ *struct{}) error {
+	select {
+	case s.onAggregate <- agg:
+	case <-s.quit:
+	}
+	return nil
+}
+
 func (s *Server) BlobberCommitted(blobberID *string, _ *struct{}) error {
 	select {
 	case s.onBlobberCommit <- *blobberID:
+	case <-s.quit:
+	}
+	return nil
+}
+
+func (s *Server) ValidatorTicket(ticket *ValidtorTicket, _ *struct{}) error {
+	select {
+	case s.onValidatorTicket <- ticket:
 	case <-s.quit:
 	}
 	return nil
@@ -523,6 +624,17 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 	case <-s.quit:
 		return ErrShutdown
 	}
+	return
+}
+
+func (s *Server) NodeCustomConfig(id NodeID, config *NodeConfig) (err error) {
+	cfg, ok := s.nodeCustomConfig[id]
+	if !ok {
+		log.Printf("[warn] no custom config for node %v\n", id)
+		return
+	}
+
+	(*config) = (*cfg)
 	return
 }
 

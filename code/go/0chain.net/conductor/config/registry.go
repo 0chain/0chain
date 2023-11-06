@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -719,6 +721,53 @@ func init() {
 		return ex.SetServerState(cfg)
 	})
 
+	register("check_miner_generates_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg WaitMinerGeneratesBlock
+		if err := mapstructure.Decode(val, &cfg); err != nil {
+			return err
+		}
+		return ex.WaitMinerGeneratesBlock(cfg, tm)
+	})
+
+	register("wait_sharder_lfb", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg WaitSharderLFB
+		if err := mapstructure.Decode(val, &cfg); err != nil {
+			return err
+		}
+		return ex.WaitSharderLFB(cfg, tm)
+	})
+
+	register("sleep", func(_ string,
+		_ Executor, val interface{}, _ time.Duration) (err error) {
+		var d time.Duration
+		switch v := val.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return
+			}
+		case time.Duration:
+			d = v
+		case int:
+			d = time.Duration(v)
+		default:
+			return fmt.Errorf("invalid duration argument: %v", val)
+		}
+		time.Sleep(d)
+		return nil
+	})
+
+	register("generate_all_challenges", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type bool, got %T", val)
+		}
+
+		log.Printf("[INF] generate_all_challenges: %v", cfg)
+
+		return ex.SetServerState(GenerateAllChallenges(cfg))
+	})
+
 	register("generate_challenge", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := NewGenerateChallenge()
 		if err := cfg.Decode(val); err != nil {
@@ -748,6 +797,17 @@ func init() {
 	// waits for blobber to submit challenge and miner to send status of this challenge
 	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
 		ex.WaitForChallengeStatus(tm)
+		return nil
+	})
+
+	register("wait_validator_ticket", func(_ string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewWaitValidatorTicket()
+		err = mapstructure.Decode(val, cfg)
+		if err != nil {
+			return
+		}
+
+		ex.WaitValidatorTicket(*cfg, tm)
 		return nil
 	})
 
@@ -824,4 +884,54 @@ func init() {
 		return ex.CheckFileMetaRoot(&command)
 	})
 
+	register("check_aggregate_value_change", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg CheckAggregateChange
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return
+		}
+
+		return ex.CheckAggregateValueChange(&cfg, tm)
+	})
+
+	register("check_aggregate_value_comparison", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg CheckAggregateComparison
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return
+		}
+
+		return ex.CheckAggregateValueComparison(&cfg, tm)
+	})
+
+	register("set_node_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg NodeCustomConfig
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return 
+		}
+
+		return ex.SetNodeCustomConfig(&cfg)
+	})
+
+	register("sync_latest_aggregates", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg SyncAggregates
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		return ex.SyncLatestAggregates(&cfg)
+	})
+
+	register("pause", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		// pause execution until the user presses enter
+		log.Println("Press enter to continue...")
+		_, err = bufio.NewReader(os.Stdin).ReadBytes('\n')
+		if err != nil {
+			return
+		}
+		log.Printf("Continuing execution...")
+		return nil
+	})
 }

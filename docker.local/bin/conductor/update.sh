@@ -5,7 +5,7 @@ set -e
 remotepath=$1
 
 # create random file
-head -c 5M < /dev/urandom > update.bin
+head -c 100M < /dev/urandom > update.bin
 
 # update it
 ./zboxcli/zbox --wallet testing.json update \

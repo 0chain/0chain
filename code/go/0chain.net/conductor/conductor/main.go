@@ -26,6 +26,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
 )
 
@@ -76,7 +77,6 @@ func main() {
 
 	log.Print("create worker instance")
 	r.conf = conf
-	r.chalConf = config.NewGenerateChallenge()
 	r.verbose = verbose
 	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
 	if err != nil {
@@ -202,6 +202,9 @@ type Runner struct {
 	waitNoProgress         config.WaitNoProgress         // no new rounds expected
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	waitCommand            chan error                    // wait a command
+	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
+	waitSharderLFB	config.WaitSharderLFB	
+	waitValidatorTicket   config.WaitValidatorTicket
 	chalConf               *config.GenerateChallege
 	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
@@ -249,16 +252,24 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case !r.waitNoViewChange.IsZero():
 		log.Println("wait for no view change")
 		return tm, true
+	case r.waitMinerGeneratesBlock.MinerName != "":
+		log.Printf("wait until miner %v generates block\n", r.waitMinerGeneratesBlock.MinerName)
+		return tm, true
+	case r.waitSharderLFB.Target != "":
+		log.Printf("wait to check sharder %v got LFB\n", r.waitSharderLFB.Target)
+		return tm, true
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
 		return tm, true
-	case r.chalConf.WaitOnBlobberCommit:
+	case r.chalConf != nil && r.chalConf.WaitOnBlobberCommit:
 		return tm, true
-	case r.chalConf.WaitOnChallengeGeneration:
+	case r.chalConf != nil && r.chalConf.WaitOnChallengeGeneration:
 		return tm, true
-	case r.chalConf.WaitForChallengeStatus:
+	case r.chalConf != nil && r.chalConf.WaitForChallengeStatus:
 		return tm, true
 	case r.fileMetaRoot.shouldWait:
+		return tm, true
+	case r.waitValidatorTicket.ValidatorName != "":
 		return tm, true
 	}
 
@@ -735,6 +746,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 
 	switch {
 	case r.waitRound.Round > re.Round:
+		log.Printf("Got round %v\n", re.Round)
 		return // not this round
 	case r.waitRound.ForbidBeyond && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
@@ -821,13 +833,115 @@ func (r *Runner) acceptShareOrSignsShares(
 	return
 }
 
-func (r *Runner) onChallengeGeneration(blobberID string) {
-	if blobberID != r.chalConf.BlobberID {
+func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] Recieved new sharder block: %+v\n", block)
+	}
+	switch {
+	case r.waitMinerGeneratesBlock.MinerName != "":
+		miner, ok := r.conf.Nodes.NodeByName(r.waitMinerGeneratesBlock.MinerName)
+		if !ok {
+			return fmt.Errorf("expecting block from unknown miner: %s", miner.ID)
+		}
+	
+		if r.verbose {
+			log.Printf(" [INF] got sharder block for miner %v, looking for miner %v\n", block.GeneratorId, miner.ID)
+		}
+	
+		err = r.handleNewBlockWaitingForMinerBlockGeneration(block, string(miner.ID))
+		return
+	case r.waitSharderLFB.Target != "":
+		sharder, ok := r.conf.Nodes.NodeByName(r.waitSharderLFB.Target)
+		if !ok {
+			return fmt.Errorf("expecting block from unknown sharder: %s", r.waitSharderLFB.Target)
+		}
+
+		err = r.handleNewBlockWaitingForSharderLFB(block, string(sharder.ID))
 		return
 	}
-	log.Println("Challenge has been generated for blobber ", blobberID)
 
-	r.chalConf.WaitOnChallengeGeneration = false
+	return
+}
+
+func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error) {
+	if r.verbose {
+		log.Printf("[INF] got validator ticket from %v\n", vt.ValidatorId)
+	}
+
+	if vt.ValidatorId != r.waitValidatorTicket.ValidatorId {
+		return nil
+	}
+
+	if r.verbose {
+		log.Printf(" [INF] ✅ Got validator ticket from the required validator %v\n", r.waitValidatorTicket.ValidatorId)
+	}
+
+	r.waitValidatorTicket = config.WaitValidatorTicket{}
+	err = r.SetServerState(config.NotifyOnValidationTicketGeneration(false))
+	return err
+}
+
+func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
+	if block.GeneratorId != string(minerId) {
+		return 
+	}
+
+	if r.verbose {
+		log.Printf(" [INF] ✅ found sharder block %v\n", minerId)
+	}
+
+	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
+
+	err = r.SetServerState(&config.NotifyOnBlockGeneration{
+		Enable: false,
+	})
+
+	return
+}
+
+func (r *Runner) handleNewBlockWaitingForSharderLFB(block *stats.BlockFromSharder, sharderId string) (err error) {
+	if block.SenderId == sharderId {
+		minDiff := int64(6) // well, 6 is infinity if the max allowed is 5
+		targetRound := block.Round
+		var curDiff int64
+		for sid, blk := range r.waitSharderLFB.LFBs {
+			if sid == config.NodeID(sharderId) {
+				continue
+			}
+			curDiff = blk.Round - targetRound
+			if curDiff < minDiff {
+				minDiff = curDiff
+			}
+		}
+
+		if minDiff <=5 {
+			if r.verbose {
+				log.Printf(" [INF] ✅ sharder sent LFB %+v\n", block)
+			}
+
+			r.waitSharderLFB = config.WaitSharderLFB{}
+			
+			err = r.SetServerState(&config.NotifyOnBlockGeneration{
+				Enable: false,
+			})
+
+			return
+		}
+	}
+
+	if r.waitSharderLFB.LFBs == nil {
+		r.waitSharderLFB.LFBs = make(map[config.NodeID]*stats.BlockFromSharder)
+	}
+	r.waitSharderLFB.LFBs[config.NodeID(block.SenderId)] = block
+	return
+}
+
+func (r *Runner) onChallengeGeneration(txnHash string) {
+	log.Printf("Challenge has been generated in txn: %v\n", txnHash)
+
+	if r.chalConf != nil {
+		r.chalConf.WaitOnChallengeGeneration = false
+	}
 }
 
 func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
@@ -836,15 +950,17 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 		return errors.New("invalid map on challenge status")
 	}
 
-	if blobberID != r.chalConf.BlobberID {
-		return nil
-	}
+	if r.chalConf != nil {
+		if blobberID != r.chalConf.BlobberID {
+			return nil
+		}
 
-	r.chalConf.WaitForChallengeStatus = false
+		r.chalConf.WaitForChallengeStatus = false
 
-	status := m["status"].(int)
-	if r.chalConf.ExpectedStatus != status {
-		return fmt.Errorf("expected status %d, got %d", r.chalConf.ExpectedStatus, status)
+		status := m["status"].(int)
+		if r.chalConf.ExpectedStatus != status {
+			return fmt.Errorf("expected challenge status %d, got %d", r.chalConf.ExpectedStatus, status)
+		}	
 	}
 
 	return nil
@@ -876,16 +992,19 @@ func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {
 }
 
 func (r *Runner) onBlobberCommit(blobberID string) {
-	if blobberID != r.chalConf.BlobberID {
-		log.Printf("Ignoring blobber: %s\n", blobberID)
-		return
+	if r.chalConf != nil {
+		if blobberID != r.chalConf.BlobberID {
+			log.Printf("Ignoring blobber: %s\n", blobberID)
+			return
+		}
+		log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
+		r.chalConf.WaitOnBlobberCommit = false
 	}
+
 	err := r.SetServerState(config.BlobberCommittedWM(true))
 	if err != nil {
 		log.Printf("error: %s", err.Error())
 	}
-	log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
-	r.chalConf.WaitOnBlobberCommit = false
 }
 
 func (r *Runner) stopAll() {
@@ -925,6 +1044,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
+		case block := <- r.server.OnSharderBlock():
+			err = r.acceptSharderBlockForMiner(block)
 		case blobberID := <-r.server.OnBlobberCommit():
 			r.onBlobberCommit(blobberID)
 		case blobberID := <-r.server.OnGenerateChallenge():
@@ -933,6 +1054,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.onChallengeStatus(m)
 		case m := <-r.server.OnGettingFileMetaRoot():
 			err = r.onGettingFileMetaRoot(m)
+		case vt := <-r.server.OnValidatorTicket():
+			err = r.acceptValidatorTicket(vt)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)
@@ -1014,6 +1137,7 @@ func (r *Runner) resetWaiters() {
 	r.waitNoProgress = config.WaitNoProgress{}                 //
 	r.waitNoViewChange = config.WaitNoViewChainge{}            //
 	r.waitSharderKeep = config.WaitSharderKeep{}               //
+	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
 	if r.waitCommand != nil {
 		go func(wc chan error) { <-wc }(r.waitCommand)
 		r.waitCommand = nil

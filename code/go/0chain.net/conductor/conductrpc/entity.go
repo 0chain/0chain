@@ -216,6 +216,17 @@ func (e *Entity) SendChallengeStatus(m map[string]interface{}) {
 	}
 }
 
+func (e *Entity) SendAggregate(aggMessage *AggregateMessage) {
+	err := e.client.sendAggregate(aggMessage)
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
+}
+
+func (e *Entity) GetNodeConfig(pid string) (config NodeConfig, err error) {
+	return e.client.getNodeCustomConfig(pid)
+}
+
 //
 // global
 //
@@ -254,6 +265,10 @@ func (e *Entity) AddBlockClientStats(rs *stats.BlockRequest, reqType stats.Block
 	}
 
 	return e.client.addBlockClientStats(blob)
+}
+
+func (e *Entity) NotifyOnSharderBlock(block *stats.BlockFromSharder) error {
+	return e.client.notifyOnSharderBlock(block)
 }
 
 var global *Entity

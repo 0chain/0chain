@@ -3,6 +3,8 @@ package config
 import (
 	"strings"
 	"time"
+
+	"0chain.net/conductor/conductrpc/stats"
 )
 
 // ExpectMagicBlock represents expected magic block.
@@ -120,6 +122,8 @@ func (wa *WaitAdd) Take(name NodeName) (ok bool) {
 		return wa.TakeValidator(name)	
 	} else if strings.Contains(string(name), "authorizer") {
 		return wa.TakeAuthorizer(name)
+	} else if strings.Contains(string(name), "validator") {
+		return wa.TakeValidator(name)
 	}
 
 	return false
@@ -210,4 +214,17 @@ func (wsk *WaitSharderKeep) TakeSharder(name NodeName) (ok bool) {
 		}
 	}
 	return
+}
+
+// WaitMinerGeneratesBlock used in waiting if a miner generates a block
+type WaitMinerGeneratesBlock struct {
+	MinerName NodeName `json:"miner" yaml:"miner" mapstructure:"miner"`
+}
+
+// WaitSharderLFB used when checking a sharder recieves the LFB
+type WaitSharderLFB struct {
+	Target NodeName `json:"sharder" yaml:"sharder" mapstructure:"sharder"`
+
+	// Not part of the directive parameters
+	LFBs map[NodeID]*stats.BlockFromSharder `json:"-" yaml:"-" mapstructure:"-"`
 }

@@ -14,6 +14,9 @@ view_change: 250 # 100
 skip_wait: ["0dns"]
 stuck_warning_threshold: "2s"
 
+aggregate_base_url: "http://localhost:9081/v2"
+
+
 #
 # nodes used in tests
 #
@@ -189,6 +192,34 @@ nodes:
     start_command: "echo \0"
     stop_command: "echo \0"
 
+  - name: "validator-1"
+    id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
+    work_dir: "../blobber/docker.local/validator1"
+    env: BLOBBER=1,CONFIG_PATH=./conductor-config
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
+
+  - name: "validator-2"
+    id: ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd
+    work_dir: "../blobber/docker.local/validator2"
+    env: BLOBBER=2,CONFIG_PATH=./conductor-config
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
+
+  - name: "validator-3"
+    id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
+    work_dir: "../blobber/docker.local/validator3"
+    env: BLOBBER=3,CONFIG_PATH=./conductor-config
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
+
+  - name: "validator-4"
+    id: 823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337
+    work_dir: "../blobber/docker.local/validator4"
+    env: BLOBBER=4,CONFIG_PATH=./conductor-config
+    start_command: "sh -c \"echo\""
+    stop_command: "sh -c \"echo\""
+
   # authorizer
   - name: "authorizer-1"
     id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
@@ -210,6 +241,13 @@ nodes:
     env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
     start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+  
+  - name: "authorizer-4"
+    id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
+    work_dir: "../token_bridge_authserver/docker.local/auth4"
+    env: AUTHORIZER=4,ETH_MNEMONIC=prize tennis people canoe tongue reform main ghost jelly prefer swear nurse,ETH_UNLOCKPASSWORD="L9gwnf#Gm)bpZLP7",ETH_ADDRESS=0xD21073e6DC7E65aABc8763b9B34AAd9Eb4c8cE65,ETH_PK=0x8f86829881c924854a3ed32e986cb64bde652eb7431cc693a38d20da90319a88
+    start_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
+    stop_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   # 0dns (patched version, add docker-clean, start-no-daemon.sh)
   - name: "0dns" #
@@ -218,6 +256,13 @@ nodes:
     env: "" # no ENV needed
     start_command: "../0dns/docker.local/bin/start-no-daemon.sh" # not demonized instance
     stop_command: "../0dns/docker.local/bin/stop-no-daemon.sh" # not demonized instance
+  
+  - name: "0box"
+    id: "0box"
+    work_dir: "../0box/"
+    env: ""
+    start_command: "./docker.local/bin/start-ct.sh"
+    stop_command: "./docker.local/bin/stop-ct.sh"
 
 # named system commands
 commands:
@@ -236,6 +281,10 @@ commands:
   cleanup_blobbers:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/docker-clean.sh"
+    can_fail: true
+  cleanup_0box:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/cleanup_0box.sh"
     can_fail: true
   cleanup_0dns:
     work_dir: "../0dns"
@@ -397,6 +446,43 @@ commands:
       destname:
         required: false
         default: upload_renamed.bin
+  cleanup_provider:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/cleanup_provider.sh $path $recreate_script $recreate_script_workdir"
+    args:
+      path:
+        required: true
+      recreate_script:
+        required: true
+      recreate_script_workdir:
+        required: true
+  fill_blobber_validator_wallets:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/fill_blobber_validator_wallets.sh"
+  stake_providers:
+    work_dir: "../"
+    exec: ./0chain/docker.local/bin/conductor/stake_providers.sh $provider_type $provider_ids
+    args:
+      provider_type:
+        required: true
+      provider_ids:
+        required: true
+  update_config:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/update_config.sh $keys $values"
+    args:
+      keys:
+        required: true
+      values:
+        required: true
+  update_faucet_config:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/update_faucet_config.sh $keys $values"
+    args:
+      keys:
+        required: true
+      values:
+        required: true
   cleanup:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/cleanup.sh"

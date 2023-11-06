@@ -79,6 +79,7 @@ type State struct {
 	BlobberDownload         *config.BlobberDownload
 	BlobberUpload           *config.BlobberUpload
 	BlobberDelete           *config.BlobberDelete
+	GenerateAllChallenges   bool
 	GenerateChallenge       *config.GenerateChallege
 	StopWMCommit            bool
 	StopChallengeGeneration bool
@@ -94,6 +95,8 @@ type State struct {
 
 	ServerStatsCollectorEnabled bool
 	ClientStatsCollectorEnabled bool
+	NotifyOnBlockGeneration bool
+	NotifyOnValidationTicketGeneration bool
 }
 
 // Name returns NodeName by given NodeID.

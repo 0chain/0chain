@@ -235,6 +235,17 @@ func (c *client) magicBlock() (configFile *string, err error) {
 	return
 }
 
+func (c *client) notifyOnSharderBlock(block *stats.BlockFromSharder) (err error) {
+	err = c.client.Call("Server.SharderBlock", block, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.SharderBlock", block, &struct{}{})
+	}
+	return
+}
+
 func (c *client) challengeGenerated(blobberID string) (err error) {
 	err = c.client.Call("Server.ChallengeGenerated", &blobberID, nil)
 	return
@@ -247,5 +258,21 @@ func (c *client) blobberCommitted(blobberID string) (err error) {
 
 func (c *client) sendChallengeStatus(m map[string]interface{}) (err error) {
 	err = c.client.Call("Server.SetChallengeStatus", m, nil)
+	return
+}
+
+func (c *client) sendAggregate(aggMessage *AggregateMessage) (err error) {
+	err = c.client.Call("Server.AggregateMessage", aggMessage, nil)
+	return
+}
+
+func (c *client) getNodeCustomConfig(pid string) (config NodeConfig, err error) {
+	err = c.client.Call("Server.NodeCustomConfig", pid, &config)
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.NodeCustomConfig", pid, &config)
+	}
 	return
 }
