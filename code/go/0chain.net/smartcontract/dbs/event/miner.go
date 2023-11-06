@@ -96,7 +96,7 @@ type MinerQuery struct {
 	PublicKey         null.String
 	ShortName         null.String
 	BuildTag          null.String
-	TotalStaked       currency.Coin
+	TotalStaked       null.Int
 	Delete            null.Bool
 	DelegateWallet    null.String
 	ServiceCharge     null.Float
