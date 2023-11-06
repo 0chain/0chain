@@ -3,7 +3,7 @@ name: CONDUCTOR BLOBBER-04 TESTS
 on:
   schedule:
     # Runs everyday at 02:00 am
-    - cron: '0 4 * * *'
+    - cron: '0 5 * * *'
   workflow_dispatch:
     inputs:
       chain_branch:

@@ -3,7 +3,7 @@ name: CONDUCTOR MINER STANDARD TESTS
 on:
   schedule:
     # Runs everyday at 01:00 am
-    - cron: '0 1 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       chain_branch:

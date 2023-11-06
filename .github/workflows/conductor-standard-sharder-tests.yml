@@ -3,7 +3,7 @@ name: CONDUCTOR SHARDER STANDARD TESTS
 on:
   schedule:
     # Runs everyday at 12:00 am
-    - cron: '0 0 * * *'
+    - cron: '0 11 * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
