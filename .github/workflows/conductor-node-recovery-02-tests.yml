@@ -277,7 +277,7 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    - name: Starting blobber Tests.
+    - name: Starting Node Recovery Tests.
       run: |
         export HOME="/root"
         cd 0chain
