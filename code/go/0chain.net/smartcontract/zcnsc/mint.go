@@ -181,6 +181,7 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 
 	rd := rand.New(rand.NewSource(randomSeed))
 	sig := sortedSigs[rd.Intn(len(payload.Signatures))]
+	logging.Logger.Debug("mint reward", zap.String("authorizer", sig.ID), zap.Int64("seed", randomSeed))
 
 	sp, err := zcn.getStakePool(sig.ID, ctx)
 	if err != nil {
