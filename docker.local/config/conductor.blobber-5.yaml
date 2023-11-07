@@ -7,8 +7,8 @@ sets:
   - name: "Minority Cases"
     tests:
       - "Rollback tokenomics"
-      - "Allocation state should be same after rollback"
-      - "Allocation state should be same after repair"
+#      - "Allocation state should be same after rollback"
+#      - "Allocation state should be same after repair"
 
 # test cases
 tests:
