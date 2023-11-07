@@ -3,6 +3,9 @@ name: CONDUCTOR AUTHORIZER NODE RECOVERY TESTS
 on:
   schedule:
     - cron: '0 10 * * *'
+  push:
+    branches:
+      - "feature/ct-auth-crash-and-reward"
   workflow_dispatch:
       inputs:
         chain_branch:
@@ -19,7 +22,7 @@ on:
           required: false
         zwalletcli_branch:
           description: 'Input branch for zwalletcli repo'
-          default: ''
+          default: 'feat/mint-zcn-txn'
           required: false
         zbox_branch:
           description: 'Input branch for zbox repo'
