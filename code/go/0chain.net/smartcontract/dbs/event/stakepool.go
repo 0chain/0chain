@@ -134,6 +134,8 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}()
 
+	logging.Logger.Debug("reward provider", zap.Any("rewards", rewards))
+
 	if len(rewards.rewards) > 0 || len(rewards.totalRewards) > 0 {
 		if err := edb.rewardProviders(rewards.rewards, rewards.totalRewards, round); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
@@ -148,6 +150,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	if len(rewards.delegatePools) > 0 {
+		logging.Logger.Debug("reward provider pools", zap.Any("rewards", rewards))
 		if err := edb.rewardProviderDelegates(rewards.delegatePools, round); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
