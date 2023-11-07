@@ -16,7 +16,7 @@ func init() {
 	BlockSyncTimer = metrics.GetOrRegisterTimer("block_sync_timer", nil)
 }
 
-//Stats - a struct to store various runtime stats of the chain
+// Stats - a struct to store various runtime stats of the chain
 type Stats struct {
 	ShardedBlocksCount int64
 
@@ -225,13 +225,4 @@ type ExplorerStats struct {
 	PrevInvocationCount    uint64  `json:"pervious_invocation_count"`
 	PrevInvocationScanTime string  `json:"previous_incovcation_scan_time"`
 	MeanScanBlockStatsTime float64 `json:"mean_scan_block_stats_time"`
-}
-
-func (sc *Chain) WriteMinioStats(w http.ResponseWriter) {
-	fmt.Fprintf(w, "<table width='100%%'>")
-	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Minio Stats</th></tr>")
-	fmt.Fprintf(w, "<tr><td>Total Rounds processed</td><td>%d</td></tr>", sc.TieringStats.TotalBlocksUploaded)
-	fmt.Fprintf(w, "<tr><td>Last Round processed</td><td>%d</td></tr>", sc.TieringStats.LastRoundUploaded)
-	fmt.Fprintf(w, "<tr><td>Last Upload time</td class='string'><td>%v</td></tr>", sc.TieringStats.LastUploadTime.Format(HealthCheckDateTimeFormat))
-	fmt.Fprintf(w, "</table>")
 }
