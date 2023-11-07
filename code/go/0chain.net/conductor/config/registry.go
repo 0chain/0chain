@@ -936,14 +936,14 @@ func init() {
 	})
 
 	register("set_miss_up_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg, ok := val.(MissUpDownload)
+		input, ok := val.(bool)
 		if !ok {
-			return fmt.Errorf("invalid value. Required type MissUpDownload, got %T", val)
+			return fmt.Errorf("invalid value. Required type MissUpDownload, got %T", input)
 		}
-
+		cfg := MissUpDownload(input)
 		return ex.SetMissUpDownload(&cfg)
 	})
-	
+
 	register("wait_sharders_finalize_near_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		var command WaitShardersFinalizeNearBlocks
 		err = mapstructure.Decode(val, &command)
