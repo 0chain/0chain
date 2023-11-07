@@ -1,9 +1,9 @@
-name: CONDUCTOR BLOBBER-04 TESTS
+name: CONDUCTOR BLOBBER-06 TESTS
 
 on:
   schedule:
     # Runs everyday at 02:00 am
-    - cron: '0 5 * * *'
+    - cron: '0 12 * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -24,8 +24,8 @@ on:
         required: false
 
 jobs:
-  CONDUCTOR_BLOBBERS_04_TESTS:
-    name: CONDUCTOR-BLOBBERS-04-TESTS
+  CONDUCTOR_BLOBBERS_06_TESTS:
+    name: CONDUCTOR-BLOBBERS-06-TESTS
     runs-on: [self-hosted, conductor-test03]
 
     outputs:
@@ -36,7 +36,7 @@ jobs:
       run: |
         rm -rf *
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
-        
+
     - name: "Setup Go"
       shell: 'script --return --quiet --command "bash {0}"'
       run: |
@@ -62,19 +62,6 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-    # - name: Get Branch
-    #   id: get_branch
-    #   run: |
-    #     if [[ -n "${{ inputs.branchname }}" ]]; then
-    #        BRANCH="${{ inputs.branchname }}"
-    #        echo ::set-output name=BRANCH::${BRANCH}
-    #        echo "Branch name is ${BRANCH}"
-    #     else
-    #        BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-    #        echo ::set-output name=BRANCH::${BRANCH}
-    #        echo "Branch name is ${BRANCH}"
-    #     fi
 
     - name: Install herumi/bls and herumi/mcl
       run: |
@@ -261,12 +248,12 @@ jobs:
       run: |
         export HOME="/root"
         cd 0chain
-        ./docker.local/bin/start.conductor.sh blobber-4
+        ./docker.local/bin/start.conductor.sh blobber-6
 
     - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: blobber-04-logs
+        name: blobber-06-logs
         path: |
           0chain/conductor/logs/
           0chain/docker.local/miner*/log
@@ -280,40 +267,40 @@ jobs:
 
   notify_slack_on_failure:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_BLOBBERS_04_TESTS]
-    if: always() && (needs.CONDUCTOR_BLOBBERS_04_TESTS.result == 'failure')
+    needs: [CONDUCTOR_BLOBBERS_06_TESTS]
+    if: always() && (needs.CONDUCTOR_BLOBBERS_06_TESTS.result == 'failure')
     steps:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_BLOBBERS_04_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_04_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_BLOBBERS_06_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_06_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
-              "text": "CONDUCTOR BLOBBERS_04 TEST FAILED ⚠️",
+              "text": "CONDUCTOR BLOBBERS_06 TEST FAILED ⚠️",
               "color": "#ff0000"
               }
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_04_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_04_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_06_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_06_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_BLOBBERS_04_TESTS]
-    if: always() && (needs.CONDUCTOR_BLOBBERS_04_TESTS.result == 'success')
+    needs: [CONDUCTOR_BLOBBERS_06_TESTS]
+    if: always() && (needs.CONDUCTOR_BLOBBERS_06_TESTS.result == 'success')
     steps:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_BLOBBERS_04_TESTS PASSING on ${{ needs.CONDUCTOR_BLOBBERS_04_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_BLOBBERS_06_TESTS PASSING on ${{ needs.CONDUCTOR_BLOBBERS_06_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
-              "text": "CONDUCTOR BLOBBERS_04 TEST PASSED ✅",
+              "text": "CONDUCTOR BLOBBERS_06 TEST PASSED ✅",
               "color": "#22bb33"
               }
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_04_TESTS ARE PASSING on ${{ needs.CONDUCTOR_BLOBBERS_04_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_06_TESTS ARE PASSING on ${{ needs.CONDUCTOR_BLOBBERS_06_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

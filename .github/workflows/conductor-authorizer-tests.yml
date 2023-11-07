@@ -2,36 +2,39 @@ name: CONDUCTOR AUTHORIZER TESTS
 
 on:
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '0 1 * * *'
   workflow_dispatch:
-      inputs:
-        chain_branch:
-          description: 'Input branch for 0chain repo'
-          default: ''
-          required: false
-        auth_branch:
-          description: 'Input branch for authorizer repo'
-          default: ''
-          required: false
-        zboxcli_branch:
-          description: 'Input branch for zboxcli repo'
-          default: ''
-          required: false
-        zwalletcli_branch:
-          description: 'Input branch for zwalletcli repo'
-          default: ''
-          required: false
+    inputs:
+      chain_branch:
+        description: 'Input branch for 0chain repo'
+        default: ''
+        required: false
+      auth_branch:
+        description: 'Input branch for authorizer repo'
+        default: ''
+        required: false
+      zboxcli_branch:
+        description: 'Input branch for zboxcli repo'
+        default: ''
+        required: false
+      zwalletcli_branch:
+        description: 'Input branch for zwalletcli repo'
+        default: ''
+        required: false
 
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
     name: CONDUCTOR-AUTHORIZER-TESTS
     runs-on: [self-hosted, conductor-test03]
 
+    outputs:
+      branch: ${{ steps.auth_branch.outputs.BRANCH_OUT }}
+
     steps:
     - name: Cleanup before restarting conductor tests.
       run: |
         rm -rf *
-
+        [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
     # - uses: actions/checkout@v1
 
     - name: "Setup Go"
@@ -127,13 +130,13 @@ jobs:
         bash -c 'sed -i "s/max_pour_amount: 10/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
         bash -c 'cat docker.local/config/sc.yaml | grep max_pour_amount'
 
-
     - name: View Change Rounds
       run: |
         awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
     - name: Git clone authorizer
+      id: auth_branch
       run: |
         git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
         cd token_bridge_authserver
@@ -143,7 +146,7 @@ jobs:
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo ::set-output name=AUTH_BRANCH::${AUTH_BRANCH}
+          echo "BRANCH_OUT=$AUTH_BRANCH" >>$GITHUB_OUTPUT
         fi
         echo "Branch name is ${AUTH_BRANCH}"
         git checkout ${AUTH_BRANCH}
@@ -219,11 +222,6 @@ jobs:
         chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
         ./docker.local/bin/build.authorizer-integration-tests.sh
 
-    - name: Changing Authorizer Network
-      run: |
-        cd token_bridge_authserver
-        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
-
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
@@ -294,7 +292,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR AUTHORIZER TEST FAILED ⚠️",
@@ -303,7 +301,7 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
 
   notify_slack_on_success:
     runs-on: [self-hosted, arc-runner]
@@ -313,7 +311,7 @@ jobs:
       - name: "Notify Slack"
         run: |
           payload='{
-          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS PASSING on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
           "attachments": [
               {
               "text": "CONDUCTOR AUTHORIZER TEST PASSED ✅",
@@ -322,4 +320,4 @@ jobs:
           ]
           }'
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS ARE PASSING on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
