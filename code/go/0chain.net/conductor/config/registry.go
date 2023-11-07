@@ -807,7 +807,8 @@ func init() {
 			return
 		}
 
-		return ex.WaitValidatorTicket(*cfg, tm)
+		ex.WaitValidatorTicket(*cfg, tm)
+		return nil
 	})
 
 	// stop_challenge_generation directs miner to stop/resume generating challenge for any blobber
@@ -941,5 +942,16 @@ func init() {
 		}
 
 		return ex.SetMissUpDownload(&cfg)
+	})
+	
+	register("wait_sharders_finalize_near_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command WaitShardersFinalizeNearBlocks
+		err = mapstructure.Decode(val, &command)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		ex.WaitShardersFinalizeNearBlocks(command, tm)
+		return nil
 	})
 }

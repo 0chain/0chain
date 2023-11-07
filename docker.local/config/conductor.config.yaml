@@ -16,7 +16,6 @@ stuck_warning_threshold: "2s"
 
 aggregate_base_url: "http://localhost:9081/v2"
 
-
 #
 # nodes used in tests
 #

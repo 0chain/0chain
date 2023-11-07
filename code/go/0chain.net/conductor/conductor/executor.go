@@ -400,6 +400,23 @@ func (r *Runner) WaitSharderLFB(conf config.WaitSharderLFB, timeout time.Duratio
 	return
 }
 
+func (r *Runner) WaitShardersFinalizeNearBlocks(command config.WaitShardersFinalizeNearBlocks, timeout time.Duration) {
+	if r.verbose {
+		log.Printf(" [INF] Watching for sharders blocks to check LFB for %v\n", command.Sharders)
+	}
+
+	r.setupTimeout(timeout)
+
+	err := r.SetServerState(&config.NotifyOnBlockGeneration{
+		Enable: true,
+	})
+	if err != nil {
+		return
+	}
+
+	r.waitShardersFinalizeNearBlocks = command
+}
+
 func (r *Runner) GenerateChallenge(c *config.GenerateChallege) error {
 	if r.verbose {
 		log.Print(" [INF] setting generate challenge info")
@@ -451,24 +468,24 @@ func (r *Runner) WaitForChallengeStatus(timeout time.Duration) {
 	r.chalConf.WaitForChallengeStatus = true
 }
 
-func (r *Runner) WaitValidatorTicket(wvt config.WaitValidatorTicket, timeout time.Duration) (err error) {
+func (r *Runner) WaitValidatorTicket(wvt config.WaitValidatorTicket, timeout time.Duration) {
 	validator, ok := r.conf.Nodes.NodeByName(config.NodeName(wvt.ValidatorName))
 	if !ok {
-		return fmt.Errorf("Validator with name %v not found", wvt.ValidatorName)
+		log.Printf("[ERR] Validator with name %v not found", wvt.ValidatorName)
 	}
 
 	if r.verbose {
 		log.Printf(" [INF] waiting for ticket from validator %v (%v)", wvt.ValidatorName, validator.ID)
 	}
 
-	err = r.SetServerState(config.NotifyOnValidationTicketGeneration(true))
+	err := r.SetServerState(config.NotifyOnValidationTicketGeneration(true))
 	if err != nil {
-		return
+		log.Printf("[ERR] setting notify on validation ticket generation: %v", err)
 	}
 
 	r.setupTimeout(timeout)
+	r.waitValidatorTicket.ValidatorName = wvt.ValidatorName
 	r.waitValidatorTicket.ValidatorId = string(validator.ID)
-	return nil
 }
 
 func (r *Runner) WaitForFileMetaRoot() {
