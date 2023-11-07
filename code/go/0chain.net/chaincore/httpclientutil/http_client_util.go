@@ -5,7 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"math"
 	"net"
 	"net/http"
@@ -134,7 +135,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	return body, err
 }
 
@@ -171,7 +172,7 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 			logging.N2n.Error("get transaction status -- failed", zap.Error(err))
 			numErrs++
 		} else {
-			contents, err := ioutil.ReadAll(response.Body)
+			contents, err := io.ReadAll(response.Body)
 			if response.StatusCode != 200 {
 				// logging.Logger.Error("transaction confirmation response code",
 				// 	zap.Any("code", response.StatusCode))
@@ -420,7 +421,7 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 				return
 			}
 
-			bodyBytes, err := ioutil.ReadAll(rsp.Body)
+			bodyBytes, err := io.ReadAll(rsp.Body)
 			if err != nil {
 				logging.Logger.Error("SCRestAPI - failed to read body response", zap.String("URL", sharderURL), zap.Error(err))
 			}
@@ -529,7 +530,7 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 				response.Body.Close()
 				continue
 			}
-			bodyBytes, err := ioutil.ReadAll(response.Body)
+			bodyBytes, err := io.ReadAll(response.Body)
 			response.Body.Close()
 			if err != nil {
 				logging.Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Error(err))
@@ -604,7 +605,7 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 			}
 
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				logging.Logger.Error("fetch_magic_block_from_sharders - read data failed",
 					zap.String("url", url),
@@ -703,7 +704,7 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 				response.Body.Close()
 				continue
 			}
-			bodyBytes, err := ioutil.ReadAll(response.Body)
+			bodyBytes, err := io.ReadAll(response.Body)
 			response.Body.Close()
 			if err != nil {
 				logging.Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Error(err))

@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -47,7 +46,7 @@ const (
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
-	dbDir, err := ioutil.TempDir("", "dbs")
+	dbDir, err := os.MkdirTemp("", "dbs")
 	require.NoError(t, err)
 
 	blockDir := filepath.Join(dbDir, blockDataDir)
