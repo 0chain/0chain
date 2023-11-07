@@ -27,6 +27,8 @@ tests:
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 100
       - command:
           name: 'init_allocation_only'
       - command:
