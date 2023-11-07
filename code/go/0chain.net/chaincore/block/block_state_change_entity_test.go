@@ -27,7 +27,10 @@ func newBSC(state util.MerklePatriciaTrieI) *StateChange {
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
 	}
-	bsc.ComputeProperties()
+	err := bsc.ComputeProperties()
+	if err != nil {
+		return nil
+	}
 	return bsc
 }
 
@@ -82,7 +85,9 @@ func TestNewBlockStateChange(t *testing.T) {
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
 	}
-	bsc.ComputeProperties()
+
+	err = bsc.ComputeProperties()
+	require.NoError(t, err)
 
 	type args struct {
 		b *Block
