@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"fmt"
 	"io"
 	"net/http"
@@ -91,19 +90,19 @@ func HttpGet(url string, headers map[string]string) ([]byte, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode >= 400 {
-
-		log.Println("1 Error fetching allocation from remote", resp.StatusCode)
-
-		bdy, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		log.Println("2 Error fetching allocation from remote", string(bdy))
-
-		return nil, fmt.Errorf("Error in GET request to url %v", url)
-	}
+	//if resp.StatusCode >= 400 {
+	//
+	//	log.Println("1 Error fetching allocation from remote", resp.StatusCode)
+	//
+	//	bdy, err := io.ReadAll(resp.Body)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	log.Println("2 Error fetching allocation from remote", string(bdy))
+	//
+	//	return nil, fmt.Errorf("error in GET request to url %v", url)
+	//}
 
 	bdy, err := io.ReadAll(resp.Body)
 	if err != nil {
