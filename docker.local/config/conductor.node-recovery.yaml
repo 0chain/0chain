@@ -294,7 +294,7 @@ tests:
        - cleanup_bc: {}
        - command:
            name: "cleanup_0dns"
-       - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+       - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
        - wait_round:
           round: 15 # just wait the BC starts
        - start: ['0dns']
