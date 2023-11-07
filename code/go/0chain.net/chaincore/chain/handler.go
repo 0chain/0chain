@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/http"
+	"os"
 	"runtime"
 	"runtime/debug"
 	"sort"
@@ -1975,7 +1975,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 	mptRootHash := util.ToHex(mpt.GetRoot())
 	fileName := fmt.Sprintf("mpt_%v_%v_%v.txt", contract, lfb.Round, mptRootHash)
-	file, err := ioutil.TempFile("", fileName)
+	file, err := os.CreateTemp("", fileName)
 	if err != nil {
 		return
 	}
