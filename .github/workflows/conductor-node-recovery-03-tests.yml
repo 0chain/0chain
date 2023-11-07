@@ -1,16 +1,13 @@
-name: CONDUCTOR AUTHORIZER NODE RECOVERY TESTS
+name: CONDUCTOR NODE-RECOVERY-03-TESTS
 
 on:
   schedule:
     - cron: '0 10 * * *'
-  push:
-    branches:
-      - "feature/ct-auth-crash-and-reward"
   workflow_dispatch:
       inputs:
         chain_branch:
           description: 'Input branch for 0chain repo'
-          default: 'feature/ct-auth-crash-and-reward'
+          default: ''
           required: false
         auth_branch:
           description: 'Input branch for authorizer repo'
@@ -28,6 +25,8 @@ on:
           description: 'Input branch for zbox repo'
           default: ''
           required: false
+env:
+  ZDNS_URL: http://198.18.0.98:9091
 
 jobs:
   CONDUCTOR_NODE_RECOVERY_AUTHORIZER_TESTS:
@@ -197,7 +196,7 @@ jobs:
       run: |
         cd 0box
         chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
-        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }}
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
 
     - name: Build 0box Docker Image For Integration Test.
       run: |
@@ -300,7 +299,7 @@ jobs:
         export HOME="/root"
         cd 0chain
         # ./docker.local/bin/start.conductor.sh authorizer
-        ./docker.local/bin/start.conductor.sh node-recovery
+        ./docker.local/bin/start.conductor.sh node-recovery-03
 
     - uses: actions/upload-artifact@v3
       if: always()
