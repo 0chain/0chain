@@ -52,6 +52,7 @@ type Executor interface {
 	WaitOnBlobberCommit(timeout time.Duration)
 	WaitForChallengeStatus(timeout time.Duration)
 	WaitForFileMetaRoot()
+	WaitShardersFinalizeNearBlocks(command WaitShardersFinalizeNearBlocks, timeout time.Duration)
 	CheckFileMetaRoot(cfg *CheckFileMetaRoot) error
 
 	// Byzantine: BC, sharders

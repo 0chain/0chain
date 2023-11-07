@@ -192,6 +192,10 @@ type WaitNoViewChainge struct {
 	Round Round `json:"round" yaml:"round" mapstructure:"round"`
 }
 
+type WaitShardersFinalizeNearBlocks struct {
+	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+}
+
 func (wnvc *WaitNoViewChainge) IsZero() bool {
 	return (*wnvc) == (WaitNoViewChainge{})
 }

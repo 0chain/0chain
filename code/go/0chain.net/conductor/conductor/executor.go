@@ -400,6 +400,23 @@ func (r *Runner) WaitSharderLFB(conf config.WaitSharderLFB, timeout time.Duratio
 	return
 }
 
+func (r *Runner) WaitShardersFinalizeNearBlocks(command config.WaitShardersFinalizeNearBlocks, timeout time.Duration) {
+	if r.verbose {
+		log.Printf(" [INF] Watching for sharders blocks to check LFB for %v\n", command.Sharders)
+	}
+
+	r.setupTimeout(timeout)
+
+	err := r.SetServerState(&config.NotifyOnBlockGeneration{
+		Enable: true,
+	})
+	if err != nil {
+		return
+	}
+
+	r.waitShardersFinalizeNearBlocks = command
+}
+
 func (r *Runner) GenerateChallenge(c *config.GenerateChallege) error {
 	if r.verbose {
 		log.Print(" [INF] setting generate challenge info")
