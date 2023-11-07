@@ -5,6 +5,7 @@ import (
 	"0chain.net/conductor/types"
 	"0chain.net/conductor/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -57,15 +58,19 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 		return false, err
 	}
 
-	movedToChallengeDiffInFloat64 := float64(remoteAllocation.MovedToChallenge - localAllocation.MovedToChallenge)
-	movedBackDiffInFloat64 := float64(remoteAllocation.MovedBack - localAllocation.MovedBack)
-
-	if movedToChallengeDiffInFloat64 <= 1.05*movedBackDiffInFloat64 &&
-		movedToChallengeDiffInFloat64 >= 0.95*movedBackDiffInFloat64 {
-		return true, nil
+	if remoteAllocation.MovedToChallenge == localAllocation.MovedToChallenge {
+		return false, errors.New("active blobbers did not commit write markers")
 	}
 
-	return false, nil
+	if remoteAllocation.MovedBack == localAllocation.MovedBack {
+		return false, errors.New("active blobbers did not submit rollback WM")
+	}
+
+	if remoteAllocation.MovedToChallenge-remoteAllocation.MovedBack != 0 {
+		return false, errors.New("incorrect rollback tokens distributed")
+	}
+
+	return true, nil
 }
 
 func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.Allocation, error) {
