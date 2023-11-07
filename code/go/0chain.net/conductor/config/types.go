@@ -224,6 +224,25 @@ func BuildDisableFailRenameCommit(nodes []NodeID) *RenameCommitControl {
 	}
 }
 
+type UploadCommitControl struct {
+	Fail  bool
+	Nodes []NodeID
+}
+
+func BuildFailUploadCommit(nodes []NodeID) *UploadCommitControl {
+	return &UploadCommitControl{
+		Fail:  true,
+		Nodes: nodes,
+	}
+}
+
+func BuildDisableFailUploadCommit(nodes []NodeID) *UploadCommitControl {
+	return &UploadCommitControl{
+		Fail:  false,
+		Nodes: nodes,
+	}
+}
+
 type WaitValidatorTicket struct {
 	ValidatorName string `json:"validator_name" yaml:"validator_name" mapstructure:"validator_name"`
 	ValidatorId   string `json:"-" yaml:"-" mapstructure:"-"`

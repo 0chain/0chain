@@ -1159,6 +1159,13 @@ func (r *Runner) SetServerState(update interface{}) error {
 				state.FailRenameCommit = utils.SliceDifference(state.FailRenameCommit, update.Nodes)
 			}
 			fmt.Printf("state.FailRenameCommit = %v\n", state.FailRenameCommit)
+		case *config.UploadCommitControl:
+			if update.Fail {
+				state.FailUploadCommit = utils.SliceUnion(state.FailUploadCommit, update.Nodes)
+			} else {
+				state.FailUploadCommit = utils.SliceDifference(state.FailUploadCommit, update.Nodes)
+			}
+			fmt.Printf("state.FailUploadCommit = %v\n", state.FailUploadCommit)
 		case config.NotifyOnValidationTicketGeneration:
 			state.NotifyOnValidationTicketGeneration = bool(update)
 		}

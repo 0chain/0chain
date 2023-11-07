@@ -869,6 +869,44 @@ func init() {
 		return ex.SetServerState(BuildDisableFailRenameCommit(nodeIds))
 	})
 
+	register("fail_upload_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildFailUploadCommit(nodeIds))
+	})
+
+	register("disable_fail_upload_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildDisableFailUploadCommit(nodeIds))
+	})
+
 	register("wait_for_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		ex.WaitForFileMetaRoot()
 		cfg := GetFileMetaRoot(true)

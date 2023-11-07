@@ -44,12 +44,12 @@ tests:
             remotepath: /remote/upload1.bin
       - sleep: "1m"
       - store_allocations_data: { }
-      - stop: [ 'blobber-3' ]
+      - fail_rename_commit: ['blobber-3']
       - command:
           name: "upload_can_fail"
           params:
             remotepath: /remote/upload2.bin
-      - sleep: "3m" # simple wait for blobbers to pick up state
+      - sleep: "5m" # simple wait for blobbers to pick up state
       - check_rollback_tokenomics: { }
 
   - name: "Allocation state should be same after rollback"
