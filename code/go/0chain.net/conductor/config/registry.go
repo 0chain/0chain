@@ -817,7 +817,8 @@ func init() {
 			return
 		}
 
-		return ex.WaitValidatorTicket(*cfg, tm)
+		ex.WaitValidatorTicket(*cfg, tm)
+		return nil
 	})
 
 	// stop_challenge_generation directs miner to stop/resume generating challenge for any blobber
@@ -936,8 +937,22 @@ func init() {
 	register("pause", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		// pause execution until the user presses enter
 		log.Println("Press enter to continue...")
-		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		_, err = bufio.NewReader(os.Stdin).ReadBytes('\n')
+		if err != nil {
+			return
+		}
 		log.Printf("Continuing execution...")
+		return nil
+	})
+
+	register("wait_sharders_finalize_near_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command WaitShardersFinalizeNearBlocks
+		err = mapstructure.Decode(val, &command)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		ex.WaitShardersFinalizeNearBlocks(command, tm)
 		return nil
 	})
 }

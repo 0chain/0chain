@@ -13,6 +13,7 @@ sets:
     tests:
       - "Send bad FB to miners when all miners are down and then they are brought up"
       - "Send bad MB to miners when all miners are down and then they are brought up"
+      - "Down sharder coming up in different times"
 
 #
 # test cases
@@ -55,4 +56,27 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           shift: 50
+          timeout: "10m"
+  
+  - name: "Down sharder coming up in different times"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1", "sharder-2"]
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          shift: 100
+      - stop: ["sharder-2"]
+      - wait_round:
+          shift: 100
+      - stop: ["miner-1", "miner-2", "miner-3", "sharder-1"]
+      - sleep: "1m"
+      - start: ["miner-1", "miner-2", "miner-3", "sharder-1"]
+      - wait_round:
+          shift: 100
+      - start: ["sharder-2"]
+      - wait_round:
+          shift: 200
+      - wait_sharders_finalize_near_blocks:
+          sharders: ["sharder-1", "sharder-2"]
           timeout: "10m"

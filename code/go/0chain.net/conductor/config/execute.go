@@ -47,11 +47,12 @@ type Executor interface {
 	WaitSharderKeep(wsk WaitSharderKeep, timeout time.Duration) (err error)
 	WaitMinerGeneratesBlock(wmgb WaitMinerGeneratesBlock, timeout time.Duration) (err error)
 	WaitSharderLFB(wslfb WaitSharderLFB, timeout time.Duration) (err error)
-	WaitValidatorTicket(wvt WaitValidatorTicket, timeout time.Duration) (err error)
+	WaitValidatorTicket(wvt WaitValidatorTicket, timeout time.Duration)
 	WaitForChallengeGeneration(timeout time.Duration)
 	WaitOnBlobberCommit(timeout time.Duration)
 	WaitForChallengeStatus(timeout time.Duration)
 	WaitForFileMetaRoot()
+	WaitShardersFinalizeNearBlocks(command WaitShardersFinalizeNearBlocks, timeout time.Duration)
 	CheckFileMetaRoot(cfg *CheckFileMetaRoot) error
 
 	// Byzantine: BC, sharders
