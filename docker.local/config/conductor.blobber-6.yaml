@@ -33,7 +33,10 @@ tests:
           name: "upload"
           params:
             remotepath: /remote/upload.bin
-      - pause: {}
-      # - sleep:  "1m" # simple wait for blobbers to pick up state
-      
+      - set_miss_up_download: true
+      - sleep:  "1m" # simple wait for blobbers to pick up state
+      - command:
+          name: "download_fail_verification"
+          params:
+            remotepath: /remote/upload.bin
       
