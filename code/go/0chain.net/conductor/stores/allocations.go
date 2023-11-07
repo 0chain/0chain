@@ -1,6 +1,7 @@
 package stores
 
 import (
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"errors"
 	"sync"
 
@@ -29,7 +30,17 @@ func GetAllocationStore() *AllocationStore {
 }
 
 func (s *AllocationStore) Add(allocation Allocation) {
-	_ = append(allocationStore.data, allocation)
+	allocationStore.data = append(allocationStore.data, allocation)
+
+	log.Println("Added allocation: ", allocation)
+
+	latestLocalAllocation, err := allocationStore.GetLatest()
+	if err != nil {
+		log.Println("Error getting latest allocation: ", err)
+		return
+	}
+
+	log.Println("Latest allocation: ", latestLocalAllocation)
 }
 
 func (s *AllocationStore) GetLatest() (Allocation, error) {
