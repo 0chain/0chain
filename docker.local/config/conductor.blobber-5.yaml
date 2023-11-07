@@ -7,8 +7,8 @@ sets:
   - name: "Minority Cases"
     tests:
       - "Rollback tokenomics"
-#      - "Allocation state should be same after rollback"
-#      - "Allocation state should be same after repair"
+      - "Allocation state should be same after rollback"
+      - "Allocation state should be same after repair"
 
 # test cases
 tests:
@@ -46,6 +46,7 @@ tests:
             remotepath: /remote/upload2.bin
       - sleep: "3m" # simple wait for blobbers to pick up state
       - check_rollback_tokenomics: { }
+      - disable_fail_upload_commit: ['blobber-3']
 
   - name: "Allocation state should be same after rollback"
     flow:
