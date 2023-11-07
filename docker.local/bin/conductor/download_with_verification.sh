@@ -10,6 +10,6 @@ head -c 100M < /dev/urandom > update.bin
 # update it
 ./zboxcli/zbox --wallet testing.json download \
     --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --verifyDownload \
+    --verifydownload \
     --localpath=download.bin \
     --remotepath=$remotepath
