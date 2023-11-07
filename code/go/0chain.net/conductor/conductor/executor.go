@@ -1263,7 +1263,7 @@ func (r *Runner) CheckRollbackTokenomicsComparison() error {
 		log.Printf("[INF] checking rollback tokenomics comparison")
 	}
 
-	allocationService := services.NewAllocationService(r.conf.AggregatesBaseUrl)
+	allocationService := services.NewAllocationService(r.conf.Sharder1BaseURL)
 
 	check, err := allocationService.CompareRollBackTokens()
 	if err != nil {
