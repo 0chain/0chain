@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -180,7 +179,7 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 var NoDataErr = common.NewError("no_data", "No data")
 
 func readAndClose(reader io.ReadCloser) {
-	_, _ = io.Copy(ioutil.Discard, reader)
+	_, _ = io.Copy(io.Discard, reader)
 	_ = reader.Close()
 }
 

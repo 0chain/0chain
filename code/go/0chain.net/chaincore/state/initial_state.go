@@ -1,10 +1,9 @@
 package state
 
 import (
-	"io/ioutil"
-
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/currency"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -36,7 +35,7 @@ func NewInitStates() *InitStates {
 
 // Read is use on the InitStates to read the initial states for the genesis block from a yaml file.
 func (initStates *InitStates) Read(file string) (err error) {
-	bytes, err := ioutil.ReadFile(file)
+	bytes, err := os.ReadFile(file)
 	if err != nil {
 		return
 	}
