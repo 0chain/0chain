@@ -91,19 +91,7 @@ func HttpGet(url string, headers map[string]string) ([]byte, error) {
 	}
 
 	if resp.StatusCode >= 400 {
-		// Read the response body
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("Error reading response body: %v", err)
-		}
-
-		// Close the response body
-		err = resp.Body.Close()
-		if err != nil {
-			return nil, err
-		}
-
-		return nil, fmt.Errorf("Error in GET request to url %v. Status code: %d. Response body: %s", url, resp.StatusCode, string(body))
+		return nil, fmt.Errorf("Error in GET request to url %v", url)
 	}
 
 	bdy, err := io.ReadAll(resp.Body)

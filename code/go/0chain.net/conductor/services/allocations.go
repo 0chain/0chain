@@ -52,21 +52,13 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 		return false, err
 	}
 
-	log.Printf("Remote allocation: %v\n", remoteAllocation)
-
 	localAllocation, err := allocationStore.GetLatest()
 	if err != nil {
 		return false, err
 	}
 
-	log.Printf("Local allocation: %v\n", localAllocation)
-
 	movedToChallengeDiffInFloat64 := float64(remoteAllocation.MovedToChallenge - localAllocation.MovedToChallenge)
 	movedBackDiffInFloat64 := float64(remoteAllocation.MovedBack - localAllocation.MovedBack)
-
-	log.Printf("movedToChallengeDiffInFloat64: %v\n", movedToChallengeDiffInFloat64)
-	log.Printf("movedBackDiffInFloat64: %v\n", movedBackDiffInFloat64)
-	log.Printf("movedToChallengeDiffInFloat64 / movedBackDiffInFloat64: %v\n", movedToChallengeDiffInFloat64/movedBackDiffInFloat64)
 
 	if movedToChallengeDiffInFloat64 <= 1.05*movedBackDiffInFloat64 &&
 		movedToChallengeDiffInFloat64 >= 0.95*movedBackDiffInFloat64 {
@@ -79,10 +71,7 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.Allocation, error) {
 	url := fmt.Sprintf("%v/allocation?allocation=%s", s.baseUrl, allocationID)
 
-	log.Printf("Getting allocation from %v\n", url)
-
 	resp, err := utils.HttpGet(url, map[string]string{})
-	log.Printf("Response: %v\n", string(resp))
 	if err != nil {
 		log.Println("Error getting allocation from remote", err)
 		return nil, err
