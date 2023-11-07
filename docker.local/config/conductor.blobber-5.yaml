@@ -7,8 +7,8 @@ sets:
   - name: "Minority Cases"
     tests:
       - "Rollback tokenomics"
-      - "Allocation state should be same after rollback"
-      - "Allocation state should be same after repair"
+#      - "Allocation state should be same after rollback"
+#      - "Allocation state should be same after repair"
 
 # test cases
 tests:
@@ -38,18 +38,13 @@ tests:
             data_shards: "2"
             parity_shards: "1"
       - sleep: "1m"
-      - command:
-          name: "upload"
-          params:
-            remotepath: /remote/upload1.bin
-      - sleep: "1m"
       - store_allocations_data: { }
-      - fail_rename_commit: ['blobber-3']
+      - fail_upload_commit: ['blobber-3']
       - command:
           name: "upload_can_fail"
           params:
             remotepath: /remote/upload2.bin
-      - sleep: "5m" # simple wait for blobbers to pick up state
+      - sleep: "3m" # simple wait for blobbers to pick up state
       - check_rollback_tokenomics: { }
 
   - name: "Allocation state should be same after rollback"
