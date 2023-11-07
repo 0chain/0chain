@@ -3,7 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
+
 	"strings"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -40,7 +41,7 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 }
 
 func readEventDbTests(filename string) (map[string][]event.Event, error) {
-	file, _ := ioutil.ReadFile(filename)
+	file, _ := os.ReadFile(filename)
 	var data map[string][]event.Event
 	err := json.Unmarshal(file, &data)
 	return data, err
