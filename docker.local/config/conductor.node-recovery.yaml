@@ -323,7 +323,7 @@ tests:
            provider_id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
            key: total_rewards
            monotonicity: increase
-           timeout: "10m"
+           timeout: "2m"
 #       - check_aggregate_values_change:
 #           provider_type: authorizer
 #           key: total_rewards
