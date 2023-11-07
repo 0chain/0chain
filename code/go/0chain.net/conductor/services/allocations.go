@@ -69,7 +69,7 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 }
 
 func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.Allocation, error) {
-	url := fmt.Sprintf("%v/allocation?allocation_id=%s", s.baseUrl, allocationID)
+	url := fmt.Sprintf("%v/allocation?allocation=%s", s.baseUrl, allocationID)
 
 	log.Printf("Getting allocation from %v\n", url)
 
