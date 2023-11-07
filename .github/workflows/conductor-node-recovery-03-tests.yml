@@ -19,7 +19,7 @@ on:
           required: false
         zwalletcli_branch:
           description: 'Input branch for zwalletcli repo'
-          default: 'feat/mint-zcn-txn'
+          default: ''
           required: false
         zbox_branch:
           description: 'Input branch for zbox repo'
