@@ -247,6 +247,12 @@ jobs:
     - name: Init setup for authorizers
       run: |
         cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
+    
+    - name: Authorizer patching
+      run: |
+        cd token_bridge_authserver
+        chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
 
     - name: Build authorizer
       run: |
