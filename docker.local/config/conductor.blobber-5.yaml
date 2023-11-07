@@ -38,12 +38,17 @@ tests:
             data_shards: "2"
             parity_shards: "1"
       - sleep: "1m"
+      - command:
+          name: "upload"
+          params:
+            remotepath: /remote/upload1.bin
+      - sleep: "1m"
       - store_allocations_data: { }
       - stop: [ 'blobber-3' ]
       - command:
           name: "upload_can_fail"
           params:
-            remotepath: /remote/upload.bin
+            remotepath: /remote/upload2.bin
       - sleep: "3m" # simple wait for blobbers to pick up state
       - check_rollback_tokenomics: { }
 
