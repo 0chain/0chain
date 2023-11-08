@@ -30,6 +30,7 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		totalRewardsMap = make(map[string]currency.Coin)
 		dpRewardsMap    = make(map[string]map[string]currency.Coin)
 	)
+
 	for i, sp := range spus {
 		if sp.Reward != 0 {
 			rewardsMap[sp.ID] = rewardsMap[sp.ID] + sp.Reward
@@ -42,8 +43,6 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 			dpRewardsMap[sp.ID][poolId] = dpRewardsMap[sp.ID][poolId] + spus[i].DelegateRewards[poolId]
 			totalRewardsMap[sp.ID] = totalRewardsMap[sp.ID] + spus[i].DelegateRewards[poolId]
 		}
-		// todo https://github.com/0chain/0chain/issues/2122
-		// slash charges are no longer taken from rewards, but the stake pool. So related code has been removed.
 	}
 
 	return &providerRewardsDelegates{
@@ -134,6 +133,8 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}()
 
+	logging.Logger.Info("Jayash event db - update reward", zap.Int64("round", round), zap.Any("totalRewards", rewards.totalRewards), zap.Any("rewards num", rewards.rewards), zap.Int("delegate pools num", len(rewards.delegatePools)))
+
 	if len(rewards.rewards) > 0 || len(rewards.totalRewards) > 0 {
 		if err := edb.rewardProviders(rewards.rewards, rewards.totalRewards, round); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
@@ -222,6 +223,9 @@ func (edb *EventDb) rewardProviders(
 		totalRewards = append(totalRewards, uint64(tr))
 		lastUpdated = append(lastUpdated, round)
 	}
+
+	logging.Logger.Info("Jayash rewardProviders", zap.Any("ids", ids), zap.Any("rewards", rewards), zap.Any("totalRewards", totalRewards), zap.Any("lastUpdated", lastUpdated))
+
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
