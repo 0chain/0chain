@@ -201,7 +201,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	var conf *Config
 	var err error
 	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
+		return "", common.NewErrorf("allocation_creation_failed ",
 			"can't get config: %v", err)
 	}
 

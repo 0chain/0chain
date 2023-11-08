@@ -3,7 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
+
 	"strconv"
 	"strings"
 	"sync"
@@ -381,7 +382,7 @@ func writeEvents(filename string, events map[string][]event.Event) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, data, 0644)
+	return os.WriteFile(filename, data, 0644)
 }
 
 func runEventDatabaseSuite(
