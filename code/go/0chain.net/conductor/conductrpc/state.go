@@ -87,6 +87,7 @@ type State struct {
 	BlobberCommittedWM      bool
 	GetFileMetaRoot         bool
 	FailRenameCommit        []NodeID
+	FailUploadCommit        []NodeID
 	// Validators related states
 	CheckChallengeIsValid *cases.CheckChallengeIsValid
 	AdversarialValidator  *config.AdversarialValidator
