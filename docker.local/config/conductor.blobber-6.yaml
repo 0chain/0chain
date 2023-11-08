@@ -1,6 +1,6 @@
 enable:
   - "Download verification"
-  # - "Free reads"
+  - "Free reads"
 
 sets:
   - name: "Download verification"
@@ -71,16 +71,14 @@ tests:
       - wait_round:
           shift: 100
       - command:
-          name: 'init_allocation_only'
+          name: 'init_allocation_free_read'
       - command:
           name: "upload"
           params:
             remotepath: /remote/upload.bin
-      - set_miss_up_download: true
+      - stop: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - sleep:  "1m" # simple wait for blobbers to pick up state
       - command:
-          name: "download_fail_verification"
-          failure_threshold: "2m"
+          name: "download_with_verification"
           params:
             remotepath: /remote/upload.bin
-      
