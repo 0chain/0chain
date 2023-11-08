@@ -16,6 +16,9 @@ stuck_warning_threshold: "2s"
 
 aggregate_base_url: "http://localhost:9081/v2"
 
+sharder1_base_url: "http://localhost:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+
+
 #
 # nodes used in tests
 #
@@ -277,6 +280,9 @@ commands:
     work_dir: "./."
     exec: "./docker.local/bin/build.miners-integration-tests.sh"
     can_fail: true
+  cleanup_0chain:
+    work_dir: "../0chain"
+    exec: "sh -x docker.local/bin/docker-clean.sh"
   cleanup_blobbers:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/docker-clean.sh"
@@ -337,6 +343,14 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh $remotepath"
     should_fail: false
+    args:
+      remotepath:
+        required: false
+        default: /remote/upload.bin
+  upload_can_fail:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh $remotepath"
+    should_fail: true
     args:
       remotepath:
         required: false
