@@ -3,7 +3,7 @@ package chain_test
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -1502,7 +1502,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}
 
 				test.chain.HandleSCRest(test.args.w, test.args.r)
-				d, err := ioutil.ReadAll(test.args.w.Result().Body)
+				d, err := io.ReadAll(test.args.w.Result().Body)
 				require.NoError(t, err)
 				require.Equal(t, test.wantStatus, test.args.w.Result().StatusCode, string(d))
 			},

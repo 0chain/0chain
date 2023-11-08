@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 
@@ -23,8 +23,10 @@ func init() {
 	compDe = zcompde
 }
 
-/*BlockDB - a simple database that supports write and read of an immutable block on the blockchain where the
-records of the database are the transactions in the block*/
+/*
+BlockDB - a simple database that supports write and read of an immutable block on the blockchain where the
+records of the database are the transactions in the block
+*/
 type BlockDB struct {
 	file      string
 	compress  bool
@@ -34,7 +36,8 @@ type BlockDB struct {
 	dataFile  *os.File
 }
 
-/*NewBlockDB - create a new block db
+/*
+NewBlockDB - create a new block db
 -- file name is of the form directory/where/to/store/dbfile. The actual files will be dbfile.idx and dbfile.dat
 -- create - create a new one or only try to open an existing one
 -- compress - compress the records being saved
@@ -44,17 +47,17 @@ func NewBlockDB(file string, keyLength int8, compress bool) (*BlockDB, error) {
 	return db, nil
 }
 
-//SetDBHeader - set the db header
+// SetDBHeader - set the db header
 func (bdb *BlockDB) SetDBHeader(dbHeader DBHeader) {
 	bdb.dbHeader = dbHeader
 }
 
-//SetIndex - set the index object
+// SetIndex - set the index object
 func (bdb *BlockDB) SetIndex(index Index) {
 	bdb.index = index
 }
 
-//Create - create the database
+// Create - create the database
 func (bdb *BlockDB) Create() error {
 	dir := filepath.Dir(bdb.file)
 	err := os.MkdirAll(dir, 0755)
@@ -69,7 +72,7 @@ func (bdb *BlockDB) Create() error {
 	return err
 }
 
-//Open - open an existing database
+// Open - open an existing database
 func (bdb *BlockDB) Open() error {
 	f, err := os.OpenFile(bdb.getHeaderFileName(), os.O_RDONLY, 0644)
 	if err != nil {
@@ -87,7 +90,7 @@ func (bdb *BlockDB) Open() error {
 	return err
 }
 
-//Read - read an individual record
+// Read - read an individual record
 func (bdb *BlockDB) Read(key Key, record Record) error {
 	offset, err := bdb.index.GetOffset(key)
 	if err != nil {
@@ -126,7 +129,7 @@ func (bdb *BlockDB) read(dataFile io.Reader, record Record) error {
 	return err
 }
 
-//ReadAll - read all the records
+// ReadAll - read all the records
 func (bdb *BlockDB) ReadAll(rp RecordProvider) ([]Record, error) {
 	keys := bdb.index.GetKeys()
 	records := make([]Record, 0, len(keys))
@@ -145,7 +148,7 @@ func (bdb *BlockDB) ReadAll(rp RecordProvider) ([]Record, error) {
 	return records, nil
 }
 
-//WriteData - write the data
+// WriteData - write the data
 func (bdb *BlockDB) WriteData(record Record) error {
 	offset, err := bdb.dataFile.Seek(0, 1)
 	if err != nil {
@@ -182,7 +185,7 @@ func (bdb *BlockDB) WriteData(record Record) error {
 	return err
 }
 
-//Iterate - implement the interface
+// Iterate - implement the interface
 func (bdb *BlockDB) Iterate(ctx context.Context, handler DBIteratorHandler, rp RecordProvider) error {
 	records, err := bdb.ReadAll(rp)
 	if err != nil {
@@ -197,7 +200,7 @@ func (bdb *BlockDB) Iterate(ctx context.Context, handler DBIteratorHandler, rp R
 	return nil
 }
 
-//Save - implement interface
+// Save - implement interface
 func (bdb *BlockDB) Save() error {
 	if err := bdb.saveHeader(); err != nil {
 		return err
@@ -205,7 +208,7 @@ func (bdb *BlockDB) Save() error {
 	return bdb.Close()
 }
 
-//Close - implement interface
+// Close - implement interface
 func (bdb *BlockDB) Close() error {
 	if bdb.dataFile != nil {
 		return bdb.dataFile.Close()
@@ -213,7 +216,7 @@ func (bdb *BlockDB) Close() error {
 	return nil
 }
 
-//Delete - implement interface
+// Delete - implement interface
 func (bdb *BlockDB) Delete() error {
 	err := os.Remove(bdb.getHeaderFileName())
 	if err != nil {
@@ -257,7 +260,7 @@ func (bdb *BlockDB) readHeader(file *os.File) error {
 	}
 	if bdb.dbHeader != nil {
 		var data []byte
-		data, err = ioutil.ReadAll(file)
+		data, err = io.ReadAll(file)
 		if err != nil {
 			return err
 		}
