@@ -147,7 +147,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 			zap.Int64("round", round))
 	}
 
-	if len(rewards.delegatePools) > 0 {
+	if len(rewards.delegatePools) > 0 || len(rewards.totalRewards) > 0 {
 		if err := edb.rewardProviderDelegates(rewards.delegatePools, round); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
