@@ -118,6 +118,7 @@ tests:
           require_same_root: true
   - name: "Rollback tokenomics"
     flow:
+      - sleep: "1m"
       - set_monitor: "sharder-1"
       - cleanup_bc: { }
       - command:
