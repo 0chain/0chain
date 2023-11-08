@@ -30,7 +30,6 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 		totalRewardsMap = make(map[string]currency.Coin)
 		dpRewardsMap    = make(map[string]map[string]currency.Coin)
 	)
-
 	for i, sp := range spus {
 		if sp.Reward != 0 {
 			rewardsMap[sp.ID] = rewardsMap[sp.ID] + sp.Reward
@@ -133,8 +132,6 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}()
 
-	logging.Logger.Info("Jayash event db - update reward", zap.Int64("round", round), zap.Any("totalRewards", rewards.totalRewards), zap.Any("rewards num", rewards.rewards), zap.Int("delegate pools num", len(rewards.delegatePools)))
-
 	if len(rewards.rewards) > 0 || len(rewards.totalRewards) > 0 {
 		if err := edb.rewardProviders(rewards.rewards, rewards.totalRewards, round); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
@@ -148,7 +145,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 			zap.Int64("round", round))
 	}
 
-	if len(rewards.delegatePools) > 0 || len(rewards.totalRewards) > 0 {
+	if len(rewards.delegatePools) > 0 {
 		if err := edb.rewardProviderDelegates(rewards.delegatePools, round); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
@@ -216,16 +213,12 @@ func (edb *EventDb) rewardProviders(
 	for id, r := range prRewards {
 		ids = append(ids, id)
 		rewards = append(rewards, uint64(r))
-		tr, ok := prTotalRewards[id]
-		if !ok {
-			return fmt.Errorf("could not find total rewards for provider %s", id)
-		}
-		totalRewards = append(totalRewards, uint64(tr))
 		lastUpdated = append(lastUpdated, round)
 	}
 
-	logging.Logger.Info("Jayash rewardProviders", zap.Any("ids", ids), zap.Any("rewards", rewards), zap.Any("totalRewards", totalRewards), zap.Any("lastUpdated", lastUpdated))
-
+	for _, tr := range prTotalRewards {
+		totalRewards = append(totalRewards, uint64(tr))
+	}
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
