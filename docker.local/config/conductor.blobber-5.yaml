@@ -95,6 +95,8 @@ tests:
           name: "upload"
           params:
             remotepath: /remote/upload.bin
+      - wait_round: # successive download requests need rest in between them
+          shift: 50
       - command:
           name: "upload"
           params:
