@@ -10,8 +10,8 @@ on:
           description: 'Input branch for 0chain repo'
           default: ''
           required: false
-        blobber_branch:
-          description: 'Input branch for blobber repo'
+        auth_branch:
+          description: 'Input branch for authorizer repo'
           default: ''
           required: false
         zboxcli_branch:
@@ -132,20 +132,20 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
-    - name: Git clone blobber
+    - name: Git clone authorizer
       run: |
-        git clone https://github.com/0chain/blobber.git
-        cd blobber
+        git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
+        cd token_bridge_authserver
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
-        BLOBBER_BRANCH="${{ inputs.blobber_branch }}"
-        if [[ -z $BLOBBER_BRANCH ]]; then
-            echo "Checking for latest sprint branch"
-            git branch --sort=-committerdate | grep "sprint-*" | head -1
-            BLOBBER_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+        AUTH_BRANCH="${{ inputs.auth_branch }}"
+        if [[ -z $AUTH_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=AUTH_BRANCH::${AUTH_BRANCH}
         fi
-        echo "BRANCH_OUT=$BLOBBER_BRANCH" >>$GITHUB_OUTPUT
-        echo "Branch name is ${BLOBBER_BRANCH}"
-        git checkout ${BLOBBER_BRANCH}
+        echo "Branch name is ${AUTH_BRANCH}"
+        git checkout ${AUTH_BRANCH}
 
     - name: Git clone zboxcli
       run: |
@@ -220,9 +220,12 @@ jobs:
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
 
-    - name: Blobbers Patching
+    - name: Authorizer patching
       run: |
-        cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
+        cd token_bridge_authserver
+        chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
+
     - name: 0box Patching
       run: |
         cd 0box
@@ -242,21 +245,20 @@ jobs:
         ./docker.local/bin/build.base.sh
         ./docker.local/bin/build.zbox-integration-tests.sh
 
-    - name: Init setup for blobbers
+    - name: Init setup for authorizers
       run: |
-        chmod +x blobber/docker.local/bin/blobber.init.setup.sh
-        cd blobber && ./docker.local/bin/blobber.init.setup.sh
+        cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
 
-    - name: Build blobber base
+    - name: Build authorizer
       run: |
-        cd blobber
-        ./docker.local/bin/build.base.sh
+        cd token_bridge_authserver
+        chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
+        ./docker.local/bin/build.authorizer-integration-tests.sh
 
-    - name: Build blobber
+    - name: Changing Authorizer Network
       run: |
-        cd blobber
-        chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
-        ./docker.local/bin/build.blobber-integration-tests.sh
+        cd token_bridge_authserver
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
     - name: Add ZCN config
       run: |
@@ -270,6 +272,13 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
+        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/VTT3Q9SUeQf4v38EjaHoZwsh6FPh300b
+        bridge:
+          bridge_address: 0x71660175fb4639Ae35946b5f86Fb6CeC3DFD15ae
+          token_address: 0x12cE2E0F9409E24D481fb86982EaA74FFe833514
+          authorizers_address: 0xC9CbebF273B2Ac66a47fA0d025B34738d7D4748a
+          ethereum_address: 0xD8c9156e782C68EE671C09b6b92de76C97948432
+          password: "02289b9"
         EOF
 
     - name: List pwd zcn
@@ -278,6 +287,19 @@ jobs:
         ls -lha ./
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
+
+    - name: Add Address
+      run: |
+        cd ~/.zcn
+        mkdir wallets
+        cd wallets
+        cat <<\EOF > UTC--2023-05-22T11-45-59.391983000Z--d8c9156e782c68ee671c09b6b92de76c97948432
+        {"address":"d8c9156e782c68ee671c09b6b92de76c97948432","crypto":{"cipher":"aes-128-ctr","ciphertext":"26133146fa7a880226f6259b960b4234b1280583f98ee71c120d239673681110","cipherparams":{"iv":"d834890aabcb3e0d9ae3309a71a8ff27"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"143d2eae97b837ca163e651223b92042f2acc20340629cf9de56646e5d59ae92"},"mac":"86cd6646c767e056e497c975a6fa4557d68b85b19a9ea0ec0062e7b7dc78df7f"},"id":"155f80d0-48d9-4bc7-bc60-7294a3ea3edc","version":3}
+        EOF
+
+    - name: Cat Address
+      run: |
+        cat ~/.zcn/wallets/UTC--2023-05-22T11-45-59.391983000Z--d8c9156e782c68ee671c09b6b92de76c97948432
 
     - name: Starting Node Recovery Tests.
       run: |
