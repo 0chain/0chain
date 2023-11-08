@@ -223,6 +223,8 @@ func (edb *EventDb) rewardProviders(
 
 		// Adding provider total reward
 		totalRewards = append(totalRewards, uint64(tr))
+
+		// Last updated time stamp
 		lastUpdated = append(lastUpdated, round)
 	}
 
