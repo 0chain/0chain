@@ -280,6 +280,9 @@ commands:
     work_dir: "./."
     exec: "./docker.local/bin/build.miners-integration-tests.sh"
     can_fail: true
+  cleanup_0chain:
+    work_dir: "../0chain"
+    exec: "sh -x docker.local/bin/docker-clean.sh"
   cleanup_blobbers:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/docker-clean.sh"
