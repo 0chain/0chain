@@ -86,6 +86,7 @@ type State struct {
 	BlobberCommittedWM      bool
 	GetFileMetaRoot         bool
 	FailRenameCommit        []NodeID
+	FailUploadCommit        []NodeID
 	// Validators related states
 	CheckChallengeIsValid *cases.CheckChallengeIsValid
 	AdversarialValidator  *config.AdversarialValidator
@@ -93,9 +94,9 @@ type State struct {
 	// Authorizers related states
 	AdversarialAuthorizer *config.AdversarialAuthorizer
 
-	ServerStatsCollectorEnabled bool
-	ClientStatsCollectorEnabled bool
-	NotifyOnBlockGeneration bool
+	ServerStatsCollectorEnabled        bool
+	ClientStatsCollectorEnabled        bool
+	NotifyOnBlockGeneration            bool
 	NotifyOnValidationTicketGeneration bool
 }
 
