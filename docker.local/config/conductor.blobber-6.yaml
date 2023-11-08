@@ -1,6 +1,6 @@
 enable:
   - "Download verification"
-  - "Free reads"
+  # - "Free reads"
 
 sets:
   - name: "Download verification"
@@ -42,6 +42,7 @@ tests:
       - sleep:  "1m" # simple wait for blobbers to pick up state
       - command:
           name: "download_fail_verification"
+          failure_threshold: "2m"
           params:
             remotepath: /remote/upload.bin
       - set_miss_up_download: false

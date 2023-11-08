@@ -108,7 +108,7 @@ type Command struct {
 type CommandName struct {
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
 	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
-	FailureThreshold time.Duration `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
+	FailureThreshold string `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
 }
 
 // A Config represents conductor testing configurations.
