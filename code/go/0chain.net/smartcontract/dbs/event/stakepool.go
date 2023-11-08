@@ -210,15 +210,22 @@ func (edb *EventDb) rewardProviders(
 	var rewards []uint64
 	var totalRewards []uint64
 	var lastUpdated []int64
-	for id, r := range prRewards {
+	for id, tr := range prTotalRewards {
+		// Adding provider id to the list of ids
 		ids = append(ids, id)
+
+		// Adding provider reward or setting to 0 if service charge is 0 and there is no provider reward
+		r, ok := prRewards[id]
+		if !ok {
+			r = 0
+		}
 		rewards = append(rewards, uint64(r))
+
+		// Adding provider total reward
+		totalRewards = append(totalRewards, uint64(tr))
 		lastUpdated = append(lastUpdated, round)
 	}
 
-	for _, tr := range prTotalRewards {
-		totalRewards = append(totalRewards, uint64(tr))
-	}
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
