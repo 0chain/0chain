@@ -247,7 +247,7 @@ nodes:
   - name: "authorizer-4"
     id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
     work_dir: "../token_bridge_authserver/docker.local/auth4"
-    env: AUTHORIZER=4,ETH_MNEMONIC=prize tennis people canoe tongue reform main ghost jelly prefer swear nurse,ETH_UNLOCKPASSWORD="L9gwnf#Gm)bpZLP7",ETH_ADDRESS=0xD21073e6DC7E65aABc8763b9B34AAd9Eb4c8cE65,ETH_PK=0x8f86829881c924854a3ed32e986cb64bde652eb7431cc693a38d20da90319a88,ETH_BRIDGE_ADDRESS=0x71660175fb4639Ae35946b5f86Fb6CeC3DFD15ae
+    env: AUTHORIZER=4,ETH_MNEMONIC=prize tennis people canoe tongue reform main ghost jelly prefer swear nurse,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
