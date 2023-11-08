@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -217,9 +218,15 @@ func (c *Config) Execute(name string, params map[string]string, failureThreshold
 	if failureThreshold == 0 {
 		cmd = exec.Command(command, ss[1:]...)
 	} else {
+		log.Printf("[INF] Setting failure threshold of %v for command %v\n", failureThreshold, name)
 		failureCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(failureThreshold))
 		defer cancel()
 		cmd = exec.CommandContext(failureCtx, command, ss[1:]...)
+		go func (cmd *exec.Cmd)  {
+			<-failureCtx.Done()
+			log.Printf("[ERR] Command %v exceeded failure threshold of %v\n", name, failureThreshold)
+			cmd.Cancel()
+		}(cmd)
 	}
 
 	cmd.Dir = n.WorkDir
