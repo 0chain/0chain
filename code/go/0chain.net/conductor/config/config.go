@@ -225,7 +225,10 @@ func (c *Config) Execute(name string, params map[string]string, failureThreshold
 		go func (cmd *exec.Cmd)  {
 			<-failureCtx.Done()
 			log.Printf("[ERR] Command %v exceeded failure threshold of %v\n", name, failureThreshold)
-			cmd.Cancel()
+			err := cmd.Process.Kill()
+			if err != nil {
+				log.Printf("[ERR] Failed to kill command %v: %v\n", name, err)
+			}
 		}(cmd)
 	}
 
