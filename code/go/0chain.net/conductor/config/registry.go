@@ -358,9 +358,14 @@ func init() {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
 
-		dur, err := time.ParseDuration(cn.FailureThreshold)
-		if err != nil {
-			return fmt.Errorf("decoding '%s': %v", name, err)
+		var dur time.Duration
+		if cn.FailureThreshold == "" {
+			dur = tm
+		} else {
+			dur, err = time.ParseDuration(cn.FailureThreshold)
+			if err != nil {
+				return fmt.Errorf("decoding '%s': %v", name, err)
+			}
 		}
 
 		ex.Command(cn.Name, cn.Params, dur, tm) // async command
