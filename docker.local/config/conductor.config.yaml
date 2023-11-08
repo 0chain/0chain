@@ -497,6 +497,16 @@ commands:
       parity_shards:
         required: false
         default: "2"
+  init_allocation_free_read:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation_free_read.sh $data_shards $parity_shards"
+    args:
+      data_shards:
+        required: false
+        default: "1"
+      parity_shards:
+        required: false
+        default: "2"
   download_fail_verification:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/download_with_verification.sh $remotepath"
