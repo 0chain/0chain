@@ -357,7 +357,7 @@ func init() {
 		if err = mapstructure.Decode(val, &cn); err != nil {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
-		ex.Command(cn.Name, cn.Params, tm) // async command
+		ex.Command(cn.Name, cn.Params, cn.FailureThreshold, tm) // async command
 		return nil
 	})
 

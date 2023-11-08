@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -106,6 +107,7 @@ type Command struct {
 type CommandName struct {
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
 	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
+	FailureThreshold time.Duration `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
 }
 
 // A Config represents conductor testing configurations.
@@ -172,7 +174,7 @@ func (c *Config) GetStuckWarningThreshold() time.Duration {
 }
 
 // Execute system command by its name.
-func (c *Config) Execute(name string, params map[string]string) (err error) {
+func (c *Config) Execute(name string, params map[string]string, failureThreshold time.Duration) (err error) {
 	var n, ok = c.Commands[name]
 	if !ok {
 		return fmt.Errorf("unknown system command: %q", name)
@@ -210,7 +212,16 @@ func (c *Config) Execute(name string, params map[string]string) (err error) {
 	if filepath.Base(command) != command && !strings.HasPrefix(command, ".") {
 		command = "./" + filepath.Join(n.WorkDir, command)
 	}
-	var cmd = exec.Command(command, ss[1:]...)
+
+	var cmd *exec.Cmd
+	if failureThreshold == 0 {
+		cmd = exec.Command(command, ss[1:]...)
+	} else {
+		failureCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(failureThreshold))
+		defer cancel()
+		cmd = exec.CommandContext(failureCtx, command, ss[1:]...)
+	}
+
 	cmd.Dir = n.WorkDir
 
 	cmd.Stdout = os.Stdout

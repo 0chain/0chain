@@ -86,7 +86,7 @@ type Executor interface {
 	Publish(p *Bad) (err error)
 
 	// system command (a bash script, etc)
-	Command(name string, params map[string]interface{}, timeout time.Duration)
+	Command(name string, params map[string]interface{}, failureThreshold, timeout time.Duration)
 
 	// Blobber related executors
 	StorageTree(st *Bad) (err error)
