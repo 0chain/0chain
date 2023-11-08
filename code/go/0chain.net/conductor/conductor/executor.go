@@ -1290,7 +1290,7 @@ func (r *Runner) SetNodeCustomConfig(cfg *config.NodeCustomConfig) error {
 	return r.server.SetNodeConfig(node.ID, cfg.Config)
 }
 
-func (r *Runner) SetMissUpDownload(cfg *config.MissUpDownload) error {
+func (r *Runner) SetMissUpDownload(cfg config.MissUpDownload) error {
 	if r.verbose {
 		log.Printf("[INF] setting miss up download: %+v", cfg)
 	}

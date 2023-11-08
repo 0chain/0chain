@@ -941,7 +941,7 @@ func init() {
 			return fmt.Errorf("invalid value. Required type MissUpDownload, got %T", input)
 		}
 		cfg := MissUpDownload(input)
-		return ex.SetMissUpDownload(&cfg)
+		return ex.SetMissUpDownload(cfg)
 	})
 
 	register("wait_sharders_finalize_near_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
