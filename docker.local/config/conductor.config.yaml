@@ -515,3 +515,13 @@ commands:
       remotepath:
         required: false
         default: /remote/upload.bin
+  update_blobber_config:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/update_blobber_config.sh $blobber_id $key $value"
+    args:
+      blobber_id:
+        required: true
+      key:
+        required: true
+      value:
+        required: true
