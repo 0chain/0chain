@@ -272,6 +272,13 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
+        ethereum_node_url: https://polygon-mumbai.g.alchemy.com/v2/VTT3Q9SUeQf4v38EjaHoZwsh6FPh300b
+        bridge:
+          bridge_address: 0x71660175fb4639Ae35946b5f86Fb6CeC3DFD15ae
+          token_address: 0x12cE2E0F9409E24D481fb86982EaA74FFe833514
+          authorizers_address: 0xC9CbebF273B2Ac66a47fA0d025B34738d7D4748a
+          ethereum_address: 0xD8c9156e782C68EE671C09b6b92de76C97948432
+          password: "02289b9"
         EOF
 
     - name: List pwd zcn
