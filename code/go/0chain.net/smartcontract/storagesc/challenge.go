@@ -837,6 +837,10 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 	case randomWeightSelection:
 		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
 
+		if len(challengeBlobbers) == 0 || maxBlobbersSelect == 0 {
+			return "", errors.New("no blobbers available for challenge")
+		}
+
 		// shuffle challenge blobbers
 		r.Shuffle(len(challengeBlobbers), func(i, j int) {
 			challengeBlobbers[i], challengeBlobbers[j] = challengeBlobbers[j], challengeBlobbers[i]

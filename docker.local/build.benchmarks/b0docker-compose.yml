@@ -8,6 +8,8 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_USER: postgres
       POSTGRES_HOST_AUTH_METHOD: trust
+      SLOW_TABLESPACE_PATH: /var/lib/postgresql/hdd_ts
+      SLOW_TABLESPACE: hdd_tablespace
     ports:
       - "15432:5432" #for testing purpose only
     volumes:
