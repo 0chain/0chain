@@ -3,7 +3,7 @@ name: CONDUCTOR SHARDER STANDARD TESTS
 on:
   schedule:
     # Runs everyday at 12:00 am
-    - cron: '0 0 * * *'
+    - cron: '0 11 * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -27,7 +27,8 @@ jobs:
     - name: Cleanup before restarting conductor tests.
       run: |
         rm -rf *
-
+        [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
+        
     # - uses: actions/checkout@v1
 
     - name: "Setup Go"

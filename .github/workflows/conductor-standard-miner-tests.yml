@@ -3,7 +3,7 @@ name: CONDUCTOR MINER STANDARD TESTS
 on:
   schedule:
     # Runs everyday at 01:00 am
-    - cron: '0 1 * * *'
+    - cron: '0 10 * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -27,6 +27,7 @@ jobs:
     - name: Cleanup before restarting conductor tests.
       run: |
         rm -rf *
+        [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
 
     # - uses: actions/checkout@v1
 
