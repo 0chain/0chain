@@ -92,6 +92,7 @@ jobs:
         export HOME="/root"
         cd 0chain
         make install-mockery
+        ls /usr/local/go/bin
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
