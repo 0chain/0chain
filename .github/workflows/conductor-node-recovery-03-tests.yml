@@ -260,26 +260,26 @@ jobs:
         cd token_bridge_authserver
         sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
-        - name: Add ZCN config
-        run: |
-          rm -rf ~/.zcn || true
-          mkdir ~/.zcn
-          cat <<\EOF > ~/.zcn/config.yaml
-          block_worker: http://127.0.0.1:9091
-          signature_scheme: bls0chain
-          min_submit: 50
-          min_confirmation: 50
-          confirmation_chain_length: 3
-          max_txn_query: 5
-          query_sleep_time: 5
-          ethereum_node_url: ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }}
-          bridge:
-            bridge_address: 0x7700D773022b19622095118Fadf46f7B9448Be9b
-            token_address: 0xb9EF770B6A5e12E45983C5D80545258aA38F3B78
-            authorizers_address: 0x481daB4407b9880DE0A68dc62E6aF611c4949E42
-            ethereum_address: 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97
-            password: "12345678"
-          EOF
+    - name: Add ZCN config
+      run: |
+        rm -rf ~/.zcn || true
+        mkdir ~/.zcn
+        cat <<\EOF > ~/.zcn/config.yaml
+        block_worker: http://127.0.0.1:9091
+        signature_scheme: bls0chain
+        min_submit: 50
+        min_confirmation: 50
+        confirmation_chain_length: 3
+        max_txn_query: 5
+        query_sleep_time: 5
+        ethereum_node_url: ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }}
+        bridge:
+          bridge_address: 0x7700D773022b19622095118Fadf46f7B9448Be9b
+          token_address: 0xb9EF770B6A5e12E45983C5D80545258aA38F3B78
+          authorizers_address: 0x481daB4407b9880DE0A68dc62E6aF611c4949E42
+          ethereum_address: 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97
+          password: "12345678"
+        EOF
   
     - name: List pwd zcn
       run: |
