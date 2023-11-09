@@ -28,7 +28,7 @@ env:
 jobs:
   CONDUCTOR_BLOBBERS_06_TESTS:
     name: CONDUCTOR-BLOBBERS-06-TESTS
-    runs-on: [self-hosted, conductor-test02]
+    runs-on: [self-hosted, conductor-test03]
 
     outputs:
       branch: ${{ steps.blobber.outputs.BRANCH_OUT }}
