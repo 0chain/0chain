@@ -220,12 +220,6 @@ jobs:
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
 
-    - name: Authorizer patching
-      run: |
-        cd token_bridge_authserver
-        chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
-        ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
-
     - name: 0box Patching
       run: |
         cd 0box
