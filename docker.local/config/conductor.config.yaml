@@ -333,8 +333,12 @@ commands:
     should_fail: false
   download:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/download.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/download.sh $remotepath"
     should_fail: false # shouldn't fail because of Rid-Solomon
+    args:
+      remotepath:
+        required: false
+        default: /remote/random.bin
   delete:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/delete.sh"
@@ -511,3 +515,31 @@ commands:
       parity_shards:
         required: false
         default: "2"
+  init_allocation_free_read:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation_free_read.sh $data_shards $parity_shards"
+    args:
+      data_shards:
+        required: false
+        default: "1"
+      parity_shards:
+        required: false
+        default: "2"
+  download_fail_verification:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/download_with_verification.sh $remotepath"
+    should_fail: true
+    args:
+      remotepath:
+        required: false
+        default: /remote/upload.bin
+  update_blobber_config:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/update_blobber_config.sh $blobber_id $key $value"
+    args:
+      blobber_id:
+        required: true
+      key:
+        required: true
+      value:
+        required: true

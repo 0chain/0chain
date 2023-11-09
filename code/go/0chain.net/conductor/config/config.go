@@ -1,8 +1,11 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -106,6 +109,7 @@ type Command struct {
 type CommandName struct {
 	Name   string                 `json:"name" yaml:"name" mapstructure:"name"`
 	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
+	FailureThreshold string `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
 }
 
 // A Config represents conductor testing configurations.
@@ -174,7 +178,7 @@ func (c *Config) GetStuckWarningThreshold() time.Duration {
 }
 
 // Execute system command by its name.
-func (c *Config) Execute(name string, params map[string]string) (err error) {
+func (c *Config) Execute(name string, params map[string]string, failureThreshold time.Duration) (err error) {
 	var n, ok = c.Commands[name]
 	if !ok {
 		return fmt.Errorf("unknown system command: %q", name)
@@ -212,11 +216,63 @@ func (c *Config) Execute(name string, params map[string]string) (err error) {
 	if filepath.Base(command) != command && !strings.HasPrefix(command, ".") {
 		command = "./" + filepath.Join(n.WorkDir, command)
 	}
-	var cmd = exec.Command(command, ss[1:]...)
+
+	cmd := exec.Command(command, ss[1:]...)
 	cmd.Dir = n.WorkDir
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmdStdOut, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	cmdStdErr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		_, err := io.Copy(os.Stdout, cmdStdOut)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	go func() {
+		_, err := io.Copy(os.Stderr, cmdStdErr)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	if failureThreshold > 0 {
+		log.Printf("[INF] Setting failure threshold of %v for command %v\n", failureThreshold, name)
+		failureCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(failureThreshold))
+		defer cancel()
+		
+		// Context watcher
+		go func (cmd *exec.Cmd)  {
+			<-failureCtx.Done()
+			if failureCtx.Err() == context.DeadlineExceeded {
+				log.Printf("[ERR] Command %v exceeded failure threshold of %v\n", name, failureThreshold)
+
+				err := cmd.Process.Kill()
+				if err != nil && err.Error() != "os: process already finished" {
+					log.Printf("[ERR] Failed to kill command %v: %v\n", name, err)
+				}
+
+				err = cmdStdOut.Close()
+				if err != nil && err.Error() != "os: file already closed" {
+					log.Printf("[ERR] Failed to close stdout of command %v: %v\n", name, err)
+				}
+
+				err = cmdStdErr.Close()
+				if err != nil && err.Error() != "os: file already closed" {
+					log.Printf("[ERR] Failed to close stderr of command %v: %v\n", name, err)
+				}
+			}
+		}(cmd)
+	}
+	
 	err = cmd.Run()
 	if n.CanFail {
 		return nil // ignore an error

@@ -1,0 +1,102 @@
+enable:
+  - "Download verification"
+  - "Free reads"
+
+sets:
+  - name: "Download verification"
+    tests:
+      - "Download verification should be successful - bad download should be discarded by the client"
+  - name: "Free reads"
+    tests:
+      - "Free reads should be successful even when the whole network is down"
+tests:
+  - name: "Download verification should be successful - bad download should be discarded by the client"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - sleep: "20s"
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
+          timeout: '15m'
+          start: true
+      # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 100
+      - command:
+          name: 'init_allocation_only'
+      - command:
+          name: "upload"
+          params:
+            remotepath: /remote/upload.bin
+      - set_miss_up_download: true
+      - sleep:  "1m" # simple wait for blobbers to pick up state
+      - command:
+          name: "download_fail_verification"
+          failure_threshold: "2m"
+          params:
+            remotepath: /remote/upload.bin
+      - set_miss_up_download: false
+
+  - name: "Free reads should be successful even when the whole network is down"
+    flow:
+      - sleep: "1m"
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - sleep: "20s"
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+          validators: ['validator-1', 'validator-2', 'validator-3']
+          timeout: '15m'
+          start: true
+      # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 100
+      - command:
+          name: update_blobber_config
+          params:
+            blobber_id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+            key: read_price
+            value: 0
+      - command:
+          name: update_blobber_config
+          params:
+            blobber_id: 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+            key: read_price
+            value: 0
+      - command:
+          name: update_blobber_config
+          params:
+            blobber_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+            key: read_price
+            value: 0
+      - command:
+          name: 'init_allocation_free_read'
+      - command:
+          name: "upload"
+          params:
+            remotepath: /remote/upload.bin
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - sleep:  "1m" # simple wait for blobbers to pick up state
+      - command:
+          name: "download"
+          params:
+            remotepath: /remote/upload.bin

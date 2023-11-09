@@ -885,7 +885,7 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 }
 
 // Command executing.
-func (r *Runner) Command(name string, params map[string]interface{}, tm time.Duration) {
+func (r *Runner) Command(name string, params map[string]interface{}, failureThreshold, tm time.Duration) {
 	r.setupTimeout(tm)
 
 	if r.verbose {
@@ -908,17 +908,17 @@ func (r *Runner) Command(name string, params map[string]interface{}, tm time.Dur
 		}
 	}
 
-	r.waitCommand = r.asyncCommand(name, stringParams)
+	r.waitCommand = r.asyncCommand(name, stringParams, failureThreshold)
 }
 
-func (r *Runner) asyncCommand(name string, params map[string]string) (reply chan error) {
+func (r *Runner) asyncCommand(name string, params map[string]string, failureThreshold time.Duration) (reply chan error) {
 	reply = make(chan error)
-	go r.runAsyncCommand(reply, name, params)
+	go r.runAsyncCommand(reply, name, params, failureThreshold)
 	return
 }
 
-func (r *Runner) runAsyncCommand(reply chan error, name string, params map[string]string) {
-	var err = r.conf.Execute(name, params)
+func (r *Runner) runAsyncCommand(reply chan error, name string, params map[string]string, failureThreshold time.Duration) {
+	var err = r.conf.Execute(name, params, failureThreshold)
 	if err != nil {
 		err = fmt.Errorf("%q: %v", name, err)
 	}
@@ -1168,6 +1168,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			fmt.Printf("state.FailUploadCommit = %v\n", state.FailUploadCommit)
 		case config.NotifyOnValidationTicketGeneration:
 			state.NotifyOnValidationTicketGeneration = bool(update)
+		case config.MissUpDownload:
+			state.MissUpDownload = bool(update)
 		}
 	})
 
@@ -1327,4 +1329,12 @@ func (r *Runner) SetNodeCustomConfig(cfg *config.NodeCustomConfig) error {
 	}
 
 	return r.server.SetNodeConfig(node.ID, cfg.Config)
+}
+
+func (r *Runner) SetMissUpDownload(cfg config.MissUpDownload) error {
+	if r.verbose {
+		log.Printf("[INF] setting miss up download: %+v", cfg)
+	}
+
+	return r.SetServerState(cfg)
 }

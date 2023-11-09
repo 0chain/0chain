@@ -357,7 +357,18 @@ func init() {
 		if err = mapstructure.Decode(val, &cn); err != nil {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
-		ex.Command(cn.Name, cn.Params, tm) // async command
+
+		var dur time.Duration
+		if cn.FailureThreshold == "" {
+			dur = 0
+		} else {
+			dur, err = time.ParseDuration(cn.FailureThreshold)
+			if err != nil {
+				return fmt.Errorf("decoding '%s': %v", name, err)
+			}
+		}
+
+		ex.Command(cn.Name, cn.Params, dur, tm) // async command
 		return nil
 	})
 
@@ -979,6 +990,15 @@ func init() {
 		}
 		log.Printf("Continuing execution...")
 		return nil
+	})
+
+	register("set_miss_up_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		input, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type MissUpDownload, got %T", input)
+		}
+		cfg := MissUpDownload(input)
+		return ex.SetMissUpDownload(cfg)
 	})
 
 	register("wait_sharders_finalize_near_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
