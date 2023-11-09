@@ -327,8 +327,12 @@ commands:
     should_fail: false
   download:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/download.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/download.sh $remotepath"
     should_fail: false # shouldn't fail because of Rid-Solomon
+    args:
+    remotepath:
+      required: false
+      default: /remote/random.bin
   delete:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/delete.sh"
