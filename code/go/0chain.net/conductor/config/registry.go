@@ -360,7 +360,7 @@ func init() {
 
 		var dur time.Duration
 		if cn.FailureThreshold == "" {
-			dur = tm
+			dur = 0
 		} else {
 			dur, err = time.ParseDuration(cn.FailureThreshold)
 			if err != nil {
