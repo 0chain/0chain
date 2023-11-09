@@ -114,8 +114,8 @@ type GenerateAllChallenges bool
 type MissUpDownload bool
 
 type GenerateChallege struct {
-	BlobberID         string        `json:"blobber_id" mapstructure:"blobber_id"`
-	ExpectedStatus    int           `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
+	BlobberID      string `json:"blobber_id" mapstructure:"blobber_id"`
+	ExpectedStatus int    `json:"expected_status" mapstructure:"expected_status"` // 1 -> "pass" or 0-> "fail"
 	// Id of a miner so that only this miner will generate challenge
 	MinerID                   string `json:"miner" mapstructure:"miner"`
 	WaitOnBlobberCommit       bool
@@ -199,7 +199,7 @@ func (n *CollectVerificationTicketsWhenMissedVRF) Decode(val interface{}) error 
 }
 
 type NotifyOnBlockGeneration struct {
-	Enable bool	`json:"enable" yaml:"enable" mapstructure:"enable"`
+	Enable bool `json:"enable" yaml:"enable" mapstructure:"enable"`
 }
 
 func (nbg *NotifyOnBlockGeneration) Decode(val interface{}) error {
@@ -207,27 +207,46 @@ func (nbg *NotifyOnBlockGeneration) Decode(val interface{}) error {
 }
 
 type RenameCommitControl struct {
-	Fail bool
+	Fail  bool
 	Nodes []NodeID
 }
 
 func BuildFailRenameCommit(nodes []NodeID) *RenameCommitControl {
 	return &RenameCommitControl{
-		Fail: true,
+		Fail:  true,
 		Nodes: nodes,
 	}
 }
 
 func BuildDisableFailRenameCommit(nodes []NodeID) *RenameCommitControl {
 	return &RenameCommitControl{
-		Fail: false,
+		Fail:  false,
+		Nodes: nodes,
+	}
+}
+
+type UploadCommitControl struct {
+	Fail  bool
+	Nodes []NodeID
+}
+
+func BuildFailUploadCommit(nodes []NodeID) *UploadCommitControl {
+	return &UploadCommitControl{
+		Fail:  true,
+		Nodes: nodes,
+	}
+}
+
+func BuildDisableFailUploadCommit(nodes []NodeID) *UploadCommitControl {
+	return &UploadCommitControl{
+		Fail:  false,
 		Nodes: nodes,
 	}
 }
 
 type WaitValidatorTicket struct {
 	ValidatorName string `json:"validator_name" yaml:"validator_name" mapstructure:"validator_name"`
-	ValidatorId string `json:"-" yaml:"-" mapstructure:"-"`
+	ValidatorId   string `json:"-" yaml:"-" mapstructure:"-"`
 }
 
 func NewWaitValidatorTicket() *WaitValidatorTicket {
@@ -235,32 +254,32 @@ func NewWaitValidatorTicket() *WaitValidatorTicket {
 }
 
 type SyncAggregates struct {
-	SharderIds []string `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
-	MinerIds []string	`json:"miners" yaml:"miners" mapstructure:"miners"`
-	BlobberIds []string	`json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
-	ValidatorIds []string	`json:"validators" yaml:"validators" mapstructure:"validators"`
-	AuthorizerIds []string	`json:"authorizers" yaml:"authorizers" mapstructure:"authorizers"`
-	MonitorGlobal bool	`json:"global" yaml:"global" mapstructure:"global"`
-	UserIds []string `json:"users" yaml:"users" mapstructure:"users"`
-	Required bool `json:"required" yaml:"required" mapstructure:"required"`
+	SharderIds    []string `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+	MinerIds      []string `json:"miners" yaml:"miners" mapstructure:"miners"`
+	BlobberIds    []string `json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
+	ValidatorIds  []string `json:"validators" yaml:"validators" mapstructure:"validators"`
+	AuthorizerIds []string `json:"authorizers" yaml:"authorizers" mapstructure:"authorizers"`
+	MonitorGlobal bool     `json:"global" yaml:"global" mapstructure:"global"`
+	UserIds       []string `json:"users" yaml:"users" mapstructure:"users"`
+	Required      bool     `json:"required" yaml:"required" mapstructure:"required"`
 }
 
 type CheckAggregateChange struct {
 	ProviderType types.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
-	ProviderId string `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
-	Key string `json:"key" yaml:"key" mapstructure:"key"`
+	ProviderId   string             `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
+	Key          string             `json:"key" yaml:"key" mapstructure:"key"`
 	Monotonicity types.Monotonicity `json:"monotonicity" yaml:"monotonicity" mapstructure:"monotonicity"`
 }
 
 type CheckAggregateComparison struct {
 	ProviderType types.ProviderType `json:"provider_type" yaml:"provider_type" mapstructure:"provider_type"`
-	ProviderId string `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
-	Key string `json:"key" yaml:"key" mapstructure:"key"`
-	Comparison types.Comparison `json:"comparison" yaml:"comparison" mapstructure:"comparison"`
-	RValue float64 `json:"rvalue" yaml:"rvalue" mapstructure:"rvalue"`
+	ProviderId   string             `json:"provider_id" yaml:"provider_id" mapstructure:"provider_id"`
+	Key          string             `json:"key" yaml:"key" mapstructure:"key"`
+	Comparison   types.Comparison   `json:"comparison" yaml:"comparison" mapstructure:"comparison"`
+	RValue       float64            `json:"rvalue" yaml:"rvalue" mapstructure:"rvalue"`
 }
 
 type NodeCustomConfig struct {
-	NodeName NodeName `json:"node" yaml:"node" mapstructure:"node"`
-	Config map[string]interface{} `json:"config" yaml:"config" mapstructure:"config"`
+	NodeName NodeName               `json:"node" yaml:"node" mapstructure:"node"`
+	Config   map[string]interface{} `json:"config" yaml:"config" mapstructure:"config"`
 }

@@ -92,22 +92,22 @@ type Set struct {
 }
 
 type Arg struct {
-	Required bool `json:"required" yaml:"required" mapstructured:"required"`
-	Default string `json:"default" yaml:"default" mapstructured:"default"`
+	Required bool   `json:"required" yaml:"required" mapstructured:"required"`
+	Default  string `json:"default" yaml:"default" mapstructured:"default"`
 }
 
 // A system command.
 type Command struct {
-	WorkDir    string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
-	Exec       string `json:"exec" yaml:"exec" mapstructure:"exec"`
-	ShouldFail bool   `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
-	CanFail    bool   `json:"can_fail" yaml:"can_fail" mapstructure:"can_fail"`
-	Args	   map[string]*Arg	`json:"args" yaml:"args" mapstructure:"args"`
+	WorkDir    string          `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
+	Exec       string          `json:"exec" yaml:"exec" mapstructure:"exec"`
+	ShouldFail bool            `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
+	CanFail    bool            `json:"can_fail" yaml:"can_fail" mapstructure:"can_fail"`
+	Args       map[string]*Arg `json:"args" yaml:"args" mapstructure:"args"`
 }
 
 // CommandName
 type CommandName struct {
-	Name string `json:"name" yaml:"name" mapstructure:"name"`
+	Name   string                 `json:"name" yaml:"name" mapstructure:"name"`
 	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
 	FailureThreshold string `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
 }
@@ -127,6 +127,8 @@ type Config struct {
 	Logs string `json:"logs" yaml:"logs" mapstructure:"logs"`
 	// AggregateBaseUrl is base url for aggregate service.
 	AggregatesBaseUrl string `json:"aggregate_base_url" yaml:"aggregate_base_url" mapstructure:"aggregate_base_url"`
+	// Sharder1BaseUrl is base url of sharder1
+	Sharder1BaseURL string `json:"sharder1_base_url" yaml:"sharder1_base_url"  mapstructure:"sharder1_base_url"`
 	// Nodes for tests.
 	Nodes Nodes `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
 	// Tests cases and related.

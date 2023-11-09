@@ -16,6 +16,9 @@ stuck_warning_threshold: "2s"
 
 aggregate_base_url: "http://localhost:9081/v2"
 
+sharder1_base_url: "http://localhost:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+
+
 #
 # nodes used in tests
 #
@@ -223,21 +226,21 @@ nodes:
   - name: "authorizer-1"
     id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     work_dir: "../token_bridge_authserver/docker.local/auth1"
-    env: AUTHORIZER=1,ETH_MNEMONIC=symbol alley celery diesel donate moral almost opinion achieve since diamond page,ETH_UNLOCKPASSWORD="02289b9",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+    env: AUTHORIZER=1,ETH_MNEMONIC=symbol alley celery diesel donate moral almost opinion achieve since diamond page,ETH_UNLOCKPASSWORD="02289b9",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   - name: "authorizer-2"
     id: 47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a
     work_dir: "../token_bridge_authserver/docker.local/auth2"
-    env: AUTHORIZER=2,ETH_MNEMONIC=office peanut sail help sword minor gospel shoot execute prosper flip know,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+    env: AUTHORIZER=2,ETH_MNEMONIC=office peanut sail help sword minor gospel shoot execute prosper flip know,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
 
   - name: "authorizer-3"
     id: 7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a
     work_dir: "../token_bridge_authserver/docker.local/auth3"
-    env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0xf260c644Acfbfd87bdC77Fe32c8d6a56C9eec879
+    env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
   
@@ -277,6 +280,9 @@ commands:
     work_dir: "./."
     exec: "./docker.local/bin/build.miners-integration-tests.sh"
     can_fail: true
+  cleanup_0chain:
+    work_dir: "../0chain"
+    exec: "sh -x docker.local/bin/docker-clean.sh"
   cleanup_blobbers:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/docker-clean.sh"
@@ -341,6 +347,14 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh $remotepath"
     should_fail: false
+    args:
+      remotepath:
+        required: false
+        default: /remote/upload.bin
+  upload_can_fail:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh $remotepath"
+    should_fail: true
     args:
       remotepath:
         required: false
