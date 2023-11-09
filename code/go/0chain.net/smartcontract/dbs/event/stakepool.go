@@ -42,8 +42,6 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 			dpRewardsMap[sp.ID][poolId] = dpRewardsMap[sp.ID][poolId] + spus[i].DelegateRewards[poolId]
 			totalRewardsMap[sp.ID] = totalRewardsMap[sp.ID] + spus[i].DelegateRewards[poolId]
 		}
-		// todo https://github.com/0chain/0chain/issues/2122
-		// slash charges are no longer taken from rewards, but the stake pool. So related code has been removed.
 	}
 
 	return &providerRewardsDelegates{
@@ -212,16 +210,24 @@ func (edb *EventDb) rewardProviders(
 	var rewards []uint64
 	var totalRewards []uint64
 	var lastUpdated []int64
-	for id, r := range prRewards {
+	for id, tr := range prTotalRewards {
+		// Adding provider id to the list of ids
 		ids = append(ids, id)
-		rewards = append(rewards, uint64(r))
-		tr, ok := prTotalRewards[id]
+
+		// Adding provider reward or setting to 0 if service charge is 0 and there is no provider reward
+		r, ok := prRewards[id]
 		if !ok {
-			return fmt.Errorf("could not find total rewards for provider %s", id)
+			r = 0
 		}
+		rewards = append(rewards, uint64(r))
+
+		// Adding provider total reward
 		totalRewards = append(totalRewards, uint64(tr))
+
+		// Last updated time stamp
 		lastUpdated = append(lastUpdated, round)
 	}
+
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
