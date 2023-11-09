@@ -97,6 +97,6 @@ tests:
       - stop: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - sleep:  "1m" # simple wait for blobbers to pick up state
       - command:
-          name: "download_with_verification"
+          name: "download"
           params:
             remotepath: /remote/upload.bin
