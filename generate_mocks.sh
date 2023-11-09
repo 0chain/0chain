@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
+set -e 
+
 BASEDIR=$(pwd)
 
 echo "Making mocks..."
 
 generate_mock() {
 	OUTPUT=$1
-	"$GOROOT/bin/mockery" --case underscore --output=$OUTPUT --all
+	"$GOPATH/bin/mockery" --case underscore --output=$OUTPUT --all
 }
 
 cd "${BASEDIR}/code/go/0chain.net/core" || exit

@@ -54,7 +54,7 @@ install-mockery:
 	&& rm -rf ./tmp
 
 build-mocks:
-	./generate_mocks.sh
+	GOPATH=$(GOPATH) ./generate_mocks.sh
 
 install-msgp:
 	@echo "Install msgp..."
