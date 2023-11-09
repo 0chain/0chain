@@ -71,6 +71,8 @@ jobs:
         cd bls
         make -C mcl -j 4 lib/libmclbn256.a install
         make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+        ls -la /usr/local/lib
+        export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
     - name: Git clone 0chain
       run: |
@@ -188,11 +190,13 @@ jobs:
 
     - name: Install zboxcli
       run: |
+        echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
         export HOME="/root"
         cd zboxcli && make install
 
     - name: Install zwalletcli
       run: |
+        echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
         export HOME="/root"
         cd zwalletcli && make install
 
@@ -211,6 +215,7 @@ jobs:
 
     - name: Build 0dns
       run: |
+        echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
         cd 0dns
         ./docker.local/bin/init.sh
         ./docker.local/bin/build.sh
@@ -222,11 +227,13 @@ jobs:
 
     - name: Build blobber base
       run: |
+        echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
         cd blobber
         ./docker.local/bin/build.base.sh
 
     - name: Build blobber
       run: |
+        echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
         cd blobber
         chmod +x ./docker.local/bin/build.blobber-integration-tests.sh
         ./docker.local/bin/build.blobber-integration-tests.sh
@@ -254,6 +261,7 @@ jobs:
 
     - name: Starting blobber Tests.
       run: |
+        echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
         export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh blobber-6
