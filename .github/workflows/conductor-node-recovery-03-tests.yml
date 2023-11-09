@@ -219,6 +219,12 @@ jobs:
     - name: 0dns Patching
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
+    
+    - name: Authorizer patching
+      run: |
+        cd token_bridge_authserver
+        chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }}
 
     - name: 0box Patching
       run: |
