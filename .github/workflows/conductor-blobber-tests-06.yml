@@ -205,8 +205,8 @@ jobs:
 
     - name: Change blobber owner
       run: |
-        sed -i "s/delegate_wallet: [0-9a-zA-Z]*/delegate_wallet: $OWNER_ID/g" ./blobber/docker.local/conductor-config/0chain_blobber.yaml
-        sed -i "s/delegate_wallet: [0-9a-zA-Z]*/delegate_wallet: $OWNER_ID/g" ./blobber/docker.local/conductor-config/0chain_validator.yaml
+        sed -i "s,delegate_wallet: .*$,delegate_wallet: $OWNER_ID,g" ./blobber/docker.local/conductor-config/0chain_blobber.yaml
+        sed -i "s,delegate_wallet: .*$,delegate_wallet: $OWNER_ID,g" ./blobber/docker.local/conductor-config/0chain_validator.yaml
 
     - name: Build 0dns
       run: |
