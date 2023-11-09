@@ -6,7 +6,7 @@ echo "Making mocks..."
 
 generate_mock() {
 	OUTPUT=$1
-	mockery --case underscore --output=$OUTPUT --all
+	"$GOROOT/bin/mockery" --case underscore --output=$OUTPUT --all
 }
 
 cd "${BASEDIR}/code/go/0chain.net/core" || exit
