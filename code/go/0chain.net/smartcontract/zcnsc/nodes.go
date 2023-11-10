@@ -117,7 +117,7 @@ func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MaxFee, err = currency.ParseZCN(amount)
+			gn.MaxFee = currency.Coin(amount)
 			if err != nil {
 				return err
 			}
