@@ -43,3 +43,5 @@ sudo ifconfig lo0 alias 198.18.0.134
 sudo ifconfig lo0 alias 198.18.0.135
 sudo ifconfig lo0 alias 198.18.0.136
 sudo ifconfig lo0 alias 198.18.0.137
+# 0box
+sudo ifconfig lo0 alias 198.18.0.150

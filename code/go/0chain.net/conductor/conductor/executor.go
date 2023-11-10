@@ -1077,6 +1077,9 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 		case *cases.RoundHasFinalized:
 			state.RoundHasFinalizedConfig = cfg
 
+		case *cases.RoundRandomSeed:
+			state.RoundRandomSeed = cfg
+
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())
 		}

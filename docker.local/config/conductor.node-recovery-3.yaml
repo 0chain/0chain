@@ -1,0 +1,67 @@
+enable:
+  - "Node Recovery"
+  - "Client Operation"
+
+# sets of test cases
+sets:
+  - name: "Node Recovery"
+    tests:
+      - "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
+
+tests:
+  - name: "Authorizer Recovery - Authorizer should be able to sign tickets and gain rewards after it is recovered"
+    flow:
+       - set_monitor: "sharder-1"
+       - cleanup_bc: {}
+       - command:
+           name: "cleanup_0dns"
+       - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
+       - wait_round:
+          round: 15 # just wait the BC starts
+       - start: ['0dns']
+       - sleep: "20s"
+       - start: ['0box']
+       - sleep: "20s"
+       - wait_round:
+           shift: 50
+       - command:
+           name: "register_authorizer"
+       - wait_add:
+           authorizers: ['authorizer-1','authorizer-2','authorizer-3','authorizer-4']
+           start: true
+       - wait_round:
+           shift: 200
+       - sync_latest_aggregates:
+           authorizers:
+             - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
+           required: true
+       - round_random_seed:
+           random_seed: 54
+       - command:
+           name: "mint_zcn"
+       - check_aggregate_value_change:
+           provider_type: authorizer
+           provider_id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
+           key: total_rewards
+           monotonicity: increase
+           timeout: "2m"
+       - stop: ['authorizer-4']
+       - wait_round:
+           shift: 100
+       - wait_add:
+           authorizers: [ 'authorizer-4' ]
+           start: true
+       - sync_latest_aggregates:
+           authorizers:
+             - "d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab"
+           required: true
+       - round_random_seed:
+           random_seed: 54
+       - command:
+           name: "mint_zcn"
+       - check_aggregate_value_change:
+           provider_type: authorizer
+           provider_id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
+           key: total_rewards
+           monotonicity: increase
+           timeout: "2m"

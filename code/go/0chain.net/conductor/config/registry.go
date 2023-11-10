@@ -638,6 +638,16 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("round_random_seed", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := cases.NewRoundRandomSeed()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {

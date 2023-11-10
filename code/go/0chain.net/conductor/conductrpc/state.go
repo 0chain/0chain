@@ -68,6 +68,7 @@ type State struct {
 	FBRequestor                           *cases.FBRequestor
 	MissingLFBTicket                      *cases.MissingLFBTickets
 	RoundHasFinalizedConfig               *cases.RoundHasFinalized
+	RoundRandomSeed                       *cases.RoundRandomSeed
 
 	LockNotarizationAndSendNextRoundVRF *config.LockNotarizationAndSendNextRoundVRF
 

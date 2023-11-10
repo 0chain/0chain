@@ -2,6 +2,7 @@ package zcnsc_test
 
 import (
 	"math/rand"
+	"sort"
 	"testing"
 	"time"
 
@@ -166,8 +167,15 @@ func Test_MaxFeeMint(t *testing.T) {
 				mintsMap[m.ToClientID] = mm[i]
 			}
 
-			rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
-			sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+			// sort the signatures
+			sortedSigs := make([]*AuthorizerSignature, len(payload.Signatures))
+			copy(sortedSigs, payload.Signatures)
+			sort.Slice(sortedSigs, func(i, j int) bool {
+				return sortedSigs[i].ID < sortedSigs[j].ID
+			})
+
+			rd := rand.New(rand.NewSource(ctx.GetBlock().GetRoundRandomSeed()))
+			sig := sortedSigs[rd.Intn(len(payload.Signatures))]
 
 			stakePool := NewStakePool()
 			err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePool)

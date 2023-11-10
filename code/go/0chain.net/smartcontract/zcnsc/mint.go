@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -19,7 +20,7 @@ import (
 )
 
 // Mint inputData - is a MintPayload
-func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []byte, randomSeed int64, ctx cstate.StateContextI) (resp string, err error) {
 	const (
 		code = "failed to mint"
 	)
@@ -171,8 +172,16 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		Signers:   signers,
 	})
 
-	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
-	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+	// sort the signatures
+	sortedSigs := make([]*AuthorizerSignature, len(payload.Signatures))
+	copy(sortedSigs, payload.Signatures)
+	sort.Slice(sortedSigs, func(i, j int) bool {
+		return sortedSigs[i].ID < sortedSigs[j].ID
+	})
+
+	rd := rand.New(rand.NewSource(randomSeed))
+	sig := sortedSigs[rd.Intn(len(payload.Signatures))]
+	logging.Logger.Debug("mint reward", zap.String("authorizer", sig.ID), zap.Int64("seed", randomSeed))
 
 	sp, err := zcn.getStakePool(sig.ID, ctx)
 	if err != nil {
