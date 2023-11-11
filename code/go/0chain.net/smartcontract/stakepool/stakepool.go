@@ -773,7 +773,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 
 	if len(funcs) > 1 {
 		refresh := funcs[1]
-		if sp, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		if _, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
 			return "", common.NewErrorf("stake_pool_lock_failed",
 				"can't refresh provider: %v", err)
 		}
@@ -889,7 +889,7 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 
 	if len(funcs) > 1 {
 		refresh := funcs[1]
-		if sp, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
+		if _, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
 			return "", common.NewErrorf("stake_pool_lock_failed",
 				"can't refresh provider: %v", err)
 		}
