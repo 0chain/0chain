@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
+	"github.com/0chain/common/core/currency"
 )
 
 const allChallengeReadyBlobbersPartitionSize = 50
@@ -20,21 +21,26 @@ func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions
 // ChallengeReadyBlobber represents a node that is ready to be challenged,
 // it will be saved in challenge ready blobbers partitions.
 type ChallengeReadyBlobber struct {
-	BlobberID string `json:"blobber_id"`
-	Weight    uint64 `json:"weight"`
+	BlobberID    string        `json:"blobber_id"`
+	Stake        currency.Coin `json:"stake"`
+	UsedCapacity uint64        `json:"usedCapacity"`
 }
 
 func (bc *ChallengeReadyBlobber) GetID() string {
 	return bc.BlobberID
 }
 
-func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, weight uint64) error {
+func (bc *ChallengeReadyBlobber) GetWeight() uint64 {
+	return uint64((float64(bc.Stake) * float64(bc.UsedCapacity)) / 1e10)
+}
+
+func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
 	parts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge ready partitions, %v", err)
 	}
 
-	crb := &ChallengeReadyBlobber{BlobberID: blobberID, Weight: weight}
+	crb := &ChallengeReadyBlobber{BlobberID: blobberID, UsedCapacity: usedCapacity, Stake: stake}
 	if err := parts.Add(state, crb); err != nil {
 		if !partitions.ErrItemExist(err) {
 			return err

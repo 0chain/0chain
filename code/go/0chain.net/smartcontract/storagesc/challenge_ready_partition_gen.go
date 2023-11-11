@@ -7,15 +7,22 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z ChallengeReadyBlobber) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *ChallengeReadyBlobber) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
+	// map header, size 3
 	// string "BlobberID"
-	o = append(o, 0x82, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
+	o = append(o, 0x83, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
-	// string "Weight"
-	o = append(o, 0xa6, 0x57, 0x65, 0x69, 0x67, 0x68, 0x74)
-	o = msgp.AppendUint64(o, z.Weight)
+	// string "Stake"
+	o = append(o, 0xa5, 0x53, 0x74, 0x61, 0x6b, 0x65)
+	o, err = z.Stake.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Stake")
+		return
+	}
+	// string "UsedCapacity"
+	o = append(o, 0xac, 0x55, 0x73, 0x65, 0x64, 0x43, 0x61, 0x70, 0x61, 0x63, 0x69, 0x74, 0x79)
+	o = msgp.AppendUint64(o, z.UsedCapacity)
 	return
 }
 
@@ -43,10 +50,16 @@ func (z *ChallengeReadyBlobber) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "BlobberID")
 				return
 			}
-		case "Weight":
-			z.Weight, bts, err = msgp.ReadUint64Bytes(bts)
+		case "Stake":
+			bts, err = z.Stake.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Weight")
+				err = msgp.WrapError(err, "Stake")
+				return
+			}
+		case "UsedCapacity":
+			z.UsedCapacity, bts, err = msgp.ReadUint64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "UsedCapacity")
 				return
 			}
 		default:
@@ -62,7 +75,7 @@ func (z *ChallengeReadyBlobber) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z ChallengeReadyBlobber) Msgsize() (s int) {
-	s = 1 + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 7 + msgp.Uint64Size
+func (z *ChallengeReadyBlobber) Msgsize() (s int) {
+	s = 1 + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 6 + z.Stake.Msgsize() + 13 + msgp.Uint64Size
 	return
 }
