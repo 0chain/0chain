@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -837,8 +836,6 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 	switch selection {
 	case randomWeightSelection:
 		maxBlobbersSelect := conf.MaxBlobberSelectForChallenge
-
-		uniqueUuidForLogging := uuid.New().String()
 
 		if len(challengeBlobbers) == 0 || maxBlobbersSelect == 0 {
 			return "", errors.New("no blobbers available for challenge")
