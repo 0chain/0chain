@@ -1,10 +1,9 @@
 package storagesc
 
 import (
-	"fmt"
-
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
+	"fmt"
 	"github.com/0chain/common/core/currency"
 )
 
@@ -54,6 +53,33 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 
 	if err := parts.Save(state); err != nil {
 		return fmt.Errorf("could not add or update challenge ready partitions: %v", err)
+	}
+
+	return nil
+}
+
+func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
+	parts, err := partitionsChallengeReadyBlobbers(state)
+	if err != nil {
+		return fmt.Errorf("could not get challenge ready partitions, %v", err)
+	}
+
+	blobberExist, err := parts.Exist(state, blobberID)
+	if err != nil {
+		return err
+	}
+
+	if !blobberExist {
+		return nil
+	}
+
+	crb := &ChallengeReadyBlobber{BlobberID: blobberID, UsedCapacity: usedCapacity, Stake: stake}
+	if err := parts.UpdateItem(state, crb); err != nil {
+		return err
+	}
+
+	if err := parts.Save(state); err != nil {
+		return err
 	}
 
 	return nil

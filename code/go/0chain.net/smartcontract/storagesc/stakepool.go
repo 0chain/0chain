@@ -392,7 +392,7 @@ func (_ *StorageSmartContract) refreshProvider(
 			return nil, err
 		}
 
-		if err := PartitionsChallengeReadyBlobberAddOrUpdate(balances, providerID, spBalance, sd); err != nil {
+		if err := PartitionsChallengeReadyBlobberUpdate(balances, providerID, spBalance, sd); err != nil {
 			return nil, err
 		}
 	}
