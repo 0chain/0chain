@@ -1,11 +1,12 @@
 package storagesc
 
 import (
-	"fmt"
-
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
+	"fmt"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 const allChallengeReadyBlobbersPartitionSize = 50
@@ -54,6 +55,26 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 
 	if err := parts.Save(state); err != nil {
 		return fmt.Errorf("could not add or update challenge ready partitions: %v", err)
+	}
+
+	return nil
+}
+
+func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
+	parts, err := partitionsChallengeReadyBlobbers(state)
+	if err != nil {
+		return fmt.Errorf("could not get challenge ready partitions, %v", err)
+	}
+
+	crb := &ChallengeReadyBlobber{BlobberID: blobberID, UsedCapacity: usedCapacity, Stake: stake}
+
+	if err := parts.UpdateItem(state, crb); err != nil {
+		logging.Logger.Info("blobber is not in challenge ready partitions", zap.Error(err))
+		return nil
+	}
+
+	if err := parts.Save(state); err != nil {
+		return err
 	}
 
 	return nil
