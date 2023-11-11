@@ -28,7 +28,7 @@ func (bc *ChallengeReadyBlobber) GetID() string {
 	return bc.BlobberID
 }
 
-func partitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, weight uint64) error {
+func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, weight uint64) error {
 	parts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge ready partitions, %v", err)

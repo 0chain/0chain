@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	"0chain.net/smartcontract/storagesc"
 	"errors"
 	"fmt"
 
@@ -104,6 +105,17 @@ func (sp *StakePool) LockPool(
 
 	i, _ := txn.Value.Int64()
 	logging.Logger.Info("emmit TagLockStakePool", zap.String("client_id", txn.ClientID), zap.String("provider_id", providerId))
+
+	if providerType == spenum.Blobber {
+		spBalance, err := sp.stake()
+		if err != nil {
+			return "", err
+		}
+
+		if err := storagesc.PartitionsChallengeReadyBlobberAddOrUpdate(balances, providerId, uint64(spBalance)); err != nil {
+			return "", err
+		}
+	}
 
 	lock := event.DelegatePoolLock{
 		Client:       txn.ClientID,

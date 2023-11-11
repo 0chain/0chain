@@ -435,7 +435,7 @@ func testCancelAllocation(
 	for i, blobberChallenges := range challenges {
 		blobberID := strconv.Itoa(i)
 
-		err := partitionsChallengeReadyBlobberAddOrUpdate(ctx, blobberID, 1000)
+		err := PartitionsChallengeReadyBlobberAddOrUpdate(ctx, blobberID, 1000)
 		require.NoError(t, err)
 
 		for _, created := range blobberChallenges {
@@ -560,7 +560,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 	for i, blobberChallenges := range challenges {
 		blobberID := strconv.Itoa(i)
 
-		err := partitionsChallengeReadyBlobberAddOrUpdate(ctx, blobberID, 1000)
+		err := PartitionsChallengeReadyBlobberAddOrUpdate(ctx, blobberID, 1000)
 		require.NoError(t, err)
 
 		for _, created := range blobberChallenges {
