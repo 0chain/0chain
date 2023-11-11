@@ -840,11 +840,6 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 		uniqueUuidForLogging := uuid.New().String()
 
-		logging.Logger.Info("Jayash selectRandomBlobber : "+uniqueUuidForLogging,
-			zap.Any("maxBlobberSelect", maxBlobbersSelect),
-			zap.Any("len_challengeBlobbers", len(challengeBlobbers)),
-			zap.Any("challengeBlobbers", challengeBlobbers))
-
 		if len(challengeBlobbers) == 0 || maxBlobbersSelect == 0 {
 			return "", errors.New("no blobbers available for challenge")
 		}
@@ -867,10 +862,6 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 		}
 
 		randValue := r.Float64() * float64(totalWeight)
-
-		logging.Logger.Info("Jayash selectRandomBlobber : "+uniqueUuidForLogging,
-			zap.Any("randValue", randValue),
-			zap.Any("blobbersSelected", blobbersSelected))
 
 		var cumulativeWeight uint64
 		for _, bc := range blobbersSelected {
