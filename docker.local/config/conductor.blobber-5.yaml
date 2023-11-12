@@ -36,6 +36,8 @@ tests:
           shift: 250
       - command:
           name: 'init_allocation_only'
+      - wait_round:
+          shift: 250
       - command:
           name: "upload"
           params:
