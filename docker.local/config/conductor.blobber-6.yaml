@@ -31,9 +31,11 @@ tests:
           start: true
       # setup blobbers and create allocation with minimum write pool lock
       - wait_round:
-          shift: 100
+          shift: 250
       - command:
           name: 'init_allocation_only'
+      - wait_round:
+          shift: 250
       - command:
           name: "upload"
           params:
@@ -68,8 +70,6 @@ tests:
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
-      - wait_round:
-          shift: 100
       - command:
           name: update_blobber_config
           params:
@@ -88,8 +88,12 @@ tests:
             blobber_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
             key: read_price
             value: 0
+      - wait_round:
+          shift: 250
       - command:
           name: 'init_allocation_free_read'
+      - wait_round:
+          shift: 250
       - command:
           name: "upload"
           params:
