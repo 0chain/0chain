@@ -70,6 +70,8 @@ tests:
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: update_blobber_config
           params:
