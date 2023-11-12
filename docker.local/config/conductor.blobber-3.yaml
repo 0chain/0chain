@@ -33,14 +33,16 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_list:
           send_wrong_data: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+      - wait_round:
+          shift: 250
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'list_and_verify'
@@ -59,15 +61,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_list:
           send_wrong_metadata: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'list_and_verify'
           timeout: '25m'
@@ -85,15 +89,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_list:
           not_respond: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'list_and_verify'
           timeout: '25m'
@@ -111,15 +117,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_download:
           not_respond: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'download_and_verify'
           timeout: '25m'
@@ -137,15 +145,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_upload:
           not_respond: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'upload_and_verify'
           timeout: '25m'
@@ -163,15 +173,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_delete:
           not_respond: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'delete_and_verify'
           timeout: '25m'
@@ -189,15 +201,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_list:
           return_error: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'list_and_verify'
           timeout: '25m'
@@ -215,15 +229,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_download:
           return_error: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'download_and_verify'
           timeout: '25m'
@@ -241,15 +257,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_upload:
           return_error: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'upload_and_verify'
           timeout: '25m'
@@ -267,16 +285,17 @@ tests:
       - start: ['0dns']
       # wait the 0dns starts
       - sleep: "20s"
-      - start: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
           validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
           timeout: '15m'
+          start: true
       - blobber_delete:
           return_error: true
           adversarial: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'delete_and_verify'
           timeout: '25m'
-...
