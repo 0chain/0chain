@@ -107,6 +107,8 @@ tests:
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'init_allocation_only'
           timeout: '35m'
@@ -142,12 +144,14 @@ tests:
           validators: ['validator-3', 'validator-4']
           timeout: '5m'
           start: true
+      - wait_round:
+          shift: 250
       - command:
           name: 'repair_allocation'
           timeout: '15m'
       - stop: ['blobber-4']
       - wait_round:
-          shift: 30
+          shift: 200
       - command:
           name: 'upload_repair'
           timeout: '5m'

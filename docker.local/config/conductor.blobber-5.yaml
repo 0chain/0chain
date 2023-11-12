@@ -33,7 +33,7 @@ tests:
           start: true
       # setup blobbers and create allocation with minimum write pool lock
       - wait_round:
-          shift: 50
+          shift: 250
       - command:
           name: 'init_allocation_only'
       - command:
@@ -41,7 +41,7 @@ tests:
           params:
             remotepath: /remote/upload.bin
       - wait_round: # successive download requests need rest in between them
-          shift: 50
+          shift: 250
       - command:
           name: "upload"
           params:
@@ -85,18 +85,20 @@ tests:
           start: true
       # setup blobbers and create allocation with minimum write pool lock
       - wait_round:
-          shift: 50
+          shift: 250
       - command:
           name: 'init_allocation_only'
           params:
             data_shards: "2"
             parity_shards: "1"
+      - wait_round:
+          shift: 250
       - command:
           name: "upload"
           params:
             remotepath: /remote/upload.bin
       - wait_round: # successive download requests need rest in between them
-          shift: 50
+          shift: 250
       - command:
           name: "upload"
           params:
@@ -140,7 +142,7 @@ tests:
           start: true
       # setup blobbers and create allocation with minimum write pool lock
       - wait_round:
-          shift: 50
+          shift: 250
       - command:
           name: 'init_allocation_only'
           params:
