@@ -855,14 +855,14 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
-			totalWeight += bc.Weight
+			totalWeight += bc.GetWeight()
 		}
 
 		randValue := r.Float64() * float64(totalWeight)
 
 		var cumulativeWeight uint64
 		for _, bc := range blobbersSelected {
-			cumulativeWeight += bc.Weight
+			cumulativeWeight += bc.GetWeight()
 			if float64(cumulativeWeight) >= randValue {
 				return bc.BlobberID, nil
 			}
