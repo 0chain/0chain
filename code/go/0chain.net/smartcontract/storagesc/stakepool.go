@@ -1,12 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/state"
-	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"0chain.net/chaincore/state"
+	"0chain.net/core/maths"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
@@ -279,7 +281,7 @@ func getStakePoolAdapter(
 
 // getStakePool of given blobber
 func (_ *StorageSmartContract) getStakePoolAdapter(
-	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
 ) (sp stakepool.AbstractStakePool, err error) {
 	return getStakePoolAdapter(providerType, providerID, balances)
 }
@@ -366,7 +368,36 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	}
 	return stakepool.StakePoolLock(t, input, balances,
 		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates},
-		ssc.getStakePoolAdapter)
+		ssc.getStakePoolAdapter, ssc.refreshProvider)
+}
+
+// getStakePool of given blobber
+func (_ *StorageSmartContract) refreshProvider(
+	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
+) (s stakepool.AbstractStakePool, err error) {
+	sp, err := getStakePool(providerType, providerID, balances)
+
+	if providerType == spenum.Blobber {
+		spBalance, err := sp.stake()
+		if err != nil {
+			return nil, err
+		}
+
+		blobber, err := getBlobber(providerID, balances)
+		if err != nil {
+			return nil, err
+		}
+		sd, err := maths.ConvertToUint64(blobber.SavedData)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := PartitionsChallengeReadyBlobberUpdate(balances, providerID, spBalance, sd); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
 }
 
 // stake pool can return excess tokens from stake pool
