@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math"
 	"net/http"
 	"strconv"
@@ -1723,6 +1724,8 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	uniqueIdForLogging := uuid.New().String()
+
 	data := r.URL.Query().Get("data")
 	var req updateAllocationRequest
 	if err := req.decode([]byte(data)); err != nil {
@@ -1730,11 +1733,15 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("req", req))
+
 	eAlloc, err := edb.GetAllocation(req.ID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
 	}
+
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("eAlloc", eAlloc))
 
 	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
 	if err != nil {
@@ -1742,44 +1749,42 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("alloc", alloc))
+
 	conf, err := getConfig(balances)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("conf", conf.CancellationCharge))
+
 	var (
 		now = common.Now()
 	)
+
+	if alloc.Expiration < now {
+		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
+		return
+	}
+
+	if req.Size < 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid size"))
+		return
+	}
 
 	if req.Extend {
 		alloc.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()) // new expiration
 	}
 
-	if alloc.Expiration < now {
-		// allocation is expired, return the current rest min lock demand
-		rmld, err := getRestMinLockDemand(&alloc.StorageAllocation, conf.CancellationCharge)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
-		}
-
-		common.Respond(w, r, map[string]interface{}{
-			"min_lock_demand": rmld,
-		}, nil)
-		return
-	}
-
 	alloc.Size += req.Size
-	if alloc.Size < conf.MinAllocSize || alloc.Size < alloc.Stats.UsedSize {
-		common.Respond(w, r, nil, common.NewErrBadRequest("allocation size becomes too small"))
-		return
-	}
 
 	if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
+
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("alloc.StorageAllocation", alloc))
 
 	if err = changeBlobbersEventDB(
 		edb,
@@ -1792,16 +1797,22 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("alloc.StorageAllocation", alloc))
+
 	if err := updateAllocRestMinLockDemand(&req, &alloc.StorageAllocation, conf); err != nil {
 		common.Respond(w, r, nil, err)
 		return
 	}
+
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("alloc.StorageAllocation", alloc))
 
 	rmld, err := getRestMinLockDemand(&alloc.StorageAllocation, conf.CancellationCharge)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
+
+	logging.Logger.Info("Jayash getAllocationUpdateMinLock : "+uniqueIdForLogging, zap.Any("rmld", rmld))
 
 	common.Respond(w, r, map[string]interface{}{
 		"min_lock_demand": rmld,
@@ -1910,15 +1921,21 @@ func getRestMinLockDemand(alloc *StorageAllocation, cancelCharge float64) (curre
 		return 0, common.NewErrInternal(fmt.Sprintf("failed to calculate rest min lock demand: %v", err))
 	}
 
+	logging.Logger.Info("Jayash getRestMinLockDemand : ", zap.Any("rmld", rmld))
+
 	cost, err := alloc.cost()
 	if err != nil {
 		return 0, common.NewErrInternal(fmt.Sprintf("failed to calculate cost: %v", err))
 	}
 
+	logging.Logger.Info("Jayash getRestMinLockDemand : ", zap.Any("cost", cost))
+
 	costF64, err := cost.Float64()
 	if err != nil {
 		return 0, common.NewErrInternal(fmt.Sprintf("failed to convert cost to float64: %v", err))
 	}
+
+	logging.Logger.Info("Jayash getRestMinLockDemand : ", zap.Any("costF64", costF64))
 
 	//return	"min_lock_demand": rmld + currency.Coin(costF64*conf.CancellationCharge),
 	return rmld + currency.Coin(costF64*cancelCharge), nil
