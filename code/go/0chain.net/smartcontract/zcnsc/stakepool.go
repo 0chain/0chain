@@ -1,6 +1,9 @@
 package zcnsc
 
 import (
+	"errors"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -8,8 +11,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"errors"
-	"fmt"
 	"github.com/0chain/common/core/util"
 )
 
@@ -90,7 +91,7 @@ func (zcn *ZCNSmartContract) getStakePoolForAdapter(_ spenum.Provider, providerI
 }
 
 func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
-	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	balances cstate.StateContextI) (sp stakepool.AbstractStakePool, err error) {
 	pool, err := zcn.getStakePoolForAdapter(providerType, providerID, balances)
 	if err != nil {
 		return nil, err

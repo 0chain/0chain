@@ -729,7 +729,7 @@ func (spr *StakePoolRequest) decode(p []byte) (err error) {
 }
 
 func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI, vs ValidationSettings,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
+	funcs ...func(providerType spenum.Provider, providerID string, balances cstate.StateContextI) (AbstractStakePool, error)) (resp string, err error) {
 
 	var spr StakePoolRequest
 	if err = spr.decode(input); err != nil {
@@ -738,6 +738,11 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	}
 
 	var sp AbstractStakePool
+	if len(funcs) < 1 {
+		return "", common.NewError("stake_pool_lock_failed",
+			"provide get func")
+	}
+	get := funcs[0]
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
@@ -764,6 +769,14 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool staking error: %v", err)
+	}
+
+	if len(funcs) > 1 {
+		refresh := funcs[1]
+		if _, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
+			return "", common.NewErrorf("stake_pool_lock_failed",
+				"can't refresh provider: %v", err)
+		}
 	}
 
 	return out, err
@@ -810,7 +823,7 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 
 // StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
+	funcs ...func(providerType spenum.Provider, providerID string, balances cstate.StateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {
 	var spr StakePoolRequest
 
@@ -818,6 +831,11 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)
 	}
+	if len(funcs) < 1 {
+		return "", common.NewError("stake_pool_lock_failed",
+			"provide get func")
+	}
+	get := funcs[0]
 	var sp AbstractStakePool
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
@@ -867,6 +885,14 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)
+	}
+
+	if len(funcs) > 1 {
+		refresh := funcs[1]
+		if _, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
+			return "", common.NewErrorf("stake_pool_lock_failed",
+				"can't refresh provider: %v", err)
+		}
 	}
 
 	return output, nil
