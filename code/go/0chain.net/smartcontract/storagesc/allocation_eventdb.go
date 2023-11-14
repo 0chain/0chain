@@ -70,7 +70,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		ba := &BlobberAllocation{
 			BlobberID:     b.ID,
 			AllocationID:  alloc.AllocationID,
-			Size:          b.Allocated,
+			Size:          int64(gbSize),
 			Terms:         terms,
 			MinLockDemand: minLockDemand,
 		}
