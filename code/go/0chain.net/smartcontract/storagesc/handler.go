@@ -1752,29 +1752,21 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		now = common.Now()
 	)
 
+	if alloc.Expiration < now {
+		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
+		return
+	}
+
+	if req.Size < 0 {
+		common.Respond(w, r, nil, common.NewErrBadRequest("invalid size"))
+		return
+	}
+
 	if req.Extend {
 		alloc.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()) // new expiration
 	}
 
-	if alloc.Expiration < now {
-		// allocation is expired, return the current rest min lock demand
-		rmld, err := getRestMinLockDemand(&alloc.StorageAllocation, conf.CancellationCharge)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
-		}
-
-		common.Respond(w, r, map[string]interface{}{
-			"min_lock_demand": rmld,
-		}, nil)
-		return
-	}
-
 	alloc.Size += req.Size
-	if alloc.Size < conf.MinAllocSize || alloc.Size < alloc.Stats.UsedSize {
-		common.Respond(w, r, nil, common.NewErrBadRequest("allocation size becomes too small"))
-		return
-	}
 
 	if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 		common.Respond(w, r, nil, err)
