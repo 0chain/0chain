@@ -50,16 +50,13 @@ tests:
           timeout: '15m'
           start: true
       - wait_round:
-          shift: 100
+          shift: 250
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_allocation_3_blobbers_no_read_tokens'
           timeout: '35m'
-      # upload failure without enough tokens in write pool
-      # NOTE: cannot be done as upload allowed at this point due to lock added on new allocation
-#      - command:
-#          name: "upload_no_tokens"
-#          timeout: '5m'
+      - wait_round:
+          shift: 250
       # upload failure without metadata (add tokens to write pool)
       - command:
           name: "upload_no_meta" # this locks token in a write pool
@@ -107,9 +104,13 @@ tests:
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          shift: 250
       - command:
           name: 'init_allocation_only'
           timeout: '35m'
+      - wait_round:
+          shift: 250
       - command:
           name: 'simultaneous'
           timeout: '20m'
@@ -142,18 +143,20 @@ tests:
           validators: ['validator-3', 'validator-4']
           timeout: '5m'
           start: true
+      - wait_round:
+          shift: 250
       - command:
           name: 'repair_allocation'
           timeout: '15m'
       - stop: ['blobber-4']
       - wait_round:
-          shift: 30
+          shift: 250
       - command:
           name: 'upload_repair'
           timeout: '5m'
       - start: ['blobber-4']
       - wait_round:
-          shift: 200
+          shift: 250
       - command:
           name: 'list_repair'
           timeout: '5m'

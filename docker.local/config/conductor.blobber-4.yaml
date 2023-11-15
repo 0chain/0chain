@@ -38,6 +38,8 @@ tests:
           timeout: '15m'
           start: true
       # setup blobbers and create allocation with minimum write pool lock
+      - wait_round:
+          round: 250
       - command:
           name: 'init_allocation_only'
           timeout: '25m'
@@ -48,6 +50,8 @@ tests:
       - adversarial_validator:
           fail_valid_challenge: true
           id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
+      - wait_round:
+          round: 250
       - command:
           name: "upload"
       - wait_blobber_commit:
@@ -85,6 +89,8 @@ tests:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           expected_status: 1 # 1 --> pass, 0 --> fail
           miner: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929" # generate challenge by this miner
+      - wait_round:
+          round: 250
       - command:
           name: 'init_allocation'
           timeout: '25m'

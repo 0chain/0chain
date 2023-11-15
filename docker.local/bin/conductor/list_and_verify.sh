@@ -51,6 +51,8 @@ head -c 5M < /dev/urandom > random.bin
 
 rm -f random.bin
 
+sleep 60;
+
 allocation=$(cat ~/.zcn/allocation.txt)
 cmd_output=$(./zboxcli/zbox --wallet testing.json list \
     --allocation "$allocation" \

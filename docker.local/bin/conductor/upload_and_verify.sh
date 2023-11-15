@@ -52,6 +52,8 @@ cmd_output=$(./zboxcli/zbox --wallet testing.json upload \
 
 rm -f random.bin
 
+sleep 60;
+
 if [[ $cmd_output == *random.bin* ]]
 then 
     exit 0

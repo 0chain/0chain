@@ -52,6 +52,8 @@ VALIDATOR3=86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
 # create random file
 head -c 5M < /dev/urandom > random.bin
 
+sleep 60;
+
 # upload initial file
 ./zboxcli/zbox --wallet testing.json upload \
     --allocation "$(cat ~/.zcn/allocation.txt)" \

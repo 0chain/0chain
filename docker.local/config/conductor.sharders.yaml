@@ -69,9 +69,9 @@ tests:
       - stop: ["sharder-2"]
       - wait_round:
           shift: 100
-      - stop: ["miner-1", "miner-2", "miner-3", "sharder-1"]
+      - stop: ["miner-1", "miner-2", "miner-3"]
       - sleep: "1m"
-      - start: ["miner-1", "miner-2", "miner-3", "sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           shift: 100
       - start: ["sharder-2"]

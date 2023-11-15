@@ -42,6 +42,8 @@ BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 # create random file
 head -c 52428800 < /dev/urandom > random.bin
 
+sleep 60;
+
 # upload initial file
 ./zboxcli/zbox --wallet testing.json upload \
     --allocation "$(cat ~/.zcn/allocation.txt)" \
