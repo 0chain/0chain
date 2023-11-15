@@ -78,7 +78,6 @@ func main() {
 
 	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-
 	config.SetServerChainID(config.Configuration().ChainID)
 
 	common.SetupRootContext(node.GetNodeContext())
