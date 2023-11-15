@@ -8,6 +8,7 @@
 ## Table of Contents
 - [Züs Overview](#züs-overview)
 - [Changelog](#changelog)
+- [Quickstart](#quickstart)
 - [Initial Setup](#initial-setup)
   - [Host Machine Network Setup](#host-machine-network-setup)
   - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders)
@@ -57,6 +58,11 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 
 ## Changelog
 [CHANGELOG.md](CHANGELOG.md)
+
+## Quickstart
+
+Quickstart with a convenient bash script for deploying a Züs blockchain locally. Link to guide mentioned below:
+- [Deploy Züs network locally](https://docs.zus.network/guides/setup-a-blockchain/step-1-set-up-the-project)
 
 ## Initial Setup
 
