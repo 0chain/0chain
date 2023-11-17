@@ -97,6 +97,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/replicate-validator-aggregates", srh.replicateValidatorAggregates),
 		rest.MakeEndpoint(storage+"/replicate-user-aggregates", srh.replicateUserAggregates),
 		rest.MakeEndpoint(storage+"/get-blobber-allocations", srh.getBlobberAllocations),
+		rest.MakeEndpoint(storage+"/get-providers-health-check", srh.getProviderHealthCheck),
 	}
 
 	if config.Development() {
@@ -3216,4 +3217,42 @@ func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r 
 		users = []event.UserAggregate{}
 	}
 	common.Respond(w, r, users, nil)
+}
+
+
+func (srh *StorageRestHandler) getProviderHealthCheck(w http.ResponseWriter, r *http.Request) {
+	var (
+		providersID = r.URL.Query().Get("providers_ids")
+	)
+
+	logging.Logger.Debug("getProviderHealthCheck", zap.Any("providers_ids", providersID))
+
+	if providersID == "" {
+		err := common.NewErrBadRequest("missing 'provider_id' URL query parameter")
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	var providersIDList []string
+	err := json.Unmarshal([]byte(providersID), &providersIDList)
+	if err != nil {
+		common.Respond(w, r, nil, errors.New("providers ids list is malformed"))
+		return
+	} 
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		err := common.NewErrInternal("no db connection")
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	provider, err := edb.GetProvidersHealthCheck(providersIDList)
+	if err != nil {
+		err := common.NewErrInternal(err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, provider, nil)
 }

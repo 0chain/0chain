@@ -123,6 +123,33 @@ func (edb *EventDb) ReplicateProviderAggregates(round int64, limit int, offset i
 	return nil
 }
 
+func (edb *EventDb) GetProvidersHealthCheck(providers []string) ([]dbs.DbHealthCheck, error) {
+	var healthChecks []dbs.DbHealthCheck
+
+	logging.Logger.Debug("GetProvidersHealthCheck", zap.Any("providers", providers))
+
+	err := edb.Get().Raw(`
+		SELECT ids.id, last_health_check 
+		FROM unnest(?::text[]) as ids(id) 
+		LEFT JOIN (
+			select id, last_health_check from miners
+			UNION ALL
+			select id, last_health_check from sharders
+			UNION ALL
+			select id, last_health_check from validators
+			UNION ALL
+			select id, last_health_check from blobbers
+			UNION ALL
+			select id, last_health_check from authorizers
+		) as providers_health_check on ids.id = providers_health_check.id
+	`, pq.Array(providers)).Scan(&healthChecks).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return healthChecks, nil
+}
+
 func (edb *EventDb) BuildChangedProvidersMapFromEvents(events []Event) (ProvidersMap, error) {
 	ids, err := extractIdsFromEvents(events)
 	if err != nil {
