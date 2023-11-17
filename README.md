@@ -9,13 +9,15 @@
 - [Züs Overview](#züs-overview)
 - [Changelog](#changelog)
 - [Quickstart](#quickstart)
-- [Initial Setup](#initial-setup)
-  - [Host Machine Network Setup](#host-machine-network-setup)
-  - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders)
-  - [Setup Network](#setup-network)
-  - [Building the Nodes](#building-the-nodes)
-  - [Configuring the Nodes](#configuring-the-nodes)
-  - [Starting the Nodes](#starting-the-nodes)
+- [Get Started](#get-started)
+  - [1. Network Setup](#1-network-setup)
+  - [2. Directory Setup for Miners and Sharders](#2-directory-setup-for-miners-and-sharders)
+  - [3. Build and Start 0dns](#3-build-and-start-0dns)
+  - [4. Setup Network](#4-setup-network)
+  - [5. Building the Miner and Sharder Nodes](#5-building-the-miner-and-sharder-nodes)
+  - [6. Configuring the Miner and Sharder Nodes](#6-configuring-the-miner-and-sharder-nodes)
+  - [7. Starting the Miner and Sharder Nodes](#7-starting-the-miner-and-sharder-nodes)
+  - [8. Building and Starting Blobber Nodes](#8-building-and-starting-blobber-nodes)
   - [Check Chain Status](#check-chain-status)
   - [Restarting the Nodes](#restarting-the-nodes)
   - [Cleanup](#cleanup)
@@ -61,14 +63,14 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 
 ## Quickstart
 
-Quickstart with a convenient bash script for deploying a Züs blockchain locally. Link to guide mentioned below:
+Quickstart with a convenient bash script for deploying a Züs blockchain locally, follow the guide mentioned below:
 - [Deploy Züs network locally](https://docs.zus.network/guides/setup-a-blockchain/step-1-set-up-the-project)
 
-## Initial Setup
+## Get Started
 
-Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/) and Go from [here](https://go.dev/doc/install). 
+Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/get-docker/) and Go from [here](https://go.dev/dl/). 
 
-### Host Machine Network setup
+### 1. Network setup
 
 #### MacOS
 ```bash
@@ -84,7 +86,7 @@ Run the following script
 ```bash
 ./wsl_ubuntu_network_iptables.sh
 ```
-### Directory Setup for Miners and Sharders
+### 2. Directory setup for Miners and Sharders
 
 In the git/0chain run the following command
 
@@ -92,7 +94,17 @@ In the git/0chain run the following command
 ./docker.local/bin/init.setup.sh
 ```
 
-### Setup Network
+### 3. Build and start 0dns
+
+0dns service is responsible for connecting to the network and fetching all the magic blocks from the network which are saved in the DB.
+
+For detailed steps building and starting 0dns, follow the guide below:
+
+- [Building and starting the 0dns node](https://github.com/0chain/0dns#building-and-starting-the-node)
+
+Note: For miner and sharder URLs to work locally, update docker.local/config/0dns.yaml to disable both use_https and use_path (set to false).
+
+### 4. Setup Network
 
 Set up a network called testnet0 for each of these node containers to talk to each other.
 
@@ -102,7 +114,7 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 ./docker.local/bin/setup.network.sh
 ```
 
-## Building the Nodes
+## 5. Building the Miner and Sharder Nodes
 
 1. Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
 
@@ -116,7 +128,9 @@ Set up a network called testnet0 for each of these node containers to talk to ea
    ```
     make build-mocks 
    ```
-   Note: Mocks have to be built once in the beginning. Building mocks require mockery and brew which can be installed from [here](https://docs.zus.network/guides/setup-a-blockchain/additional-tips-and-troubleshooting-for-mac#install-homebrew-and-mockery-on-mac-and-linux). 
+   Note: Mocks have to be built once in the beginning. Building mocks require mockery which can be installed using brew package manager.
+   -  Brew package manager can be installed from [here](https://brew.sh/). 
+   -  Mockery can be installed using brew via following command `brew install mockery`
 
 3. Building the miners and sharders. From the git/0chain directory use
 
@@ -138,7 +152,7 @@ Set up a network called testnet0 for each of these node containers to talk to ea
    ./docker.local/bin/sync_clock.sh
    ```
 
-## Configuring the nodes
+## 6. Configuring the Miner and Sharder Nodes
 
 1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
 
@@ -154,7 +168,7 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 
 **_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
 
-## Starting the nodes
+## 7. Starting the Miner and Sharder Nodes
 
 1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
 
@@ -171,6 +185,81 @@ On the respective miner terminal, use
 ```
 ../bin/start.b0miner.sh
 ```
+## 8. Building and Starting Blobber Nodes
+
+For detailed steps on building and starting blobber, follow the guides below:
+
+- [Directory Setup for Blobbers](https://github.com/0chain/blobber#directory-setup-for-blobbers)
+- [Building and Starting the Blobber Nodes](https://github.com/0chain/blobber#building-and-starting-the-nodes)
+ 
+Note: A block worker URL is a field in the `blobber/config/0chain_validator.yaml` and `blobber/config/0chain_blobber.yaml` configuration files that require the URL of blockchain network you want to connect to. Change the default value of block_worker field with the following: http://198.18.0.98:9091/ for the local chain.
+
+
+1. After starting blobbers check whether the blobber has registered to the blockchain by running the zbox command below:
+
+```
+./zbox ls-blobbers
+```
+
+Note: In case you have not installed and configured zbox for testnet yet, follow the guides below:
+
+ - [Install zboxcli](https://github.com/0chain/zboxcli/wiki/Install-zboxcli)
+ - [Configure zbox network](https://github.com/0chain/zboxcli/wiki/Configure-zbox-network) 
+
+In the command response you should see the local blobbers mentioned with their urls for example http://198.18.0.91:5051 and http://198.18.0.92:5052
+
+Sample Response:
+```
+- id:                    7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+  url:                   http://198.18.0.92:5052
+  used / total capacity: 0 B / 1.0 GiB
+  last_health_check:	  1635347427
+  terms:
+    read_price:          10.000 mZCN / GB
+    write_price:         100.000 mZCN / GB / time_unit
+    min_lock_demand:     0.1
+    cct:                 2m0s
+    max_offer_duration:  744h0m0s
+- id:                    f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+  url:                   http://198.18.0.91:5051
+  used / total capacity: 0 B / 1.0 GiB
+  last_health_check:	  1635347950
+  terms:
+    read_price:          10.000 mZCN / GB
+    write_price:         100.000 mZCN / GB / time_unit
+    min_lock_demand:     0.1
+    cct:                 2m0s
+    max_offer_duration:  744h0m0s
+```
+
+Note: When starting multiple blobbers, it could happen that blobbers are not being registered properly (not returned on `zbox ls-blobbers`). 
+   
+Blobber registration takes some time and adding at least 5 second wait before starting the next blobber usually avoids the issue.
+  
+2. Now you can create allocations on blobber and store files. 
+
+Note: For creating allocationsand locking tokens to stake pool, you need tokens into your wallet, follow the link below to get tokens:
+
+- [Get Tokens](https://github.com/0chain/zwalletcli#getting-tokens-with-faucet-smart-contract---faucet)
+
+Note: If unable to create new allocations as shown below.
+
+```
+./zbox newallocation --lock 0.5
+Error creating allocation: transaction_not_found: Transaction was not found on any of the sharders
+```
+
+To fix this issue you must lock some tokens on the blobber. Get the local blobber id using the `./zbox ls-blobbers` , we have fetched local blobber id's for you ,use the commands below to lock tokens into stake pool: 
+
+```
+export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+./zbox sp-lock --blobber_id $BLOBBER1 --tokens 1
+./zbox sp-lock --blobber_id $BLOBBER2 --tokens 1
+```
+Note: For locking tokens to stake pool and creating allocations,you need tokens into your wallet. Follow the guide below
+
+
 ## Check Chain Status
 
 1. Ensure the port mapping is all correct:
