@@ -491,10 +491,11 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	require.NoError(t, err)
 
 	conf := setConfig(t, balances)
+	conf.TimeUnit = 2 * time.Minute
 
 	ba, ok := alloc.BlobberAllocsMap[blobber.ID]
 	if !ok {
-		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, conf, common.Timestamp(now), 2*time.Minute)
+		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, conf, common.Timestamp(now))
 		require.NoError(t, err)
 	}
 

@@ -414,7 +414,7 @@ func setupNewAllocation(
 
 	sa.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(blobberNodes))
 	for _, b := range blobberNodes {
-		balloc, err := newBlobberAllocation(bSize, sa, b, conf, now, conf.TimeUnit)
+		balloc, err := newBlobberAllocation(bSize, sa, b, conf, now)
 		if err != nil {
 			return nil, nil, common.NewErrorf("allocation_creation_failed",
 				"can't create blobber allocation: %v", err)

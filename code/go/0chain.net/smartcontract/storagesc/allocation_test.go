@@ -852,7 +852,10 @@ func TestExtendAllocation(t *testing.T) {
 			t.Parallel()
 			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
 			conf := &Config{
-				TimeUnit: confTimeUnit,
+				TimeUnit:      confTimeUnit,
+				MaxWritePrice: currency.Coin(11e14),
+				MinWritePrice: currency.Coin(1),
+				MaxReadPrice:  currency.Coin(11e14),
 			}
 
 			err := ssc.extendAllocation(
