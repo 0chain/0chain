@@ -40,7 +40,6 @@ func SliceUnion[T comparable](s1, s2 []T) []T {
 	newCap := len(s1) + len(s2)
 	found := make(map[T]interface{})
 	out := make([]T, 0, newCap)
-
 	for _, v := range s1 {
 		if _, ok := found[v]; ok {
 			continue
