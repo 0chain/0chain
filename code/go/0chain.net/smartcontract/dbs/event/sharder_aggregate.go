@@ -48,6 +48,7 @@ func (edb *EventDb) CreateSharderAggregates(sharders []*Sharder, round int64) er
 		aggregate := SharderAggregate{
 			Round:    round,
 			SharderID:  s.ID,
+			LastHealthCheck: s.LastHealthCheck,
 		}
 		recalculateProviderFields(s, &aggregate)
 		aggregate.Fees = s.Fees
