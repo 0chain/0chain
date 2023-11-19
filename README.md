@@ -236,11 +236,15 @@ Note: When starting multiple blobbers, it could happen that blobbers are not bei
    
 Blobber registration takes some time and adding at least 5 second wait before starting the next blobber usually avoids the issue.
   
-2. Now you can create allocations on blobber and store files. 
-
-Note: For creating allocations and locking tokens to stake pool, you need tokens into your wallet, follow the guide below to get tokens:
+2. Now you can create allocations on blobber and store files. For creating allocations you need tokens into your wallet, follow the guide below to get tokens:
 
 - [Get Tokens](https://github.com/0chain/zwalletcli#getting-tokens-with-faucet-smart-contract---faucet)
+
+3. Then create new allocation using the command below:
+
+```
+./zbox newallocation --lock 0.5
+```
 
 Note: If unable to create new allocations as shown below.
 
@@ -257,6 +261,7 @@ export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 ./zbox sp-lock --blobber_id $BLOBBER1 --tokens 1
 ./zbox sp-lock --blobber_id $BLOBBER2 --tokens 1
 ```
+Note: Atleast have 2 ZCN balance in your wallet before locking tokens into stake pool using the command above.
 
 ## Check Chain Status
 
