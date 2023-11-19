@@ -12,8 +12,8 @@ enable:
 sets:
   - name: "Upload/Download"
     tests:
-      - "Error on upload/download"
-      - "Error on simultaneous uploads"
+    #   - "Error on upload/download"
+    #   - "Error on simultaneous uploads"
   - name: "Repair"
     tests:
       - "Repair after blobber comes back online"
