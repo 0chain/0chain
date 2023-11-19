@@ -82,9 +82,11 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		logging.Logger.Info("using sharder keys from local")
 		initScheme(signatureScheme, file)
 		_ = file.Close()
 	} else {
+		logging.Logger.Info("using sharder keys from aws")
 		initScheme(signatureScheme, reader)
 	}
 

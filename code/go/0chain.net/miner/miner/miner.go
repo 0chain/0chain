@@ -93,9 +93,11 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		logging.Logger.Info("using miner keys from local")
 		initScheme(signatureScheme, file)
 		_ = file.Close()
 	} else {
+		logging.Logger.Info("using miner keys from aws")
 		initScheme(signatureScheme, reader)
 	}
 
