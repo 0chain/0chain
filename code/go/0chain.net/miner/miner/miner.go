@@ -386,7 +386,8 @@ func initScheme(signatureScheme encryption.SignatureScheme, reader io.Reader) {
 }
 
 func readKeysFromAws() (io.Reader, error) {
-	keys, err := common.GetSecretsFromAWS("miner-keys", "us-east-2")
+	minerSecretName := os.Getenv("MINER_SECRET_NAME")
+	keys, err := common.GetSecretsFromAWS(minerSecretName, "us-east-2")
 	if err != nil {
 		return nil, err
 	}

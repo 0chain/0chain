@@ -277,7 +277,8 @@ func readKeysFromFile(keysFile *string) (*os.File, error) {
 }
 
 func readKeysFromAws() (io.Reader, error) {
-	keys, err := common.GetSecretsFromAWS("sharder-keys", "us-east-2")
+	sharderSecretName := os.Getenv("SHARDER_SECRET_NAME")
+	keys, err := common.GetSecretsFromAWS(sharderSecretName, "us-east-2")
 	if err != nil {
 		return nil, err
 	}
