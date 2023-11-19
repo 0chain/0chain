@@ -33,7 +33,7 @@ type Chainer interface {
 	ForceFinalizeRound()
 }
 
-//AcceptMessage - implement the node.MessageFilterI interface
+// AcceptMessage - implement the node.MessageFilterI interface
 func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 	switch entityName {
 	case "block":

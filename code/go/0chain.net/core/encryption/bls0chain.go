@@ -34,7 +34,7 @@ func init() {
 	}
 }
 
-//BLS0ChainScheme - a signature scheme for BLS0Chain Signature
+// BLS0ChainScheme - a signature scheme for BLS0Chain Signature
 type BLS0ChainScheme struct {
 	privateKey []byte
 	publicKey  []byte
@@ -42,12 +42,12 @@ type BLS0ChainScheme struct {
 	secKey     *bls.SecretKey
 }
 
-//NewBLS0ChainScheme - create a BLS0ChainScheme object
+// NewBLS0ChainScheme - create a BLS0ChainScheme object
 func NewBLS0ChainScheme() *BLS0ChainScheme {
 	return &BLS0ChainScheme{}
 }
 
-//GenerateKeys - implement interface
+// GenerateKeys - implement interface
 func (b0 *BLS0ChainScheme) GenerateKeys() error {
 	var skey bls.SecretKey
 	skey.SetByCSPRNG()
@@ -58,7 +58,7 @@ func (b0 *BLS0ChainScheme) GenerateKeys() error {
 	return nil
 }
 
-//ReadKeys - implement interface
+// ReadKeys - implement interface
 func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 	result := scanner.Scan()
@@ -98,7 +98,6 @@ func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
 // This is an example of the raw public key we expect from MIRACL
 var miraclExamplePK = `0418a02c6bd223ae0dfda1d2f9a3c81726ab436ce5e9d17c531ff0a385a13a0b491bdfed3a85690775ee35c61678957aaba7b1a1899438829f1dc94248d87ed36817f6dfafec19bfa87bf791a4d694f43fec227ae6f5a867490e30328cac05eaff039ac7dfc3364e851ebd2631ea6f1685609fc66d50223cc696cb59ff2fee47ac`
 
-//
 // This is an example of the same MIRACL public key serialized with ToString().
 // pk ([1bdfed3a85690775ee35c61678957aaba7b1a1899438829f1dc94248d87ed368,18a02c6bd223ae0dfda1d2f9a3c81726ab436ce5e9d17c531ff0a385a13a0b49],[039ac7dfc3364e851ebd2631ea6f1685609fc66d50223cc696cb59ff2fee47ac,17f6dfafec19bfa87bf791a4d694f43fec227ae6f5a867490e30328cac05eaff])
 func MiraclToHerumiPK(pk string) string {
@@ -146,7 +145,7 @@ func MiraclToHerumiSig(sig string) string {
 	return sign.SerializeToHexStr()
 }
 
-//WriteKeys - implement interface
+// WriteKeys - implement interface
 func (b0 *BLS0ChainScheme) WriteKeys(writer io.Writer) error {
 	publicKey := hex.EncodeToString(b0.publicKey)
 	privateKey := hex.EncodeToString(b0.privateKey)
@@ -154,7 +153,7 @@ func (b0 *BLS0ChainScheme) WriteKeys(writer io.Writer) error {
 	return err
 }
 
-//SetPublicKey - implement interface
+// SetPublicKey - implement interface
 func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
 	if len(b0.privateKey) > 0 {
 		return errors.New("cannot set public key when there is a private key")
@@ -196,7 +195,7 @@ func (b0 *BLS0ChainScheme) GetBLSPublicKey() *bls.PublicKey {
 	return b0.pubKey
 }
 
-//Sign - implement interface
+// Sign - implement interface
 func (b0 *BLS0ChainScheme) Sign(hash interface{}) (string, error) {
 	if b0.secKey == nil {
 		return "", errors.New("private key is nil")
@@ -210,7 +209,7 @@ func (b0 *BLS0ChainScheme) Sign(hash interface{}) (string, error) {
 	return sig.SerializeToHexStr(), nil
 }
 
-//Verify - implement interface
+// Verify - implement interface
 func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
 	if b0.pubKey == nil {
 		return false, errors.New("public key is nil")
@@ -226,7 +225,7 @@ func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
 	return sign.Verify(b0.pubKey, string(rawHash)), nil
 }
 
-//GetSignature - given a string return the signature object
+// GetSignature - given a string return the signature object
 func (b0 *BLS0ChainScheme) GetSignature(signature string) (*bls.Sign, error) {
 	if signature == "" {
 		return nil, errors.New("empty signature")
@@ -248,7 +247,7 @@ func decodePublicKey(key []byte) (*bls.PublicKey, error) {
 	return pk, nil
 }
 
-//PairMessageHash - Pair a given message hash
+// PairMessageHash - Pair a given message hash
 func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*bls.GT, error) {
 	g2 := bls.CastFromPublicKey(b0.pubKey)
 	var g1 = &bls.G1{}
@@ -264,7 +263,7 @@ func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*bls.GT, error) {
 	return gt, nil
 }
 
-//GenerateSplitKeys - implement interface
+// GenerateSplitKeys - implement interface
 func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]SignatureScheme, error) {
 	var primarySk bls.Fr
 	if err := primarySk.SetLittleEndian(b0.privateKey); err != nil {
@@ -312,7 +311,7 @@ func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]SignatureScheme, 
 	return splitKeys, nil
 }
 
-//AggregateSignatures - implement interface
+// AggregateSignatures - implement interface
 func (b0 *BLS0ChainScheme) AggregateSignatures(signatures []string) (string, error) {
 	var aggSign bls.Sign
 	for _, signature := range signatures {

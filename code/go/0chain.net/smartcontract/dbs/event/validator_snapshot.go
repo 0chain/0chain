@@ -9,7 +9,7 @@ import (
 type ValidatorSnapshot struct {
 	ValidatorID string `json:"id" gorm:"uniqueIndex"`
 
-	Round		  int64         `json:"round"`
+	Round         int64         `json:"round"`
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
@@ -83,6 +83,6 @@ func createValidatorSnapshotFromValidator(validator *Validator, round int64) *Va
 		CreationRound: validator.CreationRound,
 		TotalRewards:  validator.Rewards.TotalRewards,
 		IsKilled:      validator.IsKilled,
-		IsShutdown:   validator.IsShutdown,
+		IsShutdown:    validator.IsShutdown,
 	}
 }

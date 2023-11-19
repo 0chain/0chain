@@ -10,8 +10,8 @@ type DelegatePoolLock struct {
 	ProviderId   string          `json:"provider_id"`
 	ProviderType spenum.Provider `json:"provider_type"`
 	Amount       int64           `json:"amount"`
-	Reward		 currency.Coin   `json:"reward"`
-	Total		 int64			 `json:"total"`
+	Reward       currency.Coin   `json:"reward"`
+	Total        int64           `json:"total"`
 }
 
 type ReadPoolLock struct {
@@ -35,8 +35,8 @@ type ChallengePoolLock struct {
 }
 
 type BridgeMint struct {
-	UserID string `json:"user_id"`
-	MintNonce int64 `json:"mint_nonce"`
-	Amount currency.Coin `json:"amount"`
-	Signers []string `json:"signers"`
+	UserID    string        `json:"user_id"`
+	MintNonce int64         `json:"mint_nonce"`
+	Amount    currency.Coin `json:"amount"`
+	Signers   []string      `json:"signers"`
 }

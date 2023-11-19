@@ -123,7 +123,7 @@ func (ems *Store) MultiDelete(ctx context.Context, entityMetadata datastore.Enti
 // func (ems *Store) WBWrite(ctx context.Context, emd datastore.EntityMetadata, batch *AtomicWriteBatch) error {
 // 	// Build []byte key and value
 // 	c := GetEntityCon(ctx, emd)
-// 	err := 
+// 	err :=
 // }
 
 func (ems *Store) Merge(ctx context.Context, entity datastore.Entity) error {

@@ -9,13 +9,13 @@ import (
 type SharderAggregate struct {
 	model.ImmutableModel
 
-	SharderID string `json:"sharder_id" gorm:"index:idx_sharder_aggregate,unique"`
-	Round     int64  `json:"round" gorm:"index:idx_sharder_aggregate,unique"`
+	SharderID       string           `json:"sharder_id" gorm:"index:idx_sharder_aggregate,unique"`
+	Round           int64            `json:"round" gorm:"index:idx_sharder_aggregate,unique"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	Fees          currency.Coin `json:"fees"`
-	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin `json:"total_rewards"`
-	ServiceCharge float64       `json:"service_charge"`
+	Fees            currency.Coin    `json:"fees"`
+	TotalStake      currency.Coin    `json:"total_stake"`
+	TotalRewards    currency.Coin    `json:"total_rewards"`
+	ServiceCharge   float64          `json:"service_charge"`
 }
 
 func (s *SharderAggregate) GetTotalStake() currency.Coin {
@@ -46,8 +46,8 @@ func (edb *EventDb) CreateSharderAggregates(sharders []*Sharder, round int64) er
 	var aggregates []SharderAggregate
 	for _, s := range sharders {
 		aggregate := SharderAggregate{
-			Round:    round,
-			SharderID:  s.ID,
+			Round:           round,
+			SharderID:       s.ID,
 			LastHealthCheck: s.LastHealthCheck,
 		}
 		recalculateProviderFields(s, &aggregate)

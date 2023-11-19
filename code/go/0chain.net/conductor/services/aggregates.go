@@ -13,29 +13,29 @@ import (
 
 type (
 	ProviderType = types.ProviderType
-	Aggregate = types.Aggregate
+	Aggregate    = types.Aggregate
 	Monotonicity = types.Monotonicity
-	Comparison = types.Comparison
+	Comparison   = types.Comparison
 )
 
 const (
 	aggregateServiceSyncInterval = 1 // How often should we run the sync command
 
-	Miner = types.Miner
-	Sharder = types.Sharder
-	Blobber = types.Blobber
-	Validator = types.Validator
+	Miner      = types.Miner
+	Sharder    = types.Sharder
+	Blobber    = types.Blobber
+	Validator  = types.Validator
 	Authorizer = types.Authorizer
-	User = types.User
-	Global = types.Global
+	User       = types.User
+	Global     = types.Global
 
 	Increase Monotonicity = types.Increase
 	Decrease Monotonicity = types.Decrease
 
-	EQ Comparison = types.EQ
-	LT Comparison = types.LT
+	EQ  Comparison = types.EQ
+	LT  Comparison = types.LT
 	LTE Comparison = types.LTE
-	GT Comparison = types.GT
+	GT  Comparison = types.GT
 	GTE Comparison = types.GTE
 )
 
@@ -43,17 +43,17 @@ var aggStore = stores.GetAggregateStore()
 
 type AggregateService struct {
 	recv_aggrs chan *types.Aggregate
-	baseUrl string
+	baseUrl    string
 }
 
 func NewAggregateService(baseUrl string) *AggregateService {
 	return &AggregateService{
 		recv_aggrs: make(chan *types.Aggregate),
-		baseUrl: baseUrl,
+		baseUrl:    baseUrl,
 	}
 }
 
-func (s *AggregateService) SyncLatestAggregate(ptype types.ProviderType, pid string) (error) {
+func (s *AggregateService) SyncLatestAggregate(ptype types.ProviderType, pid string) error {
 	resp, err := s.getRemoteAggregate(ptype, pid)
 	if err != nil {
 		log.Printf("Error getting aggregates: %v, %v, %v\n", ptype, pid, err)
@@ -71,10 +71,10 @@ func (s *AggregateService) SyncLatestAggregate(ptype types.ProviderType, pid str
 	return nil
 }
 
-func (s *AggregateService) SyncLatestAggregates(ptype types.ProviderType, pids []string) (error) {
+func (s *AggregateService) SyncLatestAggregates(ptype types.ProviderType, pids []string) error {
 	var (
 		aggrs []types.Aggregate
-		err error
+		err   error
 	)
 
 	switch ptype {
@@ -114,7 +114,7 @@ func (s *AggregateService) SyncLatestAggregates(ptype types.ProviderType, pids [
 			log.Printf("Provider id not found in aggregate: %v\n", aggr)
 			continue
 		}
-		
+
 		pid, ok := id.(string)
 		if !ok {
 			log.Printf("Unknown type of provider id: %v %T\n", id, id)
@@ -140,7 +140,7 @@ func (s *AggregateService) CheckAggregateValueChange(ptype ProviderType, pid str
 	t := time.NewTicker(aggregateServiceSyncInterval * time.Second)
 	defer t.Stop()
 	ts := time.Now()
-	
+
 	cancel := make(chan struct{})
 	go func() {
 		for range t.C {
@@ -188,7 +188,7 @@ func (s *AggregateService) CompareAggregateValue(ptype ProviderType, pid string,
 	t := time.NewTicker(aggregateServiceSyncInterval * time.Second)
 	defer t.Stop()
 	ts := time.Now()
-	
+
 	cancel := make(chan struct{})
 	go func() {
 		for range t.C {
@@ -313,12 +313,12 @@ func (s *AggregateService) checkAggKeyValueChange(prev, cur Aggregate, key strin
 	}
 
 	switch mono {
-		case Increase:
-			return f64Cur > f64Prev, nil
-		case Decrease:
-			return f64Cur < f64Prev, nil
-		default:
-			return false, fmt.Errorf("unknown monotonicity: %v", mono)
+	case Increase:
+		return f64Cur > f64Prev, nil
+	case Decrease:
+		return f64Cur < f64Prev, nil
+	default:
+		return false, fmt.Errorf("unknown monotonicity: %v", mono)
 	}
 }
 
@@ -334,17 +334,17 @@ func (s *AggregateService) compareAggValue(agg Aggregate, key string, expectedVa
 	}
 
 	switch comp {
-		case EQ:
-			return f64Actual == expectedVal, nil
-		case LT:
-			return f64Actual < expectedVal, nil
-		case LTE:
-			return f64Actual <= expectedVal, nil
-		case GT:
-			return f64Actual > expectedVal, nil
-		case GTE:
-			return f64Actual >= expectedVal, nil
-		default:
-			return false, fmt.Errorf("unknown comparison: %v", comp)
+	case EQ:
+		return f64Actual == expectedVal, nil
+	case LT:
+		return f64Actual < expectedVal, nil
+	case LTE:
+		return f64Actual <= expectedVal, nil
+	case GT:
+		return f64Actual > expectedVal, nil
+	case GTE:
+		return f64Actual >= expectedVal, nil
+	default:
+		return false, fmt.Errorf("unknown comparison: %v", comp)
 	}
 }

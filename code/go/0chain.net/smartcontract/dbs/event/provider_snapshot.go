@@ -74,4 +74,4 @@ func (edb *EventDb) CreateNewProviderSnapshots(providers ProvidersMap, round int
 	}
 
 	return nil
-} 
+}

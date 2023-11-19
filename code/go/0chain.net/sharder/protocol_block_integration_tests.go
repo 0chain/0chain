@@ -6,10 +6,10 @@ package sharder
 import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	crpc "0chain.net/conductor/conductrpc" // integration tests
 	"0chain.net/conductor/conductrpc/stats"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 func notifyConductor(block *block.Block) error {
@@ -21,10 +21,10 @@ func notifyConductor(block *block.Block) error {
 	)
 	if crpc.Client().State().NotifyOnBlockGeneration {
 		return crpc.Client().NotifyOnSharderBlock(&stats.BlockFromSharder{
-			Round: block.Round,
-			Hash: block.Hash,
+			Round:       block.Round,
+			Hash:        block.Hash,
 			GeneratorId: block.MinerID,
-			SenderId: node.Self.ID,
+			SenderId:    node.Self.ID,
 		})
 	}
 	return nil

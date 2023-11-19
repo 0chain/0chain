@@ -20,15 +20,15 @@ func TestUpdateBuilder_build(t *testing.T) {
 	}
 
 	type condition struct {
-		column string
+		column   string
 		operator string
-		value string
+		value    string
 	}
 
 	type fields struct {
-		ids     interface{}
-		updates []update
-		idParts []idPart
+		ids        interface{}
+		updates    []update
+		idParts    []idPart
 		conditions []condition
 	}
 

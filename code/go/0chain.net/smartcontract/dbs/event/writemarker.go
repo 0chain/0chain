@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// swagger:model WriteMarker 
+// swagger:model WriteMarker
 type WriteMarker struct {
 	model.UpdatableModel
 	ClientID      string `json:"client_id"`

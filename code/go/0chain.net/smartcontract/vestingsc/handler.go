@@ -34,8 +34,9 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 // get client pools
 //
 // responses:
-//  200: vestingClientPools
-//  500:
+//
+//	200: vestingClientPools
+//	500:
 func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Request) {
 	var (
 		clientID = r.URL.Query().Get("client_id")
@@ -56,8 +57,9 @@ func (vrh *VestingRestHandler) getClientPools(w http.ResponseWriter, r *http.Req
 // get vesting configuration settings
 //
 // responses:
-//  200: vestingInfo
-//  500:
+//
+//	200: vestingInfo
+//	500:
 func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Request) {
 	var (
 		poolID = r.URL.Query().Get("pool_id")
@@ -83,8 +85,9 @@ func (vrh *VestingRestHandler) getPoolInfo(w http.ResponseWriter, r *http.Reques
 // get vesting configuration settings
 //
 // responses:
-//  200: StringMap
-//  500:
+//
+//	200: StringMap
+//	500:
 func (vrh *VestingRestHandler) getConfig(w http.ResponseWriter, r *http.Request) {
 	conf, err := getConfigReadOnly(vrh.GetQueryStateContext())
 	if err != nil {

@@ -6,7 +6,7 @@ import (
 	"github.com/herumi/bls/ffi/go/bls"
 )
 
-//BLS0ChainAggregateSignatureScheme - a scheme that can aggregate signatures for BLS0Chain signature scheme
+// BLS0ChainAggregateSignatureScheme - a scheme that can aggregate signatures for BLS0Chain signature scheme
 type BLS0ChainAggregateSignatureScheme struct {
 	Total     int
 	BatchSize int
@@ -14,7 +14,7 @@ type BLS0ChainAggregateSignatureScheme struct {
 	AGt       []*bls.GT
 }
 
-//NewBLS0ChainAggregateSignature - create a new instance
+// NewBLS0ChainAggregateSignature - create a new instance
 func NewBLS0ChainAggregateSignature(total int, batchSize int) *BLS0ChainAggregateSignatureScheme {
 	b0a := &BLS0ChainAggregateSignatureScheme{Total: total, BatchSize: batchSize}
 	numBatches := total / batchSize
@@ -26,7 +26,7 @@ func NewBLS0ChainAggregateSignature(total int, batchSize int) *BLS0ChainAggregat
 	return b0a
 }
 
-//Aggregate - implement interface
+// Aggregate - implement interface
 func (b0a BLS0ChainAggregateSignatureScheme) Aggregate(ss SignatureScheme, idx int, signature string, hash string) error {
 	b0sig, ok := ss.(*BLS0ChainScheme)
 	if !ok {
@@ -54,7 +54,7 @@ func (b0a BLS0ChainAggregateSignatureScheme) Aggregate(ss SignatureScheme, idx i
 	return nil
 }
 
-//Verify - implement interface
+// Verify - implement interface
 func (b0a BLS0ChainAggregateSignatureScheme) Verify() (bool, error) {
 	agtmul := b0a.AGt[0]
 	asig := b0a.ASigs[0]

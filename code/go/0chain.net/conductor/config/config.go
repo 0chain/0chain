@@ -107,9 +107,9 @@ type Command struct {
 
 // CommandName
 type CommandName struct {
-	Name   string                 `json:"name" yaml:"name" mapstructure:"name"`
-	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
-	FailureThreshold string `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
+	Name             string                 `json:"name" yaml:"name" mapstructure:"name"`
+	Params           map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
+	FailureThreshold string                 `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
 }
 
 // A Config represents conductor testing configurations.
@@ -248,9 +248,9 @@ func (c *Config) Execute(name string, params map[string]string, failureThreshold
 		log.Printf("[INF] Setting failure threshold of %v for command %v\n", failureThreshold, name)
 		failureCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(failureThreshold))
 		defer cancel()
-		
+
 		// Context watcher
-		go func (cmd *exec.Cmd)  {
+		go func(cmd *exec.Cmd) {
 			<-failureCtx.Done()
 			if failureCtx.Err() == context.DeadlineExceeded {
 				log.Printf("[ERR] Command %v exceeded failure threshold of %v\n", name, failureThreshold)
@@ -272,7 +272,7 @@ func (c *Config) Execute(name string, params map[string]string, failureThreshold
 			}
 		}(cmd)
 	}
-	
+
 	err = cmd.Run()
 	if n.CanFail {
 		return nil // ignore an error

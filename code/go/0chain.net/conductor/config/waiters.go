@@ -119,7 +119,7 @@ func (wa *WaitAdd) Take(name NodeName) (ok bool) {
 	} else if strings.Contains(string(name), "blobber") {
 		return wa.TakeBlobber(name)
 	} else if strings.Contains(string(name), "validator") {
-		return wa.TakeValidator(name)	
+		return wa.TakeValidator(name)
 	} else if strings.Contains(string(name), "authorizer") {
 		return wa.TakeAuthorizer(name)
 	} else if strings.Contains(string(name), "validator") {

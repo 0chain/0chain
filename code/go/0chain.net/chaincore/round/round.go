@@ -5,7 +5,7 @@ import (
 	"0chain.net/chaincore/node"
 )
 
-//RoundI - an interface that represents a blockchain round
+// RoundI - an interface that represents a blockchain round
 type RoundI interface {
 	GetRoundNumber() int64
 	GetBlockHash() string

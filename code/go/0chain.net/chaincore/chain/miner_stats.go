@@ -1,6 +1,6 @@
 package chain
 
-//MinerStats - stats associated with a given miner
+// MinerStats - stats associated with a given miner
 type MinerStats struct {
 
 	// Number of times the miner is a genrator

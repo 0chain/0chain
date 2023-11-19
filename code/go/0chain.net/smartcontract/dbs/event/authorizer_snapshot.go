@@ -72,7 +72,7 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []*Authorizer, round int64
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "authorizer_id"}},
+		Columns:   []clause.Column{{Name: "authorizer_id"}},
 		UpdateAll: true,
 	}).Create(&snapshots).Error
 }

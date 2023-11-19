@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-//BCContext a wrapper to access Blockchain
+// BCContext a wrapper to access Blockchain
 type BCContext struct{}
 
 // PoolMemberInfo of a pool member
@@ -20,14 +20,16 @@ type PoolMemberInfo struct {
 	Type      string `json:"type"`
 }
 
-//PoolMembersInfo array of pool memebers
+// PoolMembersInfo array of pool memebers
 // swagger:model PoolMembersInfo
 type PoolMembersInfo struct {
 	MembersInfo []PoolMemberInfo `json:"members_info"`
 }
 
-/*GetNodepoolInfo gets complete information about node pool members.
-  Smartcontracts using this must have validated the caller.
+/*
+GetNodepoolInfo gets complete information about node pool members.
+
+	Smartcontracts using this must have validated the caller.
 */
 func (bc *BCContext) GetNodepoolInfo() interface{} {
 	nodes := node.CopyNodes()

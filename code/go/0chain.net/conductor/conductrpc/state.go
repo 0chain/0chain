@@ -99,7 +99,7 @@ type State struct {
 	ClientStatsCollectorEnabled        bool
 	NotifyOnBlockGeneration            bool
 	NotifyOnValidationTicketGeneration bool
-	MissUpDownload bool
+	MissUpDownload                     bool
 }
 
 // Name returns NodeName by given NodeID.

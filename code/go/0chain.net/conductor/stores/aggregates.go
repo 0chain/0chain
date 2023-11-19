@@ -9,24 +9,23 @@ import (
 
 type (
 	ProviderType = types.ProviderType
-	Aggregate = types.Aggregate
+	Aggregate    = types.Aggregate
 	Monotonicity = types.Monotonicity
-	
+
 	AggregateStore struct {
 		data map[ProviderType]map[string][]Aggregate
 		lock sync.RWMutex
 	}
-	
 )
 
 const (
-	Miner = types.Miner
-	Sharder = types.Sharder
-	Blobber = types.Blobber
-	Validator = types.Validator
+	Miner      = types.Miner
+	Sharder    = types.Sharder
+	Blobber    = types.Blobber
+	Validator  = types.Validator
 	Authorizer = types.Authorizer
-	User = types.User
-	Global = types.Global
+	User       = types.User
+	Global     = types.Global
 )
 
 var store AggregateStore
@@ -64,7 +63,7 @@ func (s *AggregateStore) GetLatest(ptype ProviderType, pid string, key string) (
 		return nil, err
 	}
 
-	return aggProviderIdStore[len(aggProviderIdStore) - 1], nil
+	return aggProviderIdStore[len(aggProviderIdStore)-1], nil
 }
 
 func getProviderIdStore(ptype ProviderType, pid string, mustGet bool) ([]Aggregate, error) {

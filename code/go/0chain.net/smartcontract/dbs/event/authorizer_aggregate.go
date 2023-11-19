@@ -9,8 +9,8 @@ import (
 type AuthorizerAggregate struct {
 	model.ImmutableModel
 
-	AuthorizerID string `json:"authorizer_id" gorm:"index:idx_authorizer_aggregate,unique"`
-	Round        int64  `json:"round" gorm:"index:idx_authorizer_aggregate,unique"`
+	AuthorizerID    string           `json:"authorizer_id" gorm:"index:idx_authorizer_aggregate,unique"`
+	Round           int64            `json:"round" gorm:"index:idx_authorizer_aggregate,unique"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	Fee           currency.Coin `json:"fee"`
@@ -49,8 +49,8 @@ func (edb *EventDb) CreateAuthorizerAggregates(authorizers []*Authorizer, round 
 	var aggregates []AuthorizerAggregate
 	for _, v := range authorizers {
 		agg := AuthorizerAggregate{
-			Round:       round,
-			AuthorizerID: v.ID,
+			Round:           round,
+			AuthorizerID:    v.ID,
 			LastHealthCheck: v.LastHealthCheck,
 		}
 		recalculateProviderFields(v, &agg)

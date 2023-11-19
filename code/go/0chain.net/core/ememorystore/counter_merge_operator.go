@@ -6,13 +6,13 @@ import (
 )
 
 type CounterMergeOperator struct {
-	KeyFieldName string
+	KeyFieldName     string
 	CounterFieldName string
 }
 
 func NewCounterMergeOperator(keyFieldName, counterFieldName string) *CounterMergeOperator {
 	return &CounterMergeOperator{
-		KeyFieldName: keyFieldName,
+		KeyFieldName:     keyFieldName,
 		CounterFieldName: counterFieldName,
 	}
 }
@@ -20,7 +20,7 @@ func NewCounterMergeOperator(keyFieldName, counterFieldName string) *CounterMerg
 func (m *CounterMergeOperator) Name() string { return "counter_merger" }
 
 func (m *CounterMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
-	
+
 	curCounterEntity := make(map[string]interface{})
 	if string(existingValue) == "" {
 		curCounterEntity[m.KeyFieldName] = datastore.ToKey(key)
@@ -34,7 +34,7 @@ func (m *CounterMergeOperator) FullMerge(key, existingValue []byte, operands [][
 
 	var (
 		result float64
-		ok bool
+		ok     bool
 	)
 
 	if result, ok = curCounterEntity[m.CounterFieldName].(float64); !ok {

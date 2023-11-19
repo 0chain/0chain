@@ -399,10 +399,10 @@ func waitSigInt() {
 
 func execute(r, address string, codes chan int, logsDir string) {
 	var (
-		ctx, cancel = context.WithTimeout(context.Background(), 2 * time.Minute)
-		cmd  = exec.CommandContext(ctx, "sh", "-x", r)
-		err  error
-		code int
+		ctx, cancel = context.WithTimeout(context.Background(), 2*time.Minute)
+		cmd         = exec.CommandContext(ctx, "sh", "-x", r)
+		err         error
+		code        int
 	)
 
 	defer cancel()
@@ -449,10 +449,10 @@ func main() {
 
 	// address
 	var (
-		logsDir string = ""				 // logs directory
-		markers string = ""              // markers arriving order
-		filter  string = ""              // filter multipart forms fields
-		addr    string = fmt.Sprintf("0.0.0.0:%v", rand.Intn(65535-10000) + 10000) // bind
+		logsDir string = ""                                                      // logs directory
+		markers string = ""                                                      // markers arriving order
+		filter  string = ""                                                      // filter multipart forms fields
+		addr    string = fmt.Sprintf("0.0.0.0:%v", rand.Intn(65535-10000)+10000) // bind
 
 		back = context.Background() //
 
@@ -521,13 +521,13 @@ func main() {
 	os.Exit(code)
 }
 
-
 func cleanup(ctx context.Context, s *http.Server) {
 	log.Println("shutdown server")
 	if err := s.Shutdown(ctx); err != nil {
 		log.Printf("shutdown error: %\ns", err)
 	}
 }
+
 // ========================================================================== //
 //                                    note                                    //
 // ========================================================================== //

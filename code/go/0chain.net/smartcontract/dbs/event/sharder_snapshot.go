@@ -70,7 +70,7 @@ func (edb *EventDb) addSharderSnapshot(sharders []*Sharder, round int64) error {
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "sharder_id"}},
+		Columns:   []clause.Column{{Name: "sharder_id"}},
 		UpdateAll: true,
 	}).Create(&snapshots).Error
 }

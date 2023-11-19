@@ -31,7 +31,7 @@ type bNode struct {
 	Size               int     `json:"size"`
 }
 
-//WIPBlockChainHandler - all the blocks in the memory useful to visualize and debug
+// WIPBlockChainHandler - all the blocks in the memory useful to visualize and debug
 func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 	bl := c.getBlocks()
 	var minr int64 = math.MaxInt64

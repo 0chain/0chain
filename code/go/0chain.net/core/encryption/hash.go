@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-//ErrInvalidHash - hash is invalid error
+// ErrInvalidHash - hash is invalid error
 var ErrInvalidHash = common.NewError("invalid_hash", "Invalid hash")
 
 const HASH_LENGTH = 32
@@ -24,10 +24,10 @@ func IsHash(str string) bool {
 	return err == nil && len(bytes) == HASH_LENGTH
 }
 
-//EmptyHash - hash of an empty string
+// EmptyHash - hash of an empty string
 var EmptyHash = Hash("")
 
-//EmptyHashBytes - hash bytes of an empty string
+// EmptyHashBytes - hash bytes of an empty string
 var EmptyHashBytes = RawHash("")
 
 /*RawHash - Logic to hash the text and return the hash bytes */

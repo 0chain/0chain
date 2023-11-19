@@ -57,8 +57,10 @@ func (k *IDField) Delete(ctx context.Context) error {
 	return common.NewError("abstract_delete", "Calling entity.Delete() requires implementing the method")
 }
 
-/*NOIDFied - used when we just want to create a datastore entity that doesn't
-have it's own id (like 1-to-many) that is only required to send it around with the parent key */
+/*
+NOIDFied - used when we just want to create a datastore entity that doesn't
+have it's own id (like 1-to-many) that is only required to send it around with the parent key
+*/
 type NOIDField struct {
 }
 

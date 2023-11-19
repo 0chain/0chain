@@ -62,8 +62,8 @@ func TestStorageSmartContract_shutdownBlobber(t *testing.T) {
 			stakePool: &stakePool{
 				StakePool: &stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
-						"stake_pool_1": &stakepool.DelegatePool{},
-						"stake_pool_2": &stakepool.DelegatePool{},
+						"stake_pool_1": {},
+						"stake_pool_2": {},
 					},
 				},
 			},
@@ -150,8 +150,8 @@ func TestStorageSmartContract_shutdownValidator(t *testing.T) {
 			stakePool: &stakePool{
 				StakePool: &stakepool.StakePool{
 					Pools: map[string]*stakepool.DelegatePool{
-						"stake_pool_1": &stakepool.DelegatePool{},
-						"stake_pool_2": &stakepool.DelegatePool{},
+						"stake_pool_1": {},
+						"stake_pool_2": {},
 					},
 				},
 			},

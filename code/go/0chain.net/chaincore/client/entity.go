@@ -295,7 +295,7 @@ func GetClients(ctx context.Context, clients map[string]*Client) (err error) {
 	return
 }
 
-//GetClientFromCache - gets client from either cache
+// GetClientFromCache - gets client from either cache
 func GetClientFromCache(key datastore.Key) (*Client, error) {
 	co, err := cacher.Get(key)
 	if err != nil {
@@ -304,7 +304,7 @@ func GetClientFromCache(key datastore.Key) (*Client, error) {
 	return co.(*Client), nil
 }
 
-//PutClientCache saves client to cache
+// PutClientCache saves client to cache
 func PutClientCache(co *Client) error {
 	return cacher.Add(co.GetKey(), co)
 }

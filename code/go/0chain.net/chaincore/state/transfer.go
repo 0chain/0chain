@@ -13,14 +13,14 @@ import (
 
 var ErrInvalidTransfer = common.NewError("invalid_transfer", "invalid transfer of state")
 
-//Transfer - a data structure to hold state transfer from one client to another
+// Transfer - a data structure to hold state transfer from one client to another
 type Transfer struct {
 	ClientID   string        `json:"from"`
 	ToClientID string        `json:"to"`
 	Amount     currency.Coin `json:"amount"`
 }
 
-//NewTransfer - create a new transfer
+// NewTransfer - create a new transfer
 func NewTransfer(fromClientID, toClientID datastore.Key, zcn currency.Coin) *Transfer {
 	t := &Transfer{ClientID: fromClientID, ToClientID: toClientID, Amount: zcn}
 	return t

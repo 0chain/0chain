@@ -7,8 +7,8 @@ import (
 
 // swagger:model MinerSnapshot
 type MinerSnapshot struct {
-	MinerID  string `json:"id" gorm:"uniqueIndex"`
-	Round    int64  `json:"round"`
+	MinerID string `json:"id" gorm:"uniqueIndex"`
+	Round   int64  `json:"round"`
 
 	Fees          currency.Coin `json:"fees"`
 	TotalStake    currency.Coin `json:"total_stake"`
@@ -70,7 +70,7 @@ func (edb *EventDb) addMinerSnapshot(miners []*Miner, round int64) error {
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "miner_id"}},
+		Columns:   []clause.Column{{Name: "miner_id"}},
 		UpdateAll: true,
 	}).Create(&snapshots).Error
 }
