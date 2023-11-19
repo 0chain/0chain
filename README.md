@@ -63,8 +63,8 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 
 ## Quickstart
 
-Quickstart with a convenient bash script for deploying a Züs blockchain locally, follow the guide mentioned below:
-- [Deploy Züs network locally](https://docs.zus.network/guides/setup-a-blockchain/step-1-set-up-the-project)
+Quickstart with a convenient bash script for deploying a Züs testnet locally, follow the guide mentioned below:
+- [Deploy Züs testnet locally](https://docs.zus.network/guides/setup-a-blockchain/step-1-set-up-the-project)
 
 ## Get Started
 
@@ -98,11 +98,11 @@ In the git/0chain run the following command
 
 0dns service is responsible for connecting to the network and fetching all the magic blocks from the network which are saved in the DB.
 
-For detailed steps building and starting 0dns, follow the guide below:
+For comprehensive instructions on building and starting 0dns, please clone the [0dns repository](https://github.com/0chain/0dns) and follow the guide provided below:
 
 - [Building and starting the 0dns node](https://github.com/0chain/0dns#building-and-starting-the-node)
 
-Note: For miner and sharder URLs to work locally, update docker.local/config/0dns.yaml to disable both use_https and use_path (set to false).
+Note: For miner and sharder URLs to work locally, update 0dns/docker.local/config/0dns.yaml to disable both use_https and use_path (set to false).
 
 ### 4. Setup Network
 
@@ -187,7 +187,7 @@ On the respective miner terminal, use
 ```
 ## 8. Building and Starting Blobber Nodes
 
-For detailed steps on building and starting blobber, follow the guides below:
+For detailed steps on building and starting blobbers, please clone the [blobber repository](https://github.com/0chain/blobber) and follow the guides below:
 
 - [Directory Setup for Blobbers](https://github.com/0chain/blobber#directory-setup-for-blobbers)
 - [Building and Starting the Blobber Nodes](https://github.com/0chain/blobber#building-and-starting-the-nodes)
@@ -238,7 +238,7 @@ Blobber registration takes some time and adding at least 5 second wait before st
   
 2. Now you can create allocations on blobber and store files. 
 
-Note: For creating allocationsand locking tokens to stake pool, you need tokens into your wallet, follow the link below to get tokens:
+Note: For creating allocations and locking tokens to stake pool, you need tokens into your wallet, follow the guide below to get tokens:
 
 - [Get Tokens](https://github.com/0chain/zwalletcli#getting-tokens-with-faucet-smart-contract---faucet)
 
@@ -249,7 +249,7 @@ Note: If unable to create new allocations as shown below.
 Error creating allocation: transaction_not_found: Transaction was not found on any of the sharders
 ```
 
-To fix this issue you must lock some tokens on the blobber. Get the local blobber id using the `./zbox ls-blobbers` , we have fetched local blobber id's for you ,use the commands below to lock tokens into stake pool: 
+To fix this issue you must lock some tokens on the blobber. Get the local blobber id using the `./zbox ls-blobbers` , use the commands below to lock tokens into stake pool: 
 
 ```
 export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
@@ -257,8 +257,6 @@ export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 ./zbox sp-lock --blobber_id $BLOBBER1 --tokens 1
 ./zbox sp-lock --blobber_id $BLOBBER2 --tokens 1
 ```
-Note: For locking tokens to stake pool and creating allocations,you need tokens into your wallet. Follow the guide below
-
 
 ## Check Chain Status
 
