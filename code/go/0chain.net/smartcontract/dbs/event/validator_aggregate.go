@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 )
@@ -10,7 +11,8 @@ type ValidatorAggregate struct {
 
 	ValidatorID string `json:"validator_id" gorm:"index:idx_validator_aggregate,unique"`
 	Round       int64  `json:"round" gorm:"index:idx_validator_aggregate,unique"`
-
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
@@ -46,6 +48,7 @@ func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int
 		agg := ValidatorAggregate{
 			Round:       round,
 			ValidatorID: v.ID,
+			LastHealthCheck: v.LastHealthCheck,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

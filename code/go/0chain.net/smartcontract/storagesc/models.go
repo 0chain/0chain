@@ -507,25 +507,37 @@ func newBlobberAllocation(
 	size int64,
 	allocation *StorageAllocation,
 	blobber *StorageNode,
+	conf *Config,
 	date common.Timestamp,
-	timeUnit time.Duration,
 ) (*BlobberAllocation, error) {
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
-	ba.Terms = blobber.Terms
+
+	setCappedPrices(ba, blobber, conf)
 	ba.AllocationID = allocation.ID
 	ba.BlobberID = blobber.ID
 	ba.LatestFinalizedChallCreatedAt = date
 	ba.LatestSuccessfulChallCreatedAt = date
 
-	rdtu, err := allocation.restDurationInTimeUnits(date, timeUnit)
+	rdtu, err := allocation.restDurationInTimeUnits(date, conf.TimeUnit)
 	if err != nil {
 		return nil, fmt.Errorf("new blobber allocation failed: %v", err)
 	}
 
 	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu, allocation.MinLockDemand)
 	return ba, err
+}
+
+func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) {
+	//TODO check the maximum price of the network and choose minimum
+	ba.Terms = blobber.Terms
+	if blobber.Terms.WritePrice > conf.MaxWritePrice {
+		ba.Terms.WritePrice = conf.MaxWritePrice
+	}
+	if blobber.Terms.ReadPrice > conf.MaxReadPrice {
+		ba.Terms.ReadPrice = conf.MaxReadPrice
+	}
 }
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
@@ -1562,7 +1574,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 	afterSize := sa.bSize()
 
-	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, now, conf.TimeUnit)
+	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, conf, now)
 	if err != nil {
 		return nil, fmt.Errorf("can't allocate blobber: %v", err)
 	}
