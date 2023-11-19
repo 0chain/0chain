@@ -68,7 +68,13 @@ Quickstart with a convenient bash script for deploying a Züs testnet locally, f
 
 ## Get Started
 
-Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/get-docker/) and Go from [here](https://go.dev/dl/). 
+### Required OS and Software Dependencies
+
+ - Linux (Ubuntu Preferred) Version: 20.04 and Above
+ - Mac(Apple Silicon or Intel) Version: Big Sur and Above
+ - Windows Version: Windows 11 or 10 version 2004 and later requires WSL2. Instructions for installing WSL can be found [here](https://learn.microsoft.com/en-us/windows/wsl/install).
+ - Docker is available for Linux, macOS and Windows platforms. Find instructions for the preferred operating system [here](https://docs.docker.com/engine/install/#supported-platforms).
+ - Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/get-docker/) and Go from [here](https://go.dev/dl/). 
 
 ### 1. Network setup
 
