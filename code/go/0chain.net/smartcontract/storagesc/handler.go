@@ -1835,7 +1835,7 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba, err := newBlobberAllocation(sa.bSize(), sa, addBlobber, now, conf.TimeUnit)
+	ba, err := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
 	if err != nil {
 		return err
 	}
