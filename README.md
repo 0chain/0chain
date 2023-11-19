@@ -63,7 +63,7 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 
 ## Quickstart
 
-Quickstart with a convenient bash script for deploying a Züs testnet locally, follow the guide mentioned below:
+Quickstart with a convenient bash script for deploying a Züs testnet locally. follow the guide mentioned below:
 - [Deploy Züs testnet locally](https://docs.zus.network/guides/setup-a-blockchain/step-1-set-up-the-project)
 
 ## Get Started
@@ -73,11 +73,21 @@ Quickstart with a convenient bash script for deploying a Züs testnet locally, f
  - Linux (Ubuntu Preferred) Version: 20.04 and Above
  - Mac(Apple Silicon or Intel) Version: Big Sur and Above
  - Windows Version: Windows 11 or 10 version 2004 and later requires WSL2. Instructions for installing WSL can be found [here](https://learn.microsoft.com/en-us/windows/wsl/install).
- - Docker is available for Linux, macOS and Windows platforms. Find instructions for the preferred operating system [here](https://docs.docker.com/engine/install/#supported-platforms).
  - Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/get-docker/) and Go from [here](https://go.dev/dl/). 
+ - Setting up Docker Desktop for Windows with WSL 2 (Windows Subsystem for Linux, version 2) requires additional steps. Instructions can be found [here](https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-containers).
 
 ### 1. Network setup
 
+1.1 Clone the 0chain repo:
+```
+git clone https://github.com/0chain/0chain.git
+```
+
+1.2 Navigate to 0chain directory.
+
+```
+cd 0chain
+```
 #### MacOS
 ```bash
 ./macos_network.sh
@@ -94,17 +104,34 @@ Run the following script
 ```
 ### 2. Directory setup for Miners and Sharders
 
-In the git/0chain run the following command
+2.1) Inside the 0chain directory, run the following command:
 
 ```
+cd 0chain
 ./docker.local/bin/init.setup.sh
+```
+
+Response: The response will intialize 8 miner and 4 sharder directories in `0chain/docker.local/`
+```
+~/0chain/docker.local$ ls
+Makefile    build.benchmarks  build.sc_unit_test     build.unit_test  miner2  miner6    sharder2
+benchmarks  build.genkeys     build.sharder          config           miner3  miner7    sharder3
+bin         build.magicBlock  build.swagger          docker-clean     miner4  miner8    sharder4
+build.base  build.miner       build.test.multisigsc  miner1           miner5  sharder1  sql_script
 ```
 
 ### 3. Build and start 0dns
 
-0dns service is responsible for connecting to the network and fetching all the magic blocks from the network which are saved in the DB.
+0dns service is responsible for connecting to the network and fetching all the magic blocks from the network which are saved in the DB. For building and starting 0dns:
 
-For comprehensive instructions on building and starting 0dns, please clone the [0dns repository](https://github.com/0chain/0dns) and follow the guide provided below:
+3.1) Clone the 0dns repo and navigate to 0dns directory.
+
+```
+git clone https://github.com/0chain/0dns.git
+cd 0dns
+```
+
+3.2) Then follow the guide provided below:
 
 - [Building and starting the 0dns node](https://github.com/0chain/0dns#building-and-starting-the-node)
 
@@ -112,7 +139,12 @@ Note: For miner and sharder URLs to work locally, update 0dns/docker.local/confi
 
 ### 4. Setup Network
 
-Set up a network called testnet0 for each of these node containers to talk to each other.
+4.1) Inside the git/0chain directory:
+
+   ```
+   cd 0chain
+   ``` 
+4.2) Set up a network called testnet0 for each of these node containers to talk to each other.
 
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
 
@@ -122,14 +154,18 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 
 ## 5. Building the Miner and Sharder Nodes
 
-1. Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
+ 5.1) Inside the git/0chain directory:
 
-   1.1) First build the base containers, zchain_build_base and zchain_run_base
+   ```
+   cd 0chain
+   ``` 
+
+5.2) First build the base containers, zchain_build_base and zchain_run_base
 
    ```
    ./docker.local/bin/build.base.sh
    ```
-2. Build mocks from the Makefile in the repo, from git/0chain directory run:
+5.3) Build mocks from the Makefile in the repo, from git/0chain directory run:
    
    ```
     make build-mocks 
@@ -138,21 +174,26 @@ Set up a network called testnet0 for each of these node containers to talk to ea
    -  Brew package manager can be installed from [here](https://brew.sh/). 
    -  Mockery can be installed using brew via following command `brew install mockery`
 
-3. Building the miners and sharders. From the git/0chain directory use
+5.4) Building the miners and sharders. From the git/0chain directory:
 
-   3.1) To build the miner containers
+   ```
+   cd 0chain
+   ``` 
+
+   5.4.1) To build the miner containers
 
    ```
    ./docker.local/bin/build.miners.sh
    ```
 
-   3.2) To build the sharder containers
+   5.4.2) To build the sharder containers
 
    ```
    ./docker.local/bin/build.sharders.sh
    ```
 
-   3.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
+   5.4.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed 
+    periodically when you see the validation error.
 
    ```
    ./docker.local/bin/sync_clock.sh
@@ -160,7 +201,7 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 
 ## 6. Configuring the Miner and Sharder Nodes
 
-1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
+6.1) Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
 
   1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
 
@@ -176,7 +217,7 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 
 ## 7. Starting the Miner and Sharder Nodes
 
-1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
+7.1) For starting the nodes open 4 terminal tabs. Use the 1st terminal tab and be in the sharder1(0chain/docker.local/sharder1) directory.On other 3 terminal tabs be in the miner directory(0chain/docker.local/miner|i)(miner1/2/3). 
 
 Start sharder first because miners need the genesis magic block. On the sharder terminal, use
 
@@ -191,6 +232,9 @@ On the respective miner terminal, use
 ```
 ../bin/start.b0miner.sh
 ```
+
+Note: The above commands will run 1 sharder and 3 miners for minimal setup. For running more sharders and blobbers repeat the process in more terminal tabs. 
+
 ## 8. Building and Starting Blobber Nodes
 
 For detailed steps on building and starting blobbers, please clone the [blobber repository](https://github.com/0chain/blobber) and follow the guides below:
