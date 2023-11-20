@@ -70,9 +70,9 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
-	blobberIds := make([]string, len(alloc.BlobberAllocs))
-	for i, v := range alloc.BlobberAllocs {
-		blobberIds[i] = v.BlobberID
+	blobberIds := make([]string, 0, len(alloc.BlobberAllocs))
+	for _, v := range alloc.BlobberAllocs {
+		blobberIds = append(blobberIds, v.BlobberID)
 	}
 
 	transactionOutput := NewAllocationTxnOutput{alloc.ID, blobberIds}
