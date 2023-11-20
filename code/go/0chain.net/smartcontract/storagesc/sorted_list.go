@@ -129,7 +129,6 @@ func (sb *SortedBlobbers) add(b *StorageNode) (ok bool) {
 }
 
 // replace if found
-//
 //nolint:golint,unused
 func (sb *SortedBlobbers) update(b *StorageNode) (ok bool) {
 	var i int

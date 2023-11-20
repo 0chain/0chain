@@ -33,9 +33,6 @@ services:
       - DOCKER=true
       - REDIS_HOST=redis-${MINER}
       - REDIS_TXNS=redis_txns-${MINER}
-      - AWS_ACCESS_KEY_ID=key_id
-      - AWS_SECRET_ACCESS_KEY=secret_key
-      - MINER_SECRET_NAME=miner_secret_name
     depends_on:
      - redis
      - redis_txns

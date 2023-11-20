@@ -14,14 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// Nodes - a set of nodes for synching the state
+//Nodes - a set of nodes for synching the state
 type Nodes struct {
 	datastore.IDField
 	Version string      `json:"version"`
 	Nodes   []util.Node `json:"-" msgpack:"-"`
 }
 
-// NewStateNodes - create a new partial state object with initialization
+//NewStateNodes - create a new partial state object with initialization
 func NewStateNodes() *Nodes {
 	return datastore.GetEntityMetadata("state_nodes").Instance().(*Nodes)
 }
@@ -66,7 +66,7 @@ func SetupStateNodes(store datastore.Store) {
 	datastore.RegisterEntityMetadata("state_nodes", nodesEntityMetadata)
 }
 
-// SaveState - save the partial state into another state db
+//SaveState - save the partial state into another state db
 func (ns *Nodes) SaveState(ctx context.Context, stateDB util.NodeDB) error {
 	var keys []util.Key
 	for _, nd := range ns.Nodes {
@@ -75,7 +75,7 @@ func (ns *Nodes) SaveState(ctx context.Context, stateDB util.NodeDB) error {
 	return stateDB.MultiPutNode(keys, ns.Nodes)
 }
 
-// MarshalJSON - implement Marshaler interface
+//MarshalJSON - implement Marshaler interface
 func (ns *Nodes) MarshalJSON() ([]byte, error) {
 	data := ns.getMarshalFields()
 	b, err := json.Marshal(data)
@@ -87,7 +87,7 @@ func (ns *Nodes) MarshalJSON() ([]byte, error) {
 	return b, err
 }
 
-// UnmarshalJSON - implement Unmarshaler interface
+//UnmarshalJSON - implement Unmarshaler interface
 func (ns *Nodes) UnmarshalJSON(data []byte) error {
 	var obj map[string]interface{}
 	err := json.Unmarshal(data, &obj)
@@ -98,7 +98,7 @@ func (ns *Nodes) UnmarshalJSON(data []byte) error {
 	return ns.unmarshalStateNodesJSON(obj)
 }
 
-// unmarshalStateNodesJSON - unmarshal the partial state
+//unmarshalStateNodesJSON - unmarshal the partial state
 func (ns *Nodes) unmarshalStateNodesJSON(obj map[string]interface{}) error {
 	if str, ok := obj["version"].(string); ok {
 		ns.Version = str
@@ -154,7 +154,7 @@ func (ns *Nodes) getMarshalFields() map[string]interface{} {
 	return data
 }
 
-// UnmarshalMsgpack - implement Unmarshaler interface
+//UnmarshalMsgpack - implement Unmarshaler interface
 func (ns *Nodes) UnmarshalMsgpack(data []byte) error {
 	var obj map[string]interface{}
 	err := msgpack.Unmarshal(data, &obj)
@@ -165,7 +165,7 @@ func (ns *Nodes) UnmarshalMsgpack(data []byte) error {
 	return ns.unmarshalStateNodesMsgpack(obj)
 }
 
-// unmarshalStateNodesMsgpack - unmarshal the partial state
+//unmarshalStateNodesMsgpack - unmarshal the partial state
 func (ns *Nodes) unmarshalStateNodesMsgpack(obj map[string]interface{}) error {
 	if str, ok := obj["version"].(string); ok {
 		ns.Version = str

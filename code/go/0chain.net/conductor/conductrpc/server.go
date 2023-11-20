@@ -64,7 +64,7 @@ type AddBlobberEvent struct {
 
 // AddValidatorEvent in miner SC.
 type AddValidatorEvent struct {
-	Sender    NodeName // event emitter
+	Sender  NodeName // event emitter
 	Validator NodeName // the added validator
 }
 
@@ -110,14 +110,14 @@ type ValidtorTicket struct {
 
 type AggregateMessage struct {
 	ProviderType types.ProviderType
-	ProviderId   string
-	Values       types.Aggregate
+	ProviderId string
+	Values types.Aggregate
 }
 
 type NodeConfig struct {
 	Version int
-	Map     map[string]interface{}
-	mutex   *sync.RWMutex
+	Map map[string]interface{}
+	mutex *sync.RWMutex
 }
 
 func (nc *NodeConfig) Get(key string) map[string]interface{} {
@@ -141,8 +141,8 @@ func (nc *NodeConfig) Update(config map[string]interface{}) {
 func NewNodeConfig(config map[string]interface{}) *NodeConfig {
 	return &NodeConfig{
 		Version: 1,
-		Map:     config,
-		mutex:   &sync.RWMutex{},
+		Map: config,
+		mutex: &sync.RWMutex{},
 	}
 }
 
@@ -197,7 +197,7 @@ type Server struct {
 	nodes map[NodeName]*nodeState
 
 	// node id -> node name mapping
-	names            map[NodeID]NodeName
+	names map[NodeID]NodeName
 	nodeCustomConfig map[NodeID]*NodeConfig
 
 	NodesServerStatsCollector *stats.NodesServerStats
@@ -212,7 +212,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 	s = &Server{
 		quit:                      make(chan struct{}),
 		names:                     names,
-		nodeCustomConfig:          make(map[config.NodeID]*NodeConfig),
+		nodeCustomConfig: 		   make(map[config.NodeID]*NodeConfig),
 		onViewChange:              make(chan *ViewChangeEvent, 10),
 		onPhase:                   make(chan *PhaseEvent, 10),
 		onAddMiner:                make(chan *AddMinerEvent, 10),
@@ -220,8 +220,8 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server, err error)
 		onAddBlobber:              make(chan *AddBlobberEvent, 10),
 		onAddAuthorizer:           make(chan *AddAuthorizerEvent, 10),
 		onSharderKeep:             make(chan *SharderKeepEvent, 10),
-		onSharderBlock:            make(chan *stats.BlockFromSharder),
-		onValidatorTicket:         make(chan *ValidtorTicket, 10),
+		onSharderBlock: 		   make(chan *stats.BlockFromSharder),
+		onValidatorTicket: 		   make(chan *ValidtorTicket, 10),
 		onNodeReady:               make(chan NodeName, 10),
 		onRoundEvent:              make(chan *RoundEvent, 100),
 		onContributeMPKEvent:      make(chan *ContributeMPKEvent, 10),
@@ -287,7 +287,7 @@ func (s *Server) SetNodeConfig(id NodeID, config map[string]interface{}) (err er
 		s.nodeCustomConfig[id] = NewNodeConfig(config)
 		return
 	}
-
+	
 	nc.Update(config)
 	return
 }
@@ -513,7 +513,7 @@ func (s *Server) SharderKeep(sk *SharderKeepEvent, _ *struct{}) (err error) {
 func (s *Server) SharderBlock(block *stats.BlockFromSharder, _ *struct{}) (err error) {
 	select {
 	case s.onSharderBlock <- block:
-	case <-s.quit:
+	case <- s.quit:
 	}
 	return
 }

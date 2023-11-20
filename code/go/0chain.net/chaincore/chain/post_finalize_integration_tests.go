@@ -15,12 +15,12 @@ import (
 
 type TxnHandler func(txn *transaction.Transaction, client *crpc.Entity) error
 
-var txnHandlers = map[string]TxnHandler{
-	"generate_challenge": func(txn *transaction.Transaction, client *crpc.Entity) error {
+var txnHandlers = map[string] TxnHandler{
+	"generate_challenge": func(txn *transaction.Transaction, client *crpc.Entity) error{
 		client.ChallengeGenerated(txn.Hash)
 		return nil
 	},
-	"challenge_response": func(txn *transaction.Transaction, client *crpc.Entity) error {
+	"challenge_response": func(txn *transaction.Transaction, client *crpc.Entity) error{
 		switch txn.TransactionOutput {
 		case "challenge passed by blobber":
 			status := 0
@@ -29,13 +29,13 @@ var txnHandlers = map[string]TxnHandler{
 			}
 			client.SendChallengeStatus(map[string]interface{}{
 				"blobber_id": txn.ClientID,
-				"status":     status,
+				"status": status,
 			})
 		case "Challenge Failed by Blobber":
 			client.SendChallengeStatus(map[string]interface{}{
-				"error":      txn.TransactionData,
-				"status":     0,
-				"response":   txn.TransactionOutput,
+				"error": txn.TransactionData,
+				"status": 0,
+				"response": txn.TransactionOutput,
 				"blobber_id": txn.ClientID,
 			})
 		}
@@ -53,7 +53,7 @@ func (c *Chain) postFinalize(ctx context.Context, fb *block.Block) error {
 		logging.Logger.Info("post_finalize processing txn",
 			zap.Any("function_name", txn.FunctionName),
 			zap.Any("hash", txn.Hash),
-			zap.Any("output", txn.TransactionOutput),
+			zap.Any("output", txn.TransactionOutput),	
 		)
 		err := handler(txn, client)
 		if err != nil {

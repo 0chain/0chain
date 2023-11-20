@@ -48,7 +48,7 @@ type (
 
 // IsActingOnTestRequestor checks with MinerInformer help response to the requestor or not.
 //
-//	Returns true if the follow is correct:
+// 	Returns true if the follow is correct:
 //		provided informer must be not nil;
 //		requestor must be Replica0;
 //		round must be equal to the expected round;

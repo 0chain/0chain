@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	firstCapRegex       = regexp.MustCompile("(.)([A-Z][a-z]+)")
-	allCapRegex         = regexp.MustCompile("([a-z0-9])([A-Z])")
-	gormColumRegex      = regexp.MustCompile("(?m)column:([a-zA-Z0-9_]+);")
-	gormForeignKeyRegex = regexp.MustCompile("(?m)foreignKey:")
+	firstCapRegex 	= regexp.MustCompile("(.)([A-Z][a-z]+)")
+	allCapRegex 	= regexp.MustCompile("([a-z0-9])([A-Z])")
+	gormColumRegex 	= regexp.MustCompile("(?m)column:([a-zA-Z0-9_]+);")
+	gormForeignKeyRegex 	= regexp.MustCompile("(?m)foreignKey:")
 )
 
 type FieldWithValue struct {
@@ -22,9 +22,9 @@ type FieldWithValue struct {
 
 // toSnakeCase converts a string to snake_case
 func toSnakeCase(str string) string {
-	snake := firstCapRegex.ReplaceAllString(str, "${1}_${2}")
-	snake = allCapRegex.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
+    snake := firstCapRegex.ReplaceAllString(str, "${1}_${2}")
+    snake = allCapRegex.ReplaceAllString(snake, "${1}_${2}")
+    return strings.ToLower(snake)
 }
 
 func isForeignKey(f reflect.StructField) bool {
@@ -56,7 +56,7 @@ func (columns Columns) add(fwv FieldWithValue, lenObjects int) {
 // Ignores struct/slice field that are gorm.foreignKey
 func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 	columns := make(Columns)
-
+	
 	for _, obj := range objects {
 		v := reflect.ValueOf(obj)
 
@@ -78,7 +78,7 @@ func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 		for len(colStack) > 0 {
 			fwv := colStack[len(colStack)-1]
 			colStack = colStack[:len(colStack)-1]
-
+			
 			switch fwv.Field.Type.Kind() {
 			case reflect.Ptr:
 				if fwv.Value.IsNil() || isForeignKey(fwv.Field) {
@@ -88,7 +88,7 @@ func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 				for fidx := 0; fidx < fwv.Field.Type.Elem().NumField(); fidx++ {
 					colStack = append(colStack, FieldWithValue{fwv.Field.Type.Elem().Field(fidx), v.Field(fidx)})
 				}
-			case reflect.Struct:
+			case reflect.Struct:				
 				v := fwv.Value
 				// Ignore foreign key struct
 				if isForeignKey(fwv.Field) {
@@ -104,7 +104,7 @@ func Columnize[T any](objects []T) (map[string][]interface{}, error) {
 					}, reflect.ValueOf(v.Interface().(time.Time).Unix())})
 					continue
 				}
-
+				
 				// unwrap nested struct
 				for fidx := 0; fidx < fwv.Field.Type.NumField(); fidx++ {
 					colStack = append(colStack, FieldWithValue{fwv.Field.Type.Field(fidx), v.Field(fidx)})

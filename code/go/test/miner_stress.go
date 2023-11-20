@@ -158,14 +158,14 @@ func main() {
 	count := 0
 	for i := 0; i < *maxConcurrentClients; i++ {
 		go func() {
-			for range ticketCannel {
+			for _ = range ticketCannel {
 				CreateTransaction(httpclient, clients[rand.Intn(len(clients))])
 				//GetHash(httpclient, "hello-world")
 				doneChannel <- true
 			}
 		}()
 	}
-	for range doneChannel {
+	for _ = range doneChannel {
 		count++
 		if count+*maxConcurrentClients <= *numTxns {
 			ticketCannel <- true

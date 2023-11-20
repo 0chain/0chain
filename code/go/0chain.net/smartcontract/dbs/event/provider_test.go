@@ -398,7 +398,7 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 		}
 
 		for providerType, idsList := range ids {
-			for id := range idsList {
+			for id, _ := range idsList {
 				idsLists[providerType] = append(idsLists[providerType], id)
 			}
 		}

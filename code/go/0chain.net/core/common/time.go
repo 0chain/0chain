@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// DateTimeFormat - the format in which the date time fields should be displayed in the UI
+//DateTimeFormat - the format in which the date time fields should be displayed in the UI
 var DateTimeFormat = "2006-01-02T15:04:05+00:00"
 
 //go:generate msgp -io=false -tests=false -v
@@ -24,12 +24,12 @@ func (t Timestamp) Duration() time.Duration {
 	return time.Second * time.Duration(t)
 }
 
-// TimeToString - return the time stamp as a string
+//TimeToString - return the time stamp as a string
 func TimeToString(ts Timestamp) string {
 	return strconv.FormatInt(int64(ts), 10)
 }
 
-// ToTime - converts the common.Timestamp to time.Time
+//ToTime - converts the common.Timestamp to time.Time
 func ToTime(ts Timestamp) time.Time {
 	return time.Unix(int64(ts), 0)
 }

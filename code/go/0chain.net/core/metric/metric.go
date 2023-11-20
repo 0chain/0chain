@@ -20,7 +20,7 @@ type PowerMetrics struct {
 	CurrentValue Metric
 }
 
-// FormattedTime - get the formatted time
+//FormattedTime - get the formatted time
 func FormattedTime(metric Metric) string {
 	t := metric.GetTime()
 	return fmt.Sprintf("%02d:%02d", t.Minute(), t.Second())

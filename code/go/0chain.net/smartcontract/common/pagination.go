@@ -66,12 +66,12 @@ func GetPaginationParamsDefaultDesc(values url.Values) (Pagination, error) {
 	var (
 		offsetString = values.Get("offset")
 		limitString  = values.Get("limit")
-		sort         = values.Get("sort")
+		sort 	   = values.Get("sort")
 
-		limit        = DefaultQueryLimit
-		offset       = 0
+		limit  = DefaultQueryLimit
+		offset = 0
 		isDescending = true
-		err          error
+		err    error
 	)
 
 	if offsetString != "" {

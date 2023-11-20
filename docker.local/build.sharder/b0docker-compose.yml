@@ -27,9 +27,6 @@ services:
     environment:
       - POSTGRES_HOST=sharder-postgres-${SHARDER}
       - DOCKER=true
-      - AWS_ACCESS_KEY_ID=key_id
-      - AWS_SECRET_ACCESS_KEY=secret_key
-      - SHARDER_SECRET_NAME=sharder_secret_name
     depends_on:
       - postgres
     volumes:

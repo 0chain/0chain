@@ -7,13 +7,13 @@ type (
 )
 
 const (
-	Sharder    ProviderType = "sharder"
-	Miner      ProviderType = "miner"
-	Blobber    ProviderType = "blobber"
-	Validator  ProviderType = "validator"
+	Sharder ProviderType = "sharder"
+	Miner ProviderType = "miner"
+	Blobber ProviderType = "blobber"
+	Validator ProviderType = "validator"
 	Authorizer ProviderType = "authorizer"
-	User       ProviderType = "user"
-	Global     ProviderType = "global" // For Global, the id will be always "global"
+	User ProviderType = "user"
+	Global ProviderType = "global" // For Global, the id will be always "global"
 )
 
 var (
@@ -44,17 +44,15 @@ func (p ProviderType) String() string {
 type Aggregate map[string]any
 
 type Comparison string
-
 const (
-	EQ  Comparison = "eq"
-	LT  Comparison = "lt"
+	EQ Comparison = "eq"
+	LT Comparison = "lt"
 	LTE Comparison = "lte"
-	GT  Comparison = "gt"
+	GT Comparison = "gt"
 	GTE Comparison = "gte"
 )
 
 type Monotonicity string
-
 const (
 	Increase Monotonicity = "increase"
 	Decrease Monotonicity = "decrease"

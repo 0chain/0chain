@@ -62,7 +62,7 @@ func GetMessageLookup(msgType int) *common.Lookup {
 	return msg
 }
 
-// ShouldRetry - tells whether this message should be retried by putting back into the channel
+//ShouldRetry - tells whether this message should be retried by putting back into the channel
 func (bm *BlockMessage) ShouldRetry() bool {
 	if bm.RetryCount < 5 || time.Since(bm.Timestamp) < 5*chain.DELTA {
 		return true
@@ -70,7 +70,7 @@ func (bm *BlockMessage) ShouldRetry() bool {
 	return false
 }
 
-// Retry - retry the block message by putting it back into the channel
+//Retry - retry the block message by putting it back into the channel
 func (bm *BlockMessage) Retry(bmc chan *BlockMessage) {
 	go func() {
 		duration := time.Since(bm.Timestamp)

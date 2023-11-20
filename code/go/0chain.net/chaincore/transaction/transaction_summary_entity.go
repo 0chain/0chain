@@ -12,21 +12,21 @@ import (
 
 /*TransactionSummary - the summary of the transaction */
 type TransactionSummary struct {
-	datastore.HashIDField       // Keyspaced transaction hash - used as key
-	Round                 int64 `json:"round"`
+	datastore.HashIDField // Keyspaced transaction hash - used as key
+	Round int64 `json:"round"`
 }
 
 const transactionKeyspace = "transaction_round"
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl
 
-// TransactionSummaryProvider - factory method
+//TransactionSummaryProvider - factory method
 func TransactionSummaryProvider() datastore.Entity {
 	t := &TransactionSummary{}
 	return t
 }
 
-// GetEntityMetadata - implement interface
+//GetEntityMetadata - implement interface
 func (t *TransactionSummary) GetEntityMetadata() datastore.EntityMetadata {
 	return transactionSummaryEntityMetadata
 }
@@ -44,12 +44,12 @@ func BuildSummaryTransactionKey(hash string) datastore.Key {
 	)
 }
 
-// GetKey - implement interface
+//GetKey - implement interface
 func (t *TransactionSummary) GetKey() datastore.Key {
 	return datastore.ToKey(t.Hash)
 }
 
-// SetKey - implement interface
+//SetKey - implement interface
 func (t *TransactionSummary) SetKey(key datastore.Key) {
 	t.Hash = datastore.ToString(key)
 }

@@ -7,31 +7,28 @@ type Aggregate map[string]any
 type AggregateStore map[ProviderType]map[string][]Aggregate
 
 type ProviderType string
-
 const (
-	Sharder    ProviderType = "sharder"
-	Miner      ProviderType = "miner"
-	Blobber    ProviderType = "blobber"
-	Validator  ProviderType = "validator"
+	Sharder ProviderType = "sharder"
+	Miner ProviderType = "miner"
+	Blobber ProviderType = "blobber"
+	Validator ProviderType = "validator"
 	Authorizer ProviderType = "authorizer"
-	User       ProviderType = "user"
-	Global     ProviderType = "global" // For Global, the id will be always "global".
+	User ProviderType = "user"
+	Global ProviderType = "global" // For Global, the id will be always "global".
 )
 
 type Monotonicity string
-
 const (
 	Increase Monotonicity = "increase"
 	Decrease Monotonicity = "decrease"
 )
 
 type Comparison string
-
 const (
-	EQ  Comparison = "eq"
-	LT  Comparison = "lt"
+	EQ Comparison = "eq"
+	LT Comparison = "lt"
 	LTE Comparison = "lte"
-	GT  Comparison = "gt"
+	GT Comparison = "gt"
 	GTE Comparison = "gte"
 )
 
@@ -116,11 +113,11 @@ func CheckAggregateValueChange(ptype ProviderType, pid string, key string, monot
 			default:
 				return false, fmt.Errorf("unknown monotonicity")
 			}
-
+	
 			if check {
 				return true, nil
 			}
-
+	
 			prevInt64 = curInt64
 		default:
 			return false, fmt.Errorf("key found in the aggregates of this provider but value not int64: %v, %v, %v, %T %v", ptype.String(), pid, key, cur, cur)
@@ -136,7 +133,7 @@ func GetLatestAggregateValue(ptype ProviderType, pid string, key string) (int64,
 		return 0, err
 	}
 
-	val, ok := aggProviderIdStore[len(aggProviderIdStore)-1][key]
+	val, ok := aggProviderIdStore[len(aggProviderIdStore) - 1][key]
 	if !ok {
 		return 0, fmt.Errorf("key not found in the aggregates of this provider: %v, %v, %v", ptype.String(), pid, key)
 	}

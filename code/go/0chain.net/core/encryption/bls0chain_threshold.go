@@ -6,7 +6,7 @@ import (
 	"github.com/herumi/bls/ffi/go/bls"
 )
 
-// BLS0ChainThresholdScheme - a scheme that can create threshold signature shares for BLS0Chain signature scheme
+//BLS0ChainThresholdScheme - a scheme that can create threshold signature shares for BLS0Chain signature scheme
 type BLS0ChainThresholdScheme struct {
 	BLS0ChainScheme
 	id bls.ID
@@ -18,7 +18,7 @@ type BLS0ChainReconstruction struct {
 	sigs []bls.Sign
 }
 
-// NewBLS0ChainThresholdScheme - create a new instance
+//NewBLS0ChainThresholdScheme - create a new instance
 func NewBLS0ChainThresholdScheme() *BLS0ChainThresholdScheme {
 	return &BLS0ChainThresholdScheme{}
 }
@@ -72,7 +72,7 @@ func BLS0GenerateThresholdKeyShares(t, n int, originalKey SignatureScheme) ([]Th
 	return shares, nil
 }
 
-// NewBLS0ChainReconstruction - create a new instance
+//NewBLS0ChainReconstruction - create a new instance
 func NewBLS0ChainReconstruction(t, n int) *BLS0ChainReconstruction {
 	return &BLS0ChainReconstruction{
 		t:    t,
@@ -82,7 +82,7 @@ func NewBLS0ChainReconstruction(t, n int) *BLS0ChainReconstruction {
 	}
 }
 
-// Add - implement interface
+//Add - implement interface
 func (rec *BLS0ChainReconstruction) Add(tss ThresholdSignatureScheme, signature string) error {
 	b0tss, ok := tss.(*BLS0ChainThresholdScheme)
 	if !ok {
@@ -100,7 +100,7 @@ func (rec *BLS0ChainReconstruction) Add(tss ThresholdSignatureScheme, signature 
 	return nil
 }
 
-// Reconstruct - implement interface
+//Reconstruct - implement interface
 func (rec BLS0ChainReconstruction) Reconstruct() (string, error) {
 	var s bls.Sign
 

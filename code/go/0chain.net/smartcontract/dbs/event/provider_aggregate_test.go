@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+
 func TestCreateNewProviderAggregates(t *testing.T) {
 	edb, rb := GetTestEventDB(t)
 	defer rb()
@@ -67,6 +68,7 @@ func TestCreateNewProviderAggregates(t *testing.T) {
 	}
 	err = edb.Store.Get().Omit(clause.Associations).Create(&authorizers).Error
 	require.NoError(t, err)
+
 
 	providers := ProvidersMap{
 		spenum.Blobber: {

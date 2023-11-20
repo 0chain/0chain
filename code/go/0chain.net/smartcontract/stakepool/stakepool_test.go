@@ -187,9 +187,9 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 func TestGetOrderedPools(t *testing.T) {
 	sp := &StakePool{
 		Pools: map[string]*DelegatePool{
-			"p1": {DelegateID: "p1"},
-			"p2": {DelegateID: "p2"},
-			"p3": {DelegateID: "p3"},
+			"p1": &DelegatePool{DelegateID: "p1"},
+			"p2": &DelegatePool{DelegateID: "p2"},
+			"p3": &DelegatePool{DelegateID: "p3"},
 		},
 	}
 

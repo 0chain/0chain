@@ -57,16 +57,16 @@ const (
 )
 
 // GetNodeTypeAndTypeRank returns node type
-// and type rank.
+//and type rank.
 // If ranks is not computed, returns -1, -1.
 //
-//	Explaining type rank example:
+// 	Explaining type rank example:
 //		Generators num = 2
-//		len(miners) = 4
-//		Generator0:	rank = 0; typeRank = 0.
-//		Generator1:	rank = 1; typeRank = 1.
-//		Replica0:	rank = 2; typeRank = 0.
-//		Replica1:	rank = 3; typeRank = 1.
+// 		len(miners) = 4
+// 		Generator0:	rank = 0; typeRank = 0.
+// 		Generator1:	rank = 1; typeRank = 1.
+// 		Replica0:	rank = 2; typeRank = 0.
+// 		Replica1:	rank = 3; typeRank = 1.
 func GetNodeTypeAndTypeRank(roundNum int64) (nodeType, typeRank int) {
 	sChain := GetServerChain()
 

@@ -15,7 +15,7 @@ var (
 	UseRecoverHandler = true
 )
 
-// Recover - recover after a handler panic
+//Recover - recover after a handler panic
 func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 	if !UseRecoverHandler {
 		return handler
@@ -32,7 +32,7 @@ func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
 				errorMessage := fmt.Sprintf("%v", err)
-				if strings.Contains(strings.ToLower(errorMessage), "panic") ||
+				if 	strings.Contains(strings.ToLower(errorMessage), "panic") ||
 					strings.Contains(strings.ToLower(errorMessage), "stack trace") {
 					errorMessage = "Unknown Server Error"
 				}

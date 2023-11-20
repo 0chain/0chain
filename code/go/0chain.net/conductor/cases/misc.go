@@ -51,13 +51,13 @@ func (r *RoundInfo) blocks() map[string]*BlockInfo {
 // getNotarisedBlocks return ID of the node with provided parameters.
 // If node with provided parameters is not found, returns "".
 //
-//	Explaining type rank example:
+// 	Explaining type rank example:
 //		RoundInfo.GeneratorsNum = 2
-//		len(RoundInfo.RankedMiners) = 4
-//		Generator0:	rank = 0; generator = true;	typeRank = 0.
-//		Generator1:	rank = 1; generator = true; typeRank = 1.
-//		Replica0:	rank = 2; generator = false; typeRank = 0.
-//		Replica0:	rank = 3; generator = false; typeRank = 1.
+// 		len(RoundInfo.RankedMiners) = 4
+// 		Generator0:	rank = 0; generator = true;	typeRank = 0.
+// 		Generator1:	rank = 1; generator = true; typeRank = 1.
+// 		Replica0:	rank = 2; generator = false; typeRank = 0.
+// 		Replica0:	rank = 3; generator = false; typeRank = 1.
 func (r *RoundInfo) getNodeID(generator bool, typeRank int) string {
 	for rank, rankedMiner := range r.RankedMiners {
 		isGenerator := rank < r.GeneratorsNum

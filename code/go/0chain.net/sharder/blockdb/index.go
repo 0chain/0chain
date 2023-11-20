@@ -14,7 +14,7 @@ type keyo struct {
 	o int64
 }
 
-// mapIndex - an implementation of the db index
+//mapIndex - an implementation of the db index
 type mapIndex struct {
 	index map[Key]int64
 	mutex sync.RWMutex
@@ -26,7 +26,7 @@ func newMapIndex() *mapIndex {
 	return idx
 }
 
-// SetOffset - set the offset of the given record
+//SetOffset - set the offset of the given record
 func (mi *mapIndex) SetOffset(key Key, offset int64) error {
 	mi.mutex.Lock()
 	defer mi.mutex.Unlock()
@@ -34,7 +34,7 @@ func (mi *mapIndex) SetOffset(key Key, offset int64) error {
 	return nil
 }
 
-// GetOffset - get the offset of the given record */
+//GetOffset - get the offset of the given record */
 func (mi *mapIndex) GetOffset(key Key) (int64, error) {
 	mi.mutex.RLock()
 	defer mi.mutex.RUnlock()
@@ -133,7 +133,7 @@ func (mi *mapIndex) GetKeys() []Key {
 	return keys
 }
 
-// fixedKeyArrayIndex
+//fixedKeyArrayIndex
 type fixedKeyArrayIndex struct {
 	buffer []byte
 	keylen int8
@@ -149,12 +149,12 @@ func (fkai *fixedKeyArrayIndex) getKeySize() int8 {
 	return int8(fkai.keylen) + 1 + 8
 }
 
-// SetOffset - set the offset of the given record
+//SetOffset - set the offset of the given record
 func (fkai *fixedKeyArrayIndex) SetOffset(_ Key, _ int64) error {
 	return errors.New("method not supported for this implementation")
 }
 
-// GetOffset - get the offset of the given record */
+//GetOffset - get the offset of the given record */
 func (fkai *fixedKeyArrayIndex) GetOffset(key Key) (int64, error) {
 	klen := int(fkai.keylen)
 	ksz := fkai.getKeySize()

@@ -19,23 +19,23 @@ type MagicBlockMap struct {
 
 var magicBlockMapEntityMetadata *datastore.EntityMetadataImpl
 
-// MagicBlockSummaryProvider - factory method
+//MagicBlockSummaryProvider - factory method
 func MagicBlockMapProvider() datastore.Entity {
 	mb := &MagicBlockMap{}
 	return mb
 }
 
-// GetEntityMetadata - implement interface
+//GetEntityMetadata - implement interface
 func (mb *MagicBlockMap) GetEntityMetadata() datastore.EntityMetadata {
 	return magicBlockMapEntityMetadata
 }
 
-// GetKey - implement interface
+//GetKey - implement interface
 func (mb *MagicBlockMap) GetKey() datastore.Key {
 	return datastore.ToKey(mb.ID)
 }
 
-// SetKey - implement interface
+//SetKey - implement interface
 func (mb *MagicBlockMap) SetKey(key datastore.Key) {
 	mb.ID = datastore.ToString(key)
 }

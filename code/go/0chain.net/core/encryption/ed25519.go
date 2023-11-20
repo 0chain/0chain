@@ -10,18 +10,18 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-// ED25519Scheme - a signature scheme based on ED25519
+//ED25519Scheme - a signature scheme based on ED25519
 type ED25519Scheme struct {
 	privateKey []byte
 	publicKey  []byte
 }
 
-// NewED25519Scheme - create a ED255219Scheme object
+//NewED25519Scheme - create a ED255219Scheme object
 func NewED25519Scheme() *ED25519Scheme {
 	return &ED25519Scheme{}
 }
 
-// GenerateKeys - implement interface
+//GenerateKeys - implement interface
 func (ed *ED25519Scheme) GenerateKeys() error {
 	public, private, err := GenerateKeysBytes()
 	if err != nil {
@@ -32,7 +32,7 @@ func (ed *ED25519Scheme) GenerateKeys() error {
 	return nil
 }
 
-// ReadKeys - implement interface
+//ReadKeys - implement interface
 func (ed *ED25519Scheme) ReadKeys(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 	result := scanner.Scan()
@@ -56,7 +56,7 @@ func (ed *ED25519Scheme) ReadKeys(reader io.Reader) error {
 	return nil
 }
 
-// WriteKeys - implement interface
+//WriteKeys - implement interface
 func (ed *ED25519Scheme) WriteKeys(writer io.Writer) error {
 	publicKey := hex.EncodeToString(ed.publicKey)
 	privateKey := hex.EncodeToString(ed.privateKey)
@@ -64,7 +64,7 @@ func (ed *ED25519Scheme) WriteKeys(writer io.Writer) error {
 	return err
 }
 
-// SetPublicKey - implement interface
+//SetPublicKey - implement interface
 func (ed *ED25519Scheme) SetPublicKey(publicKey string) error {
 	if len(ed.privateKey) > 0 {
 		return errors.New("cannot set public key when there is a private key")
@@ -77,17 +77,17 @@ func (ed *ED25519Scheme) SetPublicKey(publicKey string) error {
 	return nil
 }
 
-// GetPublicKey - implement interface
+//GetPublicKey - implement interface
 func (ed *ED25519Scheme) GetPublicKey() string {
 	return hex.EncodeToString(ed.publicKey)
 }
 
-// Sign - impelemnt interface
+//Sign - impelemnt interface
 func (ed *ED25519Scheme) Sign(hash interface{}) (string, error) {
 	return signED25519(ed.privateKey, hash)
 }
 
-// Verify - implement interface
+//Verify - implement interface
 func (ed *ED25519Scheme) Verify(signature string, hash string) (bool, error) {
 	return verifyED25519(ed.publicKey, signature, hash)
 }

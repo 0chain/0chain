@@ -28,7 +28,7 @@ type Entity interface {
 	Delete(ctx context.Context) error
 }
 
-// AllocateEntities - allocate entities for the given entity type
+//AllocateEntities - allocate entities for the given entity type
 func AllocateEntities(size int, entityMetadata EntityMetadata) []Entity {
 	entities := make([]Entity, size)
 	for i := 0; i < size; i++ {

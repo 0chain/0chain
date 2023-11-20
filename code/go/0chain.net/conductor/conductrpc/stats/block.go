@@ -23,10 +23,10 @@ type (
 	}
 
 	BlockFromSharder struct {
-		Round       int64  `json:"round"`
-		Hash        string `json:"hash"`
+		Round int64 `json:"round"`
+		Hash string `json:"hash"`
 		GeneratorId string `json:"miner_id"`
-		SenderId    string `json:"sharder_id"`
+		SenderId string `json:"sharder_id"`
 	}
 )
 

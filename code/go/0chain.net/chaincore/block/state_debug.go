@@ -24,7 +24,7 @@ func SetupStateLogger(file string) {
 	fmt.Fprintf(StateOut, "starting state log ...\n")
 }
 
-// StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
+//StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
 func StateSanityCheck(ctx context.Context, b *Block) {
 	if !state.DebugBlock() {
 		return

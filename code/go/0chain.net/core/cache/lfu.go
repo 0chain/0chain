@@ -13,19 +13,19 @@ type LFU struct {
 	lock  sync.Mutex
 }
 
-// NewLFUCache - create a new LFU cache object
+//NewLFUCache - create a new LFU cache object
 func NewLFUCache(size int) *LFU {
 	c := &LFU{}
 	c.Cache = cache.NewLFU(size)
 	return c
 }
 
-// Add - add a given key and value
+//Add - add a given key and value
 func (c *LFU) Add(key string, value interface{}) error {
 	return c.Cache.Set(key, value)
 }
 
-// Get - get the value associated with the key
+//Get - get the value associated with the key
 func (c *LFU) Get(key string) (interface{}, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()

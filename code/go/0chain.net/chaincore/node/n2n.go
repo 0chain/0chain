@@ -17,15 +17,13 @@ be repeatedly applied to different nodes
 */
 type SendHandler func(ctx context.Context, n *Node) bool
 
-/*
-EntitySendHandler is used to send an entity to a given node
+/*EntitySendHandler is used to send an entity to a given node
 
 Creates the send handler closure by substituting an entity as a message
 */
 type EntitySendHandler func(entity datastore.Entity) SendHandler
 
-/*
-EntityRequestor is used to request an entity and handle it
+/*EntityRequestor is used to request an entity and handle it
 
 f p h n  where p is the parameters to query the entity being requested, h is the handler that processes the response and n is the node.
 

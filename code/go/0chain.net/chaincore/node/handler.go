@@ -13,14 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// SetupHandlers - setup all the handlers
+//SetupHandlers - setup all the handlers
 func SetupHandlers() {
 	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler))
 	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
 	http.HandleFunc("/_nh/getpoolmembers", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
 }
 
-// WhoAmIHandler - who am i?
+//WhoAmIHandler - who am i?
 func WhoAmIHandler(w http.ResponseWriter, r *http.Request) {
 	if Self == nil {
 		return
@@ -32,7 +32,7 @@ func scale(val int64) float64 {
 	return float64(val) / 1000000.0
 }
 
-// PrintSendStats - print the n2n statistics to this node
+//PrintSendStats - print the n2n statistics to this node
 func (n *Node) PrintSendStats(w io.Writer) {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
@@ -127,14 +127,14 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, info, nil)
 }
 
-// ToDo: Move this to MagicBlock logic
+//ToDo: Move this to MagicBlock logic
 // PoolMembers of pool
 type PoolMembers struct {
 	Miners   []string `json:"miners"`
 	Sharders []string `json:"sharders"`
 }
 
-// GetPoolMembersHandler API to get access information of all the members of the pool.
+//GetPoolMembersHandler API to get access information of all the members of the pool.
 func GetPoolMembersHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	pm := &PoolMembers{}
 

@@ -20,7 +20,7 @@ var (
 	pullingEntityCache = newPullingCache(1000, 5)
 )
 
-// pushDataCacheEntry - cached push data
+//pushDataCacheEntry - cached push data
 type pushDataCacheEntry struct {
 	Options    SendOptions
 	Data       []byte
@@ -44,7 +44,7 @@ func p2pKey(uri string, id string) string {
 	return uri + ":" + id
 }
 
-// PushToPullHandler - handles a pull request of cached push entity data
+//PushToPullHandler - handles a pull request of cached push entity data
 func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	pushURI := r.FormValue("_puri")
 	id := r.FormValue("id")

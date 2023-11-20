@@ -8,13 +8,13 @@ import (
 
 type MinerAggregate struct {
 	model.ImmutableModel
-	MinerID         string           `json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
-	Round           int64            `json:"round" gorm:"index:idx_miner_aggregate,unique"`
-	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	Fees            currency.Coin    `json:"fees"`
-	TotalStake      currency.Coin    `json:"total_stake"`
-	TotalRewards    currency.Coin    `json:"total_rewards"`
-	ServiceCharge   float64          `json:"service_charge"`
+	MinerID       string        		`json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
+	Round         int64         		`json:"round" gorm:"index:idx_miner_aggregate,unique"`
+	LastHealthCheck	common.Timestamp	`json:"last_health_check"`
+	Fees          currency.Coin 		`json:"fees"`
+	TotalStake    currency.Coin 		`json:"total_stake"`
+	TotalRewards  currency.Coin 		`json:"total_rewards"`
+	ServiceCharge float64       		`json:"service_charge"`
 }
 
 func (m *MinerAggregate) GetTotalStake() currency.Coin {
@@ -45,8 +45,8 @@ func (edb *EventDb) CreateMinerAggregates(miners []*Miner, round int64) error {
 	var aggregates []MinerAggregate
 	for _, m := range miners {
 		aggregate := MinerAggregate{
-			Round:           round,
-			MinerID:         m.ID,
+			Round:    round,
+			MinerID:  m.ID,
 			LastHealthCheck: m.LastHealthCheck,
 		}
 		recalculateProviderFields(m, &aggregate)
