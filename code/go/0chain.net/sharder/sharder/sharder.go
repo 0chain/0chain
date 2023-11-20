@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/core/config"
@@ -65,12 +67,6 @@ func main() {
 
 	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-
-	reader, err := os.Open(*keysFile)
-	if err != nil {
-		panic(err)
-	}
-
 	config.SetServerChainID(config.Configuration().ChainID)
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
@@ -79,15 +75,20 @@ func main() {
 	blockstore.Init(workdir, sViper)
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
-	err = signatureScheme.ReadKeys(reader)
-	if err != nil {
-		Logger.Panic("Error reading keys file")
-	}
-	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
-		Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
-	}
 
-	reader.Close()
+	reader, err := readKeysFromAws()
+	if err != nil {
+		file, err := readKeysFromFile(keysFile)
+		if err != nil {
+			panic(err)
+		}
+		logging.Logger.Info("using sharder keys from local")
+		initScheme(signatureScheme, file)
+		_ = file.Close()
+	} else {
+		logging.Logger.Info("using sharder keys from aws")
+		initScheme(signatureScheme, reader)
+	}
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
 		logging.Logger.Panic("Error setting up events database", zap.Error(err))
@@ -260,6 +261,30 @@ func main() {
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
+}
+
+func initScheme(signatureScheme encryption.SignatureScheme, reader io.Reader) {
+	err2 := signatureScheme.ReadKeys(reader)
+	if err2 != nil {
+		Logger.Panic("Error reading keys file")
+	}
+	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
+		Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
+	}
+}
+
+func readKeysFromFile(keysFile *string) (*os.File, error) {
+	reader, err := os.Open(*keysFile)
+	return reader, err
+}
+
+func readKeysFromAws() (io.Reader, error) {
+	sharderSecretName := os.Getenv("SHARDER_SECRET_NAME")
+	keys, err := common.GetSecretsFromAWS(sharderSecretName, "us-east-2")
+	if err != nil {
+		return nil, err
+	}
+	return strings.NewReader(keys), nil
 }
 
 func Listen(server *http.Server) {

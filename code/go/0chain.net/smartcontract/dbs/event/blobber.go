@@ -38,11 +38,6 @@ type Blobber struct {
 	// todo update
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 
-	Name        string `json:"name" gorm:"name"`
-	WebsiteUrl  string `json:"website_url" gorm:"website_url"`
-	LogoUrl     string `json:"logo_url" gorm:"logo_url"`
-	Description string `json:"description" gorm:"description"`
-
 	ChallengesPassed    uint64        `json:"challenges_passed"`
 	ChallengesCompleted uint64        `json:"challenges_completed"`
 	OpenChallenges      uint64        `json:"open_challenges"`

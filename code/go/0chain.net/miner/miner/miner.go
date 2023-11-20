@@ -6,15 +6,18 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/encryption"
 	"0chain.net/rest"
 	"go.uber.org/zap"
 
@@ -75,7 +78,6 @@ func main() {
 
 	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-
 	config.SetServerChainID(config.Configuration().ChainID)
 
 	common.SetupRootContext(node.GetNodeContext())
@@ -85,16 +87,19 @@ func main() {
 
 	signatureScheme := serverChain.GetSignatureScheme()
 
-	logging.Logger.Info("Owner keys file", zap.String("filename", *keysFile))
-	reader, err := os.Open(*keysFile)
+	reader, err := readKeysFromAws()
 	if err != nil {
-		panic(err)
+		file, err := readKeysFromFile(keysFile)
+		if err != nil {
+			panic(err)
+		}
+		logging.Logger.Info("using miner keys from local")
+		initScheme(signatureScheme, file)
+		_ = file.Close()
+	} else {
+		logging.Logger.Info("using miner keys from aws")
+		initScheme(signatureScheme, reader)
 	}
-	err = signatureScheme.ReadKeys(reader)
-	if err != nil {
-		logging.Logger.Panic("Error reading keys file")
-	}
-	reader.Close()
 
 	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
 		logging.Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
@@ -370,6 +375,30 @@ func main() {
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
+}
+
+func initScheme(signatureScheme encryption.SignatureScheme, reader io.Reader) {
+	err2 := signatureScheme.ReadKeys(reader)
+	if err2 != nil {
+		logging.Logger.Panic("Error reading keys file")
+	}
+	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
+		logging.Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
+	}
+}
+
+func readKeysFromAws() (io.Reader, error) {
+	minerSecretName := os.Getenv("MINER_SECRET_NAME")
+	keys, err := common.GetSecretsFromAWS(minerSecretName, "us-east-2")
+	if err != nil {
+		return nil, err
+	}
+	return strings.NewReader(keys), nil
+}
+
+func readKeysFromFile(keysFile *string) (*os.File, error) {
+	reader, err := os.Open(*keysFile)
+	return reader, err
 }
 
 func done() {
