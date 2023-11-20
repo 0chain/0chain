@@ -233,7 +233,7 @@ func (sp *stakePool) slash(
 func unallocatedCapacity(writePrice, total, offers currency.Coin) (free int64, err error) {
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater than the clean stake
-		return
+		return 0, fmt.Errorf("total stake %d is less than offers %d", total, offers)
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
 	return
