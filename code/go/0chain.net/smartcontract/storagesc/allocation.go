@@ -70,13 +70,13 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
-	var blobber_ids []string
-	for _, v := range alloc.BlobberAllocs {
-		blobber_ids = append(blobber_ids, v.BlobberID)
+	blobberIds := make([]string, len(alloc.BlobberAllocs))
+	for i, v := range alloc.BlobberAllocs {
+		blobberIds[i] = v.BlobberID
 	}
 
-	transaction_output := NewAllocationTxnOutput{alloc.ID, blobber_ids}
-	buff, _ := json.Marshal(transaction_output)
+	transactionOutput := NewAllocationTxnOutput{alloc.ID, blobberIds}
+	buff, _ := json.Marshal(transactionOutput)
 	return string(buff), nil
 }
 
