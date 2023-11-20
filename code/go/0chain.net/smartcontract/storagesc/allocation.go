@@ -70,7 +70,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
-	blobber_ids := make([]string, len(alloc.BlobberAllocs))
+	var blobber_ids []string
 	for _, v := range alloc.BlobberAllocs {
 		blobber_ids = append(blobber_ids, v.BlobberID)
 	}
@@ -325,15 +325,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			zap.String("txn", txn.Hash),
 			zap.Error(err))
 		return "", common.NewError("allocation_creation_failed", err.Error())
-	}
-
-	cost, err := sa.cost()
-	if err != nil {
-		return "", err
-	}
-	if sa.WritePool < cost {
-		return "", common.NewError("allocation_creation_failed",
-			fmt.Sprintf("not enough tokens to cover the allocation cost"+" (%d < %d)", sa.WritePool, cost))
 	}
 
 	if err := sa.checkFunding(conf.CancellationCharge); err != nil {
