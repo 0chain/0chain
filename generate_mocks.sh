@@ -2,6 +2,13 @@
 
 BASEDIR=$(pwd)
 
+echo PATH = $PATH
+echo GOPATH = $GOPATH
+ls $GOPATH/bin
+export PATH=$PATH:$GOPATH/bin
+
+echo PATH = $PATH
+
 echo "Making mocks..."
 
 generate_mock() {
