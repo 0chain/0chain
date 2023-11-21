@@ -839,11 +839,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
-	if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"insufficient funds: %v", err)
-	}
-
 	sd, err := maths.ConvertToUint64(blobber.SavedData)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed", "savedData is negative: %v", err)

@@ -1004,6 +1004,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		if err != nil {
 			return "", err
 		}
+
+		if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
+			return "", common.NewError("allocation_updating_failed", err.Error())
+		}
 	} else /* Owner Actions */ {
 
 		// update allocation transaction hash
