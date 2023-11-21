@@ -393,7 +393,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionRounds = 720
 	config.SmartContractConfig.Set("max_challenge_completion_rounds", 720)
-	conf.MinLockDemand = 0.1
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
@@ -495,8 +494,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 
 	ba, ok := alloc.BlobberAllocsMap[blobber.ID]
 	if !ok {
-		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, conf, common.Timestamp(now))
-		require.NoError(t, err)
+		ba = newBlobberAllocation(alloc.bSize(), alloc, blobber, conf, common.Timestamp(now))
 	}
 
 	ba.Stats.OpenChallenges++

@@ -89,7 +89,6 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 			FailedChallenges:         0,
 			LatestClosedChallengeTxn: "latest_closed_challenge_txn",
 			ThirdPartyExtendable:     false,
-			MinLockDemand:            0.17,
 		})
 		ids = append(ids, id)
 		initTime = initTime.Add(time.Second)
@@ -116,7 +115,6 @@ func TestAllocations(t *testing.T) {
 		// ReadPrice is price for reading. Token / GB (no time unit).
 		ReadPrice currency.Coin `json:"read_price"`
 		// WritePrice is price for reading. Token / GB / time unit. Also,
-		// it used to calculate min_lock_demand value.
 		WritePrice currency.Coin `json:"write_price"`
 	}
 
@@ -167,9 +165,6 @@ func TestAllocations(t *testing.T) {
 		LastWriteMarker *WriteMarker            `json:"write_marker"`
 		Stats           *StorageAllocationStats `json:"stats"`
 		Terms           Terms                   `json:"terms"`
-		// MinLockDemand for the allocation in tokens.
-		MinLockDemand currency.Coin `json:"min_lock_demand"`
-		Spent         currency.Coin `json:"spent"`
 		// Penalty o the blobber for the allocation in tokens.
 		Penalty currency.Coin `json:"penalty"`
 		// ReadReward of the blobber.
@@ -220,8 +215,7 @@ func TestAllocations(t *testing.T) {
 		// transaction.
 		Canceled bool `json:"canceled,omitempty"`
 		// UsedSize used to calculate blobber reward ratio.
-		UsedSize      int64   `json:"-"`
-		MinLockDemand float64 `json:"min_lock_demand"`
+		UsedSize int64 `json:"-"`
 
 		// MovedToChallenge is number of tokens moved to challenge pool.
 		MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
@@ -280,7 +274,6 @@ func TestAllocations(t *testing.T) {
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 			FileOptions:              sa.FileOptions,
-			MinLockDemand:            sa.MinLockDemand,
 		}
 	}
 

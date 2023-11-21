@@ -106,7 +106,6 @@ smart_contracts:
     min_blobber_capacity: 10737418240
     # fraction of the allocation cost that is locked in the cancellation charge
     cancellation_charge: 0.2
-    min_lock_demand: 0.1
     # users' read pool related configurations
     readpool:
       min_lock: 0.0 # tokens

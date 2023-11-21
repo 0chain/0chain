@@ -50,7 +50,6 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		TimeUnit:                     720 * time.Hour,
 		MaxStake:                     zcnToBalance(100000.0),
 		CancellationCharge:           0.2,
-		MinLockDemand:                0.1,
 		BlockReward: &blockReward{
 			BlockReward:             zcnToBalance(0.06),
 			BlockRewardChangePeriod: 125000000,

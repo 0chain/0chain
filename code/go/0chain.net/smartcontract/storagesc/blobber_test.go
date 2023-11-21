@@ -136,10 +136,6 @@ func Test_flow_reward(t *testing.T) {
 	}
 	require.NotNil(t, b1)
 
-	restMinLock, err := alloc.restMinLockDemand()
-	require.NoError(t, err)
-	require.EqualValues(t, currency.Coin(10000000040), restMinLock)
-
 	t.Run("read as owner", func(t *testing.T) {
 		tp += 100
 		var rm ReadConnection
@@ -192,12 +188,6 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, readPoolFund-1e10, int64(rp.Balance))
 
-		// min lock demand reducing
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		restMinLock, err := alloc.restMinLockDemand()
-		require.NoError(t, err)
-		require.EqualValues(t, currency.Coin(9500000038), restMinLock)
 	})
 
 	t.Run("read as unauthorized separate user", func(t *testing.T) {
@@ -306,13 +296,6 @@ func Test_flow_reward(t *testing.T) {
 		var moved = int64(sizeInGB(size) * float64(avgTerms.WritePrice) * rdtu)
 
 		require.EqualValues(t, moved, cp.Balance)
-
-		// min lock demand reducing
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		restMinLock, err := alloc.restMinLockDemand()
-		require.NoError(t, err)
-		require.EqualValues(t, currency.Coin(9000000036), restMinLock) // -read above
 	})
 
 	t.Run("delete", func(t *testing.T) {
@@ -358,11 +341,6 @@ func Test_flow_reward(t *testing.T) {
 
 		require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
 
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		restMinLock, err := alloc.restMinLockDemand()
-		require.NoError(t, err)
-		require.EqualValues(t, currency.Coin(9000000036), restMinLock) // -read above
 	})
 
 	var b3 *Client
@@ -560,10 +538,6 @@ func Test_flow_penalty(t *testing.T) {
 	}
 	require.NotNil(t, b1)
 
-	restMinLock, err := alloc.restMinLockDemand()
-	require.NoError(t, err)
-	require.EqualValues(t, 583333336580, restMinLock)
-
 	// add 10 validators
 	var valids []*Client
 	tp += 100
@@ -757,10 +731,6 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-
-	restMinLock, err := alloc.restMinLockDemand()
-	require.NoError(t, err)
-	require.EqualValues(t, 202546280, restMinLock)
 
 	// add 10 validators
 	var valids []*Client
@@ -987,10 +957,6 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	if err != nil {
 		return
 	}
-
-	_, err = alloc.restMinLockDemand()
-	require.NoError(t, err)
-	//require.EqualValues(t, 583333336580, restMinLock)
 
 	// add 10 validators
 	var valids []*Client

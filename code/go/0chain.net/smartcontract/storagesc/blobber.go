@@ -534,12 +534,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 	details.ReadReward = readReward
 
-	spent, err := currency.AddCoin(details.Spent, value) // reduce min lock demand left
-	if err != nil {
-		return "", err
-	}
-	details.Spent = spent
-
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
 	if blobber.LastRewardDataReadRound >= rewardRound {
@@ -668,12 +662,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, err
 		}
 		alloc.MovedToChallenge = movedToChallenge
-
-		spent, err := currency.AddCoin(details.Spent, move)
-		if err != nil {
-			return 0, err
-		}
-		details.Spent = spent
 	} else {
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {

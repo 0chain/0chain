@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -63,7 +62,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/errors", common.UserRateLimit(srh.getErrors)),
 		rest.MakeEndpoint(storage+"/allocations", common.UserRateLimit(srh.getAllocations)),
 		rest.MakeEndpoint(storage+"/expired-allocations", common.UserRateLimit(srh.getExpiredAllocations)),
-		rest.MakeEndpoint(storage+"/allocation_min_lock", common.UserRateLimit(srh.getAllocationMinLock)),
 		rest.MakeEndpoint(storage+"/allocation-update-min-lock", common.UserRateLimit(srh.getAllocationUpdateMinLock)),
 		rest.MakeEndpoint(storage+"/allocation", common.UserRateLimit(srh.getAllocation)),
 		rest.MakeEndpoint(storage+"/latestreadmarker", common.UserRateLimit(srh.getLatestReadMarker)),
@@ -1600,105 +1598,6 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock allocation_min_lock
-// Calculates the cost of a new allocation request.
-//
-// parameters:
-//
-//	+name: allocation_data
-//	 description: json marshall of new allocation request input data
-//	 in: query
-//	 type: string
-//	 required: true
-//
-// responses:
-//
-//	200: Int64Map
-//	400:
-//	500:
-func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *http.Request) {
-	var err error
-	allocData := r.URL.Query().Get("allocation_data")
-	var req newAllocationRequest
-	if err = req.decode([]byte(allocData)); err != nil {
-		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
-		return
-	}
-
-	balances := srh.GetQueryStateContext()
-	edb := balances.GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	conf, err := getConfig(balances)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	var request newAllocationRequest
-	if err = request.decode([]byte(allocData)); err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
-		return
-	}
-	if err := request.validate(conf); err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	//TODO use maximum blobber price instead, so we need not to select blobbers here, but estimate the maximum price of blobbers combined
-	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	var sns []*storageNodeResponse
-	for _, b := range blobbers {
-		sn := blobberTableToStorageNode(b)
-		sns = append(sns, &sn)
-	}
-
-	sa, _, err := setupNewAllocation(
-		request,
-		sns,
-		Timings{timings: nil, start: common.ToTime(balances.Now())},
-		balances.Now(),
-		conf,
-		"",
-	)
-
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	cost, err := sa.cost()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	cost64, err := cost.Float64()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	mld, err := sa.restMinLockDemand()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	mld64, err := mld.Float64()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": math.Max(cost64, mld64+cost64*conf.CancellationCharge),
-	}, nil)
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-update-min-lock allocation-update-min-lock
 // Calculates the cost for updating an allocation.
 //
@@ -1784,19 +1683,23 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	if err := updateAllocRestMinLockDemand(&req, &alloc.StorageAllocation, conf); err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	rmld, err := getRestMinLockDemand(&alloc.StorageAllocation, conf.CancellationCharge)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
+	blobberSize := bSize(req.Size, alloc.DataShards)
+	var cost currency.Coin
+	for _, ba := range alloc.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(blobberSize))
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		cost, err = currency.AddCoin(cost, c)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
 	}
 
 	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": rmld,
+		"min_lock_demand": cost,
 	}, nil)
 }
 
@@ -1835,10 +1738,7 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba, err := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
-	if err != nil {
-		return err
-	}
+	ba := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
 
 	removedIdx := 0
 
@@ -1869,51 +1769,6 @@ func changeBlobbersEventDB(
 	sa.BlobberAllocs[removedIdx] = ba
 	sa.BlobberAllocsMap[addID] = ba
 	return nil
-}
-
-func updateAllocRestMinLockDemand(req *updateAllocationRequest, alloc *StorageAllocation, conf *Config) error {
-	var (
-		size   = req.getNewBlobbersSize(alloc) // blobber size
-		gbSize = sizeInGB(size)                // blobber size in GB
-	)
-
-	for _, ba := range alloc.BlobberAllocs {
-		rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit)
-		if err != nil {
-			return common.NewErrInternal(err.Error())
-		}
-
-		nbmld, err := ba.Terms.minLockDemand(gbSize, rdtu, alloc.MinLockDemand)
-		if err != nil {
-			return common.NewErrInternal(err.Error())
-		}
-
-		// min_lock_demand can be increased only
-		if nbmld > ba.MinLockDemand {
-			ba.MinLockDemand = nbmld
-		}
-	}
-	return nil
-}
-
-func getRestMinLockDemand(alloc *StorageAllocation, cancelCharge float64) (currency.Coin, error) {
-	rmld, err := alloc.restMinLockDemand()
-	if err != nil {
-		return 0, common.NewErrInternal(fmt.Sprintf("failed to calculate rest min lock demand: %v", err))
-	}
-
-	cost, err := alloc.cost()
-	if err != nil {
-		return 0, common.NewErrInternal(fmt.Sprintf("failed to calculate cost: %v", err))
-	}
-
-	costF64, err := cost.Float64()
-	if err != nil {
-		return 0, common.NewErrInternal(fmt.Sprintf("failed to convert cost to float64: %v", err))
-	}
-
-	//return	"min_lock_demand": rmld + currency.Coin(costF64*conf.CancellationCharge),
-	return rmld + currency.Coin(costF64*cancelCharge), nil
 }
 
 func updateAllocBlobberTerms(

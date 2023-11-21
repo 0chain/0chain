@@ -138,10 +138,6 @@ definitions:
                 x-go-name: BlobberID
             max_offer_duration:
                 $ref: '#/definitions/Duration'
-            min_lock_demand:
-                format: double
-                type: number
-                x-go-name: MinLockDemand
             read_price:
                 format: int64
                 type: integer
@@ -172,8 +168,6 @@ definitions:
             challenge_pool_integral_value:
                 $ref: '#/definitions/Coin'
             challenge_reward:
-                $ref: '#/definitions/Coin'
-            min_lock_demand:
                 $ref: '#/definitions/Coin'
             penalty:
                 $ref: '#/definitions/Coin'
@@ -1461,14 +1455,6 @@ definitions:
         properties:
             max_offer_duration:
                 $ref: '#/definitions/Duration'
-            min_lock_demand:
-                description: |-
-                    MinLockDemand in number in [0; 1] range. It represents part of
-                    allocation should be locked for the blobber rewards even if
-                    user never write something to the blobber.
-                format: double
-                type: number
-                x-go-name: MinLockDemand
             read_price:
                 $ref: '#/definitions/Coin'
             write_price:

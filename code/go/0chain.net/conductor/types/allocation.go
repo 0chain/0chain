@@ -33,5 +33,4 @@ type Allocation struct {
 	WritePool                currency.Coin `json:"write_pool"`
 	ThirdPartyExtendable     bool          `json:"third_party_extendable"`
 	FileOptions              uint16        `json:"file_options"`
-	MinLockDemand            float64       `json:"min_lock_demand"`
 }

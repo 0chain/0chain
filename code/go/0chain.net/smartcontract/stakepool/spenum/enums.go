@@ -67,8 +67,7 @@ type Reward int
 var rewardString []string
 
 const (
-	MinLockDemandReward Reward = iota
-	BlockRewardMiner
+	BlockRewardMiner Reward = iota
 	BlockRewardSharder
 	BlockRewardBlobber
 	FeeRewardMiner
@@ -84,7 +83,6 @@ const (
 
 func initRewardString() {
 	rewardString = make([]string, NumOfRewards+1)
-	rewardString[MinLockDemandReward] = "min_lock_demand"
 	rewardString[BlockRewardMiner] = "block_reward_miner"
 	rewardString[BlockRewardSharder] = "block_reward_sharder"
 	rewardString[BlockRewardBlobber] = "block_reward_blobber"
