@@ -33,7 +33,7 @@ env:
 jobs:
   CONDUCTOR_NODE_RECOVERY_02_TESTS:
     name: CONDUCTOR-NODE-RECOVERY-02-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test02]
 
     steps:
     - name: Cleanup before restarting conductor tests.
