@@ -1372,11 +1372,11 @@ func (sa *StorageAllocation) isActive(
 			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
 	}
 
-	bSize := sa.bSize()
+	blobberSize := sa.bSize()
 	// filter by blobber's capacity left
-	if blobber.Capacity-blobber.Allocated < bSize {
+	if blobber.Capacity-blobber.Allocated < blobberSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
-			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
+			blobber.ID, blobber.Capacity-blobber.Allocated, blobberSize)
 	}
 
 	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
@@ -1384,9 +1384,9 @@ func (sa *StorageAllocation) isActive(
 		return fmt.Errorf("failed to get unallocated capacity: %v", err)
 	}
 
-	if blobber.Terms.WritePrice > 0 && unallocCapacity < bSize {
+	if blobber.Terms.WritePrice > 0 && unallocCapacity < blobberSize {
 		return fmt.Errorf("blobber %v staked capacity %v is insufficient, wanted %v",
-			blobber.ID, unallocCapacity, bSize)
+			blobber.ID, unallocCapacity, blobberSize)
 	}
 
 	return nil
