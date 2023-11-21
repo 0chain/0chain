@@ -52,7 +52,6 @@ install-mockery:
 	&& tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery \
 	&& cp ./tmp/mockery/mockery $(GOPATH)/bin/ \
 	&& rm -rf ./tmp
-	&& export PATH=$PATH:$(GOPATH)/bin
 
 build-mocks:
 	./generate_mocks.sh
