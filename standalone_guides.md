@@ -1,11 +1,11 @@
-This guide contains step-by-step instructions for installing software dependencies related to Züs 
+This guide contains step-by-step instructions for installing software dependencies related to Züs. 
 
 - [Install WSL with Docker](#install-wsl-with-docker)
   - [Cleanup](#cleanup)
 - [Install Docker Desktop](#install-docker-desktop)
 - [Install Go](#install-go)
 
-## Install WSL with Docker.
+## Install WSL with Docker
 
 1. Install Windows Subsystem for Linux (WSL) from the Microsoft Store.
 
@@ -23,7 +23,7 @@ This guide contains step-by-step instructions for installing software dependenci
 
 ![ubuntu prompt username ](https://github.com/0chain/0chain/assets/65766301/2f27e22c-402e-49f6-ac25-31620ab0ae5a)
 
-5. Install Docker Desktop for Windows forom [here](https://www.docker.com/products/docker-desktop/).
+5. Install Docker Desktop for Windows from [here](https://www.docker.com/products/docker-desktop/).
 
 ![docker desktop for windows](https://github.com/0chain/0chain/assets/65766301/faacf49d-4944-4aba-a106-1caa224cb1b4)
 
@@ -56,3 +56,40 @@ Note: Restart your Windows machine after Docker installation.
 
 3. In Windows Settings, go to Add or Remove Programs, find Docker Desktop, click on the app name, select three dots, and choose Uninstall.
 ![Screenshot (45)](https://github.com/0chain/0chain/assets/65766301/3285ccd3-ea4b-42c3-b8ad-6deab770f3f2)
+
+
+## Install Docker Desktop
+
+* [Linux Installation](#linux-installation)
+* [Mac Installation](#mac-installation)
+* [Windows Installation](#windows-installation)
+
+### Linux Installation
+
+1. To manually download the Debian binary file from the official docker website. You can use the wget command as shown in terminal.
+
+```
+wget https://desktop.docker.com/linux/main/amd64/docker-desktop-4.25.2-amd64.deb
+
+```
+
+2. Once the file is downloaded, install Docker Desktop by running the following apt command:
+
+```
+sudo apt install ./docker-desktop-4.25.2-amd64.deb
+apt-install-docker-desktop-debian-binary
+```
+
+3. Once Docker Desktop is installed, you can use the application manager to search and launch it as shown. Shortly after, the Docker Desktop GUI dashboard will launch. Setup and finally, you will land on the Docker Desktop home page as you can see below with instructions on how to get started with containers.
+
+![Run-sample-container-docker-desktop-ubuntu-768x446](https://github.com/0chain/0chain/assets/65766301/aa856ea9-1d0b-449b-a8d4-8e8a2bc73cc8)
+
+### Mac Installation
+
+
+
+### Windows Installation
+
+
+
+
