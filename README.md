@@ -72,10 +72,9 @@ Quickstart with a convenient bash script for deploying a Züs testnet locally. f
 
  - Linux (Ubuntu Preferred) Version: 20.04 and Above
  - Mac(Apple Silicon or Intel) Version: Big Sur and Above
- - Windows Version: Windows 11 or 10 version 2004 and later requires WSL2. Instructions for installing WSL can be found [here](https://learn.microsoft.com/en-us/windows/wsl/install).
+ - Windows Version: Windows 11 or 10 version 2004 and later requires WSL2. Instructions for installing WSL with docker can be found [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-wsl-with-docker).
  - Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/get-docker/) and Go from [here](https://go.dev/dl/). 
- - Setting up Docker Desktop for Windows with WSL 2 (Windows Subsystem for Linux, version 2) requires additional steps. Instructions can be found [here](https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-containers).
-
+ 
 ### 1. Network setup
 
 1.1 Clone the 0chain repo:
