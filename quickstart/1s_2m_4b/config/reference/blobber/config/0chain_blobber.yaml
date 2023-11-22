@@ -20,14 +20,7 @@ price_worker_in_hours: 12
 #     ./zbox sc-config
 #
 
-# min_lock_demand is value in [0; 1] range; it represents number of tokens the
-# blobber earned even if a user will not read or write something
-# to an allocation; the number of tokens will be calculated by the following
-# formula (regarding the time_unit and allocation duration)
-#
-#     allocation_size * write_price * min_lock_demand
-#
-min_lock_demand: 0.1
+
 # max_offer_duration restrict long contracts where,
 # in the future, prices can be changed
 max_offer_duration: 744h # 31 day

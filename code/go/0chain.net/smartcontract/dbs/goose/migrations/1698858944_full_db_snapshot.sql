@@ -108,7 +108,7 @@ CREATE TABLE allocations (
     latest_closed_challenge_txn text,
     write_pool bigint,
     third_party_extendable boolean DEFAULT false,
-    file_options smallint DEFAULT 63,
+    file_options smallint DEFAULT 63
 );
 
 
