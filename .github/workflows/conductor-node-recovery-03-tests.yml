@@ -99,6 +99,7 @@ jobs:
         cd 0chain
         make install-mockery
 
+        echo $(go env)
         export PATH=$PATH:$(go env GOPATH)/bin
 
         make build-mocks
