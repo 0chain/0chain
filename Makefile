@@ -54,7 +54,7 @@ install-mockery:
 	&& rm -rf ./tmp
 
 build-mocks:
-	PATH=$PATH:$(GOPATH)/bin ./generate_mocks.sh
+	./generate_mocks.sh
 
 install-msgp:
 	@echo "Install msgp..."
