@@ -21,7 +21,6 @@ import (
 )
 
 const testBlobberSavedData = 1000
-const testBlobberUsed = 1000
 
 func init() {
 	logging.Logger = zap.NewNop()
@@ -65,23 +64,19 @@ func TestUpdateBlobberStats(t *testing.T) {
 	ids := setUpBlobbers(t, edb, 10, true)
 	var blobber1, blobber2 Blobber
 	blobber1.ID = ids[0]
-	blobber1.Used = -100 // reduce the used by 100 units
 	blobber1.SavedData = -100
 
 	blobber2.ID = ids[1]
-	blobber2.Used = 200
 	blobber2.SavedData = 200 // increase the savedData by 200 units
 
 	require.NoError(t, edb.updateBlobbersStats([]Blobber{blobber1, blobber2}))
 
 	b1, err := edb.GetBlobber(blobber1.ID)
 	require.NoError(t, err)
-	require.Equal(t, int64(testBlobberUsed-100), b1.Used)
 	require.Equal(t, int64(testBlobberSavedData-100), b1.SavedData)
 
 	b2, err := edb.GetBlobber(blobber2.ID)
 	require.NoError(t, err)
-	require.Equal(t, int64(testBlobberUsed+200), b2.Used)
 	require.Equal(t, int64(testBlobberSavedData+200), b2.SavedData)
 }
 
@@ -230,25 +225,21 @@ func TestEventDb_updateBlobbersAllocatedSavedAndHealth(t *testing.T) {
 	now := common.Now()
 	blobber1.ID = ids[0]
 	blobber1.LastHealthCheck = now
-	blobber1.Used = 300
 	blobber1.SavedData = 300
 
 	blobber2.ID = ids[1]
 	blobber2.LastHealthCheck = now
-	blobber2.Used = 200
 	blobber2.SavedData = 200
 
 	require.NoError(t, edb.updateBlobbersAllocatedSavedAndHealth([]Blobber{blobber1, blobber2}))
 
 	b1, err := edb.GetBlobber(blobber1.ID)
 	require.NoError(t, err)
-	require.Equal(t, int64(300), b1.Used)
 	require.Equal(t, int64(300), b1.SavedData)
 	require.Equal(t, now, b1.LastHealthCheck)
 
 	b2, err := edb.GetBlobber(blobber2.ID)
 	require.NoError(t, err)
-	require.Equal(t, int64(200), b2.Used)
 	require.Equal(t, int64(200), b2.SavedData)
 	require.Equal(t, now, b2.LastHealthCheck)
 }
@@ -271,7 +262,6 @@ func setUpBlobbers(t *testing.T, eventDb *EventDb, number int, withStats bool) [
 		}
 		blobber.BaseURL = blobber.ID + ".com"
 		if withStats {
-			blobber.Used = testBlobberUsed
 			blobber.SavedData = testBlobberSavedData
 		}
 
