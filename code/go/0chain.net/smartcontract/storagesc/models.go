@@ -1368,8 +1368,8 @@ func (sa *StorageAllocation) isActive(
 	}
 	// filter by write price
 	if !sa.WritePriceRange.isMatch(blobber.Terms.WritePrice) {
-		return fmt.Errorf("read price range %v does not match blobber %s write price %v",
-			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+		return fmt.Errorf("write price range %v does not match blobber %s write price %v",
+			sa.WritePriceRange, blobber.ID, blobber.Terms.WritePrice)
 	}
 
 	bSize := sa.bSize()
