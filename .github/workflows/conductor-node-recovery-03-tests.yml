@@ -263,6 +263,7 @@ jobs:
       run: |
         cd token_bridge_authserver
         sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
+        sed -i 's/^ethereum_node_url:\ .*/ethereum_node_url:\ ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }}' config/config.yaml
 
     - name: Add ZCN config
       run: |
