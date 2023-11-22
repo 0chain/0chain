@@ -62,6 +62,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/errors", common.UserRateLimit(srh.getErrors)),
 		rest.MakeEndpoint(storage+"/allocations", common.UserRateLimit(srh.getAllocations)),
 		rest.MakeEndpoint(storage+"/expired-allocations", common.UserRateLimit(srh.getExpiredAllocations)),
+		rest.MakeEndpoint(storage+"/allocation_min_lock", common.UserRateLimit(srh.getAllocationMinLock)),
 		rest.MakeEndpoint(storage+"/allocation-update-min-lock", common.UserRateLimit(srh.getAllocationUpdateMinLock)),
 		rest.MakeEndpoint(storage+"/allocation", common.UserRateLimit(srh.getAllocation)),
 		rest.MakeEndpoint(storage+"/latestreadmarker", common.UserRateLimit(srh.getLatestReadMarker)),
@@ -1598,6 +1599,95 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 	}
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock allocation_min_lock
+// Calculates the cost of a new allocation request.
+//
+// parameters:
+//
+//	+name: allocation_data
+//	 description: json marshall of new allocation request input data
+//	 in: query
+//	 type: string
+//	 required: true
+//
+// responses:
+//
+//	200: Int64Map
+//	400:
+//	500:
+func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *http.Request) {
+	var err error
+	allocData := r.URL.Query().Get("allocation_data")
+	var req newAllocationRequest
+	if err = req.decode([]byte(allocData)); err != nil {
+		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
+		return
+	}
+
+	balances := srh.GetQueryStateContext()
+	edb := balances.GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	var request newAllocationRequest
+	if err = request.decode([]byte(allocData)); err != nil {
+		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
+		return
+	}
+	if err := request.validate(conf); err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	//TODO use maximum blobber price instead, so we need not to select blobbers here, but estimate the maximum price of blobbers combined
+	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	var sns []*storageNodeResponse
+	for _, b := range blobbers {
+		sn := blobberTableToStorageNode(b)
+		sns = append(sns, &sn)
+	}
+
+	sa, _, err := setupNewAllocation(
+		request,
+		sns,
+		Timings{timings: nil, start: common.ToTime(balances.Now())},
+		balances.Now(),
+		conf,
+		"",
+	)
+
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	cost, err := sa.cost()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	cost64, err := cost.Float64()
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	common.Respond(w, r, map[string]interface{}{
+		"min_lock_demand": cost64,
+	}, nil)
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-update-min-lock allocation-update-min-lock
 // Calculates the cost for updating an allocation.
 //
@@ -1615,6 +1705,10 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter, r *http.Request) {
+	var (
+		now = common.Now()
+	)
+
 	balances := srh.GetQueryStateContext()
 	edb := balances.GetEventDB()
 	if edb == nil {
@@ -1641,15 +1735,23 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	conf, err := getConfig(balances)
+	totalAllocCostBeforeUpdate, err := alloc.cost()
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
-	var (
-		now = common.Now()
-	)
+	allocCostFromNowBeforeUpdate, err := alloc.costForRDTU(now)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
 
 	if alloc.Expiration < now {
 		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
@@ -1683,23 +1785,27 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	blobberSize := bSize(req.Size, alloc.DataShards)
-	var cost currency.Coin
-	for _, ba := range alloc.BlobberAllocs {
-		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(blobberSize))
+	var finalAllocCost float64
+	if req.Extend {
+		allocCostAfterUpdate, err := alloc.cost()
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
-		cost, err = currency.AddCoin(cost, c)
+
+		finalAllocCost = float64(allocCostAfterUpdate - (totalAllocCostBeforeUpdate - allocCostFromNowBeforeUpdate))
+	} else {
+		allocCostAfterUpdate, err := alloc.costForRDTU(now)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
+
+		finalAllocCost = float64(allocCostAfterUpdate - allocCostFromNowBeforeUpdate)
 	}
 
 	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": cost,
+		"min_lock_demand": finalAllocCost,
 	}, nil)
 }
 

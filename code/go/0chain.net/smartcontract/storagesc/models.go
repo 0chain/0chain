@@ -1297,6 +1297,32 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
+func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, error) {
+	rdtu, err := sa.restDurationInTimeUnits(now, sa.TimeUnit)
+	if err != nil {
+		return 0, err
+	}
+
+	var cost currency.Coin
+	for _, ba := range sa.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+		if err != nil {
+			return 0, err
+		}
+
+		cWithRDTU, err := currency.MultFloat64(c, rdtu)
+		if err != nil {
+			return 0, err
+		}
+
+		cost, err = currency.AddCoin(cost, cWithRDTU)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return cost, nil
+}
+
 func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
 	cost, err := sa.cost()
 	if err != nil {
