@@ -1135,16 +1135,16 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 }
 
 func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances chainstate.StateContextI, passRates []float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction) error {
-
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
-	if cancellationCharge < sa.WritePool {
-		cancellationCharge = cancellationCharge - sa.WritePool
+	usedWritePool := sa.MovedToChallenge - sa.MovedBack
+
+	if usedWritePool < cancellationCharge {
+		cancellationCharge = cancellationCharge - usedWritePool
 	} else {
-		cancellationCharge = 0
 		return nil
 	}
 
@@ -1194,10 +1194,11 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
-	if cancellationCharge < sa.WritePool {
-		cancellationCharge = cancellationCharge - sa.WritePool
+	usedWritePool := sa.MovedToChallenge - sa.MovedBack
+
+	if usedWritePool < cancellationCharge {
+		cancellationCharge = cancellationCharge - usedWritePool
 	} else {
-		cancellationCharge = 0
 		return nil
 	}
 
