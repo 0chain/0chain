@@ -265,6 +265,8 @@ jobs:
         sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
         sed -i "s,ethereum_node_url: .*$,ethereum_node_url: ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }},g" config/config.yaml
 
+        cat config/config.yaml | sed 's/./& /g'
+
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
@@ -285,6 +287,8 @@ jobs:
           ethereum_address: 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97
           password: "12345678"
         EOF
+
+        cat ~/.zcn/config.yaml | sed 's/./& /g'
   
     - name: List pwd zcn
       run: |
