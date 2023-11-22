@@ -1134,6 +1134,7 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 	return nil
 }
 
+// Cancellation charge
 func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances chainstate.StateContextI, passRates []float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction) error {
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
@@ -1144,6 +1145,10 @@ func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances ch
 
 	if usedWritePool < cancellationCharge {
 		cancellationCharge = cancellationCharge - usedWritePool
+
+		if sa.WritePool < cancellationCharge {
+			cancellationCharge = sa.WritePool
+		}
 	} else {
 		return nil
 	}
@@ -1198,11 +1203,21 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 
 	if usedWritePool < cancellationCharge {
 		cancellationCharge = cancellationCharge - usedWritePool
+
+		if sa.WritePool < cancellationCharge {
+			cancellationCharge = sa.WritePool
+		}
 	} else {
 		return nil
 	}
 
-	totalWritePrice := ba.Terms.WritePrice
+	totalWritePrice := currency.Coin(0)
+	for _, ba := range sa.BlobberAllocs {
+		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
+		if err != nil {
+			return fmt.Errorf("failed to add write price: %v", err)
+		}
+	}
 
 	totalCancellationChargePaid, err := ba.payCancellationCharge(sa, sp, balances, sc, passRate, totalWritePrice, cancellationCharge)
 	if err != nil {
@@ -1289,8 +1304,8 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
-func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, error) {
-	rdtu, err := sa.restDurationInTimeUnits(now, sa.TimeUnit)
+func (sa *StorageAllocation) costForDTU(from, to common.Timestamp) (currency.Coin, error) {
+	dtu, err := sa.durationInTimeUnits(to-from, sa.TimeUnit)
 	if err != nil {
 		return 0, err
 	}
@@ -1302,12 +1317,12 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 			return 0, err
 		}
 
-		cWithRDTU, err := currency.MultFloat64(c, rdtu)
+		cWithDTU, err := currency.MultFloat64(c, dtu)
 		if err != nil {
 			return 0, err
 		}
 
-		cost, err = currency.AddCoin(cost, cWithRDTU)
+		cost, err = currency.AddCoin(cost, cWithDTU)
 		if err != nil {
 			return 0, err
 		}
@@ -1316,7 +1331,7 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 }
 
 func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
-	cost, err := sa.cost()
+	cost, err := sa.costForDTU(sa.StartTime, sa.Expiration)
 	if err != nil {
 		return 0, err
 	}
@@ -1335,6 +1350,36 @@ func (sa *StorageAllocation) checkFunding() error {
 	}
 
 	return nil
+}
+
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(allocBeforeUpdate *StorageAllocation, now common.Timestamp) (currency.Coin, error) {
+	costOfAllocBeforeUpdate, err := allocBeforeUpdate.costForDTU(allocBeforeUpdate.StartTime, now)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+	}
+
+	costOfAllocAfterUpdate, err := sa.costForDTU(now, sa.Expiration)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+	}
+
+	totalWritePoolBalance := allocBeforeUpdate.WritePool + (allocBeforeUpdate.MovedToChallenge - allocBeforeUpdate.MovedBack)
+
+	var remainingTokensInWP currency.Coin
+	if totalWritePoolBalance > costOfAllocBeforeUpdate {
+		remainingTokensInWP = totalWritePoolBalance - costOfAllocBeforeUpdate
+	} else {
+		remainingTokensInWP = 0
+	}
+
+	var tokensRequiredToLock currency.Coin
+	if remainingTokensInWP < costOfAllocAfterUpdate {
+		tokensRequiredToLock = costOfAllocAfterUpdate - remainingTokensInWP
+	} else {
+		tokensRequiredToLock = 0
+	}
+
+	return tokensRequiredToLock, nil
 }
 
 func (sa *StorageAllocation) bSize() int64 {
@@ -1398,6 +1443,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			}
 
 			sa.BlobberAllocs[i] = addedBlobberAllocation
+			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
 		}
 	}

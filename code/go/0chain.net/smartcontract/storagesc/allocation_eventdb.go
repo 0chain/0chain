@@ -20,7 +20,7 @@ type StorageAllocationBlobbers struct {
 	Blobbers          []*storageNodeResponse `json:"blobbers"`
 }
 
-func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
+func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, *StorageAllocation, error) {
 	storageNodes := make([]*storageNodeResponse, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
@@ -37,7 +37,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	blobbers, err := eventDb.GetBlobbersFromIDs(blobberIDs)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
 
 	var gbSize = sizeInGB(bSize(alloc.Size, alloc.DataShards))
@@ -108,7 +108,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	return &StorageAllocationBlobbers{
 		StorageAllocation: *sa,
 		Blobbers:          storageNodes,
-	}, nil
+	}, sa, nil
 }
 
 func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
@@ -234,7 +234,7 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit c
 	}
 
 	for _, alloc := range allocs {
-		sa, err := allocationTableToStorageAllocationBlobbers(&alloc, eventDb)
+		sa, _, err := allocationTableToStorageAllocationBlobbers(&alloc, eventDb)
 		if err != nil {
 			return nil, err
 		}
@@ -257,7 +257,7 @@ func getExpiredAllocationsFromDb(blobberID string, eventDb *event.EventDb) ([]st
 func prepareAllocationsResponse(eventDb *event.EventDb, eAllocs []event.Allocation) ([]*StorageAllocationBlobbers, error) {
 	sas := make([]*StorageAllocationBlobbers, 0, len(eAllocs))
 	for _, eAlloc := range eAllocs {
-		sa, err := allocationTableToStorageAllocationBlobbers(&eAlloc, eventDb)
+		sa, _, err := allocationTableToStorageAllocationBlobbers(&eAlloc, eventDb)
 		if err != nil {
 			return nil, err
 		}

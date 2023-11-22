@@ -1639,19 +1639,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	totalAllocCostBeforeUpdate, err := alloc.cost()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	allocCostFromNowBeforeUpdate, err := alloc.costForRDTU(now)
+	alloc, allocBeforeUpdate, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1695,27 +1683,14 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	var finalAllocCost float64
-	if req.Extend {
-		allocCostAfterUpdate, err := alloc.cost()
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
-		}
-
-		finalAllocCost = float64(allocCostAfterUpdate - (totalAllocCostBeforeUpdate - allocCostFromNowBeforeUpdate))
-	} else {
-		allocCostAfterUpdate, err := alloc.costForRDTU(now)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
-		}
-
-		finalAllocCost = float64(allocCostAfterUpdate - allocCostFromNowBeforeUpdate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(allocBeforeUpdate, now)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
 	}
 
 	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": finalAllocCost,
+		"min_lock_demand": tokensRequiredToLock,
 	}, nil)
 }
 
@@ -1969,7 +1944,7 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
 	}
-	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
+	sa, _, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
 		logging.Logger.Error("unable to create allocation response",
 			zap.String("allocation", allocationID),
