@@ -1135,17 +1135,13 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 }
 
 func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances chainstate.StateContextI, passRates []float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction) error {
-	allocCost, err := sa.cost()
-	if err != nil {
-		return fmt.Errorf("failed to get allocation cost: %v", err)
-	}
 
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
-	if allocCost-cancellationCharge < sa.WritePool {
+	if cancellationCharge < sa.WritePool {
 		cancellationCharge = cancellationCharge - sa.WritePool
 	} else {
 		cancellationCharge = 0
@@ -1193,17 +1189,12 @@ func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances ch
 }
 
 func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, passRate float64, conf *Config, sc *StorageSmartContract, clientID string, ba *BlobberAllocation) error {
-	allocCost, err := sa.cost()
-	if err != nil {
-		return fmt.Errorf("failed to get allocation cost: %v", err)
-	}
-
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
-	if allocCost-cancellationCharge < sa.WritePool {
+	if cancellationCharge < sa.WritePool {
 		cancellationCharge = cancellationCharge - sa.WritePool
 	} else {
 		cancellationCharge = 0
