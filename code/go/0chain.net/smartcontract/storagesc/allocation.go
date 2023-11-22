@@ -336,7 +336,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			fmt.Sprintf("not enough tokens to cover the allocation cost"+" (%d < %d)", sa.WritePool, cost))
 	}
 
-	if err := sa.checkFunding(conf.CancellationCharge); err != nil {
+	if err := sa.checkFunding(); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_write_pool")
@@ -799,9 +799,8 @@ func (sc *StorageSmartContract) extendAllocation(
 	balances chainstate.StateContextI,
 ) (err error) {
 	var (
-		diff   = req.getBlobbersSizeDiff(alloc) // size difference
-		size   = req.getNewBlobbersSize(alloc)  // blobber size
-		gbSize = sizeInGB(size)                 // blobber size in GB
+		diff = req.getBlobbersSizeDiff(alloc) // size difference
+		size = req.getNewBlobbersSize(alloc)  // blobber size
 
 		// keep original terms to adjust challenge pool value
 		originalTerms = make([]Terms, 0, len(alloc.BlobberAllocs))
@@ -983,7 +982,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			return "", err
 		}
 
-		if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
+		if err := alloc.checkFunding(); err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
 		}
 	} else /* Owner Actions */ {
@@ -1014,7 +1013,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			}
 		}
 
-		if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
+		if err := alloc.checkFunding(); err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
 		}
 

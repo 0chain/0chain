@@ -41,7 +41,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}
 
 	var gbSize = sizeInGB(bSize(alloc.Size, alloc.DataShards))
-	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &storageNodeResponse{
