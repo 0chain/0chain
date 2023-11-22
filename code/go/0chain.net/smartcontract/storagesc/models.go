@@ -1353,7 +1353,7 @@ func (sa *StorageAllocation) checkFunding() error {
 }
 
 func (sa *StorageAllocation) requiredTokensForUpdateAllocation(allocBeforeUpdate *StorageAllocation, now common.Timestamp) (currency.Coin, error) {
-	costOfAllocBeforeUpdate, err := allocBeforeUpdate.costForDTU(allocBeforeUpdate.StartTime, now)
+	costOfAllocBeforeUpdate, err := allocBeforeUpdate.costForDTU(now, sa.Expiration)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
@@ -1363,18 +1363,9 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(allocBeforeUpdate
 		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
-	totalWritePoolBalance := allocBeforeUpdate.WritePool + (allocBeforeUpdate.MovedToChallenge - allocBeforeUpdate.MovedBack)
-
-	var remainingTokensInWP currency.Coin
-	if totalWritePoolBalance > costOfAllocBeforeUpdate {
-		remainingTokensInWP = totalWritePoolBalance - costOfAllocBeforeUpdate
-	} else {
-		remainingTokensInWP = 0
-	}
-
 	var tokensRequiredToLock currency.Coin
-	if remainingTokensInWP < costOfAllocAfterUpdate {
-		tokensRequiredToLock = costOfAllocAfterUpdate - remainingTokensInWP
+	if costOfAllocBeforeUpdate < costOfAllocAfterUpdate {
+		tokensRequiredToLock = costOfAllocAfterUpdate - costOfAllocBeforeUpdate
 	} else {
 		tokensRequiredToLock = 0
 	}
