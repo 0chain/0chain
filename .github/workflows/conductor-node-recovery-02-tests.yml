@@ -40,7 +40,7 @@ jobs:
     runs-on: ${{ github.event.inputs.runner_label }}
 
     steps:
-    - name: Setup PATH
+    - name: Setup Environment Variables
       run: |
         export HOME="/root"
         go env -w GO111MODULE=auto
