@@ -73,7 +73,7 @@ Quickstart with a convenient bash script for deploying a Züs testnet locally. f
  - Linux (Ubuntu Preferred) Version: 20.04 and Above
  - Mac(Apple Silicon or Intel) Version: Big Sur and Above
  - Windows Version: Windows 11 or 10 version 2004 and later requires WSL2. Instructions for installing WSL with docker can be found [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-wsl-with-docker).
- - Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/get-docker/) and Go from [here](https://go.dev/dl/). 
+ - Docker and Go must be installed to run the testnet containers. Instructions for installing Docker can be found [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-docker-desktop) and for Go find installation instructions [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-go). 
  
 ### 1. Network setup
 
@@ -153,7 +153,7 @@ Note: For miner and sharder URLs to work locally, update 0dns/docker.local/confi
 
 ## 5. Building the Miner and Sharder Nodes
 
- 5.1) Inside the git/0chain directory:
+ 5.1) Navigate to 0chain directory:
 
    ```
    cd 0chain
@@ -169,10 +169,8 @@ Note: For miner and sharder URLs to work locally, update 0dns/docker.local/confi
    ```
     make build-mocks 
    ```
-   Note: Mocks have to be built once in the beginning. Building mocks require mockery which can be installed using brew package manager.
-   -  Brew package manager can be installed from [here](https://brew.sh/). 
-   -  Mockery can be installed using brew via following command `brew install mockery`
-
+   Note: Mocks have to be built once in the beginning. Building mocks require mockery which can be installed from [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-brew-and-mockery).
+   
 5.4) Building the miners and sharders. From the git/0chain directory:
 
    ```
