@@ -43,7 +43,7 @@ jobs:
 
       - name: Install Go (v1.20.11)
         run: |
-          rm go1.20.11.linux-amd64.tar.gz
+          rm go1.20.11.linux-amd64.tar.gz || true
           wget https://go.dev/dl/go1.20.11.linux-amd64.tar.gz
           rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.11.linux-amd64.tar.gz
           echo $GITHUB_ENV
@@ -79,7 +79,7 @@ jobs:
       
       - name: Install Herumi BLS/MCL (latest)
         run: |
-          rm -rf bls
+          rm -rf bls || true
           git clone --recursive https://github.com/herumi/bls
           cd bls
           make -C mcl -j 4 lib/libmclbn256.a install
