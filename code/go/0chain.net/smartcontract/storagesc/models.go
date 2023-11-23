@@ -1304,34 +1304,8 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
-func (sa *StorageAllocation) costForDTU(from, to common.Timestamp) (currency.Coin, error) {
-	dtu, err := sa.durationInTimeUnits(to-from, sa.TimeUnit)
-	if err != nil {
-		return 0, err
-	}
-
-	var cost currency.Coin
-	for _, ba := range sa.BlobberAllocs {
-		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
-		if err != nil {
-			return 0, err
-		}
-
-		cWithDTU, err := currency.MultFloat64(c, dtu)
-		if err != nil {
-			return 0, err
-		}
-
-		cost, err = currency.AddCoin(cost, cWithDTU)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return cost, nil
-}
-
 func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
-	cost, err := sa.costForDTU(sa.StartTime, sa.Expiration)
+	cost, err := sa.cost()
 	if err != nil {
 		return 0, err
 	}
@@ -1352,23 +1326,13 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(allocBeforeUpdate *StorageAllocation, now common.Timestamp) (currency.Coin, error) {
-	costOfAllocBeforeUpdate, err := allocBeforeUpdate.costForDTU(now, sa.Expiration)
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation() (currency.Coin, error) {
+	costOfAllocAfterUpdate, err := sa.cost()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
-	costOfAllocAfterUpdate, err := sa.costForDTU(now, sa.Expiration)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
-	}
-
-	var tokensRequiredToLock currency.Coin
-	if costOfAllocBeforeUpdate < costOfAllocAfterUpdate {
-		tokensRequiredToLock = costOfAllocAfterUpdate - costOfAllocBeforeUpdate
-	} else {
-		tokensRequiredToLock = 0
-	}
+	tokensRequiredToLock := costOfAllocAfterUpdate - (sa.WritePool + sa.MovedToChallenge - sa.MovedBack)
 
 	return tokensRequiredToLock, nil
 }

@@ -934,14 +934,12 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
-	if request.OwnerID == "" {
-		request.OwnerID = t.ClientID
+	if request.Size > 0 {
+		request.Extend = true
 	}
 
-	allocBeforeUpdate, err := sc.getAllocation(request.ID, balances)
-	if err != nil {
-		return "", common.NewError("allocation_updating_failed",
-			"can't get existing allocation: "+err.Error())
+	if request.OwnerID == "" {
+		request.OwnerID = t.ClientID
 	}
 
 	var alloc *StorageAllocation
@@ -1041,7 +1039,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(allocBeforeUpdate, t.CreationDate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation()
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
