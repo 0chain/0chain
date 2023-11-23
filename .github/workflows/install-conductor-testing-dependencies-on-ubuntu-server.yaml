@@ -49,6 +49,7 @@ jobs:
           echo "PATH=\$PATH:/usr/local/go/bin" >> $GITHUB_ENV
           export PATH=$PATH:/usr/local/go/bin
           go version
+          rm go1.20.11.linux-amd64.tar.gz
       
       - name: Install Docker (latest)
         run: |
