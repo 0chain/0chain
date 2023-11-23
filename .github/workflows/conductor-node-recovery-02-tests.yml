@@ -43,8 +43,7 @@ jobs:
         go env GOROOT
         go env GOPATH
         echo "HOME=$HOME" >> $GITHUB_ENV
-        echo "PATH=$PATH:$(go env GOROOT)/bin" >> $GITHUB_ENV
-        echo "PATH=$PATH:$(go env GOPATH)/bin" >> $GITHUB_ENV
+        echo "PATH=$PATH:$(go env GOROOT)/bin:$(go env GOPATH)/bin" >> $GITHUB_ENV
     - name: Cleanup before restarting conductor tests.
       run: |
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
