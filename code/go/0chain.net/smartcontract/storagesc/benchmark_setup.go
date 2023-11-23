@@ -29,9 +29,7 @@ import (
 )
 
 const (
-	mockMinLockDemand            = 1
 	mockFinalizedAllocationIndex = 2
-	mockAllocationMinLockDemand  = 0.1
 )
 
 func AddMockAllocations(
@@ -87,10 +85,9 @@ func addMockAllocation(
 			FailedChallenges:          2,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
-		MinLockDemand: mockAllocationMinLockDemand,
-		TimeUnit:      viper.GetDuration(sc.TimeUnit),
-		Finalized:     i == mockFinalizedAllocationIndex,
-		WritePool:     2e10,
+		TimeUnit:  viper.GetDuration(sc.TimeUnit),
+		Finalized: i == mockFinalizedAllocationIndex,
+		WritePool: 2e10,
 	}
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
@@ -112,7 +109,6 @@ func addMockAllocation(
 				LastestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 			},
 			Terms:                         getMockBlobberTerms(),
-			MinLockDemand:                 mockMinLockDemand,
 			AllocationRoot:                encryption.Hash("allocation root"),
 			LastWriteMarker:               &WriteMarker{},
 			LatestFinalizedChallCreatedAt: 0,
@@ -283,7 +279,7 @@ func AddMockChallengePools(eventDb *event.EventDb, balances cstate.StateContextI
 		allocationId := getMockAllocationId(i)
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(ADDRESS, allocationId)
-		cp.Balance = mockMinLockDemand * 100
+		cp.Balance = 10
 		if _, err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
 			log.Fatal(err)
 		}
@@ -907,7 +903,6 @@ func SetMockConfig(
 	conf.HealthCheckPeriod = 1 * time.Hour
 	conf.BlobberSlash = 0.1
 	conf.CancellationCharge = 0.2
-	conf.MinLockDemand = mockAllocationMinLockDemand
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0

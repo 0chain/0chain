@@ -41,7 +41,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}
 
 	var gbSize = sizeInGB(bSize(alloc.Size, alloc.DataShards))
-	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &storageNodeResponse{
@@ -61,18 +60,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 		terms := blobberTermsMap[b.ID]
 
-		bwF := gbSize * alloc.MinLockDemand * rdtu
-		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
-		if err != nil {
-			return nil, err
-		}
-
 		ba := &BlobberAllocation{
-			BlobberID:     b.ID,
-			AllocationID:  alloc.AllocationID,
-			Size:          int64(gbSize),
-			Terms:         terms,
-			MinLockDemand: minLockDemand,
+			BlobberID:    b.ID,
+			AllocationID: alloc.AllocationID,
+			Size:         int64(gbSize),
+			Terms:        terms,
 		}
 		blobberDetails = append(blobberDetails, ba)
 		blobberMap[b.ID] = ba
@@ -111,7 +103,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
-		MinLockDemand:     alloc.MinLockDemand,
 	}
 
 	return &StorageAllocationBlobbers{
@@ -146,7 +137,6 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		WritePool:            sa.WritePool,
 		ThirdPartyExtendable: sa.ThirdPartyExtendable,
 		FileOptions:          sa.FileOptions,
-		MinLockDemand:        sa.MinLockDemand,
 	}
 
 	if sa.Stats != nil {

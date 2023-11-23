@@ -120,27 +120,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getAllocations,
 			},
 			{
-				FuncName: "allocation_min_lock",
-				Params: map[string]string{
-					"allocation_data": func() string {
-						var blobbers []string
-						for i := 0; i < viper.GetInt(bk.NumBlobbersPerAllocation); i++ {
-							blobbers = append(blobbers, getMockBlobberId(i))
-						}
-						nar, _ := (&newAllocationRequest{
-							DataShards:      len(blobbers) / 2,
-							ParityShards:    len(blobbers) / 2,
-							Size:            10 * viper.GetInt64(bk.StorageMinAllocSize),
-							Blobbers:        blobbers,
-							ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-							WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-						}).encode()
-						return string(nar)
-					}(),
-				},
-				Endpoint: srh.getAllocationMinLock,
-			},
-			{
 				FuncName: "allocation-update-min-lock",
 				Params: map[string]string{
 					"data": func() string {

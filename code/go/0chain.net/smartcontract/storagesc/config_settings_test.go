@@ -486,8 +486,6 @@ func getConfField(conf Config, field string) interface{} {
 		return conf.MaxIndividualFreeAllocation
 	case CancellationCharge:
 		return conf.CancellationCharge
-	case MinLockDemand:
-		return conf.MinLockDemand
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
 	case FreeAllocationParityShards:

@@ -46,7 +46,6 @@ type Allocation struct {
 	WritePool                currency.Coin `json:"write_pool"`
 	ThirdPartyExtendable     bool          `json:"third_party_extendable"`
 	FileOptions              uint16        `json:"file_options"`
-	MinLockDemand            float64       `json:"min_lock_demand"`
 
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -159,7 +158,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"latest_closed_challenge_txn",
 		"third_party_extendable",
 		"file_options",
-		"min_lock_demand",
 	}
 
 	columns, err := Columnize(allocs)
