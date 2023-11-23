@@ -29,7 +29,6 @@ type Blobber struct {
 
 	Capacity     int64 `json:"capacity"`   // total blobber capacity
 	Allocated    int64 `json:"allocated"`  // allocated capacity
-	Used         int64 `json:"used"`       // total of files saved on blobber
 	SavedData    int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData     int64 `json:"read_data"`
 	NotAvailable bool  `json:"not_available"`
@@ -171,20 +170,17 @@ func (edb *EventDb) updateBlobbersAllocatedSavedAndHealth(blobbers []Blobber) er
 	var allocated []int64
 	var savedData []int64
 	var lastHealthCheck []int64
-	var used []int64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		allocated = append(allocated, m.Allocated)
 		savedData = append(savedData, m.SavedData)
 		lastHealthCheck = append(lastHealthCheck, int64(m.LastHealthCheck))
-		used = append(used, m.Used)
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
 		AddUpdate("allocated", allocated).
 		AddUpdate("last_health_check", lastHealthCheck).
 		AddUpdate("saved_data", savedData).
-		AddUpdate("used", used).
 		Exec(edb).Error
 
 }
@@ -350,16 +346,13 @@ func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
 
 func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
 	var ids []string
-	var used []int64
 	var savedData []int64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
-		used = append(used, m.Used)
 		savedData = append(savedData, m.SavedData)
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
-		AddUpdate("used", used, "blobbers.used + t.used").
 		AddUpdate("saved_data", savedData, "blobbers.saved_data + t.saved_data").
 		AddUpdate("read_data", savedData, "blobbers.read_data + t.read_data").Exec(edb).Error
 }
@@ -370,7 +363,6 @@ func mergeUpdateBlobberStatsEvents() *eventsMergerImpl[Blobber] {
 
 func withBlobberStatsMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *Blobber) (*Blobber, error) {
-		a.Used += b.Used
 		a.SavedData += b.SavedData
 		a.ReadData += b.ReadData
 		return a, nil

@@ -1028,7 +1028,6 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
 	bb := event.Blobber{
 		Provider:  event.Provider{ID: w.BlobberID},
-		Used:      w.Size,
 		SavedData: w.Size,
 	}
 

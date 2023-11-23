@@ -80,7 +80,6 @@ func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.Stat
 		},
 		Allocated: sn.Allocated,
 		SavedData: sn.SavedData,
-		Used:      sn.SavedData,
 	})
 }
 
