@@ -1332,7 +1332,15 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation() (currency.Coin,
 		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
-	tokensRequiredToLock := costOfAllocAfterUpdate - (sa.WritePool + sa.MovedToChallenge - sa.MovedBack)
+	totalWritePool := sa.WritePool + sa.MovedToChallenge - sa.MovedBack
+
+	var tokensRequiredToLock currency.Coin
+
+	if totalWritePool < costOfAllocAfterUpdate {
+		tokensRequiredToLock = costOfAllocAfterUpdate - totalWritePool
+	} else {
+		tokensRequiredToLock = 0
+	}
 
 	return tokensRequiredToLock, nil
 }

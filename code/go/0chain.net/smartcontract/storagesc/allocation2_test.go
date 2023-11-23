@@ -168,8 +168,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 		Stats: &StorageAllocationStats{
 			UsedSize: 1073741824,
 		},
-		Size:      4560,
-		WritePool: 400000000,
+		Size:             4560,
+		WritePool:        400000000,
+		MovedToChallenge: 40000000,
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
@@ -305,7 +306,9 @@ func TestFinalizeAllocation(t *testing.T) {
 			UsedSize:       205,
 			OpenChallenges: 3,
 		},
-		Size: 4560,
+		Size:             4560,
+		WritePool:        400000000000,
+		MovedToChallenge: 400000000,
 	}
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
@@ -370,8 +373,6 @@ func TestFinalizeAllocation(t *testing.T) {
 		}
 	}
 	var challengePoolBalance = int64(7000000)
-
-	allocation.WritePool = currency.Coin(10000000000000000000)
 
 	t.Run("finalize allocation", func(t *testing.T) {
 		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, challengePoolBalance, allocation.Expiration, challenges, ctx)
@@ -463,6 +464,18 @@ func testCancelAllocation(
 	var cancellationCharges []int64
 	totalCancellationCharge, _ := sAllocation.cancellationCharge(0.2)
 
+	usedWritePool := sAllocation.MovedToChallenge - 661111
+
+	if usedWritePool < totalCancellationCharge {
+		totalCancellationCharge = totalCancellationCharge - usedWritePool
+
+		if sAllocation.WritePool < totalCancellationCharge {
+			totalCancellationCharge = sAllocation.WritePool
+		}
+	} else {
+		totalCancellationCharge = 0
+	}
+
 	totalWritePrice := currency.Coin(0)
 
 	for _, ba := range f.allocation.BlobberAllocs {
@@ -494,7 +507,7 @@ func testCancelAllocation(
 
 	// get alloc owner client balance to see if refund was made
 	amt, _ := ctx.GetClientBalance(sAllocation.Owner)
-	require.Equal(t, currency.Coin(100660834), amt)
+	require.Equal(t, currency.Coin(130165279), amt)
 	return nil
 }
 
@@ -587,6 +600,18 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 
 	var cancellationCharges []int64
 	totalCancellationCharge, _ := sAllocation.cancellationCharge(0.2)
+
+	usedWritePool := sAllocation.MovedToChallenge - 6929691
+
+	if usedWritePool < totalCancellationCharge {
+		totalCancellationCharge = totalCancellationCharge - usedWritePool
+
+		if sAllocation.WritePool < totalCancellationCharge {
+			totalCancellationCharge = sAllocation.WritePool
+		}
+	} else {
+		totalCancellationCharge = 0
+	}
 
 	totalWritePrice := currency.Coin(0)
 

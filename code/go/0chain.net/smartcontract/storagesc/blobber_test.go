@@ -304,7 +304,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		var wpb, cpb = alloc.WritePool, cp.Balance
-		require.EqualValues(t, currency.Coin(9995118882922), wpb)
+		require.EqualValues(t, currency.Coin(10000000000000), wpb)
 		require.EqualValues(t, currency.Coin(4881117078), cpb)
 
 		tp += 100
@@ -368,7 +368,7 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
-		require.EqualValues(t, currency.Coin(9997559253081), wpb1i)
+		require.EqualValues(t, currency.Coin(10000000000000), wpb1i)
 		require.EqualValues(t, currency.Coin(2440746919), cpb1i)
 		require.EqualValues(t, currency.Coin(40*x10), blobb1)
 
@@ -416,7 +416,7 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
-		require.EqualValues(t, currency.Coin(9997559253081), apb2i)
+		require.EqualValues(t, currency.Coin(10000000000000), apb2i)
 		require.EqualValues(t, currency.Coin(2443798559), cpb2i)
 
 		require.EqualValues(t, currency.Coin(40*x10), blobb2)
