@@ -1,7 +1,7 @@
 This guide contains step-by-step instructions for installing software dependencies related to Züs. 
 
 - [Install WSL with Docker](#install-wsl-with-docker)
-  - [Cleanup](#cleanup)
+    - [Cleanup](#cleanup)
 - [Install Docker Desktop](#install-docker-desktop)
    - [Linux Installation](#linux-installation)
    - [Mac Installation](#mac-installation)
@@ -10,7 +10,9 @@ This guide contains step-by-step instructions for installing software dependenci
    - [Go Linux Installation ](#go-linux-installation)
    - [Go Mac Installation](#go-mac-installation)
    - [Go Windows Installation](#go-windows-installation)
-    
+- [Install Brew and Mockery](#install-brew-and-mockery)
+   - [Linux or WSL](#linux-or-wsl)    
+   - [Mac](#mac)
 
 ## Install WSL with Docker
 
@@ -187,3 +189,101 @@ The command above should print the installed version of Go.
     go version
   ```
   The command above should print the installed version of Go.
+
+## Install Brew and Mockery 
+
+### Linux or WSL 
+
+1. Open Terminal and install build tools using the command below:
+
+```
+sudo apt-get install build-essential procps curl file git
+```
+2. Install Homebrew using the command below:
+
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+In case getting the error below when running the command above:
+```
+curl: (28) Failed to connect to raw.githubusercontent.com port 443
+```
+a) Open the /etc/hosts file using terminal.
+```
+sudo nano /etc/hosts
+```
+b)Enter your password.
+c)Add the following IP address at the end of the file:
+```
+185.199.108.133 raw.githubusercontent.com 
+```             
+d)Save and close the file and then try installing again.
+
+3. Add homebrew to the `PATH` using command below.
+
+```
+echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/<your_linux_username>/.bashrc 
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+```
+4. Now verify that Homebrew is set up correctly. Run this command:
+
+```
+brew doctor
+```
+If no updates are required at this time, you’ll receive the following output:
+```
+Your system is ready to brew.
+```
+5. Install mockery using the command below:
+
+```
+brew install mockery
+```
+6. Verify mockery is installed using the command below:
+
+```
+mockery --version
+```
+Output should be similar to response below:
+```
+23 Nov 23 16:44 IST INF couldn't read any config file version=v2.38.0
+23 Nov 23 16:44 IST INF Starting mockery dry-run=false version=v2.38.0
+23 Nov 23 16:44 IST INF Using config:  dry-run=false version=v2.38.0
+v2.38.0
+```
+### Mac
+
+1. Download the Homebrew mac .pkg installer from [here](https://github.com/Homebrew/brew/releases/download/4.1.21/Homebrew-4.1.21.pkg).
+
+2. Run the installer and follow the prompts for installation.
+
+3. After completing the installtion and opeen terminal and type `brew` there can be the following error:
+```
+brew
+Error: You have not agreed to the Xcode license. Please resolve this by running the command below:
+sudo xcodebuild -license accept
+```
+Note: Also if you haven't already installed XCode Command Line Tools on your mac, you'll see a message that "The XCode Command Line Tools will be installed." Press return to continue when prompted by the Homebrew installation script. It takes one to two minutes to download and install the Command Line Tools
+
+4. Now install mockery using the command below:
+
+```
+brew install mockery
+```
+5. Verify mockery is installed using the command below:
+
+```
+mockery --version
+```
+Output should be similar to response below:
+```
+23 Nov 23 16:44 IST INF couldn't read any config file version=v2.38.0
+23 Nov 23 16:44 IST INF Starting mockery dry-run=false version=v2.38.0
+23 Nov 23 16:44 IST INF Using config:  dry-run=false version=v2.38.0
+v2.38.0
+```
+
+
+
+
+
