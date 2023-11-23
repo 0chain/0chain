@@ -89,7 +89,6 @@ jobs:
       
       - name: Install mockery (latest)
         run: |
-          echo HOME = $HOME
           export HOME=/root
           go env -w GO111MODULE=auto
           go env -w GOPATH=$HOME/go
