@@ -252,7 +252,6 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 	updateColumns := []string{
 		"read_price",
 		"write_price",
-		"min_lock_demand",
 		"max_offer_duration",
 		"capacity",
 		"allocated",

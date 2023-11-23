@@ -47,7 +47,6 @@ const (
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
 	CancellationCharge
-	MinLockDemand
 
 	FreeAllocationDataShards
 	FreeAllocationParityShards
@@ -156,7 +155,6 @@ func initSettingName() {
 	SettingName[MaxTotalFreeAllocation] = "max_total_free_allocation"
 	SettingName[MaxIndividualFreeAllocation] = "max_individual_free_allocation"
 	SettingName[CancellationCharge] = "cancellation_charge"
-	SettingName[MinLockDemand] = "min_lock_demand"
 	SettingName[FreeAllocationDataShards] = "free_allocation_settings.data_shards"
 	SettingName[FreeAllocationParityShards] = "free_allocation_settings.parity_shards"
 	SettingName[FreeAllocationSize] = "free_allocation_settings.size"
@@ -241,7 +239,6 @@ func initSettings() {
 		MaxTotalFreeAllocation.String():           {MaxTotalFreeAllocation, config.CurrencyCoin},
 		MaxIndividualFreeAllocation.String():      {MaxIndividualFreeAllocation, config.CurrencyCoin},
 		CancellationCharge.String():               {CancellationCharge, config.Float64},
-		MinLockDemand.String():                    {MinLockDemand, config.Float64},
 		FreeAllocationDataShards.String():         {FreeAllocationDataShards, config.Int},
 		FreeAllocationParityShards.String():       {FreeAllocationParityShards, config.Int},
 		FreeAllocationSize.String():               {FreeAllocationSize, config.Int64},
@@ -468,8 +465,6 @@ func (conf *Config) setFloat64(key string, change float64) error {
 		conf.ValidatorReward = change
 	case CancellationCharge:
 		conf.CancellationCharge = change
-	case MinLockDemand:
-		conf.MinLockDemand = change
 	case StakePoolKillSlash:
 		conf.StakePool.KillSlash = change
 	case BlobberSlash:
@@ -661,8 +656,6 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MaxIndividualFreeAllocation
 	case CancellationCharge:
 		return conf.CancellationCharge
-	case MinLockDemand:
-		return conf.MinLockDemand
 	case FreeAllocationDataShards:
 		return conf.FreeAllocationSettings.DataShards
 	case FreeAllocationParityShards:

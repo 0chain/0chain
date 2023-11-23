@@ -3192,7 +3192,6 @@ Status: Internal Server Error
 | CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | DeletedAt | [DeletedAt](#deleted-at)| `DeletedAt` |  | |  |  |
 | ID | uint64 (formatted integer)| `uint64` |  | |  |  |
-| MinLockDemand | double (formatted number)| `float64` |  | |  |  |
 | ReadPrice | int64 (formatted integer)| `int64` |  | |  |  |
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | WritePrice | int64 (formatted integer)| `int64` |  | |  |  |
@@ -3229,7 +3228,6 @@ Status: Internal Server Error
 | blobber_allocs_partition_loc | [PartitionLocation](#partition-location)| `PartitionLocation` |  | |  |  |
 | challenge_pool_integral_value | [Coin](#coin)| `Coin` |  | |  |  |
 | challenge_reward | [Coin](#coin)| `Coin` |  | |  |  |
-| min_lock_demand | [Coin](#coin)| `Coin` |  | |  |  |
 | penalty | [Coin](#coin)| `Coin` |  | |  |  |
 | read_reward | [Coin](#coin)| `Coin` |  | |  |  |
 | returned | [Coin](#coin)| `Coin` |  | |  |  |
@@ -4399,7 +4397,6 @@ which the allocation has created. |  |
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| MinLockDemand | double (formatted number)| `float64` |  | | MinLockDemand in number in [0; 1] range. It represents part of
 allocation should be locked for the blobber rewards even if
 user never write something to the blobber. |  |
 | max_offer_duration | [Duration](#duration)| `Duration` |  | |  |  |

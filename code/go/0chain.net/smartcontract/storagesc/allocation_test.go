@@ -640,7 +640,6 @@ func TestExtendAllocation(t *testing.T) {
 		mockNumAllBlobbers = 2 + mockDataShards + mockParityShards
 		mockExpiration     = common.Timestamp(2592000)
 		mockStake          = 3
-		mockMinLockDemand  = 0.1
 		mockTimeUnit       = 1 * time.Hour
 		mockHash           = "mock hash"
 	)
@@ -740,8 +739,7 @@ func TestExtendAllocation(t *testing.T) {
 			if i < sa.DataShards+sa.ParityShards {
 				blobbers = append(blobbers, mockBlobber)
 				sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
-					BlobberID:     mockBlobber.ID,
-					MinLockDemand: zcnToBalance(mockMinLockDemand),
+					BlobberID: mockBlobber.ID,
 					Terms: Terms{
 						WritePrice: mockWritePrice,
 					},
@@ -1719,13 +1717,12 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	assert.Equal(t, cp.Size*2, alloc.Size)
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
 
-	var tbs, mld int64
+	var tbs int64
 	for i, d := range alloc.BlobberAllocs {
 		if i == alloc.DataShards {
 			break
 		}
 		tbs += d.Size
-		mld += int64(d.MinLockDemand)
 	}
 	var (
 		numb  = int64(alloc.DataShards)
@@ -1968,13 +1965,12 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
 
-	tbs, mld = 0, 0
+	tbs = 0
 	for i, detail := range alloc.BlobberAllocs {
 		if i == alloc.DataShards {
 			break
 		}
 		tbs += detail.Size
-		mld += int64(detail.MinLockDemand)
 	}
 	numb = int64(alloc.DataShards + alloc.ParityShards)
 	bsize = (alloc.Size + (numb - 1)) / numb
@@ -2190,9 +2186,6 @@ func Test_finalize_allocation(t *testing.T) {
 	tp += 720
 
 	assert.True(t, alloc.Finalized)
-	assert.True(t,
-		alloc.BlobberAllocs[0].MinLockDemand <= alloc.BlobberAllocs[0].Spent,
-		"should receive min_lock_demand")
 }
 
 func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {

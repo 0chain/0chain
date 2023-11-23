@@ -762,8 +762,24 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 				finalBlobberReward := int64(0)
 				passRate := float64(blobberAlloc.Stats.SuccessChallenges) / float64(blobberAlloc.Stats.TotalChallenges)
-				allocCost, _ := alloc.cost()
-				expectedCancellationCharge := int64(float64(allocCost)*conf.CancellationCharge*passRate) / int64(len(alloc.BlobberAllocs))
+
+				var expectedCancellationCharge int64
+
+				cancellationCharge, _ := alloc.cancellationCharge(conf.CancellationCharge)
+
+				usedWritePool := alloc.MovedToChallenge - alloc.MovedBack
+
+				if usedWritePool < cancellationCharge {
+					cancellationCharge = cancellationCharge - usedWritePool
+
+					if alloc.WritePool < cancellationCharge {
+						cancellationCharge = alloc.WritePool
+					}
+
+					expectedCancellationCharge = int64(float64(cancellationCharge)*passRate) / int64(len(alloc.BlobberAllocs))
+				} else {
+					expectedCancellationCharge = 0
+				}
 
 				if blobberAlloc.LatestSuccessfulChallCreatedAt < blobberAlloc.LatestFinalizedChallCreatedAt {
 					blobberReward, penaltyPaid := confirmBlobberPenaltyOnFinalization(t, f, int64(blobberAlloc.ChallengePoolIntegralValue), *blobberSP, true, passRate, expectedCancellationCharge)
@@ -781,7 +797,6 @@ func TestCompleteRewardFlow(t *testing.T) {
 				require.InDelta(t, finalBlobberReward, int64(blobberAlloc.ChallengePoolIntegralValue), errDelta)
 			}
 
-			allocCost, _ := alloc.cost()
 			// wp will be returned to the owner
 			allocOwnerBalance, err := balances.GetClientBalance(alloc.Owner)
 			require.NoError(t, err)
@@ -789,8 +804,26 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 			passRate := float64(alloc.Stats.SuccessChallenges) / float64(alloc.Stats.TotalChallenges)
 
+			var expectedTotalCancellationCharge int64
+
+			cancellationCharge, _ := alloc.cancellationCharge(conf.CancellationCharge)
+
+			usedWritePool := alloc.MovedToChallenge - alloc.MovedBack
+
+			if usedWritePool < cancellationCharge {
+				cancellationCharge = cancellationCharge - usedWritePool
+
+				if alloc.WritePool < cancellationCharge {
+					cancellationCharge = alloc.WritePool
+				}
+
+				expectedTotalCancellationCharge = int64(float64(cancellationCharge)*passRate) / int64(len(alloc.BlobberAllocs))
+			} else {
+				expectedTotalCancellationCharge = 0
+			}
+
 			require.InDelta(t, totalExpectedReward, totalPaidReward+2*totalPenalty+totalReturnedReward, 50)
-			require.InDelta(t, int64(refund), 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-int64(float64(allocCost)*conf.CancellationCharge*passRate)+totalReturnedReward, 50)
+			require.InDelta(t, int64(refund), 1000*x10-int64(alloc.MovedToChallenge)+totalPenalty-expectedTotalCancellationCharge+totalReturnedReward, 50)
 		})
 	}
 }

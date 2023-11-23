@@ -108,8 +108,7 @@ CREATE TABLE allocations (
     latest_closed_challenge_txn text,
     write_pool bigint,
     third_party_extendable boolean DEFAULT false,
-    file_options smallint DEFAULT 63,
-    min_lock_demand numeric
+    file_options smallint DEFAULT 63
 );
 
 
@@ -333,7 +332,6 @@ CREATE TABLE blobbers (
     base_url text,
     read_price bigint,
     write_price bigint,
-    min_lock_demand numeric,
     max_offer_duration bigint,
     capacity bigint,
     allocated bigint,

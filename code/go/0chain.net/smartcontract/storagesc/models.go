@@ -252,17 +252,7 @@ type Terms struct {
 	// ReadPrice is price for reading. Token / GB (no time unit).
 	ReadPrice currency.Coin `json:"read_price"`
 	// WritePrice is price for reading. Token / GB / time unit. Also,
-	// it used to calculate min_lock_demand value.
 	WritePrice currency.Coin `json:"write_price"`
-}
-
-// The minLockDemand returns min lock demand value for this Terms (the
-// WritePrice and the MinLockDemand must be already set). Given size in GB and
-// rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rdtu, minLockDemand float64) (currency.Coin, error) {
-
-	var mldf = float64(t.WritePrice) * gbSize * minLockDemand //
-	return currency.Float64ToCoin(mldf * rdtu)                //
 }
 
 // validate a received terms
@@ -409,20 +399,10 @@ type BlobberAllocation struct {
 	LastWriteMarker *WriteMarker            `json:"write_marker"`
 	Stats           *StorageAllocationStats `json:"stats"`
 	// Terms of the BlobberAllocation represents weighted average terms
-	// for the allocation. The MinLockDemand can be increased only,
-	// to prevent some attacks. If a user extends an allocation then
+	// for the allocation. If a user extends an allocation then
 	// we calculate new weighted average terms based on previous terms,
 	// size and expiration and new terms size and expiration.
 	Terms Terms `json:"terms"`
-	// MinLockDemand for the allocation in tokens.
-	MinLockDemand currency.Coin `json:"min_lock_demand"`
-	// Spent is number of tokens sent from write pool to challenge pool
-	// for this blobber. It's used to calculate min lock demand left
-	// for this blobber. For a case, where a client uses > 1 parity shards
-	// and don't sends a data to one of blobbers, the blobber should
-	// receive its min_lock_demand tokens. Thus, we can't use shared
-	// (for allocation) min_lock_demand and spent.
-	Spent currency.Coin `json:"spent"`
 	// Penalty o the blobber for the allocation in tokens.
 	Penalty currency.Coin `json:"penalty"`
 	// ReadReward of the blobber.
@@ -509,7 +489,7 @@ func newBlobberAllocation(
 	blobber *StorageNode,
 	conf *Config,
 	date common.Timestamp,
-) (*BlobberAllocation, error) {
+) *BlobberAllocation {
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
@@ -520,13 +500,7 @@ func newBlobberAllocation(
 	ba.LatestFinalizedChallCreatedAt = date
 	ba.LatestSuccessfulChallCreatedAt = date
 
-	rdtu, err := allocation.restDurationInTimeUnits(date, conf.TimeUnit)
-	if err != nil {
-		return nil, fmt.Errorf("new blobber allocation failed: %v", err)
-	}
-
-	ba.MinLockDemand, err = blobber.Terms.minLockDemand(sizeInGB(size), rdtu, allocation.MinLockDemand)
-	return ba, err
+	return ba
 }
 
 func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) {
@@ -668,39 +642,6 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 	return passRate, nil
 }
 
-func (d *BlobberAllocation) payMinLockDemand(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI) (currency.Coin, error) {
-
-	if d.MinLockDemand > d.Spent {
-		delta, err := currency.MinusCoin(d.MinLockDemand, d.Spent)
-		if err != nil {
-			return 0, err
-		}
-		if alloc.WritePool < delta {
-			return 0, fmt.Errorf("paying min_lock for blobber %v"+
-				"ammount was short by %v", d.BlobberID, delta)
-		}
-		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, delta)
-		if err != nil {
-			return 0, err
-		}
-
-		err = sp.DistributeRewards(delta, d.BlobberID, spenum.Blobber, spenum.MinLockDemandReward, balances, alloc.ID)
-		if err != nil {
-			return 0, fmt.Errorf("distribute rewards failed, paying min_lock %v for blobber "+
-				"%v from write pool %v, minlock demand %v spent %v error %v",
-				delta, d.BlobberID, alloc.WritePool, d.MinLockDemand, d.Spent, err.Error())
-		}
-		d.Spent, err = currency.AddCoin(d.Spent, delta)
-		if err != nil {
-			return 0, err
-		}
-
-		return delta, nil
-	}
-
-	return currency.Coin(0), nil
-}
-
 func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp, sc *StorageSmartContract) (currency.Coin, currency.Coin, error) {
 	if d.LatestFinalizedChallCreatedAt == 0 {
 		return 0, 0, nil
@@ -767,15 +708,10 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 			return payment, fmt.Errorf("failed to distribute rewards blobber: %s, err: %v", d.BlobberID, err)
 		}
 
-		d.Spent, err = currency.AddCoin(d.Spent, reward)
-		if err != nil {
-			return payment, fmt.Errorf("blobber alloc spent: %v", err)
-		}
 		payment, err = currency.AddCoin(payment, reward)
 		if err != nil {
 			return payment, fmt.Errorf("pass payments: %v", err)
 		}
-
 	}
 
 	return payment, nil
@@ -970,11 +906,6 @@ type StorageAllocation struct {
 	// transaction.
 	Canceled bool `json:"canceled,omitempty"`
 
-	// MinLockDemand in number in [0; 1] range. It represents part of
-	// allocation should be locked for the blobber rewards even if
-	// user never write something to the blobber.
-	MinLockDemand float64 `json:"min_lock_demand"`
-
 	// MovedToChallenge is number of tokens moved to challenge pool.
 	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
 	// MovedBack is number of tokens moved from challenge pool to
@@ -1112,55 +1043,6 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	return nil
 }
 
-func (sa *StorageAllocation) payMinLockDemand(sps []*stakePool, balances chainstate.StateContextI, t *transaction.Transaction) error {
-	deductionFromWritePool := currency.Coin(0)
-
-	for i, d := range sa.BlobberAllocs {
-		// min lock demand rest
-		minLockDeductionFromWritePool, err := d.payMinLockDemand(sa, sps[i], balances)
-		if err != nil {
-			return fmt.Errorf("error paying min lock demand: %v", err)
-		}
-
-		deductionFromWritePool, err = currency.AddCoin(deductionFromWritePool, minLockDeductionFromWritePool)
-		if err != nil {
-			return fmt.Errorf("error adding min lock demand to deductionFromWritePool: %v", err)
-		}
-	}
-
-	i, err := deductionFromWritePool.Int64()
-	if err != nil {
-		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
-		Client:       t.ClientID,
-		AllocationId: sa.ID,
-		Amount:       i,
-	})
-
-	return nil
-}
-
-func (sa *StorageAllocation) payMinLockDemandToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, clientID string, ba *BlobberAllocation) error {
-	// min lock demand rest
-	minLockDeductionFromWritePool, err := ba.payMinLockDemand(sa, sp, balances)
-	if err != nil {
-		return fmt.Errorf("error paying min lock demand: %v", err)
-	}
-
-	i, err := minLockDeductionFromWritePool.Int64()
-	if err != nil {
-		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
-	}
-	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
-		Client:       clientID,
-		AllocationId: sa.ID,
-		Amount:       i,
-	})
-
-	return nil
-}
-
 func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract, now common.Timestamp) error {
 	var passPayments currency.Coin
 
@@ -1252,15 +1134,23 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 	return nil
 }
 
+// Cancellation charge
 func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances chainstate.StateContextI, passRates []float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction) error {
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
-	if sa.WritePool < cancellationCharge {
-		cancellationCharge = sa.WritePool
-		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
+	usedWritePool := sa.MovedToChallenge - sa.MovedBack
+
+	if usedWritePool < cancellationCharge {
+		cancellationCharge = cancellationCharge - usedWritePool
+
+		if sa.WritePool < cancellationCharge {
+			cancellationCharge = sa.WritePool
+		}
+	} else {
+		return nil
 	}
 
 	totalWritePrice := currency.Coin(0)
@@ -1309,9 +1199,16 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
-	if sa.WritePool < cancellationCharge {
-		cancellationCharge = sa.WritePool
-		logging.Logger.Error("insufficient funds, %v, for cancellation charge, %v. distributing the remaining write pool.")
+	usedWritePool := sa.MovedToChallenge - sa.MovedBack
+
+	if usedWritePool < cancellationCharge {
+		cancellationCharge = cancellationCharge - usedWritePool
+
+		if sa.WritePool < cancellationCharge {
+			cancellationCharge = sa.WritePool
+		}
+	} else {
+		return nil
 	}
 
 	totalWritePrice := currency.Coin(0)
@@ -1415,21 +1312,37 @@ func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (c
 	return currency.MultFloat64(cost, cancellationFraction)
 }
 
-func (sa *StorageAllocation) checkFunding(cancellationFraction float64) error {
-	cancellationCharge, err := sa.cancellationCharge(cancellationFraction)
+func (sa *StorageAllocation) checkFunding() error {
+	allocCost, err := sa.cost()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get allocation cost: %v", err)
 	}
-	mld, err := sa.restMinLockDemand()
-	if err != nil {
-		return err
-	}
-	if sa.WritePool < cancellationCharge+mld {
-		return fmt.Errorf("not enough tokens to honor the cancellation charge plus min lock demand"+" (%d < %d + %d)",
-			sa.WritePool, cancellationCharge, mld)
+
+	if sa.WritePool < allocCost {
+		return fmt.Errorf("not enough tokens to honor the allocation cost %v < %v",
+			sa.WritePool, allocCost)
 	}
 
 	return nil
+}
+
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation() (currency.Coin, error) {
+	costOfAllocAfterUpdate, err := sa.cost()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+	}
+
+	totalWritePool := sa.WritePool + sa.MovedToChallenge - sa.MovedBack
+
+	var tokensRequiredToLock currency.Coin
+
+	if totalWritePool < costOfAllocAfterUpdate {
+		tokensRequiredToLock = costOfAllocAfterUpdate - totalWritePool
+	} else {
+		tokensRequiredToLock = 0
+	}
+
+	return tokensRequiredToLock, nil
 }
 
 func (sa *StorageAllocation) bSize() int64 {
@@ -1479,10 +1392,6 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"error removing offer: "+err.Error())
 			}
 
-			if err := sa.payMinLockDemandToRemoveBlobber(sp, balances, clientID, d); err != nil {
-				return fmt.Errorf("error paying min lock demand: %v", err)
-			}
-
 			cp, err := sc.getChallengePool(sa.ID, balances)
 			if err != nil {
 				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)
@@ -1497,6 +1406,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			}
 
 			sa.BlobberAllocs[i] = addedBlobberAllocation
+			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
 		}
 	}
@@ -1574,10 +1484,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 	afterSize := sa.bSize()
 
-	ba, err := newBlobberAllocation(afterSize, sa, addedBlobber, conf, now)
-	if err != nil {
-		return nil, fmt.Errorf("can't allocate blobber: %v", err)
-	}
+	ba := newBlobberAllocation(afterSize, sa, addedBlobber, conf, now)
 
 	if len(removeId) > 0 {
 		if blobbers, err = replaceBlobber(sa, blobbers, removeId, balances, sc, clientID, addedBlobber, ba, now); err != nil {
@@ -1610,25 +1517,6 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 }
 
 type StorageAllocationDecode StorageAllocation
-
-// The restMinLockDemand returns number of tokens required as min_lock_demand;
-// if a blobber receive write marker, then some token moves to related
-// challenge pool and 'Spent' of this blobber is increased; thus, the 'Spent'
-// reduces the rest of min_lock_demand of this blobber; but, if a malfunctioning
-// client doesn't send a data to a blobber (or blobbers) then this blobbers
-// don't receive tokens, their spent will be zero, and the min lock demand
-// will be blobber reward anyway.
-func (sa *StorageAllocation) restMinLockDemand() (rest currency.Coin, err error) {
-	for _, details := range sa.BlobberAllocs {
-		if details.MinLockDemand > details.Spent {
-			rest, err = currency.AddCoin(rest, details.MinLockDemand-details.Spent)
-			if err != nil {
-				return
-			}
-		}
-	}
-	return
-}
 
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
