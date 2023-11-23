@@ -86,6 +86,10 @@ jobs:
       
       - name: Install mockery (latest)
         run: |
+          export HOME=/root
+          go env -w GO111MODULE=auto
+          go env -w GOPATH=$HOME/go
+          go env -w GOMODCACHE=$HOME/go/pkg/mod
           go install github.com/vektra/mockery/v2@v2.38.0
           echo "PATH=$PATH:$(go env GOPATH)/bin" >> $GITHUB_ENV
           export PATH=$PATH:$(go env GOPATH)/bin
