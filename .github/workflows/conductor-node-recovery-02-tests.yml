@@ -6,10 +6,6 @@ on:
     - cron: '0 9 * * *'
   workflow_dispatch:
     inputs:
-        runner_label:
-          description: 'Runner Label'
-          default: 'conductor-test'
-          required: true
         chain_branch:
           description: 'Input branch for 0chain repo'
           default: ''
@@ -37,7 +33,7 @@ env:
 jobs:
   CONDUCTOR_NODE_RECOVERY_02_TESTS:
     name: CONDUCTOR-NODE-RECOVERY-02-TESTS
-    runs-on: ${{ github.event.inputs.runner_label }}
+    runs-on: [self-hosted, conductor-test]
 
     steps:
     - name: Setup Environment Variables
