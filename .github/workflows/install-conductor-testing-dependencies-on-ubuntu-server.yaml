@@ -43,13 +43,13 @@ jobs:
 
       - name: Install Go (v1.20.11)
         run: |
+          rm go1.20.11.linux-amd64.tar.gz
           wget https://go.dev/dl/go1.20.11.linux-amd64.tar.gz
           rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.11.linux-amd64.tar.gz
           echo $GITHUB_ENV
           echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
           export PATH=$PATH:/usr/local/go/bin
           go version
-          rm go1.20.11.linux-amd64.tar.gz
           ln -fs /usr/local/go/bin/go /usr/bin/go
       
       - name: Install Docker (latest)
@@ -79,13 +79,13 @@ jobs:
       
       - name: Install Herumi BLS/MCL (latest)
         run: |
+          rm -rf bls
           git clone --recursive https://github.com/herumi/bls
           cd bls
           make -C mcl -j 4 lib/libmclbn256.a install
           make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
           ls -la /usr/local/lib
           cd ..
-          rm -rf bls
       
       - name: Install mockery (latest)
         run: |
