@@ -3,7 +3,7 @@ name: CONDUCTOR BLOBBER-03 TESTS
 on:
   schedule:
     # Runs everyday at 02:00 am
-    - cron: '0 4 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -27,12 +27,22 @@ on:
 jobs:
   CONDUCTOR_BLOBBERS_03_TESTS:
     name: CONDUCTOR-BLOBBERS-03-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test]
 
     outputs:
       branch: ${{ steps.blobber.outputs.BRANCH_OUT }}
 
     steps:
+    - name: Setup Environment Variables
+      run: |
+        export HOME="/root"
+        go env -w GO111MODULE=auto
+        go env GOROOT
+        go env GOPATH
+        echo "HOME=$HOME" >> $GITHUB_ENV
+        echo "PATH=$PATH:$(go env GOROOT)/bin:$(go env GOPATH)/bin" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib" >> $GITHUB_ENV
+
     - name: Cleanup before restarting conductor tests.
       run: |
         rm -rf *

@@ -43,23 +43,24 @@ jobs:
 
       - name: Install Go (v1.20.11)
         run: |
+          rm go1.20.11.linux-amd64.tar.gz || true
           wget https://go.dev/dl/go1.20.11.linux-amd64.tar.gz
           rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.11.linux-amd64.tar.gz
-          echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc && source ~/.bashrc
+          echo $GITHUB_ENV
+          echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+          export PATH=$PATH:/usr/local/go/bin
           go version
+          ln -fs /usr/local/go/bin/go /usr/bin/go
       
       - name: Install Docker (latest)
         run: |
-          for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
-
-          # Add Docker's official GPG key:
+          for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg || true; done
           sudo apt-get update
           sudo apt-get install -y ca-certificates curl gnupg
           install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          chmod a+r /etc/apt/keyrings/docker.gpg
-            
-          # Add the repository to Apt sources:
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
+          chmod a+r /etc/apt/keyrings/docker.gpg            
+
           echo \
             "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
             "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
@@ -79,6 +80,7 @@ jobs:
       
       - name: Install Herumi BLS/MCL (latest)
         run: |
+          rm -rf bls || true
           git clone --recursive https://github.com/herumi/bls
           cd bls
           make -C mcl -j 4 lib/libmclbn256.a install
@@ -87,6 +89,11 @@ jobs:
       
       - name: Install mockery (latest)
         run: |
+          export HOME=/root
+          go env -w GO111MODULE=auto
+          go env -w GOPATH=$HOME/go
+          go env -w GOMODCACHE=$HOME/go/pkg/mod
           go install github.com/vektra/mockery/v2@v2.38.0
-          echo "export PATH=\$PATH:$(go env GOPATH)/bin" >> ~/.bashrc && source ~/.bashrc
+          echo "PATH=$PATH:$(go env GOPATH)/bin" >> $GITHUB_ENV
+          export PATH=$PATH:$(go env GOPATH)/bin
           mockery --version

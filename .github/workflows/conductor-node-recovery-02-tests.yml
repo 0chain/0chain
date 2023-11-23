@@ -33,9 +33,18 @@ env:
 jobs:
   CONDUCTOR_NODE_RECOVERY_02_TESTS:
     name: CONDUCTOR-NODE-RECOVERY-02-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test]
 
     steps:
+    - name: Setup Environment Variables
+      run: |
+        export HOME="/root"
+        go env -w GO111MODULE=auto
+        go env GOROOT
+        go env GOPATH
+        echo "HOME=$HOME" >> $GITHUB_ENV
+        echo "PATH=$PATH:$(go env GOROOT)/bin:$(go env GOPATH)/bin" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib" >> $GITHUB_ENV
     - name: Cleanup before restarting conductor tests.
       run: |
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
@@ -43,38 +52,11 @@ jobs:
         rm -rf /mnt/hdd/*
         rm -rf /mnt/ssd/*
 
-    - name: "Setup Go"
-      shell: 'script --return --quiet --command "bash {0}"'
-      run: |
-        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
-        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
-        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
-        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
-
-        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
-        export PATH=$PATH:/usr/local/go/bin
-        export HOME="/root"
-        which go
-        go env
-      
-    - name: Docker Compose Setup.
-      run: |
-        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
-
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-    - name: Install herumi/bls and herumi/mcl
-      run: |
-        git clone --recursive https://github.com/herumi/bls
-        cd bls
-        make -C mcl -j 4 lib/libmclbn256.a install
-        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
       run: |
@@ -94,10 +76,7 @@ jobs:
     - name: Docker Init Setup.
       run: |
         export HOME="/root"
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
-        make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
