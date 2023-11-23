@@ -1,0 +1,92 @@
+name:  Install Conductor Testing Dependencies on a new Ubuntu machine
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner-label:
+        description: 'Label of the runner to install the dependencies on'
+        required: true
+        default: 'conductor-test'
+
+jobs:
+  INSTALL_DEPS:
+    name: INSTALL_DEPS
+    runs-on: ${{ github.event.inputs.runner-label }}
+  
+    steps:
+      - name: Install APT dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            git \
+            nghttp2 \
+            libnghttp2-dev \
+            libssl-dev \
+            wget \
+            build-essential \
+            manpages-dev \
+            software-properties-common
+      
+      - name: Install g++-11/gcc-11
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get update -y
+          sudo apt-get install -y gcc-11 g++-11
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110 \
+            --slave /usr/bin/g++ g++ /usr/bin/g++-11 \
+            --slave /usr/bin/gcov gcov /usr/bin/gcov-11 \
+            --slave /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-11 \
+            --slave /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-11
+          gcc -v
+          g++ -v
+          gcov -v
+
+      - name: Install Go (v1.20.11)
+        run: |
+          wget https://go.dev/dl/go1.20.11.linux-amd64.tar.gz
+          rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.11.linux-amd64.tar.gz
+          echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc && source ~/.bashrc
+          go version
+      
+      - name: Install Docker (latest)
+        run: |
+          for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; done
+
+          # Add Docker's official GPG key:
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl gnupg
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          chmod a+r /etc/apt/keyrings/docker.gpg
+            
+          # Add the repository to Apt sources:
+          echo \
+            "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+            "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          
+          docker version
+          docker run --rm hello-world
+      
+      - name: Install legacy docker-compose (v1.29.2)
+        run: |
+          sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+      
+      - name: Install Herumi BLS/MCL (latest)
+        run: |
+          git clone --recursive https://github.com/herumi/bls
+          cd bls
+          make -C mcl -j 4 lib/libmclbn256.a install
+          make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+          ls -la /usr/local/lib
+      
+      - name: Install mockery (latest)
+        run: |
+          go install github.com/vektra/mockery/v2@v2.38.0
+          echo "export PATH=\$PATH:$(go env GOPATH)/bin" >> ~/.bashrc && source ~/.bashrc
+          mockery --version
