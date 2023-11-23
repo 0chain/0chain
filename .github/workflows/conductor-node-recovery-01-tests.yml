@@ -3,7 +3,7 @@ name: CONDUCTOR NODE-RECOVERY-01 TESTS
 on:
   schedule:
     # Runs everyday at 02:00 am
-    - cron: '0 8 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
         chain_branch:
@@ -14,7 +14,7 @@ on:
 jobs:
   CONDUCTOR_NODE_RECOVERY_01_TESTS:
     name: CONDUCTOR-NODE-RECOVERY-01-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test]
 
     steps:
     - name: Cleanup before restarting conductor tests.

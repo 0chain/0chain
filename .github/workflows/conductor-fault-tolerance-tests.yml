@@ -3,7 +3,7 @@ name: CONDUCTOR FAULT TOLERANCE TESTS
 on:
   schedule:
     # Runs everyday at 01:00 am
-    - cron: '0 7 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -18,7 +18,7 @@ env:
 jobs:
   CONDUCTOR_FAULT_TOLERANCE_TESTS:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test]
 
     outputs:
       branch: ${{ steps.chain.outputs.BRANCH_OUT }}

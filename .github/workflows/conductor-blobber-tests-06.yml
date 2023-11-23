@@ -3,7 +3,7 @@ name: CONDUCTOR BLOBBER-06 TESTS
 on:
   schedule:
     # Runs everyday at 02:00 am
-    - cron: '0 12 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -28,7 +28,7 @@ env:
 jobs:
   CONDUCTOR_BLOBBERS_06_TESTS:
     name: CONDUCTOR-BLOBBERS-06-TESTS
-    runs-on: [self-hosted, conductor-test03]
+    runs-on: [self-hosted, conductor-test]
 
     outputs:
       branch: ${{ steps.blobber.outputs.BRANCH_OUT }}
