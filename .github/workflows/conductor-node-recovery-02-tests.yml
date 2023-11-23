@@ -259,6 +259,7 @@ jobs:
 
     - name: Starting Node Recovery Tests.
       run: |
+        ls -la /usr/local/lib
         export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh node-recovery-2
