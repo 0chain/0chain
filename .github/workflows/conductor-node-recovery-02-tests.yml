@@ -33,7 +33,7 @@ env:
 jobs:
   CONDUCTOR_NODE_RECOVERY_02_TESTS:
     name: CONDUCTOR-NODE-RECOVERY-02-TESTS
-    runs-on: [self-hosted, conductor-test4]
+    runs-on: [self-hosted, conductor-test5]
 
     steps:
     - name: Setup PATH
@@ -260,7 +260,6 @@ jobs:
 
     - name: Starting Node Recovery Tests.
       run: |
-        ls -la /usr/local/lib
         export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh node-recovery-2
