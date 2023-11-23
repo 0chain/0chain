@@ -550,11 +550,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			balances.On(
 				"GetTrieNode", blobber.GetKey(),
 				mockSetValue(blobber)).Return(nil).Once()
-
-			balances.On(
-				"GetTrieNode", blobber.GetKey(),
-				stakePoolKey(spenum.Blobber, blobber.ID)).Return(nil).Once()
-
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(), mock.Anything,
 			).Return("", nil).Once()
