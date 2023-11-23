@@ -45,7 +45,8 @@ jobs:
         run: |
           wget https://go.dev/dl/go1.20.11.linux-amd64.tar.gz
           rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.11.linux-amd64.tar.gz
-          echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc && source ~/.bashrc
+          echo $GITHUB_ENV
+          echo "PATH=\$PATH:/usr/local/go/bin" >> $GITHUB_ENV
           go version
       
       - name: Install Docker (latest)
@@ -88,5 +89,5 @@ jobs:
       - name: Install mockery (latest)
         run: |
           go install github.com/vektra/mockery/v2@v2.38.0
-          echo "export PATH=\$PATH:$(go env GOPATH)/bin" >> ~/.bashrc && source ~/.bashrc
+          echo "PATH=\$PATH:$(go env GOPATH)/bin" >> $GITHUB_ENV
           mockery --version
