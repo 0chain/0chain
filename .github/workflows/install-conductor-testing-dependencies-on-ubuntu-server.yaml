@@ -50,6 +50,7 @@ jobs:
           export PATH=$PATH:/usr/local/go/bin
           go version
           rm go1.20.11.linux-amd64.tar.gz
+          ln -fs /usr/local/go/bin/go /usr/bin/go
       
       - name: Install Docker (latest)
         run: |
