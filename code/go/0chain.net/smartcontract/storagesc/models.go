@@ -1326,13 +1326,18 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation() (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(extend bool) (currency.Coin, error) {
 	costOfAllocAfterUpdate, err := sa.cost()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
-	totalWritePool := sa.WritePool + sa.MovedToChallenge - sa.MovedBack
+	var totalWritePool currency.Coin
+	if extend {
+		totalWritePool = sa.WritePool
+	} else {
+		totalWritePool = sa.WritePool + sa.MovedToChallenge - sa.MovedBack
+	}
 
 	var tokensRequiredToLock currency.Coin
 
