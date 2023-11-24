@@ -1683,7 +1683,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation()
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(req.Extend)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return

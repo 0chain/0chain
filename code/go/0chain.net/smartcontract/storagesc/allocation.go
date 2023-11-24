@@ -1039,7 +1039,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation()
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(request.Extend)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
