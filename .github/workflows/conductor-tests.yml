@@ -1,0 +1,45 @@
+name: CONDUCTOR TESTS SUITE
+
+on:
+  schedule:
+    #   # Runs everyday at 02:00 am
+      - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Unified branch for repos (0chain, 0box, blobber, authorizer, zwalletcli, zboxcli) - leave blank to use sprint branch'
+        required: false
+        type: string
+        default: ''
+jobs:
+  standard-miner:
+    name: Miner Standard CT
+    uses: 0chain/0chain/.github/workflows/conductor-standard-miner-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  standard-sharder:
+    name: Sharder Standard CT
+    uses: 0chain/0chain/.github/workflows/conductor-standard-sharder-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+  
+  
+  # byzantine:
+  # fault-tolerance:
+  # blobber-01:
+  #   name: Run all conductor tests in parallel
+  #   runs-on: conductor-test
+  # blobber-02:
+  # blobber-03:
+  # blobber-04:
+  # blobber-05:
+  # blobber-06:
+  # authorizers-standard:
+  # node-recovery-01:
+  # node-recovery-02:
+  # node-recovery-03:
