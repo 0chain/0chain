@@ -70,13 +70,13 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation in db: %v", err)
 	}
 
-	blobber_ids := make([]string, len(alloc.BlobberAllocs))
+	blobberIds := make([]string, 0, len(alloc.BlobberAllocs))
 	for _, v := range alloc.BlobberAllocs {
-		blobber_ids = append(blobber_ids, v.BlobberID)
+		blobberIds = append(blobberIds, v.BlobberID)
 	}
 
-	transaction_output := NewAllocationTxnOutput{alloc.ID, blobber_ids}
-	buff, _ := json.Marshal(transaction_output)
+	transactionOutput := NewAllocationTxnOutput{alloc.ID, blobberIds}
+	buff, _ := json.Marshal(transactionOutput)
 	return string(buff), nil
 }
 
@@ -278,6 +278,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		snr := StoragNodeToStorageNodeResponse(*blobbers[i])
 		snr.TotalOffers = spMap[blobbers[i].ID].TotalOffers
 		snr.TotalStake = stake
+		stakedCapacity, err := spMap[blobbers[i].ID].stakedCapacity(blobbers[i].Terms.WritePrice)
+		if err != nil {
+			return "", common.NewErrorf("allocation_creation_failed", "can not get total staked capacity for blobber %s: %v", blobbers[i].ID, err)
+		}
+		snr.StakedCapacity = stakedCapacity
+
 		sns = append(sns, &snr)
 	}
 
@@ -325,15 +331,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			zap.String("txn", txn.Hash),
 			zap.Error(err))
 		return "", common.NewError("allocation_creation_failed", err.Error())
-	}
-
-	cost, err := sa.cost()
-	if err != nil {
-		return "", err
-	}
-	if sa.WritePool < cost {
-		return "", common.NewError("allocation_creation_failed",
-			fmt.Sprintf("not enough tokens to cover the allocation cost"+" (%d < %d)", sa.WritePool, cost))
 	}
 
 	if err := sa.checkFunding(); err != nil {
@@ -816,6 +813,11 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
+		var sp *stakePool
+		if sp, err = sc.getStakePool(spenum.Blobber, details.BlobberID, balances); err != nil {
+			return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
+		}
+
 		originalTerms = append(originalTerms, details.Terms) // keep original terms will be changed
 		oldOffer := details.Offer()
 		var b = blobbers[i]
@@ -835,7 +837,13 @@ func (sc *StorageSmartContract) extendAllocation(
 					"blobber %s is not active", b.ID)
 			}
 
-			if b.Capacity-b.Allocated-diff < 0 {
+			stakedCapacity, err := sp.stakedCapacity(b.Terms.WritePrice)
+			if err != nil {
+				return common.NewErrorf("allocation_extending_failed",
+					"can't get staked capacity: %v", err)
+			}
+
+			if b.Capacity-b.Allocated-diff < 0 || stakedCapacity-b.Allocated-diff < 0 {
 				return common.NewErrorf("allocation_extending_failed",
 					"blobber %s doesn't have enough free space", b.ID)
 			}
@@ -855,10 +863,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		// update blobber's offer
 		newOffer := details.Offer()
 		if newOffer != oldOffer {
-			var sp *stakePool
-			if sp, err = sc.getStakePool(spenum.Blobber, details.BlobberID, balances); err != nil {
-				return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
-			}
 			if newOffer > oldOffer {
 				coin, err := currency.MinusCoin(newOffer, oldOffer)
 				if err != nil {

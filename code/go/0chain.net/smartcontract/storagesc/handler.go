@@ -2277,6 +2277,7 @@ type storageNodeResponse struct {
 	ReadData                 int64         `json:"read_data"`
 	UsedAllocation           int64         `json:"used_allocation"`
 	TotalOffers              currency.Coin `json:"total_offers"`
+	StakedCapacity           int64         `json:"staked_capacity"`
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
