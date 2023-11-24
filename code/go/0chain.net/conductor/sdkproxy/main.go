@@ -406,25 +406,6 @@ func execute(r, address string, codes chan int, logsDir string) {
 	log.Print("execute: ", r)
 	defer func() { log.Printf("executed (%s) with %d exit code", r, code) }()
 
-	// executableName := filepath.Base(r)
-	// logFileBaseName := fmt.Sprintf("%v-%v.log", executableName, time.Now().Local().Format("2006-01-02_15-04-05"))
-
-	// foutPath := filepath.Join(logsDir, fmt.Sprintf("sdkproxy/stdout-%v.log", logFileBaseName))
-	// fout, err := os.Create(foutPath)
-	// if err != nil {
-	// 	log.Printf("creating temp file: %v", err)
-	// 	return
-	// }
-	// defer fout.Close()
-
-	// ferrPath := filepath.Join(logsDir, fmt.Sprintf("sdkproxy/stderr-%v.log", logFileBaseName))
-	// ferr, err := os.Create(ferrPath)
-	// if err != nil {
-	// 	log.Printf("creating temp file: %v", err)
-	// 	return
-	// }
-	// defer ferr.Close()
-
 	cmdStdOut, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Printf("error creating stdout pipe: %v", err)
