@@ -13,7 +13,6 @@ on:
         default: ''
 jobs:
   standard-miner:
-    name: Miner Standard CT
     uses: 0chain/0chain/.github/workflows/conductor-standard-miner-tests.yml@aggregate-ct-test
     with:
       chain_branch: ${{ github.event.inputs.branch }}
@@ -21,14 +20,107 @@ jobs:
       inherit
 
   standard-sharder:
-    name: Sharder Standard CT
     uses: 0chain/0chain/.github/workflows/conductor-standard-sharder-tests.yml@aggregate-ct-test
     with:
       chain_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
   
+  # byzantine:
+  #   uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
   
+  # fault-tolerance:
+  #   uses: 0chain/0chain/.github/workflows/conductor-fault-tolerance-tests.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
+  
+  # blobber-01:
+  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-01.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #     blobber_branch: ${{ github.event.inputs.branch }}
+  #     zboxcli_branch: ${{ github.event.inputs.branch }}
+  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
+
+  # blobber-02:
+  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #     blobber_branch: ${{ github.event.inputs.branch }}
+  #     zboxcli_branch: ${{ github.event.inputs.branch }}
+  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
+
+  # blobber-03:
+  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-03.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #     blobber_branch: ${{ github.event.inputs.branch }}
+  #     zboxcli_branch: ${{ github.event.inputs.branch }}
+  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
+
+  # blobber-04:
+  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-04.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #     blobber_branch: ${{ github.event.inputs.branch }}
+  #     zboxcli_branch: ${{ github.event.inputs.branch }}
+  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
+
+  # blobber-05:
+  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-05.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #     blobber_branch: ${{ github.event.inputs.branch }}
+  #     zboxcli_branch: ${{ github.event.inputs.branch }}
+  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
+
+  # blobber-06:
+  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-06.yml@aggregate-ct-test
+  #   with:
+  #     chain_branch: ${{ github.event.inputs.branch }}
+  #     blobber_branch: ${{ github.event.inputs.branch }}
+  #     zboxcli_branch: ${{ github.event.inputs.branch }}
+  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
+  #   secrets:
+  #     inherit
+      
+  notify_slack:
+    runs-on: [self-hosted, arc-runner]
+    needs: [standard-miner, standard-sharder]
+    steps:
+      - name: "Notify Slack"
+        run: |
+          payload='{
+          "text": "'"<!here> Conductor testing results 📝 on ${{ github.event.inputs.branch }}.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
+          "attachments": [
+              {
+              "text": "CONDUCTOR STANDARD MINERS TEST $([ \"${{ needs.standard-miner.result }}\" = \"success\" ] && echo \"PASSED ✅\" || echo \"FAILED ⚠️\")",
+              "color": "$([ \"${{ needs.standard-miner.result }}\" = \"success\" ] && echo '#22bb33' || echo '#ff0000')"
+              },
+              {
+              "text": "CONDUCTOR STANDARD SHARDERS TEST $([ \"${{ needs.standard-sharder.result }}\" = \"success\" ] && echo \"PASSED ✅\" || echo \"FAILED ⚠️\")",
+              "color": "$([ \"${{ needs.standard-sharder.result }}\" = \"success\" ] && echo '#22bb33' || echo '#ff0000')"
+              }
+          ]
+          }'
+          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+        
   # byzantine:
   # fault-tolerance:
   # blobber-01:
