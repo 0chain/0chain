@@ -483,10 +483,8 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 
 // validate request
 func (uar *updateAllocationRequest) validate(
-	blobbers []*StorageNode,
+	conf *Config,
 	alloc *StorageAllocation,
-	sc *StorageSmartContract,
-	balances chainstate.StateContextI,
 ) error {
 	if uar.Size == 0 &&
 		uar.Extend == false &&
@@ -524,30 +522,6 @@ func (uar *updateAllocationRequest) validate(
 
 	if uar.FileOptions > 63 {
 		return fmt.Errorf("FileOptions %d incorrect", uar.FileOptions)
-	}
-
-	updateBlobberSize := uar.getBlobbersSizeDiff(alloc)
-
-	for _, blobber := range blobbers {
-		sp, err := sc.getStakePool(spenum.Blobber, blobber.ID, balances)
-		if err != nil {
-			return common.NewError("update_blobber_settings_failed",
-				"can't get related stake pool: "+err.Error())
-		}
-
-		stakedCapacity, err := sp.stakedCapacity(blobber.Terms.WritePrice)
-		if err != nil {
-			return common.NewError("update_blobber_settings_failed",
-				"can't get staked capacity: "+err.Error())
-		}
-
-		if stakedCapacity-blobber.Allocated < updateBlobberSize {
-			return fmt.Errorf("blobber %s has insufficient staked capacity to upgrade the allocation", blobber.ID)
-		}
-
-		if blobber.Capacity-blobber.Allocated < updateBlobberSize {
-			return fmt.Errorf("blobber %s has insufficient physical capacity to upgrade the allocation", blobber.ID)
-		}
 	}
 
 	return nil
@@ -839,6 +813,11 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
+		var sp *stakePool
+		if sp, err = sc.getStakePool(spenum.Blobber, details.BlobberID, balances); err != nil {
+			return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
+		}
+
 		originalTerms = append(originalTerms, details.Terms) // keep original terms will be changed
 		oldOffer := details.Offer()
 		var b = blobbers[i]
@@ -858,7 +837,13 @@ func (sc *StorageSmartContract) extendAllocation(
 					"blobber %s is not active", b.ID)
 			}
 
-			if b.Capacity-b.Allocated-diff < 0 {
+			stakedCapacity, err := sp.stakedCapacity(b.Terms.WritePrice)
+			if err != nil {
+				return common.NewErrorf("allocation_extending_failed",
+					"can't get staked capacity: %v", err)
+			}
+
+			if b.Capacity-b.Allocated-diff < 0 || stakedCapacity-b.Allocated-diff < 0 {
 				return common.NewErrorf("allocation_extending_failed",
 					"blobber %s doesn't have enough free space", b.ID)
 			}
@@ -878,10 +863,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		// update blobber's offer
 		newOffer := details.Offer()
 		if newOffer != oldOffer {
-			var sp *stakePool
-			if sp, err = sc.getStakePool(spenum.Blobber, details.BlobberID, balances); err != nil {
-				return fmt.Errorf("can't get stake pool of %s: %v", details.BlobberID, err)
-			}
 			if newOffer > oldOffer {
 				coin, err := currency.MinusCoin(newOffer, oldOffer)
 				if err != nil {
@@ -982,6 +963,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
+	if err = request.validate(conf, alloc); err != nil {
+		return "", common.NewError("allocation_updating_failed", err.Error())
+	}
+
 	// can't update expired allocation
 	if alloc.Expiration < t.CreationDate {
 		return "", common.NewError("allocation_updating_failed",
@@ -995,10 +980,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			err.Error())
-	}
-
-	if err = request.validate(blobbers, alloc, sc, balances); err != nil {
-		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible

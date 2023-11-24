@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -425,14 +424,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 }
 
 func TestUpdateFreeStorageRequest(t *testing.T) {
-	var (
-		ssc = &StorageSmartContract{
-			SmartContract: sci.NewSC(ADDRESS),
-		}
-
-		balances = &mocks.StateContextI{}
-	)
-
 	const (
 		mockCooperationId        = "mock cooperation id"
 		mockAllocationId         = "mock allocation id"
@@ -463,8 +454,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		FreeAllocationSettings:       mockFreeAllocationSettings,
 		MaxBlobbersPerAllocation:     40,
 		TimeUnit:                     timeUnit,
-		MaxDelegates:                 10,
-		MaxStake:                     10000000000000000,
 	}
 	var now = common.Timestamp(29000000)
 
@@ -503,7 +492,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 	setExpectations := func(t *testing.T, name string, p parameters) args {
 		var err error
-
+		var balances = &mocks.StateContextI{}
 		var txn = &transaction.Transaction{
 			ClientID:     p.marker.Recipient,
 			PublicKey:    mockUserPublicKey,
@@ -512,6 +501,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		txn.Value, err = currency.ParseZCN(p.marker.FreeTokens)
 		require.NoError(t, err)
 		txn.Hash = mockTransactionHash
+		var ssc = &StorageSmartContract{
+
+			SmartContract: sci.NewSC(ADDRESS),
+		}
 
 		p.marker.Signature, p.assigner.PublicKey = signFreeAllocationMarker(t, freeStorageMarker{
 			Assigner:   p.marker.Assigner,
@@ -553,51 +546,29 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			TimeUnit:     mockTimeUnit,
 			Stats:        &StorageAllocationStats{},
 		}
-
-		sp := stakePool{
-			StakePool: &stakepool.StakePool{
-				Pools: map[string]*stakepool.DelegatePool{},
-			},
-		}
-
-		for _, blobber := range mockAllBlobbers.Nodes {
-			balances.On("GetTrieNode", stakePoolKey(spenum.Blobber, blobber.ID),
-				mock.MatchedBy(func(s *stakePool) bool {
-					*s = sp
-					return true
-				})).Return(nil).Once()
-		}
-
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
 				"GetTrieNode", blobber.GetKey(),
 				mockSetValue(blobber)).Return(nil).Once()
-
 			balances.On(
 				"InsertTrieNode", blobber.GetKey(), mock.Anything,
 			).Return("", nil).Once()
-
 			sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
 				BlobberID:    blobber.ID,
 				AllocationID: p.allocationId,
 			})
 		}
-
 		balances.On("GetTrieNode", sa.GetKey(ssc.ID),
 			mockSetValue(&sa)).Return(nil).Once()
-
 		balances.On(
 			"InsertTrieNode", sa.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
-
 		balances.On("GetClientBalance", mockRecipient).Return(currency.Coin(1000000000000), nil).Maybe().Once()
-
 		balances.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(nil).Once()
 
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
 			mockSetValue(&challengePool{})).Return(nil).Once()
-
 		balances.On(
 			"GetTrieNode", mock.Anything,
 			mockSetValue(&StorageAllocation{ID: p.allocationId})).Return(nil)
@@ -758,21 +729,8 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters)
 
-			for _, blobber := range mockAllBlobbers.Nodes {
-				spr := stakePoolRequest{
-					ProviderType: spenum.Blobber,
-					ProviderID:   blobber.ID,
-				}
-
-				input := mustEncode(t, &spr)
-
-				var tx = newTransaction(blobber.ID, ADDRESS, 100000000000, time.Now().Unix())
-				_, err := args.ssc.stakePoolLock(tx, input, args.balances)
-				require.NoError(t, err)
-			}
-
 			_, err := args.ssc.updateFreeStorageRequest(args.txn, args.input, args.balances)
-			require.EqualValues(t, test.want.err, err != nil, err)
+			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
 				return
