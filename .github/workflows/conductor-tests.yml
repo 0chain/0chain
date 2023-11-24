@@ -13,35 +13,35 @@ on:
         default: ''
 jobs:
   standard-miner:
-    uses: 0chain/0chain/.github/workflows/conductor-standard-miner-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-standard-miner-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
 
   standard-sharder:
-    uses: 0chain/0chain/.github/workflows/conductor-standard-sharder-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-standard-sharder-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
   
   byzantine:
-    uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
   
   fault-tolerance:
-    uses: 0chain/0chain/.github/workflows/conductor-fault-tolerance-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-fault-tolerance-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
   
   blobber-01:
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-01.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-01.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       blobber_branch: ${{ github.event.inputs.branch }}
@@ -51,7 +51,7 @@ jobs:
       inherit
 
   blobber-02:
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       blobber_branch: ${{ github.event.inputs.branch }}
@@ -61,7 +61,7 @@ jobs:
       inherit
 
   blobber-03:
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-03.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-03.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       blobber_branch: ${{ github.event.inputs.branch }}
@@ -71,7 +71,7 @@ jobs:
       inherit
 
   blobber-04:
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-04.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-04.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       blobber_branch: ${{ github.event.inputs.branch }}
@@ -81,7 +81,7 @@ jobs:
       inherit
 
   blobber-05:
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-05.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-05.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       blobber_branch: ${{ github.event.inputs.branch }}
@@ -91,7 +91,7 @@ jobs:
       inherit
 
   blobber-06:
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-06.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-06.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       blobber_branch: ${{ github.event.inputs.branch }}
@@ -101,21 +101,24 @@ jobs:
       inherit
   
   authorizers-standard:
-    uses: 0chain/0chain/.github/workflows/conductor-authorizer-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-authorizer-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
+      auth_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
   
   node-recovery-01:
-    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-01-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-01-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
 
   node-recovery-02:
-    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       blobber_branch: ${{ github.event.inputs.branch }}
@@ -126,7 +129,7 @@ jobs:
       inherit
 
   node-recovery-03:
-    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-03-tests.yml@aggregate-ct-test
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-03-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
       auth_branch: ${{ github.event.inputs.branch }}
