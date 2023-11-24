@@ -1,4 +1,4 @@
-name: CONDUCTOR BLOBBER-01 TESTS
+name: CONDUCTOR TESTS SUITE
 
 on:
   schedule:
