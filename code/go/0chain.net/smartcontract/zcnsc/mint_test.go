@@ -350,27 +350,24 @@ func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {
 	require.NoError(t, err)
 
 	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
-	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
 
-	stakePoolBefore := NewStakePool()
-	err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePoolBefore)
-	require.NoError(t, err)
+	rewardBefore := 0
 
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotZero(t, resp)
 
-	stakePoolAfter := NewStakePool()
-	err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePoolAfter)
-	require.NoError(t, err)
+	rewardAfter := 0
 
-	rewardAfter, err := stakePoolAfter.Reward.Float64()
-	require.NoError(t, err)
+	for _, sig := range payload.Signatures {
+		stakePool := NewStakePool()
+		err = ctx.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, sig.ID), stakePool)
+		require.NoError(t, err)
 
-	rewardBefore, err := stakePoolBefore.Reward.Float64()
-	require.NoError(t, err)
+		rewardAfter += int(stakePool.Reward)
+	}
 
-	require.NotEqual(t, rewardAfter, rewardBefore)
+	require.NotEqual(t, rewardAfter, rewardBefore, "reward should be distributed rewardAfter : ? rewardBefore : ?", rewardAfter, rewardBefore)
 }
 
 func TestZCNSmartContractMintNonce(t *testing.T) {
