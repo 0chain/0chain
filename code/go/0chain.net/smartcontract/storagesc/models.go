@@ -782,22 +782,6 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 		return 0, fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", d.BlobberID, err)
 	}
 
-	blobber, err := sc.getBlobber(d.BlobberID, balances)
-	if err != nil {
-		return reward, common.NewError("fini_alloc_failed",
-			"can't get blobber "+d.BlobberID+": "+err.Error())
-	}
-	blobber.SavedData += -d.Stats.UsedSize
-	blobber.Allocated += -d.Size
-	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-	if err != nil {
-		return reward, common.NewError("fini_alloc_failed",
-			"saving blobber "+d.BlobberID+": "+err.Error())
-	}
-
-	// Update saved data on events_db
-	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
-
 	return reward, nil
 }
 
@@ -1404,6 +1388,22 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
+
+			blobber, err := sc.getBlobber(d.BlobberID, balances)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't get blobber "+d.BlobberID+": "+err.Error())
+			}
+			blobber.SavedData += -d.Stats.UsedSize
+			blobber.Allocated += -d.Size
+			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"saving blobber "+d.BlobberID+": "+err.Error())
+			}
+
+			// Update saved data on events_db
+			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
 			sa.BlobberAllocs[i] = addedBlobberAllocation
 			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
