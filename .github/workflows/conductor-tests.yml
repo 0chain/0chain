@@ -113,7 +113,7 @@ jobs:
           SHAEDER_COLOR=$([ "${{ needs.standard-sharder.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
 
           payload="{
-          \"text\": \"'<!here> Conductor testing results 📝 on $BRANCH branch.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}'\",
+          \"text\": \"<!here> Conductor testing results 📝 on $BRANCH branch.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\",
           \"attachments\": [
               {
               \"text\": \"CONDUCTOR STANDARD MINERS TEST $MINER_STATUS\",
