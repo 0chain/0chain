@@ -1043,7 +1043,12 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation()
+	cp, err := sc.getChallengePool(alloc.ID, balances)
+	if err != nil {
+		return "", common.NewError("allocation_updating_failed", err.Error())
+	}
+
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}

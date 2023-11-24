@@ -1683,7 +1683,13 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation()
+	cp, err := edb.GetChallengePool(alloc.ID)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
