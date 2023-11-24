@@ -146,6 +146,7 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 		amount currency.Coin
 		share  currency.Coin
 	)
+
 	share, _, err = currency.DistributeCoin(gn.ZCNSConfig.MaxFee, int64(len(payload.Signatures)))
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, DistributeCoin operation, %s", code, info))

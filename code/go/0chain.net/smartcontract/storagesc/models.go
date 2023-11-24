@@ -782,22 +782,6 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 		return 0, fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", d.BlobberID, err)
 	}
 
-	blobber, err := sc.getBlobber(d.BlobberID, balances)
-	if err != nil {
-		return reward, common.NewError("fini_alloc_failed",
-			"can't get blobber "+d.BlobberID+": "+err.Error())
-	}
-	blobber.SavedData += -d.Stats.UsedSize
-	blobber.Allocated += -d.Size
-	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-	if err != nil {
-		return reward, common.NewError("fini_alloc_failed",
-			"saving blobber "+d.BlobberID+": "+err.Error())
-	}
-
-	// Update saved data on events_db
-	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
-
 	return reward, nil
 }
 
@@ -1245,7 +1229,8 @@ func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool,
 
 func (sa *StorageAllocation) isActive(
 	blobber *StorageNode,
-	total, offers currency.Coin,
+	totalStakePoolBalance, spOffersTotal currency.Coin,
+	stakedCapacity int64,
 	conf *Config,
 	now common.Timestamp,
 ) error {
@@ -1269,21 +1254,21 @@ func (sa *StorageAllocation) isActive(
 			sa.WritePriceRange, blobber.ID, blobber.Terms.WritePrice)
 	}
 
-	bSize := sa.bSize()
+	blobberSize := sa.bSize()
 	// filter by blobber's capacity left
-	if blobber.Capacity-blobber.Allocated < bSize {
+	if blobber.Capacity-blobber.Allocated < blobberSize || stakedCapacity-blobber.Allocated < blobberSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
-			blobber.ID, blobber.Capacity-blobber.Allocated, bSize)
+			blobber.ID, blobber.Capacity-blobber.Allocated, blobberSize)
 	}
 
-	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, total, offers)
+	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, totalStakePoolBalance, spOffersTotal)
 	if err != nil {
 		return fmt.Errorf("failed to get unallocated capacity: %v", err)
 	}
 
-	if blobber.Terms.WritePrice > 0 && unallocCapacity < bSize {
+	if blobber.Terms.WritePrice > 0 && unallocCapacity < blobberSize {
 		return fmt.Errorf("blobber %v staked capacity %v is insufficient, wanted %v",
-			blobber.ID, unallocCapacity, bSize)
+			blobber.ID, unallocCapacity, blobberSize)
 	}
 
 	return nil
@@ -1326,13 +1311,13 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation() (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin) (currency.Coin, error) {
 	costOfAllocAfterUpdate, err := sa.cost()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
-	totalWritePool := sa.WritePool + sa.MovedToChallenge - sa.MovedBack
+	totalWritePool := sa.WritePool + cpBalance
 
 	var tokensRequiredToLock currency.Coin
 
@@ -1404,6 +1389,22 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
+
+			blobber, err := sc.getBlobber(d.BlobberID, balances)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't get blobber "+d.BlobberID+": "+err.Error())
+			}
+			blobber.SavedData += -d.Stats.UsedSize
+			blobber.Allocated += -d.Size
+			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"saving blobber "+d.BlobberID+": "+err.Error())
+			}
+
+			// Update saved data on events_db
+			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
 			sa.BlobberAllocs[i] = addedBlobberAllocation
 			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
@@ -1477,7 +1478,12 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, conf, now); err != nil {
+	stakedCapacity, err := sp.stakedCapacity(addedBlobber.Terms.WritePrice)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, stakedCapacity, conf, now); err != nil {
 		return nil, err
 	}
 
@@ -1574,7 +1580,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 	)
 	for _, b := range blobbers {
 		sn := StoragNodeResponseToStorageNode(*b)
-		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, conf, creationDate)
+		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
 		if err != nil {
 			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
 			errs = append(errs, err.Error())

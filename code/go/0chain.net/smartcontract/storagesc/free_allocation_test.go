@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -546,6 +547,29 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			TimeUnit:     mockTimeUnit,
 			Stats:        &StorageAllocationStats{},
 		}
+
+		for _, blobber := range mockAllBlobbers.Nodes {
+			const (
+				mockPoolId = "mock pool id"
+			)
+			sp := stakePool{
+				StakePool: &stakepool.StakePool{
+					Pools: map[string]*stakepool.DelegatePool{
+						mockPoolId: {
+							DelegateID: "32q498e2de",
+							Balance:    1e15,
+						},
+					},
+				},
+			}
+			sp.Pools[mockPoolId].Balance = zcnToBalance(1e5)
+			balances.On("GetTrieNode", stakePoolKey(spenum.Blobber, blobber.ID),
+				mock.MatchedBy(func(s *stakePool) bool {
+					*s = sp
+					return true
+				})).Return(nil).Once()
+		}
+
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
 				"GetTrieNode", blobber.GetKey(),
