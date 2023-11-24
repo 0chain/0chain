@@ -750,7 +750,10 @@ func TestExtendAllocation(t *testing.T) {
 				sp := stakePool{
 					StakePool: &stakepool.StakePool{
 						Pools: map[string]*stakepool.DelegatePool{
-							mockPoolId: {},
+							mockPoolId: {
+								DelegateID: "32q498e2de",
+								Balance:    1e15,
+							},
 						},
 					},
 				}
@@ -815,7 +818,7 @@ func TestExtendAllocation(t *testing.T) {
 				request: updateAllocationRequest{
 					ID:          mockAllocationId,
 					OwnerID:     mockOwner,
-					Size:        zcnToInt64(31),
+					Size:        10 * MB,
 					FileOptions: 63,
 					Extend:      true,
 				},
@@ -830,7 +833,7 @@ func TestExtendAllocation(t *testing.T) {
 				request: updateAllocationRequest{
 					ID:          mockAllocationId,
 					OwnerID:     mockOwner,
-					Size:        zcnToInt64(61),
+					Size:        10 * MB,
 					FileOptions: 63,
 					Extend:      true,
 				},
