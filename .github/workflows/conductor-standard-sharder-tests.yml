@@ -70,12 +70,12 @@ jobs:
         echo "Branch name is ${CHAIN_BRANCH}"
         git checkout ${CHAIN_BRANCH}
 
-    # - name: Docker Init Setup.
-    #   run: |
-    #     export HOME="/root"
-    #     cd 0chain
-    #     make build-mocks
-    #     bash ./docker.local/bin/init.setup.sh
+    - name: Docker Init Setup.
+      run: |
+        export HOME="/root"
+        cd 0chain
+        make build-mocks
+        bash ./docker.local/bin/init.setup.sh
 
     - name: Docker Network Setup.
       run: |

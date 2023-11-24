@@ -103,6 +103,7 @@ jobs:
   notify_slack:
     runs-on: [self-hosted, arc-runner]
     needs: [standard-miner, standard-sharder]
+    if: always()
     steps:
       - name: "Notify Slack"
         run: |
