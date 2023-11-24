@@ -106,24 +106,25 @@ jobs:
     steps:
       - name: "Notify Slack"
         run: |
+          BRANCH=$([ -z "${{ github.event.inputs.branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.branch }}")
           MINER_STATUS=$([ "${{ needs.standard-miner.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           MINER_COLOR=$([ "${{ needs.standard-miner.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
           SHARDER_STATUS=$([ "${{ needs.standard-sharder.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           SHAEDER_COLOR=$([ "${{ needs.standard-sharder.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
 
-          payload='{
-          "text": "'"<!here> Conductor testing results 📝 on ${{ github.event.inputs.branch }}.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
+          payload="{
+          \"text\": \"'<!here> Conductor testing results 📝 on $BRANCH branch.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}'\",
+          \"attachments\": [
               {
-              "text": "CONDUCTOR STANDARD MINERS TEST $MINER_STATUS",
-              "color": "$MINER_COLOR"
+              \"text\": \"CONDUCTOR STANDARD MINERS TEST $MINER_STATUS\",
+              \"color\": \"$MINER_COLOR\"
               },
               {
-              "text": "CONDUCTOR STANDARD SHARDERS TEST $SHARDER_STATUS",
-              "color": "$SHAEDER_COLOR"
+              \"text\": \"CONDUCTOR STANDARD SHARDERS TEST $SHARDER_STATUS\",
+              \"color\": \"$SHAEDER_COLOR\"
               }
           ]
-          }'
+          }"
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
         
   # byzantine:
