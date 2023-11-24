@@ -117,7 +117,7 @@ build.base  build.miner       build.test.multisigsc  miner1           miner5  sh
 
 0dns service is responsible for connecting to the network and fetching all the magic blocks from the network which are saved in the DB. For building and starting 0dns:
 
-3.1) Open another terminal tab, clone the 0dns repo and navigate to 0dns directory using the command below:
+3.1) Open another terminal window, clone the 0dns repo and navigate to 0dns directory using the command below:
 
 ```
 git clone https://github.com/0chain/0dns.git
@@ -233,11 +233,9 @@ Note: The above commands will run 1 sharder and 3 miners for minimal setup. For 
 
 For detailed steps on building and starting blobbers, follow the guides below:
 
-- [Directory Setup for Blobbers](https://github.com/0chain/blobber#directory-setup-for-blobbers)
-- [Building and Starting the Blobber Nodes](https://github.com/0chain/blobber#building-and-starting-the-nodes)
+- [Directory Setup for Blobbers](https://github.com/0chain/blobber/tree/hm90121-patch-2#directory-setup-for-blobbers)
+- [Building and Starting the Blobber Nodes](https://github.com/0chain/blobber/tree/hm90121-patch-2#building-and-starting-the-nodes)
  
-Note: A block worker URL is a field in the `blobber/config/0chain_validator.yaml` and `blobber/config/0chain_blobber.yaml` configuration files that require the URL of blockchain network you want to connect to. Change the default value of block_worker field with the following: http://198.18.0.98:9091/ for the local chain.
-
 8.1). After starting blobbers check whether the blobber has registered to the blockchain by running the zbox command below:
 
 ```
@@ -247,9 +245,9 @@ Note: A block worker URL is a field in the `blobber/config/0chain_validator.yaml
 Note: In case you have not installed and configured zbox for testnet yet, follow the guides below:
 
  - [Install zboxcli](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#1-installation)
- - [Configure zbox network](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#2-configure-network) 
+ - [Configure zbox network](https://github.com/0chain/blobber/tree/hm90121-patch-2#building-and-starting-the-nodes) 
 
-In the command response you should see the local blobbers mentioned with their urls for example http://198.18.0.91:5051 and http://198.18.0.92:5052
+In the command response you should see the local blobbers mentioned with their urls for example `http://198.18.0.91:5051` and `http://198.18.0.92:5052`
 
 Sample Response:
 ```
@@ -279,24 +277,30 @@ Note: When starting multiple blobbers, it could happen that blobbers are not bei
    
 Blobber registration takes some time and adding at least 5 second wait before starting the next blobber usually avoids the issue.
   
-8.2) Now you can create allocations on blobber and store files. For creating allocations you need tokens into your wallet, follow the guide below to get tokens:
+8.2) Now you can create allocations on blobber and store files. For creating allocations you need tokens into your wallet, Running the command below in zwallet will give 1 token to wallet.
 
-- [Get Tokens](https://github.com/0chain/zwalletcli#getting-tokens-with-faucet-smart-contract---faucet)
-
-8.3) Then create new allocation using the command below:
-
-```
-./zbox newallocation --lock 0.5
+```sh
+./zwallet faucet --methodName pour --input "need token"
 ```
 
-Note: If unable to create new allocations as shown below.
+You can specify the number of tokens required using the following command  for adding 5 tokens:
+
+```sh
+./zwallet faucet --methodName pour --input "need token" --tokens 5
+```
+
+Sample output from `faucet` prints the transaction.
 
 ```
-./zbox newallocation --lock 0.5
-Error creating allocation: transaction_not_found: Transaction was not found on any of the sharders
+Execute faucet smart contract success with txn:  d25acd4a339f38a9ce4d1fa91b287302fab713ef4385522e16d18fd147b2ebaf
 ```
+To check wallet balance run `./zwallet getbalance` command
 
-To fix this issue you must lock some tokens on the blobber. Get the local blobber id using the `./zbox ls-blobbers` , use the commands below to lock tokens into stake pool: 
+Response:
+```
+Balance: 5 ZCN (4.2299999999999995 USD)
+```
+8.2) Lock some tokens in blobber stake pool, use the commands below to lock tokens into stake pool: 
 
 ```
 export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
@@ -305,6 +309,15 @@ export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 ./zbox sp-lock --blobber_id $BLOBBER2 --tokens 1
 ```
 Note: Atleast have 2 ZCN balance in your wallet before locking tokens into stake pool using the command above.
+
+8.3) Then create new allocation using the command below:
+
+```
+./zbox newallocation --lock 0.5
+```
+Note: Atleast have 1 ZCN balance in your wallet before running the command above.
+
+Now, you can store files in allocated space and execute a variety of operations using zboxcli. For a comprehensive list of zbox commands and their respective functionalities, please refer to the documentation [here](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#commands-table).
 
 ## Check Chain Status
 
