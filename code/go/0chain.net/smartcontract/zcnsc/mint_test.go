@@ -367,7 +367,7 @@ func Test_CheckAuthorizerStakePoolDistributedRewards(t *testing.T) {
 		rewardAfter += int(stakePool.Reward)
 	}
 
-	require.NotEqual(t, rewardAfter, rewardBefore, "reward should be distributed rewardAfter : ? rewardBefore : ?", rewardAfter, rewardBefore)
+	require.Greater(t, rewardAfter, rewardBefore, "reward should be distributed rewardAfter : ? rewardBefore : ?", rewardAfter, rewardBefore)
 }
 
 func TestZCNSmartContractMintNonce(t *testing.T) {
