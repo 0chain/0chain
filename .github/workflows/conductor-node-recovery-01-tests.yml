@@ -95,11 +95,11 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
-    # - name: Starting Node Recovery 01 Tests.
-    #   run: |
-    #     export HOME="/root"
-    #     cd 0chain
-    #     ./docker.local/bin/start.conductor.sh node-recovery-1
+    - name: Starting Node Recovery 01 Tests.
+      run: |
+        export HOME="/root"
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh node-recovery-1
 
     - uses: actions/upload-artifact@v3
       if: always()

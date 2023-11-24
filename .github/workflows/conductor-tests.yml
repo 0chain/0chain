@@ -190,7 +190,7 @@ jobs:
           NODE_RECOVERY_03_COLOR=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
 
           payload="{
-          \"text\": \"*📝 Conductor testing results*\n🐙 On $BRANCH branch .\n ⚙️Github run: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\",
+            \"text\": \"*📝 CONDUCTOR TESTING RESULTS 📝*\n🐙 On $BRANCH branch\n⚙️ Github run: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\n\",
           \"attachments\": [
               {
               \"text\": \"CONDUCTOR STANDARD MINERS TEST $MINER_STATUS\",

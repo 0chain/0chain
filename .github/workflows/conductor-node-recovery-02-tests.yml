@@ -282,11 +282,11 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    # - name: Starting Node Recovery Tests.
-    #   run: |
-    #     export HOME="/root"
-    #     cd 0chain
-    #     ./docker.local/bin/start.conductor.sh node-recovery-2
+    - name: Starting Node Recovery Tests.
+      run: |
+        export HOME="/root"
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh node-recovery-2
 
     - uses: actions/upload-artifact@v3
       if: always()

@@ -239,13 +239,13 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    # - name: Starting blobber Tests.
-    #   run: |
-    #     export HOME="/root"
-    #     ls -lha
-    #     cd 0chain
-    #     ls -lha
-    #     ./docker.local/bin/start.conductor.sh blobber-1
+    - name: Starting blobber Tests.
+      run: |
+        export HOME="/root"
+        ls -lha
+        cd 0chain
+        ls -lha
+        ./docker.local/bin/start.conductor.sh blobber-1
 
     - uses: actions/upload-artifact@v3
       if: always()

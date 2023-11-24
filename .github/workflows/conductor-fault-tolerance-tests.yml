@@ -97,11 +97,11 @@ jobs:
         bash -c 'sed -i "s/max_pour_amount: [0-9]*/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
         bash -c 'grep max_pour_amount ./docker.local/config/sc.yaml'
   
-    # - name: Running No VC Fault Tolerance Tests.
-    #   run: |
-    #     cd 0chain
-    #     export HOME="/root"
-    #     bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+    - name: Running No VC Fault Tolerance Tests.
+      run: |
+        cd 0chain
+        export HOME="/root"
+        bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 
     - uses: actions/upload-artifact@v3
       if: always()
