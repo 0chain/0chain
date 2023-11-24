@@ -26,83 +26,122 @@ jobs:
     secrets:
       inherit
   
-  # byzantine:
-  #   uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
+  byzantine:
+    uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
   
-  # fault-tolerance:
-  #   uses: 0chain/0chain/.github/workflows/conductor-fault-tolerance-tests.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
+  fault-tolerance:
+    uses: 0chain/0chain/.github/workflows/conductor-fault-tolerance-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
   
-  # blobber-01:
-  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-01.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #     blobber_branch: ${{ github.event.inputs.branch }}
-  #     zboxcli_branch: ${{ github.event.inputs.branch }}
-  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
+  blobber-01:
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-01.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
 
-  # blobber-02:
-  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #     blobber_branch: ${{ github.event.inputs.branch }}
-  #     zboxcli_branch: ${{ github.event.inputs.branch }}
-  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
+  blobber-02:
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
 
-  # blobber-03:
-  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-03.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #     blobber_branch: ${{ github.event.inputs.branch }}
-  #     zboxcli_branch: ${{ github.event.inputs.branch }}
-  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
+  blobber-03:
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-03.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
 
-  # blobber-04:
-  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-04.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #     blobber_branch: ${{ github.event.inputs.branch }}
-  #     zboxcli_branch: ${{ github.event.inputs.branch }}
-  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
+  blobber-04:
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-04.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
 
-  # blobber-05:
-  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-05.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #     blobber_branch: ${{ github.event.inputs.branch }}
-  #     zboxcli_branch: ${{ github.event.inputs.branch }}
-  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
+  blobber-05:
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-05.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
 
-  # blobber-06:
-  #   uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-06.yml@aggregate-ct-test
-  #   with:
-  #     chain_branch: ${{ github.event.inputs.branch }}
-  #     blobber_branch: ${{ github.event.inputs.branch }}
-  #     zboxcli_branch: ${{ github.event.inputs.branch }}
-  #     zwalletcli_branch: ${{ github.event.inputs.branch }}
-  #   secrets:
-  #     inherit
-      
+  blobber-06:
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-06.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+  
+  authorizers-standard:
+    uses: 0chain/0chain/.github/workflows/conductor-authorizer-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+  
+  node-recovery-01:
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-01-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  node-recovery-02:
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+      zbox_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  node-recovery-03:
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-03-tests.yml@aggregate-ct-test
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      auth_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+      zbox_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+  
+  
+  
+  
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [standard-miner, standard-sharder]
+    needs: [standard-miner, standard-sharder, byzantine, fault-tolerance, blobber-01, blobber-02, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02, node-recovery-03]
     if: always()
     steps:
       - name: "Notify Slack"
@@ -110,11 +149,48 @@ jobs:
           BRANCH=$([ -z "${{ github.event.inputs.branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.branch }}")
           MINER_STATUS=$([ "${{ needs.standard-miner.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           MINER_COLOR=$([ "${{ needs.standard-miner.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
           SHARDER_STATUS=$([ "${{ needs.standard-sharder.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           SHAEDER_COLOR=$([ "${{ needs.standard-sharder.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          BYZANTINE_STATUS=$([ "${{ needs.byzantine.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BYZANTINE_COLOR=$([ "${{ needs.byzantine.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          FAULT_TOLERANCE_STATUS=$([ "${{ needs.fault-tolerance.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          FAULT_TOLERANCE_COLOR=$([ "${{ needs.fault-tolerance.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          BLOBBER_01_STATUS=$([ "${{ needs.blobber-01.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BLOBBER_01_COLOR=$([ "${{ needs.blobber-01.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          BLOBBER_02_STATUS=$([ "${{ needs.blobber-02.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BLOBBER_02_COLOR=$([ "${{ needs.blobber-02.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          BLOBBER_03_STATUS=$([ "${{ needs.blobber-03.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BLOBBER_03_COLOR=$([ "${{ needs.blobber-03.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          BLOBBER_04_STATUS=$([ "${{ needs.blobber-04.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BLOBBER_04_COLOR=$([ "${{ needs.blobber-04.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          BLOBBER_05_STATUS=$([ "${{ needs.blobber-05.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BLOBBER_05_COLOR=$([ "${{ needs.blobber-05.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          BLOBBER_06_STATUS=$([ "${{ needs.blobber-06.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BLOBBER_06_COLOR=$([ "${{ needs.blobber-06.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          AUTHORIZER_STATUS=$([ "${{ needs.authorizers-standard.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          AUTHORIZER_COLOR=$([ "${{ needs.authorizers-standard.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          NODE_RECOVERY_01_STATUS=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          NODE_RECOVERY_01_COLOR=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          NODE_RECOVERY_02_STATUS=$([ "${{ needs.node-recovery-02.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          NODE_RECOVERY_02_COLOR=$([ "${{ needs.node-recovery-02.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          
+          NODE_RECOVERY_03_STATUS=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          NODE_RECOVERY_03_COLOR=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
 
           payload="{
-          \"text\": \"<!here> Conductor testing results 📝 on $BRANCH branch.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\",
+          \"text\": \"*📝 Conductor testing results*\n🐙 On $BRANCH branch .\n ⚙️Github run: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\",
           \"attachments\": [
               {
               \"text\": \"CONDUCTOR STANDARD MINERS TEST $MINER_STATUS\",
@@ -123,22 +199,55 @@ jobs:
               {
               \"text\": \"CONDUCTOR STANDARD SHARDERS TEST $SHARDER_STATUS\",
               \"color\": \"$SHAEDER_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR BYZANTINE TEST $BYZANTINE_STATUS\",
+              \"color\": \"$BYZANTINE_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR FAULT TOLERANCE TEST $FAULT_TOLERANCE_STATUS\",
+              \"color\": \"$FAULT_TOLERANCE_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR BLOBBER TEST 01 $BLOBBER_01_STATUS\",
+              \"color\": \"$BLOBBER_01_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR BLOBBER TEST 02 $BLOBBER_02_STATUS\",
+              \"color\": \"$BLOBBER_02_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR BLOBBER TEST 03 $BLOBBER_03_STATUS\",
+              \"color\": \"$BLOBBER_03_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR BLOBBER TEST 04 $BLOBBER_04_STATUS\",
+              \"color\": \"$BLOBBER_04_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR BLOBBER TEST 05 $BLOBBER_05_STATUS\",
+              \"color\": \"$BLOBBER_05_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR BLOBBER TEST 06 $BLOBBER_06_STATUS\",
+              \"color\": \"$BLOBBER_06_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR AUTHORIZER TEST $AUTHORIZER_STATUS\",
+              \"color\": \"$AUTHORIZER_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR NODE RECOVERY TEST 01 $NODE_RECOVERY_01_STATUS\",
+              \"color\": \"$NODE_RECOVERY_01_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR NODE RECOVERY TEST 02 $NODE_RECOVERY_02_STATUS\",
+              \"color\": \"$NODE_RECOVERY_02_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR NODE RECOVERY TEST 03 $NODE_RECOVERY_03_STATUS\",
+              \"color\": \"$NODE_RECOVERY_03_COLOR\"
               }
           ]
           }"
           curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-        
-  # byzantine:
-  # fault-tolerance:
-  # blobber-01:
-  #   name: Run all conductor tests in parallel
-  #   runs-on: conductor-test
-  # blobber-02:
-  # blobber-03:
-  # blobber-04:
-  # blobber-05:
-  # blobber-06:
-  # authorizers-standard:
-  # node-recovery-01:
-  # node-recovery-02:
-  # node-recovery-03:

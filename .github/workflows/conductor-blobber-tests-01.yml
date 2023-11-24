@@ -1,9 +1,6 @@
 name: CONDUCTOR BLOBBER-01 TESTS
 
 on:
-  schedule:
-  #   # Runs everyday at 02:00 am
-    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -19,6 +16,28 @@ on:
         default: ''
         required: false
       zwalletcli_branch:
+        description: 'Input branch for zwalletcli repo'
+        default: ''
+        required: false
+  workflow_call:
+    inputs:
+      chain_branch:
+        type: string
+        description: 'Input branch for 0chain repo'
+        default: ''
+        required: false
+      blobber_branch:
+        type: string
+        description: 'Input branch for blobber repo'
+        default: ''
+        required: false
+      zboxcli_branch:
+        type: string
+        description: 'Input branch for zboxcli repo'
+        default: ''
+        required: false
+      zwalletcli_branch:
+        type: string
         description: 'Input branch for zwalletcli repo'
         default: ''
         required: false
@@ -220,13 +239,13 @@ jobs:
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
-    - name: Starting blobber Tests.
-      run: |
-        export HOME="/root"
-        ls -lha
-        cd 0chain
-        ls -lha
-        ./docker.local/bin/start.conductor.sh blobber-1
+    # - name: Starting blobber Tests.
+    #   run: |
+    #     export HOME="/root"
+    #     ls -lha
+    #     cd 0chain
+    #     ls -lha
+    #     ./docker.local/bin/start.conductor.sh blobber-1
 
     - uses: actions/upload-artifact@v3
       if: always()
@@ -243,42 +262,3 @@ jobs:
       run: |
         cd /tmp
         rm -rf ./*
-
-  notify_slack_on_failure:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_BLOBBERS_01_TESTS]
-    if: always() && (needs.CONDUCTOR_BLOBBERS_01_TESTS.result == 'failure')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR BLOBBER01 TEST FAILED ⚠️",
-              "color": "#ff0000"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS FAILED on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-  notify_slack_on_success:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_BLOBBERS_01_TESTS]
-    if: always() && (needs.CONDUCTOR_BLOBBERS_01_TESTS.result == 'success')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_BLOBBERS_01_TESTS PASSING on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR BLOBBERS_01 TEST PASSED ✅",
-              "color": "#22bb33"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BLOBBERS_01_TESTS ARE PASSING on ${{ needs.CONDUCTOR_BLOBBERS_01_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

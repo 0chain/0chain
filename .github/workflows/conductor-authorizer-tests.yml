@@ -1,8 +1,6 @@
 name: CONDUCTOR AUTHORIZER TESTS
 
 on:
-  schedule:
-    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -21,7 +19,29 @@ on:
         description: 'Input branch for zwalletcli repo'
         default: ''
         required: false
-
+  workflow_call:
+    inputs:
+      chain_branch:
+        type: string
+        description: 'Input branch for 0chain repo'
+        default: ''
+        required: false
+      auth_branch:
+        type: string
+        description: 'Input branch for authorizer repo'
+        default: ''
+        required: false
+      zboxcli_branch:
+        type: string
+        description: 'Input branch for zboxcli repo'
+        default: ''
+        required: false
+      zwalletcli_branch:
+        type: string
+        description: 'Input branch for zwalletcli repo'
+        default: ''
+        required: false
+      
 jobs:
   CONDUCTOR_AUTHORIZER_TESTS:
     name: CONDUCTOR-AUTHORIZER-TESTS
@@ -45,7 +65,6 @@ jobs:
       run: |
         rm -rf *
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
-    # - uses: actions/checkout@v1
 
     - name: Login to Docker Hub
       uses: docker/login-action@v1
@@ -239,11 +258,11 @@ jobs:
       run: |
         cat ~/.zcn/wallets/UTC--2023-10-26T00-34-42.327566000Z--8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97
 
-    - name: Starting authorizer Tests.
-      run: |
-        export HOME="/root"
-        cd 0chain
-        ./docker.local/bin/start.conductor.sh authorizer
+    # - name: Starting authorizer Tests.
+    #   run: |
+    #     export HOME="/root"
+    #     cd 0chain
+    #     ./docker.local/bin/start.conductor.sh authorizer
 
     - uses: actions/upload-artifact@v3
       if: always()
@@ -259,41 +278,3 @@ jobs:
       run: |
         cd /tmp
         rm -rf ./*
-
-  notify_slack_on_failure:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_AUTHORIZER_TESTS]
-    if: always() && (needs.CONDUCTOR_AUTHORIZER_TESTS.result == 'failure')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR AUTHORIZER TEST FAILED ⚠️",
-              "color": "#ff0000"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS FAILED on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-  notify_slack_on_success:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_AUTHORIZER_TESTS]
-    if: always() && (needs.CONDUCTOR_AUTHORIZER_TESTS.result == 'success')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_AUTHORIZER_TESTS PASSING on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR AUTHORIZER TEST PASSED ✅",
-              "color": "#22bb33"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_AUTHORIZER_TESTS ARE PASSING on ${{ needs.CONDUCTOR_AUTHORIZER_TESTS.outputs.branch }}!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}

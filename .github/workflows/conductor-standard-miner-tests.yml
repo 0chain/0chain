@@ -108,7 +108,6 @@ jobs:
         cd 0chain
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
-        exit -1
 
     # - name: Running Standard Tests for Miners.
     #   run: |
