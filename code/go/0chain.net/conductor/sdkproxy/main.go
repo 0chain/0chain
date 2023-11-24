@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -399,38 +398,66 @@ func waitSigInt() {
 
 func execute(r, address string, codes chan int, logsDir string) {
 	var (
-		ctx, cancel = context.WithTimeout(context.Background(), 2 * time.Minute)
-		cmd  = exec.CommandContext(ctx, "sh", "-x", r)
+		cmd  = exec.Command("sh", "-x", r)
 		err  error
 		code int
 	)
 
-	defer cancel()
-
 	log.Print("execute: ", r)
 	defer func() { log.Printf("executed (%s) with %d exit code", r, code) }()
 
-	executableName := filepath.Base(r)
-	logFileBaseName := fmt.Sprintf("%v-%v.log", executableName, time.Now().Local().Format("2006-01-02_15-04-05"))
-
-	foutPath := filepath.Join(logsDir, fmt.Sprintf("sdkproxy/stdout-%v.log", logFileBaseName))
-	fout, err := os.Create(foutPath)
+	cmdStdOut, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Printf("creating temp file: %v", err)
+		log.Printf("error creating stdout pipe: %v", err)
 		return
 	}
-	defer fout.Close()
 
-	ferrPath := filepath.Join(logsDir, fmt.Sprintf("sdkproxy/stderr-%v.log", logFileBaseName))
-	ferr, err := os.Create(ferrPath)
+	cmdStdErr, err := cmd.StderrPipe()
 	if err != nil {
-		log.Printf("creating temp file: %v", err)
+		log.Printf("error creating stderr pipe: %v", err)
 		return
 	}
-	defer ferr.Close()
 
-	cmd.Stdout = fout
-	cmd.Stderr = ferr
+	go func() {
+		_, err := io.Copy(os.Stdout, cmdStdOut)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+	go func() {
+		_, err := io.Copy(os.Stderr, cmdStdErr)
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+
+	failureCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(2 * time.Minute))
+	defer cancel()
+
+	go func (cmd *exec.Cmd)  {
+		<-failureCtx.Done()
+		if failureCtx.Err() == context.DeadlineExceeded {
+			log.Printf("[ERR] Command %v exceeded failure threshold of %v\n", r, 2 * time.Minute)
+
+			err := cmd.Process.Kill()
+			if err != nil && err.Error() != "os: process already finished" {
+				log.Printf("[ERR] Failed to kill command %v: %v\n", r, err)
+			}
+
+			err = cmdStdOut.Close()
+			if err != nil && err.Error() != "os: file already closed" {
+				log.Printf("[ERR] Failed to close stdout of command %v: %v\n", r, err)
+			}
+
+			err = cmdStdErr.Close()
+			if err != nil && err.Error() != "os: file already closed" {
+				log.Printf("[ERR] Failed to close stderr of command %v: %v\n", r, err)
+			}
+		}
+	}(cmd)
+
 	cmd.Env = append(os.Environ(), "HTTP_PROXY=http://"+address)
 
 	err = cmd.Run()
