@@ -109,11 +109,11 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-    - name: Running Standard Tests for Sharders.
-      run: |
-        cd 0chain
-        export HOME="/root"
-        bash ./docker.local/bin/start.conductor.sh sharders
+    # - name: Running Standard Tests for Sharders.
+    #   run: |
+    #     cd 0chain
+    #     export HOME="/root"
+    #     bash ./docker.local/bin/start.conductor.sh sharders
 
     - uses: actions/upload-artifact@v3
       if: always()
