@@ -77,7 +77,7 @@ Quickstart with a convenient bash script for deploying a Züs testnet locally. f
  
 ### 1. Network setup
 
-1.1 Clone the 0chain repo:
+1.1 Open terminal and clone the 0chain repo:
 ```
 git clone https://github.com/0chain/0chain.git
 ```
@@ -91,11 +91,6 @@ cd 0chain
 ```bash
 ./macos_network.sh
 ```
-#### Windows
-Run powershell as administrator
-```powershell
-./windows_network.ps1
-```
 #### Ubuntu/WSL2
 Run the following script
 ```bash
@@ -106,7 +101,6 @@ Run the following script
 2.1) Inside the 0chain directory, run the following command:
 
 ```
-cd 0chain
 ./docker.local/bin/init.setup.sh
 ```
 
@@ -123,26 +117,33 @@ build.base  build.miner       build.test.multisigsc  miner1           miner5  sh
 
 0dns service is responsible for connecting to the network and fetching all the magic blocks from the network which are saved in the DB. For building and starting 0dns:
 
-3.1) Clone the 0dns repo and navigate to 0dns directory.
+3.1) Open another terminal tab, clone the 0dns repo and navigate to 0dns directory using the command below:
 
 ```
 git clone https://github.com/0chain/0dns.git
 cd 0dns
 ```
 
-3.2) Then follow the guide provided below:
+3.2) For miner and sharder URLs to work locally, update `0dns/docker.local/config/0dns.yaml` to disable both `use_https` and `use_path` (set to `false`).
 
-- [Building and starting the 0dns node](https://github.com/0chain/0dns#building-and-starting-the-node)
+3.3) Then run the following command
 
-Note: For miner and sharder URLs to work locally, update 0dns/docker.local/config/0dns.yaml to disable both use_https and use_path (set to false).
+```
+./docker.local/bin/build.sh
+```
 
+3.4) Run the container using
+
+```
+./docker.local/bin/start.sh
+```
 ### 4. Setup Network
 
 4.1) Inside the git/0chain directory:
-
-   ```
-   cd 0chain
-   ``` 
+   
+```
+cd 0chain
+``` 
 4.2) Set up a network called testnet0 for each of these node containers to talk to each other.
 
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
@@ -173,10 +174,6 @@ Note: For miner and sharder URLs to work locally, update 0dns/docker.local/confi
    
 5.4) Building the miners and sharders. From the git/0chain directory:
 
-   ```
-   cd 0chain
-   ``` 
-
    5.4.1) To build the miner containers
 
    ```
@@ -189,7 +186,7 @@ Note: For miner and sharder URLs to work locally, update 0dns/docker.local/confi
    ./docker.local/bin/build.sharders.sh
    ```
 
-   5.4.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed 
+   5.4.3)(Optional)Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed 
     periodically when you see the validation error.
 
    ```
@@ -234,15 +231,14 @@ Note: The above commands will run 1 sharder and 3 miners for minimal setup. For 
 
 ## 8. Building and Starting Blobber Nodes
 
-For detailed steps on building and starting blobbers, please clone the [blobber repository](https://github.com/0chain/blobber) and follow the guides below:
+For detailed steps on building and starting blobbers, follow the guides below:
 
 - [Directory Setup for Blobbers](https://github.com/0chain/blobber#directory-setup-for-blobbers)
 - [Building and Starting the Blobber Nodes](https://github.com/0chain/blobber#building-and-starting-the-nodes)
  
 Note: A block worker URL is a field in the `blobber/config/0chain_validator.yaml` and `blobber/config/0chain_blobber.yaml` configuration files that require the URL of blockchain network you want to connect to. Change the default value of block_worker field with the following: http://198.18.0.98:9091/ for the local chain.
 
-
-1. After starting blobbers check whether the blobber has registered to the blockchain by running the zbox command below:
+8.1). After starting blobbers check whether the blobber has registered to the blockchain by running the zbox command below:
 
 ```
 ./zbox ls-blobbers
@@ -250,8 +246,8 @@ Note: A block worker URL is a field in the `blobber/config/0chain_validator.yaml
 
 Note: In case you have not installed and configured zbox for testnet yet, follow the guides below:
 
- - [Install zboxcli](https://github.com/0chain/zboxcli/wiki/Install-zboxcli)
- - [Configure zbox network](https://github.com/0chain/zboxcli/wiki/Configure-zbox-network) 
+ - [Install zboxcli](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#1-installation)
+ - [Configure zbox network](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#2-configure-network) 
 
 In the command response you should see the local blobbers mentioned with their urls for example http://198.18.0.91:5051 and http://198.18.0.92:5052
 
@@ -283,11 +279,11 @@ Note: When starting multiple blobbers, it could happen that blobbers are not bei
    
 Blobber registration takes some time and adding at least 5 second wait before starting the next blobber usually avoids the issue.
   
-2. Now you can create allocations on blobber and store files. For creating allocations you need tokens into your wallet, follow the guide below to get tokens:
+8.2) Now you can create allocations on blobber and store files. For creating allocations you need tokens into your wallet, follow the guide below to get tokens:
 
 - [Get Tokens](https://github.com/0chain/zwalletcli#getting-tokens-with-faucet-smart-contract---faucet)
 
-3. Then create new allocation using the command below:
+8.3) Then create new allocation using the command below:
 
 ```
 ./zbox newallocation --lock 0.5
