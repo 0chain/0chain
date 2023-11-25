@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/stakepool"
 	"encoding/hex"
 	"encoding/json"
@@ -590,9 +591,17 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On("GetClientBalance", mockRecipient).Return(currency.Coin(1000000000000), nil).Maybe().Once()
 		balances.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(nil).Once()
 
+		cp := &challengePool{
+			ZcnPool: &tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					Balance: 10,
+				},
+			},
+		}
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
-			mockSetValue(&challengePool{})).Return(nil).Once()
+			mockSetValue(cp)).Return(nil).Once()
+
 		balances.On(
 			"GetTrieNode", mock.Anything,
 			mockSetValue(&StorageAllocation{ID: p.allocationId})).Return(nil)
@@ -613,6 +622,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				RedeemedNonces:  append(p.assigner.RedeemedNonces, p.marker.Nonce),
 			},
 		).Return("", nil).Once()
+
+		balances.On(
+			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
+			mock.Anything).Return(nil).Once()
 
 		balances.On(
 			"EmitEvent",
