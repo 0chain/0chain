@@ -14,11 +14,6 @@ on:
         description: 'Input branch for 0chain repo'
         default: ''
         required: false
-    secrets:
-      DOCKERHUB_USERNAME:
-        description: 'Dockerhub username'
-      DOCKERHUB_PASSWORD:
-        description: 'Dockerhub password'
       
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -123,3 +118,9 @@ jobs:
           0chain/conductor/logs/
           0chain/docker.local/miner*/log
           0chain/docker.local/sharder*/log
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
+    

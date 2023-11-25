@@ -112,3 +112,9 @@ jobs:
           0chain/conductor/logs/
           0chain/docker.local/miner*/log
           0chain/docker.local/sharder*/log
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf ./*
+    
