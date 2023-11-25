@@ -1048,10 +1048,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
-	allocCost, _ := alloc.requiredTokensForUpdateAllocation(cp.Balance)
-
-	logging.Logger.Info("allocation_updating", zap.Any("alloc", alloc), zap.Any("allocCost", allocCost), zap.Any("cp.balance", cp.Balance))
-
 	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
