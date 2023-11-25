@@ -1289,6 +1289,14 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
+func (ba *BlobberAllocation) cost() (currency.Coin, error) {
+	cost, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+	if err != nil {
+		return 0, err
+	}
+	return cost, nil
+}
+
 func (sa *StorageAllocation) cancellationCharge(cancellationFraction float64) (currency.Coin, error) {
 	cost, err := sa.cost()
 	if err != nil {
@@ -1311,15 +1319,35 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin) (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberIdx, replacedBlobberIdx int64) (currency.Coin, error) {
+	var tokensRequiredToLock currency.Coin
+
+	if !extend {
+		addedBlobber := sa.BlobberAllocs[addedBlobberIdx]
+		addedBlobberCost, err := addedBlobber.cost()
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+		}
+
+		tokensRequiredToLock, err = currency.AddCoin(tokensRequiredToLock, addedBlobberCost)
+		if err != nil {
+			return 0, fmt.Errorf("failed to add blobber cost: %v", err)
+		}
+
+		if replacedBlobberIdx != -1 {
+			replacedBlobber := sa.BlobberAllocs[replacedBlobberIdx]
+			tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, replacedBlobber.ChallengePoolIntegralValue)
+		}
+
+		return tokensRequiredToLock, nil
+	}
+
 	costOfAllocAfterUpdate, err := sa.cost()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
 	totalWritePool := sa.WritePool + cpBalance
-
-	var tokensRequiredToLock currency.Coin
 
 	if totalWritePool < costOfAllocAfterUpdate {
 		tokensRequiredToLock = costOfAllocAfterUpdate - totalWritePool
