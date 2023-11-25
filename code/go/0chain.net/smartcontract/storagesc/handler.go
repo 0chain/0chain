@@ -1698,7 +1698,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	}
 
 	// Add extra 5% to deal with race condition
-	tokensRequiredToLock := float64(tokensRequiredToLockZCN) * 1.05
+	tokensRequiredToLock := int64(float64(tokensRequiredToLockZCN) * 1.05)
 
 	common.Respond(w, r, map[string]interface{}{
 		"min_lock_demand": tokensRequiredToLock,
