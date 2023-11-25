@@ -1319,14 +1319,14 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberIdx, replacedBlobberIdx int64) (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId, replacedBlobberId string) (currency.Coin, error) {
 	var tokensRequiredToLock currency.Coin
 
 	// If not extending then we need to lock tokens for specific cases
 	if !extend {
 		// If blobber is added than we need to add cost of this blobber for time unit
-		if addedBlobberIdx != -1 {
-			addedBlobber := sa.BlobberAllocs[addedBlobberIdx]
+		if addedBlobberId != "" {
+			addedBlobber := sa.BlobberAllocsMap[addedBlobberId]
 			addedBlobberCost, err := addedBlobber.cost()
 			if err != nil {
 				return 0, fmt.Errorf("failed to get allocation cost: %v", err)
@@ -1338,8 +1338,8 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 			}
 
 			// If blobber is replaced than we need to remove cost of this blobber for time unit
-			if replacedBlobberIdx != -1 {
-				replacedBlobber := sa.BlobberAllocs[replacedBlobberIdx]
+			if replacedBlobberId != "" {
+				replacedBlobber := sa.BlobberAllocsMap[replacedBlobberId]
 
 				replacedBlobberCost, err := replacedBlobber.cost()
 				if err != nil {
