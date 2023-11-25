@@ -240,6 +240,20 @@ jobs:
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
+      - name: 'Setup jq'
+        uses: dcarbone/install-jq-action@v2.1.0
+        with:
+            version: '1.7'
+            force: 'false'
+              
+      - name: "Create Tenderly fork"
+        run: |
+          echo "TENDERLY_FORK_ID=$(curl -X POST \
+              -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+              -H "Content-Type: application/json" \
+              -d '{"alias":"", "description":"", "network_id":"1"}' \
+              https://api.tenderly.co/api/v1/account/zus_network/project/project/fork | jq -r '.simulation_fork.id')" >> $GITHUB_ENV
+
       - name: "Deploy 0Chain"
         uses: 0chain/actions/deploy-0chain@master
         with:
@@ -270,6 +284,14 @@ jobs:
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+
+      - name: "Remove Tenderly fork"
+        if: always()
+        run: |
+          curl -X DELETE \
+            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+            -H "Content-Type: application/json" \
+            https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}  
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
