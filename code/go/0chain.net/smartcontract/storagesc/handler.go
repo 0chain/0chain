@@ -1625,6 +1625,11 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
 
 	data := r.URL.Query().Get("data")
 	var req updateAllocationRequest
@@ -1636,6 +1641,9 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	// Always extend the allocation if the size is greater than 0.
 	if req.Size > 0 {
 		req.Extend = true
+	} else if req.Size < 0 {
+		common.Respond(w, r, "", common.NewErrBadRequest("invalid size"))
+		return
 	}
 
 	eAlloc, err := edb.GetAllocation(req.ID)
@@ -1644,33 +1652,22 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	eAlloc.Size += req.Size
+
+	if eAlloc.Expiration < int64(now) {
+		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
+		return
+	}
+
+	if req.Extend {
+		eAlloc.Expiration = common.ToTime(now).Add(conf.TimeUnit).Unix() // new expiration
+	}
+
 	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-
-	conf, err := getConfig(balances)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	if alloc.Expiration < now {
-		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
-		return
-	}
-
-	if req.Size < 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid size"))
-		return
-	}
-
-	if req.Extend {
-		alloc.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()) // new expiration
-	}
-
-	alloc.Size += req.Size
 
 	if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 		common.Respond(w, r, nil, err)
