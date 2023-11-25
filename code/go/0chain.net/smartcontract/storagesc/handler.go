@@ -1771,6 +1771,7 @@ func changeBlobbersEventDB(
 		sa.ParityShards++
 
 		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+		sa.BlobberAllocsMap[addID] = ba
 	}
 
 	return nil
