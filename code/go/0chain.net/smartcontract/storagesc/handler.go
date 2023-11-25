@@ -1693,13 +1693,14 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 	allocCost, _ := alloc.cost()
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance))
+	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
-	logging.Logger.Info("allocation_updating", zap.Any("alloc", alloc), zap.Any("allocCost", allocCost), zap.Any("cp.balance", cp.Balance), zap.Any("tokensRequiredToLock", tokensRequiredToLock), zap.Any("req", req))
+	// Add extra 5% to deal with race condition
+	tokensRequiredToLock := float64(tokensRequiredToLockZCN) * 1.05
 
 	common.Respond(w, r, map[string]interface{}{
 		"min_lock_demand": tokensRequiredToLock,
