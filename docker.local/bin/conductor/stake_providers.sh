@@ -23,7 +23,7 @@ case "${ptype}" in
 esac
 
 ./zwalletcli/zwallet --wallet testing.json faucet \
-    --methodName pour --input "{Pay day}" --tokens 99
+    --methodName pour --input "{Pay day}" --tokens 100
 
 
 for id in ${ids//,/ }
