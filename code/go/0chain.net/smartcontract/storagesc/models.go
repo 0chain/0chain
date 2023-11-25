@@ -1337,6 +1337,9 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 		if replacedBlobberIdx != -1 {
 			replacedBlobber := sa.BlobberAllocs[replacedBlobberIdx]
 			tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, replacedBlobber.ChallengePoolIntegralValue)
+			if err != nil {
+				return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
+			}
 		}
 
 		return tokensRequiredToLock, nil
