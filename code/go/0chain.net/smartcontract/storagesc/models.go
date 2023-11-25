@@ -1322,7 +1322,10 @@ func (sa *StorageAllocation) checkFunding() error {
 func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberIdx, replacedBlobberIdx int64) (currency.Coin, error) {
 	var tokensRequiredToLock currency.Coin
 
+	// If not extending then we need to lock tokens for specific cases
 	if !extend {
+		// If blobber is added than we need to add cost of this blobber for time unit
+		// Otherwise there is no lock required for other params for example (third party extendable)
 		if addedBlobberIdx != -1 {
 			addedBlobber := sa.BlobberAllocs[addedBlobberIdx]
 			addedBlobberCost, err := addedBlobber.cost()
@@ -1335,6 +1338,7 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				return 0, fmt.Errorf("failed to add blobber cost: %v", err)
 			}
 
+			// If blobber is replaced than we need to remove cost of this blobber for time unit
 			if replacedBlobberIdx != -1 {
 				replacedBlobber := sa.BlobberAllocs[replacedBlobberIdx]
 
