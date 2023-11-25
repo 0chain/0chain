@@ -493,6 +493,7 @@ func newBlobberAllocation(
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
+	ba.Terms = blobber.Terms
 
 	setCappedPrices(ba, blobber, conf)
 	ba.AllocationID = allocation.ID
