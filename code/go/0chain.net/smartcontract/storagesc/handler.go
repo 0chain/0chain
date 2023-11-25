@@ -1763,13 +1763,16 @@ func changeBlobbersEventDB(
 		if !found {
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
+
+		sa.BlobberAllocs[removedIdx] = ba
+		sa.BlobberAllocsMap[addID] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
 		sa.ParityShards++
+
+		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
 	}
 
-	sa.BlobberAllocs[removedIdx] = ba
-	sa.BlobberAllocsMap[addID] = ba
 	return nil
 }
 
