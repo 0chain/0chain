@@ -1633,6 +1633,11 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	// Always extend the allocation if the size is greater than 0.
+	if req.Size > 0 {
+		req.Extend = true
+	}
+
 	eAlloc, err := edb.GetAllocation(req.ID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
