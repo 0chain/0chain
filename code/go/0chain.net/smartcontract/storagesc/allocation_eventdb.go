@@ -40,7 +40,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
 
-	var gbSize = sizeInGB(bSize(alloc.Size, alloc.DataShards))
+	blobberSize := bSize(alloc.Size, alloc.DataShards)
+	var gbSize = sizeInGB(blobberSize)
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &storageNodeResponse{
