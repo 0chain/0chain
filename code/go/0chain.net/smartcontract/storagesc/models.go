@@ -1323,33 +1323,35 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 	var tokensRequiredToLock currency.Coin
 
 	if !extend {
-		addedBlobber := sa.BlobberAllocs[addedBlobberIdx]
-		addedBlobberCost, err := addedBlobber.cost()
-		if err != nil {
-			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
-		}
-
-		tokensRequiredToLock, err = currency.AddCoin(tokensRequiredToLock, addedBlobberCost)
-		if err != nil {
-			return 0, fmt.Errorf("failed to add blobber cost: %v", err)
-		}
-
-		if replacedBlobberIdx != -1 {
-			replacedBlobber := sa.BlobberAllocs[replacedBlobberIdx]
-
-			replacedBlobberCost, err := replacedBlobber.cost()
+		if addedBlobberIdx != -1 {
+			addedBlobber := sa.BlobberAllocs[addedBlobberIdx]
+			addedBlobberCost, err := addedBlobber.cost()
 			if err != nil {
 				return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 			}
 
-			// No need to lock more tokens
-			if replacedBlobberCost > tokensRequiredToLock {
-				return 0, nil
+			tokensRequiredToLock, err = currency.AddCoin(tokensRequiredToLock, addedBlobberCost)
+			if err != nil {
+				return 0, fmt.Errorf("failed to add blobber cost: %v", err)
 			}
 
-			tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, replacedBlobberCost)
-			if err != nil {
-				return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
+			if replacedBlobberIdx != -1 {
+				replacedBlobber := sa.BlobberAllocs[replacedBlobberIdx]
+
+				replacedBlobberCost, err := replacedBlobber.cost()
+				if err != nil {
+					return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+				}
+
+				// No need to lock more tokens
+				if replacedBlobberCost > tokensRequiredToLock {
+					return 0, nil
+				}
+
+				tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, replacedBlobberCost)
+				if err != nil {
+					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
+				}
 			}
 		}
 
