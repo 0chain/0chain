@@ -1691,8 +1691,6 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	allocCost, _ := alloc.cost()
-
 	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
