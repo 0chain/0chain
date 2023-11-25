@@ -1325,7 +1325,6 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 	// If not extending then we need to lock tokens for specific cases
 	if !extend {
 		// If blobber is added than we need to add cost of this blobber for time unit
-		// Otherwise there is no lock required for other params for example (third party extendable)
 		if addedBlobberIdx != -1 {
 			addedBlobber := sa.BlobberAllocs[addedBlobberIdx]
 			addedBlobberCost, err := addedBlobber.cost()
@@ -1357,9 +1356,12 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
 				}
 			}
+
+			return tokensRequiredToLock, nil
+		} else { // Otherwise there is no lock required for other params for example (third party extendable)
+			return 0, nil
 		}
 
-		return tokensRequiredToLock, nil
 	}
 
 	costOfAllocAfterUpdate, err := sa.cost()
