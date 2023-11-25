@@ -6,11 +6,8 @@ rm -rf ~/.zcn/testing.json
 # rm -rf ~/.zcn/testing-auth.json
 rm -rf ~/.zcn/allocation.txt
 
-for run in $(seq 1 10)
-do
-  ./zwalletcli/zwallet --wallet testing.json faucet \
-      --methodName pour --input "{Pay day}"
-done
+./zwalletcli/zwallet --wallet testing.json faucet \
+    --methodName pour --input "{Pay day}" --tokens 100
 
 # for run in $(seq 1 4)
 # do
