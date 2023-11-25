@@ -2,10 +2,8 @@
 
 set -e
 
-for i in {1..5}; do
-    ./zwalletcli/zwallet --wallet testing.json faucet \
-      --methodName pour --input "{Pay day}"
-done
+./zwalletcli/zwallet --wallet testing.json faucet \
+    --methodName pour --input "{Pay day}" --tokens 100
 
 ./zboxcli/zbox --wallet testing.json sp-lock \
     --validator_id 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b \
