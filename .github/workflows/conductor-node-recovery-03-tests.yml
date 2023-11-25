@@ -1,9 +1,6 @@
 name: CONDUCTOR NODE-RECOVERY-03 TESTS
 
 on:
-  schedule:
-    # Runs everyday at 02:00 am
-    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
         chain_branch:
@@ -23,6 +20,33 @@ on:
           default: ''
           required: false
         zbox_branch:
+          description: 'Input branch for 0box repo'
+          default: ''
+          required: false
+  workflow_call:
+    inputs:
+        chain_branch:
+          type: string
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
+        auth_branch:
+          type: string
+          description: 'Input branch for authorizer repo'
+          default: ''
+          required: false
+        zboxcli_branch:
+          type: string
+          description: 'Input branch for zboxcli repo'
+          default: ''
+          required: false
+        zwalletcli_branch:
+          type: string
+          description: 'Input branch for zwalletcli repo'
+          default: ''
+          required: false
+        zbox_branch:
+          type: string
           description: 'Input branch for 0box repo'
           default: ''
           required: false
@@ -302,43 +326,3 @@ jobs:
       run: |
         cd /tmp
         rm -rf ./*
-
-  notify_slack_on_failure:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_NODE_RECOVERY_03_TESTS]
-    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_03_TESTS.result == 'failure')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_03_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR NODE_RECOVERY_03 TEST FAILED ⚠️",
-              "color": "#ff0000"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_03_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-  notify_slack_on_success:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_NODE_RECOVERY_03_TESTS]
-    if: always() && (needs.CONDUCTOR_NODE_RECOVERY_03_TESTS.result == 'success')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_NODE_RECOVERY_03_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR NODE_RECOVERY_03 TEST PASSED ✅",
-              "color": "#22bb33"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_NODE_RECOVERY_03_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
