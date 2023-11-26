@@ -98,7 +98,6 @@ smart_contracts:
     max_write_price: 100.0
     max_file_size : 40000000000000
     max_challenge_completion_rounds: 720
-    min_offer_duration: 10h
     max_offer_duration: 10h
     min_blobber_capacity: 1024
     max_charge: 0.2
