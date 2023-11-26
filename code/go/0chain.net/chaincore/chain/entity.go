@@ -665,9 +665,11 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	}
 
 	gbInitedKey := encryption.RawHash("genesis block state init")
+	logging.Logger.Debug("check gb initialized...")
 	_, err = c.stateDB.GetNode(gbInitedKey)
 	switch err {
 	case nil:
+		logging.Logger.Debug("genesis block state already", zap.Any("key", gbInitedKey))
 	case util.ErrNodeNotFound:
 		logging.Logger.Info("initialize genesis block state",
 			zap.Int("changes", pmt.GetChangeCount()), zap.String("root", util.ToHex(pmt.GetRoot())))
