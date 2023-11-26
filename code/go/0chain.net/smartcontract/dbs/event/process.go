@@ -483,6 +483,7 @@ func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, erro
 
 	g, err := tx.GetGlobal()
 	if err != nil {
+		fmt.Println("can't load snapshot for, round:", es.round, "err:", err)
 		logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
 	}
 	gs = &g
