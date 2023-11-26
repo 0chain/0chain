@@ -1052,8 +1052,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
-	logging.Logger.Info("tokensRequiredToLock", zap.Any("alloc", alloc))
-
 	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance, request.Extend, request.AddBlobberId, replacedBlobberAlloc)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
