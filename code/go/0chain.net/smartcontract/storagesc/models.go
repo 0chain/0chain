@@ -493,7 +493,6 @@ func newBlobberAllocation(
 	ba := &BlobberAllocation{}
 	ba.Stats = &StorageAllocationStats{}
 	ba.Size = size
-	ba.Terms = blobber.Terms
 
 	setCappedPrices(ba, blobber, conf)
 	ba.AllocationID = allocation.ID
@@ -1291,6 +1290,9 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 }
 
 func (ba *BlobberAllocation) cost() (currency.Coin, error) {
+	logging.Logger.Info("BlobberAllocation cost", zap.Any("ba", ba))
+	logging.Logger.Info("BlobberAllocation cost", zap.Any("write price", ba.Terms.WritePrice), zap.Any("size", ba.Size))
+
 	cost, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 	if err != nil {
 		return 0, err
