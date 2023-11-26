@@ -951,9 +951,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get existing allocation: "+err.Error())
 	}
-
 	if err != nil {
 		return "", err
+	}
+
+	var replacedBlobberAlloc *BlobberAllocation
+	if len(request.RemoveBlobberId) > 0 {
+		replacedBlobberAlloc = alloc.BlobberAllocsMap[request.RemoveBlobberId]
 	}
 
 	if t.ClientID != alloc.Owner {
@@ -1048,7 +1052,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance, request.Extend, request.AddBlobberId, replacedBlobberAlloc)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}

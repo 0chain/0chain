@@ -1806,7 +1806,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		ID:           alloc.ID,
 		AddBlobberId: nb.id,
 	}
-	resp, err = req.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	resp, err = req.callUpdateAllocReq(t, client.id, 10000000987, tp, ssc, balances)
 	require.NoError(t, err)
 
 	// assert that the new blobber offer is updated
