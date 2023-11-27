@@ -236,6 +236,7 @@ smart_contracts:
     min_stake_per_delegate : 1
     min_authorizers: 1
     percent_authorizers: 0.7
+    max_mint: 200000000 # ZCN
     max_delegates: 10
     max_fee: 100 #todo change the wording
     burn_address: "0000000000000000000000000000000000000000000000000000000000000000" #todo maybe we should use sc address

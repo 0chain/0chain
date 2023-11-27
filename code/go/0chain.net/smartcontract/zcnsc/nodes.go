@@ -28,6 +28,8 @@ import (
 // ------------- GlobalNode ------------------------
 
 type ZCNSConfig struct {
+	MaxMint             currency.Coin  `json:"max_mint"`
+	Minted              currency.Coin  `json:"minted"`
 	MinMintAmount       currency.Coin  `json:"min_mint"`
 	MinBurnAmount       currency.Coin  `json:"min_burn"`
 	MinStakeAmount      currency.Coin  `json:"min_stake"`
@@ -52,6 +54,15 @@ type GlobalNode struct {
 func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 	for key, value := range cfg.Fields {
 		switch key {
+		case MaxMintAmount:
+			amount, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
+			}
+			gn.MaxMint, err = currency.ParseZCN(amount)
+			if err != nil {
+				return err
+			}
 		case MinMintAmount:
 			amount, err := strconv.ParseFloat(value, 64)
 			if err != nil {
@@ -186,6 +197,8 @@ func (gn *GlobalNode) Validate() error {
 	)
 	// todo stop using hard coded values here
 	switch {
+	case gn.MaxMint < 1:
+		return common.NewError(Code, fmt.Sprintf("max mint amount (%v) is less than 1", gn.MaxMint))
 	case gn.MinStakeAmount < 1:
 		return common.NewError(Code, fmt.Sprintf("min stake amount (%v) is less than 1", gn.MinStakeAmount))
 	case gn.MaxStakeAmount < 1:

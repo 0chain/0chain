@@ -46,6 +46,17 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
+	minted, err := currency.AddCoin(gn.Minted, payload.Amount)
+	if err != nil {
+		err = common.NewError(code, fmt.Sprintf("failed to add minted amount: %v, %s", err, info))
+		return
+	}
+
+	if minted > gn.MaxMint {
+		err = common.NewError(code, fmt.Sprintf("max mint limit reached: %s", info))
+		return
+	}
+
 	if len(payload.Signatures) == 0 {
 		msg := fmt.Sprintf("payload doesn't contain signatures: %v, %s", err, info)
 		err = common.NewError(code, msg)

@@ -22,6 +22,7 @@ const (
 )
 
 const (
+	MaxMintAmount       = "max_mint"
 	MinMintAmount       = "min_mint"
 	PercentAuthorizers  = "percent_authorizers"
 	MinAuthorizers      = "min_authorizers"
@@ -135,6 +136,10 @@ func postfix(section string) string {
 
 func getConfig() (conf *ZCNSConfig, err error) {
 	conf = new(ZCNSConfig)
+	conf.MaxMint, err = currency.ParseZCN(cfg.GetFloat64(postfix(MaxMintAmount)))
+	if err != nil {
+		return nil, err
+	}
 	conf.MinMintAmount, err = currency.ParseZCN(cfg.GetFloat64(postfix(MinMintAmount)))
 	if err != nil {
 		return nil, err
