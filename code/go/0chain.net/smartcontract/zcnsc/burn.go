@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -92,6 +93,17 @@ func (zcn *ZCNSmartContract) Burn(
 	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, trans.Value))
 	if err != nil {
 		return "", err
+	}
+
+	// update the gn.Minted
+	minted, err := currency.MinusCoin(gn.Minted, trans.Value)
+	if err != nil {
+		return "", common.NewError(code, fmt.Sprintf("failed to update minted amount: %v", err))
+	}
+
+	gn.Minted = minted
+	if err := gn.Save(ctx); err != nil {
+		return "", common.NewError(code, fmt.Sprintf("failed to save global node: %v", err))
 	}
 
 	response := &BurnPayloadResponse{
