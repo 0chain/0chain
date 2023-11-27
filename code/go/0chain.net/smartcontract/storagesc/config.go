@@ -457,17 +457,17 @@ func getConfiguredConfig() (conf *Config, err error) {
 	return
 }
 
-func InitConfig(balances chainState.StateContextI) error {
+func InitConfig(balances chainState.StateContextI) (*Config, error) {
 	err := balances.GetTrieNode(scConfigKey(ADDRESS), &Config{})
 	if err == util.ErrValueNotPresent {
 		conf, err := getConfiguredConfig()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-		return err
+		return conf, err
 	}
-	return err
+	return nil, err
 }
 
 // getConfig

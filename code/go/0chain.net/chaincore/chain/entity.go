@@ -13,16 +13,16 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/currency"
 	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zcnsc"
 	"github.com/herumi/bls/ffi/go/bls"
 	"go.uber.org/zap"
 
@@ -612,12 +612,78 @@ func mustInitialState(tokens currency.Coin) *state.State {
 
 /*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
-	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
-	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
+	var (
+		memMPT      = util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
+		pmt         = util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
+		txn         = transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
+		gbInitedKey = encryption.RawHash("genesis block state init")
+	)
 
-	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
+	_, err := c.stateDB.GetNode(gbInitedKey)
+	if err == nil {
+		return pmt
+	}
+
+	if err != util.ErrNodeNotFound {
+		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
+	}
+
+	logging.Logger.Info("initialize genesis block state",
+		zap.Int("changes", pmt.GetChangeCount()),
+		zap.String("root", util.ToHex(pmt.GetRoot())))
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
+
+	err = faucetsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	mgn, err := minersc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB minersc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	sgn, err := storagesc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = vestingsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB vestingsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	zgn, err := zcnsc.InitConfig(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB zcnsc InitConfig failed", zap.Error(err))
+		panic(err)
+	}
+
+	maxMints := []currency.Coin{
+		mgn.MaxMint,
+		sgn.MaxMint,
+		zgn.MaxMint,
+	}
+
+	var scMaxMints currency.Coin
+	for _, v := range maxMints {
+		scMaxMints, err = currency.AddCoin(scMaxMints, v)
+		if err != nil {
+			logging.Logger.Error("chain.stateDB get max mints failed", zap.Error(err))
+			panic(err)
+		}
+	}
+
+	// validate init state, checking the max token supply limit
+	if err := validateInitState(initStates, scMaxMints); err != nil {
+		logging.Logger.Error("init state validation failed", zap.Error(err))
+		panic(err)
+	}
 
 	for _, v := range initStates.States {
 		s := mustInitialState(v.Tokens)
@@ -634,67 +700,64 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		panic(err)
 	}
 
-	err := faucetsc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
-		panic(err)
+	if err := pmt.SaveChanges(context.Background(), c.stateDB, false); err != nil {
+		logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
 	}
 
-	err = minersc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB minersc InitConfig failed", zap.Error(err))
-		panic(err)
+	if err := stateDB.PutNode(gbInitedKey, util.NewValueNode()); err != nil {
+		logging.Logger.Panic("set gb initialized failed", zap.Error(err))
 	}
 
-	err = storagesc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB storagesc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
-
-	err = vestingsc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB vestingsc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
-
-	err = zcnsc.InitConfig(stateCtx)
-	if err != nil {
-		logging.Logger.Error("chain.stateDB zcnsc InitConfig failed", zap.Error(err))
-		panic(err)
-	}
-
-	gbInitedKey := encryption.RawHash("genesis block state init")
-	_, err = c.stateDB.GetNode(gbInitedKey)
-	switch err {
-	case nil:
-	case util.ErrNodeNotFound:
-		logging.Logger.Info("initialize genesis block state",
-			zap.Int("changes", pmt.GetChangeCount()), zap.String("root", util.ToHex(pmt.GetRoot())))
-		if err := pmt.SaveChanges(context.Background(), c.stateDB, false); err != nil {
-			logging.Logger.Panic("chain.stateDB save changes failed", zap.Error(err))
+	eventDB := c.GetEventDb()
+	if eventDB != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1, event.CommitNow())
+		if err != nil {
+			panic(err)
 		}
-
-		if err := stateDB.PutNode(gbInitedKey, util.NewValueNode()); err != nil {
-			logging.Logger.Panic("set gb initialized failed", zap.Error(err))
-		}
-
-		eventDB := c.GetEventDb()
-		if eventDB != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			_, err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1, event.CommitNow())
-			if err != nil {
-				panic(err)
-			}
-		}
-
-	default:
-		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
 	}
 
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func validateInitState(initStates *state.InitStates, scMaxMints currency.Coin) error {
+	var (
+		totalTokens currency.Coin
+		err         error
+	)
+
+	for _, v := range initStates.States {
+		totalTokens, err = currency.AddCoin(totalTokens, v.Tokens)
+		if err != nil {
+			logging.Logger.Warn("init state - adding tokens failed", zap.Error(err))
+			return err
+		}
+	}
+
+	for _, v := range initStates.Stakes {
+		totalTokens, err = currency.AddCoin(totalTokens, v.Tokens)
+		if err != nil {
+			logging.Logger.Warn("init stake - adding tokens failed", zap.Error(err))
+			return err
+		}
+	}
+
+	allowedMints, err := currency.MinusCoin(config.MaxTokenSupply, scMaxMints)
+	if err != nil {
+		logging.Logger.Warn("init state - substracting tokens failed", zap.Error(err))
+		return err
+	}
+
+	if totalTokens > allowedMints {
+		logging.Logger.Warn("init state - total tokens exceed maximum supply limit",
+			zap.Uint64("total tokens to init", uint64(totalTokens)),
+			zap.Uint64("allowed init mints", uint64(allowedMints)))
+		return fmt.Errorf("total tokens in initial state exceed maximum supply limit")
+	}
+
+	return nil
 }
 
 func (c *Chain) addInitialStakes(stakes []state.InitStake, balances *cstate.StateContext) error {

@@ -138,26 +138,26 @@ func getGlobalNode(
 	return gn, nil
 }
 
-func InitConfig(balances cstate.CommonStateContextI) error {
+func InitConfig(balances cstate.CommonStateContextI) (*GlobalNode, error) {
 	gn := new(GlobalNode)
 	if err := balances.GetTrieNode(GlobalNodeKey, gn); err != nil {
 		if err != util.ErrValueNotPresent {
-			return fmt.Errorf("failed to get global node: %w", err)
+			return nil, fmt.Errorf("failed to get global node: %w", err)
 		}
 		if err := gn.readConfig(); err != nil {
-			return fmt.Errorf("failed to read config: %w", err)
+			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 		if err := gn.validate(); err != nil {
-			return fmt.Errorf("failed to validate global node: %w", err)
+			return nil, fmt.Errorf("failed to validate global node: %w", err)
 		}
 		if _, err := balances.InsertTrieNode(GlobalNodeKey, gn); err != nil {
-			return fmt.Errorf("failed to insert global node: %w", err)
+			return nil, fmt.Errorf("failed to insert global node: %w", err)
 		}
 	}
 
 	if err := initGlobalSettings(balances); err != nil {
-		return fmt.Errorf("failed to initialize global settings: %w", err)
+		return nil, fmt.Errorf("failed to initialize global settings: %w", err)
 	}
 
-	return nil
+	return gn, nil
 }

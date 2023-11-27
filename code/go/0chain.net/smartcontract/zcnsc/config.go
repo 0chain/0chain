@@ -47,18 +47,18 @@ var CostFunctions = []string{
 }
 
 // InitConfig initializes global node config to MPT
-func InitConfig(ctx state.StateContextI) error {
+func InitConfig(ctx state.StateContextI) (*GlobalNode, error) {
 	node := &GlobalNode{ID: ADDRESS}
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	if err == util.ErrValueNotPresent {
 		node.ZCNSConfig, err = getConfig()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		_, err := ctx.InsertTrieNode(node.GetKey(), node)
-		return err
+		return node, err
 	}
-	return err
+	return nil, err
 }
 
 func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
