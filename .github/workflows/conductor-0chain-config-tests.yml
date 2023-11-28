@@ -1,0 +1,193 @@
+name: CONDUCTOR 0CHAIN CONFIG TESTS
+
+on:
+  workflow_dispatch:
+    inputs:
+      chain_branch:
+        description: 'Input branch for 0chain repo'
+        default: ''
+        required: false
+      zwalletcli_branch:
+        description: 'Input branch for zwalletcli repo'
+        default: ''
+        required: false
+  workflow_call:
+    inputs:
+      chain_branch:
+        type: string
+        description: 'Input branch for 0chain repo'
+        default: ''
+        required: false
+      zwalletcli_branch:
+        type: string
+        description: 'Input branch for zwalletcli repo'
+        default: ''
+        required: false
+      
+env:
+  OWNER_ID: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+jobs:
+  CONDUCTOR_0CHAIN_CONFIG_TESTS:
+    name: CONDUCTOR-0CHAIN-CONFIG-TESTS
+    runs-on: [self-hosted, conductor-test]
+
+    outputs:
+      branch: ${{ steps.blobber.outputs.BRANCH_OUT }}
+
+    steps:
+    - name: Setup Environment Variables
+      run: |
+        export HOME="/root"
+        go env -w GO111MODULE=auto
+        go env GOROOT
+        go env GOPATH
+        echo "HOME=$HOME" >> $GITHUB_ENV
+        echo "PATH=$PATH:$(go env GOROOT)/bin:$(go env GOPATH)/bin" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib" >> $GITHUB_ENV
+
+    - name: Cleanup before restarting conductor tests.
+      run: |
+        rm -rf *
+        [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Git clone 0chain
+      run: |
+        git clone https://github.com/0chain/0chain.git
+        cd 0chain
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        CHAIN_BRANCH="${{ inputs.chain_branch }}"
+        if [[ -z $CHAIN_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
+        fi
+        echo "Branch name is ${CHAIN_BRANCH}"
+        git checkout ${CHAIN_BRANCH}
+
+    - name: Docker Init Setup.
+      run: |
+        export HOME="/root"
+        cd 0chain
+        make build-mocks
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/setup.network.sh || true
+
+    - name: Building Base Images
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.base.sh
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        cd 0chain
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+  
+    - name: Update max faucet limit
+      run: |
+        cd 0chain
+        bash -c 'sed -i "s/max_pour_amount: [0-9]*/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
+        bash -c 'grep max_pour_amount ./docker.local/config/sc.yaml'
+  
+    - name: View Change Rounds
+      run: |
+        awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
+
+    - name: Git clone zwalletcli
+      run: |
+        export HOME="/root"
+        git clone https://github.com/0chain/zwalletcli.git
+        cd zwalletcli
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
+        if [[ -z $ZWALLETCLI_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZWALLETCLI_BRANCH::${ZWALLETCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZWALLETCLI_BRANCH}"
+        git checkout ${ZWALLETCLI_BRANCH}
+
+    - name: Git clone 0dns
+      run: |
+        git clone https://github.com/0chain/0dns.git
+
+    - name: list pwd
+      run: |
+        ls -lha
+        cd 0chain && git status
+        cd ../0dns && git status
+        pwd
+
+    - name: Install zwalletcli
+      run: |
+        export HOME="/root"
+        cd zwalletcli && make install
+
+    - name: 0dns Patching
+      run: |
+        cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
+
+    - name: Build 0dns
+      run: |
+        cd 0dns
+        ./docker.local/bin/init.sh
+        ./docker.local/bin/build.sh
+
+    - name: Add ZCN config
+      run: |
+        rm -rf ~/.zcn || true
+        mkdir ~/.zcn
+        cat <<\EOF > ~/.zcn/config.yaml
+        block_worker: http://127.0.0.1:9091
+        signature_scheme: bls0chain
+        min_submit: 50
+        min_confirmation: 50
+        confirmation_chain_length: 3
+        max_txn_query: 5
+        query_sleep_time: 5
+        EOF
+
+    - name: List pwd zcn
+      run: |
+        pwd
+        ls -lha ./
+        ls -lha ~/.zcn
+        cat ~/.zcn/config.yaml
+
+    - name: Starting 0chain config Tests.
+      run: |
+        export HOME="/root"
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh 0chain-config
+
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: 0chain-config-logs
+        path: |
+          0chain/conductor/logs/
+          0chain/docker.local/miner*/log
+          0chain/docker.local/sharder*/log
+
+    - name: Added /tmp folder cleanup.
+      run: |
+        cd /tmp
+        rm -rf *
