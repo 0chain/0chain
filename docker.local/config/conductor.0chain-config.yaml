@@ -35,10 +35,7 @@ tests:
       - wait_no_progress:
         timeout: "1m"
       - command:
-          name: update_0chain_config
-          params:
-            config_name: min_generators
-            config_value: 2
+          name: rollback_0chain_config_changes
   
   - name: "test min_active_sharders"
     flow:
@@ -59,10 +56,7 @@ tests:
       - wait_no_progress:
         timeout: "1m"
       - command:
-          name: update_0chain_config
-          params:
-            config_name: min_active_sharders
-            config_value: 20
+          name: rollback_0chain_config_changes
 
   - name: "test max_block_cost"
     flow:
@@ -80,10 +74,7 @@ tests:
       - wait_no_progress:
         timeout: "1m"
       - command:
-          name: update_0chain_config
-          params:
-            config_name: max_block_cost
-            config_value: 10000
+          name: rollback_0chain_config_changes
 
   - name: "test max_byte_size"
     flow:
@@ -101,10 +92,7 @@ tests:
       - wait_no_progress:
         timeout: "1m"
       - command:
-          name: update_0chain_config
-          params:
-            config_name: max_byte_size
-            config_value: 1638400
+          name: rollback_0chain_config_changes
     
   - name: "test payload max_size"
     flow:
@@ -122,7 +110,4 @@ tests:
       - command:
           name: send_transaction_with_large_payload
       - command:
-          name: update_0chain_config
-          params:
-            config_name: max_size
-            config_value: 98304
+          name: rollback_0chain_config_changes
