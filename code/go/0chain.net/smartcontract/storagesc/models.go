@@ -1360,11 +1360,9 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
-			spareTokensInWP := costOfAllocAfterUpdate - sa.WritePool
-			if spareTokensInWP > tokensRequiredToLock {
-				return 0, nil
-			} else {
-				tokensRequiredToLock = tokensRequiredToLock - spareTokensInWP
+			spareTokensInWP := int64(sa.WritePool) - int64(costOfAllocAfterUpdate) + int64(tokensRequiredToLock)
+			if spareTokensInWP > 0 {
+				tokensRequiredToLock = tokensRequiredToLock - currency.Coin(spareTokensInWP)
 			}
 
 			return tokensRequiredToLock, nil
