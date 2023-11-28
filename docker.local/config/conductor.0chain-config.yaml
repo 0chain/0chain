@@ -10,6 +10,7 @@ sets:
       - "test min_active_sharders"
       - "test max_block_cost"
       - "test max_byte_size"
+      - "test payload max_size"
 
 #
 # test cases
@@ -62,3 +63,66 @@ tests:
           params:
             config_name: min_active_sharders
             config_value: 20
+
+  - name: "test max_block_cost"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - cleanup_bc: {}
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_block_cost
+            config_value: 10
+      - wait_add:
+          sharders: ['sharder-1', 'sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          start: true
+      - wait_no_progress:
+        timeout: "1m"
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_block_cost
+            config_value: 10000
+
+  - name: "test max_byte_size"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - cleanup_bc: {}
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_byte_size
+            config_value: 10
+      - wait_add:
+          sharders: ['sharder-1', 'sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          start: true
+      - wait_no_progress:
+        timeout: "1m"
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_byte_size
+            config_value: 1638400
+    
+  - name: "test payload max_size"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - cleanup_bc: {}
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_size
+            config_value: 10000
+      - wait_add:
+          sharders: ['sharder-1', 'sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          start: true
+      - command:
+          name: send_transaction_with_large_payload
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_size
+            config_value: 98304
