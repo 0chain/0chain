@@ -1289,6 +1289,33 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
+func (sa *StorageAllocation) costForDTU(now common.Timestamp) (currency.Coin, error) {
+	rdtu, err := sa.restDurationInTimeUnits(now, sa.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
+
+	}
+
+	var cost currency.Coin
+	for _, ba := range sa.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+		if err != nil {
+			return 0, err
+		}
+
+		c, err = currency.MultFloat64(c, rdtu)
+		if err != nil {
+			return 0, err
+		}
+
+		cost, err = currency.AddCoin(cost, c)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return cost, nil
+}
+
 func (ba *BlobberAllocation) cost() (currency.Coin, error) {
 	cost, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 	if err != nil {
@@ -1320,10 +1347,6 @@ func (sa *StorageAllocation) checkFunding() error {
 }
 
 func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation) (currency.Coin, error) {
-	costOfAllocAfterUpdate, err := sa.cost()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
-	}
 
 	var tokensRequiredToLock currency.Coin
 
@@ -1360,16 +1383,21 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
-			spareTokensInWP := int64(sa.WritePool) - int64(costOfAllocAfterUpdate) + int64(tokensRequiredToLock)
-			if spareTokensInWP > 0 {
-				tokensRequiredToLock = tokensRequiredToLock - currency.Coin(spareTokensInWP)
+			extraTokensInWP, err := sa.costForDTU(common.Timestamp(time.Now().Unix()))
+			if err != nil {
+				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
 			}
 
-			return tokensRequiredToLock, nil
+			return tokensRequiredToLock - extraTokensInWP, nil
 		} else { // Otherwise there is no lock required for other params for example (third party extendable)
 			return 0, nil
 		}
 
+	}
+
+	costOfAllocAfterUpdate, err := sa.cost()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
 	totalWritePool := sa.WritePool + cpBalance
