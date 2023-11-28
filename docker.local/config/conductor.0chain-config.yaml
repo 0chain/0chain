@@ -30,10 +30,10 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
           start: true
       - wait_round:
-        round: 10
+          round: 10
       - stop: ['miner-4']
       - wait_no_progress:
-        timeout: "1m"
+          timeout: "1m"
       - command:
           name: rollback_0chain_config_changes
   
@@ -51,10 +51,10 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
           start: true
       - wait_round:
-        round: 10
+          round: 10
       - stop: ['sharder-2']
       - wait_no_progress:
-        timeout: "1m"
+          timeout: "1m"
       - command:
           name: rollback_0chain_config_changes
 
@@ -72,7 +72,7 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
           start: true
       - wait_no_progress:
-        timeout: "1m"
+          timeout: "1m"
       - command:
           name: rollback_0chain_config_changes
 
@@ -90,7 +90,7 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
           start: true
       - wait_no_progress:
-        timeout: "1m"
+          timeout: "1m"
       - command:
           name: rollback_0chain_config_changes
     
