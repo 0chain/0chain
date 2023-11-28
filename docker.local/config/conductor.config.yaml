@@ -545,16 +545,16 @@ commands:
         required: true
   update_0chain_config:
     work_dir: "./"
-      exec: "sh -x docker.local/bin/conductor/update_0chain_config.sh $config_name $config_value"
-      args:
-        config_name:
-          required: true
-        config_value:
-          required: true
+    exec: "sh -x docker.local/bin/conductor/update_0chain_config.sh $config_name $config_value"
+    args:
+      config_name:
+        required: true
+      config_value:
+        required: true
   rollback_0chain_config_changes:
     work_dir: "./"
-      exec: "sh -x docker.local/bin/conductor/rollback_0chain_config.sh"
+    exec: "sh -x docker.local/bin/conductor/rollback_0chain_config.sh"
   send_transaction_with_large_payload:
     work_dir: "../"
-      exec: "sh -x 0chain/docker.local/bin/conductor/send_token_with_large_payload.sh"
-      should_fail: true
+    exec: "sh -x 0chain/docker.local/bin/conductor/send_token_with_large_payload.sh"
+    should_fail: true
