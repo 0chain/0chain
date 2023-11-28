@@ -551,4 +551,7 @@ commands:
           required: true
         config_value:
           required: true
-
+  send_transaction_with_large_payload:
+    work_dir: "../"
+      exec: "sh -x 0chain/docker.local/bin/conductor/send_token_with_large_payload.sh"
+      should_fail: true

@@ -7,4 +7,4 @@ value=$2
 
 echo "Updating 0chain config; param $key value $value";
 
-sed -i "s/$key: */$key: $value/g" docker.local/config/0chain.yaml
+sed -i "s/$key: [0-9]*/$key: $value/g" docker.local/config/0chain.yaml
