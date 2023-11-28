@@ -18,7 +18,7 @@ sets:
 tests:
   - name: "test min_generators"
     flow:
-      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
@@ -39,7 +39,7 @@ tests:
   
   - name: "test min_active_sharders"
     flow:
-      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
@@ -60,7 +60,7 @@ tests:
 
   - name: "test max_block_cost"
     flow:
-      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
@@ -78,7 +78,7 @@ tests:
 
   - name: "test max_byte_size"
     flow:
-      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
@@ -96,7 +96,7 @@ tests:
     
   - name: "test payload max_size"
     flow:
-      - magic_block_config: config/b0magicBlock_4_miners_2_sharder.json
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
