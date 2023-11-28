@@ -1320,6 +1320,11 @@ func (sa *StorageAllocation) checkFunding() error {
 }
 
 func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation) (currency.Coin, error) {
+	costOfAllocAfterUpdate, err := sa.cost()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+	}
+
 	var tokensRequiredToLock currency.Coin
 
 	// If not extending then we need to lock tokens for specific cases
@@ -1355,16 +1360,18 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
+			spareTokensInWP := costOfAllocAfterUpdate - sa.WritePool
+			if spareTokensInWP > tokensRequiredToLock {
+				return 0, nil
+			} else {
+				tokensRequiredToLock = tokensRequiredToLock - spareTokensInWP
+			}
+
 			return tokensRequiredToLock, nil
 		} else { // Otherwise there is no lock required for other params for example (third party extendable)
 			return 0, nil
 		}
 
-	}
-
-	costOfAllocAfterUpdate, err := sa.cost()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
 	totalWritePool := sa.WritePool + cpBalance
