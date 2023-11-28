@@ -30,7 +30,8 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
           start: true
       - wait_round:
-          round: 10
+          shift: 10
+          timeout: "5m"
       - stop: ['miner-4']
       - wait_no_progress:
           timeout: "1m"
@@ -51,7 +52,8 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
           start: true
       - wait_round:
-          round: 10
+          shift: 10
+          timeout: "5m"
       - stop: ['sharder-2']
       - wait_no_progress:
           timeout: "1m"
