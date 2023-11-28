@@ -1289,7 +1289,7 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
-func (sa *StorageAllocation) costForDTU(now common.Timestamp) (currency.Coin, error) {
+func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, error) {
 	rdtu, err := sa.restDurationInTimeUnits(now, sa.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
@@ -1383,7 +1383,7 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
-			extraTokensInWP, err := sa.costForDTU(common.Timestamp(time.Now().Unix()))
+			extraTokensInWP, err := sa.costForRDTU(common.Timestamp(time.Now().Unix()))
 			if err != nil {
 				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
 			}
