@@ -100,8 +100,6 @@ smart_contracts:
     min_alloc_size: 1048576
     # max challenge completion time of a blobber allowed by the SC
     max_challenge_completion_rounds: 720
-    # min blobber's offer duration allowed by the SC
-    min_offer_duration: "10h" #todo based on timeunit
     # min blobber capacity allowed by the SC
     min_blobber_capacity: 10737418240
     # fraction of the allocation cost that is locked in the cancellation charge

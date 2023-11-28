@@ -1625,11 +1625,24 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
 
 	data := r.URL.Query().Get("data")
 	var req updateAllocationRequest
 	if err := req.decode([]byte(data)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
+		return
+	}
+
+	// Always extend the allocation if the size is greater than 0.
+	if req.Size > 0 {
+		req.Extend = true
+	} else if req.Size < 0 {
+		common.Respond(w, r, "", common.NewErrBadRequest("invalid size"))
 		return
 	}
 
@@ -1639,33 +1652,28 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	beforeAlloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	eAlloc.Size += req.Size
+
+	if eAlloc.Expiration < int64(now) {
+		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
+		return
+	}
+
+	if req.Extend {
+		eAlloc.Expiration = common.ToTime(now).Add(conf.TimeUnit).Unix() // new expiration
+	}
+
 	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
-
-	conf, err := getConfig(balances)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	if alloc.Expiration < now {
-		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
-		return
-	}
-
-	if req.Size < 0 {
-		common.Respond(w, r, nil, common.NewErrBadRequest("invalid size"))
-		return
-	}
-
-	if req.Extend {
-		alloc.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()) // new expiration
-	}
-
-	alloc.Size += req.Size
 
 	if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 		common.Respond(w, r, nil, err)
@@ -1689,11 +1697,19 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance))
+	var replacedBlobberAllocation *BlobberAllocation
+	if len(req.RemoveBlobberId) > 0 {
+		replacedBlobberAllocation = beforeAlloc.BlobberAllocsMap[req.RemoveBlobberId]
+	}
+
+	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, req.AddBlobberId, replacedBlobberAllocation)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
+
+	// Add extra 5% to deal with race condition
+	tokensRequiredToLock := int64(float64(tokensRequiredToLockZCN) * 1.05)
 
 	common.Respond(w, r, map[string]interface{}{
 		"min_lock_demand": tokensRequiredToLock,
@@ -1758,13 +1774,17 @@ func changeBlobbersEventDB(
 		if !found {
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
+
+		sa.BlobberAllocs[removedIdx] = ba
+		sa.BlobberAllocsMap[addID] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
 		sa.ParityShards++
+
+		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+		sa.BlobberAllocsMap[addID] = ba
 	}
 
-	sa.BlobberAllocs[removedIdx] = ba
-	sa.BlobberAllocsMap[addID] = ba
 	return nil
 }
 
