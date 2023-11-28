@@ -309,3 +309,11 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/mint_zcn.sh"
     should_fail: false
+  update_0chain_config:
+    work_dir: "./"
+      exec: "sh -x docker.local/bin/conductor/update_0chain_config.sh $config_name $config_value"
+      args:
+        config_name:
+          required: true
+        config_value:
+          required: true
