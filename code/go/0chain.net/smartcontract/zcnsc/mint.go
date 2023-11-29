@@ -190,7 +190,7 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	err = sp.DistributeRewards(share, sig.ID, spenum.Authorizer, spenum.FeeRewardAuthorizer, ctx)
+	err = sp.DistributeRewards(trans.ClientID, share, sig.ID, spenum.Authorizer, spenum.FeeRewardAuthorizer, ctx, true)
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("failed to retrieve stake pool for authorizer %s", sig.ID))
 		return

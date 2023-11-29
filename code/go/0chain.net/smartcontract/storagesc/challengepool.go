@@ -92,6 +92,7 @@ func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllo
 }
 
 func (cp *challengePool) moveToValidators(
+	sscID string,
 	reward currency.Coin,
 	validators []datastore.Key,
 	vSPs []*stakePool,
@@ -112,7 +113,7 @@ func (cp *challengePool) moveToValidators(
 	}
 
 	for i, sp := range vSPs {
-		err := sp.DistributeRewards(oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances, allocationID)
+		err := sp.DistributeRewards(sscID, oneReward, validators[i], spenum.Validator, spenum.ValidationReward, balances, true, allocationID)
 		if err != nil {
 			return fmt.Errorf("moving to validator %s: %v",
 				validators[i], err)
@@ -120,7 +121,7 @@ func (cp *challengePool) moveToValidators(
 	}
 	if bal > 0 {
 		for i := 0; i < int(bal); i++ {
-			err := vSPs[i].DistributeRewards(1, validators[i], spenum.Validator, spenum.ValidationReward, balances, allocationID)
+			err := vSPs[i].DistributeRewards(sscID, 1, validators[i], spenum.Validator, spenum.ValidationReward, balances, true, allocationID)
 			if err != nil {
 				return fmt.Errorf("moving to validator %s: %v",
 					validators[i], err)
@@ -132,7 +133,7 @@ func (cp *challengePool) moveToValidators(
 	return nil
 }
 
-func (cp *challengePool) moveToBlobbers(sscKey string, reward currency.Coin,
+func (cp *challengePool) moveToBlobbers(sscID string, reward currency.Coin,
 	blobberId datastore.Key,
 	sp *stakePool,
 	balances cstate.StateContextI,
@@ -147,7 +148,7 @@ func (cp *challengePool) moveToBlobbers(sscKey string, reward currency.Coin,
 		return fmt.Errorf("not enough tokens in challenge pool: %v < %v", cp.Balance, reward)
 	}
 
-	err := sp.DistributeRewards(reward, blobberId, spenum.Blobber, spenum.ChallengePassReward, balances, allocationID)
+	err := sp.DistributeRewards(sscID, reward, blobberId, spenum.Blobber, spenum.ChallengePassReward, balances, true, allocationID)
 	if err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}

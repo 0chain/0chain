@@ -101,7 +101,7 @@ func toJson(val interface{}) string {
 	return string(b)
 }
 
-func (rp *readPool) moveToBlobber(allocID, blobID string,
+func (rp *readPool) moveToBlobber(sscID string, allocID, blobID string,
 	sp *stakePool, value currency.Coin, balances cstate.StateContextI) (resp string, err error) {
 
 	// all redeems to response at the end
@@ -123,7 +123,7 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 
 	rp.Balance = currentBalance
 
-	err = sp.DistributeRewards(value, blobID, spenum.Blobber, spenum.FileDownloadReward, balances, allocID)
+	err = sp.DistributeRewards(sscID, value, blobID, spenum.Blobber, spenum.FileDownloadReward, balances, true, allocID)
 	if err != nil {
 		return "", fmt.Errorf("can't move tokens to blobber: %v", err)
 	}

@@ -186,8 +186,8 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 				zap.Int64("round", balances.GetBlock().Round),
 				zap.String("block_hash", balances.GetBlock().Hash))
 
-			if err := qsp.DistributeRewards(
-				reward, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
+			if err := qsp.DistributeRewards(ssc.ID,
+				reward, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances, false); err != nil {
 				return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 			}
 
@@ -206,7 +206,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 		if rShare > 0 {
 			for i := range stakePools {
-				if err := stakePools[i].DistributeRewards(rShare, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
+				if err := stakePools[i].DistributeRewards(ssc.ID, rShare, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances, false); err != nil {
 					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}
@@ -214,7 +214,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 		if rl > 0 {
 			for i := 0; i < int(rl); i++ {
-				if err := stakePools[i].DistributeRewards(1, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances); err != nil {
+				if err := stakePools[i].DistributeRewards(ssc.ID, 1, qualifyingBlobberIds[i], spenum.Blobber, spenum.BlockRewardBlobber, balances, false); err != nil {
 					return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 				}
 			}

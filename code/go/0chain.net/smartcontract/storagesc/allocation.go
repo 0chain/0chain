@@ -1431,7 +1431,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
-	if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc, t.CreationDate); err != nil {
+	if err = alloc.payChallengePoolPassPayments(sc.ID, sps, balances, cp, passRates, conf, t.CreationDate); err != nil {
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 	}
 
