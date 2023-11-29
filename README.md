@@ -101,7 +101,7 @@ Run the following script
 2.1) Inside the 0chain directory, run the following command:
 
 ```
-./docker.local/bin/init.setup.sh
+sudo ./docker.local/bin/init.setup.sh
 ```
 
 Response: The response will intialize 8 miner and 4 sharder directories in `0chain/docker.local/`
@@ -124,7 +124,7 @@ git clone https://github.com/0chain/0dns.git
 cd 0dns
 ```
 
-3.2) For miner and sharder URLs to work locally, update `0dns/docker.local/config/0dns.yaml` to disable both `use_https` and `use_path` (set to `false`).
+3.2) For miner and sharder URLs to work locally, update `0dns/docker.local/config/0dns.yaml` file and set both `use_https` and `use_path` to `false`.
 
 3.3) Then run the following command
 
@@ -154,17 +154,15 @@ cd 0chain
 
 ## 5. Building the Miner and Sharder Nodes
 
- 5.1) Navigate to 0chain directory:
-
-   ```
-   cd 0chain
-   ``` 
-
+5.1) Navigate to 0chain directory:
+```
+cd 0chain
+``` 
 5.2) First build the base containers, zchain_build_base and zchain_run_base
 
-   ```
-   ./docker.local/bin/build.base.sh
-   ```
+ ```
+ ./docker.local/bin/build.base.sh
+ ```
 5.3) Build mocks from the Makefile in the repo, from git/0chain directory run:
    
    ```
@@ -197,23 +195,23 @@ cd 0chain
 
 6.1) Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
 
-  1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
+  6.1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
 
-  1.2) If you want the debug statements in the logs to appear - change `logging.level` from `"info"` to `"debug"`
+  6.1.2) If you want the debug statements in the logs to appear - change `logging.level` from `"info"` to `"debug"`
 
-  1.3) If you want to change the block size, set the value of `server_chain.block.size`
+  6.1.3) If you want to change the block size, set the value of `server_chain.block.size`
 
-  1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
+  6.1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
 
-  1.5) If you want to turn off fees adjust `server_chain.smart_contract.miner` from `true` to `false`
+  6.1.5) If you want to turn off fees adjust `server_chain.smart_contract.miner` from `true` to `false`
 
 **_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
 
 ## 7. Starting the Miner and Sharder Nodes
 
-7.1) For starting the nodes open 4 terminal tabs. Use the 1st terminal tab and be in the sharder1(0chain/docker.local/sharder1) directory.On other 3 terminal tabs be in the miner directory(0chain/docker.local/miner|i)(miner1/2/3). 
+7.1) For starting the nodes open 4 terminal tabs. Use the 1st terminal tab and be in the sharder1 (`0chain/docker.local/sharder1`) directory. On other 3 terminal tabs be in the miner directory(0chain/docker.local/miner|i)(miner1/2/3). 
 
-Start sharder first because miners need the genesis magic block. On the sharder terminal, use
+Start sharder first because miners need the genesis magic block. On the sharder terminal tab, use the command below to start the sharders:
 
 ```
 ../bin/start.b0sharder.sh
@@ -221,7 +219,7 @@ Start sharder first because miners need the genesis magic block. On the sharder 
 
 Wait till the cassandra is started and the sharder is ready to listen to requests.
 
-On the respective miner terminal, use
+On the respective miner terminal tabs, use the command below to start the miners:
 
 ```
 ../bin/start.b0miner.sh
@@ -236,16 +234,15 @@ For detailed steps on building and starting blobbers, follow the guides below:
 - [Directory Setup for Blobbers](https://github.com/0chain/blobber/tree/hm90121-patch-2#directory-setup-for-blobbers)
 - [Building and Starting the Blobber Nodes](https://github.com/0chain/blobber/tree/hm90121-patch-2#building-and-starting-the-nodes)
  
-8.1). After starting blobbers check whether the blobber has registered to the blockchain by running the zbox command below:
+8.1) After starting blobbers check whether the blobber has registered to the blockchain by running the zbox command below:
 
 ```
 ./zbox ls-blobbers
 ```
-
 Note: In case you have not installed and configured zbox for testnet yet, follow the guides below:
 
  - [Install zboxcli](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#1-installation)
- - [Configure zbox network](https://github.com/0chain/blobber/tree/hm90121-patch-2#building-and-starting-the-nodes) 
+ - [Configure zbox network](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#2-configure-network) 
 
 In the command response you should see the local blobbers mentioned with their urls for example `http://198.18.0.91:5051` and `http://198.18.0.92:5052`
 
@@ -288,7 +285,6 @@ You can specify the number of tokens required using the following command  for a
 ```sh
 ./zwallet faucet --methodName pour --input "need token" --tokens 5
 ```
-
 Sample output from `faucet` prints the transaction.
 
 ```
@@ -300,17 +296,23 @@ Response:
 ```
 Balance: 5 ZCN (4.2299999999999995 USD)
 ```
-8.2) Lock some tokens in blobber stake pool, use the commands below to lock tokens into stake pool: 
+8.3) Lock some tokens in blobber stake pools, use the commands below to lock tokens into stake pool: 
 
 ```
 export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
 export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+export BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+export BLOBBER4=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
+
 ./zbox sp-lock --blobber_id $BLOBBER1 --tokens 1
 ./zbox sp-lock --blobber_id $BLOBBER2 --tokens 1
-```
-Note: Atleast have 2 ZCN balance in your wallet before locking tokens into stake pool using the command above.
+./zbox sp-lock --blobber_id $BLOBBER3 --tokens 1
+./zbox sp-lock --blobber_id $BLOBBER4 --tokens 1
 
-8.3) Then create new allocation using the command below:
+```
+Note: Atleast have 4 ZCN balance in your wallet before locking tokens into stake pool using the command above.
+
+8.4) Then create new allocation using the command below:
 
 ```
 ./zbox newallocation --lock 0.5
