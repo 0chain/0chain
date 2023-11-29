@@ -83,26 +83,29 @@ tests:
 
   - name: "test max_byte_size"
     flow:
-      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - magic_block_config: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
+      - command:
+          name: "cleanup_0dns"
       - command:
           name: update_0chain_config
           params:
             config_name: max_byte_size
-            config_value: 10
+            config_value: 10000
       - wait_add:
-          sharders: ['sharder-1', 'sharder-2']
-          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          sharders: ['sharder-1']
+          miners: ['miner-1', 'miner-2', 'miner-3']
           start: true
-      - wait_no_progress:
-          timeout: "1m"
+      - start: ['0dns']
+      - command:
+          name: send_transaction_with_large_payload
       - command:
           name: rollback_0chain_config_changes
     
   - name: "test payload max_size"
     flow:
-      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - magic_block_config: config/b0magicBlock_3_miners_1_sharder.json
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -113,8 +116,8 @@ tests:
             config_name: max_size
             config_value: 10000
       - wait_add:
-          sharders: ['sharder-1', 'sharder-2']
-          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          sharders: ['sharder-1']
+          miners: ['miner-1', 'miner-2', 'miner-3']
           start: true
       - start: ['0dns']
       - command:
