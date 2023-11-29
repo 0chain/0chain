@@ -1388,6 +1388,10 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
 			}
 
+			if extraTokensInWP > tokensRequiredToLock {
+				return 0, nil
+			}
+
 			return tokensRequiredToLock - extraTokensInWP, nil
 		} else { // Otherwise there is no lock required for other params for example (third party extendable)
 			return 0, nil
