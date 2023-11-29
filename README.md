@@ -225,7 +225,7 @@ On the respective miner terminal tabs, use the command below to start the miners
 ../bin/start.b0miner.sh
 ```
 
-Note: The above commands will run 1 sharder and 3 miners for minimal setup. For running more sharders and blobbers repeat the process in more terminal tabs. 
+Note: The above commands will run 1 sharder and 3 miners for minimal setup. For running more sharders and miners repeat the process in more terminal tabs. 
 
 ## 8. Building and Starting Blobber Nodes
 
