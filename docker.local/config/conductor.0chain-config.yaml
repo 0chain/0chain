@@ -106,6 +106,8 @@ tests:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
+          name: "cleanup_0dns"
+      - command:
           name: update_0chain_config
           params:
             config_name: max_size
@@ -114,6 +116,7 @@ tests:
           sharders: ['sharder-1', 'sharder-2']
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
           start: true
+      - start: ['0dns']
       - command:
           name: send_transaction_with_large_payload
       - command:
