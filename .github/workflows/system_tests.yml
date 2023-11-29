@@ -42,9 +42,8 @@ jobs:
       DEV8KC: ${{ secrets.DEV8KC }}
       DEV9KC: ${{ secrets.DEV9KC }}
       SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
-      TENDERLY_FORK_ID: ${{ secrets.TENDERLY_FORK_ID }}
+      TENDERLY_SECRET: ${{ secrets.TENDERLY_SECRET }}
       GRAPHNODE_NETWORK: ${{ secrets.GRAPHNODE_NETWORK }}
-      GRAPHNODE_ETHEREUM_NODE_URL: https://rpc.tenderly.co/fork/${{ secrets.TENDERLY_FORK_ID }}
       DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
       GRAPHNODE_SC: ${{ secrets.GRAPHNODE_SC }}
       S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
