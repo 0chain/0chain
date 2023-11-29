@@ -384,7 +384,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	seed int64,
 	randN int,
 	rewardType spenum.Reward,
-	payFromScOwnerWallet bool,
+	payByTransfer bool,
 	balances cstate.StateContextI,
 ) (err error) {
 	total, err := sp.stake()
@@ -399,7 +399,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		if payFromScOwnerWallet {
+		if payByTransfer {
 			transfer := state.NewTransfer(smartContractID, providerId, value)
 			if err = balances.AddTransfer(transfer); err != nil {
 				return fmt.Errorf("could not refund lock token: %v", err)
@@ -430,7 +430,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	if serviceCharge > 0 {
 		reward := serviceCharge
 
-		if payFromScOwnerWallet {
+		if payByTransfer {
 			transfer := state.NewTransfer(smartContractID, providerId, value)
 			if err = balances.AddTransfer(transfer); err != nil {
 				return fmt.Errorf("could not refund lock token: %v", err)
@@ -493,7 +493,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	}
 
 	for i, pool := range pools {
-		if payFromScOwnerWallet {
+		if payByTransfer {
 			transfer := state.NewTransfer(smartContractID, pool.DelegateID, dpRewards[i])
 			if err = balances.AddTransfer(transfer); err != nil {
 				return fmt.Errorf("could not refund lock token: %v", err)
@@ -566,7 +566,7 @@ func (sp *StakePool) DistributeRewards(
 	providerType spenum.Provider,
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
-	payFromClient bool,
+	payByTransfer bool,
 	options ...string,
 ) (err error) {
 	total, err := sp.stake()
@@ -602,7 +602,7 @@ func (sp *StakePool) DistributeRewards(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		if payFromClient {
+		if payByTransfer {
 			transfer := state.NewTransfer(clientID, providerId, value)
 			if err = balances.AddTransfer(transfer); err != nil {
 				return fmt.Errorf("could not refund lock token: %v", err)
@@ -632,7 +632,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 	if serviceCharge > 0 {
 		reward := serviceCharge
-		if payFromClient {
+		if payByTransfer {
 			transfer := state.NewTransfer(clientID, providerId, value)
 			if err = balances.AddTransfer(transfer); err != nil {
 				return fmt.Errorf("could not refund lock token: %v", err)
@@ -698,7 +698,7 @@ func (sp *StakePool) DistributeRewards(
 	for i, id := range orderedPoolIds {
 		dp := sp.Pools[id]
 
-		if payFromClient {
+		if payByTransfer {
 			transfer := state.NewTransfer(clientID, dp.DelegateID, dpRewards[i])
 			if err = balances.AddTransfer(transfer); err != nil {
 				return fmt.Errorf("could not refund lock token: %v", err)

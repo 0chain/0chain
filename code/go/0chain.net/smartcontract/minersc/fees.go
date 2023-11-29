@@ -578,9 +578,9 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 			return err
 		}
 
-		payFromScOwnerWallet := rewardType == spenum.FeeRewardSharder
+		payByTransfer := rewardType == spenum.FeeRewardSharder
 		if err = sh.StakePool.DistributeRewardsRandN(msc.ID,
-			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, payFromScOwnerWallet, balances,
+			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, payByTransfer, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
