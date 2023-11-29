@@ -98,6 +98,7 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3']
           start: true
       - start: ['0dns']
+      - sleep: "20s"
       - command:
           name: send_transaction_with_large_payload
       - command:
@@ -120,6 +121,7 @@ tests:
           miners: ['miner-1', 'miner-2', 'miner-3']
           start: true
       - start: ['0dns']
+      - sleep: "20s"
       - command:
           name: send_transaction_with_large_payload
       - command:
