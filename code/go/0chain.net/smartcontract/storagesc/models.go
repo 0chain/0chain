@@ -1346,7 +1346,7 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation) (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation, now common.Timestamp) (currency.Coin, error) {
 
 	var tokensRequiredToLock currency.Coin
 
@@ -1383,7 +1383,7 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
-			extraTokensInWP, err := sa.costForRDTU(common.Timestamp(time.Now().Unix()))
+			extraTokensInWP, err := sa.costForRDTU(now)
 			if err != nil {
 				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
 			}

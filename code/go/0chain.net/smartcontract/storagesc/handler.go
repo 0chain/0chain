@@ -1702,7 +1702,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		replacedBlobberAllocation = beforeAlloc.BlobberAllocsMap[req.RemoveBlobberId]
 	}
 
-	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, req.AddBlobberId, replacedBlobberAllocation)
+	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, req.AddBlobberId, replacedBlobberAllocation, common.Timestamp(time.Now().Unix()))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
