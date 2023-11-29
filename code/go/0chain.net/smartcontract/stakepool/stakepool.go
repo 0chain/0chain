@@ -1,6 +1,8 @@
 package stakepool
 
 import (
+	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/storagesc"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -377,12 +379,14 @@ func (sp *StakePool) SlashFraction(
 
 // DistributeRewardsRandN distributes rewards to randomly selected N delegate pools
 func (sp *StakePool) DistributeRewardsRandN(
+	sc *minersc.MinerSmartContract,
 	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
 	seed int64,
 	randN int,
 	rewardType spenum.Reward,
+	payFromScOwnerWallet bool,
 	balances cstate.StateContextI,
 ) (err error) {
 	total, err := sp.stake()
@@ -397,10 +401,18 @@ func (sp *StakePool) DistributeRewardsRandN(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		sp.Reward, err = currency.AddCoin(sp.Reward, value)
-		if err != nil {
-			return err
+		if payFromScOwnerWallet {
+			transfer := state.NewTransfer(sc.ID, providerId, value)
+			if err = balances.AddTransfer(transfer); err != nil {
+				return fmt.Errorf("could not refund lock token: %v", err)
+			}
+		} else {
+			sp.Reward, err = currency.AddCoin(sp.Reward, value)
+			if err != nil {
+				return err
+			}
 		}
+
 		spUpdate.Reward = value
 
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
@@ -419,11 +431,19 @@ func (sp *StakePool) DistributeRewardsRandN(
 	}
 	if serviceCharge > 0 {
 		reward := serviceCharge
-		sr, err := currency.AddCoin(sp.Reward, reward)
-		if err != nil {
-			return err
+
+		if payFromScOwnerWallet {
+			transfer := state.NewTransfer(sc.ID, providerId, value)
+			if err = balances.AddTransfer(transfer); err != nil {
+				return fmt.Errorf("could not refund lock token: %v", err)
+			}
+		} else {
+			sp.Reward, err = currency.AddCoin(sp.Reward, reward)
+			if err != nil {
+				return err
+			}
 		}
-		sp.Reward = sr
+
 		spUpdate.Reward = reward
 	}
 
@@ -442,6 +462,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 		return nil
 	}
 
+	dpRewards := make([]currency.Coin, 0, len(pools))
 	for _, pool := range pools {
 		if valueBalance == 0 {
 			break
@@ -457,10 +478,9 @@ func (sp *StakePool) DistributeRewardsRandN(
 		} else {
 			valueBalance -= reward
 		}
-		pool.Reward, err = currency.AddCoin(pool.Reward, reward)
-		if err != nil {
-			return err
-		}
+
+		dpRewards = append(dpRewards, reward)
+
 		spUpdate.DelegateRewards[pool.DelegateID] = reward
 		if err != nil {
 			return err
@@ -468,9 +488,23 @@ func (sp *StakePool) DistributeRewardsRandN(
 	}
 
 	if valueBalance > 0 {
-		err = equallyDistributeRewards(valueBalance, pools, spUpdate)
+		err = equallyDistributeRewards(valueBalance, pools, spUpdate, dpRewards)
 		if err != nil {
 			return err
+		}
+	}
+
+	for i, pool := range pools {
+		if payFromScOwnerWallet {
+			transfer := state.NewTransfer(sc.ID, pool.DelegateID, dpRewards[i])
+			if err = balances.AddTransfer(transfer); err != nil {
+				return fmt.Errorf("could not refund lock token: %v", err)
+			}
+		} else {
+			pool.Reward, err = currency.AddCoin(pool.Reward, dpRewards[i])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
@@ -527,137 +561,14 @@ func (sp *StakePool) getRandStakePools(seed int64, n int) (currency.Coin, []*Del
 	return stake, pools, nil
 }
 
-func (sc *StakePool) DistributeRewardsByScOwnerTransfer(
-	value currency.Coin,
-	providerId string,
-	providerType spenum.Provider,
-	rewardType spenum.Reward,
-	balances cstate.StateContextI,
-	options ...string,
-) (err error) {
-	total, err := sp.stake()
-	if err != nil {
-		return err
-	}
-
-	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
-		return nil // nothing to move
-	}
-
-	var spUpdate *StakePoolReward
-	if len(options) > 0 {
-		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
-	} else {
-		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
-	}
-
-	defer func() {
-		if err != nil {
-			return
-		}
-
-		totalRewards := spUpdate.Reward
-		for _, p := range spUpdate.DelegateRewards {
-			totalRewards += p
-		}
-
-		if totalRewards != value {
-			logging.Logger.Panic(fmt.Sprintf("distribute rewards error: total rewards %d != value %d", totalRewards, value))
-		}
-	}()
-
-	// if no stake pools pay all rewards to the provider
-	if len(sp.Pools) == 0 {
-		sp.Reward, err = currency.AddCoin(sp.Reward, value)
-		if err != nil {
-			return err
-		}
-		spUpdate.Reward = value
-		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	fValue, err := value.Float64()
-	if err != nil {
-		return err
-	}
-	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
-	if err != nil {
-		return err
-	}
-	if serviceCharge > 0 {
-		reward := serviceCharge
-		sr, err := currency.AddCoin(sp.Reward, reward)
-		if err != nil {
-			return err
-		}
-		sp.Reward = sr
-		spUpdate.Reward = reward
-	}
-
-	valueLeft := value - serviceCharge
-	if valueLeft == 0 {
-		return nil
-	}
-
-	valueBalance := valueLeft
-	stake, err := sp.stake()
-	if err != nil {
-		return err
-	}
-	if stake == 0 {
-		return fmt.Errorf("no stake")
-	}
-
-	orderedPoolIds := sp.OrderedPoolIds()
-	for _, id := range orderedPoolIds {
-		if valueBalance == 0 {
-			break
-		}
-		dp := sp.Pools[id]
-		ratio := float64(dp.Balance) / float64(stake)
-		reward, err := currency.MultFloat64(valueLeft, ratio)
-		if err != nil {
-			return err
-		}
-		if reward > valueBalance {
-			reward = valueBalance
-			valueBalance = 0
-		} else {
-			valueBalance -= reward
-		}
-		dp.Reward, err = currency.AddCoin(dp.Reward, reward)
-		if err != nil {
-			return err
-		}
-		spUpdate.DelegateRewards[dp.DelegateID] = reward
-		if err != nil {
-			return err
-		}
-	}
-
-	if valueBalance > 0 {
-		err = sp.equallyDistributeRewards(valueBalance, spUpdate)
-		if err != nil {
-			return err
-		}
-	}
-	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (sp *StakePool) DistributeRewards(
+	sc *storagesc.StorageSmartContract,
 	value currency.Coin,
 	providerId string,
 	providerType spenum.Provider,
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
+	payFromScOwnerWallet bool,
 	options ...string,
 ) (err error) {
 	total, err := sp.stake()
@@ -693,10 +604,18 @@ func (sp *StakePool) DistributeRewards(
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
-		sp.Reward, err = currency.AddCoin(sp.Reward, value)
-		if err != nil {
-			return err
+		if payFromScOwnerWallet {
+			transfer := state.NewTransfer(sc.ID, providerId, value)
+			if err = balances.AddTransfer(transfer); err != nil {
+				return fmt.Errorf("could not refund lock token: %v", err)
+			}
+		} else {
+			sp.Reward, err = currency.AddCoin(sp.Reward, value)
+			if err != nil {
+				return err
+			}
 		}
+
 		spUpdate.Reward = value
 		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 			return err
@@ -715,11 +634,18 @@ func (sp *StakePool) DistributeRewards(
 	}
 	if serviceCharge > 0 {
 		reward := serviceCharge
-		sr, err := currency.AddCoin(sp.Reward, reward)
-		if err != nil {
-			return err
+		if payFromScOwnerWallet {
+			transfer := state.NewTransfer(sc.ID, providerId, value)
+			if err = balances.AddTransfer(transfer); err != nil {
+				return fmt.Errorf("could not refund lock token: %v", err)
+			}
+		} else {
+			sp.Reward, err = currency.AddCoin(sp.Reward, value)
+			if err != nil {
+				return err
+			}
 		}
-		sp.Reward = sr
+
 		spUpdate.Reward = reward
 	}
 
@@ -738,6 +664,7 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	orderedPoolIds := sp.OrderedPoolIds()
+	dpRewards := make([]currency.Coin, 0, len(orderedPoolIds))
 	for _, id := range orderedPoolIds {
 		if valueBalance == 0 {
 			break
@@ -754,10 +681,9 @@ func (sp *StakePool) DistributeRewards(
 		} else {
 			valueBalance -= reward
 		}
-		dp.Reward, err = currency.AddCoin(dp.Reward, reward)
-		if err != nil {
-			return err
-		}
+
+		dpRewards = append(dpRewards, reward)
+
 		spUpdate.DelegateRewards[dp.DelegateID] = reward
 		if err != nil {
 			return err
@@ -765,11 +691,28 @@ func (sp *StakePool) DistributeRewards(
 	}
 
 	if valueBalance > 0 {
-		err = sp.equallyDistributeRewards(valueBalance, spUpdate)
+		err = sp.equallyDistributeRewards(valueBalance, spUpdate, dpRewards)
 		if err != nil {
 			return err
 		}
 	}
+
+	for i, id := range orderedPoolIds {
+		dp := sp.Pools[id]
+
+		if payFromScOwnerWallet {
+			transfer := state.NewTransfer(sc.ID, dp.DelegateID, dpRewards[i])
+			if err = balances.AddTransfer(transfer); err != nil {
+				return fmt.Errorf("could not refund lock token: %v", err)
+			}
+		} else {
+			dp.Reward, err = currency.AddCoin(dp.Reward, dpRewards[i])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 		return err
 	}
@@ -790,11 +733,11 @@ func (sp *StakePool) stake() (stake currency.Coin, err error) {
 	return
 }
 
-func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *StakePoolReward) error {
-	return equallyDistributeRewards(coins, sp.GetOrderedPools(), spUpdate)
+func (sp *StakePool) equallyDistributeRewards(coins currency.Coin, spUpdate *StakePoolReward, dpRewards []currency.Coin) error {
+	return equallyDistributeRewards(coins, sp.GetOrderedPools(), spUpdate, dpRewards)
 }
 
-func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpdate *StakePoolReward) error {
+func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpdate *StakePoolReward, dpRewards []currency.Coin) error {
 	share, r, err := currency.DistributeCoin(coins, int64(len(pools)))
 	if err != nil {
 		return err
@@ -805,7 +748,7 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 	}
 	if share == 0 {
 		for i := int64(0); i < c; i++ {
-			pools[i].Reward++
+			dpRewards[i]++
 			spUpdate.DelegateRewards[pools[i].DelegateID]++
 		}
 		return nil
@@ -816,10 +759,7 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 		return err
 	}
 	for i := range pools {
-		pools[i].Reward, err = currency.AddCoin(pools[i].Reward, share)
-		if err != nil {
-			return err
-		}
+		dpRewards[i], err = currency.AddInt64(dpRewards[i], iShare)
 
 		spUpdate.DelegateRewards[pools[i].DelegateID], err =
 			currency.AddInt64(spUpdate.DelegateRewards[pools[i].DelegateID], iShare)
@@ -831,7 +771,7 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 
 	if r > 0 {
 		for i := 0; i < int(r); i++ {
-			pools[i].Reward++
+			dpRewards[i]++
 			spUpdate.DelegateRewards[pools[i].DelegateID]++
 		}
 	}

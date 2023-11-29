@@ -317,24 +317,28 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash))
 		if err := mn.StakePool.DistributeRewardsRandN(
+			msc,
 			minerRewards,
 			mn.ID,
 			spenum.Miner,
 			b.GetRoundRandomSeed(),
 			gn.NumMinerDelegatesRewarded,
 			spenum.BlockRewardMiner,
+			false,
 			balances,
 		); err != nil {
 			return "", err
 		}
 
 		if err := mn.StakePool.DistributeRewardsRandN(
+			msc,
 			minerFees,
 			mn.ID,
 			spenum.Miner,
 			b.GetRoundRandomSeed(),
 			gn.NumMinerDelegatesRewarded,
 			spenum.FeeRewardMiner,
+			true,
 			balances,
 		); err != nil {
 			return "", err
@@ -573,8 +577,10 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 		if err != nil {
 			return err
 		}
-		if err = sh.StakePool.DistributeRewardsRandN(
-			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, balances,
+
+		payFromScOwnerWallet := rewardType == spenum.FeeRewardSharder
+		if err = sh.StakePool.DistributeRewardsRandN(msc,
+			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, payFromScOwnerWallet, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)
