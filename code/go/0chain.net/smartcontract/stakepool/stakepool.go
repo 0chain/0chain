@@ -527,6 +527,131 @@ func (sp *StakePool) getRandStakePools(seed int64, n int) (currency.Coin, []*Del
 	return stake, pools, nil
 }
 
+func (sc *StakePool) DistributeRewardsByScOwnerTransfer(
+	value currency.Coin,
+	providerId string,
+	providerType spenum.Provider,
+	rewardType spenum.Reward,
+	balances cstate.StateContextI,
+	options ...string,
+) (err error) {
+	total, err := sp.stake()
+	if err != nil {
+		return err
+	}
+
+	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
+		return nil // nothing to move
+	}
+
+	var spUpdate *StakePoolReward
+	if len(options) > 0 {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
+	} else {
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+	}
+
+	defer func() {
+		if err != nil {
+			return
+		}
+
+		totalRewards := spUpdate.Reward
+		for _, p := range spUpdate.DelegateRewards {
+			totalRewards += p
+		}
+
+		if totalRewards != value {
+			logging.Logger.Panic(fmt.Sprintf("distribute rewards error: total rewards %d != value %d", totalRewards, value))
+		}
+	}()
+
+	// if no stake pools pay all rewards to the provider
+	if len(sp.Pools) == 0 {
+		sp.Reward, err = currency.AddCoin(sp.Reward, value)
+		if err != nil {
+			return err
+		}
+		spUpdate.Reward = value
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	fValue, err := value.Float64()
+	if err != nil {
+		return err
+	}
+	serviceCharge, err := currency.Float64ToCoin(sp.Settings.ServiceChargeRatio * fValue)
+	if err != nil {
+		return err
+	}
+	if serviceCharge > 0 {
+		reward := serviceCharge
+		sr, err := currency.AddCoin(sp.Reward, reward)
+		if err != nil {
+			return err
+		}
+		sp.Reward = sr
+		spUpdate.Reward = reward
+	}
+
+	valueLeft := value - serviceCharge
+	if valueLeft == 0 {
+		return nil
+	}
+
+	valueBalance := valueLeft
+	stake, err := sp.stake()
+	if err != nil {
+		return err
+	}
+	if stake == 0 {
+		return fmt.Errorf("no stake")
+	}
+
+	orderedPoolIds := sp.OrderedPoolIds()
+	for _, id := range orderedPoolIds {
+		if valueBalance == 0 {
+			break
+		}
+		dp := sp.Pools[id]
+		ratio := float64(dp.Balance) / float64(stake)
+		reward, err := currency.MultFloat64(valueLeft, ratio)
+		if err != nil {
+			return err
+		}
+		if reward > valueBalance {
+			reward = valueBalance
+			valueBalance = 0
+		} else {
+			valueBalance -= reward
+		}
+		dp.Reward, err = currency.AddCoin(dp.Reward, reward)
+		if err != nil {
+			return err
+		}
+		spUpdate.DelegateRewards[dp.DelegateID] = reward
+		if err != nil {
+			return err
+		}
+	}
+
+	if valueBalance > 0 {
+		err = sp.equallyDistributeRewards(valueBalance, spUpdate)
+		if err != nil {
+			return err
+		}
+	}
+	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (sp *StakePool) DistributeRewards(
 	value currency.Coin,
 	providerId string,
