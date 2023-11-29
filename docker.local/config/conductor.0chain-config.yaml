@@ -19,12 +19,13 @@ tests:
   - name: "test min_generators"
     flow:
       - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
           params:
             config_name: min_generators
-            config_value: 4
+            config_value: 3
       - wait_add:
           sharders: ['sharder-1', 'sharder-2']
           miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
@@ -32,7 +33,7 @@ tests:
       - wait_round:
           shift: 10
           timeout: "5m"
-      - stop: ['miner-4']
+      - stop: ['miner-3','miner-4']
       - wait_no_progress:
           timeout: "1m"
       - command:
@@ -41,6 +42,7 @@ tests:
   - name: "test min_active_sharders"
     flow:
       - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
@@ -63,6 +65,7 @@ tests:
   - name: "test max_block_cost"
     flow:
       - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
@@ -81,6 +84,7 @@ tests:
   - name: "test max_byte_size"
     flow:
       - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
@@ -99,6 +103,7 @@ tests:
   - name: "test payload max_size"
     flow:
       - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: update_0chain_config
