@@ -223,46 +223,6 @@ jobs:
     - name: 0dns Patching
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
-    
-    - name: Authorizer patching
-      run: |
-        cd token_bridge_authserver
-        chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
-        ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }}
-
-    - name: 0box Patching
-      run: |
-        cd 0box
-        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
-        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
-  
-    - name: Build 0dns
-      run: |
-        cd 0dns
-        ./docker.local/bin/init.sh
-        ./docker.local/bin/build.sh
-
-    - name: Build 0box
-      run: |
-        cd 0box
-        ./docker.local/bin/init.sh
-        ./docker.local/bin/build.base.sh
-        ./docker.local/bin/build.zbox-integration-tests.sh
-
-    - name: Init setup for authorizers
-      run: |
-        cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
-
-    - name: Build authorizer
-      run: |
-        cd token_bridge_authserver
-        chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
-        ./docker.local/bin/build.authorizer-integration-tests.sh
-
-    - name: Changing Authorizer Network
-      run: |
-        cd token_bridge_authserver
-        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
     - name: 'Setup jq'
       uses: dcarbone/install-jq-action@v2.1.0
@@ -275,7 +235,7 @@ jobs:
         echo "TENDERLY_CREATION_INFO=$(curl -X POST \
             -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
             -H "Content-Type: application/json" \
-            -d '{"alias":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}", "description":"", "network_id":"1"}' \
+            -d '{"alias":"mainnet-node-recovery-3-ct-${{ github.run_id }}", "description":"", "network_id":"1"}' \
             https://api.tenderly.co/api/v1/account/zus_network/project/project/fork)" >> $GITHUB_ENV
 
     - name: "Parse Tenderly fork creation transaction result"
@@ -347,6 +307,46 @@ jobs:
               "description": "Transfer ownership to 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97"
           }' \
             https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate
+    
+    - name: Authorizer patching
+      run: |
+        cd token_bridge_authserver
+        chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }}
+
+    - name: 0box Patching
+      run: |
+        cd 0box
+        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
+  
+    - name: Build 0dns
+      run: |
+        cd 0dns
+        ./docker.local/bin/init.sh
+        ./docker.local/bin/build.sh
+
+    - name: Build 0box
+      run: |
+        cd 0box
+        ./docker.local/bin/init.sh
+        ./docker.local/bin/build.base.sh
+        ./docker.local/bin/build.zbox-integration-tests.sh
+
+    - name: Init setup for authorizers
+      run: |
+        cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
+
+    - name: Build authorizer
+      run: |
+        cd token_bridge_authserver
+        chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
+        ./docker.local/bin/build.authorizer-integration-tests.sh
+
+    - name: Changing Authorizer Network
+      run: |
+        cd token_bridge_authserver
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
     - name: Add ZCN config
       run: |
