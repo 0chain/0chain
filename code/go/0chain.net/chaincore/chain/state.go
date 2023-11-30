@@ -711,7 +711,6 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, fmt.Errorf("transfer tokens from client failed: %v", err)
 	}
 	fs.Balance = fromBalance
-
 	_, err = sctx.SetClientState(fromClient, fs)
 	if err != nil {
 		return nil, err
@@ -740,6 +739,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if err != nil {
 		return nil, err
 	}
+
+	logging.Logger.Debug("after transfer amount", zap.Any("from", fs), zap.Any("to", ts))
 
 	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
 }
