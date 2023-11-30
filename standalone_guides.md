@@ -213,10 +213,12 @@ a) Open the /etc/hosts file using terminal.
 sudo nano /etc/hosts
 ```
 b)Enter your password.
+
 c)Add the following IP address at the end of the file:
 ```
 185.199.108.133 raw.githubusercontent.com 
 ```             
+
 d)Save and close the file and then try installing again.
 
 3. Add homebrew to the `PATH` using command below.
@@ -225,6 +227,8 @@ d)Save and close the file and then try installing again.
 echo; echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"') >> /home/<your_linux_username>/.bashrc 
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 ```
+Note: Please provide `your_linux_username` in the command above.
+
 4. Now verify that Homebrew is set up correctly. Run this command:
 
 ```
