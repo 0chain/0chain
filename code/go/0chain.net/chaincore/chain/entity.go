@@ -706,7 +706,7 @@ func (c *Chain) mustInitGBState(initStates *state.InitStates, stateCtx *cstate.S
 			}
 
 			c.emitUserEvent(stateCtx, stateToUser(cv.ID, s))
-			logging.Logger.Debug("init state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
+			logging.Logger.Debug("init state", zap.String("client ID", cv.ID), zap.Any("tokens", cv.Tokens))
 		}
 
 		// minus the transfered tokens from the SC
