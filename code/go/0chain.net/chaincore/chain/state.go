@@ -740,8 +740,6 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, err
 	}
 
-	logging.Logger.Debug("after transfer amount", zap.Any("from", fs), zap.Any("to", ts))
-
 	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
 }
 
