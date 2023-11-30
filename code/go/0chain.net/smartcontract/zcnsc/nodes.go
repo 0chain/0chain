@@ -37,7 +37,6 @@ type ZCNSConfig struct {
 	MinAuthorizers      int64          `json:"min_authorizers"`
 	PercentAuthorizers  float64        `json:"percent_authorizers"`
 	MaxFee              currency.Coin  `json:"max_fee"`
-	BurnAddress         string         `json:"burn_address"`
 	OwnerId             string         `json:"owner_id"`
 	Cost                map[string]int `json:"cost"`
 	MaxDelegates        int            `json:"max_delegates"`       // MaxDelegates per stake pool
@@ -70,11 +69,6 @@ func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 			if err != nil {
 				return err
 			}
-		case BurnAddress:
-			if value == "" {
-				return fmt.Errorf("key %s is empty", key)
-			}
-			gn.BurnAddress = value
 		case PercentAuthorizers:
 			gn.PercentAuthorizers, err = strconv.ParseFloat(value, 64)
 			if err != nil {
