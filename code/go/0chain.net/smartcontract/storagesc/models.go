@@ -1383,9 +1383,17 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
-			extraTokensInWP, err := sa.costForRDTU(now)
+			costForRDTU, err := sa.costForRDTU(now)
 			if err != nil {
 				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
+			}
+
+			var extraTokensInWP currency.Coin
+			if sa.WritePool > costForRDTU {
+				extraTokensInWP, err = currency.MinusCoin(sa.WritePool, costForRDTU)
+				if err != nil {
+					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
+				}
 			}
 
 			if extraTokensInWP > tokensRequiredToLock {
