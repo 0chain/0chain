@@ -301,6 +301,12 @@ jobs:
           }' \
             https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate
 
+    - name: Authorizer patching
+      run: |
+        cd token_bridge_authserver
+        chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh https://rpc.tenderly.co/fork/${{ env.TENDERLY_FORK_ID }}
+
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
