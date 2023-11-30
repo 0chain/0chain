@@ -1289,6 +1289,33 @@ func (sa *StorageAllocation) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
+func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, error) {
+	rdtu, err := sa.restDurationInTimeUnits(now, sa.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
+
+	}
+
+	var cost currency.Coin
+	for _, ba := range sa.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+		if err != nil {
+			return 0, err
+		}
+
+		c, err = currency.MultFloat64(c, rdtu)
+		if err != nil {
+			return 0, err
+		}
+
+		cost, err = currency.AddCoin(cost, c)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return cost, nil
+}
+
 func (ba *BlobberAllocation) cost() (currency.Coin, error) {
 	cost, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 	if err != nil {
@@ -1319,7 +1346,8 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation) (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation, now common.Timestamp) (currency.Coin, error) {
+
 	var tokensRequiredToLock currency.Coin
 
 	// If not extending then we need to lock tokens for specific cases
@@ -1355,7 +1383,16 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
-			return tokensRequiredToLock, nil
+			extraTokensInWP, err := sa.costForRDTU(now)
+			if err != nil {
+				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
+			}
+
+			if extraTokensInWP > tokensRequiredToLock {
+				return 0, nil
+			}
+
+			return tokensRequiredToLock - extraTokensInWP, nil
 		} else { // Otherwise there is no lock required for other params for example (third party extendable)
 			return 0, nil
 		}
