@@ -77,7 +77,7 @@ func TestAuthorizers(t *testing.T) {
 	_, err = authorizer_2.exists(eventDb)
 	require.NoError(t, err, "Error while checking if Authorizer exists in event Database")
 
-	activeAuthorizers, err := eventDb.GetActiveAuthorizers()
+	activeAuthorizers, err := eventDb.GetActiveAuthorizers(5 * time.Minute)
 	require.NoError(t, err, "Error while active Authorizer retrieval")
 	require.Len(t, activeAuthorizers, 2)
 
