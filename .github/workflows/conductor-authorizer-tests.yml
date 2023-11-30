@@ -313,7 +313,7 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
-        ethereum_node_url: ${{ env.TENDERLY_FORK_ID }}
+        ethereum_node_url: https://rpc.tenderly.co/fork/${{ env.TENDERLY_FORK_ID }}
         bridge:
           bridge_address: 0x7700D773022b19622095118Fadf46f7B9448Be9b
           token_address: 0xb9EF770B6A5e12E45983C5D80545258aA38F3B78
