@@ -1383,16 +1383,30 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 				}
 			}
 
-			extraTokensInWP, err := sa.costForRDTU(now)
+			costForRDTU, err := sa.costForRDTU(now)
 			if err != nil {
 				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
 			}
 
-			if extraTokensInWP > tokensRequiredToLock {
-				return 0, nil
+			totalWritePool := sa.WritePool + cpBalance
+
+			if totalWritePool > costForRDTU {
+				extraTokensInWP, err := currency.MinusCoin(totalWritePool, costForRDTU)
+				if err != nil {
+					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
+				}
+
+				if extraTokensInWP > tokensRequiredToLock {
+					return 0, nil
+				}
+
+				tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, extraTokensInWP)
+				if err != nil {
+					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
+				}
 			}
 
-			return tokensRequiredToLock - extraTokensInWP, nil
+			return tokensRequiredToLock, nil
 		} else { // Otherwise there is no lock required for other params for example (third party extendable)
 			return 0, nil
 		}
