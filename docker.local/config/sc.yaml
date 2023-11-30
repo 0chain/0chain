@@ -51,7 +51,6 @@ smart_contracts:
     # decline rewards every new epoch by this value (the block_reward)
     reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     # no mints after miner SC total mints reaches this boundary
-    max_mint: 85000000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
     # miner delegates to get paid each round when paying fees and rewards
@@ -94,8 +93,6 @@ smart_contracts:
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 20000.0 # max stake can be set by a node (boundary for all nodes)
     min_stake_per_delegate: 1
-    # max_mint
-    max_mint: 75000000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1048576
     # max challenge completion time of a blobber allowed by the SC
