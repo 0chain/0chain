@@ -725,7 +725,7 @@ func (c *Chain) mustInitGBState(initStates *state.InitStates, stateCtx *cstate.S
 	}
 
 	if scTotalTokens != config.MaxTokenSupply {
-		logging.Logger.Panic("chain.stateDB init SC tokens does not match the max token supply",
+		logging.Logger.Panic("chain.stateDB SC tokens must align with max token supply",
 			zap.Uint64("sc total tokens", uint64(scTotalTokens)),
 			zap.Uint64("max token supply", config.MaxTokenSupply))
 	}
