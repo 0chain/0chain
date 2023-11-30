@@ -11,8 +11,6 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
-const ActiveAuthorizerTimeLimit = 5 * time.Minute // 5 Minutes
-
 type Authorizer struct {
 	Provider
 
@@ -107,12 +105,12 @@ func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 	return &auth, nil
 }
 
-func (edb *EventDb) GetActiveAuthorizers() ([]Authorizer, error) {
+func (edb *EventDb) GetActiveAuthorizers(activeAuthorizerTimeLimitive time.Duration) ([]Authorizer, error) {
 	now := common.Now()
 	var authorizers []Authorizer
 	result := edb.Store.Get().
 		Model(&Authorizer{}).
-		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveAuthorizerTimeLimit).Unix()).
+		Where("last_health_check > ?", common.ToTime(now).Add(-activeAuthorizerTimeLimitive).Unix()).
 		Find(&authorizers)
 	return authorizers, result.Error
 }
