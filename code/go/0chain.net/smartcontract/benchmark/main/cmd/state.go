@@ -44,29 +44,6 @@ func mockUpdateState(
 	}
 }
 
-func mockMint(
-	to string,
-	amount currency.Coin,
-	balances cstate.StateContextI,
-) {
-	toState, err := balances.GetClientState(to)
-	if err != nil && err != util.ErrValueNotPresent {
-		log.Fatal(err)
-		return
-	}
-
-	newBal, err := currency.AddCoin(toState.Balance, amount)
-	if err != nil {
-		return
-	}
-	//fmt.Printf("mint %v to %s, new balance: %v\n", amount, to, newBal)
-	toState.Balance = newBal
-	if _, err := balances.SetClientState(to, toState); err != nil {
-		log.Fatal(err)
-		return
-	}
-}
-
 func mockTransferAmount(
 	name, from, to string,
 	amount currency.Coin,
