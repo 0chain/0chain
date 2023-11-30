@@ -1348,29 +1348,22 @@ func (sa *StorageAllocation) checkFunding() error {
 
 func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, now common.Timestamp) (currency.Coin, error) {
 
-	var tokensRequiredToLock currency.Coin
+	var (
+		costOfAllocAfterUpdate currency.Coin
+		tokensRequiredToLock   currency.Coin
+		err                    error
+	)
 
-	// If not extending then we need to lock tokens for specific cases
-	if !extend {
-		costForRDTU, err := sa.costForRDTU(now)
+	if extend {
+		costOfAllocAfterUpdate, err = sa.cost()
 		if err != nil {
-			return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 		}
-
-		totalWritePool := sa.WritePool + cpBalance
-
-		if totalWritePool < costForRDTU {
-			tokensRequiredToLock = costForRDTU - totalWritePool
-		} else {
-			tokensRequiredToLock = 0
+	} else {
+		costOfAllocAfterUpdate, err = sa.costForRDTU(now)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 		}
-
-		return tokensRequiredToLock, nil
-	}
-
-	costOfAllocAfterUpdate, err := sa.cost()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
 	totalWritePool := sa.WritePool + cpBalance
