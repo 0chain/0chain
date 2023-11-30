@@ -63,7 +63,6 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 		panic(err)
 	}
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.ZcnPercentAuthorizers)
-	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.ZcnBurnAddress)
 	gn.MaxDelegates = viper.GetInt(benchmark.ZcnMaxDelegates)
 	gn.HealthCheckPeriod = viper.GetDuration(benchmark.HealthCheckPeriod)
 	_, err = balances.InsertTrieNode(gn.GetKey(), gn)

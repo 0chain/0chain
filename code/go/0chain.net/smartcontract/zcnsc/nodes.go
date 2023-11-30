@@ -194,8 +194,6 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("min burn amount (%v) is less than 1", gn.MinBurnAmount))
 	case gn.PercentAuthorizers < 0:
 		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 0", gn.PercentAuthorizers))
-	case gn.BurnAddress == "":
-		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.BurnAddress))
 	case gn.OwnerId == "":
 		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
 	case gn.MaxDelegates <= 0:

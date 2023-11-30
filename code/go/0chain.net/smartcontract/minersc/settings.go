@@ -111,7 +111,6 @@ func initSettingName() {
 	SettingName[NumMinerDelegatesRewarded] = "num_miner_delegates_rewarded"
 	SettingName[NumShardersRewarded] = "num_sharders_rewarded"
 	SettingName[NumSharderDelegatesRewarded] = "num_sharder_delegates_rewarded"
-	SettingName[MaxMint] = "max_mint"
 	SettingName[OwnerId] = "owner_id"
 	SettingName[CooldownPeriod] = "cooldown_period"
 	SettingName[HealthCheckPeriod] = "health_check_period"
@@ -163,7 +162,6 @@ func initSettings() {
 		NumMinerDelegatesRewarded.String():   {NumMinerDelegatesRewarded, config.Int},
 		NumShardersRewarded.String():         {NumShardersRewarded, config.Int},
 		NumSharderDelegatesRewarded.String(): {NumSharderDelegatesRewarded, config.Int},
-		MaxMint.String():                     {MaxMint, config.CurrencyCoin},
 		OwnerId.String():                     {OwnerId, config.Key},
 		CooldownPeriod.String():              {CooldownPeriod, config.Int64},
 		HealthCheckPeriod.String():           {HealthCheckPeriod, config.Duration},
