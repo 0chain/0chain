@@ -264,6 +264,90 @@ jobs:
         cd token_bridge_authserver
         sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
+    - name: 'Setup jq'
+      uses: dcarbone/install-jq-action@v2.1.0
+      with:
+        version: '1.7'
+        force: 'false'
+              
+    - name: "Create Tenderly fork"
+      run: |
+        echo "TENDERLY_CREATION_INFO=$(curl -X POST \
+            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"alias":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}", "description":"", "network_id":"1"}' \
+            https://api.tenderly.co/api/v1/account/zus_network/project/project/fork)" >> $GITHUB_ENV
+
+    - name: "Parse Tenderly fork creation transaction result"
+      run: |
+        echo "TENDERLY_FORK_ID=$(echo '${{ env.TENDERLY_CREATION_INFO }}' | jq -r '.simulation_fork.id')" >> $GITHUB_ENV
+        echo "TENDERLY_ROOT_TRANSACTION_ID=$(echo '${{ env.TENDERLY_CREATION_INFO }}' | jq -r '.root_transaction.id')" >> $GITHUB_ENV
+
+    - name: "Retrieve Tenderly fork block number"
+      run: |
+        echo "TENDERLY_FORK_BLOCK_NUMBER=$(curl -X GET \
+            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+            -H "Content-Type: application/json" \
+            https://api.tenderly.co/api/v1/network/1/block-number | jq -r '.block_number')" >> $GITHUB_ENV
+
+        echo "TENDERLY_FORK_BLOCK_NUMBER=$((${{ env.TENDERLY_FORK_BLOCK_NUMBER }} + 1))" >> GITHUB_ENV
+
+    - name: "Transfer Bridge ownership in Tenderly fork"
+      run: |
+        echo "TENDERLY_ROOT_TRANSACTION_ID=$(curl -X POST \
+            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "network_id": "1",
+              "block_number": ${{ env.TENDERLY_FORK_BLOCK_NUMBER }},
+              "transaction_index": null,
+              "from": "0xed8f3170db6d1a71c8fa6d8d73cc2c51db95d5a4",
+              "input": "0xf2fde38b0000000000000000000000008e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97",
+              "to": "0x7700d773022b19622095118fadf46f7b9448be9b",
+              "gas": 8000000,
+              "gas_price": "0",
+              "value": "0",
+              "access_list": [],
+              "generate_access_list": true,
+              "save": true,
+              "source": "dashboard",
+              "block_header": null,
+              "root": "${{ env.TENDERLY_ROOT_TRANSACTION_ID }}",
+              "skip_fork_head_update": false,
+              "alias": "",
+              "description": "Transfer ownership to 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97"
+          }' \
+            https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate | jq -r '.simulation.id')" >> $GITHUB_ENV
+
+        echo "TENDERLY_FORK_BLOCK_NUMBER=$((${{ env.TENDERLY_FORK_BLOCK_NUMBER }} + 1))" >> GITHUB_ENV
+
+    - name: "Transfer Authorizers ownership in Tenderly fork"
+      run: |
+        curl -X POST \
+            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "network_id": "1",
+              "block_number": ${{ env.TENDERLY_FORK_BLOCK_NUMBER }},
+              "transaction_index": null,
+              "from": "0xed8f3170db6d1a71c8fa6d8d73cc2c51db95d5a4",
+              "input": "0xf2fde38b0000000000000000000000008e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97",
+              "to": "0x481dab4407b9880de0a68dc62e6af611c4949e42",
+              "gas": 8000000,
+              "gas_price": "0",
+              "value": "0",
+              "access_list": [],
+              "generate_access_list": true,
+              "save": true,
+              "source": "dashboard",
+              "block_header": null,
+              "root": "${{ env.TENDERLY_ROOT_TRANSACTION_ID }}",
+              "skip_fork_head_update": false,
+              "alias": "",
+              "description": "Transfer ownership to 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97"
+          }' \
+            https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate
+
     - name: Add ZCN config
       run: |
         rm -rf ~/.zcn || true
@@ -276,7 +360,7 @@ jobs:
         confirmation_chain_length: 3
         max_txn_query: 5
         query_sleep_time: 5
-        ethereum_node_url: ${{ secrets.CONDUCTOR_ETHEREUM_NODE_URL }}
+        ethereum_node_url: ${{ env.TENDERLY_FORK_ID }}
         bridge:
           bridge_address: 0x7700D773022b19622095118Fadf46f7B9448Be9b
           token_address: 0xb9EF770B6A5e12E45983C5D80545258aA38F3B78
@@ -310,6 +394,14 @@ jobs:
         export HOME="/root"
         cd 0chain
         ./docker.local/bin/start.conductor.sh node-recovery-3
+
+    - name: "Remove Tenderly fork"
+      if: always()
+      run: |
+        curl -X DELETE \
+          -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+          -H "Content-Type: application/json" \
+          https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}
 
     - uses: actions/upload-artifact@v3
       if: always()
