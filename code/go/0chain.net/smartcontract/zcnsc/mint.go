@@ -211,13 +211,6 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// Save the user node
-	err = gn.Save(ctx)
-	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
-		return
-	}
-
 	resp = string(payload.Encode())
 	return
 }
