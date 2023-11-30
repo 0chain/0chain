@@ -111,7 +111,6 @@ type StateContextI interface {
 	AddSignedTransfer(st *state.SignedTransfer)
 	GetTransfers() []*state.Transfer // cannot use in smart contracts or REST endpoints
 	GetSignedTransfers() []*state.SignedTransfer
-	GetMints() []*state.Mint // cannot use in smart contracts or REST endpoints
 	Validate() error
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
