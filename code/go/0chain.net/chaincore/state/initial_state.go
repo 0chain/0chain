@@ -1,9 +1,10 @@
 package state
 
 import (
+	"os"
+
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/currency"
-	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -16,6 +17,13 @@ type InitStates struct {
 
 // InitState is a clients initial state in the genesis block.
 type InitState struct {
+	ID     datastore.Key `yaml:"id"`     // smartcontract address
+	Tokens currency.Coin `yaml:"tokens"` // smartcontract init tokens
+	State  []IDTokens    `yaml:"state"`  // ID and Tokens that will be transfered from smartcontract
+}
+
+// IDTokens wraps the ID and Tokens
+type IDTokens struct {
 	ID     datastore.Key `yaml:"id"`
 	Tokens currency.Coin `yaml:"tokens"`
 }
