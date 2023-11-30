@@ -42,14 +42,6 @@ func mockUpdateState(
 			balances,
 		)
 	}
-
-	for _, mint := range balances.GetMints() {
-		mockMint(
-			mint.ToClientID,
-			mint.Amount,
-			balances,
-		)
-	}
 }
 
 func mockMint(
