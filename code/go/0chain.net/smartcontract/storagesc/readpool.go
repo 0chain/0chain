@@ -176,15 +176,7 @@ func (ssc *StorageSmartContract) readPoolLockInternal(txn *transaction.Transacti
 		if err := balances.AddTransfer(transfer); err != nil {
 			return "", common.NewError("read_pool_lock_failed", err.Error())
 		}
-	} else {
-		if err := balances.AddMint(&state.Mint{
-			Minter:     ADDRESS,
-			ToClientID: ADDRESS,
-			Amount:     toLock,
-		}); err != nil {
-			return "", common.NewError("read_pool_lock_failed", err.Error())
-		}
-	}
+	} // when mint is true, we don't need to do anything but add tokens to the pool, the tokens will be transfered from SC to client when collecting rewards
 
 	var newReadPool = false
 	rp, err := ssc.getReadPool(targetId, balances)

@@ -43,7 +43,6 @@ const (
 	NumMinerDelegatesRewarded
 	NumShardersRewarded
 	NumSharderDelegatesRewarded
-	MaxMint
 	OwnerId
 	CooldownPeriod
 	CostAddMiner
@@ -227,8 +226,6 @@ func (gn *GlobalNode) setDuration(key string, change time.Duration) error {
 
 func (gn *GlobalNode) setBalance(key string, change currency.Coin) error {
 	switch Settings[key].Setting {
-	case MaxMint:
-		gn.MaxMint = change
 	case MinStake:
 		gn.MinStake = change
 	case MinStakePerDelegate:

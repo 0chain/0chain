@@ -908,13 +908,6 @@ type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
 
 func WithTokenMint(coin currency.Coin) WithOption {
 	return func(balances cstate.StateContextI) (currency.Coin, error) {
-		if err := balances.AddMint(&state.Mint{
-			Minter:     ADDRESS,
-			ToClientID: ADDRESS,
-			Amount:     coin,
-		}); err != nil {
-			return 0, fmt.Errorf("minting tokens for write pool: %v", err)
-		}
 		return coin, nil
 	}
 }

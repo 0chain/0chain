@@ -246,13 +246,15 @@ func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.
 	if err != nil {
 		return 0, err
 	}
-	if err := balances.AddMint(&state.Mint{
-		Minter:     minter,
+
+	if err := balances.AddTransfer(&state.Transfer{
+		ClientID:   minter,
 		ToClientID: sp.Settings.DelegateWallet,
 		Amount:     sp.Reward,
 	}); err != nil {
-		return 0, fmt.Errorf("minting rewards: %v", err)
+		return 0, fmt.Errorf("could not transfer rewards: %v", err)
 	}
+
 	minted := sp.Reward
 	sp.Reward = 0
 	return minted, nil
@@ -290,12 +292,12 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		if err := balances.AddMint(&state.Mint{
-			Minter:     minter,
+		if err := balances.AddTransfer(&state.Transfer{
+			ClientID:   minter,
 			ToClientID: clientId,
 			Amount:     dPool.Reward,
 		}); err != nil {
-			return 0, fmt.Errorf("minting rewards: %v", err)
+			return 0, fmt.Errorf("could not transfer rewards: %v", err)
 		}
 		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
 			Amount:       int64(dPool.Reward),
