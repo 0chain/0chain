@@ -307,6 +307,24 @@ jobs:
               "description": "Transfer ownership to 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97"
           }' \
             https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate
+
+    - name: Initialize Ethereum wallet balance
+      run: |
+        curl -X POST \
+            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "method": "tenderly_addBalance",
+              "params": [
+                  [
+                      "0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97"
+                  ],
+                  "0x21e19e0c9bab2400000"
+              ],
+              "id": 42,
+              "jsonrpc": "2.0"
+          }' \
+            https://rpc.tenderly.co/fork/${{ env.TENDERLY_FORK_ID }}
     
     - name: Authorizer patching
       run: |
