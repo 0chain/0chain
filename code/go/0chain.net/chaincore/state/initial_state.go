@@ -19,7 +19,7 @@ type InitStates struct {
 type InitState struct {
 	ID     datastore.Key `yaml:"id"`     // smartcontract address
 	Tokens currency.Coin `yaml:"tokens"` // smartcontract init tokens
-	State  []IDTokens    `yaml:"state"`  // ID and Tokens that will be transfered from smartcontract
+	State  []IDTokens    `yaml:"state"`  // initial state of each client, tokens will be transfered from smartcontract address
 }
 
 // IDTokens wraps the ID and Tokens
