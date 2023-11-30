@@ -1652,12 +1652,6 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	beforeAlloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
 	eAlloc.Size += req.Size
 
 	if eAlloc.Expiration < int64(now) {
@@ -1697,12 +1691,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	var replacedBlobberAllocation *BlobberAllocation
-	if len(req.RemoveBlobberId) > 0 {
-		replacedBlobberAllocation = beforeAlloc.BlobberAllocsMap[req.RemoveBlobberId]
-	}
-
-	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, req.AddBlobberId, replacedBlobberAllocation, common.Timestamp(time.Now().Unix()))
+	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, common.Timestamp(time.Now().Unix()))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return

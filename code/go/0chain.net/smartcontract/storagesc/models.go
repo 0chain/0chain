@@ -1346,7 +1346,7 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation, now common.Timestamp) (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, now common.Timestamp) (currency.Coin, error) {
 
 	var tokensRequiredToLock currency.Coin
 
