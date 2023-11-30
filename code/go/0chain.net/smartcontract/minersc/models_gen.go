@@ -308,9 +308,9 @@ func (z *DKGMinerNodes) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 30
+	// map header, size 28
 	// string "ViewChange"
-	o = append(o, 0xde, 0x0, 0x1e, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
+	o = append(o, 0xde, 0x0, 0x1c, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
 	o = msgp.AppendInt64(o, z.ViewChange)
 	// string "MaxN"
 	o = append(o, 0xa4, 0x4d, 0x61, 0x78, 0x4e)
@@ -385,13 +385,6 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "RewardDeclineRate"
 	o = append(o, 0xb1, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x44, 0x65, 0x63, 0x6c, 0x69, 0x6e, 0x65, 0x52, 0x61, 0x74, 0x65)
 	o = msgp.AppendFloat64(o, z.RewardDeclineRate)
-	// string "MaxMint"
-	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
-	o, err = z.MaxMint.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxMint")
-		return
-	}
 	// string "NumMinerDelegatesRewarded"
 	o = append(o, 0xb9, 0x4e, 0x75, 0x6d, 0x4d, 0x69, 0x6e, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x65, 0x64)
 	o = msgp.AppendInt(o, z.NumMinerDelegatesRewarded)
@@ -411,13 +404,6 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 			err = msgp.WrapError(err, "PrevMagicBlock")
 			return
 		}
-	}
-	// string "Minted"
-	o = append(o, 0xa6, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x64)
-	o, err = z.Minted.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Minted")
-		return
 	}
 	// string "RewardRoundFrequency"
 	o = append(o, 0xb4, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x46, 0x72, 0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x79)
@@ -582,12 +568,6 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "RewardDeclineRate")
 				return
 			}
-		case "MaxMint":
-			bts, err = z.MaxMint.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MaxMint")
-				return
-			}
 		case "NumMinerDelegatesRewarded":
 			z.NumMinerDelegatesRewarded, bts, err = msgp.ReadIntBytes(bts)
 			if err != nil {
@@ -622,12 +602,6 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					err = msgp.WrapError(err, "PrevMagicBlock")
 					return
 				}
-			}
-		case "Minted":
-			bts, err = z.Minted.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Minted")
-				return
 			}
 		case "RewardRoundFrequency":
 			z.RewardRoundFrequency, bts, err = msgp.ReadInt64Bytes(bts)
@@ -691,13 +665,13 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 18 + msgp.DurationSize + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 26 + msgp.IntSize + 20 + msgp.IntSize + 28 + msgp.IntSize + 15
+	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 18 + msgp.DurationSize + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 26 + msgp.IntSize + 20 + msgp.IntSize + 28 + msgp.IntSize + 15
 	if z.PrevMagicBlock == nil {
 		s += msgp.NilSize
 	} else {
 		s += z.PrevMagicBlock.Msgsize()
 	}
-	s += 7 + z.Minted.Msgsize() + 21 + msgp.Int64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 15 + msgp.Int64Size + 5 + msgp.MapHeaderSize
+	s += 21 + msgp.Int64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 15 + msgp.Int64Size + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002
