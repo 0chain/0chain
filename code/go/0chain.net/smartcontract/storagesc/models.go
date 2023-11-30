@@ -1346,71 +1346,26 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation, now common.Timestamp) (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, now common.Timestamp) (currency.Coin, error) {
 
 	var tokensRequiredToLock currency.Coin
 
 	// If not extending then we need to lock tokens for specific cases
 	if !extend {
-		// If blobber is added than we need to add cost of this blobber for time unit
-		if addedBlobberId != "" {
-			addedBlobber := sa.BlobberAllocsMap[addedBlobberId]
-			addedBlobberCost, err := addedBlobber.cost()
-			if err != nil {
-				return 0, fmt.Errorf("failed to get allocation cost: %v", err)
-			}
-
-			tokensRequiredToLock, err = currency.AddCoin(tokensRequiredToLock, addedBlobberCost)
-			if err != nil {
-				return 0, fmt.Errorf("failed to add blobber cost: %v", err)
-			}
-
-			// If blobber is replaced than we need to remove cost of this blobber for time unit
-			if replacedBlobberAlloc != nil {
-				replacedBlobberCost, err := replacedBlobberAlloc.cost()
-				if err != nil {
-					return 0, err
-				}
-
-				// No need to lock more tokens
-				if replacedBlobberCost > tokensRequiredToLock {
-					return 0, nil
-				}
-
-				tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, replacedBlobberCost)
-				if err != nil {
-					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
-				}
-			}
-
-			costForRDTU, err := sa.costForRDTU(now)
-			if err != nil {
-				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
-			}
-
-			totalWritePool := sa.WritePool + cpBalance
-
-			if totalWritePool > costForRDTU {
-				extraTokensInWP, err := currency.MinusCoin(totalWritePool, costForRDTU)
-				if err != nil {
-					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
-				}
-
-				if extraTokensInWP > tokensRequiredToLock {
-					return 0, nil
-				}
-
-				tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, extraTokensInWP)
-				if err != nil {
-					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
-				}
-			}
-
-			return tokensRequiredToLock, nil
-		} else { // Otherwise there is no lock required for other params for example (third party extendable)
-			return 0, nil
+		costForRDTU, err := sa.costForRDTU(now)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
 		}
 
+		totalWritePool := sa.WritePool + cpBalance
+
+		if totalWritePool < costForRDTU {
+			tokensRequiredToLock = costForRDTU - totalWritePool
+		} else {
+			tokensRequiredToLock = 0
+		}
+
+		return tokensRequiredToLock, nil
 	}
 
 	costOfAllocAfterUpdate, err := sa.cost()
