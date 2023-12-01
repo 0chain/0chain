@@ -26,6 +26,14 @@ jobs:
     secrets:
       inherit
   
+  zchain-config:
+    uses: 0chain/0chain/.github/workflows/conductor-0chain-config-tests.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+  
   byzantine:
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
@@ -144,7 +152,7 @@ jobs:
   
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [standard-miner, standard-sharder, byzantine, fault-tolerance, blobber-01, blobber-02, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02, node-recovery-03]
+    needs: [standard-miner, standard-sharder, zchain-config, byzantine, fault-tolerance, blobber-01, blobber-02, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02, node-recovery-03]
     if: always()
     steps:
       - name: "Notify Slack"
@@ -155,6 +163,9 @@ jobs:
           
           SHARDER_STATUS=$([ "${{ needs.standard-sharder.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           SHAEDER_COLOR=$([ "${{ needs.standard-sharder.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+
+          ZCHAIN_CONFIG_STATUS=$([ "${{ needs.zchain-config.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          ZCHAIN_CONFIG_COLOR=$([ "${{ needs.zchain-config.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
           
           BYZANTINE_STATUS=$([ "${{ needs.byzantine.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           BYZANTINE_COLOR=$([ "${{ needs.byzantine.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
@@ -202,6 +213,10 @@ jobs:
               {
               \"text\": \"CONDUCTOR STANDARD SHARDERS TEST $SHARDER_STATUS\",
               \"color\": \"$SHAEDER_COLOR\"
+              },
+              {
+              \"text\": \"CONDUCTOR 0CHAIN CONFIG TEST $ZCHAIN_CONFIG_STATUS\",
+              \"color\": \"$ZCHAIN_CONFIG_COLOR\"
               },
               {
               \"text\": \"CONDUCTOR BYZANTINE TEST $BYZANTINE_STATUS\",
