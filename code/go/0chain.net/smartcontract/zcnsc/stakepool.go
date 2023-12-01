@@ -123,7 +123,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
 		sp = NewStakePool()
-		sp.Minter = cstate.MinterStorage
+		sp.Minter = cstate.MinterZcn
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		changed = true
 	}
