@@ -98,6 +98,7 @@ func main() {
 	r.waitNodes = make(map[config.NodeName]struct{})
 	r.latestBlock = make(map[NodeName]Number)
 	r.rounds = make(map[config.RoundName]config.Round)
+	r.nodeHistory = make(map[NodeName]*config.Node)
 	r.setupTimeout(0)
 
 	var success bool
