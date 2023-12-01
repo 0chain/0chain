@@ -30,7 +30,6 @@ var settingChangesKey = datastore.Key(ADDRESS + encryption.Hash("setting_changes
 const x10 = 10 * 1000 * 1000 * 1000
 
 const (
-	MaxMint             Setting = iota
 	MaxStake            Setting = iota
 	MinStake            Setting = iota
 	MinStakePerDelegate Setting = iota
