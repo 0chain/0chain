@@ -222,7 +222,6 @@ func initSettings() {
 		setting    Setting
 		configType config.ConfigType
 	}{
-		MaxMint.String():                          {MaxMint, config.CurrencyCoin},
 		MaxStake.String():                         {MaxStake, config.CurrencyCoin},
 		MinStake.String():                         {MinStake, config.CurrencyCoin},
 		MinStakePerDelegate.String():              {MinStakePerDelegate, config.CurrencyCoin},
