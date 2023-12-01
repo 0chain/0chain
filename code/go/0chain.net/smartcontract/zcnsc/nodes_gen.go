@@ -359,9 +359,9 @@ func (z UserNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 14
+	// map header, size 13
 	// string "MinMintAmount"
-	o = append(o, 0x8e, 0xad, 0x4d, 0x69, 0x6e, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
+	o = append(o, 0x8d, 0xad, 0x4d, 0x69, 0x6e, 0x4d, 0x69, 0x6e, 0x74, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74)
 	o, err = z.MinMintAmount.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "MinMintAmount")
@@ -415,9 +415,6 @@ func (z *ZCNSConfig) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "MaxFee")
 		return
 	}
-	// string "BurnAddress"
-	o = append(o, 0xab, 0x42, 0x75, 0x72, 0x6e, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73)
-	o = msgp.AppendString(o, z.BurnAddress)
 	// string "OwnerId"
 	o = append(o, 0xa7, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x49, 0x64)
 	o = msgp.AppendString(o, z.OwnerId)
@@ -515,12 +512,6 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "MaxFee")
 				return
 			}
-		case "BurnAddress":
-			z.BurnAddress, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "BurnAddress")
-				return
-			}
 		case "OwnerId":
 			z.OwnerId, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -583,7 +574,7 @@ func (z *ZCNSConfig) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *ZCNSConfig) Msgsize() (s int) {
-	s = 1 + 14 + z.MinMintAmount.Msgsize() + 14 + z.MinBurnAmount.Msgsize() + 15 + z.MinStakeAmount.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 15 + z.MaxStakeAmount.Msgsize() + 14 + z.MinLockAmount.Msgsize() + 15 + msgp.Int64Size + 19 + msgp.Float64Size + 7 + z.MaxFee.Msgsize() + 12 + msgp.StringPrefixSize + len(z.BurnAddress) + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
+	s = 1 + 14 + z.MinMintAmount.Msgsize() + 14 + z.MinBurnAmount.Msgsize() + 15 + z.MinStakeAmount.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 15 + z.MaxStakeAmount.Msgsize() + 14 + z.MinLockAmount.Msgsize() + 15 + msgp.Int64Size + 19 + msgp.Float64Size + 7 + z.MaxFee.Msgsize() + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002

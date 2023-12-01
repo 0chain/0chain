@@ -278,14 +278,6 @@ func runSuite(
 						// any unknown clients that minted to or transferred to
 						unknownMintTransferClients := make(map[string]struct{})
 						if err == nil {
-							ms := timedBalance.GetMints()
-							for _, m := range ms {
-								if _, ok := clientsMap[m.ToClientID]; !ok {
-									unknownMintTransferClients[m.ToClientID] = struct{}{}
-
-								}
-							}
-
 							for _, tt := range timedBalance.GetTransfers() {
 								if _, ok := clientsMap[tt.ToClientID]; !ok {
 									unknownMintTransferClients[tt.ToClientID] = struct{}{}
@@ -332,18 +324,11 @@ func runSuite(
 								totalBalanceAfter += bal
 							}
 
-							// get total mints
-							var mintTokens currency.Coin
-							for _, m := range timedBalance.GetMints() {
-								mintTokens += m.Amount
-							}
-
-							if totalBalanceBefore != totalBalanceAfter-mintTokens {
-								log.Fatal(fmt.Sprintf("name:%s\ntokens mint or burned unexpected\nbefore:%v\nafter:-minted:%v\nminted:%v\n",
+							if totalBalanceBefore != totalBalanceAfter {
+								log.Fatal(fmt.Sprintf("name:%s\ntokens mint or burned unexpected\nbefore:%v\nafter:-minted:%v\n",
 									bm.Name(),
 									totalBalanceBefore,
-									totalBalanceAfter-mintTokens, mintTokens))
-
+									totalBalanceAfter))
 							}
 						}
 					}

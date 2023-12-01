@@ -619,20 +619,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
 
-	for _, v := range initStates.States {
-		s := mustInitialState(v.Tokens)
-		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
-			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
-		}
-
-		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
-		logging.Logger.Debug("init state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
-	}
-
-	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
-		logging.Logger.Error("init stake failed", zap.Error(err))
-		panic(err)
-	}
+	c.mustInitGBState(initStates, stateCtx)
 
 	err := faucetsc.InitConfig(stateCtx)
 	if err != nil {
@@ -695,6 +682,58 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func (c *Chain) mustInitGBState(initStates *state.InitStates, stateCtx *cstate.StateContext) {
+	var err error
+	var scTotalTokens currency.Coin
+	for _, v := range initStates.States {
+		scTotalTokens, err = currency.AddCoin(scTotalTokens, v.Tokens)
+		if err != nil {
+			logging.Logger.Panic("chain.stateDB add coin failed", zap.Error(err))
+		}
+
+		var transfered currency.Coin
+		for _, cv := range v.State {
+			s := mustInitialState(cv.Tokens)
+			if _, err := stateCtx.SetClientState(cv.ID, s); err != nil {
+				logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
+			}
+
+			transfered, err = currency.AddCoin(transfered, cv.Tokens)
+			if err != nil {
+				logging.Logger.Panic("chain.stateDB add coin failed", zap.Error(err))
+			}
+
+			c.emitUserEvent(stateCtx, stateToUser(cv.ID, s))
+			logging.Logger.Debug("init state", zap.String("client ID", cv.ID), zap.Any("tokens", cv.Tokens))
+		}
+
+		// minus the transfered tokens from the SC
+		v.Tokens, err = currency.MinusCoin(v.Tokens, transfered)
+		if err != nil {
+			logging.Logger.Panic("chain.stateDB minus coin failed", zap.Error(err))
+		}
+
+		s := mustInitialState(v.Tokens)
+		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
+			logging.Logger.Panic("chain.stateDB init SC state failed", zap.String("SC", v.ID), zap.Error(err))
+		}
+
+		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
+		logging.Logger.Debug("init SC state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
+	}
+
+	if scTotalTokens != config.MaxTokenSupply {
+		logging.Logger.Panic("chain.stateDB SC tokens must align with max token supply",
+			zap.Uint64("sc total tokens", uint64(scTotalTokens)),
+			zap.Uint64("max token supply", config.MaxTokenSupply))
+	}
+
+	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
+		logging.Logger.Error("init stake failed", zap.Error(err))
+		panic(err)
+	}
 }
 
 func (c *Chain) addInitialStakes(stakes []state.InitStake, balances *cstate.StateContext) error {

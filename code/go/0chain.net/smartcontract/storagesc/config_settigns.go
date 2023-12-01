@@ -30,7 +30,6 @@ var settingChangesKey = datastore.Key(ADDRESS + encryption.Hash("setting_changes
 const x10 = 10 * 1000 * 1000 * 1000
 
 const (
-	MaxMint             Setting = iota
 	MaxStake            Setting = iota
 	MinStake            Setting = iota
 	MinStakePerDelegate Setting = iota
@@ -139,7 +138,6 @@ func init() {
 }
 
 func initSettingName() {
-	SettingName[MaxMint] = "max_mint"
 	SettingName[MaxStake] = "max_stake"
 	SettingName[MinStake] = "min_stake"
 	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
@@ -223,7 +221,6 @@ func initSettings() {
 		setting    Setting
 		configType config.ConfigType
 	}{
-		MaxMint.String():                          {MaxMint, config.CurrencyCoin},
 		MaxStake.String():                         {MaxStake, config.CurrencyCoin},
 		MinStake.String():                         {MinStake, config.CurrencyCoin},
 		MinStakePerDelegate.String():              {MinStakePerDelegate, config.CurrencyCoin},
@@ -383,8 +380,6 @@ func (conf *Config) setInt(key string, change int) error {
 
 func (conf *Config) setCoin(key string, change currency.Coin) error {
 	switch Settings[key].setting {
-	case MaxMint:
-		conf.MaxMint = change
 	case MaxStake:
 		conf.MaxStake = change
 	case MinStake:
@@ -628,8 +623,6 @@ func (conf *Config) get(key Setting) interface{} {
 	}
 
 	switch key {
-	case MaxMint:
-		return conf.MaxMint
 	case MaxStake:
 		return conf.MaxStake
 	case MinStake:

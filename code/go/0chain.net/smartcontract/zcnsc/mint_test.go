@@ -154,7 +154,7 @@ func Test_MaxFeeMint(t *testing.T) {
 			require.NotNil(t, response)
 			require.NotEmpty(t, response)
 
-			mm := ctx.GetMints()
+			mm := ctx.GetTransfers()
 			require.Equal(t, 1, len(mm))
 
 			auths := make([]string, 0, len(payload.Signatures))
@@ -162,7 +162,7 @@ func Test_MaxFeeMint(t *testing.T) {
 				auths = append(auths, sig.ID)
 			}
 
-			mintsMap := make(map[string]*state.Mint, len(mm))
+			mintsMap := make(map[string]*state.Transfer, len(mm))
 			for i, m := range mm {
 				mintsMap[m.ToClientID] = mm[i]
 			}
@@ -446,7 +446,7 @@ func TestZCNSmartContractMintNonce(t *testing.T) {
 				return
 			}
 
-			mm := ctx.GetMints()
+			mm := ctx.GetTransfers()
 			require.Equal(t, 1, len(mm))
 
 			// check that the nonce is saved to the partition by calling the Add and got

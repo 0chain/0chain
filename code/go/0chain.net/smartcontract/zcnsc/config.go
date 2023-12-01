@@ -30,7 +30,6 @@ const (
 	MinStakePerDelegate = "min_stake_per_delegate"
 	MaxStakeAmount      = "max_stake"
 	MinLockAmount       = "min_lock"
-	BurnAddress         = "burn_address"
 	MaxFee              = "max_fee"
 	OwnerID             = "owner_id"
 	Cost                = "cost"
@@ -114,7 +113,6 @@ func (gn *GlobalNode) ToStringMap() config.StringMap {
 		MinAuthorizers:      fmt.Sprintf("%v", gn.MinAuthorizers),
 		MinLockAmount:       fmt.Sprintf("%v", gn.MinLockAmount),
 		MaxFee:              fmt.Sprintf("%v", gn.MaxFee),
-		BurnAddress:         fmt.Sprintf("%v", gn.BurnAddress),
 		OwnerID:             fmt.Sprintf("%v", gn.OwnerId),
 		MaxDelegates:        fmt.Sprintf("%v", gn.MaxDelegates),
 		HealthCheckPeriod:   fmt.Sprintf("%v", gn.HealthCheckPeriod),
@@ -162,7 +160,6 @@ func getConfig() (conf *ZCNSConfig, err error) {
 		return nil, err
 	}
 	conf.MaxFee = currency.Coin(cfg.GetFloat64(postfix(MaxFee)))
-	conf.BurnAddress = cfg.GetString(postfix(BurnAddress))
 	conf.OwnerId = cfg.GetString(postfix(OwnerID))
 	conf.Cost = cfg.GetStringMapInt(postfix(Cost))
 	conf.MaxDelegates = cfg.GetInt(postfix(MaxDelegates))
