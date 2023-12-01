@@ -9,17 +9,10 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 34
+	// map header, size 33
 	// string "TimeUnit"
-	o = append(o, 0xde, 0x0, 0x22, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
+	o = append(o, 0xde, 0x0, 0x21, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
 	o = msgp.AppendDuration(o, z.TimeUnit)
-	// string "MaxMint"
-	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
-	o, err = z.MaxMint.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxMint")
-		return
-	}
 	// string "Minted"
 	o = append(o, 0xa6, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x64)
 	o, err = z.Minted.MarshalMsg(o)
@@ -231,12 +224,6 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.TimeUnit, bts, err = msgp.ReadDurationBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "TimeUnit")
-				return
-			}
-		case "MaxMint":
-			bts, err = z.MaxMint.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MaxMint")
 				return
 			}
 		case "Minted":
@@ -588,7 +575,7 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *Config) Msgsize() (s int) {
-	s = 3 + 9 + msgp.DurationSize + 8 + z.MaxMint.Msgsize() + 7 + z.Minted.Msgsize() + 13 + msgp.Int64Size + 29 + msgp.Int64Size + 19 + msgp.Int64Size + 9
+	s = 3 + 9 + msgp.DurationSize + 7 + z.Minted.Msgsize() + 13 + msgp.Int64Size + 29 + msgp.Int64Size + 19 + msgp.Int64Size + 9
 	if z.ReadPool == nil {
 		s += msgp.NilSize
 	} else {

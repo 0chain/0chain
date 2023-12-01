@@ -139,7 +139,6 @@ func init() {
 }
 
 func initSettingName() {
-	SettingName[MaxMint] = "max_mint"
 	SettingName[MaxStake] = "max_stake"
 	SettingName[MinStake] = "min_stake"
 	SettingName[MinStakePerDelegate] = "min_stake_per_delegate"
@@ -383,8 +382,6 @@ func (conf *Config) setInt(key string, change int) error {
 
 func (conf *Config) setCoin(key string, change currency.Coin) error {
 	switch Settings[key].setting {
-	case MaxMint:
-		conf.MaxMint = change
 	case MaxStake:
 		conf.MaxStake = change
 	case MinStake:
@@ -628,8 +625,6 @@ func (conf *Config) get(key Setting) interface{} {
 	}
 
 	switch key {
-	case MaxMint:
-		return conf.MaxMint
 	case MaxStake:
 		return conf.MaxStake
 	case MinStake:

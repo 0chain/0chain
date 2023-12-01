@@ -80,8 +80,6 @@ type Config struct {
 	// measured in tok / GB / time unit. Where the time unit is this
 	// configuration.
 	TimeUnit time.Duration `json:"time_unit"`
-	// MaxMint is max minting.
-	MaxMint currency.Coin `json:"max_mint"`
 	// Minted tokens by entire SC.
 	Minted currency.Coin `json:"minted"`
 	// MinAllocSize is minimum possible size (bytes)
@@ -292,24 +290,6 @@ func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
 	return conf.validateStakeRange(min, max)
 }
 
-//
-// rest handler and update function
-//
-
-func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateContextI) error {
-	minted, err := currency.AddCoin(conf.Minted, toMint)
-	if err != nil {
-		return err
-	}
-
-	if minted > conf.MaxMint {
-		return fmt.Errorf("max min %v exceeded by: %v", conf.MaxMint, minted)
-	}
-	conf.Minted = minted
-	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-	return err
-}
-
 // configs from sc.yaml
 func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
@@ -318,10 +298,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
-	conf.MaxMint, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_mint"))
-	if err != nil {
-		return nil, err
-	}
 	conf.MinStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
 	if err != nil {
 		return nil, err
