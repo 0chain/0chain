@@ -53,7 +53,7 @@ func (r *Runner) doStart(name NodeName, lock, errIfAlreadyStarted bool) (err err
 		return fmt.Errorf("starting %s: %v", n.Name, err)
 	}
 
-	r.nodeHistory = append(r.nodeHistory, n)
+	r.nodeHistory[n.Name] = n
 	return nil
 }
 

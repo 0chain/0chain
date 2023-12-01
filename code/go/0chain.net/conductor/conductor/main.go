@@ -215,7 +215,7 @@ type Runner struct {
 	report []reportTestCase
 
 	// history of all nodes spawned during each test case. Should be cleared after each test case. Used to store the logs for each case
-	nodeHistory []*config.Node
+	nodeHistory map[NodeName]*config.Node
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
@@ -1284,7 +1284,7 @@ func (r *Runner) Run() (err error, success bool) {
 			}
 
 			// clear node history
-			r.nodeHistory = make([]*config.Node, 0)
+			r.nodeHistory = make(map[NodeName]*config.Node)
 
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}
