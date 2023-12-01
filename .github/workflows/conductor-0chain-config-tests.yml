@@ -183,9 +183,7 @@ jobs:
       with:
         name: 0chain-config-logs
         path: |
-          0chain/conductor/logs/
-          0chain/docker.local/miner*/log
-          0chain/docker.local/sharder*/log
+          0chain/conductor-full-logs
 
     - name: Added /tmp folder cleanup.
       run: |
