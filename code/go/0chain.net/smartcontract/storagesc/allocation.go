@@ -805,9 +805,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		originalRemainingDuration = alloc.Expiration - txn.CreationDate
 	)
 
-	if req.Extend {
-		alloc.Expiration = common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()) // new expiration
-	}
+	alloc.Expiration = common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()) // new expiration
 
 	alloc.Size += req.Size // new size
 
@@ -938,6 +936,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
+	// Always extend if size is increased
 	if request.Size > 0 {
 		request.Extend = true
 	}
@@ -955,13 +954,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
-	var replacedBlobberAlloc *BlobberAllocation
-	if len(request.RemoveBlobberId) > 0 {
-		replacedBlobberAlloc = alloc.BlobberAllocsMap[request.RemoveBlobberId]
-	}
-
 	if t.ClientID != alloc.Owner {
-		if !alloc.ThirdPartyExtendable || (request.Extend == false && request.Size <= 0) {
+		if !alloc.ThirdPartyExtendable || !request.Extend {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
 		}
@@ -1014,7 +1008,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		// if size or expiration increased, then we use new terms
 		// otherwise, we use the same terms
-		if request.Size > 0 || request.Extend || len(request.AddBlobberId) > 0 {
+		if request.Extend {
 			err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
 			if err != nil {
 				return "", err
@@ -1052,7 +1046,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance, request.Extend, request.AddBlobberId, replacedBlobberAlloc, t.CreationDate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance, request.Extend, t.CreationDate)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}

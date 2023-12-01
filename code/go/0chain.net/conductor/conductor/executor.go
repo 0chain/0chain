@@ -52,6 +52,8 @@ func (r *Runner) doStart(name NodeName, lock, errIfAlreadyStarted bool) (err err
 	if err := n.Start(r.conf.Logs, r.conf.Env); err != nil {
 		return fmt.Errorf("starting %s: %v", n.Name, err)
 	}
+
+	r.nodeHistory[n.Name] = n
 	return nil
 }
 
