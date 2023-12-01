@@ -293,11 +293,7 @@ jobs:
       with:
         name: node-recovery-02-logs
         path: |
-          0chain/conductor/logs/
-          0chain/docker.local/miner*/log
-          0chain/docker.local/sharder*/log
-          blobber/docker.local/blobber*/log
-          blobber/docker.local/validator*/log
+          0chain/conductor-full-logs
 
     - name: Added /tmp folder cleanup.
       run: |
