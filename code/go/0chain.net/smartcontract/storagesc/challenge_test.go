@@ -337,7 +337,6 @@ func TestBlobberReward(t *testing.T) {
 	var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {10}}
 	var writePoolBalance currency.Coin = 23423 + 33333333 + 234234234
 	var scYaml = Config{
-		MaxMint:                      zcnToBalance(4000000.0),
 		ValidatorReward:              0.025,
 		MaxChallengeCompletionRounds: 720,
 		TimeUnit:                     720 * time.Hour,
@@ -924,7 +923,6 @@ func TestBlobberPenalty(t *testing.T) {
 	var writePoolBalance currency.Coin = 234234234
 	var size = int64(123000)
 	var scYaml = Config{
-		MaxMint:                      zcnToBalance(4000000.0),
 		BlobberSlash:                 0.1,
 		ValidatorReward:              0.025,
 		MaxChallengeCompletionRounds: 720,

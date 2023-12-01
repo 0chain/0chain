@@ -571,19 +571,6 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 	}
 
-	for _, mint := range sctx.GetMints() {
-		u, err := c.mintAmountWithAssert(sctx, mint.ToClientID, mint.Amount)
-		if err != nil {
-			logging.Logger.Error("mint error", zap.Error(err),
-				zap.Any("transaction", txn),
-				zap.String("to clientID", mint.ToClientID))
-			return nil, err
-		}
-		if u != nil {
-			ue[u.UserID] = u
-		}
-	}
-
 	u, err := c.incrementNonce(sctx, txn.ClientID)
 	if err != nil {
 		logging.Logger.Error("update nonce error", zap.Error(err),
@@ -724,7 +711,6 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, fmt.Errorf("transfer tokens from client failed: %v", err)
 	}
 	fs.Balance = fromBalance
-
 	_, err = sctx.SetClientState(fromClient, fs)
 	if err != nil {
 		return nil, err

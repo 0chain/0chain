@@ -88,8 +88,8 @@ func (zcn *ZCNSmartContract) Burn(
 		return
 	}
 
-	// burn the tokens
-	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, trans.Value))
+	// burn the tokens, transfer back to SC address
+	err = ctx.AddTransfer(state.NewTransfer(trans.ClientID, ADDRESS, trans.Value))
 	if err != nil {
 		return "", err
 	}

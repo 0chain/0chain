@@ -121,7 +121,6 @@ func TestUpdateSettings(t *testing.T) {
 				client:      owner,
 				previousMap: map[string]string{},
 				inputMap: map[string]string{
-					"max_mint":                        "1500000.02",
 					"time_unit":                       "720h",
 					"min_alloc_size":                  "1024",
 					"max_challenge_completion_rounds": "720",
@@ -363,7 +362,6 @@ func TestCommitSettingChanges(t *testing.T) {
 			parameters: parameters{
 				client: mockMinerId,
 				inputMap: map[string]string{
-					"max_mint":                        "1500000.02",
 					"time_unit":                       "720h",
 					"min_alloc_size":                  "1024",
 					"max_challenge_completion_rounds": "720",
@@ -456,8 +454,6 @@ func getConfField(conf Config, field string) interface{} {
 	}
 
 	switch Settings[field].setting {
-	case MaxMint:
-		return conf.MaxMint
 	case MaxStake:
 		return conf.MaxStake
 	case MinStake:

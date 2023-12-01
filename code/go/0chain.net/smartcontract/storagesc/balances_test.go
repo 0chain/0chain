@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	"github.com/0chain/common/core/currency"
 	"testing"
 	"time"
+
+	cstate "0chain.net/chaincore/chain/state"
+	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
@@ -42,7 +43,6 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	}
 
 	var scYaml = Config{
-		MaxMint:                      zcnToBalance(4000000.0),
 		StakePool:                    &stakePoolConfig{},
 		BlobberSlash:                 0.1,
 		ValidatorReward:              0.025,

@@ -14,7 +14,6 @@ func TestConfigMap_Get(t *testing.T) {
 	cfg := &GlobalNode{
 		ID: "",
 		ZCNSConfig: &ZCNSConfig{
-			BurnAddress:        "0xBEEF",
 			MinMintAmount:      100,
 			PercentAuthorizers: 101,
 			MinAuthorizers:     102,
@@ -33,7 +32,7 @@ func TestConfigMap_Get(t *testing.T) {
 
 	stringMap := cfg.ToStringMap()
 
-	require.Equal(t, 17, len(stringMap.Fields))
+	require.Equal(t, 16, len(stringMap.Fields))
 	require.Contains(t, stringMap.Fields, OwnerID)
 	require.Contains(t, stringMap.Fields, MinBurnAmount)
 	require.Contains(t, stringMap.Fields, MinMintAmount)
@@ -43,7 +42,6 @@ func TestConfigMap_Get(t *testing.T) {
 	require.Contains(t, stringMap.Fields, MinStakePerDelegate)
 	require.Contains(t, stringMap.Fields, MaxStakeAmount)
 	require.Contains(t, stringMap.Fields, MaxFee)
-	require.Contains(t, stringMap.Fields, BurnAddress)
 	require.Contains(t, stringMap.Fields, PercentAuthorizers)
 	require.Contains(t, stringMap.Fields, MaxDelegates)
 	require.Contains(t, stringMap.Fields, HealthCheckPeriod)
@@ -61,7 +59,6 @@ func TestConfigMap_Get(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("%v", cfg.MinStakePerDelegate), stringMap.Fields[MinStakePerDelegate])
 	require.Equal(t, fmt.Sprintf("%v", cfg.MaxStakeAmount), stringMap.Fields[MaxStakeAmount])
 	require.Equal(t, fmt.Sprintf("%v", cfg.MaxFee), stringMap.Fields[MaxFee])
-	require.Equal(t, fmt.Sprintf("%v", cfg.BurnAddress), stringMap.Fields[BurnAddress])
 	require.Equal(t, fmt.Sprintf("%v", cfg.PercentAuthorizers), stringMap.Fields[PercentAuthorizers])
 	require.Equal(t, fmt.Sprintf("%v", cfg.MaxDelegates), stringMap.Fields[MaxDelegates])
 	require.Equal(t, fmt.Sprintf("%v", cfg.HealthCheckPeriod), stringMap.Fields[HealthCheckPeriod])

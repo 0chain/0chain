@@ -197,8 +197,8 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// mint the tokens
-	err = ctx.AddMint(&state.Mint{
-		Minter:     ADDRESS,
+	err = ctx.AddTransfer(&state.Transfer{
+		ClientID:   ADDRESS,
 		ToClientID: trans.ClientID,
 		Amount:     payload.Amount,
 	})
@@ -208,13 +208,6 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 	}
 
 	if err = sp.save("", sig.ID, ctx); err != nil {
-		return
-	}
-
-	// Save the user node
-	err = gn.Save(ctx)
-	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
 		return
 	}
 

@@ -10,7 +10,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/currency"
 )
@@ -60,17 +59,6 @@ func (ssc *MinerSmartContract) collectReward(
 	)
 	if err != nil {
 		return "", err
-	}
-	if minted > 0 {
-		gn.Minted += minted
-		if !gn.canMint() {
-			return "", common.NewErrorf("collect_reward_failed",
-				"max mint %v exceeded, %v", gn.MaxMint, gn.Minted)
-		}
-		if err = gn.save(balances); err != nil {
-			return "", common.NewErrorf("collect_reward_failed",
-				"saving global node: %v", err)
-		}
 	}
 
 	return toJson(&event.RewardMint{

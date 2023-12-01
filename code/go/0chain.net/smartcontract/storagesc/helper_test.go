@@ -396,7 +396,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
-	conf.MaxMint = 100e10
 	conf.MaxBlobbersPerAllocation = 50
 	conf.HealthCheckPeriod = time.Hour
 	conf.ReadPool = &readPoolConfig{
