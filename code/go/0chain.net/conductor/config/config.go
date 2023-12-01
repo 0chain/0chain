@@ -123,7 +123,9 @@ type Config struct {
 	// Address is address of RPC server in docker network (e.g.
 	// address to connect to).
 	Address string `json:"address" yaml:"address" mapstructure:"address"`
-	// Logs is directory for stdin and stdout logs.
+	// FullLogs is the directory where the history of all logs of all cases within the test run is stored.
+	FullLogsDir string `json:"full_logs_dir" yaml:"full_logs_dir" mapstructure:"full_logs_dir"`
+	// Logs is directory for stdin and stdout logs in a single case.
 	Logs string `json:"logs" yaml:"logs" mapstructure:"logs"`
 	// AggregateBaseUrl is base url for aggregate service.
 	AggregatesBaseUrl string `json:"aggregate_base_url" yaml:"aggregate_base_url" mapstructure:"aggregate_base_url"`
