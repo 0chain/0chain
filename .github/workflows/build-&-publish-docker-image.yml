@@ -325,7 +325,7 @@ jobs:
               https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@fix/false-mint-peter
+        uses: 0chain/actions/deploy-0chain@master
         with:
           miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
