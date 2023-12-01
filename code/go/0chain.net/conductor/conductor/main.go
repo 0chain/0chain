@@ -29,6 +29,7 @@ import (
 	"0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/utils"
 )
 
 const noProgressSeconds = 10
@@ -212,6 +213,9 @@ type Runner struct {
 
 	// final report
 	report []reportTestCase
+
+	// history of all nodes spawned during each test case. Should be cleared after each test case. Used to store the logs for each case
+	nodeHistory []*config.Node
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
@@ -1202,6 +1206,11 @@ func (r *Runner) Run() (err error, success bool) {
 	// stop all nodes after all
 	defer r.stopAll()
 
+	// clean full logs directory
+	if err = os.RemoveAll(r.conf.FullLogsDir); err != nil {
+		log.Printf("[WARN] couldn't clean full logs dir")
+	}
+
 	// for every enabled set
 	for _, set := range r.conf.Sets {
 		if !r.conf.IsEnabled(&set) {
@@ -1266,10 +1275,46 @@ func (r *Runner) Run() (err error, success bool) {
 
 			report.endedAt = time.Now()
 			r.report = append(r.report, report)
+			
+			// Export all logs
+			if err := r.ExportFullLogs(testCase.Name); err != nil {
+				log.Printf("[WARN] couldn't export full logs for this test case: %v", err)
+			} else {
+				log.Printf("[INF] ✅ all logs saved to the full logs dir successfully")
+			}
+
+			// clear node history
+			r.nodeHistory = make([]*config.Node, 0)
+
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}
 	}
 
 	success = r.processReport()
 	return err, success
+}
+
+func (r *Runner) ExportFullLogs(testCaseName string) (err error) {
+	log.Printf("[INF] exporting full logs for the test case")
+	fullLogsPathForTheCase := filepath.Join(r.conf.FullLogsDir, strings.ReplaceAll(testCaseName, " ", "-"))
+
+	// copy current case conductor logs in conductor logs backup dir
+	condcutorLogsDstPath := filepath.Join(fullLogsPathForTheCase, "conductor")
+	log.Printf("[INF] saving conductor logs from path %v", condcutorLogsDstPath)
+	if err = utils.CopyDir(r.conf.Logs, condcutorLogsDstPath); err != nil {
+		return
+	}
+
+	// copy all spawned nodes logs during the case
+	for _, node := range r.nodeHistory {
+		nodeLogsSrcPath := filepath.Join(node.WorkDir, node.LogsDir)
+		nodeLogsDstPath := filepath.Join(fullLogsPathForTheCase, string(node.Name))
+		log.Printf("[INF] saving logs for node %v from path %v", node.Name, nodeLogsSrcPath)
+
+		if err = utils.CopyDir(nodeLogsSrcPath, nodeLogsDstPath); err != nil {
+			return
+		}
+	}
+
+	return
 }

@@ -4,6 +4,8 @@
 ---
 # RPC server address (listen on)
 bind: 0.0.0.0:15210
+# place where history of logs of all test cases within a test run is stored (relative to the working_directory)
+full_logs_dir: "conductor-full-logs"
 # place for stdin and stdout logs of nodes (relative to the working_directory)
 logs: "conductor/logs"
 # cleanup blockchain command
@@ -30,6 +32,7 @@ nodes:
     env: SHARDER=1
     start_command: "docker-compose -p sharder1 -f ../build.sharder/b0docker-compose.yml up"
     stop_command: "docker-compose -p sharder1 -f ../build.sharder/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "sharder-2"
     id: b098d2d56b087ee910f3ee2d2df173630566babb69f0be0e2e9a0c98d63f0b0b
@@ -37,6 +40,7 @@ nodes:
     env: SHARDER=2
     start_command: "docker-compose -p sharder2 -f ../build.sharder/b0docker-compose.yml up"
     stop_command: "docker-compose -p sharder2 -f ../build.sharder/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "sharder-3"
     id: d9558143f8e976126367603bff34125f5eb94720df8d7acefffdd66675d134c2
@@ -44,6 +48,7 @@ nodes:
     env: SHARDER=3
     start_command: "docker-compose -p sharder3 -f ../build.sharder/b0docker-compose.yml up"
     stop_command: "docker-compose -p sharder3 -f ../build.sharder/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "sharder-4"
     id: 600396361b3c9efc3a1ad85df6930163591be04a8c12bc5226414d34a81cb8e5
@@ -51,6 +56,7 @@ nodes:
     env: SHARDER=4
     start_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml up"
     stop_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml down"
+    logs_dir: "log"
 
 
   # miners
@@ -60,6 +66,7 @@ nodes:
     env: MINER=1
     start_command: "docker-compose -p miner1 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner1 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "miner-2"
     id: 585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2
@@ -67,6 +74,7 @@ nodes:
     env: MINER=2
     start_command: "docker-compose -p miner2 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner2 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "miner-3"
     id: bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8
@@ -74,6 +82,7 @@ nodes:
     env: MINER=3
     start_command: "docker-compose -p miner3 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner3 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "miner-4"
     id: 8877e3da19b4cb51e59b4646ec7c0cf4849bc7b860257d69ddbf753b9a981e1b
@@ -81,6 +90,7 @@ nodes:
     env: MINER=4
     start_command: "docker-compose -p miner4 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner4 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "miner-5"
     id: 53add50ff9501014df2cbd698c673f85e5785281cebba8772a64a6e74057d328
@@ -88,6 +98,7 @@ nodes:
     env: MINER=5
     start_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "miner-6"
     id: 8b2b5cd7e26db28ebbc3da1652b1967f1029a35fbed1dd330ec9652e62dde464
@@ -95,6 +106,7 @@ nodes:
     env: MINER=6
     start_command: "docker-compose -p miner6 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner6 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "miner-7"
     id: dda909a7f6c77562a836f71d0d8385842abfc5eaf1a4b52007a31ea5e38c49c2
@@ -102,6 +114,7 @@ nodes:
     env: MINER=7
     start_command: "docker-compose -p miner7 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner7 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "miner-8"
     id: 5ea78acd3d32117ab7c0744b0d3d3e61b6a4591d32ab81eb623c732e709e9e7f
@@ -109,6 +122,7 @@ nodes:
     env: MINER=8
     start_command: "docker-compose -p miner8 -f ../build.miner/b0docker-compose.yml up"
     stop_command: "docker-compose -p miner8 -f ../build.miner/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "blobber-1"
     id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
@@ -116,6 +130,7 @@ nodes:
     env: BLOBBER=1,CONFIG_PATH=./conductor-config
     start_command: "docker-compose -p blobber1 -f ../b0docker-compose.yml up"
     stop_command: "docker-compose -p blobber1 -f ../b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "blobber-2"
     id: 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
@@ -123,6 +138,7 @@ nodes:
     env: BLOBBER=2,CONFIG_PATH=./conductor-config
     start_command: "docker-compose -p blobber2 -f ../b0docker-compose.yml up"
     stop_command: "docker-compose -p blobber2 -f ../b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "blobber-3"
     id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
@@ -130,6 +146,7 @@ nodes:
     env: BLOBBER=3,CONFIG_PATH=./conductor-config
     start_command: "docker-compose -p blobber3 -f ../b0docker-compose.yml up"
     stop_command: "docker-compose -p blobber3 -f ../b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "blobber-4"
     id: 2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
@@ -137,6 +154,7 @@ nodes:
     env: BLOBBER=4,CONFIG_PATH=./conductor-config
     start_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml up"
     stop_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml down"
+    logs_dir: "log"
   
   - name: "validator-1"
     id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
@@ -144,6 +162,7 @@ nodes:
     env: BLOBBER=1,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   - name: "validator-2"
     id: ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd
@@ -151,6 +170,7 @@ nodes:
     env: BLOBBER=2,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   - name: "validator-3"
     id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
@@ -158,6 +178,7 @@ nodes:
     env: BLOBBER=3,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   - name: "validator-4"
     id: 823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337
@@ -165,6 +186,7 @@ nodes:
     env: BLOBBER=4,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   - name: "validator-1"
     id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
@@ -172,6 +194,7 @@ nodes:
     env: BLOBBER=1,CONFIG_PATH=./conductor-config
     start_command: "echo \0"
     stop_command: "echo \0"
+    logs_dir: "log"
 
   - name: "validator-2"
     id: ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd
@@ -179,6 +202,7 @@ nodes:
     env: BLOBBER=2,CONFIG_PATH=./conductor-config
     start_command: "echo \0"
     stop_command: "echo \0"
+    logs_dir: "log"
 
   - name: "validator-3"
     id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
@@ -186,6 +210,7 @@ nodes:
     env: BLOBBER=3,CONFIG_PATH=./conductor-config
     start_command: "echo \0"
     stop_command: "echo \0"
+    logs_dir: "log"
 
   - name: "validator-4"
     id: 823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337
@@ -193,6 +218,7 @@ nodes:
     env: BLOBBER=4,CONFIG_PATH=./conductor-config
     start_command: "echo \0"
     stop_command: "echo \0"
+    logs_dir: "log"
 
   - name: "validator-1"
     id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
@@ -200,6 +226,7 @@ nodes:
     env: BLOBBER=1,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   - name: "validator-2"
     id: ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd
@@ -207,6 +234,7 @@ nodes:
     env: BLOBBER=2,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   - name: "validator-3"
     id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
@@ -214,6 +242,7 @@ nodes:
     env: BLOBBER=3,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   - name: "validator-4"
     id: 823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337
@@ -221,6 +250,7 @@ nodes:
     env: BLOBBER=4,CONFIG_PATH=./conductor-config
     start_command: "sh -c \"echo\""
     stop_command: "sh -c \"echo\""
+    logs_dir: "log"
 
   # authorizer
   - name: "authorizer-1"
@@ -229,6 +259,7 @@ nodes:
     env: AUTHORIZER=1,ETH_MNEMONIC=symbol alley celery diesel donate moral almost opinion achieve since diamond page,ETH_UNLOCKPASSWORD="02289b9",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth1 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "authorizer-2"
     id: 47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a
@@ -236,6 +267,7 @@ nodes:
     env: AUTHORIZER=2,ETH_MNEMONIC=office peanut sail help sword minor gospel shoot execute prosper flip know,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth2 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+    logs_dir: "log"
 
   - name: "authorizer-3"
     id: 7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a
@@ -243,6 +275,7 @@ nodes:
     env: AUTHORIZER=3,ETH_MNEMONIC=acid dismiss fantasy already fossil material yellow present awkward debris rude oval,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth3 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+    logs_dir: "log"
   
   - name: "authorizer-4"
     id: d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab
@@ -250,6 +283,7 @@ nodes:
     env: AUTHORIZER=4,ETH_MNEMONIC=prize tennis people canoe tongue reform main ghost jelly prefer swear nurse,ETH_UNLOCKPASSWORD="12345678",ETH_BRIDGE_ADDRESS=0x7700D773022b19622095118Fadf46f7B9448Be9b
     start_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml up"
     stop_command: "docker-compose -p auth4 -f ../build.authorizer-integration-tests/b0docker-compose.yml down"
+    logs_dir: "log"
 
   # 0dns (patched version, add docker-clean, start-no-daemon.sh)
   - name: "0dns" #
@@ -258,6 +292,7 @@ nodes:
     env: "" # no ENV needed
     start_command: "../0dns/docker.local/bin/start-no-daemon.sh" # not demonized instance
     stop_command: "../0dns/docker.local/bin/stop-no-daemon.sh" # not demonized instance
+    logs_dir: "docker.local/0dns/log" # logs directory
 
   - name: "0box"
     id: "0box"
@@ -265,6 +300,7 @@ nodes:
     env: ""
     start_command: "./docker.local/bin/start-ct.sh"
     stop_command: "./docker.local/bin/stop-ct.sh"
+    logs_dir: "docker.local/0box/log"
 
 # named system commands
 commands:

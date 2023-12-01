@@ -23,7 +23,8 @@ type Node struct {
 	StartCommand string `json:"start_command" yaml:"start_command" mapstructure:"start_command"`
 	// StopCommand to start the node.
 	StopCommand string `json:"stop_command" yaml:"stop_command" mapstructure:"stop_command"`
-
+	// LogsDir is the directory where logs of this node is stored. Should be relative its "work_dir".
+	LogsDir string `json:"logs_dir" yaml:"logs_dir" mapstructure:"logs_dir"`
 	// internals
 	Command *exec.Cmd `json:"-" yaml:"-" mapstructure:"-"`
 }
