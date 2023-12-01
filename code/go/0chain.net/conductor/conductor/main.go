@@ -1277,8 +1277,8 @@ func (r *Runner) Run() (err error, success bool) {
 			r.report = append(r.report, report)
 			
 			// Export all logs
-			if err := r.ExportFullLogs(testCase.Name); err != nil {
-				log.Printf("[WARN] couldn't export full logs for this test case: %v", err)
+			if errors := r.ExportFullLogs(testCase.Name); len(errors) > 0 {
+				log.Printf("[WARN] ⚠️ errors while exporting full logs for this test case: %v", errors)
 			} else {
 				log.Printf("[INF] ✅ all logs saved to the full logs dir successfully")
 			}
@@ -1294,15 +1294,15 @@ func (r *Runner) Run() (err error, success bool) {
 	return err, success
 }
 
-func (r *Runner) ExportFullLogs(testCaseName string) (err error) {
+func (r *Runner) ExportFullLogs(testCaseName string) (errors []error) {
 	log.Printf("[INF] exporting full logs for the test case")
 	fullLogsPathForTheCase := filepath.Join(r.conf.FullLogsDir, strings.ReplaceAll(testCaseName, " ", "-"))
 
 	// copy current case conductor logs in conductor logs backup dir
 	condcutorLogsDstPath := filepath.Join(fullLogsPathForTheCase, "conductor")
 	log.Printf("[INF] saving conductor logs from path %v", condcutorLogsDstPath)
-	if err = utils.CopyDir(r.conf.Logs, condcutorLogsDstPath); err != nil {
-		return
+	if err := utils.CopyDir(r.conf.Logs, condcutorLogsDstPath); err != nil {
+		errors = append(errors, err)
 	}
 
 	// copy all spawned nodes logs during the case
@@ -1311,10 +1311,10 @@ func (r *Runner) ExportFullLogs(testCaseName string) (err error) {
 		nodeLogsDstPath := filepath.Join(fullLogsPathForTheCase, string(node.Name))
 		log.Printf("[INF] saving logs for node %v from path %v", node.Name, nodeLogsSrcPath)
 
-		if err = utils.CopyDir(nodeLogsSrcPath, nodeLogsDstPath); err != nil {
-			return
+		if err := utils.CopyDir(nodeLogsSrcPath, nodeLogsDstPath); err != nil {
+			errors = append(errors, err)
 		}
 	}
 
-	return
+	return errors
 }
