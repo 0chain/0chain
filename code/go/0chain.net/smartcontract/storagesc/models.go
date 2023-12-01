@@ -1339,62 +1339,23 @@ func (sa *StorageAllocation) checkFunding() error {
 	return nil
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, addedBlobberId string, replacedBlobberAlloc *BlobberAllocation, now common.Timestamp) (currency.Coin, error) {
+func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, now common.Timestamp) (currency.Coin, error) {
+	var (
+		costOfAllocAfterUpdate currency.Coin
+		tokensRequiredToLock   currency.Coin
+		err                    error
+	)
 
-	var tokensRequiredToLock currency.Coin
-
-	// If not extending then we need to lock tokens for specific cases
-	if !extend {
-		// If blobber is added than we need to add cost of this blobber for time unit
-		if addedBlobberId != "" {
-			addedBlobber := sa.BlobberAllocsMap[addedBlobberId]
-			addedBlobberCost, err := addedBlobber.cost()
-			if err != nil {
-				return 0, fmt.Errorf("failed to get allocation cost: %v", err)
-			}
-
-			tokensRequiredToLock, err = currency.AddCoin(tokensRequiredToLock, addedBlobberCost)
-			if err != nil {
-				return 0, fmt.Errorf("failed to add blobber cost: %v", err)
-			}
-
-			// If blobber is replaced than we need to remove cost of this blobber for time unit
-			if replacedBlobberAlloc != nil {
-				replacedBlobberCost, err := replacedBlobberAlloc.cost()
-				if err != nil {
-					return 0, err
-				}
-
-				// No need to lock more tokens
-				if replacedBlobberCost > tokensRequiredToLock {
-					return 0, nil
-				}
-
-				tokensRequiredToLock, err = currency.MinusCoin(tokensRequiredToLock, replacedBlobberCost)
-				if err != nil {
-					return 0, fmt.Errorf("failed to subtract blobber challenge pool integral value: %v", err)
-				}
-			}
-
-			extraTokensInWP, err := sa.costForRDTU(now)
-			if err != nil {
-				return 0, fmt.Errorf("failed to get cost for DTU: %v", err)
-			}
-
-			if extraTokensInWP > tokensRequiredToLock {
-				return 0, nil
-			}
-
-			return tokensRequiredToLock - extraTokensInWP, nil
-		} else { // Otherwise there is no lock required for other params for example (third party extendable)
-			return 0, nil
+	if extend {
+		costOfAllocAfterUpdate, err = sa.cost()
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 		}
-
-	}
-
-	costOfAllocAfterUpdate, err := sa.cost()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+	} else {
+		costOfAllocAfterUpdate, err = sa.costForRDTU(now)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+		}
 	}
 
 	totalWritePool := sa.WritePool + cpBalance
