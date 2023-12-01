@@ -1365,6 +1365,8 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 		}
 	}
 
+	logging.Logger.Info("requiredTokensForUpdateAllocation", zap.Any("costOfAllocAfterUpdate", costOfAllocAfterUpdate), zap.Any("cpBalance", cpBalance), zap.Any("sa.WritePool", sa.WritePool), zap.Any("extend", extend))
+
 	totalWritePool := sa.WritePool + cpBalance
 
 	if totalWritePool < costOfAllocAfterUpdate {
