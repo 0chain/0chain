@@ -1669,6 +1669,26 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	// Pay cancellation charge if removing a blobber.
+	if req.RemoveBlobberId != "" {
+		allocCancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+
+		totalWritePriceBefore := float64(0)
+		for _, blobber := range alloc.BlobberAllocs {
+			totalWritePriceBefore += float64(blobber.Terms.WritePrice)
+		}
+
+		removedBlobber := alloc.BlobberAllocsMap[req.RemoveBlobberId]
+
+		blobberCancellationCharge := currency.Coin(float64(allocCancellationCharge) * (float64(removedBlobber.Terms.WritePrice) / totalWritePriceBefore))
+
+		alloc.WritePool -= blobberCancellationCharge
+	}
+
 	if req.Extend {
 		if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 			common.Respond(w, r, nil, err)
