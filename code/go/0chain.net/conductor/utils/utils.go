@@ -3,7 +3,10 @@ package utils
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"0chain.net/core/encryption"
 )
@@ -99,4 +102,56 @@ func HttpGet(url string, headers map[string]string) ([]byte, error) {
 	}
 
 	return bdy, nil
+}
+
+func CopyDir(src string, dst string) error {
+    entries, err := ioutil.ReadDir(src)
+    if err != nil {
+        return err
+    }
+
+    err = os.MkdirAll(dst, 0755)
+    if err != nil {
+        return err
+    }
+
+    for _, entry := range entries {
+        srcPath := filepath.Join(src, entry.Name())
+        dstPath := filepath.Join(dst, entry.Name())
+
+        if entry.IsDir() {
+            err = CopyDir(srcPath, dstPath)
+            if err != nil {
+                return err
+            }
+        } else {
+            err = CopyFile(srcPath, dstPath)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    return nil
+}
+
+func CopyFile(src string, dst string) error {
+    srcFile, err := os.Open(src)
+    if err != nil {
+        return err
+    }
+    defer srcFile.Close()
+
+    dstFile, err := os.Create(dst)
+    if err != nil {
+        return err
+    }
+    defer dstFile.Close()
+
+    _, err = io.Copy(dstFile, srcFile)
+    if err != nil {
+        return err
+    }
+
+    return nil
 }
