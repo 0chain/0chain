@@ -275,7 +275,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", err
 	}
 
-	// transfer tokens from owner wallet to storage sc
+	// transfer tokens from assigner wallet to storage sc
 	transfer := state.NewTransfer(assigner.ClientId, ssc.ID, free)
 	if err := balances.AddTransfer(transfer); err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "add transfer: %v", err)
