@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"0chain.net/core/encryption"
 )
@@ -154,4 +155,37 @@ func CopyFile(src string, dst string) error {
     }
 
     return nil
+}
+
+func FileNamify(s string) string {
+	s = strings.ReplaceAll(s, " ", "-")
+	s = strings.ReplaceAll(s, ":", "(colon)")
+	s = strings.ReplaceAll(s, "'", "(single-quote)")
+	s = strings.ReplaceAll(s, "\"", "(double-quote)")
+	s = strings.ReplaceAll(s, "/", "(forward-slash)")
+	s = strings.ReplaceAll(s, "\\", "(back-slash)")
+	s = strings.ReplaceAll(s, "?", "(question-mark)")
+	s = strings.ReplaceAll(s, "*", "(asterisk)")
+	s = strings.ReplaceAll(s, "<", "(left-angle-bracket)")
+	s = strings.ReplaceAll(s, ">", "(right-angle-bracket)")
+	s = strings.ReplaceAll(s, "|", "(pipe)")
+	s = strings.ReplaceAll(s, "&", "(ampersand)")
+	s = strings.ReplaceAll(s, "%", "(percent)")
+	s = strings.ReplaceAll(s, "$", "(dollar-sign)")
+	s = strings.ReplaceAll(s, "#", "(hash)")
+	s = strings.ReplaceAll(s, "@", "(at-sign)")
+	s = strings.ReplaceAll(s, "!", "(exclamation-mark)")
+	s = strings.ReplaceAll(s, "`", "(backtick)")
+	s = strings.ReplaceAll(s, "+", "(plus-sign)")
+	s = strings.ReplaceAll(s, "=", "(equals-sign)")
+	s = strings.ReplaceAll(s, "{", "(left-curly-prace)")
+	s = strings.ReplaceAll(s, "}", "(right-curly-prace)")
+	s = strings.ReplaceAll(s, "\n", "-")
+	s = strings.ReplaceAll(s, "\r", "-")
+	s = strings.ReplaceAll(s, "\t", "-")
+	s = strings.ReplaceAll(s, "\v", "-")
+	s = strings.ReplaceAll(s, "\f", "-")
+	s = strings.ReplaceAll(s, "\b", "-")
+	s = strings.ReplaceAll(s, "\a", "-")
+	return s
 }

@@ -1278,7 +1278,7 @@ func (r *Runner) Run() (err error, success bool) {
 			r.report = append(r.report, report)
 			
 			// Export all logs
-			if errors := r.ExportFullLogs(testCase.Name); len(errors) > 0 {
+			if errors := r.ExportFullLogs(set.Name, testCase.Name); len(errors) > 0 {
 				log.Printf("[WARN] ⚠️ errors while exporting full logs for this test case: %v", errors)
 			} else {
 				log.Printf("[INF] ✅ all logs saved to the full logs dir successfully")
@@ -1295,9 +1295,9 @@ func (r *Runner) Run() (err error, success bool) {
 	return err, success
 }
 
-func (r *Runner) ExportFullLogs(testCaseName string) (errors []error) {
+func (r *Runner) ExportFullLogs(testSetName string, testCaseName string) (errors []error) {
 	log.Printf("[INF] exporting full logs for the test case")
-	fullLogsPathForTheCase := filepath.Join(r.conf.FullLogsDir, strings.ReplaceAll(testCaseName, " ", "-"))
+	fullLogsPathForTheCase := filepath.Join(r.conf.FullLogsDir, utils.FileNamify(fmt.Sprintf("%v-%v", testSetName, testCaseName)))
 
 	// copy current case conductor logs in conductor logs backup dir
 	condcutorLogsDstPath := filepath.Join(fullLogsPathForTheCase, "conductor")
