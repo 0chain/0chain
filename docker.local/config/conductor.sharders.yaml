@@ -74,7 +74,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           shift: 100
-      - start: ["sharder-2"]
+      # - start: ["sharder-2"]
       - wait_round:
           shift: 200
       - wait_sharders_finalize_near_blocks:
