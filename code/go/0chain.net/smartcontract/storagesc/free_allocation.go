@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/state"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -272,6 +273,12 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	free, err := currency.ParseZCN(marker.FreeTokens)
 	if err != nil {
 		return "", err
+	}
+
+	// transfer tokens from owner wallet to storage sc
+	transfer := state.NewTransfer(assigner.ClientId, ssc.ID, free)
+	if err := balances.AddTransfer(transfer); err != nil {
+		return "", common.NewErrorf("free_allocation_failed", "add transfer: %v", err)
 	}
 
 	newRedeemed, err := currency.AddCoin(assigner.CurrentRedeemed, free)
