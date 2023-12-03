@@ -4,15 +4,12 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
-	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -255,8 +252,6 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	logging.Logger.Info("stakePool.stakedCapacity", zap.Any("stake", stake), zap.Any("writePrice", writePrice), zap.Any("fStake", fStake), zap.Any("fWritePrice", fWritePrice), zap.Any("stakedCapacity", int64((fStake/fWritePrice)*GB)))
 
 	return int64((fStake / fWritePrice) * GB), nil
 }
