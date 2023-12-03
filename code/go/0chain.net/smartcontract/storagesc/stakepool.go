@@ -1,15 +1,17 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/state"
-	"0chain.net/core/maths"
-	"0chain.net/smartcontract/dbs/event"
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"0chain.net/chaincore/state"
+	"0chain.net/core/maths"
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+
+	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
