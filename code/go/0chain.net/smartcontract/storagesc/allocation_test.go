@@ -1032,7 +1032,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg9 = "allocation_creation_failed: " +
 			"no tokens to lock"
 	)
-
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
