@@ -904,16 +904,13 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 }
 
-type WithOption func(balances cstate.StateContextI) (currency.Coin, error)
+type TransferFunc func(balances cstate.StateContextI) (currency.Coin, error)
 
-func WithTokenMint(coin currency.Coin) WithOption {
+func WithTokenTransfer(value currency.Coin, clientId, toClientId string) TransferFunc {
 	return func(balances cstate.StateContextI) (currency.Coin, error) {
-		return coin, nil
-	}
-}
-
-func WithTokenTransfer(value currency.Coin, clientId, toClientId string) WithOption {
-	return func(balances cstate.StateContextI) (currency.Coin, error) {
+		if value == 0 {
+			return 0, nil
+		}
 		if err := stakepool.CheckClientBalance(clientId, value, balances); err != nil {
 			return 0, err
 		}
@@ -929,32 +926,19 @@ func WithTokenTransfer(value currency.Coin, clientId, toClientId string) WithOpt
 func (sa *StorageAllocation) addToWritePool(
 	txn *transaction.Transaction,
 	balances cstate.StateContextI,
-	opts ...WithOption,
+	transfer TransferFunc,
 ) error {
-	// default behaviour
-	if len(opts) == 0 {
-		value, err := WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)(balances)
-		if err != nil {
-			return err
-		}
-		if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
-			return err
-		} else {
-			sa.WritePool = writePool
-		}
+	value, err := transfer(balances)
+	if err != nil {
+		return err
+	}
+	if value == 0 {
+		return nil
+	}
+	if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+		return err
 	} else {
-		for _, opt := range opts {
-			value, err := opt(balances)
-			if err != nil {
-				return err
-			}
-			if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
-				return err
-			} else {
-				sa.WritePool = writePool
-			}
-		}
-
+		sa.WritePool = writePool
 	}
 
 	i, err := txn.Value.Int64()

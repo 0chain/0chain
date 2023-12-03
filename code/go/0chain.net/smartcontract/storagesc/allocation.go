@@ -205,7 +205,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 			"can't get config: %v", err)
 	}
 
-	resp, err := sc.newAllocationRequestInternal(t, input, conf, 0, balances, timings)
+	resp, err := sc.newAllocationRequestInternal(t, input, conf, WithTokenTransfer(t.Value, t.ClientID, t.ToClientID), balances, timings)
 	if err != nil {
 		return "", err
 	}
@@ -218,7 +218,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	txn *transaction.Transaction,
 	input []byte,
 	conf *Config,
-	mintNewTokens currency.Coin,
+	transfer TransferFunc,
 	balances chainstate.StateContextI,
 	timings map[string]time.Duration,
 ) (resp string, err error) {
@@ -321,12 +321,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 
-	var options []WithOption
-	if mintNewTokens > 0 {
-		options = []WithOption{WithTokenMint(mintNewTokens)}
-	}
 	// create write pool and lock tokens
-	if err := sa.addToWritePool(txn, balances, options...); err != nil {
+	if err := sa.addToWritePool(txn, balances, transfer); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding to allocation write pool",
 			zap.String("txn", txn.Hash),
 			zap.Error(err))
@@ -888,7 +884,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
-		if err = alloc.addToWritePool(txn, balances); err != nil {
+		if err = alloc.addToWritePool(txn, balances, WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)); err != nil {
 			return common.NewErrorf("allocation_extending_failed", "%v", err)
 		}
 	}
