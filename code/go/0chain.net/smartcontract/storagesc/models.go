@@ -1253,7 +1253,7 @@ func (sa *StorageAllocation) isActive(
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
 			blobber.ID, blobber.Capacity-blobber.Allocated, blobberSize)
 	} else if stakedCapacity-blobber.Allocated < blobberSize {
-		return fmt.Errorf("blobber %s staked capacity %v insufficient, wanted %v",
+		return fmt.Errorf("blobber %s free staked capacity %v insufficient, wanted %v",
 			blobber.ID, stakedCapacity-blobber.Allocated, blobberSize)
 	}
 
