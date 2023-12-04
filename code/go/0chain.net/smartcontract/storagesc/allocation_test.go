@@ -1028,11 +1028,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid request: blobbers provided are not enough to honour the allocation"
 		errMsg7 = "allocation_creation_failed: " + "getting stake pools: could not get item \"b1\": value not present"
 		errMsg8 = "allocation_creation_failed: " +
-			"no tokens to lock"
+			"not enough tokens to honor the allocation cost 0 < 4500"
 		errMsg9 = "allocation_creation_failed: " +
 			"no tokens to lock"
 	)
-
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
