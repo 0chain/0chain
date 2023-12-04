@@ -213,9 +213,6 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return errors.New("invalid transaction ToClientID")
 	}
 
-	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {
-		return state.ErrInvalidTransfer
-	}
 	sc.transfers = append(sc.transfers, t)
 	if isMinter(t.ToClientID) {
 		if !isMinter(t.ClientID) {
@@ -323,10 +320,6 @@ func (sc *StateContext) Validate() error {
 			amount, err = currency.AddCoin(amount, transfer.Amount)
 			if err != nil {
 				return err
-			}
-		} else {
-			if transfer.ClientID != sc.txn.ToClientID {
-				return state.ErrInvalidTransfer
 			}
 		}
 	}
