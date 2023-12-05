@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 
 	"0chain.net/core/maths"
@@ -627,6 +626,8 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
+	} else if size < CHUNK_SIZE {
+		size = CHUNK_SIZE
 	}
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
@@ -769,7 +770,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
 	}
 
-	commitConnection.WriteMarker.Size = (int64(math.Ceil(float64(commitConnection.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
 	changeSize := commitConnection.WriteMarker.Size
 
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
