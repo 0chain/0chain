@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/state"
 
 	"github.com/0chain/common/core/currency"
 
@@ -181,12 +182,27 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			ClientId: assignerInfo.Name,
 		}
 	}
+	oldLimit := assigner.TotalLimit
 	assigner.PublicKey = assignerInfo.PublicKey
 	assigner.TotalLimit = newTotalLimit
 	assigner.IndividualLimit = newIndividualLimit
 	err = assigner.save(ssc.ID, balances)
 	if err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner", "error saving new assigner: %v", err)
+	}
+
+	if newTotalLimit <= oldLimit {
+		return "", common.NewErrorf("add_free_storage_assigner", "new total limit %d must be greater than old %d", newTotalLimit, oldLimit)
+	}
+
+	// transfer from storagesc to assigner
+	tfCoins, err := currency.MinusCoin(newTotalLimit, oldLimit)
+	if err != nil {
+		return "", common.NewErrorf("add_free_storage_assigner", "minus coin failed: %v", err)
+	}
+
+	if err := balances.AddTransfer(state.NewTransfer(ADDRESS, assigner.ClientId, tfCoins)); err != nil {
+		return "", common.NewErrorf("add_free_storage_assigner", "add transfer failed: %v", err)
 	}
 
 	return "", nil
