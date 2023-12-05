@@ -519,8 +519,6 @@ func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) 
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin, err error) {
 
-	logging.Logger.Info("debug_upload", zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("write price", d.Terms.WritePrice), zap.Any("alloc_id", d.AllocationID), zap.Any("blobber_id", d.BlobberID))
-
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
@@ -796,8 +794,6 @@ func (d *BlobberAllocation) Offer() currency.Coin {
 // negative).
 func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin) {
-
-	logging.Logger.Info("debug_delete", zap.Any("size", size), zap.Any("rdtu", rdtu), zap.Any("write price", d.Terms.WritePrice), zap.Any("alloc_id", d.AllocationID), zap.Any("blobber_id", d.BlobberID))
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue -= move
