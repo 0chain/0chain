@@ -625,10 +625,20 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
+	logging.Logger.Info("debug_commit_move_tokens_1",
+		zap.String("blobber", details.BlobberID),
+		zap.String("allocation", alloc.ID),
+		zap.Int64("size", size))
+
 	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
+
+	logging.Logger.Info("debug_commit_move_tokens_2",
+		zap.String("blobber", details.BlobberID),
+		zap.String("allocation", alloc.ID),
+		zap.Int64("size", size))
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
@@ -772,6 +782,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	changeSize := commitConnection.WriteMarker.Size
 
+	logging.Logger.Info("debug_commit_connection_1",
+		zap.String("blobber", blobber.ID),
+		zap.String("allocation", alloc.ID),
+		zap.Int64("change_size", changeSize),
+		zap.Any("isRollback", isRollback(commitConnection, blobAlloc.LastWriteMarker)),
+	)
+
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize = -blobAlloc.LastWriteMarker.Size
@@ -808,6 +825,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		alloc.Stats.NumWrites++
 
 	}
+
+	logging.Logger.Info("debug_commit_connection_2",
+		zap.String("blobber", blobber.ID),
+		zap.String("allocation", alloc.ID),
+		zap.Int64("change_size", changeSize))
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
