@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 
 	"0chain.net/core/maths"
@@ -625,9 +624,10 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
-	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
+	} else if size < CHUNK_SIZE {
+		size = CHUNK_SIZE
 	}
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
