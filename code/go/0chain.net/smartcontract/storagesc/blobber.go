@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 
 	"0chain.net/core/maths"
@@ -768,6 +769,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
 	}
 
+	commitConnection.WriteMarker.Size = (int64(math.Ceil(float64(commitConnection.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
 	changeSize := commitConnection.WriteMarker.Size
 
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
