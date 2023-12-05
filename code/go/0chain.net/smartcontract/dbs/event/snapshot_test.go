@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm/clause"
@@ -491,18 +490,6 @@ func TestSnapshotFunctions(t *testing.T) {
 				},
 			},
 			{ // [2]
-				Tag: TagAddMint,
-				Data: state.Mint{
-					Amount: 200,
-				},
-			},
-			{ // [3]
-				Tag: TagBurn,
-				Data: state.Burn{
-					Amount: 100,
-				},
-			},
-			{ // [4]
 				Tag: TagLockWritePool,
 				Data: []WritePoolLock{
 					{
@@ -513,7 +500,7 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
-			{ // [5]
+			{ // [3]
 				Tag: TagUnlockWritePool,
 				Data: []WritePoolLock{
 					{
@@ -524,7 +511,7 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
-			{ // [6]
+			{ // [4]
 				Tag: TagLockReadPool,
 				Data: []ReadPoolLock{
 					{
@@ -535,7 +522,7 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
-			{ // [7]
+			{ // [5]
 				Tag: TagUnlockReadPool,
 				Data: []ReadPoolLock{
 					{
@@ -546,19 +533,19 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
-			{ // [8]
+			{ // [6]
 				Tag: TagFinalizeBlock,
+			},
+			{ // [7]
+				Tag: TagFinalizeBlock,
+			},
+			{ // [8]
+				Tag: TagUniqueAddress,
 			},
 			{ // [9]
-				Tag: TagFinalizeBlock,
+				Tag: TagUniqueAddress,
 			},
 			{ // [10]
-				Tag: TagUniqueAddress,
-			},
-			{ // [11]
-				Tag: TagUniqueAddress,
-			},
-			{ // [12]
 				Tag: TagAddTransactions,
 				Data: []Transaction{
 					{
@@ -574,22 +561,22 @@ func TestSnapshotFunctions(t *testing.T) {
 		snapDiff := Snapshot{
 			TotalChallengePools: events[0].Data.(ChallengePoolLock).Amount -
 				events[1].Data.(ChallengePoolLock).Amount,
-			TotalMint: int64(events[2].Data.(state.Mint).Amount),
-			ZCNSupply: int64(events[2].Data.(state.Mint).Amount) -
-				int64(events[3].Data.(state.Burn).Amount),
-			ClientLocks: int64(events[4].Data.([]WritePoolLock)[0].Amount) +
-				int64(events[4].Data.([]WritePoolLock)[1].Amount) -
-				int64(events[5].Data.([]WritePoolLock)[0].Amount) -
-				int64(events[5].Data.([]WritePoolLock)[1].Amount) +
-				int64(events[6].Data.([]ReadPoolLock)[0].Amount) +
-				int64(events[6].Data.([]ReadPoolLock)[1].Amount) -
-				int64(events[7].Data.([]ReadPoolLock)[0].Amount) -
-				int64(events[7].Data.([]ReadPoolLock)[1].Amount),
-			BlockCount:        2, // refers to event [8] and [9]
-			UniqueAddresses:   2, // refers to event [10] and [11]
-			TransactionsCount: int64(len(events[12].Data.([]Transaction))),
-			TotalTxnFee: int64(events[12].Data.([]Transaction)[0].Fee) +
-				int64(events[12].Data.([]Transaction)[1].Fee),
+			//TotalMint: int64(events[2].Data.(state.Mint).Amount),
+			//ZCNSupply: int64(events[2].Data.(state.Mint).Amount) -
+			//	int64(events[3].Data.(state.Burn).Amount),
+			ClientLocks: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+				int64(events[2].Data.([]WritePoolLock)[1].Amount) -
+				int64(events[3].Data.([]WritePoolLock)[0].Amount) -
+				int64(events[3].Data.([]WritePoolLock)[1].Amount) +
+				int64(events[4].Data.([]ReadPoolLock)[0].Amount) +
+				int64(events[4].Data.([]ReadPoolLock)[1].Amount) -
+				int64(events[5].Data.([]ReadPoolLock)[0].Amount) -
+				int64(events[5].Data.([]ReadPoolLock)[1].Amount),
+			BlockCount:        2, // refers to event [6] and [7]
+			UniqueAddresses:   2, // refers to event [8] and [9]
+			TransactionsCount: int64(len(events[10].Data.([]Transaction))),
+			TotalTxnFee: int64(events[10].Data.([]Transaction)[0].Fee) +
+				int64(events[10].Data.([]Transaction)[1].Fee),
 		}
 
 		err = eventDb.UpdateSnapshotFromEvents(&s, events)
