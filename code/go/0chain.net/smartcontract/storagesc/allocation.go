@@ -321,8 +321,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 
-	fmt.Println("Adding to WP", txn.Hash)
-
 	// create write pool and lock tokens
 	if err := sa.addToWritePool(txn, balances, transfer); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding to allocation write pool",
