@@ -203,6 +203,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	if !encryption.IsHash(t.ToClientID) {
 		return errors.New("invalid transaction ToClientID")
 	}
+	sc.transfers = append(sc.transfers, t)
 
 	return nil
 }
