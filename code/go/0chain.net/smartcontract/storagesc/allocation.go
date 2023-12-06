@@ -118,6 +118,10 @@ func (nar *newAllocationRequest) validate(conf *Config) error {
 		return errors.New("invalid number of data shards")
 	}
 
+	if nar.ParityShards <= 0 {
+		return errors.New("invalid number of parity shards")
+	}
+
 	if len(nar.Blobbers) < (nar.DataShards + nar.ParityShards) {
 		return errors.New("blobbers provided are not enough to honour the allocation")
 	}
