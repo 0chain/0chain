@@ -560,25 +560,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		{
-			name:     "storage.write_pool_unlock",
-			endpoint: ssc.writePoolUnlock,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				Value: rpMinLock,
-				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
-					mockFinalizedAllocationIndex, viper.GetInt(bk.NumActiveClients))],
-				ToClientID: ADDRESS,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&unlockRequest{
-					AllocationID: getMockAllocationId(mockFinalizedAllocationIndex),
-				})
-				return bytes
-			}(),
-		},
 
 		// stake pool
 		{
@@ -808,7 +789,6 @@ func BenchmarkTests(
 					"cost.read_pool_lock":            "105",
 					"cost.read_pool_unlock":          "105",
 					"cost.write_pool_lock":           "105",
-					"cost.write_pool_unlock":         "105",
 					"cost.stake_pool_lock":           "105",
 					"cost.stake_pool_unlock":         "105",
 					"cost.commit_settings_changes":   "105",

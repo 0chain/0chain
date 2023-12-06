@@ -198,7 +198,6 @@ smart_contracts:
       read_pool_lock: 170
       read_pool_unlock: 104
       write_pool_lock: 186
-      write_pool_unlock: 121
       stake_pool_lock: 187
       stake_pool_unlock: 119
       commit_settings_changes: 56
