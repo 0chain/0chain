@@ -4,8 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm/clause"
 )
@@ -491,29 +492,18 @@ func TestSnapshotFunctions(t *testing.T) {
 				},
 			},
 			{ // [2]
-				Tag: TagAddMint,
-				Data: state.Mint{
-					Amount: 200,
-				},
-			},
-			{ // [3]
-				Tag: TagBurn,
-				Data: state.Burn{
-					Amount: 100,
-				},
-			},
-			{ // [4]
 				Tag: TagLockWritePool,
 				Data: []WritePoolLock{
 					{
 						Amount: 200,
+						IsMint: true,
 					},
 					{
 						Amount: 200,
 					},
 				},
 			},
-			{ // [5]
+			{ // [3]
 				Tag: TagUnlockWritePool,
 				Data: []WritePoolLock{
 					{
@@ -524,7 +514,7 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
-			{ // [6]
+			{ // [4]
 				Tag: TagLockReadPool,
 				Data: []ReadPoolLock{
 					{
@@ -535,7 +525,7 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
-			{ // [7]
+			{ // [5]
 				Tag: TagUnlockReadPool,
 				Data: []ReadPoolLock{
 					{
@@ -546,19 +536,19 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
-			{ // [8]
+			{ // [6]
 				Tag: TagFinalizeBlock,
+			},
+			{ // [7]
+				Tag: TagFinalizeBlock,
+			},
+			{ // [8]
+				Tag: TagUniqueAddress,
 			},
 			{ // [9]
-				Tag: TagFinalizeBlock,
+				Tag: TagUniqueAddress,
 			},
 			{ // [10]
-				Tag: TagUniqueAddress,
-			},
-			{ // [11]
-				Tag: TagUniqueAddress,
-			},
-			{ // [12]
 				Tag: TagAddTransactions,
 				Data: []Transaction{
 					{
@@ -569,27 +559,61 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
+			{ // [11]
+				Tag: TagStakePoolReward,
+				Data: []dbs.StakePoolReward{
+					{
+						DelegateRewards: map[string]currency.Coin{
+							"delegate1": currency.Coin(100),
+							"delegate2": currency.Coin(100),
+						},
+					}, // with delegate reward
+					{
+						RewardType: spenum.BlockRewardMiner,
+						Reward:     currency.Coin(100),
+					}, // miner block reward
+					{
+						RewardType: spenum.BlockRewardSharder,
+						Reward:     currency.Coin(100),
+					}, // sharder block reward
+					{
+						RewardType: spenum.BlockRewardBlobber,
+						Reward:     currency.Coin(100),
+					}, // blobber block reward
+				},
+			},
+		}
+
+		minedTotalDiff := int64(0)
+		for _, dr := range events[11].Data.([]dbs.StakePoolReward)[0].DelegateRewards {
+			minedTotalDiff += int64(dr)
 		}
 
 		snapDiff := Snapshot{
 			TotalChallengePools: events[0].Data.(ChallengePoolLock).Amount -
 				events[1].Data.(ChallengePoolLock).Amount,
-			TotalMint: int64(events[2].Data.(state.Mint).Amount),
-			ZCNSupply: int64(events[2].Data.(state.Mint).Amount) -
-				int64(events[3].Data.(state.Burn).Amount),
-			ClientLocks: int64(events[4].Data.([]WritePoolLock)[0].Amount) +
-				int64(events[4].Data.([]WritePoolLock)[1].Amount) -
-				int64(events[5].Data.([]WritePoolLock)[0].Amount) -
-				int64(events[5].Data.([]WritePoolLock)[1].Amount) +
-				int64(events[6].Data.([]ReadPoolLock)[0].Amount) +
-				int64(events[6].Data.([]ReadPoolLock)[1].Amount) -
-				int64(events[7].Data.([]ReadPoolLock)[0].Amount) -
-				int64(events[7].Data.([]ReadPoolLock)[1].Amount),
-			BlockCount:        2, // refers to event [8] and [9]
-			UniqueAddresses:   2, // refers to event [10] and [11]
-			TransactionsCount: int64(len(events[12].Data.([]Transaction))),
-			TotalTxnFee: int64(events[12].Data.([]Transaction)[0].Fee) +
-				int64(events[12].Data.([]Transaction)[1].Fee),
+			TotalMint: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].Reward),
+			ZCNSupply: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].Reward),
+			MinedTotal: minedTotalDiff,
+			ClientLocks: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+				int64(events[2].Data.([]WritePoolLock)[1].Amount) -
+				int64(events[3].Data.([]WritePoolLock)[0].Amount) -
+				int64(events[3].Data.([]WritePoolLock)[1].Amount) +
+				int64(events[4].Data.([]ReadPoolLock)[0].Amount) +
+				int64(events[4].Data.([]ReadPoolLock)[1].Amount) -
+				int64(events[5].Data.([]ReadPoolLock)[0].Amount) -
+				int64(events[5].Data.([]ReadPoolLock)[1].Amount),
+			BlockCount:        2, // refers to event [6] and [7]
+			UniqueAddresses:   2, // refers to event [8] and [9]
+			TransactionsCount: int64(len(events[10].Data.([]Transaction))),
+			TotalTxnFee: int64(events[10].Data.([]Transaction)[0].Fee) +
+				int64(events[10].Data.([]Transaction)[1].Fee),
 		}
 
 		err = eventDb.UpdateSnapshotFromEvents(&s, events)
@@ -598,6 +622,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		snapAfter := s
 		require.Equal(t, snapBefore.TotalChallengePools+snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
 		require.Equal(t, snapBefore.TotalMint+snapDiff.TotalMint, snapAfter.TotalMint)
+		require.Equal(t, snapBefore.MinedTotal+snapDiff.MinedTotal, snapAfter.MinedTotal)
 		require.Equal(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapAfter.ZCNSupply)
 		require.Equal(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapAfter.ClientLocks)
 		require.Equal(t, snapBefore.BlockCount+snapDiff.BlockCount, snapAfter.BlockCount)
