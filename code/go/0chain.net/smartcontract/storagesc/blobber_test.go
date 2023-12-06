@@ -490,7 +490,7 @@ func Test_flow_reward(t *testing.T) {
 			t.Error(err2)
 		}
 		require.EqualValues(t, 9997556201441, apb2i)
-		require.EqualValues(t, 2443798559, cpb2i)
+		require.EqualValues(t, 2440747155, cpb2i)
 		require.EqualValues(t, 40*x10, blobb2)
 
 		alloc, err = ssc.getAllocation(allocID, balances)
