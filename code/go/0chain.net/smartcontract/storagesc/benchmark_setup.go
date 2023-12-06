@@ -979,7 +979,6 @@ func SetMockConfig(
 		"cost.read_pool_lock":            mockCost,
 		"cost.read_pool_unlock":          mockCost,
 		"cost.write_pool_lock":           mockCost,
-		"cost.write_pool_unlock":         mockCost,
 		"cost.stake_pool_lock":           mockCost,
 		"cost.stake_pool_unlock":         mockCost,
 		"cost.commit_settings_changes":   mockCost,
