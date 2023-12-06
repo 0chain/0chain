@@ -104,7 +104,6 @@ const (
 	CostReadPoolLock
 	CostReadPoolUnlock
 	CostWritePoolLock
-	CostWritePoolUnlock
 	CostStakePoolLock
 	CostStakePoolUnlock
 	CostCommitSettingsChanges
@@ -205,7 +204,6 @@ func initSettingName() {
 	SettingName[CostReadPoolLock] = "cost.read_pool_lock"
 	SettingName[CostReadPoolUnlock] = "cost.read_pool_unlock"
 	SettingName[CostWritePoolLock] = "cost.write_pool_lock"
-	SettingName[CostWritePoolUnlock] = "cost.write_pool_unlock"
 	SettingName[CostStakePoolLock] = "cost.stake_pool_lock"
 	SettingName[CostStakePoolUnlock] = "cost.stake_pool_unlock"
 	SettingName[CostCommitSettingsChanges] = "cost.commit_settings_changes"
@@ -288,7 +286,6 @@ func initSettings() {
 		CostReadPoolLock.String():                 {CostReadPoolLock, config.Cost},
 		CostReadPoolUnlock.String():               {CostReadPoolUnlock, config.Cost},
 		CostWritePoolLock.String():                {CostWritePoolLock, config.Cost},
-		CostWritePoolUnlock.String():              {CostWritePoolUnlock, config.Cost},
 		CostStakePoolLock.String():                {CostStakePoolLock, config.Cost},
 		CostStakePoolUnlock.String():              {CostStakePoolUnlock, config.Cost},
 		CostCommitSettingsChanges.String():        {CostCommitSettingsChanges, config.Cost},
