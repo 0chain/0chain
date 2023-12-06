@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -436,27 +435,6 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			gs.TotalChallengePools -= cp.Amount
-		case TagAddMint:
-			m, ok := fromEvent[state.Mint](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
-			}
-			gs.TotalMint += int64(m.Amount)
-			gs.ZCNSupply += int64(m.Amount)
-			logging.Logger.Info("snapshot update TagAddMint",
-				zap.Int64("total_mint", gs.TotalMint), zap.Int64("zcn_supply", gs.ZCNSupply))
-		case TagBurn:
-			m, ok := fromEvent[state.Burn](event.Data)
-			if !ok {
-				logging.Logger.Error("snapshot",
-					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
-			}
-			gs.ZCNSupply -= int64(m.Amount)
-			logging.Logger.Info("snapshot update TagBurn",
-				zap.Int64("zcn_supply", gs.ZCNSupply))
 		case TagLockWritePool:
 			ds, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
@@ -466,6 +444,10 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 			}
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
+				if d.IsMint {
+					gs.TotalMint += d.Amount
+					gs.ZCNSupply += d.Amount
+				}
 			}
 		case TagUnlockWritePool:
 			ds, ok := fromEvent[[]WritePoolLock](event.Data)
@@ -487,6 +469,10 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
 				gs.TotalReadPoolLocked += d.Amount
+				if d.IsMint {
+					gs.TotalMint += d.Amount
+					gs.ZCNSupply += d.Amount
+				}
 			}
 		case TagUnlockReadPool:
 			ds, ok := fromEvent[[]ReadPoolLock](event.Data)
@@ -515,6 +501,14 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 						continue
 					}
 					gs.MinedTotal += dr
+				}
+
+				if spu.RewardType == spenum.BlockRewardMiner ||
+					spu.RewardType == spenum.BlockRewardSharder ||
+					spu.RewardType == spenum.BlockRewardBlobber {
+
+					gs.TotalMint += int64(spu.Reward)
+					gs.ZCNSupply += int64(spu.Reward)
 				}
 			}
 		case TagFinalizeBlock:

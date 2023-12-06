@@ -51,15 +51,6 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 	return approvedMinters[minter], nil
 }
 
-func isMinter(id string) bool {
-	for _, m := range approvedMinters {
-		if m == id {
-			return true
-		}
-	}
-	return false
-}
-
 /*
 * The state context is available to the smart contract logic.
 * The smart contract logic can use
@@ -211,40 +202,6 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	defer sc.mutex.Unlock()
 	if !encryption.IsHash(t.ToClientID) {
 		return errors.New("invalid transaction ToClientID")
-	}
-
-	sc.transfers = append(sc.transfers, t)
-	if isMinter(t.ToClientID) {
-		if !isMinter(t.ClientID) {
-			sc.events = append(sc.events, event.Event{
-				BlockNumber: sc.block.Round,
-				TxHash:      sc.txn.Hash,
-				Type:        event.TypeStats,
-				Tag:         event.TagBurn,
-				Index:       sc.txn.ClientID,
-				Data: state.Burn{
-					Burner: t.ClientID,
-					Amount: t.Amount,
-				},
-			})
-		}
-		return nil
-	}
-	if isMinter(t.ClientID) {
-		if !isMinter(t.ToClientID) {
-			sc.events = append(sc.events, event.Event{
-				BlockNumber: sc.block.Round,
-				TxHash:      sc.txn.Hash,
-				Type:        event.TypeStats,
-				Tag:         event.TagAddMint,
-				Index:       sc.txn.ClientID,
-				Data: state.Mint{
-					Minter:     t.ClientID,
-					ToClientID: t.ToClientID,
-					Amount:     t.Amount,
-				},
-			})
-		}
 	}
 
 	return nil

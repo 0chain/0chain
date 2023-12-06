@@ -209,7 +209,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 			"can't get config: %v", err)
 	}
 
-	resp, err := sc.newAllocationRequestInternal(t, input, conf, WithTokenTransfer(t.Value, t.ClientID, t.ToClientID), balances, timings)
+	resp, err := sc.newAllocationRequestInternal(t, input, conf, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false), balances, timings)
 	if err != nil {
 		return "", err
 	}
@@ -222,7 +222,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	txn *transaction.Transaction,
 	input []byte,
 	conf *Config,
-	transfer TransferFunc,
+	transfer *Transfer,
 	balances chainstate.StateContextI,
 	timings map[string]time.Duration,
 ) (resp string, err error) {
@@ -888,7 +888,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// lock tokens if this transaction provides them
 	if txn.Value > 0 {
-		if err = alloc.addToWritePool(txn, balances, WithTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID)); err != nil {
+		if err = alloc.addToWritePool(txn, balances, NewTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID, false)); err != nil {
 			return common.NewErrorf("allocation_extending_failed", "%v", err)
 		}
 	}

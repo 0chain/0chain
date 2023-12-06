@@ -904,31 +904,43 @@ type StorageAllocation struct {
 	TimeUnit time.Duration `json:"time_unit"`
 }
 
-type TransferFunc func(balances cstate.StateContextI) (currency.Coin, error)
+type Transfer struct {
+	value      currency.Coin
+	clientId   string
+	toClientId string
+	isMint     bool
+}
 
-func WithTokenTransfer(value currency.Coin, clientId, toClientId string) TransferFunc {
-	return func(balances cstate.StateContextI) (currency.Coin, error) {
-		if value == 0 {
-			return 0, nil
-		}
-		if err := stakepool.CheckClientBalance(clientId, value, balances); err != nil {
-			return 0, err
-		}
-		transfer := state.NewTransfer(clientId, toClientId, value)
-		if err := balances.AddTransfer(transfer); err != nil {
-			return 0, fmt.Errorf("adding transfer to allocation pool: %v", err)
-		}
+func (t *Transfer) transfer(balances cstate.StateContextI) (currency.Coin, error) {
+	if t.value == 0 {
+		return 0, nil
+	}
+	if err := stakepool.CheckClientBalance(t.clientId, t.value, balances); err != nil {
+		return 0, err
+	}
+	transfer := state.NewTransfer(t.clientId, t.toClientId, t.value)
+	if err := balances.AddTransfer(transfer); err != nil {
+		return 0, fmt.Errorf("adding transfer to allocation pool: %v", err)
+	}
 
-		return value, nil
+	return t.value, nil
+}
+
+func NewTokenTransfer(value currency.Coin, clientId, toClientId string, isMint bool) *Transfer {
+	return &Transfer{
+		value:      value,
+		clientId:   clientId,
+		toClientId: toClientId,
+		isMint:     isMint,
 	}
 }
 
 func (sa *StorageAllocation) addToWritePool(
 	txn *transaction.Transaction,
 	balances cstate.StateContextI,
-	transfer TransferFunc,
+	transfer *Transfer,
 ) error {
-	value, err := transfer(balances)
+	value, err := transfer.transfer(balances)
 	if err != nil {
 		return err
 	}
@@ -949,6 +961,7 @@ func (sa *StorageAllocation) addToWritePool(
 		Client:       txn.ClientID,
 		AllocationId: sa.ID,
 		Amount:       i,
+		IsMint:       transfer.isMint,
 	})
 	return nil
 }

@@ -293,7 +293,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"subtracting read pool token from transaction value: %v", err)
 	}
 
-	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, WithTokenTransfer(writePoolTokens, conf.OwnerId, txn.ToClientID), balances, nil)
+	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, NewTokenTransfer(writePoolTokens, conf.OwnerId, txn.ToClientID, true), balances, nil)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "creating new allocation: %v", err)
 	}
@@ -309,7 +309,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	txn.Value = readPoolTokens
-	_, err = ssc.readPoolLockInternal(txn, readPoolTokens, true, marker.Recipient, balances)
+	_, err = ssc.readPoolLockInternal(txn, NewTokenTransfer(readPoolTokens, conf.OwnerId, txn.ToClientID, true), marker.Recipient, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
 	}
