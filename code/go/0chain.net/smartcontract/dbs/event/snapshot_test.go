@@ -4,7 +4,9 @@ import (
 	"reflect"
 	"testing"
 
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/currency"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm/clause"
 )
@@ -494,6 +496,7 @@ func TestSnapshotFunctions(t *testing.T) {
 				Data: []WritePoolLock{
 					{
 						Amount: 200,
+						IsMint: true,
 					},
 					{
 						Amount: 200,
@@ -556,14 +559,48 @@ func TestSnapshotFunctions(t *testing.T) {
 					},
 				},
 			},
+			{ // [11]
+				Tag: TagStakePoolReward,
+				Data: []dbs.StakePoolReward{
+					{
+						DelegateRewards: map[string]currency.Coin{
+							"delegate1": currency.Coin(100),
+							"delegate2": currency.Coin(100),
+						},
+					}, // with delegate reward
+					{
+						RewardType: spenum.BlockRewardMiner,
+						Reward:     currency.Coin(100),
+					}, // miner block reward
+					{
+						RewardType: spenum.BlockRewardSharder,
+						Reward:     currency.Coin(100),
+					}, // sharder block reward
+					{
+						RewardType: spenum.BlockRewardBlobber,
+						Reward:     currency.Coin(100),
+					}, // blobber block reward
+				},
+			},
+		}
+
+		minedTotalDiff := int64(0)
+		for _, dr := range events[11].Data.([]dbs.StakePoolReward)[0].DelegateRewards {
+			minedTotalDiff += int64(dr)
 		}
 
 		snapDiff := Snapshot{
 			TotalChallengePools: events[0].Data.(ChallengePoolLock).Amount -
 				events[1].Data.(ChallengePoolLock).Amount,
-			//TotalMint: int64(events[2].Data.(state.Mint).Amount),
-			//ZCNSupply: int64(events[2].Data.(state.Mint).Amount) -
-			//	int64(events[3].Data.(state.Burn).Amount),
+			TotalMint: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].Reward),
+			ZCNSupply: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].Reward) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].Reward),
+			MinedTotal: minedTotalDiff,
 			ClientLocks: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
 				int64(events[2].Data.([]WritePoolLock)[1].Amount) -
 				int64(events[3].Data.([]WritePoolLock)[0].Amount) -
@@ -585,6 +622,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		snapAfter := s
 		require.Equal(t, snapBefore.TotalChallengePools+snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
 		require.Equal(t, snapBefore.TotalMint+snapDiff.TotalMint, snapAfter.TotalMint)
+		require.Equal(t, snapBefore.MinedTotal+snapDiff.MinedTotal, snapAfter.MinedTotal)
 		require.Equal(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapAfter.ZCNSupply)
 		require.Equal(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapAfter.ClientLocks)
 		require.Equal(t, snapBefore.BlockCount+snapDiff.BlockCount, snapAfter.BlockCount)
