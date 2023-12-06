@@ -177,7 +177,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	}
 	if err == util.ErrValueNotPresent || assigner == nil {
 		assigner = &freeStorageAssigner{
-			ClientId: assignerInfo.Name,
+			ClientId: conf.OwnerId, // pay free storage from the owner's account
 		}
 	}
 	assigner.PublicKey = assignerInfo.PublicKey
