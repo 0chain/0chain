@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/smartcontractinterface"
-
 	"github.com/0chain/common/core/currency"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -294,7 +293,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"subtracting read pool token from transaction value: %v", err)
 	}
 
-	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, NewTokenTransfer(writePoolTokens, assigner.ClientId, txn.ToClientID, true), balances, nil)
+	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, NewTokenTransfer(writePoolTokens, conf.OwnerId, txn.ToClientID, true), balances, nil)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "creating new allocation: %v", err)
 	}
