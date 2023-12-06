@@ -649,8 +649,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 
-		fmt.Println("move", move, "size", size, "rdtu", rdtu, "wmTime", wmTime, "conf.TimeUnit", conf.TimeUnit)
-
 		if move > alloc.WritePool {
 			move = alloc.WritePool
 		}
@@ -681,8 +679,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
 		}
 		move = details.delete(-size, wmTime, rdtu)
-
-		fmt.Println("move", move, "size", size, "rdtu", rdtu, "wmTime", wmTime, "conf.TimeUnit", conf.TimeUnit)
 
 		if move > cp.Balance {
 			move = cp.Balance
