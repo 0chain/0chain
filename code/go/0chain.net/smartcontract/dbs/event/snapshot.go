@@ -469,6 +469,10 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 			for _, d := range *ds {
 				gs.ClientLocks += d.Amount
 				gs.TotalReadPoolLocked += d.Amount
+				if d.IsMint {
+					gs.TotalMint += d.Amount
+					gs.ZCNSupply += d.Amount
+				}
 			}
 		case TagUnlockReadPool:
 			ds, ok := fromEvent[[]ReadPoolLock](event.Data)

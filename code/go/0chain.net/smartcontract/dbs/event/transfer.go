@@ -18,6 +18,7 @@ type ReadPoolLock struct {
 	Client string `json:"client"`
 	PoolId string `json:"pool_id"`
 	Amount int64  `json:"amount"`
+	IsMint bool   `json:"mint"`
 }
 
 type WritePoolLock struct {

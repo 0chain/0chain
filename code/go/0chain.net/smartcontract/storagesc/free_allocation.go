@@ -309,7 +309,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	txn.Value = readPoolTokens
-	_, err = ssc.readPoolLockInternal(txn, readPoolTokens, true, marker.Recipient, balances)
+	_, err = ssc.readPoolLockInternal(txn, NewTokenTransfer(readPoolTokens, conf.OwnerId, txn.ToClientID, true), marker.Recipient, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
 	}
