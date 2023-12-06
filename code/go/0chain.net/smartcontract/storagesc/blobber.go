@@ -96,6 +96,8 @@ func (sc *StorageSmartContract) updateBlobber(
 	existingSp *stakePool,
 	balances cstate.StateContextI,
 ) (err error) {
+	logging.Logger.Info("debug_update_blobber", zap.Any("updated_blobber", updateBlobber), zap.Any("existing_blobber", existingBlobber))
+
 	// validate the new terms and update the existing blobber's terms
 	if err = validateAndSaveTerms(updateBlobber, existingBlobber, conf); err != nil {
 		return err
@@ -161,10 +163,20 @@ func (sc *StorageSmartContract) updateBlobber(
 
 	// update stake pool settings if write price has changed.
 	if updateBlobber.Terms != nil && updateBlobber.Terms.WritePrice != nil {
+		existingStakedCapacity, _ := existingSp.stakedCapacity(existingBlobber.Terms.WritePrice)
+
 		updatedStakedCapacity, err := existingSp.stakedCapacity(*updateBlobber.Terms.WritePrice)
 		if err != nil {
 			return fmt.Errorf("error calculating staked capacity: %v", err)
 		}
+
+		logging.Logger.Info("debug_update_blobber", zap.Any("existing_staked_capacity", existingStakedCapacity),
+			zap.Any("updated_staked_capacity", updatedStakedCapacity),
+			zap.Any("existing_allocated_capacity", existingBlobber.Allocated),
+			zap.Any("updated_allocated_capacity", updatedStakedCapacity),
+			zap.Any("existing_write_price", existingBlobber.Terms.WritePrice),
+			zap.Any("updated_write_price", *updateBlobber.Terms.WritePrice),
+		)
 
 		if existingBlobber.Allocated > updatedStakedCapacity {
 			return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than allocated capacity (%d)",
