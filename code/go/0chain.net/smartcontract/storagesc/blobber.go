@@ -181,7 +181,7 @@ func (sc *StorageSmartContract) updateBlobber(
 			zap.Any("existing_staked_capacity", existingStakedCapacity),
 			zap.Any("updated_staked_capacity", updatedStakedCapacity),
 			zap.Any("existing_allocated_capacity", existingBlobber.Allocated),
-			zap.Any("existing_write_price", existingBlobber.Terms.WritePrice),
+			zap.Any("existing_write_price", oldWP),
 			zap.Any("updated_write_price", *updateBlobber.Terms.WritePrice),
 		)
 
