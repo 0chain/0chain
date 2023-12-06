@@ -11,7 +11,6 @@ import (
 type UserAggregate struct {
 	UserID          string `json:"user_id" gorm:"uniqueIndex"`
 	Round           int64  `json:"round"`
-	Balance         int64  `json:"balance"`
 	CollectedReward int64  `json:"collected_reward"`
 	TotalStake      int64  `json:"total_stake"`
 	ReadPoolTotal   int64  `json:"read_pool_total"`
@@ -21,23 +20,6 @@ type UserAggregate struct {
 }
 
 var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
-	TagAddOrOverwriteUser: func(event Event) (updatedAggrs []UserAggregate) {
-		users, ok := fromEvent[[]User](event.Data)
-		if !ok {
-			logging.Logger.Error("user aggregate",
-				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-			return
-		}
-		logging.Logger.Debug("user_aggregates TagAddOrOverwriteUser", zap.Int("events", len(*users)))
-		for _, u := range *users {
-			updatedAggrs = append(updatedAggrs, UserAggregate{
-				Round:   event.BlockNumber,
-				UserID:  u.UserID,
-				Balance: int64(u.Balance),
-			})
-		}
-		return
-	},
 	TagLockReadPool: func(event Event) (updatedAggrs []UserAggregate) {
 		rpls, ok := fromEvent[[]ReadPoolLock](event.Data)
 		if !ok {
@@ -196,10 +178,10 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 		return mappedAggrs, nil
 	}
 	result := edb.Store.Get().
-		Raw(`SELECT user_id, max(round), balance, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
+		Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
 	FROM user_aggregates 
 	WHERE user_id IN (SELECT unnest(?::text[]))
-	GROUP BY user_id, balance, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, pq.Array(idlist)).
+	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, pq.Array(idlist)).
 		Scan(&ua)
 	if result.Error != nil {
 		logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
@@ -254,7 +236,6 @@ func (edb *EventDb) updateUserAggregates(e *BlockEvents) error {
 			snapsMap[aggr.UserID] = &UserSnapshot{
 				UserID:          curAggr.UserID,
 				Round:           curAggr.Round,
-				Balance:         curAggr.Balance,
 				CollectedReward: curAggr.CollectedReward,
 				PayedFees:       curAggr.PayedFees,
 				TotalStake:      curAggr.TotalStake,
@@ -271,7 +252,6 @@ func (edb *EventDb) updateUserAggregates(e *BlockEvents) error {
 		newAggregates[snap.UserID] = &UserAggregate{
 			Round:           snap.Round,
 			UserID:          snap.UserID,
-			Balance:         snap.Balance,
 			CollectedReward: snap.CollectedReward,
 			PayedFees:       snap.PayedFees,
 			TotalStake:      snap.TotalStake,
@@ -305,7 +285,6 @@ func (edb *EventDb) updateUserAggregates(e *BlockEvents) error {
 
 func merge(a *UserSnapshot, u *UserAggregate) {
 	a.Round = u.Round
-	a.Balance += u.Balance
 	a.CollectedReward += u.CollectedReward
 	a.PayedFees += u.PayedFees
 	a.WritePoolTotal += u.WritePoolTotal
