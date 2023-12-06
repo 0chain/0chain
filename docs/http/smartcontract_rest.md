@@ -221,7 +221,6 @@ File: 0Chain/code/go/0chain.net/smartcontract/storagesc/sc.go
 | Endpoint: fc.SmartContractExecutionStats | Handler |
 | ------ | ------ |
 | write_pool_lock | metrics.GetOrRegisterTimer |
-| write_pool_unlock | metrics.GetOrRegisterTimer |
 
 
 > stake pool

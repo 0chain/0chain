@@ -974,7 +974,7 @@ func (sa *StorageAllocation) moveToChallengePool(
 		return errors.New("invalid challenge pool")
 	}
 	if value > sa.WritePool {
-		value = sa.WritePool
+		return fmt.Errorf("insufficient funds %v in write pool to pay %v", sa.WritePool, value)
 	}
 
 	if balance, err := currency.AddCoin(cp.Balance, value); err != nil {
