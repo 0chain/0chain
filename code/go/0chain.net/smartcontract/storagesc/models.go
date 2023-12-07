@@ -519,15 +519,17 @@ func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) 
 // internal integral value.
 func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin, err error) {
+	uniqueIdForLogging := uuid.New().String()
+
+	logging.Logger.Info("debug_upload_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 
-	uniqueIdForLogging := uuid.New().String()
-
-	logging.Logger.Info("1debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
+	logging.Logger.Info("1debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue), zap.Any("move", move))
 
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
+		logging.Logger.Error("1.1debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue), zap.Any("move", move), zap.Any("err", err))
 		return
 	}
 
