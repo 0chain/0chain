@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"math"
 	"strings"
 	"time"
@@ -517,25 +516,19 @@ func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) 
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
-func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin, err error) {
-	uniqueIdForLogging := uuid.New().String()
-
-	logging.Logger.Info("debug_upload_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
+func (d *BlobberAllocation) upload(size int64, rdtu float64, writePool currency.Coin) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 
-	logging.Logger.Info("1debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue), zap.Any("move", move))
+	if move > writePool {
+		move = writePool
+	}
 
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
-		logging.Logger.Error("1.1debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue), zap.Any("move", move), zap.Any("err", err))
 		return
 	}
-
 	d.ChallengePoolIntegralValue = challengePoolIntegralValue
-
-	logging.Logger.Info("2debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
 
 	return
 }
@@ -804,15 +797,26 @@ func (d *BlobberAllocation) Offer() currency.Coin {
 // internal integral value. The size argument expected to be positive (not
 // negative).
 func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin) {
-
-	logging.Logger.Info("debug_delete", zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
+	rdtu float64) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 
-	logging.Logger.Info("1debug_cpiv", zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue), zap.Any("move", move))
+	if move > d.ChallengePoolIntegralValue {
+		move = d.ChallengePoolIntegralValue
+	}
 
-	d.ChallengePoolIntegralValue -= move
+	cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
+	if err != nil {
+		logging.Logger.Warn("delete minus failed",
+			zap.Error(err),
+			zap.Any("dtu", rdtu),
+			zap.Any("challenge value", d.ChallengePoolIntegralValue),
+			zap.Any("move", move))
+		err = fmt.Errorf("minus challenge pool value failed: %v", err)
+		return
+	}
+	d.ChallengePoolIntegralValue = cv
+
 	return
 }
 

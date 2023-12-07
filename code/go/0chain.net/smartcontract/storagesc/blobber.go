@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"math/big"
 
 	"0chain.net/core/maths"
@@ -625,10 +624,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
-	uniqueIdForLogging := uuid.New().String()
-
-	logging.Logger.Info("debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("allocation", alloc), zap.Any("size", size))
-
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
@@ -638,35 +633,21 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		return 0, fmt.Errorf("can't get related challenge pool: %v", err)
 	}
 
-	logging.Logger.Info("debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("challenge_pool", cp))
-
 	var move currency.Coin
 	if size > 0 {
 		if size < CHUNK_SIZE {
 			size = CHUNK_SIZE
 		}
 
-		logging.Logger.Info("1debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("size", size))
-
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens to challenge pool: %v", err)
 		}
 
-		logging.Logger.Info("1debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("rdtu", rdtu))
-
-		move, err = details.upload(size, wmTime, rdtu)
+		move, err = details.upload(size, rdtu, alloc.WritePool)
 		if err != nil {
-			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
+			return 0, fmt.Errorf("can't calculate move tokens to upload: %v", err)
 		}
-
-		logging.Logger.Info("1debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("move", move))
-
-		if move > alloc.WritePool {
-			move = alloc.WritePool
-		}
-
-		logging.Logger.Info("1debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("move", move))
 
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
@@ -675,8 +656,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			AllocationId: alloc.ID,
 			Amount:       coin,
 		})
-
-		logging.Logger.Info("1debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("coin", coin), zap.Any("err", err))
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
@@ -691,24 +670,15 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			size = -CHUNK_SIZE
 		}
 
-		logging.Logger.Info("2debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("size", size))
-
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
 		}
 
-		logging.Logger.Info("2debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("rdtu", rdtu))
-
-		move = details.delete(-size, wmTime, rdtu)
-
-		logging.Logger.Info("2debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("move", move))
-
-		if move > cp.Balance {
-			move = cp.Balance
+		move, err = details.delete(-size, wmTime, rdtu)
+		if err != nil {
+			return 0, fmt.Errorf("can't calculate move tokens to delete: %v", err)
 		}
-
-		logging.Logger.Info("2debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("move", move))
 
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
@@ -717,9 +687,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			AllocationId: alloc.ID,
 			Amount:       coin,
 		})
-
-		logging.Logger.Info("2debug_commit_move_tokens "+uniqueIdForLogging, zap.Any("coin", coin), zap.Any("err", err))
-
 		if err != nil {
 			return 0, fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
@@ -727,7 +694,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, err
 		}
-
 		alloc.MovedBack = movedBack
 
 		returned, err := currency.AddCoin(details.Returned, move)
