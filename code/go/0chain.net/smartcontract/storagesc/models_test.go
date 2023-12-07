@@ -30,6 +30,7 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 	conf.MinAllocSize = 10 * 1024
 	conf.TimeUnit = 48 * time.Hour
 	nar.DataShards = 1
+	nar.ParityShards = 1
 	nar.Blobbers = []string{"1", "2"}
 
 	nar.ReadPriceRange = PriceRange{Min: 20, Max: 10}
