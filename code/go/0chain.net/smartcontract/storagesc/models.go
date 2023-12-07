@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math"
 	"strings"
 	"time"
@@ -520,11 +521,19 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+
+	uniqueIdForLogging := uuid.New().String()
+
+	logging.Logger.Info("1debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
+
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
 		return
 	}
+
 	d.ChallengePoolIntegralValue = challengePoolIntegralValue
+
+	logging.Logger.Info("2debug_cpiv_"+uniqueIdForLogging, zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
 
 	return
 }
