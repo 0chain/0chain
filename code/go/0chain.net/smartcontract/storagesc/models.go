@@ -806,7 +806,12 @@ func (d *BlobberAllocation) Offer() currency.Coin {
 func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 	rdtu float64) (move currency.Coin) {
 
+	logging.Logger.Info("debug_delete", zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue))
+
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+
+	logging.Logger.Info("1debug_cpiv", zap.Any("blobber_id", d.BlobberID), zap.Any("allocationID", d.AllocationID), zap.Any("cpiv", d.ChallengePoolIntegralValue), zap.Any("move", move))
+
 	d.ChallengePoolIntegralValue -= move
 	return
 }
