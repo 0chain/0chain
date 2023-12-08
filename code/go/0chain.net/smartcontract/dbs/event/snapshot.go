@@ -493,22 +493,13 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 				return common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
 			for _, spu := range *spus {
-				for _, r := range spu.DelegateRewards {
-					dr, err := r.Int64()
-					if err != nil {
-						logging.Logger.Error("snapshot",
-							zap.Any("event", event.Data), zap.Error(err))
-						continue
-					}
-					gs.MinedTotal += dr
-				}
-
 				if spu.RewardType == spenum.BlockRewardMiner ||
 					spu.RewardType == spenum.BlockRewardSharder ||
 					spu.RewardType == spenum.BlockRewardBlobber {
 
 					gs.TotalMint += int64(spu.TotalReward())
 					gs.ZCNSupply += int64(spu.TotalReward())
+					gs.MinedTotal += int64(spu.TotalReward())
 				}
 			}
 		case TagFinalizeBlock:
