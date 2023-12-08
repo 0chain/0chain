@@ -54,6 +54,24 @@ type StakePoolReward struct {
 	AllocationID string `json:"allocation_id"`
 }
 
+func (sp *StakePoolReward) TotalReward() currency.Coin {
+	totalReward := sp.Reward
+	for _, reward := range sp.DelegateRewards {
+		totalReward += reward
+	}
+
+	return totalReward
+}
+
+func (sp *StakePoolReward) TotalPenalty() currency.Coin {
+	totalPenalty := currency.Coin(0)
+	for _, penalty := range sp.DelegatePenalties {
+		totalPenalty += penalty
+	}
+
+	return totalPenalty
+}
+
 type DelegatePoolId struct {
 	ProviderID
 	PoolId string `json:"pool_id"`
