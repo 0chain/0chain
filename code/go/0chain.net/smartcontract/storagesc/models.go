@@ -516,10 +516,14 @@ func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) 
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
-func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin, err error) {
+func (d *BlobberAllocation) upload(size int64, rdtu float64, writePool currency.Coin) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+
+	if move > writePool {
+		move = writePool
+	}
+
 	challengePoolIntegralValue, err := currency.AddCoin(d.ChallengePoolIntegralValue, move)
 	if err != nil {
 		return
@@ -793,10 +797,26 @@ func (d *BlobberAllocation) Offer() currency.Coin {
 // internal integral value. The size argument expected to be positive (not
 // negative).
 func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
-	rdtu float64) (move currency.Coin) {
+	rdtu float64) (move currency.Coin, err error) {
 
 	move = currency.Coin(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
-	d.ChallengePoolIntegralValue -= move
+
+	if move > d.ChallengePoolIntegralValue {
+		move = d.ChallengePoolIntegralValue
+	}
+
+	cv, err := currency.MinusCoin(d.ChallengePoolIntegralValue, move)
+	if err != nil {
+		logging.Logger.Warn("delete minus failed",
+			zap.Error(err),
+			zap.Any("dtu", rdtu),
+			zap.Any("challenge value", d.ChallengePoolIntegralValue),
+			zap.Any("move", move))
+		err = fmt.Errorf("minus challenge pool value failed: %v", err)
+		return
+	}
+	d.ChallengePoolIntegralValue = cv
+
 	return
 }
 

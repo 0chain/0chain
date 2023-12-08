@@ -644,13 +644,9 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, fmt.Errorf("could not move tokens to challenge pool: %v", err)
 		}
 
-		move, err = details.upload(size, wmTime, rdtu)
+		move, err = details.upload(size, rdtu, alloc.WritePool)
 		if err != nil {
-			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
-		}
-
-		if move > alloc.WritePool {
-			move = alloc.WritePool
+			return 0, fmt.Errorf("can't calculate move tokens to upload: %v", err)
 		}
 
 		err = alloc.moveToChallengePool(cp, move)
@@ -678,10 +674,10 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
 		}
-		move = details.delete(-size, wmTime, rdtu)
 
-		if move > cp.Balance {
-			move = cp.Balance
+		move, err = details.delete(-size, wmTime, rdtu)
+		if err != nil {
+			return 0, fmt.Errorf("can't calculate move tokens to delete: %v", err)
 		}
 
 		err = alloc.moveFromChallengePool(cp, move)
