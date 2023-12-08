@@ -9,9 +9,7 @@ import (
 	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type providerRewardsDelegates struct {
@@ -285,31 +283,4 @@ func (edb *EventDb) penaltyProviderDelegates(dps map[string]map[string]currency.
 		Exec(edb)
 
 	return ret.Error
-}
-
-func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: unused
-	if spu.Reward == 0 {
-		return nil
-	}
-
-	var provider interface{}
-	switch spu.Type {
-	case spenum.Blobber:
-		provider = &Blobber{Provider: Provider{ID: spu.ID}}
-	case spenum.Validator:
-		provider = &Validator{Provider: Provider{ID: spu.ID}}
-	case spenum.Miner:
-		provider = &Miner{Provider: Provider{ID: spu.ID}}
-	case spenum.Sharder:
-		provider = &Sharder{Provider: Provider{ID: spu.ID}}
-	default:
-		return fmt.Errorf("not implented provider type %v", spu.Type)
-	}
-
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr("rewards + ?", spu.Reward),
-		"total_reward": gorm.Expr("total_reward + ?", spu.Reward),
-	}
-
-	return edb.Store.Get().Model(provider).Where(provider).Updates(vs).Error
 }

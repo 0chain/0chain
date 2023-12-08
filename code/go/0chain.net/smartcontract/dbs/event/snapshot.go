@@ -507,8 +507,13 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 					spu.RewardType == spenum.BlockRewardSharder ||
 					spu.RewardType == spenum.BlockRewardBlobber {
 
-					gs.TotalMint += int64(spu.Reward)
-					gs.ZCNSupply += int64(spu.Reward)
+					totalReward := spu.Reward
+					for _, v := range spu.DelegateRewards {
+						totalReward += v
+					}
+
+					gs.TotalMint += int64(totalReward)
+					gs.ZCNSupply += int64(totalReward)
 				}
 			}
 		case TagFinalizeBlock:

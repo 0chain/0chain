@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/maths"
@@ -222,6 +224,8 @@ func (sp *stakePool) slash(
 		}
 		edbSlash.DelegatePenalties[dp.DelegateID] = dpSlash
 	}
+
+	logging.Logger.Info("jayash_debug StakePool.Slash", zap.Any("edbSlash", edbSlash))
 	//Added New Tag for StakePoolPenalty
 	if err := edbSlash.Emit(event.TagStakePoolPenalty, balances); err != nil {
 		return 0, err
