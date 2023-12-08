@@ -643,6 +643,7 @@ func newEventsDb() *event.EventDb {
 				MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
 				MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
 				ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+				Slowtablespace:  viper.GetString(benchmark.EventDbSlowTableSpace),
 			},
 			config.DbSettings{
 				Debug:                 viper.GetBool(benchmark.EventDbDebug),

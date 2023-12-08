@@ -246,6 +246,7 @@ const (
 	EventDbMaxIdleConns    = DbsEvents + "max_idle_conns"
 	EventDbOpenConns       = DbsEvents + "max_open_conns"
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
+	EventDbSlowTableSpace  = DbsEvents + "slowtablespace"
 
 	EventDbDebug                 = DbSettings + "debug"
 	EventDbAggregatePeriod       = DbSettings + "aggregate_period"
