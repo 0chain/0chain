@@ -587,15 +587,20 @@ func TestSnapshotFunctions(t *testing.T) {
 		snapDiff := Snapshot{
 			TotalChallengePools: events[0].Data.(ChallengePoolLock).Amount -
 				events[1].Data.(ChallengePoolLock).Amount,
-			TotalMint: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+			TotalMint: events[2].Data.([]WritePoolLock)[0].Amount +
+				int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
-			ZCNSupply: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
+			ZCNSupply: events[2].Data.([]WritePoolLock)[0].Amount +
+				int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
-			MinedTotal: int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()),
+			MinedTotal: int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
 			ClientLocks: events[2].Data.([]WritePoolLock)[0].Amount +
 				events[2].Data.([]WritePoolLock)[1].Amount -
 				events[3].Data.([]WritePoolLock)[0].Amount -
