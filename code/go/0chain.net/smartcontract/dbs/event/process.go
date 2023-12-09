@@ -789,41 +789,28 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		return edb.updateDelegatePool(*spUpdate)
 	case TagStakePoolReward:
-		logging.Logger.Info("jayash_debug stake pool reward event")
 		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 		if err := edb.rewardUpdate(*spus, event.BlockNumber); err != nil {
-			logging.Logger.Info("jayash_debug stake pool reward event error", zap.Error(err))
 			return err
 		}
-
-		logging.Logger.Info("jayash_debug stake pool reward event success")
-
 		if err := edb.blobberSpecificRevenue(*spus); err != nil {
-			logging.Logger.Info("jayash_debug stake pool reward event error", zap.Error(err))
 			return fmt.Errorf("could not update blobber specific revenue: %v", err)
 		}
-
 		return nil
 	case TagStakePoolPenalty:
-		logging.Logger.Info("jayash_debug stake pool penalty event")
 		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
 		if !ok {
 			return ErrInvalidEventData
 		}
 		err := edb.penaltyUpdate(*spus, event.BlockNumber)
 		if err != nil {
-			logging.Logger.Info("jayash_debug stake pool penalty event error", zap.Error(err))
 			return err
 		}
-
-		logging.Logger.Info("jayash_debug stake pool penalty event success")
-
 		err = edb.blobberSpecificRevenue(*spus)
 		if err != nil {
-			logging.Logger.Info("jayash_debug stake pool penalty event error", zap.Error(err))
 			return fmt.Errorf("could not update blobber specific revenue: %v", err)
 		}
 		return nil

@@ -446,11 +446,6 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		}
 	}
 
-	logging.Logger.Info("jayash_debug blobberSpecificRevenue",
-		zap.Any("ids", ids), zap.Any("totalBlockRewards", totalBlockRewards),
-		zap.Any("totalStorageIncome", totalStorageIncome), zap.Any("totalReadIncome", totalReadIncome),
-		zap.Any("totalSlashedStake", totalSlashedStake), zap.Any("totalChanges", totalChanges))
-
 	if totalChanges == 0 {
 		return nil
 	}
