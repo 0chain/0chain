@@ -251,7 +251,7 @@ jobs:
           echo "TENDERLY_CREATION_INFO=$(curl -X POST \
               -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
               -H "Content-Type: application/json" \
-              -d '{"alias":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}", "description":"", "network_id":"1"}' \
+              -d '{"alias":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}", "description":"", "block_number": 18539779, "network_id":"1"}' \
               https://api.tenderly.co/api/v1/account/zus_network/project/project/fork)" >> $GITHUB_ENV
 
       - name: "Parse Tenderly fork creation transaction result"
