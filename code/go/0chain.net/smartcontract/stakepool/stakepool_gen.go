@@ -34,7 +34,7 @@ func (z *DelegatePool) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "RoundCreated"
 	o = append(o, 0xac, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64)
 	o = msgp.AppendInt64(o, z.RoundCreated)
-	// string "DelegateWallet"
+	// string "DelegateID"
 	o = append(o, 0xaa, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x49, 0x44)
 	o = msgp.AppendString(o, z.DelegateID)
 	// string "StakedAt"
@@ -89,10 +89,10 @@ func (z *DelegatePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "RoundCreated")
 				return
 			}
-		case "DelegateWallet":
+		case "DelegateID":
 			z.DelegateID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "DelegateWallet")
+				err = msgp.WrapError(err, "DelegateID")
 				return
 			}
 		case "StakedAt":
@@ -133,7 +133,7 @@ func (z *DelegatePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Balance")
 		return
 	}
-	// string "DelegateWallet"
+	// string "DelegateID"
 	o = append(o, 0xaa, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x49, 0x44)
 	o = msgp.AppendString(o, z.DelegateID)
 	// string "Rewards"
@@ -216,10 +216,10 @@ func (z *DelegatePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Balance")
 				return
 			}
-		case "DelegateWallet":
+		case "DelegateID":
 			z.DelegateID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "DelegateWallet")
+				err = msgp.WrapError(err, "DelegateID")
 				return
 			}
 		case "Rewards":
