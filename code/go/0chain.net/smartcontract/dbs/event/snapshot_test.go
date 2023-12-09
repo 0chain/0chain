@@ -584,31 +584,31 @@ func TestSnapshotFunctions(t *testing.T) {
 			},
 		}
 
-		minedTotalDiff := int64(0)
-		for _, dr := range events[11].Data.([]dbs.StakePoolReward)[0].DelegateRewards {
-			minedTotalDiff += int64(dr)
-		}
-
 		snapDiff := Snapshot{
 			TotalChallengePools: events[0].Data.(ChallengePoolLock).Amount -
 				events[1].Data.(ChallengePoolLock).Amount,
-			TotalMint: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[1].Reward) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[2].Reward) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[3].Reward),
-			ZCNSupply: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[1].Reward) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[2].Reward) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[3].Reward),
-			MinedTotal: minedTotalDiff,
-			ClientLocks: int64(events[2].Data.([]WritePoolLock)[0].Amount) +
-				int64(events[2].Data.([]WritePoolLock)[1].Amount) -
-				int64(events[3].Data.([]WritePoolLock)[0].Amount) -
-				int64(events[3].Data.([]WritePoolLock)[1].Amount) +
-				int64(events[4].Data.([]ReadPoolLock)[0].Amount) +
-				int64(events[4].Data.([]ReadPoolLock)[1].Amount) -
-				int64(events[5].Data.([]ReadPoolLock)[0].Amount) -
-				int64(events[5].Data.([]ReadPoolLock)[1].Amount),
+			TotalMint: events[2].Data.([]WritePoolLock)[0].Amount +
+				int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
+			ZCNSupply: events[2].Data.([]WritePoolLock)[0].Amount +
+				int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
+			MinedTotal: int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
+				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
+			ClientLocks: events[2].Data.([]WritePoolLock)[0].Amount +
+				events[2].Data.([]WritePoolLock)[1].Amount -
+				events[3].Data.([]WritePoolLock)[0].Amount -
+				events[3].Data.([]WritePoolLock)[1].Amount +
+				events[4].Data.([]ReadPoolLock)[0].Amount +
+				events[4].Data.([]ReadPoolLock)[1].Amount -
+				events[5].Data.([]ReadPoolLock)[0].Amount -
+				events[5].Data.([]ReadPoolLock)[1].Amount,
 			BlockCount:        2, // refers to event [6] and [7]
 			UniqueAddresses:   2, // refers to event [8] and [9]
 			TransactionsCount: int64(len(events[10].Data.([]Transaction))),
