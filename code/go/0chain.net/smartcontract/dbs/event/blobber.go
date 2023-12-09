@@ -433,16 +433,16 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		switch spu.RewardType {
 		case spenum.BlockRewardBlobber:
 			totalChanges++
-			totalBlockRewards[blobberIdx] = int64(spu.TotalReward())
+			totalBlockRewards[blobberIdx] = int64(spu.TotalDelegateReward())
 		case spenum.ChallengePassReward:
 			totalChanges++
-			totalStorageIncome[blobberIdx] = int64(spu.TotalReward())
+			totalStorageIncome[blobberIdx] = int64(spu.TotalDelegateReward())
 		case spenum.FileDownloadReward:
 			totalChanges++
-			totalReadIncome[blobberIdx] = int64(spu.TotalReward())
+			totalReadIncome[blobberIdx] = int64(spu.TotalDelegateReward())
 		case spenum.ChallengeSlashPenalty:
 			totalChanges++
-			totalSlashedStake[blobberIdx] = int64(spu.TotalPenalty())
+			totalSlashedStake[blobberIdx] = int64(spu.TotalDelegatePenalty())
 		}
 	}
 

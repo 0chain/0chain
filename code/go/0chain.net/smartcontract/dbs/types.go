@@ -52,6 +52,8 @@ type StakePoolReward struct {
 	DelegatePenalties map[string]currency.Coin `json:"delegate_penalties"`
 	// allocation id
 	AllocationID string `json:"allocation_id"`
+
+	DelegateWallet string `json:"delegate_wallet"`
 }
 
 func (sp *StakePoolReward) TotalReward() currency.Coin {
@@ -63,10 +65,34 @@ func (sp *StakePoolReward) TotalReward() currency.Coin {
 	return totalReward
 }
 
+func (sp *StakePoolReward) TotalDelegateReward() currency.Coin {
+	totalReward := sp.Reward
+	for id, reward := range sp.DelegateRewards {
+		if id == sp.DelegateWallet {
+			totalReward += reward
+			break
+		}
+	}
+
+	return totalReward
+}
+
 func (sp *StakePoolReward) TotalPenalty() currency.Coin {
 	totalPenalty := currency.Coin(0)
 	for _, penalty := range sp.DelegatePenalties {
 		totalPenalty += penalty
+	}
+
+	return totalPenalty
+}
+
+func (sp *StakePoolReward) TotalDelegatePenalty() currency.Coin {
+	totalPenalty := currency.Coin(0)
+	for id, penalty := range sp.DelegatePenalties {
+		if id == sp.DelegateWallet {
+			totalPenalty += penalty
+			break
+		}
 	}
 
 	return totalPenalty

@@ -25,13 +25,14 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 	}
 }
 
-func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, options ...string) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, delegateWallet string, options ...string) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ID = pId
 	spu.Type = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
+	spu.DelegateWallet = delegateWallet
 
 	var allocationID string
 	if len(options) > 0 {
