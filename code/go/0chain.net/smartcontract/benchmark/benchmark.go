@@ -124,7 +124,7 @@ const (
 	FaucetSc      = "faucetsc."
 	VestingSc     = "vestingsc."
 	ZcnSc         = "zcnsc."
-	DbsEvents     = "dbs.Events."
+	DbsEvents     = "dbs.events."
 	DbSettings    = "dbs.settings."
 
 	BlockReward = "block_reward."
