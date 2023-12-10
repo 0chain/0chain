@@ -178,6 +178,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 				"delegate2": 20,
 				"delegate3": 30,
 			},
+			DelegateWallet: "delegate1",
 		},
 	}
 
@@ -213,7 +214,7 @@ func TestEventDb_blobberSpecificRevenue(t *testing.T) {
 	assert.Equal(t, blobbersBefore[3].TotalBlockRewards, blobbersAfter[3].TotalBlockRewards)
 	assert.Equal(t, blobbersBefore[3].TotalStorageIncome, blobbersAfter[3].TotalStorageIncome)
 	assert.Equal(t, blobbersBefore[3].TotalReadIncome, blobbersAfter[3].TotalReadIncome)
-	assert.Equal(t, blobbersBefore[3].TotalSlashedStake+60, blobbersAfter[3].TotalSlashedStake)
+	assert.Equal(t, blobbersBefore[3].TotalSlashedStake+10, blobbersAfter[3].TotalSlashedStake)
 }
 
 func TestEventDb_updateBlobbersAllocatedSavedAndHealth(t *testing.T) {
