@@ -43,7 +43,7 @@ func CheckClientBalance(
 	}
 
 	if err == util.ErrValueNotPresent {
-		return errors.New("no tokens to lock")
+		return errors.New("no tokens to lock : " + clientId)
 	}
 
 	if toLock > balance {
