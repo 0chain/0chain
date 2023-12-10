@@ -48,7 +48,7 @@ initialStates:
     tokens: 750000000000000000 
     state:
       # sc owner
-      - id: 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7
+      - id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
         tokens: 100000000000
       # blobbers
       - id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
