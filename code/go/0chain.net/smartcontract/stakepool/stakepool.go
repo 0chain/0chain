@@ -276,7 +276,6 @@ func (sp *StakePool) MintRewards(
 			ID:   providerId,
 			Type: providerType,
 		})
-
 	}
 
 	dPool, ok := sp.Pools[clientId]
@@ -395,7 +394,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType, sp.Settings.DelegateWallet)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -548,9 +547,9 @@ func (sp *StakePool) DistributeRewards(
 
 	var spUpdate *StakePoolReward
 	if len(options) > 0 {
-		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, sp.Settings.DelegateWallet, options[0])
 	} else {
-		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, sp.Settings.DelegateWallet)
 	}
 
 	defer func() {

@@ -195,7 +195,7 @@ func (sp *stakePool) slash(
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
-	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
+	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty, sp.Settings.DelegateWallet)
 	edbSlash.AllocationID = allocationID
 	for _, dp := range sp.GetOrderedPools() {
 		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
