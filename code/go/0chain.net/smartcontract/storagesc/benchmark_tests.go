@@ -325,7 +325,7 @@ func BenchmarkTests(
 					panic(err)
 				}
 				fsmBytes, _ := json.Marshal(&freeStorageMarker{
-					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
+					Assigner:   ADDRESS,
 					Recipient:  request.Recipient,
 					FreeTokens: request.FreeTokens,
 					Nonce:      request.Nonce,
