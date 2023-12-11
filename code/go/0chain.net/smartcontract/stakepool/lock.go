@@ -3,7 +3,6 @@ package stakepool
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
@@ -44,7 +43,7 @@ func CheckClientBalance(
 	}
 
 	if err == util.ErrValueNotPresent {
-		return errors.New("no tokens to lock : " + clientId + " : " + strconv.FormatInt(int64(balance), 10))
+		return errors.New("no tokens to lock")
 	}
 
 	if toLock > balance {
