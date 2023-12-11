@@ -261,7 +261,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod, false)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -332,6 +332,11 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
 		return
 	}
+	forceParam := q.Get("force")
+	force := false
+	if forceParam == "true" {
+		force = true
+	}
 
 	conf, err2 := getConfig(srh.GetQueryStateContext())
 	if err2 != nil && err2 != util.ErrValueNotPresent {
@@ -344,7 +349,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		healthCheckPeriod = conf.HealthCheckPeriod
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod, force)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -353,7 +358,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration) ([]string, error) {
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration, isForce bool) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -406,7 +411,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		return nil, errors.New("failed to get blobbers: " + err.Error())
 	}
 
-	if len(blobberIDs) < numberOfBlobbers {
+	if len(blobberIDs) < numberOfBlobbers && !isForce {
 		return nil, errors.New(fmt.Sprintf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers))
 	}
 	return blobberIDs, nil
