@@ -1326,6 +1326,15 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 			return 0, err
 		}
 	}
+
+	logging.Logger.Info("Jayash costForRDTU",
+		zap.Any("cost", cost),
+		zap.Any("rdtu", rdtu),
+		zap.Any("now", now),
+		zap.Any("time unit", sa.TimeUnit),
+		zap.Any("allocation", sa.ID),
+		zap.Any("blobbers", sa.BlobberAllocs))
+
 	return cost, nil
 }
 
