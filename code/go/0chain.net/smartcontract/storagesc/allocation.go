@@ -888,24 +888,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 	}
 
-	// lock tokens if this transaction provides them
-	if txn.Value > 0 {
-		logging.Logger.Info("Jayash addToWritePool before",
-			zap.String("allocation_id", alloc.ID),
-			zap.Any("hash", txn.Hash),
-			zap.Any("Value", txn.Value),
-			zap.Any("wp", alloc.WritePool))
-		if err = alloc.addToWritePool(txn, balances, NewTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID, false)); err != nil {
-			return common.NewErrorf("allocation_extending_failed", "%v", err)
-		}
-
-		logging.Logger.Info("Jayash addToWritePool after",
-			zap.String("allocation_id", alloc.ID),
-			zap.Any("hash", txn.Hash),
-			zap.Any("Value", txn.Value),
-			zap.Any("wp", alloc.WritePool))
-	}
-
 	// add more tokens to related challenge pool, or move some tokens back
 	var remainingDuration = alloc.Expiration - txn.CreationDate
 	err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
@@ -1084,6 +1066,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	if t.Value < tokensRequiredToLock {
 		return "", common.NewError("allocation_updating_failed",
 			fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock))
+	}
+
+	// lock tokens if this transaction provides them
+	if t.Value > 0 {
+		if err = alloc.addToWritePool(t, balances, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false)); err != nil {
+			return "", common.NewError("allocation_updating_failed", err.Error())
+		}
 	}
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)
