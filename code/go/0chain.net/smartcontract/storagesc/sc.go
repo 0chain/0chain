@@ -68,7 +68,6 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) 
 	ssc.SmartContractExecutionStats["finalize_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "finalize_allocation"), nil)
 	ssc.SmartContractExecutionStats["cancel_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "cancel_allocation"), nil)
 	ssc.SmartContractExecutionStats["free_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "free_allocation_request"), nil)
-	ssc.SmartContractExecutionStats["free_update_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_free_storage"), nil)
 	// challenge
 	ssc.SmartContractExecutionStats["challenge_response"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_response"), nil)
 	ssc.SmartContractExecutionStats["generate_challenge"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "generate_challenge"), nil)
@@ -197,8 +196,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.addFreeStorageAssigner(t, input, balances)
 	case "free_allocation_request":
 		resp, err = sc.freeAllocationRequest(t, input, balances)
-	case "free_update_allocation":
-		resp, err = sc.updateFreeStorageRequest(t, input, balances)
 
 	// blobbers
 
