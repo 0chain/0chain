@@ -706,6 +706,10 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	timeUnit time.Duration,
 	balances chainstate.StateContextI,
 ) error {
+	if alloc.Stats.UsedSize == 0 {
+		return nil // no written data
+	}
+
 	changes, err := alloc.challengePoolChanges(odr, ndr, timeUnit, oterms)
 	if err != nil {
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
