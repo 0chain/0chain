@@ -611,8 +611,6 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		return
 	}
 
-	logging.Logger.Info("Jayash saveUpdatedAllocation", zap.Any("allocationTx", sa.Tx), zap.Any("allocationId", sa.ID), zap.Any("wp", sa.WritePool))
-
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
 	return
 }
@@ -895,10 +893,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
-	logging.Logger.Info("Jayash adjustChallengePool after",
-		zap.String("allocation_id", alloc.ID),
-		zap.Any("hash", txn.Hash),
-		zap.Any("wp", alloc.WritePool))
 	return nil
 }
 
@@ -953,11 +947,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	if err != nil {
 		return "", err
 	}
-
-	logging.Logger.Info("Jayash update_allocation_request",
-		zap.String("allocation_id", alloc.ID),
-		zap.Any("hash", t.Hash),
-		zap.Any("wp", alloc.WritePool))
 
 	if t.ClientID != alloc.Owner {
 		if !alloc.ThirdPartyExtendable || !request.Extend {
@@ -1055,13 +1044,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
-
-	logging.Logger.Info("Jayash update_allocation_request",
-		zap.String("allocation_id", alloc.ID),
-		zap.Any("hash", t.Hash),
-		zap.Any("wp", alloc.WritePool),
-		zap.Any("cpBalance", cp.Balance),
-		zap.Any("tokensRequiredToLock", tokensRequiredToLock))
 
 	if t.Value < tokensRequiredToLock {
 		return "", common.NewError("allocation_updating_failed",

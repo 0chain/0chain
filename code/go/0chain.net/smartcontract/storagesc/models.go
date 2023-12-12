@@ -1327,14 +1327,6 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 		}
 	}
 
-	logging.Logger.Info("Jayash costForRDTU",
-		zap.Any("cost", cost),
-		zap.Any("rdtu", rdtu),
-		zap.Any("now", now),
-		zap.Any("time unit", sa.TimeUnit),
-		zap.Any("allocation", sa.ID),
-		zap.Any("sa", sa))
-
 	return cost, nil
 }
 
@@ -1527,12 +1519,6 @@ func (sa *StorageAllocation) changeBlobbers(
 ) ([]*StorageNode, error) {
 	var err error
 
-	logging.Logger.Info("Jayash changeBlobbers before ",
-		zap.Any("allocationID", sa.ID),
-		zap.Any("addId", addId),
-		zap.Any("removeId", removeId),
-		zap.Any("wp", sa.WritePool))
-
 	_, found := sa.BlobberAllocsMap[addId]
 	if found {
 		return nil, fmt.Errorf("allocation already has blobber %s", addId)
@@ -1587,12 +1573,6 @@ func (sa *StorageAllocation) changeBlobbers(
 	if err := sp.Save(spenum.Blobber, addId, balances); err != nil {
 		return nil, err
 	}
-
-	logging.Logger.Info("Jayash changeBlobbers after ",
-		zap.Any("allocationID", sa.ID),
-		zap.Any("addId", addId),
-		zap.Any("removeId", removeId),
-		zap.Any("wp", sa.WritePool))
 
 	return blobbers, nil
 }
