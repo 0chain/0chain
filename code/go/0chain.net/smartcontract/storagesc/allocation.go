@@ -892,7 +892,6 @@ func (sc *StorageSmartContract) extendAllocation(
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
-
 	return nil
 }
 

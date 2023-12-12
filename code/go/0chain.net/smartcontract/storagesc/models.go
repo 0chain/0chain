@@ -1326,7 +1326,6 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 			return 0, err
 		}
 	}
-
 	return cost, nil
 }
 
