@@ -54,7 +54,6 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price | [average write price](#average-write-price) | Get Average Write Price |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges | [blobber challenges](#blobber-challenges) | Get Blobber Challenges by Challenge ID |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids | [blobber ids](#blobber-ids) | Get Blobber URL as ID |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank | [blobbers by rank](#blobbers-by-rank) | Get List of Blobbers by Rank |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers | [free alloc blobbers](#free-alloc-blobbers) | Returns list of all blobbers alive that match the free allocation request. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber | [get blobber](#get-blobber) | Get Blobber Info |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge | [get challenge](#get-challenge) | Get blobber challenge by challenge id |
@@ -677,45 +676,6 @@ Status: Bad Request
 Status: Internal Server Error
 
 ###### <span id="blobbers-by-geolocation-500-schema"></span> Schema
-
-### <span id="blobbers-by-rank"></span> Get List of Blobbers by Rank (*blobbers-by-rank*)
-
-```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank
-```
-
-Gets list of all blobbers ordered by rank
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| limit | `query` | string | `string` |  |  |  | limit |
-| offset | `query` | string | `string` |  |  |  | offset |
-| sort | `query` | string | `string` |  |  |  | desc or asc |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#blobbers-by-rank-200) | OK | storageNodeResponse |  | [schema](#blobbers-by-rank-200-schema) |
-| [500](#blobbers-by-rank-500) | Internal Server Error |  |  | [schema](#blobbers-by-rank-500-schema) |
-
-#### Responses
-
-
-##### <span id="blobbers-by-rank-200"></span> 200 - storageNodeResponse
-Status: OK
-
-###### <span id="blobbers-by-rank-200-schema"></span> Schema
-   
-  
-
-[StorageNodeResponse](#storage-node-response)
-
-##### <span id="blobbers-by-rank-500"></span> 500
-Status: Internal Server Error
-
-###### <span id="blobbers-by-rank-500-schema"></span> Schema
 
 ### <span id="block"></span> Get Block Information (*block*)
 
