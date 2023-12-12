@@ -2503,33 +2503,6 @@ paths:
                         $ref: '#/definitions/stringArray'
                 "400":
                     description: ""
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank:
-        get:
-            tags:
-            - Blobber
-            summary: Get List of Blobbers by Rank
-            description: Gets list of all blobbers ordered by rank
-            operationId: blobbers-by-rank
-            parameters:
-                - description: offset
-                  in: query
-                  name: offset
-                  type: string
-                - description: limit
-                  in: query
-                  name: limit
-                  type: string
-                - description: desc or asc
-                  in: query
-                  name: sort
-                  type: string
-            responses:
-                "200":
-                    description: storageNodeResponse
-                    schema:
-                        $ref: '#/definitions/storageNodeResponse'
-                "500":
-                    description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block:
         get:
             tags:
