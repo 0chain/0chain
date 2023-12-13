@@ -706,6 +706,10 @@ func (sc *StorageSmartContract) adjustChallengePool(
 	timeUnit time.Duration,
 	balances chainstate.StateContextI,
 ) error {
+	if alloc.Stats.UsedSize == 0 {
+		return nil // no written data
+	}
+
 	changes, err := alloc.challengePoolChanges(odr, ndr, timeUnit, oterms)
 	if err != nil {
 		return fmt.Errorf("adjust_challenge_pool: %v", err)
@@ -886,13 +890,6 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 	}
 
-	// lock tokens if this transaction provides them
-	if txn.Value > 0 {
-		if err = alloc.addToWritePool(txn, balances, NewTokenTransfer(txn.Value, txn.ClientID, txn.ToClientID, false)); err != nil {
-			return common.NewErrorf("allocation_extending_failed", "%v", err)
-		}
-	}
-
 	// add more tokens to related challenge pool, or move some tokens back
 	var remainingDuration = alloc.Expiration - txn.CreationDate
 	err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
@@ -1054,6 +1051,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	if t.Value < tokensRequiredToLock {
 		return "", common.NewError("allocation_updating_failed",
 			fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock))
+	}
+
+	// lock tokens if this transaction provides them
+	if t.Value > 0 {
+		if err = alloc.addToWritePool(t, balances, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false)); err != nil {
+			return "", common.NewError("allocation_updating_failed", err.Error())
+		}
 	}
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)

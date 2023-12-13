@@ -339,49 +339,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		{
-			name:     "storage.free_update_allocation",
-			endpoint: ssc.updateFreeStorageRequest,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-				ToClientID:   ADDRESS,
-				CreationDate: creationTime,
-				Value:        maxIndividualFreeAlloc,
-			},
-			input: func() []byte {
-				var request = struct {
-					Recipient  string  `json:"recipient"`
-					FreeTokens float64 `json:"free_tokens"`
-					Nonce      int64   `json:"nonce"`
-				}{
-					data.Clients[0],
-					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
-					1,
-				}
-				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
-				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				marker := fmt.Sprintf("%s:%f:%d",
-					request.Recipient,
-					request.FreeTokens,
-					request.Nonce)
-				signature, _ := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
-				fsmBytes, _ := json.Marshal(&freeStorageMarker{
-					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-					Recipient:  request.Recipient,
-					FreeTokens: request.FreeTokens,
-					Nonce:      request.Nonce,
-					Signature:  signature,
-				})
-				bytes, _ := json.Marshal(&freeStorageUpgradeInput{
-					AllocationId: getMockAllocationId(0),
-					Marker:       string(fsmBytes),
-				})
-				return bytes
-			}(),
-		},
 
 		// data.Blobbers
 		{
@@ -777,7 +734,6 @@ func BenchmarkTests(
 					"cost.cancel_allocation":         "105",
 					"cost.add_free_storage_assigner": "105",
 					"cost.free_allocation_request":   "105",
-					"cost.free_update_allocation":    "105",
 					"cost.blobber_health_check":      "105",
 					"cost.update_blobber_settings":   "105",
 					"cost.pay_blobber_block_rewards": "105",

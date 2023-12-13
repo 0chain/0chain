@@ -92,7 +92,6 @@ const (
 	CostCancelAllocation
 	CostAddFreeStorageAssigner
 	CostFreeAllocationRequest
-	CostFreeUpdateAllocation
 	CostBlobberHealthCheck
 	CostUpdateBlobberSettings
 	CostPayBlobberBlockRewards
@@ -192,7 +191,6 @@ func initSettingName() {
 	SettingName[CostCancelAllocation] = "cost.cancel_allocation"
 	SettingName[CostAddFreeStorageAssigner] = "cost.add_free_storage_assigner"
 	SettingName[CostFreeAllocationRequest] = "cost.free_allocation_request"
-	SettingName[CostFreeUpdateAllocation] = "cost.free_update_allocation"
 	SettingName[CostBlobberHealthCheck] = "cost.blobber_health_check"
 	SettingName[CostUpdateBlobberSettings] = "cost.update_blobber_settings"
 	SettingName[CostPayBlobberBlockRewards] = "cost.pay_blobber_block_rewards"
@@ -274,7 +272,6 @@ func initSettings() {
 		CostCancelAllocation.String():             {CostCancelAllocation, config.Cost},
 		CostAddFreeStorageAssigner.String():       {CostAddFreeStorageAssigner, config.Cost},
 		CostFreeAllocationRequest.String():        {CostFreeAllocationRequest, config.Cost},
-		CostFreeUpdateAllocation.String():         {CostFreeUpdateAllocation, config.Cost},
 		CostBlobberHealthCheck.String():           {CostBlobberHealthCheck, config.Cost},
 		CostUpdateBlobberSettings.String():        {CostUpdateBlobberSettings, config.Cost},
 		CostPayBlobberBlockRewards.String():       {CostPayBlobberBlockRewards, config.Cost},

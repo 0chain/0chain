@@ -186,7 +186,6 @@ smart_contracts:
       cancel_allocation: 1163
       add_free_storage_assigner: 124
       free_allocation_request: 2132
-      free_update_allocation: 1468
       blobber_health_check: 97
       validator_health_check: 109
       update_blobber_settings: 338
