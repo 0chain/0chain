@@ -53,7 +53,7 @@ type Snapshot struct {
 	ZCNSupply            int64 `json:"zcn_supply"`             //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
 	TotalReadPoolLocked  int64 `json:"total_read_pool_locked"` //487 SUM How many tokens are locked in all read pools
-\	// updated from blobber snapshot aggregate table
+	// updated from blobber snapshot aggregate table
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
 	StorageTokenStake    int64 `json:"storage_token_stake"`              //*485 SUM of all stake amount for storage blobbers
 	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
