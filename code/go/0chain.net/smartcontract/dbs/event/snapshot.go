@@ -53,8 +53,7 @@ type Snapshot struct {
 	ZCNSupply            int64 `json:"zcn_supply"`             //488 SUM total ZCN in circulation over a period of time (mints). (Mints - burns) summarized for every round
 	ClientLocks          int64 `json:"client_locks"`           //487 SUM How many clients locked in (write/read + challenge)  pools
 	TotalReadPoolLocked  int64 `json:"total_read_pool_locked"` //487 SUM How many tokens are locked in all read pools
-	MinedTotal           int64 `json:"mined_total"`            // SUM total mined for all providers, never decrease
-	// updated from blobber snapshot aggregate table
+\	// updated from blobber snapshot aggregate table
 	TotalStaked          int64 `json:"total_staked"`                     //*485 SUM All providers all pools
 	StorageTokenStake    int64 `json:"storage_token_stake"`              //*485 SUM of all stake amount for storage blobbers
 	TotalRewards         int64 `json:"total_rewards"`                    //SUM total of all rewards
@@ -147,7 +146,6 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.ZCNSupply += diff.ZCNSupply
 	s.ClientLocks += diff.ClientLocks
 	s.TotalReadPoolLocked += diff.TotalReadPoolLocked
-	s.MinedTotal += diff.MinedTotal
 	s.TotalStaked += diff.TotalStaked
 	s.TotalRewards += diff.TotalRewards
 	s.MinerTotalRewards += diff.MinerTotalRewards
@@ -499,7 +497,6 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 
 					gs.TotalMint += int64(spu.TotalReward())
 					gs.ZCNSupply += int64(spu.TotalReward())
-					gs.MinedTotal += int64(spu.TotalReward())
 				}
 			}
 		case TagFinalizeBlock:

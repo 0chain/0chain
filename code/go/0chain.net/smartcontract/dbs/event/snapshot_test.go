@@ -387,7 +387,6 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.EqualValues(t, snapBefore.ActiveAllocatedDelta+snapDiff.ActiveAllocatedDelta, snapsAfter.ActiveAllocatedDelta)
 		require.EqualValues(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapsAfter.ZCNSupply)
 		require.EqualValues(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapsAfter.ClientLocks)
-		require.EqualValues(t, snapBefore.MinedTotal+snapDiff.MinedTotal, snapsAfter.MinedTotal)
 		require.EqualValues(t, snapBefore.TotalStaked+snapDiff.TotalStaked, snapsAfter.TotalStaked)
 		require.EqualValues(t, snapBefore.StorageTokenStake+snapDiff.StorageTokenStake, snapsAfter.StorageTokenStake)
 		require.EqualValues(t, snapBefore.TotalRewards+snapDiff.TotalRewards, snapsAfter.TotalRewards)
@@ -411,7 +410,6 @@ func TestSnapshotFunctions(t *testing.T) {
 			ActiveAllocatedDelta: int64(10),
 			ZCNSupply:            int64(10),
 			ClientLocks:          int64(100),
-			MinedTotal:           int64(100),
 			TotalStaked:          int64(100),
 			StorageTokenStake:    int64(100),
 			TotalRewards:         int64(100),
@@ -442,7 +440,6 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, initialSnapshot.ActiveAllocatedDelta+snapshotDiff.ActiveAllocatedDelta, s.ActiveAllocatedDelta)
 		require.Equal(t, initialSnapshot.ZCNSupply+snapshotDiff.ZCNSupply, s.ZCNSupply)
 		require.Equal(t, initialSnapshot.ClientLocks+snapshotDiff.ClientLocks, s.ClientLocks)
-		require.Equal(t, initialSnapshot.MinedTotal+snapshotDiff.MinedTotal, s.MinedTotal)
 		require.Equal(t, initialSnapshot.TotalTxnFee+snapshotDiff.TotalTxnFee, s.TotalTxnFee)
 		require.Equal(t, initialSnapshot.TotalStaked+snapshotDiff.TotalStaked, s.TotalStaked)
 		require.Equal(t, initialSnapshot.StorageTokenStake+snapshotDiff.StorageTokenStake, s.StorageTokenStake)
@@ -597,10 +594,6 @@ func TestSnapshotFunctions(t *testing.T) {
 				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
 				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
-			MinedTotal: int64(events[11].Data.([]dbs.StakePoolReward)[0].TotalReward()) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[1].TotalReward()) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[2].TotalReward()) +
-				int64(events[11].Data.([]dbs.StakePoolReward)[3].TotalReward()),
 			ClientLocks: events[2].Data.([]WritePoolLock)[0].Amount +
 				events[2].Data.([]WritePoolLock)[1].Amount -
 				events[3].Data.([]WritePoolLock)[0].Amount -
@@ -622,7 +615,6 @@ func TestSnapshotFunctions(t *testing.T) {
 		snapAfter := s
 		require.Equal(t, snapBefore.TotalChallengePools+snapDiff.TotalChallengePools, snapAfter.TotalChallengePools)
 		require.Equal(t, snapBefore.TotalMint+snapDiff.TotalMint, snapAfter.TotalMint)
-		require.Equal(t, snapBefore.MinedTotal+snapDiff.MinedTotal, snapAfter.MinedTotal)
 		require.Equal(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapAfter.ZCNSupply)
 		require.Equal(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapAfter.ClientLocks)
 		require.Equal(t, snapBefore.BlockCount+snapDiff.BlockCount, snapAfter.BlockCount)
@@ -758,7 +750,6 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.EqualValues(t, snapBefore.ActiveAllocatedDelta+snapDiff.ActiveAllocatedDelta, snapAfter.ActiveAllocatedDelta)
 		require.EqualValues(t, snapBefore.ZCNSupply+snapDiff.ZCNSupply, snapAfter.ZCNSupply)
 		require.EqualValues(t, snapBefore.ClientLocks+snapDiff.ClientLocks, snapAfter.ClientLocks)
-		require.EqualValues(t, snapBefore.MinedTotal+snapDiff.MinedTotal, snapAfter.MinedTotal)
 		require.EqualValues(t, snapBefore.TotalStaked+snapDiff.TotalStaked, snapAfter.TotalStaked)
 		require.EqualValues(t, snapBefore.StorageTokenStake+snapDiff.StorageTokenStake, snapAfter.StorageTokenStake)
 		require.EqualValues(t, snapBefore.TotalRewards+snapDiff.TotalRewards, snapAfter.TotalRewards)
@@ -786,7 +777,6 @@ func fillSnapshot(t *testing.T, edb *EventDb) *Snapshot {
 		ActiveAllocatedDelta: int64(100),
 		ZCNSupply:            int64(100),
 		ClientLocks:          int64(100),
-		MinedTotal:           int64(100),
 		TotalStaked:          int64(100),
 		StorageTokenStake:    int64(100),
 		TotalRewards:         int64(100),
