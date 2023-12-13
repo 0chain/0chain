@@ -967,7 +967,6 @@ func SetMockConfig(
 		"cost.cancel_allocation":         mockCost,
 		"cost.add_free_storage_assigner": mockCost,
 		"cost.free_allocation_request":   mockCost,
-		"cost.free_update_allocation":    mockCost,
 		"cost.blobber_health_check":      mockCost,
 		"cost.update_blobber_settings":   mockCost,
 		"cost.pay_blobber_block_rewards": mockCost,

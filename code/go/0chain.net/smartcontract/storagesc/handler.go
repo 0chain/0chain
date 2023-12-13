@@ -54,7 +54,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	restEndpoints := []rest.Endpoint{
 		rest.MakeEndpoint(storage+"/getBlobber", common.UserRateLimit(srh.getBlobber)),
 		rest.MakeEndpoint(storage+"/getblobbers", common.UserRateLimit(srh.getBlobbers)),
-		rest.MakeEndpoint(storage+"/blobbers-by-rank", common.UserRateLimit(srh.getBlobbersByRank)),
 		rest.MakeEndpoint(storage+"/transaction", common.UserRateLimit(srh.getTransactionByHash)),
 		rest.MakeEndpoint(storage+"/transactions", common.UserRateLimit(srh.getTransactionByFilter)),
 
@@ -261,7 +260,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod, false)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -332,6 +331,11 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
 		return
 	}
+	forceParam := q.Get("force")
+	force := false
+	if forceParam == "true" {
+		force = true
+	}
 
 	conf, err2 := getConfig(srh.GetQueryStateContext())
 	if err2 != nil && err2 != util.ErrValueNotPresent {
@@ -344,7 +348,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		healthCheckPeriod = conf.HealthCheckPeriod
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod, force)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -353,7 +357,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration) ([]string, error) {
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration, isForce bool) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -406,7 +410,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		return nil, errors.New("failed to get blobbers: " + err.Error())
 	}
 
-	if len(blobberIDs) < numberOfBlobbers {
+	if len(blobberIDs) < numberOfBlobbers && !isForce {
 		return nil, errors.New(fmt.Sprintf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers))
 	}
 	return blobberIDs, nil
@@ -2493,50 +2497,6 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	}
 
 	common.Respond(w, r, sns, nil)
-}
-
-// getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank blobbers-by-rank
-// Gets list of all blobbers ordered by rank
-// TODO: See if we need to remove since no longer used
-// parameters:
-//
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: sort
-//	 description: desc or asc
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: storageNodeResponse
-//	500:
-func (srh *StorageRestHandler) getBlobbersByRank(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobbers, err := edb.GetBlobbersByRank(limit)
-	if err != nil {
-		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, blobbers, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber getBlobber

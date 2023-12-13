@@ -118,27 +118,6 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination, healthCheckTimeL
 	return blobbers, result.Error
 }
 
-func (edb *EventDb) GetBlobbersByRank(limit common2.Pagination) ([]string, error) {
-	var blobberIDs []string
-
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Select("id").
-		Where("is_killed = ? AND is_shutdown = ?", false, false).
-		Offset(limit.Offset).Limit(limit.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "rank_metric"},
-			Desc:   true,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
-			Desc:   true,
-		}).
-		Find(&blobberIDs)
-
-	return blobberIDs, result.Error
-}
-
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	var blobbers []Blobber
 
