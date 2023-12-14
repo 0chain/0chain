@@ -31,8 +31,6 @@ func (edb *EventDb) movePartitionToSlowTableSpace(round int64, table string) err
 		return nil
 	}
 
-	fmt.Printf("Moving partition %v_%v to slow tablespace, config: %+v\n", table, toMove, edb.dbConfig)
-
 	tablespace := edb.dbConfig.Slowtablespace
 	// identify the partition table that needs to be moved to slow partition
 	raw := fmt.Sprintf("ALTER TABLE %v_%v SET TABLESPACE %v", table, toMove, tablespace)
