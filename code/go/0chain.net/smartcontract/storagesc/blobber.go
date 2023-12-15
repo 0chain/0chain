@@ -300,6 +300,8 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber.ProviderType = spenum.Blobber
 	blobber.NotAvailable = false
 
+	logging.Logger.Info("addBlobber", zap.Any("blobber", blobber))
+
 	// Check delegate wallet and operational wallet are not the same
 	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err

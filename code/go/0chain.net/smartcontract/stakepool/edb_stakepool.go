@@ -6,6 +6,8 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 type StakePoolReward dbs.StakePoolReward
@@ -33,6 +35,8 @@ func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Rew
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
 	spu.DelegateWallet = delegateWallet
+
+	logging.Logger.Info("NewStakePoolReward", zap.Any("delegateWallet", delegateWallet))
 
 	var allocationID string
 	if len(options) > 0 {
