@@ -4,6 +4,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 type DbHealthCheck struct {
@@ -66,9 +68,11 @@ func (sp *StakePoolReward) TotalReward() currency.Coin {
 }
 
 func (sp *StakePoolReward) TotalDelegateReward() currency.Coin {
+	logging.Logger.Info("TotalDelegateReward", zap.Any("sp", sp))
 	totalReward := sp.Reward
 	for id, reward := range sp.DelegateRewards {
 		if id == sp.DelegateWallet {
+			logging.Logger.Info("TotalDelegateReward", zap.Any("id", id), zap.Any("reward", reward))
 			totalReward += reward
 			break
 		}
