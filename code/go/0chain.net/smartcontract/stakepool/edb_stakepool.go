@@ -52,6 +52,8 @@ func (spu StakePoolReward) Emit(
 	balances cstate.StateContextI,
 ) error {
 
+	logging.Logger.Info("StakePoolReward Emit", zap.Any("spu", spu))
+
 	balances.EmitEvent(
 		event.TypeStats,
 		tag,
@@ -62,6 +64,8 @@ func (spu StakePoolReward) Emit(
 }
 
 func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolReward {
+	logging.Logger.Info("stakePoolRewardToStakePoolRewardEvent", zap.Any("spu", spu))
+
 	return &dbs.StakePoolReward{
 		ProviderID:        spu.ProviderID,
 		Reward:            spu.Reward,
