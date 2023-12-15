@@ -409,6 +409,8 @@ func (edb *EventDb) blobberSpecificRevenue(spus []dbs.StakePoolReward) error {
 		totalReadIncome = append(totalReadIncome, 0)
 		totalSlashedStake = append(totalSlashedStake, 0)
 
+		logging.Logger.Info("Jayash - blobberSpecificRevenue", zap.Any("spu", spu))
+
 		switch spu.RewardType {
 		case spenum.BlockRewardBlobber:
 			totalChanges++
