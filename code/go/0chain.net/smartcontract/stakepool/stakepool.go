@@ -646,6 +646,9 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 	}
+
+	logging.Logger.Info("Jayash DistributeRewards", zap.Any("spUpdate", spUpdate))
+
 	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
 		return err
 	}
