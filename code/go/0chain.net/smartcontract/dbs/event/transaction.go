@@ -103,6 +103,28 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 	return tr, res.Error
 }
 
+// GetTransactionByClientIDAndToClientID searches for transaction by clientID and toClientID
+// Used Index: idx_tclient_id
+func (edb *EventDb) GetTransactionByClientIDAndToClientID(clientID, toClientID string, limit common.Pagination) ([]Transaction, error) {
+	var tr []Transaction
+	res := edb.Store.
+		Get().
+		Model(&Transaction{}).
+		Where(Transaction{ClientId: clientID, ToClientId: toClientID}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "round"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&tr)
+	return tr, res.Error
+}
+
 // GetTransactionByBlockHash finds the transaction record by block hash
 // Used Index: idx_tblock_hash
 func (edb *EventDb) GetTransactionByBlockHash(blockHash string, limit common.Pagination) ([]Transaction, error) {
