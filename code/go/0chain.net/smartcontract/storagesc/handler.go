@@ -2212,6 +2212,27 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+
+	if blockHash != "" {
+		rtv, err := edb.GetTransactionByBlockHash(blockHash, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if clientID != "" && toClientID != "" {
+		rtv, err := edb.GetTransactionByClientIDAndToClientID(clientID, toClientID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
 	if clientID != "" {
 		rtv, err := edb.GetTransactionByClientId(clientID, limit)
 		if err != nil {
@@ -2224,16 +2245,6 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 
 	if toClientID != "" {
 		rtv, err := edb.GetTransactionByToClientId(toClientID, limit)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
-		}
-		common.Respond(w, r, rtv, nil)
-		return
-	}
-
-	if blockHash != "" {
-		rtv, err := edb.GetTransactionByBlockHash(blockHash, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
