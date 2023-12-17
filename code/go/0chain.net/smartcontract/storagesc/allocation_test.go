@@ -1315,11 +1315,13 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 		MinAllocSize: 1 * GB,
 	}
 	alloc := &StorageAllocation{
-		BlobberAllocs: []*BlobberAllocation{{}},
+		BlobberAllocsMap: make(map[string]*BlobberAllocation),
 		Owner:            "owner123",
 		FileOptions:      32,
-		Size: 10 * GB,
 	}
+	alloc.BlobberAllocsMap["blobber1"] = &BlobberAllocation{}
+
+	var sub = 9.01 * GB
 
 	tests := []struct {
 		name      string
@@ -1336,7 +1338,7 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 		{
 			name: "Becomes too small",
 			uar: &updateAllocationRequest{
-				Size:          1*GB - 1,
+				Size:          -int64(sub),
 				SetThirdPartyExtendable: true,
 				OwnerID:       "owner123",
 			},
@@ -1408,6 +1410,9 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.name == "Positive case" {
+				alloc.BlobberAllocs = []*BlobberAllocation{{}}
+			}
 			err := tt.uar.validate(config, alloc)
 
 			if tt.expectErr && err == nil {
