@@ -271,14 +271,22 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 func MakeClientBalanceRequest(clientID string, urls []string) (currency.Coin, error) {
 	//balance, _, err := zcncore.GetBalance(clientID, "balance", urls)
 	//return currency.Coin(balance), err
-	holder := node2.NewHolder(urls, 3)
+	consensus := len(urls)
+	if consensus > 3 {
+		consensus = 3
+	}
+	holder := node2.NewHolder(urls, consensus)
 	balance, _, err2 := holder.GetBalanceFieldFromSharders(clientID, "balance")
 	coin := currency.Coin(balance)
 	return coin, err2
 }
 
 func MakeClientNonceRequest(clientID string, urls []string) (int64, error) {
-	holder := node2.NewHolder(urls, 3)
+	consensus := len(urls)
+	if consensus > 3 {
+		consensus = 3
+	}
+	holder := node2.NewHolder(urls, consensus)
 	sharders, _, err2 := holder.GetNonceFromSharders(clientID)
 	return sharders, err2
 }
