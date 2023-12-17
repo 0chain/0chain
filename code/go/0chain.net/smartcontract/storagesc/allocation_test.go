@@ -1315,7 +1315,7 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 		MinAllocSize: 1 * GB,
 	}
 	alloc := &StorageAllocation{
-		BlobberAllocsMap: make(map[string]*BlobberAllocation),
+		BlobberAllocs: []*BlobberAllocation{{}},
 		Owner:            "owner123",
 		FileOptions:      32,
 		Size: 10 * GB,
