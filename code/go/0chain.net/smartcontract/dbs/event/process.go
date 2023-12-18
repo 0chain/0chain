@@ -404,6 +404,8 @@ func (edb *EventDb) managePartitions(round int64) {
 }
 
 func (edb *EventDb) movePartitions(round int64) {
+	logging.Logger.Info("Jayash - moving partitions", zap.Int64("round", round))
+
 	if err := edb.movePartitionToSlowTableSpace(round, "transactions"); err != nil {
 		logging.Logger.Error("error creating partition", zap.Error(err))
 	}
