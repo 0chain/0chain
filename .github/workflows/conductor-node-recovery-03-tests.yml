@@ -1,54 +1,63 @@
-name: CONDUCTOR AUTHORIZER TESTS
+name: CONDUCTOR NODE-RECOVERY-03 TESTS
 
 on:
   workflow_dispatch:
     inputs:
-      chain_branch:
-        description: 'Input branch for 0chain repo'
-        default: ''
-        required: false
-      auth_branch:
-        description: 'Input branch for authorizer repo'
-        default: ''
-        required: false
-      zboxcli_branch:
-        description: 'Input branch for zboxcli repo'
-        default: ''
-        required: false
-      zwalletcli_branch:
-        description: 'Input branch for zwalletcli repo'
-        default: ''
-        required: false
+        chain_branch:
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
+        auth_branch:
+          description: 'Input branch for authorizer repo'
+          default: ''
+          required: false
+        zboxcli_branch:
+          description: 'Input branch for zboxcli repo'
+          default: ''
+          required: false
+        zwalletcli_branch:
+          description: 'Input branch for zwalletcli repo'
+          default: ''
+          required: false
+        zbox_branch:
+          description: 'Input branch for 0box repo'
+          default: ''
+          required: false
   workflow_call:
     inputs:
-      chain_branch:
-        type: string
-        description: 'Input branch for 0chain repo'
-        default: ''
-        required: false
-      auth_branch:
-        type: string
-        description: 'Input branch for authorizer repo'
-        default: ''
-        required: false
-      zboxcli_branch:
-        type: string
-        description: 'Input branch for zboxcli repo'
-        default: ''
-        required: false
-      zwalletcli_branch:
-        type: string
-        description: 'Input branch for zwalletcli repo'
-        default: ''
-        required: false
-      
-jobs:
-  CONDUCTOR_AUTHORIZER_TESTS:
-    name: CONDUCTOR-AUTHORIZER-TESTS
-    runs-on: [self-hosted, conductor-test]
+        chain_branch:
+          type: string
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
+        auth_branch:
+          type: string
+          description: 'Input branch for authorizer repo'
+          default: ''
+          required: false
+        zboxcli_branch:
+          type: string
+          description: 'Input branch for zboxcli repo'
+          default: ''
+          required: false
+        zwalletcli_branch:
+          type: string
+          description: 'Input branch for zwalletcli repo'
+          default: ''
+          required: false
+        zbox_branch:
+          type: string
+          description: 'Input branch for 0box repo'
+          default: ''
+          required: false
 
-    outputs:
-      branch: ${{ steps.auth_branch.outputs.BRANCH_OUT }}
+env:
+  ZDNS_URL: http://198.18.0.98:9091
+
+jobs:
+  CONDUCTOR_NODE_RECOVERY_03_TESTS:
+    name: CONDUCTOR-NODE-RECOVERY-03-TESTS
+    runs-on: [self-hosted, conductor-test]
 
     steps:
     - name: Setup Environment Variables
@@ -63,11 +72,13 @@ jobs:
 
     - name: Cleanup before restarting conductor tests.
       run: |
-        rm -rf *
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
+        rm -rf *
+        rm -rf /mnt/hdd/*
+        rm -rf /mnt/ssd/*
 
     - name: Login to Docker Hub
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -79,10 +90,10 @@ jobs:
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         CHAIN_BRANCH="${{ inputs.chain_branch }}"
         if [[ -z $CHAIN_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
+            echo "Checking for latest sprint branch"
+            git branch --sort=-committerdate | grep "sprint-*" | head -1
+            CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
         fi
         echo "Branch name is ${CHAIN_BRANCH}"
         git checkout ${CHAIN_BRANCH}
@@ -117,8 +128,8 @@ jobs:
     - name: Update max faucet limit
       run: |
         cd 0chain
-        bash -c 'sed -i "s/max_pour_amount: 10/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
-        bash -c 'cat docker.local/config/sc.yaml | grep max_pour_amount'
+        bash -c 'sed -i "s/max_pour_amount: [0-9]*/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
+        bash -c 'grep max_pour_amount ./docker.local/config/sc.yaml'
 
     - name: View Change Rounds
       run: |
@@ -126,7 +137,6 @@ jobs:
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
     - name: Git clone authorizer
-      id: auth_branch
       run: |
         git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
         cd token_bridge_authserver
@@ -136,37 +146,39 @@ jobs:
           echo "Checking for latest sprint branch"
           git branch --sort=-committerdate | grep "sprint-*" | head -1
           AUTH_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo "BRANCH_OUT=$AUTH_BRANCH" >>$GITHUB_OUTPUT
+          echo ::set-output name=AUTH_BRANCH::${AUTH_BRANCH}
         fi
         echo "Branch name is ${AUTH_BRANCH}"
         git checkout ${AUTH_BRANCH}
 
     - name: Git clone zboxcli
       run: |
+        export HOME="/root"
         git clone https://github.com/0chain/zboxcli.git
         cd zboxcli
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
         if [[ -z $ZBOXCLI_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo ::set-output name=ZBOXCLI_BRANCH::${ZBOXCLI_BRANCH}
+            echo "Checking for latest sprint branch"
+            git branch --sort=-committerdate | grep "sprint-*" | head -1
+            ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo ::set-output name=ZBOXCLI_BRANCH::${ZBOXCLI_BRANCH}
         fi
         echo "Branch name is ${ZBOXCLI_BRANCH}"
         git checkout ${ZBOXCLI_BRANCH}
 
     - name: Git clone zwalletcli
       run: |
+        export HOME="/root"
         git clone https://github.com/0chain/zwalletcli.git
         cd zwalletcli
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
         if [[ -z $ZWALLETCLI_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-          echo ::set-output name=ZWALLETCLI_BRANCH::${ZWALLETCLI_BRANCH}
+            echo "Checking for latest sprint branch"
+            git branch --sort=-committerdate | grep "sprint-*" | head -1
+            ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo ::set-output name=ZWALLETCLI_BRANCH::${ZWALLETCLI_BRANCH}
         fi
         echo "Branch name is ${ZWALLETCLI_BRANCH}"
         git checkout ${ZWALLETCLI_BRANCH}
@@ -174,6 +186,22 @@ jobs:
     - name: Git clone 0dns
       run: |
         git clone https://github.com/0chain/0dns.git
+
+    - name: Git clone 0box
+      run: |
+        export HOME="/root"
+        git clone https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PAT }}@github.com/0chain/0box.git
+        cd 0box
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZBOX_BRANCH="${{ inputs.zbox_branch }}"
+        if [[ -z $ZBOX_BRANCH ]]; then
+            echo "Checking for latest sprint branch"
+            git branch --sort=-committerdate | grep "sprint-*" | head -1
+            ZBOX_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo ::set-output name=ZBOX_BRANCH::${ZBOX_BRANCH}
+        fi
+        echo "Branch name is ${ZBOX_BRANCH}"
+        git checkout ${ZBOX_BRANCH}
 
     - name: list pwd
       run: |
@@ -196,27 +224,6 @@ jobs:
       run: |
         cd 0dns && ../0chain/docker.local/bin/conductor/patch-0dns-tests.sh
 
-    - name: Build 0dns
-      run: |
-        cd 0dns
-        ./docker.local/bin/init.sh
-        ./docker.local/bin/build.sh
-
-    - name: Init setup for authorizers
-      run: |
-        cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
-
-    - name: Build authorizer
-      run: |
-        cd token_bridge_authserver
-        chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
-        ./docker.local/bin/build.authorizer-integration-tests.sh
-
-    - name: Changing Authorizer Network
-      run: |
-        cd token_bridge_authserver
-        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
-
     - name: 'Setup jq'
       uses: dcarbone/install-jq-action@v2.1.0
       with:
@@ -228,7 +235,7 @@ jobs:
         echo "TENDERLY_CREATION_INFO=$(curl -X POST \
             -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
             -H "Content-Type: application/json" \
-            -d '{"alias":"mainnet-authorizer-ct-${{ github.run_id }}${{ github.run_attempt }}", "description":"", "block_number": 18539779, "network_id":"1"}' \
+            -d '{"alias":"mainnet-node-recovery-3-ct-${{ github.run_id }}${{ github.run_attempt }}", "description":"", "block_number": 18539779, "network_id":"1"}' \
             https://api.tenderly.co/api/v1/account/zus_network/project/project/fork)" >> $GITHUB_ENV
 
     - name: "Parse Tenderly fork creation transaction result"
@@ -318,12 +325,46 @@ jobs:
               "jsonrpc": "2.0"
           }' \
             https://rpc.tenderly.co/fork/${{ env.TENDERLY_FORK_ID }}
-
+    
     - name: Authorizer patching
       run: |
         cd token_bridge_authserver
         chmod +x ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh
         ../0chain/docker.local/bin/conductor/patch-authorizer-tests.sh https://rpc.tenderly.co/fork/${{ env.TENDERLY_FORK_ID }}
+
+    - name: 0box Patching
+      run: |
+        cd 0box
+        chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
+  
+    - name: Build 0dns
+      run: |
+        cd 0dns
+        ./docker.local/bin/init.sh
+        ./docker.local/bin/build.sh
+
+    - name: Build 0box
+      run: |
+        cd 0box
+        ./docker.local/bin/init.sh
+        ./docker.local/bin/build.base.sh
+        ./docker.local/bin/build.zbox-integration-tests.sh
+
+    - name: Init setup for authorizers
+      run: |
+        cd token_bridge_authserver && ./docker.local/bin/authorizer.init.setup.sh
+
+    - name: Build authorizer
+      run: |
+        cd token_bridge_authserver
+        chmod +x ./docker.local/bin/build.authorizer-integration-tests.sh
+        ./docker.local/bin/build.authorizer-integration-tests.sh
+
+    - name: Changing Authorizer Network
+      run: |
+        cd token_bridge_authserver
+        sed -i 's/^block_worker:\ .*/block_worker:\ http:\/\/198\.18\.0\.98\:9091/' config/config.yaml
 
     - name: Add ZCN config
       run: |
@@ -345,14 +386,14 @@ jobs:
           ethereum_address: 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97
           password: "12345678"
         EOF
-
+  
     - name: List pwd zcn
       run: |
         pwd
         ls -lha ./
         ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
-
+  
     - name: Add Address
       run: |
         cd ~/.zcn
@@ -361,16 +402,16 @@ jobs:
         cat <<\EOF > UTC--2023-10-26T00-34-42.327566000Z--8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97
         {"address":"8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97","crypto":{"cipher":"aes-128-ctr","ciphertext":"3e6a7c7fc1875e9437fb1b19d8195b707d2143f5aa40615b02efce3ef0422619","cipherparams":{"iv":"ab9d87b14b8593112338abc7da502866"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"94cdd599dd1c4a9eb24f837ca0dbd02d30a33b890bd43eca936c0ca25fd2e983"},"mac":"f07cf9a0c324e8449a1f7c17f5d7f6d3a942ec47b1ee73e157dfc3f325cbb9d3"},"id":"db1bba38-3573-4d53-905f-f075458da3d4","version":3}
         EOF
-
+  
     - name: Cat Address
       run: |
         cat ~/.zcn/wallets/UTC--2023-10-26T00-34-42.327566000Z--8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97
-
-    - name: Starting authorizer Tests.
+  
+    - name: Starting Node Recovery Tests.
       run: |
         export HOME="/root"
         cd 0chain
-        ./docker.local/bin/start.conductor.sh authorizer
+        ./docker.local/bin/start.conductor.sh node-recovery-3
 
     - name: "Remove Tenderly fork"
       if: always()
@@ -383,7 +424,7 @@ jobs:
     - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: authorizers-logs
+        name: node-recovery-03-logs
         path: |
           0chain/conductor-full-logs
 
