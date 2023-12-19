@@ -10,7 +10,7 @@ require (
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-openapi/runtime v0.26.0
 	github.com/go-playground/validator/v10 v10.15.5
-	github.com/golang/snappy v0.0.4
+	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -43,7 +43,7 @@ require (
 
 require (
 	github.com/0chain/common v0.0.7-0.20231108122201-3e2bad6b9d20
-	github.com/0chain/gosdk v1.10.2
+	github.com/0chain/gosdk v1.10.1-0.20231216192919-bee24b781cef
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
@@ -67,6 +67,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.19.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.25.1 // indirect
 	github.com/aws/smithy-go v1.16.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
+	github.com/minio/sha256-simd v1.0.1 // indirect
 )
 
 require (

@@ -18,17 +18,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/0chain/common/core/currency"
-	"github.com/0chain/gosdk/core/transaction"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	node2 "github.com/0chain/gosdk/core/node"
 	"go.uber.org/zap"
 )
 
@@ -270,13 +269,26 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 }
 
 func MakeClientBalanceRequest(clientID string, urls []string) (currency.Coin, error) {
-	balance, _, err := transaction.GetBalanceFieldFromSharders(clientID, "balance", urls)
-	return currency.Coin(balance), err
+	//balance, _, err := zcncore.GetBalance(clientID, "balance", urls)
+	//return currency.Coin(balance), err
+	consensus := len(urls)
+	if consensus > 3 {
+		consensus = 3
+	}
+	holder := node2.NewHolder(urls, consensus)
+	balance, _, err2 := holder.GetBalanceFieldFromSharders(clientID, "balance")
+	coin := currency.Coin(balance)
+	return coin, err2
 }
 
 func MakeClientNonceRequest(clientID string, urls []string) (int64, error) {
-	nonce, _, err := transaction.GetBalanceFieldFromSharders(clientID, "nonce", urls)
-	return nonce, err
+	consensus := len(urls)
+	if consensus > 3 {
+		consensus = 3
+	}
+	holder := node2.NewHolder(urls, consensus)
+	sharders, _, err2 := holder.GetNonceFromSharders(clientID)
+	return sharders, err2
 }
 
 // MakeClientStateRequest to get a client's balance

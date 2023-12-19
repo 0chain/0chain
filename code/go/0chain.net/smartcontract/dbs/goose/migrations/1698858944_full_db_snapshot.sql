@@ -2022,7 +2022,7 @@ CREATE INDEX idx_tround_thash ON ONLY transactions USING btree (round, hash);
 -- Name: idx_tto_client_id; Type: INDEX; Schema: public; Owner: zchain_user
 --
 
-CREATE INDEX idx_tto_client_id ON ONLY transactions USING btree (to_client_id);
+CREATE INDEX idx_tto_client_id ON ONLY transactions USING btree (to_client_id, client_id);
 
 
 --
