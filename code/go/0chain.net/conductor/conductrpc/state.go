@@ -68,18 +68,26 @@ type State struct {
 	FBRequestor                           *cases.FBRequestor
 	MissingLFBTicket                      *cases.MissingLFBTickets
 	RoundHasFinalizedConfig               *cases.RoundHasFinalized
+	RoundRandomSeed                       *cases.RoundRandomSeed
 
 	LockNotarizationAndSendNextRoundVRF *config.LockNotarizationAndSendNextRoundVRF
 
 	// Blobbers related states
-	StorageTree     *config.Bad // blobber sends bad files/tree responses
-	ValidatorProof  *config.Bad // blobber sends invalid proof to validators
-	Challenges      *config.Bad // blobber ignores challenges
-	BlobberList     *config.BlobberList
-	BlobberDownload *config.BlobberDownload
-	BlobberUpload   *config.BlobberUpload
-	BlobberDelete   *config.BlobberDelete
-
+	StorageTree             *config.Bad // blobber sends bad files/tree responses
+	ValidatorProof          *config.Bad // blobber sends invalid proof to validators
+	Challenges              *config.Bad // blobber ignores challenges
+	BlobberList             *config.BlobberList
+	BlobberDownload         *config.BlobberDownload
+	BlobberUpload           *config.BlobberUpload
+	BlobberDelete           *config.BlobberDelete
+	GenerateAllChallenges   bool
+	GenerateChallenge       *config.GenerateChallege
+	StopWMCommit            bool
+	StopChallengeGeneration bool
+	BlobberCommittedWM      bool
+	GetFileMetaRoot         bool
+	FailRenameCommit        []NodeID
+	FailUploadCommit        []NodeID
 	// Validators related states
 	CheckChallengeIsValid *cases.CheckChallengeIsValid
 	AdversarialValidator  *config.AdversarialValidator
@@ -87,8 +95,11 @@ type State struct {
 	// Authorizers related states
 	AdversarialAuthorizer *config.AdversarialAuthorizer
 
-	ServerStatsCollectorEnabled bool
-	ClientStatsCollectorEnabled bool
+	ServerStatsCollectorEnabled        bool
+	ClientStatsCollectorEnabled        bool
+	NotifyOnBlockGeneration            bool
+	NotifyOnValidationTicketGeneration bool
+	MissUpDownload bool
 }
 
 // Name returns NodeName by given NodeID.

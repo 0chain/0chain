@@ -52,7 +52,6 @@ func TestStoreTransactions(t *testing.T) {
 	ctx := ememorystore.WithEntityConnection(common.GetRootContext(), transactionSummaryMetadata)
 	defer ememorystore.Close(ctx)
 
-
 	// Read from rocksdb and make sure those transactions are saved
 	for _, txn := range txns {
 		txnSummary, ok := txn.(*transaction.TransactionSummary)
@@ -92,8 +91,6 @@ func TestStoreTransactions(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, txnSummary.Hash, txnFromDB.Hash)
 	require.Equal(t, txnSummary.Round, txnFromDB.Round)
-
-
 
 	// Check round txn count is updated
 	rtcKey = transaction.BuildSummaryRoundKey(100)

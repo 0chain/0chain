@@ -1,9 +1,8 @@
 package chain_test
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -940,113 +939,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:  "Storagesc_/allocation_min_lock_500",
-			chain: serverChain,
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/allocation_min_lock")
-					req := httptest.NewRequest(http.MethodGet, tar, nil)
-
-					return req
-				}(),
-			},
-			wantStatus: http.StatusInternalServerError,
-		},
-		{
-			name:  "Storagesc_/allocation_min_lock_Invalid_Config_Err_500",
-			chain: serverChain,
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					type newAllocationRequest struct {
-						DataShards        int                  `json:"data_shards"`
-						ParityShards      int                  `json:"parity_shards"`
-						Size              int64                `json:"size"`
-						Expiration        common.Timestamp     `json:"expiration_date"`
-						Owner             string               `json:"owner_id"`
-						OwnerPublicKey    string               `json:"owner_public_key"`
-						PreferredBlobbers []string             `json:"preferred_blobbers"`
-						ReadPriceRange    storagesc.PriceRange `json:"read_price_range"`
-						WritePriceRange   storagesc.PriceRange `json:"write_price_range"`
-					}
-					allocReq := &newAllocationRequest{}
-					blob, err := json.Marshal(allocReq)
-					if err != nil {
-						t.Fatal(err)
-					}
-
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/allocation_min_lock")
-					u, err := url.Parse(tar)
-					if err != nil {
-						t.Fatal(err)
-					}
-					q := u.Query()
-					q.Set("allocation_data", string(blob))
-					u.RawQuery = q.Encode()
-
-					req := httptest.NewRequest(http.MethodGet, u.String(), nil)
-
-					return req
-				}(),
-			},
-			wantStatus: http.StatusInternalServerError,
-		},
-		{
-			name: "Storagesc_/allocation_min_lock_Invalid_Config_500",
-			chain: func() *chain.Chain {
-				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-
-				ch := chain.NewChainFromConfig()
-				ch.LatestFinalizedBlock = lfb
-
-				return ch
-			}(),
-			args: args{
-				w: httptest.NewRecorder(),
-				r: func() *http.Request {
-					type newAllocationRequest struct {
-						DataShards        int                  `json:"data_shards"`
-						ParityShards      int                  `json:"parity_shards"`
-						Size              int64                `json:"size"`
-						Expiration        common.Timestamp     `json:"expiration_date"`
-						Owner             string               `json:"owner_id"`
-						OwnerPublicKey    string               `json:"owner_public_key"`
-						PreferredBlobbers []string             `json:"blobbers"`
-						ReadPriceRange    storagesc.PriceRange `json:"read_price_range"`
-						WritePriceRange   storagesc.PriceRange `json:"write_price_range"`
-					}
-					allocReq := &newAllocationRequest{
-						Size:           2048,
-						Expiration:     common.Timestamp(time.Now().Add(time.Hour).Unix()),
-						DataShards:     1,
-						OwnerPublicKey: "owners public key",
-						Owner:          "owner",
-					}
-					blob, err := json.Marshal(allocReq)
-					if err != nil {
-						t.Fatal(err)
-					}
-
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", storagesc.ADDRESS, "/allocation_min_lock")
-					u, err := url.Parse(tar)
-					if err != nil {
-						t.Fatal(err)
-					}
-					q := u.Query()
-					q.Set("allocation_data", string(blob))
-					u.RawQuery = q.Encode()
-
-					req := httptest.NewRequest(http.MethodGet, u.String(), nil)
-
-					return req
-				}(),
-			},
-			setValidConfig: true,
-			wantStatus:     http.StatusInternalServerError,
-		},
-		{
 			name: "Storagesc_/getblobbers_500",
 			chain: func() *chain.Chain {
 				lfb := block.NewBlock("", 1)
@@ -1494,15 +1386,15 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		t.Run(test.name,
 			func(t *testing.T) {
 				if test.setValidConfig {
-					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", 1000)
+					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_rounds", 1000)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", time.Second*5)
 				} else {
-					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", -1)
+					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_rounds", -1)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", 0)
 				}
 
 				test.chain.HandleSCRest(test.args.w, test.args.r)
-				d, err := ioutil.ReadAll(test.args.w.Result().Body)
+				d, err := io.ReadAll(test.args.w.Result().Body)
 				require.NoError(t, err)
 				require.Equal(t, test.wantStatus, test.args.w.Result().StatusCode, string(d))
 			},

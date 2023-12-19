@@ -290,8 +290,13 @@ func Test_SetCycleBounds(t *testing.T) {
 
 	for _, tt := range tests {
 		tt := tt
-		tt.sc.SetLatestFinalizedBlock(tt.lfb)
 		t.Run(tt.name, func(t *testing.T) {
+
+			cl := initDBs(t)
+			defer cl()
+			tt.sc.Initialize()
+			tt.sc.SetLatestFinalizedBlock(tt.lfb)
+
 			tt.sc.setCycleBounds(context.Background(), tt.scanMode)
 			got := tt.sc.BlockSyncStats.cycle[tt.scanMode].bounds
 			if !reflect.DeepEqual(got, tt.wantCB) {

@@ -6,11 +6,8 @@ rm -rf ~/.zcn/testing.json
 # rm -rf ~/.zcn/testing-auth.json
 rm -rf ~/.zcn/allocation.txt
 
-for run in $(seq 1 10)
-do
-  ./zwalletcli/zwallet --wallet testing.json faucet \
-      --methodName pour --input "{Pay day}"
-done
+./zwalletcli/zwallet --wallet testing.json faucet \
+    --methodName pour --input "{Pay day}" --tokens 100
 
 # for run in $(seq 1 4)
 # do
@@ -41,6 +38,8 @@ BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 
 # create random file
 head -c 52428800 < /dev/urandom > random.bin
+
+sleep 60;
 
 # upload initial file
 ./zboxcli/zbox --wallet testing.json upload \

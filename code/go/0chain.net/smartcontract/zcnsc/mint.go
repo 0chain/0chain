@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -19,7 +20,7 @@ import (
 )
 
 // Mint inputData - is a MintPayload
-func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []byte, randomSeed int64, ctx cstate.StateContextI) (resp string, err error) {
 	const (
 		code = "failed to mint"
 	)
@@ -85,12 +86,24 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// check mint amount
+	// check mint amount to be higher than min mint amount
 	if payload.Amount < gn.MinMintAmount {
 		msg := fmt.Sprintf(
 			"amount requested (%v) is lower than min amount for mint (%v), %s",
 			payload.Amount,
 			gn.MinMintAmount,
+			info,
+		)
+		err = common.NewError(code, msg)
+		return
+	}
+
+	// check mint amount to be higher than min mint amount
+	if payload.Amount < gn.ZCNSConfig.MaxFee {
+		msg := fmt.Sprintf(
+			"amount requested (%v) is lower than zcn max fee (%v), %s",
+			payload.Amount,
+			gn.ZCNSConfig.MaxFee,
 			info,
 		)
 		err = common.NewError(code, msg)
@@ -133,6 +146,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		amount currency.Coin
 		share  currency.Coin
 	)
+
 	share, _, err = currency.DistributeCoin(gn.ZCNSConfig.MaxFee, int64(len(payload.Signatures)))
 	if err != nil {
 		err = errors.Wrap(err, fmt.Sprintf("%s, DistributeCoin operation, %s", code, info))
@@ -159,8 +173,16 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		Signers:   signers,
 	})
 
-	rand.Seed(ctx.GetBlock().GetRoundRandomSeed())
-	sig := payload.Signatures[rand.Intn(len(payload.Signatures))]
+	// sort the signatures
+	sortedSigs := make([]*AuthorizerSignature, len(payload.Signatures))
+	copy(sortedSigs, payload.Signatures)
+	sort.Slice(sortedSigs, func(i, j int) bool {
+		return sortedSigs[i].ID < sortedSigs[j].ID
+	})
+
+	rd := rand.New(rand.NewSource(randomSeed))
+	sig := sortedSigs[rd.Intn(len(payload.Signatures))]
+	logging.Logger.Debug("mint reward", zap.String("authorizer", sig.ID), zap.Int64("seed", randomSeed))
 
 	sp, err := zcn.getStakePool(sig.ID, ctx)
 	if err != nil {
@@ -175,8 +197,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// mint the tokens
-	err = ctx.AddMint(&state.Mint{
-		Minter:     ADDRESS,
+	err = ctx.AddTransfer(&state.Transfer{
+		ClientID:   ADDRESS,
 		ToClientID: trans.ClientID,
 		Amount:     payload.Amount,
 	})
@@ -186,13 +208,6 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	if err = sp.save("", sig.ID, ctx); err != nil {
-		return
-	}
-
-	// Save the user node
-	err = gn.Save(ctx)
-	if err != nil {
-		err = errors.Wrap(err, fmt.Sprintf("%s, global node failed to be saved, %s", code, info))
 		return
 	}
 

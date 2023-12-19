@@ -12,9 +12,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
-
-	"0chain.net/chaincore/client"
-	"0chain.net/core/memorystore"
 )
 
 /*SetupHandlers - setup miner handlers */
@@ -24,9 +21,6 @@ func SetupHandlers() {
 	))
 	http.HandleFunc("/_chain_stats", common.WithCORS(
 		common.UserRateLimit(ChainStatsWriter),
-	))
-	http.HandleFunc("/_diagnostics/wallet_stats", common.WithCORS(
-		common.UserRateLimit(GetWalletStats),
 	))
 	http.HandleFunc("/v1/miner/get/stats", common.WithCORS(
 		common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)),
@@ -143,45 +137,6 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-// GetWalletStats -
-func GetWalletStats(w http.ResponseWriter, r *http.Request) {
-	// clients
-	chain.PrintCSS(w)
-	walletsWithTokens, walletsWithoutTokens, totalWallets, round := GetWalletTable(false)
-	fmt.Fprintf(w, "Wallet stats as of round %v\n", round)
-	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><td>Wallets With Tokens</td><td>%v</td></tr>", walletsWithTokens)
-	fmt.Fprintf(w, "<tr><td>Wallets Without Tokens</td><td>%v</td></tr>", walletsWithoutTokens)
-	fmt.Fprintf(w, "<tr><td>Total Wallets</td><td>%v</td></tr>", totalWallets)
-	fmt.Fprintf(w, "</table>")
-	fmt.Fprintf(w, "<br>")
-}
-
-// GetWalletTable -
-func GetWalletTable(latest bool) (int64, int64, int64, int64) {
-	c := GetMinerChain().Chain
-	entity := client.NewClient()
-	emd := entity.GetEntityMetadata()
-	ctx := memorystore.WithEntityConnection(common.GetRootContext(), emd)
-	defer memorystore.Close(ctx)
-	collectionName := entity.GetCollectionName()
-	mstore, ok := emd.GetStore().(*memorystore.Store)
-	var b *block.Block
-	if !ok {
-		return 0, 0, 0, 0
-	}
-	if latest {
-		b = c.GetRoundBlocks(c.GetCurrentRound() - 1)[0]
-	} else {
-		b = c.GetLatestFinalizedBlock()
-	}
-	var walletsWithTokens, walletsWithoutTokens, totalWallets int64
-	walletsWithTokens = b.ClientState.GetNodeDB().Size(ctx)
-	totalWallets = mstore.GetCollectionSize(ctx, emd, collectionName)
-	walletsWithoutTokens = totalWallets - walletsWithTokens
-	return walletsWithTokens, walletsWithoutTokens, totalWallets, b.Round
-}
-
 func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain
 	var total int64
@@ -206,7 +161,7 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 	return ExplorerStats{BlockFinality: chain.SteadyStateFinalizationTimer.Mean() / 1000000.0,
 		LastFinalizedRound: c.GetLatestFinalizedBlock().Round,
 		BlocksFinalized:    total,
-		StateHealth:        node.Self.Underlying().Info.StateMissingNodes,
+		StateHealth:        node.Self.Underlying().Info.GetStateMissingNodes(),
 		CurrentRound:       c.GetCurrentRound(),
 		RoundTimeout:       rtoc,
 		Timeouts:           c.RoundTimeoutsCount,

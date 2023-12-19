@@ -11,8 +11,6 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
-const ActiveAuthorizerTimeLimit = 5 * time.Minute // 5 Minutes
-
 type Authorizer struct {
 	Provider
 
@@ -20,10 +18,6 @@ type Authorizer struct {
 
 	// Configuration
 	Fee currency.Coin `json:"fee"`
-
-	// Geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
 
 	TotalMint currency.Coin `json:"total_mint"`
 	TotalBurn currency.Coin `json:"total_burn"`
@@ -111,12 +105,12 @@ func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
 	return &auth, nil
 }
 
-func (edb *EventDb) GetActiveAuthorizers() ([]Authorizer, error) {
+func (edb *EventDb) GetActiveAuthorizers(activeAuthorizerTimeLimitive time.Duration) ([]Authorizer, error) {
 	now := common.Now()
 	var authorizers []Authorizer
 	result := edb.Store.Get().
 		Model(&Authorizer{}).
-		Where("last_health_check > ?", common.ToTime(now).Add(-ActiveAuthorizerTimeLimit).Unix()).
+		Where("last_health_check > ?", common.ToTime(now).Add(-activeAuthorizerTimeLimitive).Unix()).
 		Find(&authorizers)
 	return authorizers, result.Error
 }
@@ -133,6 +127,12 @@ func (edb *EventDb) DeleteAuthorizer(id string) error {
 	result := edb.Store.Get().
 		Where("id = ?", id).
 		Delete(&Authorizer{})
+
+	if result.Error == nil {
+		result = edb.Store.Get().
+			Where("provider_id = ?", id).
+			Delete(&ProviderRewards{})
+	}
 	return result.Error
 }
 

@@ -3,7 +3,8 @@ package chain
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
+
 	"net/url"
 	"path"
 	"path/filepath"
@@ -45,7 +46,7 @@ func ReadMagicBlockFile(path string) (mb *block.MagicBlock, err error) {
 	}
 
 	var b []byte
-	if b, err = ioutil.ReadFile(path); err != nil {
+	if b, err = os.ReadFile(path); err != nil {
 		return nil, fmt.Errorf("reading magic block file: %v", err)
 	}
 

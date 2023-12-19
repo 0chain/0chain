@@ -1,11 +1,8 @@
 #!/bin/sh
 
+docker stop $(docker ps -q)
 set -e
 
-for running in $(docker ps -q)
-do
-    docker stop "$running"
-done
 
 ./docker.local/bin/clean.sh
 
@@ -19,7 +16,7 @@ for t in $@; do
 done
 
 # go caches all build by default
-(cd ./code/go/0chain.net/conductor/conductor/ && go build)
+(cd ./code/go/0chain.net/conductor/conductor/ && go build -tags "bn256")
 # start the conductor
 ./code/go/0chain.net/conductor/conductor/conductor                     \
     -config "./docker.local/config/conductor.config.yaml"              \

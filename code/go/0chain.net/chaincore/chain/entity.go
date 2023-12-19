@@ -16,6 +16,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
@@ -72,6 +73,8 @@ const (
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
+
+var gStateNodeStat stateNodeStat
 
 /*SetServerChain - set the server chain object */
 func SetServerChain(c *Chain) {
@@ -207,10 +210,38 @@ type Chain struct {
 	blockSyncC            map[string]chan chan *block.Block
 	bscMutex              *sync.Mutex
 
+	MissingNodesStat *missingNodeStat `json:"-"`
+
 	// compute state
 	computeBlockStateC chan struct{}
 
 	OnBlockAdded func(b *block.Block)
+}
+
+type stateNodeStat struct {
+	count int64
+	lock  sync.RWMutex
+}
+
+func (sns *stateNodeStat) Inc(n int64) int64 {
+	sns.lock.Lock()
+	v := sns.count + n
+	sns.count = v
+	sns.lock.Unlock()
+	return v
+}
+
+func (sns *stateNodeStat) Get() int64 {
+	sns.lock.RLock()
+	var v = sns.count
+	sns.lock.RUnlock()
+	return v
+}
+
+type missingNodeStat struct {
+	Counter   metrics.Counter
+	Timer     metrics.Timer
+	SyncTimer metrics.Timer
 }
 
 type syncPathNodes struct {
@@ -503,6 +534,11 @@ func (c *Chain) Initialize() {
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
 	}
+	c.MissingNodesStat = &missingNodeStat{
+		Counter:   metrics.GetOrRegisterCounter("missing_nodes_count", nil),
+		Timer:     metrics.GetOrRegisterTimer("time_to_get_missing_nodes", nil),
+		SyncTimer: metrics.GetOrRegisterTimer("time_to_sync_missing_nodes", nil),
+	}
 }
 
 /*SetupEntity - setup the entity */
@@ -521,10 +557,11 @@ var stateDB *util.PNodeDB
 func SetupStateDB(workdir string) {
 
 	datadir := "data/rocksdb/state"
-	logsdir := "/0chain/log/rocksdb/state"
+	// logsdir := "/0chain/log/rocksdb/state"
+	logsdir := "data/rocksdb/state/log"
 	if len(workdir) > 0 {
 		datadir = filepath.Join(workdir, datadir)
-		logsdir = filepath.Join(workdir, "log/rocksdb/state")
+		logsdir = filepath.Join(workdir, logsdir)
 	}
 
 	db, err := util.NewPNodeDB(datadir, logsdir)
@@ -582,20 +619,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
 
-	for _, v := range initStates.States {
-		s := mustInitialState(v.Tokens)
-		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
-			logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
-		}
-
-		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
-		logging.Logger.Debug("init state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
-	}
-
-	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
-		logging.Logger.Error("init stake failed", zap.Error(err))
-		panic(err)
-	}
+	c.mustInitGBState(initStates, stateCtx)
 
 	err := faucetsc.InitConfig(stateCtx)
 	if err != nil {
@@ -658,6 +682,58 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func (c *Chain) mustInitGBState(initStates *state.InitStates, stateCtx *cstate.StateContext) {
+	var err error
+	var scTotalTokens currency.Coin
+	for _, v := range initStates.States {
+		scTotalTokens, err = currency.AddCoin(scTotalTokens, v.Tokens)
+		if err != nil {
+			logging.Logger.Panic("chain.stateDB add coin failed", zap.Error(err))
+		}
+
+		var transfered currency.Coin
+		for _, cv := range v.State {
+			s := mustInitialState(cv.Tokens)
+			if _, err := stateCtx.SetClientState(cv.ID, s); err != nil {
+				logging.Logger.Panic("chain.stateDB insert failed", zap.Error(err))
+			}
+
+			transfered, err = currency.AddCoin(transfered, cv.Tokens)
+			if err != nil {
+				logging.Logger.Panic("chain.stateDB add coin failed", zap.Error(err))
+			}
+
+			c.emitUserEvent(stateCtx, stateToUser(cv.ID, s))
+			logging.Logger.Debug("init state", zap.String("client ID", cv.ID), zap.Any("tokens", cv.Tokens))
+		}
+
+		// minus the transfered tokens from the SC
+		v.Tokens, err = currency.MinusCoin(v.Tokens, transfered)
+		if err != nil {
+			logging.Logger.Panic("chain.stateDB minus coin failed", zap.Error(err))
+		}
+
+		s := mustInitialState(v.Tokens)
+		if _, err := stateCtx.SetClientState(v.ID, s); err != nil {
+			logging.Logger.Panic("chain.stateDB init SC state failed", zap.String("SC", v.ID), zap.Error(err))
+		}
+
+		c.emitUserEvent(stateCtx, stateToUser(v.ID, s))
+		logging.Logger.Debug("init SC state", zap.String("client ID", v.ID), zap.Any("tokens", v.Tokens))
+	}
+
+	if scTotalTokens != config.MaxTokenSupply {
+		logging.Logger.Panic("chain.stateDB SC tokens must align with max token supply",
+			zap.Uint64("sc total tokens", uint64(scTotalTokens)),
+			zap.Uint64("max token supply", config.MaxTokenSupply))
+	}
+
+	if err := c.addInitialStakes(initStates.Stakes, stateCtx); err != nil {
+		logging.Logger.Error("init stake failed", zap.Error(err))
+		panic(err)
+	}
 }
 
 func (c *Chain) addInitialStakes(stakes []state.InitStake, balances *cstate.StateContext) error {
@@ -1456,34 +1532,43 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 
 // SetLatestFinalizedBlock - set the latest finalized block.
 func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
+	if b == nil {
+		return
+	}
+
 	c.lfbMutex.Lock()
 	c.LatestFinalizedBlock = b
-	if b != nil {
-		logging.Logger.Debug("set lfb",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Bool("state_computed", b.IsStateComputed()))
-		bs := b.GetSummary()
-		c.lfbSummary = bs
-		c.BroadcastLFBTicket(context.Background(), b)
-		if !node.Self.IsSharder() {
-			go c.notifyToSyncFinalizedRoundState(bs)
-		}
-	}
+	logging.Logger.Debug("set lfb",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.Bool("state_computed", b.IsStateComputed()))
+	bs := b.GetSummary()
+	c.lfbSummary = bs
+	c.BroadcastLFBTicket(context.Background(), b)
+	go c.notifyToSyncFinalizedRoundState(bs)
 	c.lfbMutex.Unlock()
 
+	if b.Round > 0 {
+		// do not store genesis block, otherwise it would re-write the LFB to 0 round every time
+		// on restarting
+		if err := c.StoreLFBRound(b.Round, b.Hash); err != nil {
+			logging.Logger.Warn("set lfb - store round to state DB failed",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Error(err))
+		}
+	}
+
 	// add LFB to blocks cache
-	if b != nil {
-		c.updateConfig(b)
-		c.blocksMutex.Lock()
-		defer c.blocksMutex.Unlock()
-		cb, ok := c.blocks[b.Hash]
-		if !ok {
-			c.blocks[b.Hash] = b
-		} else {
-			if b.ClientState != nil && cb.ClientState != b.ClientState {
-				cb.ClientState = b.ClientState
-			}
+	c.updateConfig(b)
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	cb, ok := c.blocks[b.Hash]
+	if !ok {
+		c.blocks[b.Hash] = b
+	} else {
+		if b.ClientState != nil && cb.ClientState != b.ClientState {
+			cb.ClientState = b.ClientState
 		}
 	}
 }

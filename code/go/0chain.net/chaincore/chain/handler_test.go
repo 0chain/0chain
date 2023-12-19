@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
+
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -89,7 +89,7 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 			require.Equal(t, tc.expectCode, resp.StatusCode)
 
 			if tc.expectCode == http.StatusNotModified {
-				d, err := ioutil.ReadAll(resp.Body)
+				d, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
 				require.Empty(t, d)
 				return
@@ -97,7 +97,7 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 
 			// decode the body and compare the
 			b := &block.Block{}
-			d, err := ioutil.ReadAll(resp.Body)
+			d, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			require.NoError(t, b.Decode(d))
 			require.Equal(t, tc.retLFMB.Hash, b.Hash)
@@ -124,7 +124,7 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 	//handler(w, req)
 	//resp = w.Result()
 	//defer resp.Body.Close()
-	//d, err := ioutil.ReadAll(resp.Body)
+	//d, err := io.ReadAll(resp.Body)
 	//require.NoError(t, err)
 	//
 	//b := block.Block{}
@@ -147,7 +147,7 @@ func TestHomePageAndNotFoundHandler(t *testing.T) {
 
 		HomePageAndNotFoundHandler(w, req)
 
-		body, err := ioutil.ReadAll(w.Result().Body)
+		body, err := io.ReadAll(w.Result().Body)
 
 		wantSubstring := `I am Miner000 working on the chain`
 
@@ -162,7 +162,7 @@ func TestHomePageAndNotFoundHandler(t *testing.T) {
 
 		HomePageAndNotFoundHandler(w, req)
 
-		body, err := ioutil.ReadAll(w.Result().Body)
+		body, err := io.ReadAll(w.Result().Body)
 
 		wantSubstring := `{"code":"resource_not_found","error":"resource_not_found: can't retrieve resource"}`
 
@@ -220,7 +220,7 @@ func TestRoundInfoHandler(t *testing.T) {
 		)
 		logging.Logger = zap.New(core, zap.Development())
 		RoundInfoHandler(c)(w, req)
-		bodybytes, err := ioutil.ReadAll(w.Result().Body)
+		bodybytes, err := io.ReadAll(w.Result().Body)
 		require.NoError(t, err)
 		require.Equal(t, 200, w.Result().StatusCode)
 		err = writer.Flush()

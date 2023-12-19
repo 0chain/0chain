@@ -14,9 +14,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +27,9 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/utils"
 )
 
 const noProgressSeconds = 10
@@ -92,7 +96,9 @@ func main() {
 	defer r.server.Close()
 
 	r.waitNodes = make(map[config.NodeName]struct{})
+	r.latestBlock = make(map[NodeName]Number)
 	r.rounds = make(map[config.RoundName]config.Round)
+	r.nodeHistory = make(map[NodeName]*config.Node)
 	r.setupTimeout(0)
 
 	var success bool
@@ -146,15 +152,21 @@ func appendTests(conf *config.Config, tests *config.Config) {
 }
 
 type reportTestCase struct {
-	name       string
-	s, e       time.Time // start at, end at
-	directives []reportFlowDirective
+	name               string
+	startedAt, endedAt time.Time // start at, end at
+	directives         []reportFlowDirective
 }
 
 type reportFlowDirective struct {
 	success   bool
 	err       error
 	directive string
+}
+
+type fileMetaRoot struct {
+	fmrs         map[string]string // blobberID:fileMetaRoot
+	totalBlobers int
+	shouldWait   bool
 }
 
 type Runner struct {
@@ -183,7 +195,13 @@ type Runner struct {
 	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
 	waitNoProgress         config.WaitNoProgress         // no new rounds expected
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
+	waitShardersFinalizeNearBlocks config.WaitShardersFinalizeNearBlocks // wait for sharders to finalize blocks near each other
 	waitCommand            chan error                    // wait a command
+	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
+	waitSharderLFB	config.WaitSharderLFB	
+	waitValidatorTicket   config.WaitValidatorTicket
+	chalConf               *config.GenerateChallege
+	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -191,8 +209,14 @@ type Runner struct {
 	// remembered rounds: name -> round number
 	rounds map[config.RoundName]config.Round // named rounds (the remember_round)
 
+	// List of latest block numbers received from sharders
+	latestBlock map[NodeName]Number
+
 	// final report
 	report []reportTestCase
+
+	// history of all nodes spawned during each test case. Should be cleared after each test case. Used to store the logs for each case
+	nodeHistory map[NodeName]*config.Node
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
@@ -218,7 +242,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		fmt.Printf("wait for view change %v\n", r.waitViewChange)
 		return tm, true
 	case !r.waitAdd.IsZero():
-		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Authorizers)
+		log.Printf("wait for adding sharders (%+v), miners (%+v), blobbers (%+v), validators (%+v) and authorizers (%+v)", r.waitAdd.Sharders, r.waitAdd.Miners, r.waitAdd.Blobbers, r.waitAdd.Validators, r.waitAdd.Authorizers)
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
 		log.Println("wait for sharder keep")
@@ -229,8 +253,26 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case !r.waitNoViewChange.IsZero():
 		log.Println("wait for no view change")
 		return tm, true
+	case r.waitMinerGeneratesBlock.MinerName != "":
+		log.Printf("wait until miner %v generates block\n", r.waitMinerGeneratesBlock.MinerName)
+		return tm, true
+	case r.waitSharderLFB.Target != "":
+		log.Printf("wait to check sharder %v got LFB\n", r.waitSharderLFB.Target)
+		return tm, true
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
+		return tm, true
+	case r.chalConf != nil && r.chalConf.WaitOnBlobberCommit:
+		return tm, true
+	case r.chalConf != nil && r.chalConf.WaitOnChallengeGeneration:
+		return tm, true
+	case r.chalConf != nil && r.chalConf.WaitForChallengeStatus:
+		return tm, true
+	case r.fileMetaRoot.shouldWait:
+		return tm, true
+	case r.waitValidatorTicket.ValidatorName != "":
+		return tm, true
+	case len(r.waitShardersFinalizeNearBlocks.Sharders) > 0:
 		return tm, true
 	}
 
@@ -537,6 +579,38 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 	return
 }
 
+func (r *Runner) acceptAddValidator(addv *conductrpc.AddValidatorEvent) (
+	err error) {
+
+	if addv.Sender != r.monitor {
+		return // not the monitor node
+	}
+	var (
+		sender, sok = r.conf.Nodes.NodeByName(addv.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(addv.Validator)
+	)
+	if !sok {
+		return fmt.Errorf("unexpected add_validator sender: %q", addv.Sender)
+	}
+	if !aok {
+		return fmt.Errorf("unexpected validator %q added by add_validator of %q",
+			addv.Validator, sender.Name)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] add_validator ", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	if r.waitAdd.TakeValidator(added.Name) {
+		log.Print("[OK] add_validator ", added.Name)
+	}
+	return
+}
+
 func (r *Runner) acceptAddAuthorizer(addb *conductrpc.AddAuthorizerEvent) (
 	err error) {
 	if addb.Sender != r.monitor {
@@ -675,6 +749,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 
 	switch {
 	case r.waitRound.Round > re.Round:
+		log.Printf("Got round %v\n", re.Round)
 		return // not this round
 	case r.waitRound.ForbidBeyond && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
@@ -761,6 +836,225 @@ func (r *Runner) acceptShareOrSignsShares(
 	return
 }
 
+func (r *Runner) acceptSharderBlockForMiner(block *stats.BlockFromSharder) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] Recieved new sharder block: %+v\n", block)
+	}
+	switch {
+	case r.waitMinerGeneratesBlock.MinerName != "":
+		miner, ok := r.conf.Nodes.NodeByName(r.waitMinerGeneratesBlock.MinerName)
+		if !ok {
+			return fmt.Errorf("expecting block from unknown miner: %s", miner.ID)
+		}
+	
+		if r.verbose {
+			log.Printf(" [INF] got sharder block for miner %v, looking for miner %v\n", block.GeneratorId, miner.ID)
+		}
+	
+		err = r.handleNewBlockWaitingForMinerBlockGeneration(block, string(miner.ID))
+		return
+	case r.waitSharderLFB.Target != "":
+		sharder, ok := r.conf.Nodes.NodeByName(r.waitSharderLFB.Target)
+		if !ok {
+			return fmt.Errorf("expecting block from unknown sharder: %s", r.waitSharderLFB.Target)
+		}
+
+		err = r.handleNewBlockWaitingForSharderLFB(block, string(sharder.ID))
+		return
+	case len(r.waitShardersFinalizeNearBlocks.Sharders) > 0:
+		err = r.handleNewBlockWaitingForShardersFinalizeNearBlocks(block)
+	}
+
+	return
+}
+
+func (r *Runner) acceptValidatorTicket(vt *conductrpc.ValidtorTicket) (err error) {
+	if r.verbose {
+		log.Printf("[INF] got validator ticket from %v\n", vt.ValidatorId)
+	}
+
+	if vt.ValidatorId != r.waitValidatorTicket.ValidatorId {
+		return nil
+	}
+
+	if r.verbose {
+		log.Printf(" [INF] ✅ Got validator ticket from the required validator %v\n", r.waitValidatorTicket.ValidatorId)
+	}
+
+	r.waitValidatorTicket = config.WaitValidatorTicket{}
+	err = r.SetServerState(config.NotifyOnValidationTicketGeneration(false))
+	return err
+}
+
+func (r *Runner) handleNewBlockWaitingForShardersFinalizeNearBlocks(block *stats.BlockFromSharder) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] got block %v from sharder %v\n", block.Round, block.SenderId)
+	}
+
+	node, ok := r.conf.Nodes.NodeByID(config.NodeID(block.SenderId))
+	if !ok {
+		log.Printf(" [WARN] received block from unknown sharder %v\n", block.SenderId)
+		return
+	}
+
+	r.latestBlock[node.Name] = config.Number(block.Round)
+
+	if len(r.latestBlock) < len(r.waitShardersFinalizeNearBlocks.Sharders) {
+		return
+	}
+
+	max := config.Number(0)
+	min := config.Number(math.MaxInt64)
+	for _, v := range r.latestBlock {
+		if v > max {
+			max = v
+		}
+		if v < min {
+			min = v
+		}
+	}
+
+	if max - min < 5 {
+		if r.verbose {
+			log.Printf(" [INF] ✅ sharders finalized near blocks\n")
+		}
+
+		r.waitShardersFinalizeNearBlocks = config.WaitShardersFinalizeNearBlocks{}
+
+		err = r.SetServerState(&config.NotifyOnBlockGeneration{
+			Enable: false,
+		})
+	}
+
+	return
+}
+
+func (r *Runner) handleNewBlockWaitingForMinerBlockGeneration(block *stats.BlockFromSharder, minerId string) (err error) {
+	if block.GeneratorId != string(minerId) {
+		return 
+	}
+
+	if r.verbose {
+		log.Printf(" [INF] ✅ found sharder block %v\n", minerId)
+	}
+
+	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
+
+	err = r.SetServerState(&config.NotifyOnBlockGeneration{
+		Enable: false,
+	})
+
+	return
+}
+
+func (r *Runner) handleNewBlockWaitingForSharderLFB(block *stats.BlockFromSharder, sharderId string) (err error) {
+	if block.SenderId == sharderId {
+		minDiff := int64(6) // well, 6 is infinity if the max allowed is 5
+		targetRound := block.Round
+		var curDiff int64
+		for sid, blk := range r.waitSharderLFB.LFBs {
+			if sid == config.NodeID(sharderId) {
+				continue
+			}
+			curDiff = blk.Round - targetRound
+			if curDiff < minDiff {
+				minDiff = curDiff
+			}
+		}
+
+		if minDiff <=5 {
+			if r.verbose {
+				log.Printf(" [INF] ✅ sharder sent LFB %+v\n", block)
+			}
+
+			r.waitSharderLFB = config.WaitSharderLFB{}
+			
+			err = r.SetServerState(&config.NotifyOnBlockGeneration{
+				Enable: false,
+			})
+
+			return
+		}
+	}
+
+	if r.waitSharderLFB.LFBs == nil {
+		r.waitSharderLFB.LFBs = make(map[config.NodeID]*stats.BlockFromSharder)
+	}
+	r.waitSharderLFB.LFBs[config.NodeID(block.SenderId)] = block
+	return
+}
+
+func (r *Runner) onChallengeGeneration(txnHash string) {
+	log.Printf("Challenge has been generated in txn: %v\n", txnHash)
+
+	if r.chalConf != nil {
+		r.chalConf.WaitOnChallengeGeneration = false
+	}
+}
+
+func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
+	blobberID, ok := m["blobber_id"].(string)
+	if !ok {
+		return errors.New("invalid map on challenge status")
+	}
+
+	if r.chalConf != nil {
+		if blobberID != r.chalConf.BlobberID {
+			return nil
+		}
+
+		r.chalConf.WaitForChallengeStatus = false
+
+		status := m["status"].(int)
+		if r.chalConf.ExpectedStatus != status {
+			return fmt.Errorf("expected challenge status %d, got %d", r.chalConf.ExpectedStatus, status)
+		}	
+	}
+
+	return nil
+}
+
+func (r *Runner) onGettingFileMetaRoot(m map[string]string) error {	
+	blobberId, ok := m["blobber_id"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks blobber_id")
+	}
+
+	fileMetaRoot, ok := m["file_meta_root"]
+	if !ok {
+		return fmt.Errorf("onGettingFileMetaRoot error: response lacks file_meta_root")
+	}
+
+	if r.fileMetaRoot.fmrs == nil {
+		r.fileMetaRoot.fmrs = make(map[string]string)
+	}
+
+	r.fileMetaRoot.fmrs[blobberId] = fileMetaRoot
+
+	if len(r.fileMetaRoot.fmrs) >= r.fileMetaRoot.totalBlobers {
+		r.fileMetaRoot.shouldWait = false
+		cfg := config.GetFileMetaRoot(false)
+		return r.SetServerState(cfg)
+	}
+	return nil
+}
+
+func (r *Runner) onBlobberCommit(blobberID string) {
+	if r.chalConf != nil {
+		if blobberID != r.chalConf.BlobberID {
+			log.Printf("Ignoring blobber: %s\n", blobberID)
+			return
+		}
+		log.Printf("Value of waitonblobbercommit %v\n", r.chalConf.WaitOnBlobberCommit)
+		r.chalConf.WaitOnBlobberCommit = false
+	}
+
+	err := r.SetServerState(config.BlobberCommittedWM(true))
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+	}
+}
+
 func (r *Runner) stopAll() {
 	log.Print("stop all nodes")
 	for _, n := range r.conf.Nodes {
@@ -784,6 +1078,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddSharder(adds)
 		case addb := <-r.server.OnAddBlobber():
 			err = r.acceptAddBlobber(addb)
+		case addv := <-r.server.OnAddValidator():
+			err = r.acceptAddValidator(addv)
 		case adda := <-r.server.OnAddAuthorizer():
 			err = r.acceptAddAuthorizer(adda)
 		case sk := <-r.server.OnSharderKeep():
@@ -796,6 +1092,18 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
+		case block := <- r.server.OnSharderBlock():
+			err = r.acceptSharderBlockForMiner(block)
+		case blobberID := <-r.server.OnBlobberCommit():
+			r.onBlobberCommit(blobberID)
+		case blobberID := <-r.server.OnGenerateChallenge():
+			r.onChallengeGeneration(blobberID)
+		case m := <-r.server.OnChallengeStatus():
+			err = r.onChallengeStatus(m)
+		case m := <-r.server.OnGettingFileMetaRoot():
+			err = r.onGettingFileMetaRoot(m)
+		case vt := <-r.server.OnValidatorTicket():
+			err = r.acceptValidatorTicket(vt)
 		case err = <-r.waitCommand:
 			if err != nil {
 				err = fmt.Errorf("executing command: %v", err)
@@ -836,7 +1144,7 @@ func (r *Runner) processReport() (success bool) {
 
 		var caseError error = nil
 		var caseSuccess bool = true
-		totalDuration += testCase.e.Sub(testCase.s)
+		totalDuration += testCase.endedAt.Sub(testCase.startedAt)
 
 		for i, flowDirective := range testCase.directives {
 			caseSuccess = caseSuccess && flowDirective.success
@@ -850,7 +1158,7 @@ func (r *Runner) processReport() (success bool) {
 		}
 
 		fmt.Printf("  %s after %s\n", okString(caseSuccess),
-			testCase.e.Sub(testCase.s).Round(time.Second))
+			testCase.endedAt.Sub(testCase.startedAt).Round(time.Second))
 
 		success = success && caseSuccess
 
@@ -877,6 +1185,7 @@ func (r *Runner) resetWaiters() {
 	r.waitNoProgress = config.WaitNoProgress{}                 //
 	r.waitNoViewChange = config.WaitNoViewChainge{}            //
 	r.waitSharderKeep = config.WaitSharderKeep{}               //
+	r.waitMinerGeneratesBlock = config.WaitMinerGeneratesBlock{}
 	if r.waitCommand != nil {
 		go func(wc chan error) { <-wc }(r.waitCommand)
 		r.waitCommand = nil
@@ -898,6 +1207,11 @@ func (r *Runner) Run() (err error, success bool) {
 	// stop all nodes after all
 	defer r.stopAll()
 
+	// clean full logs directory
+	if err = os.RemoveAll(r.conf.FullLogsDir); err != nil {
+		log.Printf("[WARN] couldn't clean full logs dir")
+	}
+
 	// for every enabled set
 	for _, set := range r.conf.Sets {
 		if !r.conf.IsEnabled(&set) {
@@ -913,7 +1227,7 @@ func (r *Runner) Run() (err error, success bool) {
 			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name
-			report.s = time.Now()
+			report.startedAt = time.Now()
 
 			log.Print("=======================================================")
 			log.Printf("Test case %d: %s", i, testCase.Name)
@@ -934,7 +1248,7 @@ func (r *Runner) Run() (err error, success bool) {
 						directive: d.GetName(),
 					})
 
-					report.e = time.Now()
+					report.endedAt = time.Now()
 					r.report = append(r.report, report) // add to report
 					r.stopAll()
 					r.resetWaiters()
@@ -950,6 +1264,13 @@ func (r *Runner) Run() (err error, success bool) {
 						}
 					}
 
+					// Export all logs
+					if errors := r.ExportFullLogs(set.Name, testCase.Name); len(errors) > 0 {
+						log.Printf("[WARN] ⚠️ errors while exporting full logs for this test case: %v", errors)
+					} else {
+						log.Printf("[INF] ✅ all logs saved to the full logs dir successfully")
+					}
+
 					continue cases
 				}
 
@@ -960,12 +1281,48 @@ func (r *Runner) Run() (err error, success bool) {
 				})
 			}
 
-			report.e = time.Now()
+			report.endedAt = time.Now()
 			r.report = append(r.report, report)
+			
+			// Export all logs
+			if errors := r.ExportFullLogs(set.Name, testCase.Name); len(errors) > 0 {
+				log.Printf("[WARN] ⚠️ errors while exporting full logs for this test case: %v", errors)
+			} else {
+				log.Printf("[INF] ✅ all logs saved to the full logs dir successfully")
+			}
+
+			// clear node history
+			r.nodeHistory = make(map[NodeName]*config.Node)
+
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}
 	}
 
 	success = r.processReport()
 	return err, success
+}
+
+func (r *Runner) ExportFullLogs(testSetName string, testCaseName string) (errors []error) {
+	log.Printf("[INF] exporting full logs for the test case")
+	fullLogsPathForTheCase := filepath.Join(r.conf.FullLogsDir, utils.FileNamify(fmt.Sprintf("%v___%v", testSetName, testCaseName)))
+
+	// copy current case conductor logs in conductor logs backup dir
+	condcutorLogsDstPath := filepath.Join(fullLogsPathForTheCase, "conductor")
+	log.Printf("[INF] saving conductor logs from path %v", condcutorLogsDstPath)
+	if err := utils.CopyDir(r.conf.Logs, condcutorLogsDstPath); err != nil {
+		errors = append(errors, err)
+	}
+
+	// copy all spawned nodes logs during the case
+	for _, node := range r.nodeHistory {
+		nodeLogsSrcPath := filepath.Join(node.WorkDir, node.LogsDir)
+		nodeLogsDstPath := filepath.Join(fullLogsPathForTheCase, string(node.Name))
+		log.Printf("[INF] saving logs for node %v from path %v", node.Name, nodeLogsSrcPath)
+
+		if err := utils.CopyDir(nodeLogsSrcPath, nodeLogsDstPath); err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	return errors
 }

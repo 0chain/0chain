@@ -36,7 +36,6 @@ API as other SC configurations.
 Provide
 
  - capacity                   bytes
- - min_lock_demand            [0; 1]
  - write_price                tok / GB
  - read_price                 tok / GB (by 64 KB chunks)
  - max_offer_duration         time.Duration
@@ -64,8 +63,7 @@ reduced.
 
 Validate blobber terms.
 
-SC has configured max value for blobebrs' min_lock_demand. Min value for
-max_offer_duration. Max value for challenge_completion_time.
+Min value for max_offer_duration. Max value for challenge_completion_time.
 
 ###### Blobber already registered. Update blobber
 
@@ -203,14 +201,12 @@ and allocation will be active challenge_completion_time and closed then.
 
 User can't extend size and close allocation. Such transactions are invalid.
 
-A size reducing doesn't reduce min_lock_demand to prevent the salvation attack.
 
 ### Cancel allocation.
 
 If blobbers doesn't work in reality, then an allocation can't be used.
 Allocation owner can perform cancel_allocation transaction to close the
-allocation and return back all funds. In this case, blobbers doesn't
-receive their min_lock_demand.
+allocation and return back all funds.
 
 ### Finalize allocation.
 
@@ -219,7 +215,6 @@ automatically. And user doesn't need to do anything. But, if blobbers doesn't
 do it, then user (allocation owner) can perform finalize_allocation transaction.
 The transaction:
 
-- makes sure all blobbers got their min_lock_demand (excluding penalty)
 - unlocks all tokens in write pool, moving them back to user
 - moves all tokens of a challenge pool to user, if any
 - marks allocation a finalized
@@ -300,14 +295,6 @@ free to use these zbox command.
     capacity: 1073741824 # 1 GB bytes total blobber capacity
     read_price: 0.01     # token / GB for reading
     write_price: 1.00    # token / GB for writing
-    # min_lock_demand is value in [0; 1] range; it represents number of tokens the
-    # blobber earned even if a user will not read or write something
-    # to an allocation; the number of tokens will be calculated by the following
-    # formula
-    #
-    #     allocation_size * write_price * min_lock_demand
-    #
-    min_lock_demand: 0.1
     # max_offer_duration restrict long contacts where,
     # in the future, prices can be changed
     max_offer_duration: 744h # 31 day

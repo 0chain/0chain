@@ -85,6 +85,8 @@ func SetupDefaultConfig() {
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
 
 	viper.SetDefault("smart_contracts.storagesc.max_blobbers_per_allocation", 40)
+	viper.SetDefault("smart_contracts.storagesc.max_blobber_select_for_challenge", 5)
+	viper.SetDefault("smart_contracts.storagesc.challenge_generation_gap", 1)
 
 	viper.SetDefault(GlobalSettingName[DbsAggregateDebug], false)
 	viper.SetDefault(GlobalSettingName[DbsAggregatePeriod], 10)
@@ -199,6 +201,7 @@ type DbAccess struct {
 	MaxIdleConns    int           `json:"max_idle_conns"`
 	MaxOpenConns    int           `json:"max_open_conns"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+	Slowtablespace  string        `json:"slowtablespace"`
 }
 
 type DbSettings struct {

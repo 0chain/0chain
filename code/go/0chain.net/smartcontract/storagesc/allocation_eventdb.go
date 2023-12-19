@@ -40,17 +40,12 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
 
-	var gbSize = sizeInGB(bSize(alloc.Size, alloc.DataShards))
-	var rdtu = float64(time.Second*time.Duration(alloc.Expiration-alloc.StartTime)) / float64(alloc.TimeUnit)
+	blobberSize := bSize(alloc.Size, alloc.DataShards)
 
 	for _, b := range blobbers {
 		storageNodes = append(storageNodes, &storageNodeResponse{
-			ID:      b.ID,
-			BaseURL: b.BaseURL,
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  b.Latitude,
-				Longitude: b.Longitude,
-			},
+			ID:              b.ID,
+			BaseURL:         b.BaseURL,
 			Terms:           blobberTermsMap[b.ID],
 			Capacity:        b.Capacity,
 			Allocated:       b.Allocated,
@@ -65,18 +60,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 		terms := blobberTermsMap[b.ID]
 
-		bwF := gbSize * alloc.MinLockDemand * rdtu
-		minLockDemand, err := currency.MultFloat64(terms.WritePrice, bwF)
-		if err != nil {
-			return nil, err
-		}
-
 		ba := &BlobberAllocation{
-			BlobberID:     b.ID,
-			AllocationID:  alloc.AllocationID,
-			Size:          b.Allocated,
-			Terms:         terms,
-			MinLockDemand: minLockDemand,
+			BlobberID:    b.ID,
+			AllocationID: alloc.AllocationID,
+			Size:         blobberSize,
+			Terms:        terms,
 		}
 		blobberDetails = append(blobberDetails, ba)
 		blobberMap[b.ID] = ba
@@ -115,7 +103,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
-		MinLockDemand:     alloc.MinLockDemand,
 	}
 
 	return &StorageAllocationBlobbers{
@@ -150,7 +137,6 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		WritePool:            sa.WritePool,
 		ThirdPartyExtendable: sa.ThirdPartyExtendable,
 		FileOptions:          sa.FileOptions,
-		MinLockDemand:        sa.MinLockDemand,
 	}
 
 	if sa.Stats != nil {
@@ -257,6 +243,15 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit c
 	}
 
 	return sas, nil
+}
+
+func getExpiredAllocationsFromDb(blobberID string, eventDb *event.EventDb) ([]string, error) {
+	allocs, err := eventDb.GetExpiredAllocation(blobberID)
+	if err != nil {
+		return nil, err
+	}
+
+	return allocs, nil
 }
 
 func prepareAllocationsResponse(eventDb *event.EventDb, eAllocs []event.Allocation) ([]*StorageAllocationBlobbers, error) {

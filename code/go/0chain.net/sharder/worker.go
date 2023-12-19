@@ -139,6 +139,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("end round", cr+reqNum+1))
 			go sc.requestBlocks(ctx, cr, reqNum)
 		case b := <-sc.blockChannel:
+			logging.Logger.Debug("process block, received block",
+				zap.Int64("block round", b.Round))
 			stuckCheckTimer.Reset(stuckDuration)
 			cr := sc.GetCurrentRound()
 			lfb := sc.GetLatestFinalizedBlock()

@@ -285,8 +285,6 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.MaxCharge = 0.5 // %
 	gn.Epoch = 15e6    // 15M
 	gn.RewardDeclineRate = 0.1
-	gn.MaxMint = currency.Coin(4e6 * 1e10)
-	gn.Minted = 0
 
 	mustSave(t, GlobalNodeKey, gn, balances)
 	return

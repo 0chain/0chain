@@ -19,10 +19,6 @@ func (ssc *StorageSmartContract) collectReward(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	conf, err := getConfig(balances)
-	if err != nil {
-		return "", common.NewError("collect_reward_failed", "can't get config: "+err.Error())
-	}
 	var req stakepool.CollectRewardRequest
 	minted, err := stakepool.CollectReward(
 		input, func(
@@ -55,10 +51,6 @@ func (ssc *StorageSmartContract) collectReward(
 	)
 	if err != nil {
 		return "", common.NewError("collect_reward_failed", err.Error())
-	}
-
-	if err := conf.saveMints(minted, balances); err != nil {
-		return "", common.NewError("collect_reward_failed", "can't Save config: "+err.Error())
 	}
 
 	return toJson(&event.RewardMint{

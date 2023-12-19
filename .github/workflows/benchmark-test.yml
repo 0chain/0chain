@@ -6,9 +6,9 @@ concurrency:
 
 on:
   push:
-    branches: [ master, staging ]
+    branches: [ master, staging, sprint-* ]
   pull_request:
-    branches: [ master, staging ]
+    branches: [ master, staging, sprint-* ]
   workflow_dispatch:
 
 jobs:

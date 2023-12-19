@@ -5,11 +5,8 @@ set -e
 rm -rf ~/.zcn/testing.json
 rm -rf ~/.zcn/allocation.txt
 
-for run in $(seq 1 18)
-do
-  ./zwalletcli/zwallet --wallet testing.json faucet \
-      --methodName pour --input "{Pay day}"
-done
+./zwalletcli/zwallet --wallet testing.json faucet \
+    --methodName pour --input "{Pay day}" --tokens 100
 
 ./zwalletcli/zwallet --wallet testing.json getbalance
 
@@ -50,6 +47,8 @@ head -c 5M < /dev/urandom > random.bin
     --remotepath=/remote/random.bin
 
 rm -f random.bin
+
+sleep 60;
 
 allocation=$(cat ~/.zcn/allocation.txt)
 cmd_output=$(./zboxcli/zbox --wallet testing.json list \

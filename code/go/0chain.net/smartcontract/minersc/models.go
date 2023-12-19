@@ -241,8 +241,6 @@ type GlobalNode struct {
 	Epoch int64 `json:"epoch"`
 	// RewardDeclineRate is ratio of epoch rewards declining.
 	RewardDeclineRate float64 `json:"reward_decline_rate"`
-	// MaxMint is minting boundary for SC.
-	MaxMint currency.Coin `json:"max_mint"`
 	// miner delegates to get paid each round when paying fees and rewards
 	NumMinerDelegatesRewarded int `json:"num_miner_delegates_rewarded"`
 	// sharders rewarded each round
@@ -253,9 +251,6 @@ type GlobalNode struct {
 	// In case latestFinalizedMagicBlock of a miner works incorrect. We are
 	// using this previous MB or latestFinalizedMagicBlock for genesis block.
 	PrevMagicBlock *block.MagicBlock `json:"prev_magic_block"`
-
-	// Minted tokens by SC.
-	Minted currency.Coin `json:"minted"`
 
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
 	RewardRoundFrequency int64          `json:"reward_round_frequency"`
@@ -301,10 +296,6 @@ func (gn *GlobalNode) readConfig() (err error) {
 	gn.MaxCharge = config2.SmartContractConfig.GetFloat64(pfx + SettingName[MaxCharge])
 	gn.Epoch = config2.SmartContractConfig.GetInt64(pfx + SettingName[Epoch])
 	gn.RewardDeclineRate = config2.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
-	gn.MaxMint, err = currency.ParseZCN(config2.SmartContractConfig.GetFloat64(pfx + SettingName[MaxMint]))
-	if err != nil {
-		return
-	}
 	gn.OwnerId = config2.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
 	gn.CooldownPeriod = config2.SmartContractConfig.GetInt64(pfx + SettingName[CooldownPeriod])
 	gn.Cost = config2.SmartContractConfig.GetStringMapInt(pfx + "cost")
@@ -421,8 +412,6 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.Epoch, nil
 	case RewardDeclineRate:
 		return gn.RewardDeclineRate, nil
-	case MaxMint:
-		return gn.MaxMint, nil
 	case OwnerId:
 		return gn.OwnerId, nil
 	case CooldownPeriod:
@@ -558,10 +547,6 @@ func (gn *GlobalNode) hasPrevShader(sharders *MinerNodes,
 	return // false, hasn't
 }
 
-func (gn *GlobalNode) canMint() bool {
-	return gn.Minted < gn.MaxMint
-}
-
 func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
 	var rr = gn.RewardRate
@@ -673,25 +658,18 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	return
 }
 
-// swagger:model SimpleNodeGeolocation
-type SimpleNodeGeolocation struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
 // swagger:model SimpleNode
 type SimpleNode struct {
 	provider.Provider
-	N2NHost     string                `json:"n2n_host"`
-	Host        string                `json:"host"`
-	Port        int                   `json:"port"`
-	Geolocation SimpleNodeGeolocation `json:"geolocation"`
-	Path        string                `json:"path"`
-	PublicKey   string                `json:"public_key"`
-	ShortName   string                `json:"short_name"`
-	BuildTag    string                `json:"build_tag"`
-	TotalStaked currency.Coin         `json:"total_stake"`
-	Delete      bool                  `json:"delete"`
+	N2NHost     string        `json:"n2n_host"`
+	Host        string        `json:"host"`
+	Port        int           `json:"port"`
+	Path        string        `json:"path"`
+	PublicKey   string        `json:"public_key"`
+	ShortName   string        `json:"short_name"`
+	BuildTag    string        `json:"build_tag"`
+	TotalStaked currency.Coin `json:"total_stake"`
+	Delete      bool          `json:"delete"`
 
 	// settings and statistic
 

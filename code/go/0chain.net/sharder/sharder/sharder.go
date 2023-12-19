@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -13,13 +14,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"0chain.net/core/config"
 	"0chain.net/rest"
 	"0chain.net/sharder/blockstore"
-	"0chain.net/smartcontract/dbs/event"
-
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -67,12 +67,6 @@ func main() {
 
 	config.Configuration().ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-
-	reader, err := os.Open(*keysFile)
-	if err != nil {
-		panic(err)
-	}
-
 	config.SetServerChainID(config.Configuration().ChainID)
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
@@ -81,44 +75,23 @@ func main() {
 	blockstore.Init(workdir, sViper)
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
-	err = signatureScheme.ReadKeys(reader)
-	if err != nil {
-		Logger.Panic("Error reading keys file")
-	}
-	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
-		Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
-	}
 
-	reader.Close()
+	reader, err := readKeysFromAws()
+	if err != nil {
+		file, err := readKeysFromFile(keysFile)
+		if err != nil {
+			panic(err)
+		}
+		logging.Logger.Info("using sharder keys from local")
+		initScheme(signatureScheme, file)
+		_ = file.Close()
+	} else {
+		logging.Logger.Info("using sharder keys from aws")
+		initScheme(signatureScheme, reader)
+	}
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
 		logging.Logger.Panic("Error setting up events database", zap.Error(err))
-	}
-
-	serverChain.OnBlockAdded = func(b *block.Block) {
-		err, ev := block.CreateBlockEvent(b)
-		if err != nil {
-			logging.Logger.Error("emit block event error", zap.Error(err))
-		}
-		go func() {
-			rootContext := common.GetRootContext()
-			ctx, cancel := context.WithTimeout(rootContext, 5*time.Second)
-			defer cancel()
-
-			if _, err := serverChain.GetEventDb().ProcessEvents(
-				ctx,
-				[]event.Event{ev},
-				b.Round,
-				b.Hash,
-				len(b.Txns),
-				event.CommitNow(),
-			); err != nil {
-				logging.Logger.Error("process block saving event failed",
-					zap.Error(err),
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash))
-			}
-		}()
 	}
 
 	sharder.SetupSharderChain(serverChain)
@@ -250,6 +223,8 @@ func main() {
 		return
 	}
 
+	Logger.Info("finish load latest blocks from store")
+
 	sharder.SetupWorkers(ctx)
 
 	startBlocksInfoLogs(sc)
@@ -286,6 +261,30 @@ func main() {
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
+}
+
+func initScheme(signatureScheme encryption.SignatureScheme, reader io.Reader) {
+	err2 := signatureScheme.ReadKeys(reader)
+	if err2 != nil {
+		Logger.Panic("Error reading keys file")
+	}
+	if err := node.Self.SetSignatureScheme(signatureScheme); err != nil {
+		Logger.Panic(fmt.Sprintf("Invalid signature scheme: %v", err))
+	}
+}
+
+func readKeysFromFile(keysFile *string) (*os.File, error) {
+	reader, err := os.Open(*keysFile)
+	return reader, err
+}
+
+func readKeysFromAws() (io.Reader, error) {
+	sharderSecretName := os.Getenv("SHARDER_SECRET_NAME")
+	keys, err := common.GetSecretsFromAWS(sharderSecretName, "us-east-2")
+	if err != nil {
+		return nil, err
+	}
+	return strings.NewReader(keys), nil
 }
 
 func Listen(server *http.Server) {

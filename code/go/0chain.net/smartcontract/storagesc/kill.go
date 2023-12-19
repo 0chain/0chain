@@ -25,7 +25,10 @@ func (_ *StorageSmartContract) killBlobber(
 		return "", common.NewError("can't get config", err.Error())
 	}
 
-	var blobber = &StorageNode{}
+	var (
+		blobber = &StorageNode{}
+		sp      stakepool.AbstractStakePool
+	)
 	err = provider.Kill(
 		input,
 		tx.ClientID,
@@ -45,7 +48,7 @@ func (_ *StorageSmartContract) killBlobber(
 				}
 			}
 
-			sp, err := getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
+			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -57,6 +60,22 @@ func (_ *StorageSmartContract) killBlobber(
 	if err != nil {
 		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
+
+	// delete the blobber from MPT if it's empty and has no stake pools
+	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
+		// remove the blobber from MPT
+		_, err := balances.DeleteTrieNode(blobber.GetKey())
+		if err != nil {
+			return "", common.NewErrorf("kill_blobber_failed", "deleting blobber: %v", err)
+		}
+
+		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+			return "", common.NewErrorf("kill_blobber_failed", "deleting stakepool: %v", err)
+		}
+
+		return "", nil
+	}
+
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewError("kill_blobber_failed", "saving blobber: "+err.Error())
@@ -77,7 +96,10 @@ func (_ *StorageSmartContract) killValidator(
 		return "", common.NewError("can't get config", err.Error())
 	}
 
-	var validator = &ValidationNode{}
+	var (
+		validator = &ValidationNode{}
+		sp        stakepool.AbstractStakePool
+	)
 	err = provider.Kill(
 		input,
 		tx.ClientID,
@@ -103,7 +125,7 @@ func (_ *StorageSmartContract) killValidator(
 				}
 			}
 
-			sp, err := getStakePoolAdapter(validator.Type(), validator.Id(), balances)
+			sp, err = getStakePoolAdapter(validator.Type(), validator.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -114,6 +136,22 @@ func (_ *StorageSmartContract) killValidator(
 	if err != nil {
 		return "", common.NewError("kill_validator_failed", err.Error())
 	}
+
+	// delete the validator from MPT if its stake pools is empty
+	if len(sp.GetPools()) == 0 {
+		// remove the validator from MPT
+		_, err := balances.DeleteTrieNode(validator.GetKey(""))
+		if err != nil {
+			return "", common.NewErrorf("kill_validator_failed", "deleting validator: %v", err)
+		}
+
+		if err = deleteStakepool(balances, validator.ProviderType, validator.Id()); err != nil {
+			return "", common.NewErrorf("kill_validator_failed", "deleting stakepool: %v", err)
+		}
+
+		return "", nil
+	}
+
 	_, err = balances.InsertTrieNode(validator.GetKey(""), validator)
 	if err != nil {
 		return "", common.NewError("kill_validator_failed", "saving validator: "+err.Error())

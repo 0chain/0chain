@@ -51,6 +51,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
+
 	newMiner.Settings.MinStake = gn.MinStakePerDelegate
 	magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
 

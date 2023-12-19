@@ -51,15 +51,6 @@ func GetMinter(minter ApprovedMinter) (string, error) {
 	return approvedMinters[minter], nil
 }
 
-func isMinter(id string) bool {
-	for _, m := range approvedMinters {
-		if m == id {
-			return true
-		}
-	}
-	return false
-}
-
 /*
 * The state context is available to the smart contract logic.
 * The smart contract logic can use
@@ -109,10 +100,8 @@ type StateContextI interface {
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)
-	AddMint(m *state.Mint) error
 	GetTransfers() []*state.Transfer // cannot use in smart contracts or REST endpoints
 	GetSignedTransfers() []*state.SignedTransfer
-	GetMints() []*state.Mint // cannot use in smart contracts or REST endpoints
 	Validate() error
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
@@ -129,7 +118,6 @@ type StateContext struct {
 	txn             *transaction.Transaction
 	transfers       []*state.Transfer
 	signedTransfers []*state.SignedTransfer
-	mints           []*state.Mint
 	events          []event.Event
 	// clientStates is the cache for storing client states, usually for storing txn.From and txn.To
 	clientStates                  map[string]*state.State
@@ -215,43 +203,7 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	if !encryption.IsHash(t.ToClientID) {
 		return errors.New("invalid transaction ToClientID")
 	}
-
-	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {
-		return state.ErrInvalidTransfer
-	}
 	sc.transfers = append(sc.transfers, t)
-	if isMinter(t.ToClientID) {
-		if !isMinter(t.ClientID) {
-			sc.events = append(sc.events, event.Event{
-				BlockNumber: sc.block.Round,
-				TxHash:      sc.txn.Hash,
-				Type:        event.TypeStats,
-				Tag:         event.TagBurn,
-				Index:       sc.txn.ClientID,
-				Data: state.Burn{
-					Burner: t.ClientID,
-					Amount: t.Amount,
-				},
-			})
-		}
-		return nil
-	}
-	if isMinter(t.ClientID) {
-		if !isMinter(t.ToClientID) {
-			sc.events = append(sc.events, event.Event{
-				BlockNumber: sc.block.Round,
-				TxHash:      sc.txn.Hash,
-				Type:        event.TypeStats,
-				Tag:         event.TagAddMint,
-				Index:       sc.txn.ClientID,
-				Data: state.Mint{
-					Minter:     t.ClientID,
-					ToClientID: t.ToClientID,
-					Amount:     t.Amount,
-				},
-			})
-		}
-	}
 
 	return nil
 }
@@ -262,36 +214,6 @@ func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
 	sc.signedTransfers = append(sc.signedTransfers, st)
 }
 
-// AddMint - add the mint
-func (sc *StateContext) AddMint(m *state.Mint) error {
-	sc.mutex.Lock()
-	defer sc.mutex.Unlock()
-	if !sc.isApprovedMinter(m) {
-		return state.ErrInvalidMint
-	}
-	sc.mints = append(sc.mints, m)
-
-	sc.events = append(sc.events, event.Event{
-		BlockNumber: sc.block.Round,
-		TxHash:      sc.txn.Hash,
-		Type:        event.TypeStats,
-		Tag:         event.TagAddMint,
-		Index:       m.ToClientID,
-		Data:        m,
-	})
-
-	return nil
-}
-
-func (sc *StateContext) isApprovedMinter(m *state.Mint) bool {
-	for _, minter := range approvedMinters {
-		if m.Minter == minter && sc.txn.ToClientID == minter {
-			return true
-		}
-	}
-	return false
-}
-
 // GetTransfers - get all the transfers
 func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
@@ -300,11 +222,6 @@ func (sc *StateContext) GetTransfers() []*state.Transfer {
 // GetSignedTransfers - get all the signed transfers
 func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
 	return sc.signedTransfers
-}
-
-// GetMints - get all the mints and fight bad breath
-func (sc *StateContext) GetMints() []*state.Mint {
-	return sc.mints
 }
 
 func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...Appender) {
@@ -361,10 +278,6 @@ func (sc *StateContext) Validate() error {
 			amount, err = currency.AddCoin(amount, transfer.Amount)
 			if err != nil {
 				return err
-			}
-		} else {
-			if transfer.ClientID != sc.txn.ToClientID {
-				return state.ErrInvalidTransfer
 			}
 		}
 	}

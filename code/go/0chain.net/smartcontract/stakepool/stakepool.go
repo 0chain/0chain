@@ -107,39 +107,41 @@ type UserPoolStat struct {
 }
 
 func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.DelegatePool) (*StakePoolStat, error) {
-	spStat := new(StakePoolStat)
-	spStat.ID = provider.ID
-	spStat.StakeTotal = provider.TotalStake
-	spStat.Delegate = make([]DelegatePoolStat, 0, len(delegatePools))
-	spStat.Settings = Settings{
-		DelegateWallet:     provider.DelegateWallet,
-		MaxNumDelegates:    provider.NumDelegates,
-		ServiceChargeRatio: provider.ServiceCharge,
+	spStat := &StakePoolStat{
+		ID:         provider.ID,
+		StakeTotal: provider.TotalStake,
+		Settings: Settings{
+			DelegateWallet:     provider.DelegateWallet,
+			MaxNumDelegates:    provider.NumDelegates,
+			ServiceChargeRatio: provider.ServiceCharge,
+		},
+		Rewards:  provider.Rewards.TotalRewards,
+		Delegate: make([]DelegatePoolStat, 0, len(delegatePools)),
 	}
-	spStat.Rewards = provider.Rewards.TotalRewards
+
 	for _, dp := range delegatePools {
-		if spenum.PoolStatus(dp.Status) == spenum.Deleted {
+		poolStatus := spenum.PoolStatus(dp.Status)
+		if poolStatus == spenum.Deleted {
 			continue
 		}
+
 		dpStats := DelegatePoolStat{
 			ID:           dp.PoolID,
 			DelegateID:   dp.DelegateID,
-			Status:       spenum.PoolStatus(dp.Status).String(),
+			Status:       poolStatus.String(),
 			RoundCreated: dp.RoundCreated,
 			StakedAt:     dp.StakedAt,
+			Balance:      dp.Balance,
+			Rewards:      dp.Reward,
+			TotalPenalty: dp.TotalPenalty,
+			TotalReward:  dp.TotalReward,
 		}
-		dpStats.Balance = dp.Balance
-
-		dpStats.Rewards = dp.Reward
-
-		dpStats.TotalPenalty = dp.TotalPenalty
-
-		dpStats.TotalReward = dp.TotalReward
 
 		newBal, err := currency.AddCoin(spStat.Balance, dpStats.Balance)
 		if err != nil {
 			return nil, err
 		}
+
 		spStat.Balance = newBal
 		spStat.Delegate = append(spStat.Delegate, dpStats)
 	}
@@ -244,13 +246,15 @@ func (sp *StakePool) MintServiceCharge(balances cstate.StateContextI) (currency.
 	if err != nil {
 		return 0, err
 	}
-	if err := balances.AddMint(&state.Mint{
-		Minter:     minter,
+
+	if err := balances.AddTransfer(&state.Transfer{
+		ClientID:   minter,
 		ToClientID: sp.Settings.DelegateWallet,
 		Amount:     sp.Reward,
 	}); err != nil {
-		return 0, fmt.Errorf("minting rewards: %v", err)
+		return 0, fmt.Errorf("could not transfer rewards: %v", err)
 	}
+
 	minted := sp.Reward
 	sp.Reward = 0
 	return minted, nil
@@ -272,7 +276,6 @@ func (sp *StakePool) MintRewards(
 			ID:   providerId,
 			Type: providerType,
 		})
-
 	}
 
 	dPool, ok := sp.Pools[clientId]
@@ -288,12 +291,12 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		if err := balances.AddMint(&state.Mint{
-			Minter:     minter,
+		if err := balances.AddTransfer(&state.Transfer{
+			ClientID:   minter,
 			ToClientID: clientId,
 			Amount:     dPool.Reward,
 		}); err != nil {
-			return 0, fmt.Errorf("minting rewards: %v", err)
+			return 0, fmt.Errorf("could not transfer rewards: %v", err)
 		}
 		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
 			Amount:       int64(dPool.Reward),
@@ -391,7 +394,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	if value == 0 || sp.HasBeenKilled || total < sp.Settings.MinStake {
 		return nil // nothing to move
 	}
-	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+	var spUpdate = NewStakePoolReward(providerId, providerType, rewardType, sp.Settings.DelegateWallet)
 
 	// if no stake pools pay all rewards to the provider
 	if len(sp.Pools) == 0 {
@@ -544,9 +547,9 @@ func (sp *StakePool) DistributeRewards(
 
 	var spUpdate *StakePoolReward
 	if len(options) > 0 {
-		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, options[0])
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, sp.Settings.DelegateWallet, options[0])
 	} else {
-		spUpdate = NewStakePoolReward(providerId, providerType, rewardType)
+		spUpdate = NewStakePoolReward(providerId, providerType, rewardType, sp.Settings.DelegateWallet)
 	}
 
 	defer func() {
@@ -727,7 +730,7 @@ func (spr *StakePoolRequest) decode(p []byte) (err error) {
 }
 
 func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.StateContextI, vs ValidationSettings,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error)) (resp string, err error) {
+	funcs ...func(providerType spenum.Provider, providerID string, balances cstate.StateContextI) (AbstractStakePool, error)) (resp string, err error) {
 
 	var spr StakePoolRequest
 	if err = spr.decode(input); err != nil {
@@ -736,6 +739,11 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	}
 
 	var sp AbstractStakePool
+	if len(funcs) < 1 {
+		return "", common.NewError("stake_pool_lock_failed",
+			"provide get func")
+	}
+	get := funcs[0]
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
@@ -762,6 +770,14 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"stake pool staking error: %v", err)
+	}
+
+	if len(funcs) > 1 {
+		refresh := funcs[1]
+		if _, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
+			return "", common.NewErrorf("stake_pool_lock_failed",
+				"can't refresh provider: %v", err)
+		}
 	}
 
 	return out, err
@@ -808,7 +824,7 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 
 // StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool
 func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.StateContextI,
-	get func(providerType spenum.Provider, providerID string, balances cstate.CommonStateContextI) (AbstractStakePool, error),
+	funcs ...func(providerType spenum.Provider, providerID string, balances cstate.StateContextI) (AbstractStakePool, error),
 ) (resp string, err error) {
 	var spr StakePoolRequest
 
@@ -816,6 +832,11 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)
 	}
+	if len(funcs) < 1 {
+		return "", common.NewError("stake_pool_lock_failed",
+			"provide get func")
+	}
+	get := funcs[0]
 	var sp AbstractStakePool
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
@@ -865,6 +886,14 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"stake pool staking error: %v", err)
+	}
+
+	if len(funcs) > 1 {
+		refresh := funcs[1]
+		if _, err = refresh(spr.ProviderType, spr.ProviderID, balances); err != nil {
+			return "", common.NewErrorf("stake_pool_lock_failed",
+				"can't refresh provider: %v", err)
+		}
 	}
 
 	return output, nil

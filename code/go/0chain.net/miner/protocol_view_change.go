@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
+
 	"net/http"
 	"path/filepath"
 	"reflect"
@@ -824,7 +825,7 @@ func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
 	}
 
 	var b []byte
-	if b, err = ioutil.ReadFile(path); err != nil {
+	if b, err = os.ReadFile(path); err != nil {
 		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("reading dkg summary file: %v", err))
 	}
 

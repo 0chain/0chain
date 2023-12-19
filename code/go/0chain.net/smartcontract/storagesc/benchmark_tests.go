@@ -18,6 +18,7 @@ import (
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	bk "0chain.net/smartcontract/benchmark"
 
@@ -107,7 +108,7 @@ func BenchmarkTests(
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
 
-	creationTime := data.Now
+	creationTime := common.Now()
 	timings := make(map[string]time.Duration)
 	newAllocationRequestF := func(
 		t *transaction.Transaction,
@@ -158,9 +159,9 @@ func BenchmarkTests(
 					AllocationRoot:         encryption.Hash("allocation root"),
 					PreviousAllocationRoot: encryption.Hash("allocation root"),
 					AllocationID:           getMockAllocationId(0),
-					Size:                   1024,
+					Size:                   256,
 					BlobberID:              getMockBlobberId(0),
-					Timestamp:              1,
+					Timestamp:              creationTime,
 					ClientID:               data.Clients[0],
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
@@ -334,49 +335,6 @@ func BenchmarkTests(
 					RecipientPublicKey: data.PublicKeys[1],
 					Marker:             string(fsmBytes),
 					Blobbers:           freeBlobbers,
-				})
-				return bytes
-			}(),
-		},
-		{
-			name:     "storage.free_update_allocation",
-			endpoint: ssc.updateFreeStorageRequest,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-				ToClientID:   ADDRESS,
-				CreationDate: creationTime,
-				Value:        maxIndividualFreeAlloc,
-			},
-			input: func() []byte {
-				var request = struct {
-					Recipient  string  `json:"recipient"`
-					FreeTokens float64 `json:"free_tokens"`
-					Nonce      int64   `json:"nonce"`
-				}{
-					data.Clients[0],
-					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
-					1,
-				}
-				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
-				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				marker := fmt.Sprintf("%s:%f:%d",
-					request.Recipient,
-					request.FreeTokens,
-					request.Nonce)
-				signature, _ := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
-				fsmBytes, _ := json.Marshal(&freeStorageMarker{
-					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-					Recipient:  request.Recipient,
-					FreeTokens: request.FreeTokens,
-					Nonce:      request.Nonce,
-					Signature:  signature,
-				})
-				bytes, _ := json.Marshal(&freeStorageUpgradeInput{
-					AllocationId: getMockAllocationId(0),
-					Marker:       string(fsmBytes),
 				})
 				return bytes
 			}(),
@@ -559,25 +517,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		{
-			name:     "storage.write_pool_unlock",
-			endpoint: ssc.writePoolUnlock,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				Value: rpMinLock,
-				ClientID: data.Clients[getMockOwnerFromAllocationIndex(
-					mockFinalizedAllocationIndex, viper.GetInt(bk.NumActiveClients))],
-				ToClientID: ADDRESS,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&unlockRequest{
-					AllocationID: getMockAllocationId(mockFinalizedAllocationIndex),
-				})
-				return bytes
-			}(),
-		},
 
 		// stake pool
 		{
@@ -742,11 +681,10 @@ func BenchmarkTests(
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
-					"max_mint":                      "1500000.02",
-					"time_unit":                     "720h",
-					"min_alloc_size":                "1024",
-					"max_challenge_completion_time": "3m",
-					"min_blobber_capacity":          "1024",
+					"time_unit":                       "720h",
+					"min_alloc_size":                  "1024",
+					"max_challenge_completion_rounds": "720",
+					"min_blobber_capacity":            "1024",
 
 					"readpool.min_lock": "10",
 
@@ -765,14 +703,18 @@ func BenchmarkTests(
 					"free_allocation_settings.write_price_range.max": "0.1",
 					"free_allocation_settings.read_pool_fraction":    "0.2",
 
-					"validator_reward":         "0.025",
-					"blobber_slash":            "0.1",
-					"max_read_price":           "100",
-					"max_write_price":          "100",
-					"challenge_enabled":        "true",
-					"validators_per_challenge": "2",
-					"num_validators_rewarded":  "10",
-					"max_delegates":            "100",
+					"validator_reward":                 "0.025",
+					"blobber_slash":                    "0.1",
+					"max_read_price":                   "100",
+					"max_write_price":                  "100",
+					"max_file_size":                    "40000000000000",
+					"challenge_enabled":                "true",
+					"challenge_generation_gap":         "1",
+					"validators_per_challenge":         "2",
+					"num_validators_rewarded":          "10",
+					"max_blobber_select_for_challenge": "5",
+					"max_delegates":                    "100",
+					"min_stake_per_delegate":           "1",
 
 					"block_reward.block_reward":     "1000",
 					"block_reward.qualifying_stake": "1",
@@ -792,7 +734,6 @@ func BenchmarkTests(
 					"cost.cancel_allocation":         "105",
 					"cost.add_free_storage_assigner": "105",
 					"cost.free_allocation_request":   "105",
-					"cost.free_update_allocation":    "105",
 					"cost.blobber_health_check":      "105",
 					"cost.update_blobber_settings":   "105",
 					"cost.pay_blobber_block_rewards": "105",
@@ -804,7 +745,6 @@ func BenchmarkTests(
 					"cost.read_pool_lock":            "105",
 					"cost.read_pool_unlock":          "105",
 					"cost.write_pool_lock":           "105",
-					"cost.write_pool_unlock":         "105",
 					"cost.stake_pool_lock":           "105",
 					"cost.stake_pool_unlock":         "105",
 					"cost.commit_settings_changes":   "105",

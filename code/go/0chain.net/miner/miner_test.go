@@ -397,7 +397,16 @@ func SetupGenesisBlock() *block.Block {
 		mc.SetMagicBlock(mb)
 	}
 
-	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb, state.NewInitStates())
+	states := state.NewInitStates()
+	states.States = append(states.States, state.InitState{
+		ID:     "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9",
+		Tokens: config.MaxTokenSupply,
+		State: []state.IDTokens{{
+			ID:     "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9",
+			Tokens: config.MaxTokenSupply,
+		}},
+	})
+	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb, states)
 	mr := mc.CreateRound(gr.(*round.Round))
 	mc.AddRoundBlock(gr, gb)
 	mc.AddRound(mr)

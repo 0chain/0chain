@@ -21,6 +21,13 @@ type (
 		// optional field
 		SenderID string `json:"sender_id,omitempty"`
 	}
+
+	BlockFromSharder struct {
+		Round int64 `json:"round"`
+		Hash string `json:"hash"`
+		GeneratorId string `json:"miner_id"`
+		SenderId string `json:"sharder_id"`
+	}
 )
 
 // NewBlockRequests creates initialised BlockRequests.
@@ -105,5 +112,15 @@ func (br *BlockRequest) Encode() ([]byte, error) {
 
 // Decode decodes BlockRequest from the bytes.
 func (br *BlockRequest) Decode(blob []byte) error {
+	return json.Unmarshal(blob, br)
+}
+
+// Encode encodes BlockRequest to the bytes.
+func (br *BlockFromSharder) Encode() ([]byte, error) {
+	return json.Marshal(br)
+}
+
+// Decode decodes BlockRequest from the bytes.
+func (br *BlockFromSharder) Decode(blob []byte) error {
 	return json.Unmarshal(blob, br)
 }

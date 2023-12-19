@@ -80,15 +80,13 @@ type Config struct {
 	// measured in tok / GB / time unit. Where the time unit is this
 	// configuration.
 	TimeUnit time.Duration `json:"time_unit"`
-	// MaxMint is max minting.
-	MaxMint currency.Coin `json:"max_mint"`
 	// Minted tokens by entire SC.
 	Minted currency.Coin `json:"minted"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
-	// MaxChallengeCompletionTime is max time to complete a challenge.
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	// MaxChallengeCompletionRounds is max time to complete a challenge.
+	MaxChallengeCompletionRounds int64 `json:"max_challenge_completion_rounds"`
 	// MinBlobberCapacity allowed to register in the SC.
 	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
 	// ReadPool related configurations.
@@ -115,10 +113,10 @@ type Config struct {
 	// MaxWrtiePrice
 	MaxWritePrice currency.Coin `json:"max_write_price"`
 	MinWritePrice currency.Coin `json:"min_write_price"`
+	MaxFileSize   int64         `json:"max_file_size"`
 
 	// allocation cancellation
 	CancellationCharge float64 `json:"cancellation_charge"`
-	MinLockDemand      float64 `json:"min_lock_demand"`
 	// free allocations
 	MaxTotalFreeAllocation      currency.Coin          `json:"max_total_free_allocation"`
 	MaxIndividualFreeAllocation currency.Coin          `json:"max_individual_free_allocation"`
@@ -127,11 +125,13 @@ type Config struct {
 	// challenges generating
 
 	// ChallengeEnabled is challenges generating pin.
-	ChallengeEnabled bool `json:"challenge_enabled"`
+	ChallengeEnabled       bool  `json:"challenge_enabled"`
+	ChallengeGenerationGap int64 `json:"challenge_generation_gap"`
 	// ValidatorsPerChallenge is the number of validators to select per
 	// challenges.
-	ValidatorsPerChallenge int `json:"validators_per_challenge"`
-	NumValidatorsRewarded  int `json:"num_validators_rewarded"`
+	ValidatorsPerChallenge       int `json:"validators_per_challenge"`
+	NumValidatorsRewarded        int `json:"num_validators_rewarded"`
+	MaxBlobberSelectForChallenge int `json:"max_blobber_select_for_challenge"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
 	MinStake currency.Coin `json:"min_stake"`
@@ -167,10 +167,6 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
 			conf.CancellationCharge)
 	}
-	if conf.MinLockDemand < 0.0 || 1.0 < conf.MinLockDemand {
-		return fmt.Errorf("cancellation_charge not in [0, 1] range: %v",
-			conf.MinLockDemand)
-	}
 	if conf.MaxBlobbersPerAllocation <= 0 {
 		return fmt.Errorf("invalid max_blobber_per_allocation <= 0: %v",
 			conf.MaxBlobbersPerAllocation)
@@ -179,9 +175,9 @@ func (conf *Config) validate() (err error) {
 		return fmt.Errorf("negative min_blobber_capacity: %v",
 			conf.MinBlobberCapacity)
 	}
-	if conf.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative max_challenge_completion_time: %v",
-			conf.MaxChallengeCompletionTime)
+	if conf.MaxChallengeCompletionRounds < 0 {
+		return fmt.Errorf("negative max_challenge_completion_rounds: %v",
+			conf.MaxChallengeCompletionRounds)
 	}
 	if conf.HealthCheckPeriod <= 0 {
 		return fmt.Errorf("non-positive health check period: %v", conf.HealthCheckPeriod)
@@ -229,6 +225,10 @@ func (conf *Config) validate() (err error) {
 	if conf.NumValidatorsRewarded <= 0 {
 		return fmt.Errorf("invalid num_validators_rewarded <= 0: %v",
 			conf.NumValidatorsRewarded)
+	}
+	if conf.MaxBlobberSelectForChallenge <= 0 {
+		return fmt.Errorf("invalid max_blobber_select_for_challenge <= 0: %v",
+			conf.MaxBlobberSelectForChallenge)
 	}
 	if conf.MaxStake < conf.MinStake {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", conf.MinStake,
@@ -290,24 +290,6 @@ func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
 	return conf.validateStakeRange(min, max)
 }
 
-//
-// rest handler and update function
-//
-
-func (conf *Config) saveMints(toMint currency.Coin, balances chainState.StateContextI) error {
-	minted, err := currency.AddCoin(conf.Minted, toMint)
-	if err != nil {
-		return err
-	}
-
-	if minted > conf.MaxMint {
-		return fmt.Errorf("max min %v exceeded by: %v", conf.MaxMint, minted)
-	}
-	conf.Minted = minted
-	_, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-	return err
-}
-
 // configs from sc.yaml
 func getConfiguredConfig() (conf *Config, err error) {
 	const pfx = "smart_contracts.storagesc."
@@ -316,10 +298,6 @@ func getConfiguredConfig() (conf *Config, err error) {
 	var scc = config.SmartContractConfig
 	// sc
 	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
-	conf.MaxMint, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_mint"))
-	if err != nil {
-		return nil, err
-	}
 	conf.MinStake, err = currency.ParseZCN(scc.GetFloat64(pfx + "min_stake"))
 	if err != nil {
 		return nil, err
@@ -334,12 +312,11 @@ func getConfiguredConfig() (conf *Config, err error) {
 	}
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
-	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
+	conf.MaxChallengeCompletionRounds = scc.GetInt64(pfx + "max_challenge_completion_rounds")
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
 	conf.CancellationCharge = scc.GetFloat64(pfx + "cancellation_charge")
-	conf.MinLockDemand = scc.GetFloat64(pfx + "min_lock_demand")
 	conf.MaxBlobbersPerAllocation = scc.GetInt(pfx + "max_blobbers_per_allocation")
 	conf.MaxReadPrice, err = currency.ParseZCN(scc.GetFloat64(pfx + "max_read_price"))
 	if err != nil {
@@ -353,6 +330,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.MaxFileSize = scc.GetInt64(pfx + "max_file_size")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock, err = currency.ParseZCN(scc.GetFloat64(pfx + "readpool.min_lock"))
@@ -419,8 +397,10 @@ func getConfiguredConfig() (conf *Config, err error) {
 
 	// challenges generating
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
+	conf.ChallengeGenerationGap = scc.GetInt64(pfx + "challenge_generation_gap")
 	conf.ValidatorsPerChallenge = scc.GetInt(pfx + "validators_per_challenge")
 	conf.NumValidatorsRewarded = scc.GetInt(pfx + "num_validators_rewarded")
+	conf.MaxBlobberSelectForChallenge = scc.GetInt(pfx + "max_blobber_select_for_challenge")
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 

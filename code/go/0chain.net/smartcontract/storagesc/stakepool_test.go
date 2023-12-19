@@ -76,7 +76,6 @@ func TestStakePoolLock(t *testing.T) {
 	scYaml = &Config{
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
-		MaxMint:      zcnToBalance(4000000.0),
 		MinStake:     0.1e10,
 		MaxStake:     10.1e10,
 		StakePool:    &stakePoolConfig{},
@@ -93,7 +92,6 @@ func TestStakePoolLock(t *testing.T) {
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
-		scYaml.Minted = scYaml.MaxMint
 		value, err := currency.MinusCoin(minLock, 1)
 		require.NoError(t, err)
 		creationDate = common.Timestamp(time.Second * 120)

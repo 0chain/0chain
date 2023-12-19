@@ -5,8 +5,10 @@ import (
 	"0chain.net/core/datastore"
 )
 
-/*Notarization - A list of valid block verification tickets for the given block
-that are good enough to get notarization */
+/*
+Notarization - A list of valid block verification tickets for the given block
+that are good enough to get notarization
+*/
 type Notarization struct {
 	datastore.NOIDField
 	VerificationTickets []*block.VerificationTicket
@@ -43,12 +45,12 @@ func SetupNotarizationEntity() {
 	datastore.RegisterEntityMetadata("block_notarization", notarizationEntityMetadata)
 }
 
-//DoReadLock - implement ReadLockable interface
+// DoReadLock - implement ReadLockable interface
 func (notarization *Notarization) DoReadLock() {
 	notarization.Block.DoReadLock()
 }
 
-//DoReadUnlock - implement ReadLockable interface
+// DoReadUnlock - implement ReadLockable interface
 func (notarization *Notarization) DoReadUnlock() {
 	notarization.Block.DoReadUnlock()
 }

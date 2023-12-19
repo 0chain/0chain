@@ -17,8 +17,6 @@ for i in $(seq 1 4)
 do
   echo "deleting sharder$i logs"
   rm -rf ./sharder$i/log/*
-  echo "deleting sharder$i cassandra db"
-  rm -rf ./sharder$i/data/cassandra/*
   echo "deleting sharder$i rocksdb db"
   rm -rf ./sharder$i/data/rocksdb/*
   echo "deleting sharder$i blocks on the file system"

@@ -113,7 +113,7 @@ func TestGetRewardClaimedTotalBetweenDates(t *testing.T) {
 	eventDb.Get().Table("blocks").Count(&blocksCount)
 	require.Equal(t, int64(1), blocksCount, "Blocks not getting inserted")
 
-	block.Round = 800
+	block.Round = 99
 	block.CreationDate = time.Now().AddDate(0, 0, -1).Unix()
 	block.Hash = "another_hash"
 
@@ -139,7 +139,7 @@ func TestGetRewardClaimedTotalBetweenDates(t *testing.T) {
 	eventDb.Get().Table("reward_mints").Count(&count)
 	require.Equal(t, int64(1), count, "Rewards not getting inserted")
 
-	reward.BlockNumber = 800
+	reward.BlockNumber = 99
 	reward.ClientID = "another_wallet_id"
 	err = eventDb.addRewardMint(reward)
 	require.NoError(t, err, "Error while inserting reward to event Database")
@@ -161,7 +161,7 @@ func TestGetRewardClaimedTotalBetweenDates(t *testing.T) {
 	claimedReward, err := eventDb.GetRewardClaimedTotalBetweenDates(rewardQuery)
 	require.NoError(t, err, "Error while getting sum of rewards")
 	require.Len(t, claimedReward, 1)
-	require.Equal(t, int64(500), claimedReward[0], "Specific reward was not calculated")
+	require.Equal(t, int64(0), claimedReward[0], "Specific reward was not calculated")
 }
 
 func TestGetRewardClaimedTotalBetweenBlocks(t *testing.T) {

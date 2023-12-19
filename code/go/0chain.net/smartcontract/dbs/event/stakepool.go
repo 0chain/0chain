@@ -9,9 +9,7 @@ import (
 	"github.com/0chain/common/core/logging"
 
 	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/stakepool/spenum"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type providerRewardsDelegates struct {
@@ -42,8 +40,6 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 			dpRewardsMap[sp.ID][poolId] = dpRewardsMap[sp.ID][poolId] + spus[i].DelegateRewards[poolId]
 			totalRewardsMap[sp.ID] = totalRewardsMap[sp.ID] + spus[i].DelegateRewards[poolId]
 		}
-		// todo https://github.com/0chain/0chain/issues/2122
-		// slash charges are no longer taken from rewards, but the stake pool. So related code has been removed.
 	}
 
 	return &providerRewardsDelegates{
@@ -134,7 +130,9 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}()
 
-	if len(rewards.rewards) > 0 {
+	logging.Logger.Debug("reward provider", zap.Any("rewards", rewards))
+
+	if len(rewards.rewards) > 0 || len(rewards.totalRewards) > 0 {
 		if err := edb.rewardProviders(rewards.rewards, rewards.totalRewards, round); err != nil {
 			return fmt.Errorf("could not rewards providers: %v", err)
 		}
@@ -148,6 +146,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	if len(rewards.delegatePools) > 0 {
+		logging.Logger.Debug("reward provider pools", zap.Any("rewards", rewards))
 		if err := edb.rewardProviderDelegates(rewards.delegatePools, round); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
@@ -212,16 +211,24 @@ func (edb *EventDb) rewardProviders(
 	var rewards []uint64
 	var totalRewards []uint64
 	var lastUpdated []int64
-	for id, r := range prRewards {
+	for id, tr := range prTotalRewards {
+		// Adding provider id to the list of ids
 		ids = append(ids, id)
-		rewards = append(rewards, uint64(r))
-		tr, ok := prTotalRewards[id]
+
+		// Adding provider reward or setting to 0 if service charge is 0 and there is no provider reward
+		r, ok := prRewards[id]
 		if !ok {
-			return fmt.Errorf("could not find total rewards for provider %s", id)
+			r = 0
 		}
+		rewards = append(rewards, uint64(r))
+
+		// Adding provider total reward
 		totalRewards = append(totalRewards, uint64(tr))
+
+		// Last updated time stamp
 		lastUpdated = append(lastUpdated, round)
 	}
+
 	return CreateBuilder("provider_rewards", "provider_id", ids).
 		AddUpdate("rewards", rewards, "provider_rewards.rewards + t.rewards").
 		AddUpdate("total_rewards", totalRewards, "provider_rewards.total_rewards + t.total_rewards").
@@ -276,31 +283,4 @@ func (edb *EventDb) penaltyProviderDelegates(dps map[string]map[string]currency.
 		Exec(edb)
 
 	return ret.Error
-}
-
-func (edb *EventDb) rewardProvider(spu dbs.StakePoolReward) error { //nolint: unused
-	if spu.Reward == 0 {
-		return nil
-	}
-
-	var provider interface{}
-	switch spu.Type {
-	case spenum.Blobber:
-		provider = &Blobber{Provider: Provider{ID: spu.ID}}
-	case spenum.Validator:
-		provider = &Validator{Provider: Provider{ID: spu.ID}}
-	case spenum.Miner:
-		provider = &Miner{Provider: Provider{ID: spu.ID}}
-	case spenum.Sharder:
-		provider = &Sharder{Provider: Provider{ID: spu.ID}}
-	default:
-		return fmt.Errorf("not implented provider type %v", spu.Type)
-	}
-
-	vs := map[string]interface{}{
-		"rewards":      gorm.Expr("rewards + ?", spu.Reward),
-		"total_reward": gorm.Expr("total_reward + ?", spu.Reward),
-	}
-
-	return edb.Store.Get().Model(provider).Where(provider).Updates(vs).Error
 }

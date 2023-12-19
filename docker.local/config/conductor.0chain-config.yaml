@@ -1,0 +1,126 @@
+---
+enable:
+  - "0chain_config_tests"
+
+# sets of test cases
+sets:
+  - name: "0chain_config_tests"
+    tests:
+      - "test min_generators"
+      - "test min_active_sharders"
+      - "test max_block_cost"
+      - "test max_byte_size"
+      - "test payload max_size"
+
+#
+# test cases
+#
+tests:
+  - name: "test min_generators"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: min_generators
+            config_value: 3
+      - wait_add:
+          sharders: ['sharder-1', 'sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          start: true
+      - wait_round:
+          shift: 10
+          timeout: "5m"
+      - stop: ['miner-3','miner-4']
+      - wait_no_progress:
+          timeout: "1m"
+      - command:
+          name: rollback_0chain_config_changes
+  
+  - name: "test min_active_sharders"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: min_active_sharders
+            config_value: 80
+      - wait_add:
+          sharders: ['sharder-1', 'sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          start: true
+      - wait_round:
+          shift: 10
+          timeout: "5m"
+      - stop: ['sharder-2']
+      - wait_no_progress:
+          timeout: "1m"
+      - command:
+          name: rollback_0chain_config_changes
+
+  - name: "test max_block_cost"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_block_cost
+            config_value: 10
+      - wait_add:
+          sharders: ['sharder-1', 'sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
+          start: true
+      - wait_no_progress:
+          timeout: "1m"
+      - command:
+          name: rollback_0chain_config_changes
+
+  - name: "test max_byte_size"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_0dns"
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_byte_size
+            config_value: 10000
+      - wait_add:
+          sharders: ['sharder-1']
+          miners: ['miner-1', 'miner-2', 'miner-3']
+          start: true
+      - start: ['0dns']
+      - sleep: "20s"
+      - command:
+          name: send_transaction_with_large_payload
+      - command:
+          name: rollback_0chain_config_changes
+    
+  - name: "test payload max_size"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_0dns"
+      - command:
+          name: update_0chain_config
+          params:
+            config_name: max_size
+            config_value: 10000
+      - wait_add:
+          sharders: ['sharder-1']
+          miners: ['miner-1', 'miner-2', 'miner-3']
+          start: true
+      - start: ['0dns']
+      - sleep: "20s"
+      - command:
+          name: send_transaction_with_large_payload
+      - command:
+          name: rollback_0chain_config_changes

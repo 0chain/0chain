@@ -1,14 +1,24 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+type StopChallengeGeneration bool
+type WaitOnChallengeGeneration bool
+type StopWMCommit bool
+type BlobberCommittedWM bool
+type GetFileMetaRoot bool
+type NotifyOnValidationTicketGeneration bool
 
 // common types
 type (
@@ -81,17 +91,25 @@ type Set struct {
 	Tests []string `json:"tests" yaml:"tests" mapstructure:"tests"`
 }
 
+type Arg struct {
+	Required bool   `json:"required" yaml:"required" mapstructured:"required"`
+	Default  string `json:"default" yaml:"default" mapstructured:"default"`
+}
+
 // A system command.
 type Command struct {
-	WorkDir    string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
-	Exec       string `json:"exec" yaml:"exec" mapstructure:"exec"`
-	ShouldFail bool   `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
-	CanFail    bool   `json:"can_fail" yaml:"can_fail" mapstructure:"can_fail"`
+	WorkDir    string          `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
+	Exec       string          `json:"exec" yaml:"exec" mapstructure:"exec"`
+	ShouldFail bool            `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
+	CanFail    bool            `json:"can_fail" yaml:"can_fail" mapstructure:"can_fail"`
+	Args       map[string]*Arg `json:"args" yaml:"args" mapstructure:"args"`
 }
 
 // CommandName
 type CommandName struct {
-	Name string `json:"name" yaml:"name" mapstructure:"name"`
+	Name   string                 `json:"name" yaml:"name" mapstructure:"name"`
+	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
+	FailureThreshold string `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
 }
 
 // A Config represents conductor testing configurations.
@@ -105,8 +123,14 @@ type Config struct {
 	// Address is address of RPC server in docker network (e.g.
 	// address to connect to).
 	Address string `json:"address" yaml:"address" mapstructure:"address"`
-	// Logs is directory for stdin and stdout logs.
+	// FullLogs is the directory where the history of all logs of all cases within the test run is stored.
+	FullLogsDir string `json:"full_logs_dir" yaml:"full_logs_dir" mapstructure:"full_logs_dir"`
+	// Logs is directory for stdin and stdout logs in a single case.
 	Logs string `json:"logs" yaml:"logs" mapstructure:"logs"`
+	// AggregateBaseUrl is base url for aggregate service.
+	AggregatesBaseUrl string `json:"aggregate_base_url" yaml:"aggregate_base_url" mapstructure:"aggregate_base_url"`
+	// Sharder1BaseUrl is base url of sharder1
+	Sharder1BaseURL string `json:"sharder1_base_url" yaml:"sharder1_base_url"  mapstructure:"sharder1_base_url"`
 	// Nodes for tests.
 	Nodes Nodes `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
 	// Tests cases and related.
@@ -156,7 +180,7 @@ func (c *Config) GetStuckWarningThreshold() time.Duration {
 }
 
 // Execute system command by its name.
-func (c *Config) Execute(name string) (err error) {
+func (c *Config) Execute(name string, params map[string]string, failureThreshold time.Duration) (err error) {
 	var n, ok = c.Commands[name]
 	if !ok {
 		return fmt.Errorf("unknown system command: %q", name)
@@ -166,19 +190,91 @@ func (c *Config) Execute(name string) (err error) {
 		n.WorkDir = "."
 	}
 
+	commandString := n.Exec
+	fmt.Printf("Command: %v, Args: %+v, Params: %v\n", name, n.Args, params)
+
+	// Build command arguments from given params
+	for aname, arg := range n.Args {
+		pval, ok := params[aname]
+		fmt.Printf("From params map, val = %v, found = %v\n", pval, ok)
+		if !ok {
+			if arg.Required {
+				return fmt.Errorf("argument %v is required for command %v but no value was provided", aname, name)
+			} else {
+				pval = arg.Default
+			}
+		}
+		fmt.Printf("Trying to replace %v with %v in %v\n", fmt.Sprintf("$%v", aname), pval, n.Exec)
+		commandString = strings.Replace(commandString, fmt.Sprintf("$%v", aname), pval, 1)
+	}
+
+	fmt.Printf("[INF] Running command: %v\n", commandString)
+
 	var (
-		ss      = strings.Fields(n.Exec)
+		ss      = strings.Fields(commandString)
 		command string
 	)
 	command = ss[0]
 	if filepath.Base(command) != command && !strings.HasPrefix(command, ".") {
 		command = "./" + filepath.Join(n.WorkDir, command)
 	}
-	var cmd = exec.Command(command, ss[1:]...)
+
+	cmd := exec.Command(command, ss[1:]...)
 	cmd.Dir = n.WorkDir
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmdStdOut, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	cmdStdErr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		_, err := io.Copy(os.Stdout, cmdStdOut)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	go func() {
+		_, err := io.Copy(os.Stderr, cmdStdErr)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	if failureThreshold > 0 {
+		log.Printf("[INF] Setting failure threshold of %v for command %v\n", failureThreshold, name)
+		failureCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(failureThreshold))
+		defer cancel()
+		
+		// Context watcher
+		go func (cmd *exec.Cmd)  {
+			<-failureCtx.Done()
+			if failureCtx.Err() == context.DeadlineExceeded {
+				log.Printf("[ERR] Command %v exceeded failure threshold of %v\n", name, failureThreshold)
+
+				err := cmd.Process.Kill()
+				if err != nil && err.Error() != "os: process already finished" {
+					log.Printf("[ERR] Failed to kill command %v: %v\n", name, err)
+				}
+
+				err = cmdStdOut.Close()
+				if err != nil && err.Error() != "os: file already closed" {
+					log.Printf("[ERR] Failed to close stdout of command %v: %v\n", name, err)
+				}
+
+				err = cmdStdErr.Close()
+				if err != nil && err.Error() != "os: file already closed" {
+					log.Printf("[ERR] Failed to close stderr of command %v: %v\n", name, err)
+				}
+			}
+		}(cmd)
+	}
+	
 	err = cmd.Run()
 	if n.CanFail {
 		return nil // ignore an error
@@ -214,7 +310,7 @@ func (c *Config) TestsOfSet(set *Set) (cs []Case) {
 	return
 }
 
-// IsEnabled returns true it given Set enabled.
+// IsEnabled returns true if given set is included in `enable“ list.
 func (c *Config) IsEnabled(set *Set) bool {
 	for _, name := range c.Enable {
 		if set.Name == name {

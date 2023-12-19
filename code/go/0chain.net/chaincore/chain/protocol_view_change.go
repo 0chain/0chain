@@ -192,10 +192,6 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.Settings.ServiceChargeRatio = viper.GetFloat64("service_charge")
 	mn.Settings.MaxNumDelegates = viper.GetInt("number_of_delegates")
 
-	mn.Geolocation = minersc.SimpleNodeGeolocation{
-		Latitude:  viper.GetFloat64("latitude"),
-		Longitude: viper.GetFloat64("longitude"),
-	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
 		mn.ProviderType = spenum.Miner

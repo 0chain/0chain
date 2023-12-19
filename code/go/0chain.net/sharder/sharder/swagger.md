@@ -54,8 +54,6 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/average-write-price | [average write price](#average-write-price) | Get Average Write Price |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges | [blobber challenges](#blobber-challenges) | Get Blobber Challenges by Challenge ID |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids | [blobber ids](#blobber-ids) | Get Blobber URL as ID |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation | [blobbers by geolocation](#blobbers-by-geolocation) | Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank | [blobbers by rank](#blobbers-by-rank) | Get List of Blobbers by Rank |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers | [free alloc blobbers](#free-alloc-blobbers) | Returns list of all blobbers alive that match the free allocation request. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber | [get blobber](#get-blobber) | Get Blobber Info |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge | [get challenge](#get-challenge) | Get blobber challenge by challenge id |
@@ -100,7 +98,6 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList | [get dkg list](#get-dkg-list) | Get list of DKG Miners |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList | [get miner list](#get-miner-list) | Get Miner List |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList | [get mpks list](#get-mpks-list) | Get DKG Miners |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations | [get miner geolocations](#get-miner-geolocations) | Get Miner Geolocation |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stake | [get miners stake](#get-miners-stake) | Get Miners Stake |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats | [get miners stats](#get-miners-stats) | Get Miners Stats |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats | [get sharders stats](#get-sharders-stats) | Get Active and Inactive Miners Count |
@@ -157,7 +154,6 @@
 |---------|---------|--------|---------|
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList | [get sharder keep list](#get-sharder-keep-list) | Get Sharder Stake |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList | [get sharder list](#get-sharder-list) | Get Sharders List |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations | [get sharder geolocations](#get-sharder-geolocations) | Get Sharder Geolocation |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stake | [get sharders stake](#get-sharders-stake) | Get Total Sharder Stake |
 | GET | /v1/sharder/get/stats | [sharderstats](#sharderstats) | Get Sharder Stats |
   
@@ -672,56 +668,6 @@ Status: Bad Request
 
 ###### <span id="blobber-ids-400-schema"></span> Schema
 
-### <span id="blobbers-by-geolocation"></span> Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values. (*blobbers-by-geolocation*)
-
-```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation
-```
-
-+ name: max_latitude
-description: maximum latitude value, defaults to 90
-in: query
-type: string
-+ name: min_latitude
-description:  minimum latitude value, defaults to -90
-in: query
-type: string
-+ name: max_longitude
-description: maximum max_longitude value, defaults to 180
-in: query
-type: string
-+ name: min_longitude
-description: minimum max_longitude value, defaults to -180
-in: query
-type: string
-+ name: offset
-description: offset
-in: query
-type: string
-+ name: limit
-description: limit
-in: query
-type: string
-+ name: sort
-description: desc or asc
-in: query
-type: string
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#blobbers-by-geolocation-200) | OK | stringArray |  | [schema](#blobbers-by-geolocation-200-schema) |
-| [500](#blobbers-by-geolocation-500) | Internal Server Error |  |  | [schema](#blobbers-by-geolocation-500-schema) |
-
-#### Responses
-
-
-##### <span id="blobbers-by-geolocation-200"></span> 200 - stringArray
-Status: OK
-
-###### <span id="blobbers-by-geolocation-200-schema"></span> Schema
-   
-  
 
 
  [StringArray](#string-array)
@@ -730,45 +676,6 @@ Status: OK
 Status: Internal Server Error
 
 ###### <span id="blobbers-by-geolocation-500-schema"></span> Schema
-
-### <span id="blobbers-by-rank"></span> Get List of Blobbers by Rank (*blobbers-by-rank*)
-
-```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank
-```
-
-Gets list of all blobbers ordered by rank
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| limit | `query` | string | `string` |  |  |  | limit |
-| offset | `query` | string | `string` |  |  |  | offset |
-| sort | `query` | string | `string` |  |  |  | desc or asc |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#blobbers-by-rank-200) | OK | storageNodeResponse |  | [schema](#blobbers-by-rank-200-schema) |
-| [500](#blobbers-by-rank-500) | Internal Server Error |  |  | [schema](#blobbers-by-rank-500-schema) |
-
-#### Responses
-
-
-##### <span id="blobbers-by-rank-200"></span> 200 - storageNodeResponse
-Status: OK
-
-###### <span id="blobbers-by-rank-200-schema"></span> Schema
-   
-  
-
-[StorageNodeResponse](#storage-node-response)
-
-##### <span id="blobbers-by-rank-500"></span> 500
-Status: Internal Server Error
-
-###### <span id="blobbers-by-rank-500-schema"></span> Schema
 
 ### <span id="block"></span> Get Block Information (*block*)
 
@@ -2136,51 +2043,6 @@ Status: Internal Server Error
 
 ###### <span id="get-blocks-500-schema"></span> Schema
 
-### <span id="get-miner-geolocations"></span> Get Miner Geolocation (*get_miner_geolocations*)
-
-```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations
-```
-
-list minersc config settings
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| active | `query` | string | `string` |  | ✓ |  | active |
-| limit | `query` | string | `string` |  | ✓ |  | limit |
-| offset | `query` | string | `string` |  | ✓ |  | offset |
-| sort | `query` | string | `string` |  |  |  | desc or asc |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#get-miner-geolocations-200) | OK | MinerGeolocation |  | [schema](#get-miner-geolocations-200-schema) |
-| [400](#get-miner-geolocations-400) | Bad Request |  |  | [schema](#get-miner-geolocations-400-schema) |
-| [484](#get-miner-geolocations-484) | Status 484 |  |  | [schema](#get-miner-geolocations-484-schema) |
-
-#### Responses
-
-
-##### <span id="get-miner-geolocations-200"></span> 200 - MinerGeolocation
-Status: OK
-
-###### <span id="get-miner-geolocations-200-schema"></span> Schema
-   
-  
-
-[MinerGeolocation](#miner-geolocation)
-
-##### <span id="get-miner-geolocations-400"></span> 400
-Status: Bad Request
-
-###### <span id="get-miner-geolocations-400-schema"></span> Schema
-
-##### <span id="get-miner-geolocations-484"></span> 484
-Status: Status 484
-
-###### <span id="get-miner-geolocations-484-schema"></span> Schema
 
 ### <span id="get-miners-stake"></span> Get Miners Stake (*get_miners_stake*)
 
@@ -2244,51 +2106,6 @@ Status: Not Found
 
 ###### <span id="get-miners-stats-404-schema"></span> Schema
 
-### <span id="get-sharder-geolocations"></span> Get Sharder Geolocation (*get_sharder_geolocations*)
-
-```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations
-```
-
-list minersc config settings
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| active | `query` | string | `string` |  | ✓ |  | active |
-| limit | `query` | string | `string` |  | ✓ |  | limit |
-| offset | `query` | string | `string` |  | ✓ |  | offset |
-| sort | `query` | string | `string` |  |  |  | desc or asc |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#get-sharder-geolocations-200) | OK | SharderGeolocation |  | [schema](#get-sharder-geolocations-200-schema) |
-| [400](#get-sharder-geolocations-400) | Bad Request |  |  | [schema](#get-sharder-geolocations-400-schema) |
-| [484](#get-sharder-geolocations-484) | Status 484 |  |  | [schema](#get-sharder-geolocations-484-schema) |
-
-#### Responses
-
-
-##### <span id="get-sharder-geolocations-200"></span> 200 - SharderGeolocation
-Status: OK
-
-###### <span id="get-sharder-geolocations-200-schema"></span> Schema
-   
-  
-
-[SharderGeolocation](#sharder-geolocation)
-
-##### <span id="get-sharder-geolocations-400"></span> 400
-Status: Bad Request
-
-###### <span id="get-sharder-geolocations-400-schema"></span> Schema
-
-##### <span id="get-sharder-geolocations-484"></span> 484
-Status: Status 484
-
-###### <span id="get-sharder-geolocations-484-schema"></span> Schema
 
 ### <span id="get-sharders-stake"></span> Get Total Sharder Stake (*get_sharders_stake*)
 
@@ -3335,7 +3152,6 @@ Status: Internal Server Error
 | CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | DeletedAt | [DeletedAt](#deleted-at)| `DeletedAt` |  | |  |  |
 | ID | uint64 (formatted integer)| `uint64` |  | |  |  |
-| MinLockDemand | double (formatted number)| `float64` |  | |  |  |
 | ReadPrice | int64 (formatted integer)| `int64` |  | |  |  |
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | WritePrice | int64 (formatted integer)| `int64` |  | |  |  |
@@ -3372,7 +3188,6 @@ Status: Internal Server Error
 | blobber_allocs_partition_loc | [PartitionLocation](#partition-location)| `PartitionLocation` |  | |  |  |
 | challenge_pool_integral_value | [Coin](#coin)| `Coin` |  | |  |  |
 | challenge_reward | [Coin](#coin)| `Coin` |  | |  |  |
-| min_lock_demand | [Coin](#coin)| `Coin` |  | |  |  |
 | penalty | [Coin](#coin)| `Coin` |  | |  |  |
 | read_reward | [Coin](#coin)| `Coin` |  | |  |  |
 | returned | [Coin](#coin)| `Coin` |  | |  |  |
@@ -3876,22 +3691,6 @@ IDField - Useful to embed this into all the entities and get consistent behavior
 
 
 
-### <span id="miner-geolocation"></span> MinerGeolocation
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Latitude | double (formatted number)| `float64` |  | |  |  |
-| Longitude | double (formatted number)| `float64` |  | |  |  |
-| MinerID | string| `string` |  | |  |  |
-
-
 
 ### <span id="miner-node"></span> MinerNode
 
@@ -3915,7 +3714,6 @@ IDField - Useful to embed this into all the entities and get consistent behavior
 | Port | int64 (formatted integer)| `int64` |  | |  |  |
 | PublicKey | string| `string` |  | |  |  |
 | ShortName | string| `string` |  | |  |  |
-| geolocation | [SimpleNodeGeolocation](#simple-node-geolocation)| `SimpleNodeGeolocation` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | minter | [ApprovedMinter](#approved-minter)| `ApprovedMinter` |  | |  |  |
 | node_type | [NodeType](#node-type)| `NodeType` |  | |  |  |
@@ -4270,21 +4068,6 @@ it can be used as a scan destination, similar to NullString.
 
 
 
-### <span id="sharder-geolocation"></span> SharderGeolocation
-
-
-  
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Latitude | double (formatted number)| `float64` |  | |  |  |
-| Longitude | double (formatted number)| `float64` |  | |  |  |
-| SharderID | string| `string` |  | |  |  |
-
 
 
 ### <span id="share-or-signs"></span> ShareOrSigns
@@ -4324,7 +4107,6 @@ it can be used as a scan destination, similar to NullString.
 | Port | int64 (formatted integer)| `int64` |  | |  |  |
 | PublicKey | string| `string` |  | |  |  |
 | ShortName | string| `string` |  | |  |  |
-| geolocation | [SimpleNodeGeolocation](#simple-node-geolocation)| `SimpleNodeGeolocation` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | node_type | [NodeType](#node-type)| `NodeType` |  | |  |  |
 | total_stake | [Coin](#coin)| `Coin` |  | |  |  |
@@ -4536,7 +4318,6 @@ which the allocation has created. |  |
 | ID | string| `string` |  | |  |  |
 | LastRewardDataReadRound | int64 (formatted integer)| `int64` |  | |  |  |
 | SavedData | int64 (formatted integer)| `int64` |  | |  |  |
-| geolocation | [StorageNodeGeolocation](#storage-node-geolocation)| `StorageNodeGeolocation` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | provider_type | [Provider](#provider)| `Provider` |  | |  |  |
 | reward_partition | [RewardPartitionLocation](#reward-partition-location)| `RewardPartitionLocation` |  | |  |  |
@@ -4544,23 +4325,6 @@ which the allocation has created. |  |
 | terms | [Terms](#terms)| `Terms` |  | |  |  |
 
 
-
-### <span id="storage-node-geolocation"></span> StorageNodeGeolocation
-
-
-> Move to the core, in case of multi-entity use of geo data
-  
-
-
-
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| Latitude | double (formatted number)| `float64` |  | |  |  |
-| Longitude | double (formatted number)| `float64` |  | |  |  |
 
 
 
@@ -4593,7 +4357,6 @@ which the allocation has created. |  |
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| MinLockDemand | double (formatted number)| `float64` |  | | MinLockDemand in number in [0; 1] range. It represents part of
 allocation should be locked for the blobber rewards even if
 user never write something to the blobber. |  |
 | max_offer_duration | [Duration](#duration)| `Duration` |  | |  |  |
@@ -4825,8 +4588,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | AuthorizerID | string| `string` |  | |  |  |
 | DelegateWallet | string| `string` |  | | stake_pool_settings |  |
 | LastHealthCheck | int64 (formatted integer)| `int64` |  | | Stats |  |
-| Latitude | double (formatted number)| `float64` |  | | Geolocation |  |
-| Longitude | double (formatted number)| `float64` |  | |  |  |
 | NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
 | ServiceCharge | double (formatted number)| `float64` |  | |  |  |
 | URL | string| `string` |  | |  |  |
@@ -4987,7 +4748,6 @@ Timestamp - just a wrapper to control the json encoding */ |  |
 | Round | int64 (formatted integer)| `int64` |  | |  |  |
 | ShortName | string| `string` |  | |  |  |
 | TotalReward | int64 (formatted integer)| `int64` |  | |  |  |
-| geolocation | [SimpleNodeGeolocation](#simple-node-geolocation)| `SimpleNodeGeolocation` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | minter | [ApprovedMinter](#approved-minter)| `ApprovedMinter` |  | |  |  |
 | node_type | [NodeType](#node-type)| `NodeType` |  | |  |  |
@@ -5070,7 +4830,6 @@ and the other for the allocations that the client (client_id) doesn't own
 | ReadData | int64 (formatted integer)| `int64` |  | |  |  |
 | SavedData | int64 (formatted integer)| `int64` |  | |  |  |
 | UsedAllocation | int64 (formatted integer)| `int64` |  | |  |  |
-| geolocation | [StorageNodeGeolocation](#storage-node-geolocation)| `StorageNodeGeolocation` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | provider_type | [Provider](#provider)| `Provider` |  | |  |  |
 | reward_partition | [RewardPartitionLocation](#reward-partition-location)| `RewardPartitionLocation` |  | |  |  |

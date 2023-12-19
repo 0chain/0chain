@@ -63,6 +63,7 @@ func SetupScRestApiHandlers() {
 func SetupSharderStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler))))
+	http.HandleFunc("/v1/current-round", common.WithCORS(common.UserRateLimit(common.ToJSONResponse(c.GetCurrentRoundHandler))))
 	http.HandleFunc("/v1/scstats/", common.WithCORS(common.UserRateLimit(c.GetSCStats)))
 	http.HandleFunc("/v1/screst/", common.WithCORS(common.UserRateLimit(c.HandleSCRest)))
 }
@@ -194,6 +195,10 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	}
 
 	return userToState(user), nil
+}
+
+func (c *Chain) GetCurrentRoundHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return c.GetCurrentRound(), nil
 }
 
 func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {

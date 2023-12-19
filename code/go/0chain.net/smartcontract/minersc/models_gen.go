@@ -308,9 +308,9 @@ func (z *DKGMinerNodes) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 30
+	// map header, size 28
 	// string "ViewChange"
-	o = append(o, 0xde, 0x0, 0x1e, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
+	o = append(o, 0xde, 0x0, 0x1c, 0xaa, 0x56, 0x69, 0x65, 0x77, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65)
 	o = msgp.AppendInt64(o, z.ViewChange)
 	// string "MaxN"
 	o = append(o, 0xa4, 0x4d, 0x61, 0x78, 0x4e)
@@ -385,13 +385,6 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "RewardDeclineRate"
 	o = append(o, 0xb1, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x44, 0x65, 0x63, 0x6c, 0x69, 0x6e, 0x65, 0x52, 0x61, 0x74, 0x65)
 	o = msgp.AppendFloat64(o, z.RewardDeclineRate)
-	// string "MaxMint"
-	o = append(o, 0xa7, 0x4d, 0x61, 0x78, 0x4d, 0x69, 0x6e, 0x74)
-	o, err = z.MaxMint.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "MaxMint")
-		return
-	}
 	// string "NumMinerDelegatesRewarded"
 	o = append(o, 0xb9, 0x4e, 0x75, 0x6d, 0x4d, 0x69, 0x6e, 0x65, 0x72, 0x44, 0x65, 0x6c, 0x65, 0x67, 0x61, 0x74, 0x65, 0x73, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x65, 0x64)
 	o = msgp.AppendInt(o, z.NumMinerDelegatesRewarded)
@@ -411,13 +404,6 @@ func (z *GlobalNode) MarshalMsg(b []byte) (o []byte, err error) {
 			err = msgp.WrapError(err, "PrevMagicBlock")
 			return
 		}
-	}
-	// string "Minted"
-	o = append(o, 0xa6, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x64)
-	o, err = z.Minted.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "Minted")
-		return
 	}
 	// string "RewardRoundFrequency"
 	o = append(o, 0xb4, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x52, 0x6f, 0x75, 0x6e, 0x64, 0x46, 0x72, 0x65, 0x71, 0x75, 0x65, 0x6e, 0x63, 0x79)
@@ -582,12 +568,6 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "RewardDeclineRate")
 				return
 			}
-		case "MaxMint":
-			bts, err = z.MaxMint.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "MaxMint")
-				return
-			}
 		case "NumMinerDelegatesRewarded":
 			z.NumMinerDelegatesRewarded, bts, err = msgp.ReadIntBytes(bts)
 			if err != nil {
@@ -622,12 +602,6 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					err = msgp.WrapError(err, "PrevMagicBlock")
 					return
 				}
-			}
-		case "Minted":
-			bts, err = z.Minted.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Minted")
-				return
 			}
 		case "RewardRoundFrequency":
 			z.RewardRoundFrequency, bts, err = msgp.ReadInt64Bytes(bts)
@@ -691,13 +665,13 @@ func (z *GlobalNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *GlobalNode) Msgsize() (s int) {
-	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 18 + msgp.DurationSize + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 8 + z.MaxMint.Msgsize() + 26 + msgp.IntSize + 20 + msgp.IntSize + 28 + msgp.IntSize + 15
+	s = 3 + 11 + msgp.Int64Size + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 5 + msgp.IntSize + 13 + msgp.IntSize + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 9 + msgp.Float64Size + 10 + msgp.Int64Size + 9 + z.MaxStake.Msgsize() + 9 + z.MinStake.Msgsize() + 20 + z.MinStakePerDelegate.Msgsize() + 18 + msgp.DurationSize + 11 + msgp.Float64Size + 11 + msgp.Float64Size + 12 + z.BlockReward.Msgsize() + 10 + msgp.Float64Size + 6 + msgp.Int64Size + 18 + msgp.Float64Size + 26 + msgp.IntSize + 20 + msgp.IntSize + 28 + msgp.IntSize + 15
 	if z.PrevMagicBlock == nil {
 		s += msgp.NilSize
 	} else {
 		s += z.PrevMagicBlock.Msgsize()
 	}
-	s += 7 + z.Minted.Msgsize() + 21 + msgp.Int64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 15 + msgp.Int64Size + 5 + msgp.MapHeaderSize
+	s += 21 + msgp.Int64Size + 8 + msgp.StringPrefixSize + len(z.OwnerId) + 15 + msgp.Int64Size + 5 + msgp.MapHeaderSize
 	if z.Cost != nil {
 		for za0001, za0002 := range z.Cost {
 			_ = za0002
@@ -892,9 +866,9 @@ func (z *PhaseNode) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 14
+	// map header, size 13
 	// string "Provider"
-	o = append(o, 0x8e, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0x8d, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	o, err = z.Provider.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Provider")
@@ -909,15 +883,6 @@ func (z *SimpleNode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Port"
 	o = append(o, 0xa4, 0x50, 0x6f, 0x72, 0x74)
 	o = msgp.AppendInt(o, z.Port)
-	// string "Geolocation"
-	o = append(o, 0xab, 0x47, 0x65, 0x6f, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e)
-	// map header, size 2
-	// string "Latitude"
-	o = append(o, 0x82, 0xa8, 0x4c, 0x61, 0x74, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o = msgp.AppendFloat64(o, z.Geolocation.Latitude)
-	// string "Longitude"
-	o = append(o, 0xa9, 0x4c, 0x6f, 0x6e, 0x67, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o = msgp.AppendFloat64(o, z.Geolocation.Longitude)
 	// string "Path"
 	o = append(o, 0xa4, 0x50, 0x61, 0x74, 0x68)
 	o = msgp.AppendString(o, z.Path)
@@ -998,41 +963,6 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Port")
 				return
 			}
-		case "Geolocation":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Geolocation")
-				return
-			}
-			for zb0002 > 0 {
-				zb0002--
-				field, bts, err = msgp.ReadMapKeyZC(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "Geolocation")
-					return
-				}
-				switch msgp.UnsafeString(field) {
-				case "Latitude":
-					z.Geolocation.Latitude, bts, err = msgp.ReadFloat64Bytes(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Geolocation", "Latitude")
-						return
-					}
-				case "Longitude":
-					z.Geolocation.Longitude, bts, err = msgp.ReadFloat64Bytes(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Geolocation", "Longitude")
-						return
-					}
-				default:
-					bts, err = msgp.Skip(bts)
-					if err != nil {
-						err = msgp.WrapError(err, "Geolocation")
-						return
-					}
-				}
-			}
 		case "Path":
 			z.Path, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -1071,13 +1001,13 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			}
 		case "NodeType":
 			{
-				var zb0003 int
-				zb0003, bts, err = msgp.ReadIntBytes(bts)
+				var zb0002 int
+				zb0002, bts, err = msgp.ReadIntBytes(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "NodeType")
 					return
 				}
-				z.NodeType = NodeType(zb0003)
+				z.NodeType = NodeType(zb0002)
 			}
 		case "LastHealthCheck":
 			bts, err = z.LastHealthCheck.UnmarshalMsg(bts)
@@ -1105,68 +1035,7 @@ func (z *SimpleNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SimpleNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 12 + 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z SimpleNodeGeolocation) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
-	// string "Latitude"
-	o = append(o, 0x82, 0xa8, 0x4c, 0x61, 0x74, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o = msgp.AppendFloat64(o, z.Latitude)
-	// string "Longitude"
-	o = append(o, 0xa9, 0x4c, 0x6f, 0x6e, 0x67, 0x69, 0x74, 0x75, 0x64, 0x65)
-	o = msgp.AppendFloat64(o, z.Longitude)
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *SimpleNodeGeolocation) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var field []byte
-	_ = field
-	var zb0001 uint32
-	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	for zb0001 > 0 {
-		zb0001--
-		field, bts, err = msgp.ReadMapKeyZC(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "Latitude":
-			z.Latitude, bts, err = msgp.ReadFloat64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Latitude")
-				return
-			}
-		case "Longitude":
-			z.Longitude, bts, err = msgp.ReadFloat64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Longitude")
-				return
-			}
-		default:
-			bts, err = msgp.Skip(bts)
-			if err != nil {
-				err = msgp.WrapError(err)
-				return
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z SimpleNodeGeolocation) Msgsize() (s int) {
-	s = 1 + 9 + msgp.Float64Size + 10 + msgp.Float64Size
+	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.N2NHost) + 5 + msgp.StringPrefixSize + len(z.Host) + 5 + msgp.IntSize + 5 + msgp.StringPrefixSize + len(z.Path) + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.StringPrefixSize + len(z.ShortName) + 9 + msgp.StringPrefixSize + len(z.BuildTag) + 12 + z.TotalStaked.Msgsize() + 7 + msgp.BoolSize + 9 + msgp.IntSize + 16 + z.LastHealthCheck.Msgsize() + 23 + msgp.Int64Size
 	return
 }
 

@@ -198,7 +198,6 @@ func TestUpdateSettings(t *testing.T) {
 					"max_charge":                          "0.5",
 					"epoch":                               "6415000000",
 					"reward_decline_rate":                 "0.1",
-					"max_mint":                            "1500000.0",
 					"owner_id":                            owner,
 					"cost.add_miner":                      "111",
 					"cost.add_sharder":                    "111",

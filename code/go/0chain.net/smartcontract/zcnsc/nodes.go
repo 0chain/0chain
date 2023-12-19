@@ -37,7 +37,6 @@ type ZCNSConfig struct {
 	MinAuthorizers      int64          `json:"min_authorizers"`
 	PercentAuthorizers  float64        `json:"percent_authorizers"`
 	MaxFee              currency.Coin  `json:"max_fee"`
-	BurnAddress         string         `json:"burn_address"`
 	OwnerId             string         `json:"owner_id"`
 	Cost                map[string]int `json:"cost"`
 	MaxDelegates        int            `json:"max_delegates"`       // MaxDelegates per stake pool
@@ -70,11 +69,6 @@ func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 			if err != nil {
 				return err
 			}
-		case BurnAddress:
-			if value == "" {
-				return fmt.Errorf("key %s is empty", key)
-			}
-			gn.BurnAddress = value
 		case PercentAuthorizers:
 			gn.PercentAuthorizers, err = strconv.ParseFloat(value, 64)
 			if err != nil {
@@ -117,7 +111,7 @@ func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 			if err != nil {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
-			gn.MaxFee, err = currency.ParseZCN(amount)
+			gn.MaxFee = currency.Coin(amount)
 			if err != nil {
 				return err
 			}
@@ -200,16 +194,14 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("min burn amount (%v) is less than 1", gn.MinBurnAmount))
 	case gn.PercentAuthorizers < 0:
 		return common.NewError(Code, fmt.Sprintf("min percentage of authorizers (%v) is less than 0", gn.PercentAuthorizers))
-	case gn.BurnAddress == "":
-		return common.NewError(Code, fmt.Sprintf("burn address (%v) is not valid", gn.BurnAddress))
 	case gn.OwnerId == "":
 		return common.NewError(Code, fmt.Sprintf("owner id (%v) is not valid", gn.OwnerId))
 	case gn.MaxDelegates <= 0:
 		return common.NewError(Code, fmt.Sprintf("max delegate count (%v) is less than 0", gn.MaxDelegates))
 	case gn.HealthCheckPeriod <= 0:
 		return common.NewError(Code, fmt.Sprintf("health check period (%v) is less than 0", gn.HealthCheckPeriod))
-	case gn.MinLockAmount == 0:
-		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is equal to 0", gn.MinLockAmount))
+		// case gn.MinLockAmount == 0:
+		// 	return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is equal to 0", gn.MinLockAmount))
 	}
 	return nil
 }
@@ -364,8 +356,15 @@ func (an *AuthorizerNode) ToEvent() *event.Authorizer {
 		an.Config = new(AuthorizerConfig)
 	}
 	return &event.Authorizer{
-		Provider: event.Provider{ID: an.ID},
-		Fee:      an.Config.Fee,
+		Provider: event.Provider{
+			ID: an.ID,
+			Rewards: event.ProviderRewards{
+				ProviderID: an.ID,
+			},
+			LastHealthCheck: an.LastHealthCheck,
+			IsKilled:        an.Provider.IsKilled(),
+		},
+		Fee: an.Config.Fee,
 
 		URL: an.URL,
 	}

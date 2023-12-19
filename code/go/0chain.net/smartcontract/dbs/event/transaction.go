@@ -1,23 +1,24 @@
 package event
 
 import (
+	"strings"
+	"time"
+
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
-	"strings"
-	"time"
 )
 
 // Transaction model to save the transaction data
 // swagger:model Transaction
 type Transaction struct {
 	model.ImmutableModel
-	Hash              string        `json:"hash" gorm:"uniqueIndex:idx_thash"`
+	Hash              string        `json:"hash" gorm:"uniqueIndex:idx_thash;index:idx_tround_thash, priority:2"`
 	BlockHash         string        `json:"block_hash" gorm:"index:idx_tblock_hash"`
-	Round             int64         `json:"round"`
+	Round             int64         `json:"round" gorm:"index:idx_tround;index:idx_tround_thash, priority:1"`
 	Version           string        `json:"version"`
 	ClientId          string        `json:"client_id" gorm:"index:idx_tclient_id"`
 	ToClientId        string        `json:"to_client_id" gorm:"index:idx_tto_client_id"`
@@ -88,6 +89,28 @@ func (edb *EventDb) GetTransactionByToClientId(toClientID string, limit common.P
 		Get().
 		Model(&Transaction{}).
 		Where(Transaction{ToClientId: toClientID}).
+		Offset(limit.Offset).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "round"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "hash"},
+			Desc:   limit.IsDescending,
+		}).
+		Scan(&tr)
+	return tr, res.Error
+}
+
+// GetTransactionByClientIDAndToClientID searches for transaction by clientID and toClientID
+// Used Index: idx_tclient_id
+func (edb *EventDb) GetTransactionByClientIDAndToClientID(clientID, toClientID string, limit common.Pagination) ([]Transaction, error) {
+	var tr []Transaction
+	res := edb.Store.
+		Get().
+		Model(&Transaction{}).
+		Where(Transaction{ClientId: clientID, ToClientId: toClientID}).
 		Offset(limit.Offset).
 		Limit(limit.Limit).
 		Order(clause.OrderByColumn{

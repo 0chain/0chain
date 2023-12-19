@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -55,15 +54,13 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	restEndpoints := []rest.Endpoint{
 		rest.MakeEndpoint(storage+"/getBlobber", common.UserRateLimit(srh.getBlobber)),
 		rest.MakeEndpoint(storage+"/getblobbers", common.UserRateLimit(srh.getBlobbers)),
-		rest.MakeEndpoint(storage+"/blobbers-by-rank", common.UserRateLimit(srh.getBlobbersByRank)),
-		rest.MakeEndpoint(storage+"/blobbers-by-geolocation", common.UserRateLimit(srh.getBlobbersByGeoLocation)),
 		rest.MakeEndpoint(storage+"/transaction", common.UserRateLimit(srh.getTransactionByHash)),
 		rest.MakeEndpoint(storage+"/transactions", common.UserRateLimit(srh.getTransactionByFilter)),
 
 		rest.MakeEndpoint(storage+"/writemarkers", common.UserRateLimit(srh.getWriteMarker)),
 		rest.MakeEndpoint(storage+"/errors", common.UserRateLimit(srh.getErrors)),
 		rest.MakeEndpoint(storage+"/allocations", common.UserRateLimit(srh.getAllocations)),
-		rest.MakeEndpoint(storage+"/allocation_min_lock", common.UserRateLimit(srh.getAllocationMinLock)),
+		rest.MakeEndpoint(storage+"/expired-allocations", common.UserRateLimit(srh.getExpiredAllocations)),
 		rest.MakeEndpoint(storage+"/allocation-update-min-lock", common.UserRateLimit(srh.getAllocationUpdateMinLock)),
 		rest.MakeEndpoint(storage+"/allocation", common.UserRateLimit(srh.getAllocation)),
 		rest.MakeEndpoint(storage+"/latestreadmarker", common.UserRateLimit(srh.getLatestReadMarker)),
@@ -263,7 +260,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod, false)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -334,6 +331,11 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
 		return
 	}
+	forceParam := q.Get("force")
+	force := false
+	if forceParam == "true" {
+		force = true
+	}
 
 	conf, err2 := getConfig(srh.GetQueryStateContext())
 	if err2 != nil && err2 != util.ErrValueNotPresent {
@@ -346,7 +348,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		healthCheckPeriod = conf.HealthCheckPeriod
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod, force)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -355,7 +357,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration) ([]string, error) {
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration, isForce bool) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -408,7 +410,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		return nil, errors.New("failed to get blobbers: " + err.Error())
 	}
 
-	if len(blobberIDs) < numberOfBlobbers {
+	if len(blobberIDs) < numberOfBlobbers && !isForce {
 		return nil, errors.New(fmt.Sprintf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers))
 	}
 	return blobberIDs, nil
@@ -980,8 +982,6 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	if err != nil {
 		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
 	}
-	spStat := &stakepool.StakePoolStat{}
-	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
 
 	switch spenum.Provider(providerType) {
 	case spenum.Blobber:
@@ -1602,105 +1602,6 @@ func (srh *StorageRestHandler) getLatestReadMarker(w http.ResponseWriter, r *htt
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation_min_lock allocation_min_lock
-// Calculates the cost of a new allocation request.
-//
-// parameters:
-//
-//	+name: allocation_data
-//	 description: json marshall of new allocation request input data
-//	 in: query
-//	 type: string
-//	 required: true
-//
-// responses:
-//
-//	200: Int64Map
-//	400:
-//	500:
-func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *http.Request) {
-	var err error
-	allocData := r.URL.Query().Get("allocation_data")
-	var req newAllocationRequest
-	if err = req.decode([]byte(allocData)); err != nil {
-		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
-		return
-	}
-
-	balances := srh.GetQueryStateContext()
-	edb := balances.GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-
-	conf, err := getConfig(balances)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	var request newAllocationRequest
-	if err = request.decode([]byte(allocData)); err != nil {
-		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
-		return
-	}
-	if err := request.validate(conf); err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	//TODO use maximum blobber price instead, so we need not to select blobbers here, but estimate the maximum price of blobbers combined
-	blobbers, err := edb.GetBlobbersFromIDs(request.Blobbers)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	var sns []*storageNodeResponse
-	for _, b := range blobbers {
-		sn := blobberTableToStorageNode(b)
-		sns = append(sns, &sn)
-	}
-
-	sa, _, err := setupNewAllocation(
-		request,
-		sns,
-		Timings{timings: nil, start: common.ToTime(balances.Now())},
-		balances.Now(),
-		conf,
-		"",
-	)
-
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	cost, err := sa.cost()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	cost64, err := cost.Float64()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	mld, err := sa.restMinLockDemand()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-	mld64, err := mld.Float64()
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": math.Max(cost64, mld64+cost64*conf.CancellationCharge),
-	}, nil)
-}
-
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-update-min-lock allocation-update-min-lock
 // Calculates the cost for updating an allocation.
 //
@@ -1718,10 +1619,19 @@ func (srh *StorageRestHandler) getAllocationMinLock(w http.ResponseWriter, r *ht
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter, r *http.Request) {
+	var (
+		now = common.Now()
+	)
+
 	balances := srh.GetQueryStateContext()
 	edb := balances.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	conf, err := getConfig(balances)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
@@ -1732,10 +1642,29 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	// Always extend the allocation if the size is greater than 0.
+	if req.Size > 0 {
+		req.Extend = true
+	} else if req.Size < 0 {
+		common.Respond(w, r, "", common.NewErrBadRequest("invalid size"))
+		return
+	}
+
 	eAlloc, err := edb.GetAllocation(req.ID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest(err.Error()))
 		return
+	}
+
+	eAlloc.Size += req.Size
+
+	if eAlloc.Expiration < int64(now) {
+		common.Respond(w, r, nil, common.NewErrBadRequest("allocation expired"))
+		return
+	}
+
+	if req.Extend {
+		eAlloc.Expiration = common.ToTime(now).Add(conf.TimeUnit).Unix() // new expiration
 	}
 
 	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
@@ -1744,43 +1673,35 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	conf, err := getConfig(balances)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
-	}
-
-	var (
-		now = common.Now()
-	)
-
-	if req.Extend {
-		alloc.Expiration = common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()) // new expiration
-	}
-
-	if alloc.Expiration < now {
-		// allocation is expired, return the current rest min lock demand
-		rmld, err := getRestMinLockDemand(&alloc.StorageAllocation, conf.CancellationCharge)
+	// Pay cancellation charge if removing a blobber.
+	if req.RemoveBlobberId != "" {
+		allocCancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
 
-		common.Respond(w, r, map[string]interface{}{
-			"min_lock_demand": rmld,
-		}, nil)
-		return
+		totalWritePriceBefore := float64(0)
+		for _, blobber := range alloc.BlobberAllocs {
+			totalWritePriceBefore += float64(blobber.Terms.WritePrice)
+		}
+
+		removedBlobber := alloc.BlobberAllocsMap[req.RemoveBlobberId]
+
+		blobberCancellationCharge := currency.Coin(float64(allocCancellationCharge) * (float64(removedBlobber.Terms.WritePrice) / totalWritePriceBefore))
+
+		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, blobberCancellationCharge)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
 	}
 
-	alloc.Size += req.Size
-	if alloc.Size < conf.MinAllocSize || alloc.Size < alloc.Stats.UsedSize {
-		common.Respond(w, r, nil, common.NewErrBadRequest("allocation size becomes too small"))
-		return
-	}
-
-	if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
-		common.Respond(w, r, nil, err)
-		return
+	if req.Extend {
+		if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
+			common.Respond(w, r, nil, err)
+			return
+		}
 	}
 
 	if err = changeBlobbersEventDB(
@@ -1794,19 +1715,23 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	if err := updateAllocRestMinLockDemand(&req, &alloc.StorageAllocation, conf); err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	rmld, err := getRestMinLockDemand(&alloc.StorageAllocation, conf.CancellationCharge)
+	cp, err := edb.GetChallengePool(alloc.ID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
+	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, common.Timestamp(time.Now().Unix()))
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+
+	// Add extra 5% to deal with race condition
+	tokensRequiredToLock := int64(float64(tokensRequiredToLockZCN) * 1.05)
+
 	common.Respond(w, r, map[string]interface{}{
-		"min_lock_demand": rmld,
+		"min_lock_demand": tokensRequiredToLock,
 	}, nil)
 }
 
@@ -1845,10 +1770,7 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba, err := newBlobberAllocation(sa.bSize(), sa, addBlobber, now, conf.TimeUnit)
-	if err != nil {
-		return err
-	}
+	ba := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
 
 	removedIdx := 0
 
@@ -1871,59 +1793,18 @@ func changeBlobbersEventDB(
 		if !found {
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
+
+		sa.BlobberAllocs[removedIdx] = ba
+		sa.BlobberAllocsMap[addID] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
 		sa.ParityShards++
+
+		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+		sa.BlobberAllocsMap[addID] = ba
 	}
 
-	sa.BlobberAllocs[removedIdx] = ba
-	sa.BlobberAllocsMap[addID] = ba
 	return nil
-}
-
-func updateAllocRestMinLockDemand(req *updateAllocationRequest, alloc *StorageAllocation, conf *Config) error {
-	var (
-		size   = req.getNewBlobbersSize(alloc) // blobber size
-		gbSize = sizeInGB(size)                // blobber size in GB
-	)
-
-	for _, ba := range alloc.BlobberAllocs {
-		rdtu, err := alloc.restDurationInTimeUnits(alloc.StartTime, conf.TimeUnit)
-		if err != nil {
-			return common.NewErrInternal(err.Error())
-		}
-
-		nbmld, err := ba.Terms.minLockDemand(gbSize, rdtu, alloc.MinLockDemand)
-		if err != nil {
-			return common.NewErrInternal(err.Error())
-		}
-
-		// min_lock_demand can be increased only
-		if nbmld > ba.MinLockDemand {
-			ba.MinLockDemand = nbmld
-		}
-	}
-	return nil
-}
-
-func getRestMinLockDemand(alloc *StorageAllocation, cancelCharge float64) (currency.Coin, error) {
-	rmld, err := alloc.restMinLockDemand()
-	if err != nil {
-		return 0, common.NewErrInternal(fmt.Sprintf("failed to calculate rest min lock demand: %v", err))
-	}
-
-	cost, err := alloc.cost()
-	if err != nil {
-		return 0, common.NewErrInternal(fmt.Sprintf("failed to calculate cost: %v", err))
-	}
-
-	costF64, err := cost.Float64()
-	if err != nil {
-		return 0, common.NewErrInternal(fmt.Sprintf("failed to convert cost to float64: %v", err))
-	}
-
-	//return	"min_lock_demand": rmld + currency.Coin(costF64*conf.CancellationCharge),
-	return rmld + currency.Coin(costF64*cancelCharge), nil
 }
 
 func updateAllocBlobberTerms(
@@ -1997,6 +1878,22 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 		return
 	}
 	allocations, err := getClientAllocationsFromDb(clientID, edb, limit)
+	if err != nil {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
+		return
+	}
+	common.Respond(w, r, allocations, nil)
+}
+
+func (srh *StorageRestHandler) getExpiredAllocations(w http.ResponseWriter, r *http.Request) {
+	blobberID := r.URL.Query().Get("blobber_id")
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	allocations, err := getExpiredAllocationsFromDb(blobberID, edb)
 	if err != nil {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations"))
 		return
@@ -2315,6 +2212,27 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
+
+	if blockHash != "" {
+		rtv, err := edb.GetTransactionByBlockHash(blockHash, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
+	if clientID != "" && toClientID != "" {
+		rtv, err := edb.GetTransactionByClientIDAndToClientID(clientID, toClientID, limit)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		common.Respond(w, r, rtv, nil)
+		return
+	}
+
 	if clientID != "" {
 		rtv, err := edb.GetTransactionByClientId(clientID, limit)
 		if err != nil {
@@ -2327,16 +2245,6 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 
 	if toClientID != "" {
 		rtv, err := edb.GetTransactionByToClientId(toClientID, limit)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-			return
-		}
-		common.Respond(w, r, rtv, nil)
-		return
-	}
-
-	if blockHash != "" {
-		rtv, err := edb.GetTransactionByBlockHash(blockHash, limit)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -2401,28 +2309,31 @@ type storageNodesResponse struct {
 // StorageNode represents Blobber configurations.
 // swagger:model storageNodeResponse
 type storageNodeResponse struct {
-	ID                      string                 `json:"id" validate:"hexadecimal,len=64"`
-	BaseURL                 string                 `json:"url"`
-	Geolocation             StorageNodeGeolocation `json:"geolocation"`
-	Terms                   Terms                  `json:"terms"`     // terms
-	Capacity                int64                  `json:"capacity"`  // total blobber capacity
-	Allocated               int64                  `json:"allocated"` // allocated capacity
-	LastHealthCheck         common.Timestamp       `json:"last_health_check"`
-	IsKilled                bool                   `json:"is_killed"`
-	IsShutdown              bool                   `json:"is_shutdown"`
-	PublicKey               string                 `json:"-"`
-	SavedData               int64                  `json:"saved_data"`
-	DataReadLastRewardRound float64                `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64                  `json:"last_reward_data_read_round"` // last round when data read was updated
-	StakePoolSettings       stakepool.Settings     `json:"stake_pool_settings"`
-	RewardRound             RewardRound            `json:"reward_round"`
-	NotAvailable            bool                   `json:"not_available"`
+	ID                      string             `json:"id" validate:"hexadecimal,len=64"`
+	BaseURL                 string             `json:"url"`
+	Terms                   Terms              `json:"terms"`     // terms
+	Capacity                int64              `json:"capacity"`  // total blobber capacity
+	Allocated               int64              `json:"allocated"` // allocated capacity
+	LastHealthCheck         common.Timestamp   `json:"last_health_check"`
+	IsKilled                bool               `json:"is_killed"`
+	IsShutdown              bool               `json:"is_shutdown"`
+	PublicKey               string             `json:"-"`
+	SavedData               int64              `json:"saved_data"`
+	DataReadLastRewardRound float64            `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64              `json:"last_reward_data_read_round"` // last round when data read was updated
+	StakePoolSettings       stakepool.Settings `json:"stake_pool_settings"`
+	RewardRound             RewardRound        `json:"reward_round"`
+	NotAvailable            bool               `json:"not_available"`
+
+	ChallengesPassed    int64 `json:"challenges_passed"`
+	ChallengesCompleted int64 `json:"challenges_completed"`
 
 	TotalStake               currency.Coin `json:"total_stake"`
 	CreationRound            int64         `json:"creation_round"`
 	ReadData                 int64         `json:"read_data"`
 	UsedAllocation           int64         `json:"used_allocation"`
 	TotalOffers              currency.Coin `json:"total_offers"`
+	StakedCapacity           int64         `json:"staked_capacity"`
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
@@ -2432,7 +2343,6 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 	return storageNodeResponse{
 		ID:                      sn.ID,
 		BaseURL:                 sn.BaseURL,
-		Geolocation:             sn.Geolocation,
 		Terms:                   sn.Terms,
 		Capacity:                sn.Capacity,
 		Allocated:               sn.Allocated,
@@ -2459,7 +2369,6 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 			HasBeenShutDown: snr.IsShutdown,
 		},
 		BaseURL:                 snr.BaseURL,
-		Geolocation:             snr.Geolocation,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
 		Allocated:               snr.Allocated,
@@ -2477,10 +2386,6 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		ID:      blobber.ID,
 		BaseURL: blobber.BaseURL,
-		Geolocation: StorageNodeGeolocation{
-			Latitude:  blobber.Latitude,
-			Longitude: blobber.Longitude,
-		},
 		Terms: Terms{
 			ReadPrice:  blobber.ReadPrice,
 			WritePrice: blobber.WritePrice,
@@ -2493,10 +2398,14 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 			MaxNumDelegates:    blobber.NumDelegates,
 			ServiceChargeRatio: blobber.ServiceCharge,
 		},
+
+		ChallengesPassed:    int64(blobber.ChallengesPassed),
+		ChallengesCompleted: int64(blobber.ChallengesCompleted),
+
 		TotalStake:               blobber.TotalStake,
 		CreationRound:            blobber.CreationRound,
 		ReadData:                 blobber.ReadData,
-		UsedAllocation:           blobber.Used,
+		UsedAllocation:           blobber.SavedData,
 		TotalOffers:              blobber.OffersTotal,
 		TotalServiceCharge:       blobber.Rewards.TotalRewards,
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
@@ -2599,172 +2508,6 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	}
 
 	common.Respond(w, r, sns, nil)
-}
-
-// getBlobbers swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-rank blobbers-by-rank
-// Gets list of all blobbers ordered by rank
-// TODO: See if we need to remove since no longer used
-// parameters:
-//
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: sort
-//	 description: desc or asc
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: storageNodeResponse
-//	500:
-func (srh *StorageRestHandler) getBlobbersByRank(w http.ResponseWriter, r *http.Request) {
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobbers, err := edb.GetBlobbersByRank(limit)
-	if err != nil {
-		err := common.NewErrInternal("cannot get blobber by rank" + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, blobbers, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobbers-by-geolocation blobbers-by-geolocation
-//
-//	Returns a list of all blobbers within a rectangle defined by maximum and minimum latitude and longitude values.
-//
-//	  +name: max_latitude
-//	   description: maximum latitude value, defaults to 90
-//	   in: query
-//	   type: string
-//	  +name: min_latitude
-//	   description:  minimum latitude value, defaults to -90
-//	   in: query
-//	   type: string
-//	  +name: max_longitude
-//	   description: maximum max_longitude value, defaults to 180
-//	   in: query
-//	   type: string
-//	  +name: min_longitude
-//	   description: minimum max_longitude value, defaults to -180
-//	   in: query
-//	   type: string
-//	  +name: offset
-//	   description: offset
-//	   in: query
-//	   type: string
-//	  +name: limit
-//	   description: limit
-//	   in: query
-//	   type: string
-//	  +name: sort
-//	   description: desc or asc
-//	   in: query
-//	   type: string
-//
-// responses:
-//
-//	200: stringArray
-//	500:
-func (srh *StorageRestHandler) getBlobbersByGeoLocation(w http.ResponseWriter, r *http.Request) {
-	var maxLatitude, minLatitude, maxLongitude, minLongitude float64
-	var err error
-
-	maxLatitudeString := r.URL.Query().Get("max_latitude")
-	if len(maxLatitudeString) > 0 {
-		maxLatitude, err = strconv.ParseFloat(maxLatitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
-			return
-		}
-		if maxLatitude > MaxLatitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+maxLatitudeString+" out of range -90,+90"))
-			return
-		}
-	} else {
-		maxLatitude = MaxLatitude
-	}
-
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	minLatitudeString := r.URL.Query().Get("min_latitude")
-	if len(minLatitudeString) > 0 {
-		minLatitude, err = strconv.ParseFloat(minLatitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max latitude: "+err.Error()))
-			return
-		}
-		if minLatitude < MinLatitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max latitude "+minLatitudeString+" out of range -90,+90"))
-			return
-		}
-	} else {
-		minLatitude = MinLatitude
-	}
-
-	maxLongitudeString := r.URL.Query().Get("max_longitude")
-	if len(maxLongitudeString) > 0 {
-		maxLongitude, err = strconv.ParseFloat(maxLongitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad max longitude: "+err.Error()))
-			return
-		}
-		if maxLongitude > MaxLongitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("max max longitude "+maxLongitudeString+" out of range -180,80"))
-			return
-		}
-	} else {
-		maxLongitude = MaxLongitude
-	}
-
-	minLongitudeString := r.URL.Query().Get("min_longitude")
-	if len(minLongitudeString) > 0 {
-		minLongitude, err = strconv.ParseFloat(minLongitudeString, 64)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("bad min longitude: "+err.Error()))
-			return
-		}
-		if minLongitude < MinLongitude {
-			common.Respond(w, r, nil, common.NewErrBadRequest("min longitude "+minLongitudeString+" out of range -180,180"))
-			return
-		}
-	} else {
-		minLongitude = MinLongitude
-	}
-
-	edb := srh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	blobbers, err := edb.GeBlobberByLatLong(maxLatitude, minLatitude, maxLongitude, minLongitude, limit)
-	if err != nil {
-		err := common.NewErrInternal("cannot get blobber geolocation: " + err.Error())
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, blobbers, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber getBlobber

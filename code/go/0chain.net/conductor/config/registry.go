@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -355,7 +357,38 @@ func init() {
 		if err = mapstructure.Decode(val, &cn); err != nil {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
-		ex.Command(cn.Name, tm) // async command
+
+		var dur time.Duration
+		if cn.FailureThreshold == "" {
+			dur = 0
+		} else {
+			dur, err = time.ParseDuration(cn.FailureThreshold)
+			if err != nil {
+				return fmt.Errorf("decoding '%s': %v", name, err)
+			}
+		}
+
+		ex.Command(cn.Name, cn.Params, dur, tm) // async command
+		return nil
+	})
+
+	register("sleep", func(_ string,
+		_ Executor, val interface{}, _ time.Duration) (err error) {
+		var d time.Duration
+		switch v := val.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return
+			}
+		case time.Duration:
+			d = v
+		case int:
+			d = time.Duration(v)
+		default:
+			return fmt.Errorf("Invalid duration argument: %v", val)
+		}
+		time.Sleep(d)
 		return nil
 	})
 
@@ -605,6 +638,16 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("round_random_seed", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := cases.NewRoundRandomSeed()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {
@@ -697,5 +740,285 @@ func init() {
 		}
 
 		return ex.SetServerState(cfg)
+	})
+
+	register("check_miner_generates_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg WaitMinerGeneratesBlock
+		if err := mapstructure.Decode(val, &cfg); err != nil {
+			return err
+		}
+		return ex.WaitMinerGeneratesBlock(cfg, tm)
+	})
+
+	register("wait_sharder_lfb", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg WaitSharderLFB
+		if err := mapstructure.Decode(val, &cfg); err != nil {
+			return err
+		}
+		return ex.WaitSharderLFB(cfg, tm)
+	})
+
+	register("sleep", func(_ string,
+		_ Executor, val interface{}, _ time.Duration) (err error) {
+		var d time.Duration
+		switch v := val.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return
+			}
+		case time.Duration:
+			d = v
+		case int:
+			d = time.Duration(v)
+		default:
+			return fmt.Errorf("invalid duration argument: %v", val)
+		}
+		time.Sleep(d)
+		return nil
+	})
+
+	register("generate_all_challenges", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type bool, got %T", val)
+		}
+
+		log.Printf("[INF] generate_all_challenges: %v", cfg)
+
+		return ex.SetServerState(GenerateAllChallenges(cfg))
+	})
+
+	register("generate_challenge", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewGenerateChallenge()
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+
+		err = ex.GenerateChallenge(cfg)
+		if err != nil {
+			return err
+		}
+
+		return ex.SetServerState(cfg)
+	})
+
+	register("wait_blobber_commit", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
+		ex.WaitOnBlobberCommit(tm)
+		return nil
+
+	})
+
+	// waits for miner to generate challenge-generate transaction
+	register("wait_challenge_generation", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		ex.WaitForChallengeGeneration(tm)
+		return nil
+	})
+
+	// waits for blobber to submit challenge and miner to send status of this challenge
+	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
+		ex.WaitForChallengeStatus(tm)
+		return nil
+	})
+
+	register("wait_validator_ticket", func(_ string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := NewWaitValidatorTicket()
+		err = mapstructure.Decode(val, cfg)
+		if err != nil {
+			return
+		}
+
+		ex.WaitValidatorTicket(*cfg, tm)
+		return nil
+	})
+
+	// stop_challenge_generation directs miner to stop/resume generating challenge for any blobber
+	register("stop_challenge_generation", func(_ string, ex Executor, val interface{}, _ time.Duration) (err error) {
+		stopChalGen, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type bool, got %T", val)
+		}
+		cfg := StopChallengeGeneration(stopChalGen)
+		return ex.SetServerState(cfg)
+	})
+
+	register("stop_wm_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := StopWMCommit(true)
+		return ex.SetServerState(cfg)
+	})
+
+	register("resume_wm_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := StopWMCommit(false)
+		return ex.SetServerState(cfg)
+	})
+
+	register("fail_rename_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildFailRenameCommit(nodeIds))
+	})
+
+	register("disable_fail_rename_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildDisableFailRenameCommit(nodeIds))
+	})
+
+	register("fail_upload_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildFailUploadCommit(nodeIds))
+	})
+
+	register("disable_fail_upload_commit", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		s, ok := getNodeNames(val)
+		if !ok {
+			return fmt.Errorf("required type slice but got %T", val)
+		}
+
+		nodes := ex.GetNodes()
+		var nodeIds []NodeID
+		for _, name := range s {
+			id, ok := nodes[name]
+			if !ok {
+				return fmt.Errorf("node id for %s not found", name)
+			}
+			nodeIds = append(nodeIds, id)
+		}
+
+		return ex.SetServerState(BuildDisableFailUploadCommit(nodeIds))
+	})
+
+	register("wait_for_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		ex.WaitForFileMetaRoot()
+		cfg := GetFileMetaRoot(true)
+		return ex.SetServerState(cfg)
+	})
+
+	register("check_file_meta_root", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command CheckFileMetaRoot
+		err = command.Decode(val)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+		return ex.CheckFileMetaRoot(&command)
+	})
+
+	register("check_aggregate_value_change", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg CheckAggregateChange
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return
+		}
+
+		return ex.CheckAggregateValueChange(&cfg, tm)
+	})
+
+	register("check_aggregate_value_comparison", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg CheckAggregateComparison
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return
+		}
+
+		return ex.CheckAggregateValueComparison(&cfg, tm)
+	})
+
+	register("store_allocations_data", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		return ex.StoreAllocationsData()
+	})
+
+	register("check_rollback_tokenomics", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		return ex.CheckRollbackTokenomicsComparison()
+	})
+
+	register("set_node_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg NodeCustomConfig
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return
+		}
+
+		return ex.SetNodeCustomConfig(&cfg)
+	})
+
+	register("sync_latest_aggregates", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cfg SyncAggregates
+		err = mapstructure.Decode(val, &cfg)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		return ex.SyncLatestAggregates(&cfg)
+	})
+
+	register("pause", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		// pause execution until the user presses enter
+		log.Println("Press enter to continue...")
+		_, err = bufio.NewReader(os.Stdin).ReadBytes('\n')
+		if err != nil {
+			return
+		}
+		log.Printf("Continuing execution...")
+		return nil
+	})
+
+	register("set_miss_up_download", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		input, ok := val.(bool)
+		if !ok {
+			return fmt.Errorf("invalid value. Required type MissUpDownload, got %T", input)
+		}
+		cfg := MissUpDownload(input)
+		return ex.SetMissUpDownload(cfg)
+	})
+
+	register("wait_sharders_finalize_near_blocks", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command WaitShardersFinalizeNearBlocks
+		err = mapstructure.Decode(val, &command)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		ex.WaitShardersFinalizeNearBlocks(command, tm)
+		return nil
 	})
 }

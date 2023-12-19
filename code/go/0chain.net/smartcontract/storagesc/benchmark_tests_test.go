@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const extraStats = 4
+const extraStats = 5
 
 func TestStorageBenchmarkTests(t *testing.T) {
 	mockSigScheme := &mocks.SignatureScheme{}

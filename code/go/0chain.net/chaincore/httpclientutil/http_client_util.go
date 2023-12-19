@@ -5,7 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"math"
 	"net"
 	"net/http"
@@ -17,17 +18,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/0chain/common/core/currency"
-	"github.com/0chain/gosdk/core/transaction"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	node2 "github.com/0chain/gosdk/core/node"
 	"go.uber.org/zap"
 )
 
@@ -134,7 +134,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	return body, err
 }
 
@@ -171,7 +171,7 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 			logging.N2n.Error("get transaction status -- failed", zap.Error(err))
 			numErrs++
 		} else {
-			contents, err := ioutil.ReadAll(response.Body)
+			contents, err := io.ReadAll(response.Body)
 			if response.StatusCode != 200 {
 				// logging.Logger.Error("transaction confirmation response code",
 				// 	zap.Any("code", response.StatusCode))
@@ -269,13 +269,26 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 }
 
 func MakeClientBalanceRequest(clientID string, urls []string) (currency.Coin, error) {
-	balance, _, err := transaction.GetBalanceFieldFromSharders(clientID, "balance", urls)
-	return currency.Coin(balance), err
+	//balance, _, err := zcncore.GetBalance(clientID, "balance", urls)
+	//return currency.Coin(balance), err
+	consensus := len(urls)
+	if consensus > 3 {
+		consensus = 3
+	}
+	holder := node2.NewHolder(urls, consensus)
+	balance, _, err2 := holder.GetBalanceFieldFromSharders(clientID, "balance")
+	coin := currency.Coin(balance)
+	return coin, err2
 }
 
 func MakeClientNonceRequest(clientID string, urls []string) (int64, error) {
-	nonce, _, err := transaction.GetBalanceFieldFromSharders(clientID, "nonce", urls)
-	return nonce, err
+	consensus := len(urls)
+	if consensus > 3 {
+		consensus = 3
+	}
+	holder := node2.NewHolder(urls, consensus)
+	sharders, _, err2 := holder.GetNonceFromSharders(clientID)
+	return sharders, err2
 }
 
 // MakeClientStateRequest to get a client's balance
@@ -420,7 +433,7 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 				return
 			}
 
-			bodyBytes, err := ioutil.ReadAll(rsp.Body)
+			bodyBytes, err := io.ReadAll(rsp.Body)
 			if err != nil {
 				logging.Logger.Error("SCRestAPI - failed to read body response", zap.String("URL", sharderURL), zap.Error(err))
 			}
@@ -529,7 +542,7 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 				response.Body.Close()
 				continue
 			}
-			bodyBytes, err := ioutil.ReadAll(response.Body)
+			bodyBytes, err := io.ReadAll(response.Body)
 			response.Body.Close()
 			if err != nil {
 				logging.Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Error(err))
@@ -604,7 +617,7 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 			}
 
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				logging.Logger.Error("fetch_magic_block_from_sharders - read data failed",
 					zap.String("url", url),
@@ -703,7 +716,7 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 				response.Body.Close()
 				continue
 			}
-			bodyBytes, err := ioutil.ReadAll(response.Body)
+			bodyBytes, err := io.ReadAll(response.Body)
 			response.Body.Close()
 			if err != nil {
 				logging.Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Error(err))

@@ -2,7 +2,7 @@ package stakepool
 
 import (
 	"context"
-	"io/ioutil"
+
 	"os"
 	"path/filepath"
 	"sync"
@@ -204,7 +204,7 @@ type mptStore struct {
 func newMptStore(tb testing.TB) (mpts *mptStore) {
 	mpts = new(mptStore)
 
-	var dir, err = ioutil.TempDir("", "storage-mpt")
+	var dir, err = os.MkdirTemp("", "storage-mpt")
 	require.NoError(tb, err)
 
 	mpts.pndb, err = util.NewPNodeDB(filepath.Join(dir, "data"),

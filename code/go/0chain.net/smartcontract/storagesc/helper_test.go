@@ -391,13 +391,11 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0      // 0 tokens per GB min allowed
 	conf.MaxDelegates = 200
-	conf.MaxChallengeCompletionTime = 3 * time.Minute
-	config.SmartContractConfig.Set(confMaxChallengeCompletionTime, "3m")
-	conf.MinLockDemand = 0.1
+	conf.MaxChallengeCompletionRounds = 720
+	config.SmartContractConfig.Set("max_challenge_completion_rounds", 720)
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
-	conf.MaxMint = 100e10
 	conf.MaxBlobbersPerAllocation = 50
 	conf.HealthCheckPeriod = time.Hour
 	conf.ReadPool = &readPoolConfig{
@@ -452,7 +450,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	return
 }
 
-func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string, seed int64,
+func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64, challID string, seed int64,
 	valids *partitions.Partitions, allocID string,
 	blobber *StorageNode, balances chainState.StateContextI) {
 
@@ -469,6 +467,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 	}
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
+	storChall.RoundCreatedAt = roundCreatedAt
 	storChall.ID = challID
 	var valSlice []ValidationPartitionNode
 	err = valids.GetRandomItems(balances, rand.New(rand.NewSource(seed)), &valSlice)
@@ -489,10 +488,12 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now int64, challID string
 	_, err = balances.InsertTrieNode(storChall.GetKey(ssc.ID), storChall)
 	require.NoError(t, err)
 
+	conf := setConfig(t, balances)
+	conf.TimeUnit = 2 * time.Minute
+
 	ba, ok := alloc.BlobberAllocsMap[blobber.ID]
 	if !ok {
-		ba, err = newBlobberAllocation(alloc.bSize(), alloc, blobber, common.Timestamp(now), 2*time.Minute)
-		require.NoError(t, err)
+		ba = newBlobberAllocation(alloc.bSize(), alloc, blobber, conf, common.Timestamp(now))
 	}
 
 	ba.Stats.OpenChallenges++

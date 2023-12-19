@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -185,10 +186,6 @@ func (sp *stakePool) slash(
 		return // nothing to move
 	}
 
-	if slash > offer {
-		slash = offer // can't move the offer left
-	}
-
 	staked, err := sp.stake()
 	if err != nil {
 		return 0, err
@@ -198,7 +195,7 @@ func (sp *stakePool) slash(
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
 	var ratio = float64(slash) / float64(staked)
-	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty)
+	edbSlash := stakepool.NewStakePoolReward(blobID, spenum.Blobber, spenum.ChallengeSlashPenalty, sp.Settings.DelegateWallet)
 	edbSlash.AllocationID = allocationID
 	for _, dp := range sp.GetOrderedPools() {
 		dpSlash, err := currency.MultFloat64(dp.Balance, ratio)
@@ -208,6 +205,10 @@ func (sp *stakePool) slash(
 
 		if dpSlash == 0 {
 			continue
+		}
+
+		if dpSlash > dp.Balance {
+			dpSlash = dp.Balance // Can not exceed the dp balance
 		}
 
 		if balance, err := currency.MinusCoin(dp.Balance, dpSlash); err != nil {
@@ -232,7 +233,7 @@ func (sp *stakePool) slash(
 func unallocatedCapacity(writePrice, total, offers currency.Coin) (free int64, err error) {
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater than the clean stake
-		return
+		return 0, fmt.Errorf("total stake %d is less than offers %d", total, offers)
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
 	return
@@ -280,7 +281,7 @@ func getStakePoolAdapter(
 
 // getStakePool of given blobber
 func (_ *StorageSmartContract) getStakePoolAdapter(
-	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
 ) (sp stakepool.AbstractStakePool, err error) {
 	return getStakePoolAdapter(providerType, providerID, balances)
 }
@@ -367,7 +368,36 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	}
 	return stakepool.StakePoolLock(t, input, balances,
 		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates},
-		ssc.getStakePoolAdapter)
+		ssc.getStakePoolAdapter, ssc.refreshProvider)
+}
+
+// getStakePool of given blobber
+func (_ *StorageSmartContract) refreshProvider(
+	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
+) (s stakepool.AbstractStakePool, err error) {
+	sp, err := getStakePool(providerType, providerID, balances)
+
+	if providerType == spenum.Blobber {
+		spBalance, err := sp.stake()
+		if err != nil {
+			return nil, err
+		}
+
+		blobber, err := getBlobber(providerID, balances)
+		if err != nil {
+			return nil, err
+		}
+		sd, err := maths.ConvertToUint64(blobber.SavedData)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := PartitionsChallengeReadyBlobberUpdate(balances, providerID, spBalance, sd); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
 }
 
 // stake pool can return excess tokens from stake pool

@@ -17,8 +17,10 @@ import (
 type mockStateContext struct {
 	cstate.StateContext
 	clientBalance currency.Coin
+	balances      map[string]currency.Coin
 	store         map[datastore.Key]util.MPTSerializable
 	events        []event.Event
+	transfers     []*state.Transfer
 }
 
 type mockBlobberYaml struct {
@@ -56,15 +58,14 @@ func (sc *mockStateContext) EmitEvent(eventType event.EventType, tag event.Event
 	}
 	sc.events = append(sc.events, e)
 }
-func (sc *mockStateContext) EmitError(error)                                       {}
-func (sc *mockStateContext) GetEvents() []event.Event                              { return sc.events }
-func (sc *mockStateContext) GetEventDB() *event.EventDb                            { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             {}
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }
-func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block                 { return nil }
-func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (currency.Coin, error) {
-	return sc.clientBalance, nil
+func (sc *mockStateContext) EmitError(error)                              {}
+func (sc *mockStateContext) GetEvents() []event.Event                     { return sc.events }
+func (sc *mockStateContext) GetEventDB() *event.EventDb                   { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)    {}
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
+func (sc *mockStateContext) GetLatestFinalizedBlock() *block.Block        { return nil }
+func (sc *mockStateContext) GetClientBalance(key datastore.Key) (currency.Coin, error) {
+	return sc.balances[key], nil
 }
 
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block {
@@ -87,8 +88,22 @@ func (sc *mockStateContext) GetTrieNode(key datastore.Key, v util.MPTSerializabl
 	return err
 }
 
+func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {
+	sc.transfers = append(sc.transfers, t)
+	return nil
+}
+
+func (sc *mockStateContext) GetTransfers() []*state.Transfer {
+	return sc.transfers
+}
+
 func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
 	sc.store[key] = node
+	return key, nil
+}
+
+func (sc *mockStateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
+	delete(sc.store, key)
 	return key, nil
 }
 

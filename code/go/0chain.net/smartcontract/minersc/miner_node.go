@@ -28,6 +28,8 @@ func NewMinerNode() *MinerNode {
 		},
 		StakePool: stakepool.NewStakePool(),
 	}
+
+	mn.Minter = cstate.MinterMiner
 	return mn
 }
 

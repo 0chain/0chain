@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Directive must have exactly one key-value pair.
 type Directive map[string]interface{}
 
 type Flow []Directive
@@ -18,6 +19,10 @@ func (d Directive) GetName() (name string) {
 }
 
 func (d Directive) unwrap() (name string, val interface{}, ok bool) {
+	if len(d) != 1 { // Don't allow zero/multiple key-value pair
+		return
+	}
+
 	for name, val = range d {
 		ok = true
 		return

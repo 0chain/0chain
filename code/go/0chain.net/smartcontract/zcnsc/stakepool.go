@@ -91,7 +91,7 @@ func (zcn *ZCNSmartContract) getStakePoolForAdapter(_ spenum.Provider, providerI
 }
 
 func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, providerID string,
-	balances cstate.CommonStateContextI) (sp stakepool.AbstractStakePool, err error) {
+	balances cstate.StateContextI) (sp stakepool.AbstractStakePool, err error) {
 	pool, err := zcn.getStakePoolForAdapter(providerType, providerID, balances)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
 		sp = NewStakePool()
-		sp.Minter = cstate.MinterStorage
+		sp.Minter = cstate.MinterZcn
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 		changed = true
 	}
@@ -137,6 +137,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 		sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 		changed = true
 	}
+
 	if sp.Settings.MinStake != gn.MinStakePerDelegate {
 		sp.Settings.MinStake = gn.MinStakePerDelegate
 		changed = true

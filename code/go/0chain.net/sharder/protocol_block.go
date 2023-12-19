@@ -144,6 +144,8 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 	}
 
+	notifyConductor(b)
+	
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
 }

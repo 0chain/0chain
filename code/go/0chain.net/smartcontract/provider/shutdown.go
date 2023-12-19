@@ -9,11 +9,12 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 )
 
 func ShutDown(
 	input []byte,
-	clientId string,
+	clientId, ownerId string,
 	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
@@ -40,8 +41,11 @@ func ShutDown(
 		return err
 	}
 
-	if clientId != sp.GetSettings().DelegateWallet {
-		return fmt.Errorf("access denied, allowed for delegate_wallet owner only")
+	var errCode = "shutdown_" + p.Type().String() + "_failed"
+	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
+		return ownerId == clientId || clientId == sp.GetSettings().DelegateWallet
+	}); err != nil {
+		return err
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagShutdownProvider, p.Id(), dbs.ProviderID{

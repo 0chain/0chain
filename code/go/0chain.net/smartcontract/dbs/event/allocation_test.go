@@ -89,7 +89,6 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 			FailedChallenges:         0,
 			LatestClosedChallengeTxn: "latest_closed_challenge_txn",
 			ThirdPartyExtendable:     false,
-			MinLockDemand:            0.17,
 		})
 		ids = append(ids, id)
 		initTime = initTime.Add(time.Second)
@@ -100,12 +99,6 @@ func createMockAllocations(t *testing.T, edb *EventDb, count int, presetAllocs .
 }
 
 func TestAllocations(t *testing.T) {
-
-	type StorageNodeGeolocation struct {
-		Latitude  float64 `json:"latitude"`
-		Longitude float64 `json:"longitude"`
-		// reserved / Accuracy float64 `mapstructure:"accuracy"`
-	}
 
 	type stakePoolSettings struct {
 		// DelegateWallet for pool owner.
@@ -122,7 +115,6 @@ func TestAllocations(t *testing.T) {
 		// ReadPrice is price for reading. Token / GB (no time unit).
 		ReadPrice currency.Coin `json:"read_price"`
 		// WritePrice is price for reading. Token / GB / time unit. Also,
-		// it used to calculate min_lock_demand value.
 		WritePrice currency.Coin `json:"write_price"`
 	}
 
@@ -132,14 +124,13 @@ func TestAllocations(t *testing.T) {
 	}
 
 	type StorageNode struct {
-		ID              string                 `json:"id"`
-		BaseURL         string                 `json:"url"`
-		Geolocation     StorageNodeGeolocation `json:"geolocation"`
-		Terms           Terms                  `json:"terms"`     // terms
-		Capacity        int64                  `json:"capacity"`  // total blobber capacity
-		Allocated       int64                  `json:"allocated"` // allocated capacity
-		LastHealthCheck common.Timestamp       `json:"last_health_check"`
-		PublicKey       string                 `json:"-"`
+		ID              string           `json:"id"`
+		BaseURL         string           `json:"url"`
+		Terms           Terms            `json:"terms"`     // terms
+		Capacity        int64            `json:"capacity"`  // total blobber capacity
+		Allocated       int64            `json:"allocated"` // allocated capacity
+		LastHealthCheck common.Timestamp `json:"last_health_check"`
+		PublicKey       string           `json:"-"`
 		// StakePoolSettings used initially to create and setup stake pool.
 		StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
 	}
@@ -174,9 +165,6 @@ func TestAllocations(t *testing.T) {
 		LastWriteMarker *WriteMarker            `json:"write_marker"`
 		Stats           *StorageAllocationStats `json:"stats"`
 		Terms           Terms                   `json:"terms"`
-		// MinLockDemand for the allocation in tokens.
-		MinLockDemand currency.Coin `json:"min_lock_demand"`
-		Spent         currency.Coin `json:"spent"`
 		// Penalty o the blobber for the allocation in tokens.
 		Penalty currency.Coin `json:"penalty"`
 		// ReadReward of the blobber.
@@ -227,8 +215,7 @@ func TestAllocations(t *testing.T) {
 		// transaction.
 		Canceled bool `json:"canceled,omitempty"`
 		// UsedSize used to calculate blobber reward ratio.
-		UsedSize      int64   `json:"-"`
-		MinLockDemand float64 `json:"min_lock_demand"`
+		UsedSize int64 `json:"-"`
 
 		// MovedToChallenge is number of tokens moved to challenge pool.
 		MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
@@ -287,7 +274,6 @@ func TestAllocations(t *testing.T) {
 			FailedChallenges:         sa.Stats.FailedChallenges,
 			LatestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
 			FileOptions:              sa.FileOptions,
-			MinLockDemand:            sa.MinLockDemand,
 		}
 	}
 
@@ -312,10 +298,6 @@ func TestAllocations(t *testing.T) {
 				{
 					ID:      "blobber_1",
 					BaseURL: "base_url",
-					Geolocation: StorageNodeGeolocation{
-						Latitude:  120,
-						Longitude: 141,
-					},
 					Terms: Terms{
 						ReadPrice:  10,
 						WritePrice: 10,

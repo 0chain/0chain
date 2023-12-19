@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 )
@@ -10,6 +11,7 @@ type AuthorizerAggregate struct {
 
 	AuthorizerID string `json:"authorizer_id" gorm:"index:idx_authorizer_aggregate,unique"`
 	Round        int64  `json:"round" gorm:"index:idx_authorizer_aggregate,unique"`
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	Fee           currency.Coin `json:"fee"`
 	TotalStake    currency.Coin `json:"total_stake"`
@@ -49,6 +51,7 @@ func (edb *EventDb) CreateAuthorizerAggregates(authorizers []*Authorizer, round 
 		agg := AuthorizerAggregate{
 			Round:       round,
 			AuthorizerID: v.ID,
+			LastHealthCheck: v.LastHealthCheck,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

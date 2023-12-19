@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -204,7 +203,7 @@ func (cmd *cmdMagicBlock) saveBlock() error {
 	}
 	name := getMagicBlockFileName(cmd.yml.MagicBlockFilename)
 	path := fmt.Sprintf("%v/%v", output, name)
-	if err := ioutil.WriteFile(path, file, 0644); err != nil {
+	if err := os.WriteFile(path, file, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -231,7 +230,7 @@ func (cmd *cmdMagicBlock) saveDKGSummary(index int, name string) (string, error)
 		return "", err
 	}
 	path := fmt.Sprintf("%v/%v", output, name)
-	if err := ioutil.WriteFile(path, file, 0644); err != nil {
+	if err := os.WriteFile(path, file, 0644); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -399,7 +398,7 @@ func writeNames(names map[string]string) string {
 	if err != nil {
 		log.Panic(err)
 	}
-	if err := ioutil.WriteFile(path, marshal, 0755); err != nil {
+	if err := os.WriteFile(path, marshal, 0755); err != nil {
 		log.Panic(err)
 	}
 	return path
@@ -526,7 +525,7 @@ func writeMergedYAml(magicBlockConfig *string, merged *configYaml) {
 		}
 	}
 
-	if err := ioutil.WriteFile(mergedYaml, marshal, 0755); err != nil {
+	if err := os.WriteFile(mergedYaml, marshal, 0755); err != nil {
 		log.Panic(err)
 	}
 }
@@ -566,7 +565,7 @@ func loadPasswords() map[string]string {
 	fmt.Println("Loading passwords from password.txt")
 
 	passPath := fmt.Sprintf("%v/input/%v", rootPath, "password.yaml")
-	passFile, err := ioutil.ReadFile(passPath)
+	passFile, err := os.ReadFile(passPath)
 	if err != nil {
 		log.Panic(err)
 	}

@@ -20,6 +20,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -151,7 +152,21 @@ func (c *Chain) ExecuteSmartContract(
 	case r := <-resultC:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		if len(balances.GetMissingNodeKeys()) > 0 {
+			if r.err == nil || !cstate.ErrInvalidState(r.err) {
+				logging.Logger.Error("execute smart contract - find missing nodes, not return from calling",
+					zap.Any("txn", txn))
+			} else {
+				logging.Logger.Error("execute smart contract - find missing nodes, return node not found error",
+					zap.Error(r.err),
+					zap.Any("output", r.output),
+					zap.Any("txn", txn))
+			}
 			return "", util.ErrNodeNotFound
+		}
+
+		if cstate.ErrInvalidState(r.err) {
+			logging.Logger.Debug("execute smart contract - return node not found error directly",
+				zap.Any("txn", txn))
 		}
 
 		return r.output, r.err
@@ -556,19 +571,6 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		}
 	}
 
-	for _, mint := range sctx.GetMints() {
-		u, err := c.mintAmountWithAssert(sctx, mint.ToClientID, mint.Amount)
-		if err != nil {
-			logging.Logger.Error("mint error", zap.Error(err),
-				zap.Any("transaction", txn),
-				zap.String("to clientID", mint.ToClientID))
-			return nil, err
-		}
-		if u != nil {
-			ue[u.UserID] = u
-		}
-	}
-
 	u, err := c.incrementNonce(sctx, txn.ClientID)
 	if err != nil {
 		logging.Logger.Error("update nonce error", zap.Error(err),
@@ -709,7 +711,6 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return nil, fmt.Errorf("transfer tokens from client failed: %v", err)
 	}
 	fs.Balance = fromBalance
-
 	_, err = sctx.SetClientState(fromClient, fs)
 	if err != nil {
 		return nil, err

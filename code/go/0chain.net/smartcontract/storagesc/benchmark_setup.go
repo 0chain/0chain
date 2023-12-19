@@ -29,9 +29,7 @@ import (
 )
 
 const (
-	mockMinLockDemand            = 1
 	mockFinalizedAllocationIndex = 2
-	mockAllocationMinLockDemand  = 0.1
 )
 
 func AddMockAllocations(
@@ -76,20 +74,20 @@ func addMockAllocation(
 		OwnerPublicKey:  publicKey,
 		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
 		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		StartTime:       balances.GetTransaction().CreationDate,
 		Stats: &StorageAllocationStats{
-			UsedSize:                  1,
+			UsedSize:                  viper.GetInt64(sc.StorageMinAllocSize) / 2,
 			NumWrites:                 1,
 			NumReads:                  1,
-			TotalChallenges:           1,
-			OpenChallenges:            1,
-			SuccessChallenges:         1,
-			FailedChallenges:          1,
+			TotalChallenges:           10,
+			OpenChallenges:            2,
+			SuccessChallenges:         6,
+			FailedChallenges:          2,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
-		MinLockDemand: mockAllocationMinLockDemand,
-		TimeUnit:      1 * time.Hour,
-		Finalized:     i == mockFinalizedAllocationIndex,
-		WritePool:     2e10,
+		TimeUnit:  viper.GetDuration(sc.TimeUnit),
+		Finalized: i == mockFinalizedAllocationIndex,
+		WritePool: 2e10,
 	}
 
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
@@ -97,14 +95,23 @@ func addMockAllocation(
 		bIndex := startBlobbers + j
 		bId := getMockBlobberId(bIndex)
 		ba := BlobberAllocation{
-			BlobberID:       bId,
-			AllocationID:    sa.ID,
-			Size:            viper.GetInt64(sc.StorageMinAllocSize),
-			Stats:           &StorageAllocationStats{},
-			Terms:           getMockBlobberTerms(),
-			MinLockDemand:   mockMinLockDemand,
-			AllocationRoot:  encryption.Hash("allocation root"),
-			LastWriteMarker: &WriteMarker{},
+			BlobberID:    bId,
+			AllocationID: sa.ID,
+			Size:         viper.GetInt64(sc.StorageMinAllocSize),
+			Stats: &StorageAllocationStats{
+				UsedSize:                  (sa.Stats.UsedSize) / 2,
+				NumWrites:                 sa.Stats.NumWrites,
+				NumReads:                  sa.Stats.NumReads,
+				TotalChallenges:           (sa.Stats.TotalChallenges) / 2,
+				OpenChallenges:            (sa.Stats.OpenChallenges) / 2,
+				SuccessChallenges:         (sa.Stats.SuccessChallenges) / 2,
+				FailedChallenges:          (sa.Stats.FailedChallenges) / 2,
+				LastestClosedChallengeTxn: sa.Stats.LastestClosedChallengeTxn,
+			},
+			Terms:                         getMockBlobberTerms(),
+			AllocationRoot:                encryption.Hash("allocation root"),
+			LastWriteMarker:               &WriteMarker{},
+			LatestFinalizedChallCreatedAt: 0,
 		}
 		sa.BlobberAllocs = append(sa.BlobberAllocs, &ba)
 
@@ -143,7 +150,9 @@ func addMockAllocation(
 			Expiration:               int64(sa.Expiration),
 			Owner:                    sa.Owner,
 			OwnerPublicKey:           sa.OwnerPublicKey,
+			StartTime:                int64(sa.StartTime),
 			UsedSize:                 sa.Stats.UsedSize,
+			TimeUnit:                 int64(sa.TimeUnit),
 			NumWrites:                sa.Stats.NumWrites,
 			NumReads:                 sa.Stats.NumReads,
 			TotalChallenges:          sa.Stats.TotalChallenges,
@@ -270,7 +279,7 @@ func AddMockChallengePools(eventDb *event.EventDb, balances cstate.StateContextI
 		allocationId := getMockAllocationId(i)
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(ADDRESS, allocationId)
-		cp.Balance = mockMinLockDemand * 100
+		cp.Balance = 10
 		if _, err := balances.InsertTrieNode(challengePoolKey(ADDRESS, allocationId), cp); err != nil {
 			log.Fatal(err)
 		}
@@ -317,6 +326,7 @@ func setupMockChallenge(
 		TotalValidators: totalValidatorsNum,
 		BlobberID:       blobber.ID,
 		ValidatorIDs:    validatorIds[:viper.GetInt(sc.StorageValidatorsPerChallenge)],
+		RoundCreatedAt:  int64(index) - 1,
 	}
 	_, err := balances.InsertTrieNode(challenge.GetKey(ADDRESS), challenge)
 	if err != nil {
@@ -363,10 +373,6 @@ func AddMockBlobbers(
 	}.ID
 	var blobbers StorageNodes
 	var rtvBlobbers []*StorageNode
-	const maxLatitude float64 = 88
-	const maxLongitude float64 = 175
-	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
-	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
 	blobbersDb := make([]event.Blobber, 0, viper.GetInt(sc.NumBlobbers))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		id := getMockBlobberId(i)
@@ -377,11 +383,7 @@ func AddMockBlobbers(
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: balances.GetTransaction().CreationDate,
 			},
-			BaseURL: getMockBlobberUrl(i),
-			Geolocation: StorageNodeGeolocation{
-				Latitude:  latitudeStep*float64(i) - maxLatitude,
-				Longitude: longitudeStep*float64(i) - maxLongitude,
-			},
+			BaseURL:           getMockBlobberUrl(i),
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Allocated:         mockUsedData,
@@ -402,8 +404,6 @@ func AddMockBlobbers(
 		if viper.GetBool(sc.EventDbEnabled) {
 			blobberDb := event.Blobber{
 				BaseURL:    blobber.BaseURL,
-				Latitude:   blobber.Geolocation.Latitude,
-				Longitude:  blobber.Geolocation.Longitude,
 				ReadPrice:  blobber.Terms.ReadPrice,
 				WritePrice: blobber.Terms.WritePrice,
 				Capacity:   blobber.Capacity,
@@ -500,7 +500,7 @@ func addMockValidatorSnapshots(validators []event.Validator, edb *event.EventDb)
 	for _, validator := range validators {
 		for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 			aggregate := event.ValidatorAggregate{
-				Round:         int64(i),
+				Round:         i,
 				ValidatorID:   validator.ID,
 				TotalStake:    validator.TotalStake,
 				TotalRewards:  validator.GetTotalRewards(),
@@ -528,7 +528,7 @@ func AddMockSnapshots(edb *event.EventDb) {
 			TotalChallengePools:  int64(currency.Coin(i + (1 * 1e10))),
 			ActiveAllocatedDelta: i,
 			TotalStaked:          int64(currency.Coin(i * (0.001 * 1e10))),
-			SuccessfulChallenges: i - 1/2,
+			SuccessfulChallenges: (i - 1) / 2,
 			TotalChallenges:      i - 1,
 			ZCNSupply:            100000 * int64(i+10),
 			AllocatedStorage:     i * 1024,
@@ -837,8 +837,8 @@ func getMockReadMarkerRound(allocationIndex, readMarkerIndex int) int64 {
 
 func getMockBlobberTerms() Terms {
 	return Terms{
-		ReadPrice:  currency.Coin(0.1 * 1e10),
-		WritePrice: currency.Coin(0.1 * 1e10),
+		ReadPrice:  currency.Coin(0.01 * 1e10),
+		WritePrice: currency.Coin(0.01 * 1e10),
 	}
 }
 
@@ -903,18 +903,16 @@ func SetMockConfig(
 	conf.HealthCheckPeriod = 1 * time.Hour
 	conf.BlobberSlash = 0.1
 	conf.CancellationCharge = 0.2
-	conf.MinLockDemand = mockAllocationMinLockDemand
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MinWritePrice = 0
 	conf.NumValidatorsRewarded = viper.GetInt(sc.StorageNumValidatorsRewarded)
 	conf.ValidatorsPerChallenge = viper.GetInt(sc.StorageValidatorsPerChallenge)
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
-	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
+	conf.MaxChallengeCompletionRounds = viper.GetInt64(sc.StorageMaxChallengeCompletionRounds)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
 	conf.MinStake = currency.Coin(viper.GetInt64(sc.StorageMinStake) * 1e10)
 	conf.MaxStake = currency.Coin(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-	conf.MaxMint = currency.Coin((viper.GetFloat64(sc.StorageMaxMint)) * 1e10)
 	conf.MaxTotalFreeAllocation = currency.Coin(viper.GetInt64(sc.StorageMaxTotalFreeAllocation) * 1e10)
 	conf.MaxIndividualFreeAllocation = currency.Coin(viper.GetInt64(sc.StorageMaxIndividualFreeAllocation) * 1e10)
 	conf.ReadPool = &readPoolConfig{}
@@ -969,7 +967,6 @@ func SetMockConfig(
 		"cost.cancel_allocation":         mockCost,
 		"cost.add_free_storage_assigner": mockCost,
 		"cost.free_allocation_request":   mockCost,
-		"cost.free_update_allocation":    mockCost,
 		"cost.blobber_health_check":      mockCost,
 		"cost.update_blobber_settings":   mockCost,
 		"cost.pay_blobber_block_rewards": mockCost,
@@ -981,7 +978,6 @@ func SetMockConfig(
 		"cost.read_pool_lock":            mockCost,
 		"cost.read_pool_unlock":          mockCost,
 		"cost.write_pool_lock":           mockCost,
-		"cost.write_pool_unlock":         mockCost,
 		"cost.stake_pool_lock":           mockCost,
 		"cost.stake_pool_unlock":         mockCost,
 		"cost.commit_settings_changes":   mockCost,

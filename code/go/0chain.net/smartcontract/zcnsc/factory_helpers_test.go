@@ -190,7 +190,6 @@ func CreateSmartContractGlobalNode() *GlobalNode {
 			MinAuthorizers:     1,
 			PercentAuthorizers: 70,
 			MaxFee:             0,
-			BurnAddress:        "0xBEEF",
 			OwnerId:            "",
 			Cost: map[string]int{
 				AddAuthorizerFunc:    100,

@@ -56,8 +56,6 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/nodeStat", common.UserRateLimit(mrh.getNodeStat)),
 		rest.MakeEndpoint(miner+"/nodePoolStat", common.UserRateLimit(mrh.getNodePoolStat)),
 		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
-		rest.MakeEndpoint(miner+"/get_miner_geolocations", common.UserRateLimit(mrh.getMinerGeolocations)),
-		rest.MakeEndpoint(miner+"/get_sharder_geolocations", common.UserRateLimit(mrh.getSharderGeolocations)),
 		rest.MakeEndpoint(miner+"/provider-rewards", common.UserRateLimit(mrh.getProviderRewards)),
 		rest.MakeEndpoint(miner+"/delegate-rewards", common.UserRateLimit(mrh.getDelegateRewards)),
 
@@ -178,133 +176,6 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 		return
 	}
 	common.Respond(w, r, rtv, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharder_geolocations get_sharder_geolocations
-// list minersc config settings
-//
-// parameters:
-//
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: sort
-//	 description: desc or asc
-//	 in: query
-//	 type: string
-//	+name: active
-//	 description: active
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: SharderGeolocation
-//	400:
-//	484:
-func (mrh *MinerRestHandler) getSharderGeolocations(w http.ResponseWriter, r *http.Request) {
-	var (
-		activeString = r.URL.Query().Get("active")
-	)
-
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	filter := event.SharderQuery{
-		IsKilled: null.BoolFrom(false),
-	}
-	if activeString != "" {
-		active, err := strconv.ParseBool(activeString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
-			return
-		}
-		filter.Active = null.BoolFrom(active)
-	}
-
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	geolocations, err := edb.GetSharderGeolocations(filter, pagination)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, geolocations, nil)
-}
-
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miner_geolocations get_miner_geolocations
-// list minersc config settings
-//
-// parameters:
-//
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: sort
-//	 description: desc or asc
-//	 in: query
-//	 type: string
-//	+name: active
-//	 description: active
-//	 in: query
-//	 type: string
-//
-// responses:
-//
-//	200: MinerGeolocation
-//	400:
-//	484:
-func (mrh *MinerRestHandler) getMinerGeolocations(w http.ResponseWriter, r *http.Request) {
-	var (
-		activeString = r.URL.Query().Get("active")
-	)
-
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	filter := event.MinerQuery{
-		IsKilled: null.BoolFrom(false),
-	}
-	if activeString != "" {
-		active, err := strconv.ParseBool(activeString)
-		if err != nil {
-			common.Respond(w, r, nil, common.NewErrBadRequest("active parameter is not valid"))
-			return
-		}
-		filter.Active = null.BoolFrom(active)
-	}
-	edb := mrh.GetQueryStateContext().GetEventDB()
-	if edb == nil {
-		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-		return
-	}
-	geolocations, err := edb.GetMinerGeolocations(filter, pagination)
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
-
-	common.Respond(w, r, geolocations, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs configs
@@ -1038,32 +909,66 @@ func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Req
 }
 
 func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
-	delegatePools, err := edb.GetDelegatePools(providerID)
-	if err != nil {
-		return nil, fmt.Errorf("cannot find user stake pool: %s", err.Error())
-	}
+	delegatePoolsChan := make(chan []event.DelegatePool)
+	errChan := make(chan error)
 
-	spStat := &stakepool.StakePoolStat{}
-	spStat.Delegate = make([]stakepool.DelegatePoolStat, len(delegatePools))
+	go func() {
+		delegatePools, err := edb.GetDelegatePools(providerID)
+		if err != nil {
+			errChan <- fmt.Errorf("cannot find user stake pool: %s", err.Error())
+			return
+		}
+		delegatePoolsChan <- delegatePools
+	}()
+
+	providerChan := make(chan interface{})
 
 	switch spenum.Provider(providerType) {
 	case spenum.Miner:
-		miner, err := edb.GetMiner(providerID)
-		if err != nil {
-			return nil, fmt.Errorf("can't find validator: %s", err.Error())
-		}
-
-		return stakepool.ToProviderStakePoolStats(&miner.Provider, delegatePools)
+		go func() {
+			miner, err := edb.GetMiner(providerID)
+			if err != nil {
+				errChan <- fmt.Errorf("can't find validator: %s", err.Error())
+				return
+			}
+			providerChan <- miner
+		}()
 	case spenum.Sharder:
-		sharder, err := edb.GetSharder(providerID)
-		if err != nil {
-			return nil, fmt.Errorf("can't find validator: %s", err.Error())
-		}
-
-		return stakepool.ToProviderStakePoolStats(&sharder.Provider, delegatePools)
+		go func() {
+			sharder, err := edb.GetSharder(providerID)
+			if err != nil {
+				errChan <- fmt.Errorf("can't find validator: %s", err.Error())
+				return
+			}
+			providerChan <- sharder
+		}()
+	default:
+		return nil, fmt.Errorf("unknown provider type")
 	}
 
-	return nil, fmt.Errorf("unknown provider type")
+	var delegatePools []event.DelegatePool
+	var provider interface{}
+
+	select {
+	case delegatePools = <-delegatePoolsChan:
+	case err := <-errChan:
+		return nil, err
+	}
+
+	select {
+	case provider = <-providerChan:
+	case err := <-errChan:
+		return nil, err
+	}
+
+	switch p := provider.(type) {
+	case event.Miner:
+		return stakepool.ToProviderStakePoolStats(&p.Provider, delegatePools)
+	case event.Sharder:
+		return stakepool.ToProviderStakePoolStats(&p.Provider, delegatePools)
+	default:
+		return nil, fmt.Errorf("unexpected provider type")
+	}
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool getNodepool

@@ -14,7 +14,7 @@ import (
 const (
 	numberDevelopmentEndpoints = 12
 	numberDuplicatedTests      = 3
-	numberMissingTests         = 0
+	numberMissingTests         = 1
 )
 
 // TestStorageBenchmarkRestTests

@@ -109,7 +109,6 @@ func Test_ShouldGetGlobalNode(t *testing.T) {
 
 func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 	node := CreateSmartContractGlobalNode()
-	node.BurnAddress = "11"
 	node.MinMintAmount = 12
 	node.MinBurnAmount = 13
 
@@ -120,7 +119,6 @@ func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 
 	require.NoError(t, err, "must Save the global node in state")
 
-	expected.BurnAddress = "11"
 	expected.MinMintAmount = 12
 	expected.MinBurnAmount = 13
 }

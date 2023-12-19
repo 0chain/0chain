@@ -1,9 +1,8 @@
 package main
 
 import (
-	"io/ioutil"
-
 	"gopkg.in/yaml.v2"
+	"os"
 
 	"0chain.net/chaincore/node"
 )
@@ -36,7 +35,7 @@ func newYaml() *configYaml {
 }
 
 func (c *configYaml) readYaml(file string) error {
-	yamlFile, err := ioutil.ReadFile(file)
+	yamlFile, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}

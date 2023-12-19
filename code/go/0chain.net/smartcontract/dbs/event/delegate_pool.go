@@ -19,14 +19,14 @@ type DelegatePool struct {
 	model.UpdatableModel
 	PoolID       string          `json:"pool_id" gorm:"uniqueIndex:ppp;index:idx_ddel_active"`
 	ProviderType spenum.Provider `json:"provider_type" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:2;index:idx_ddel_active,priority:2" `
-	ProviderID   string          `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2"`
+	ProviderID   string          `json:"provider_id" gorm:"uniqueIndex:ppp;index:idx_dprov_active,priority:1;index:idx_ddel_active,priority:2;index:idx_provider_status,priority:1"`
 	DelegateID   string          `json:"delegate_id" gorm:"index:idx_ddel_active,priority:2;index:idx_dp_total_staked,priority:1"` //todo think of changing priority for idx_ddel_active
 
 	Balance              currency.Coin     `json:"balance"`
 	Reward               currency.Coin     `json:"reward"`       // unclaimed reward
 	TotalReward          currency.Coin     `json:"total_reward"` // total reward paid to pool
 	TotalPenalty         currency.Coin     `json:"total_penalty"`
-	Status               spenum.PoolStatus `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3;index:idx_dp_total_staked,priority:2"`
+	Status               spenum.PoolStatus `json:"status" gorm:"index:idx_dprov_active,priority:3;index:idx_ddel_active,priority:3;index:idx_dp_total_staked,priority:2;index:idx_provider_status,priority:2"`
 	RoundCreated         int64             `json:"round_created"`
 	RoundPoolLastUpdated int64             `json:"round_pool_last_updated"`
 	StakedAt             common.Timestamp  `json:"staked_at"`
@@ -34,15 +34,15 @@ type DelegatePool struct {
 
 func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
 	var dps []DelegatePool
+	acceptableStatuses := []spenum.PoolStatus{spenum.Active, spenum.Pending}
+
 	result := edb.Store.Get().
 		Model(&DelegatePool{}).
-		Where(&DelegatePool{
-			ProviderID: id,
-		}).
-		Not(&DelegatePool{Status: spenum.Deleted}).
+		Where("provider_id = ? AND status IN (?)", id, acceptableStatuses).
 		Find(&dps)
+
 	if result.Error != nil {
-		return nil, fmt.Errorf("error getting delegate pools, %v", result.Error)
+		return nil, fmt.Errorf("error getting delegate pools: %v", result.Error)
 	}
 	return dps, nil
 }

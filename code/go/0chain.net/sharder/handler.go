@@ -273,7 +273,7 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 	}
 	selfNodeInfo := node.Self.Underlying().Info
 	return ExplorerStats{LastFinalizedRound: sc.Chain.GetLatestFinalizedBlock().Round,
-		StateHealth:            selfNodeInfo.StateMissingNodes,
+		StateHealth:            selfNodeInfo.GetStateMissingNodes(),
 		AverageBlockSize:       selfNodeInfo.AvgBlockTxns,
 		PrevInvocationCount:    previous.HealthCheckInvocations,
 		PrevInvocationScanTime: previousElapsed,

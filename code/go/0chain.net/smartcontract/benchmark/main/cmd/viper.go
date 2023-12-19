@@ -146,7 +146,7 @@ func validateConfig() {
 	}
 
 	if viper.GetInt64(bk.NumAllocations) > viper.GetInt64(bk.NumBlocks) {
-		log.Fatal(fmt.Errorf("number of allocations %d can't exceed the numebr of blocks %d",
+		log.Fatal(fmt.Errorf("number of allocations %d can't exceed the number of blocks %d",
 			viper.GetInt64(bk.NumAllocations), viper.GetInt64(bk.NumBlocks)))
 	}
 

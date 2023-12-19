@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -38,21 +37,26 @@ func init() {
 }
 
 const (
-	roundDataDir    = "round"
-	blockDataDir    = "block"
-	roundSummaryDir = "roundSummary"
-	blockSummaryDir = "blockSummary"
+	roundDataDir     = "round"
+	blockDataDir     = "block"
+	stateDataDir     = "data/rocksdb/state"
+	roundSummaryDir  = "roundSummary"
+	blockSummaryDir  = "blockSummary"
 	magicBlockMapDir = "magicblockmap"
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
-	dbDir, err := ioutil.TempDir("", "dbs")
+	dbDir, err := os.MkdirTemp("", "dbs")
 	require.NoError(t, err)
 
 	blockDir := filepath.Join(dbDir, blockDataDir)
-	require.NoError(t, err)
 	err = os.MkdirAll(blockDir, 0700)
 	require.NoError(t, err)
+
+	stateDir := filepath.Join(dbDir, stateDataDir)
+	err = os.MkdirAll(stateDir, 0700)
+	require.NoError(t, err)
+	chain.SetupStateDB(dbDir)
 
 	roundDir := filepath.Join(dbDir, roundDataDir)
 	err = os.MkdirAll(roundDir, 0700)
@@ -172,7 +176,6 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -203,7 +206,6 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			got, err := sc.GetBlockBySummary(tt.args.ctx, tt.args.bs)
 			if (err != nil) != tt.wantErr {
@@ -234,7 +236,6 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx      context.Context
@@ -267,7 +268,6 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			got, err := sc.GetBlockFromHash(tt.args.ctx, tt.args.hash, tt.args.roundNum)
 			if (err != nil) != tt.wantErr {
@@ -298,7 +298,6 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -327,7 +326,6 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			if err := sc.StoreBlockSummaryFromBlock(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummaryFromBlock() error = %v, wantErr %v", err, tt.wantErr)
@@ -351,7 +349,6 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 		BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 		SharderStats   Stats
 		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -380,7 +377,6 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 				BlockTxnCache:  tt.fields.BlockTxnCache,
 				SharderStats:   tt.fields.SharderStats,
 				BlockSyncStats: tt.fields.BlockSyncStats,
-				TieringStats:   tt.fields.TieringStats,
 			}
 			if err := sc.StoreBlockSummary(tt.args.ctx, tt.args.bs); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummary() error = %v, wantErr %v", err, tt.wantErr)
@@ -403,7 +399,6 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 		BlockTxnCache:  cache.NewLRUCache[string, *transaction.TransactionSummary](10),
 		SharderStats:   Stats{},
 		BlockSyncStats: &SyncStats{},
-		TieringStats:   &MinioStats{},
 	}
 
 	// Add 2 blocks
@@ -411,8 +406,8 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 		IDField: datastore.IDField{
 			ID: "10", // Round number but as string
 		},
-		Hash: "AAA0000000",
-		BlockRound: 10, 
+		Hash:       "AAA0000000",
+		BlockRound: 10,
 	})
 	require.NoError(t, err)
 
@@ -420,7 +415,7 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 		IDField: datastore.IDField{
 			ID: "11", // Round number but as string
 		},
-		Hash: "AAA0000001",
+		Hash:       "AAA0000001",
 		BlockRound: 11,
 	})
 	require.NoError(t, err)
@@ -428,7 +423,6 @@ func Test_GetHighestMagicBlockMap(t *testing.T) {
 	mbm, err := sc.GetMagicBlockMap(ctx, "10")
 	require.NoError(t, err)
 	require.Equal(t, "AAA0000000", mbm.Hash)
-	
 
 	// Get highest block
 	highest, err := sc.GetHighestMagicBlockMap(ctx)

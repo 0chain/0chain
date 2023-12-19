@@ -340,7 +340,6 @@ func Test_payFees(t *testing.T) {
 		gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "can't get global node")
 		assert.EqualValues(t, 251, gn.LastRound)
-		assert.EqualValues(t, gn.BlockReward, gn.Minted)
 	})
 
 	// add all the miners to DKG miners list

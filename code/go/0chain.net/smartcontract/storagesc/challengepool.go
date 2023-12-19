@@ -192,7 +192,7 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 // newChallengePool SC function creates new
 // challenge pool for a client don't saving it
 func (ssc *StorageSmartContract) newChallengePool(allocationID string,
-	creationDate, expiresAt common.Timestamp, balances cstate.StateContextI) (
+	balances cstate.StateContextI) (
 	cp *challengePool, err error) {
 
 	_, err = ssc.getChallengePool(allocationID, balances)
@@ -216,8 +216,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	// completion time
 	var cp *challengePool
 
-	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(conf.MaxChallengeCompletionTime),
-		balances)
+	cp, err = ssc.newChallengePool(alloc.ID, balances)
 	if err != nil {
 		return fmt.Errorf("can't create challenge pool: %v", err)
 	}
@@ -230,4 +229,12 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	}
 
 	return
+}
+
+func (ssc *StorageSmartContract) deleteChallengePool(alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
+	if _, err = balances.DeleteTrieNode(challengePoolKey(ssc.ID, alloc.ID)); err != nil {
+		return fmt.Errorf("can't delete challenge pool: %v", err)
+	}
+
+	return nil
 }

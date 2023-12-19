@@ -302,7 +302,6 @@ func BenchmarkTests(
 					"max_charge":                          "0.5",
 					"epoch":                               "6415000000",
 					"reward_decline_rate":                 "0.1",
-					"max_mint":                            "1500000.0",
 					"owner_id":                            "f769ccdf8587b8cab6a0f6a8a5a0a91d3405392768f283c80a45d6023a1bfa1f",
 					"cost.add_miner":                      "111",
 					"cost.add_sharder":                    "111",

@@ -25,8 +25,6 @@ type Sharder struct {
 	Delete    bool
 	Fees      currency.Coin
 	Active    bool
-	Longitude float64
-	Latitude  float64
 
 	CreationRound int64 `json:"creation_round" gorm:"index:idx_sharder_creation_round"`
 }
@@ -61,13 +59,6 @@ func (s *Sharder) SetServiceCharge(value float64) {
 
 func (s *Sharder) SetTotalRewards(value currency.Coin) {
 	s.Rewards.TotalRewards = value
-}
-
-// swagger:model SharderGeolocation
-type SharderGeolocation struct {
-	ID        string  `json:"id"`
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
 }
 
 func (edb *EventDb) GetSharderCount() (int64, error) {
@@ -200,8 +191,6 @@ type SharderQuery struct {
 	Rewards           null.Int
 	Fees              null.Int
 	Active            null.Bool
-	Longitude         null.Int
-	Latitude          null.Int
 	IsKilled          null.Bool
 }
 
@@ -220,26 +209,6 @@ func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, p co
 			Desc:   p.IsDescending,
 		})
 	return sharders, query.Scan(&sharders).Error
-}
-
-func (edb *EventDb) GetSharderGeolocations(filter SharderQuery, p common2.Pagination) ([]SharderGeolocation, error) {
-	var sharderLocations []SharderGeolocation
-	query := edb.Get().
-		Preload("Rewards").
-		Model(&Sharder{}).
-		Where(&filter).Offset(p.Offset).Limit(p.Limit).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "creation_round"},
-			Desc:   p.IsDescending,
-		}).
-		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "id"},
-			Desc:   p.IsDescending,
-		})
-
-	result := query.Scan(&sharderLocations)
-
-	return sharderLocations, result.Error
 }
 
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {

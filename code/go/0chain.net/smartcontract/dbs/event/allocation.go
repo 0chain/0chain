@@ -46,7 +46,6 @@ type Allocation struct {
 	WritePool                currency.Coin `json:"write_pool"`
 	ThirdPartyExtendable     bool          `json:"third_party_extendable"`
 	FileOptions              uint16        `json:"file_options"`
-	MinLockDemand            float64       `json:"min_lock_demand"`
 
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
@@ -96,6 +95,23 @@ func (edb *EventDb) GetClientsAllocation(clientID string, limit common.Paginatio
 	return allocs, nil
 }
 
+func (edb *EventDb) GetExpiredAllocation(blobberID string) ([]string, error) {
+	db := edb.Store.Get()
+
+	var allocationIDs []string
+
+	err := db.Model(&AllocationBlobberTerm{}).
+		Joins("JOIN allocations ON allocation_blobber_terms.alloc_id = allocations.id").
+		Where("allocation_blobber_terms.blobber_id = ? AND allocations.finalized = ? AND allocations.expiration < ?", blobberID, false, time.Now().Unix()).
+		Pluck("allocations.allocation_id", &allocationIDs).Error
+	if err != nil {
+		logging.Logger.Error("error retrieving finalized allocation for blobber", zap.Error(err))
+		return nil, fmt.Errorf("error retrieving finalized allocation for blobber: %v, error: %v", blobberID, err)
+	}
+
+	return allocationIDs, nil
+}
+
 func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 	var count int64
 	result := edb.Store.Get().Model(&Allocation{}).Where("finalized = ? AND cancelled = ?", false, false).Count(&count)
@@ -142,7 +158,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"latest_closed_challenge_txn",
 		"third_party_extendable",
 		"file_options",
-		"min_lock_demand",
 	}
 
 	columns, err := Columnize(allocs)

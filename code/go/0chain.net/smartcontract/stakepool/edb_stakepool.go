@@ -1,12 +1,11 @@
 package stakepool
 
 import (
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
-
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/dbs/event"
 )
 
 type StakePoolReward dbs.StakePoolReward
@@ -21,17 +20,19 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 		dp := sp.Pools[id]
 		dpu := dbs.NewDelegatePoolUpdate(id, pId, pType)
 		dpu.Updates["balance"] = dp.Balance
+
 		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id, *dpu)
 	}
 }
 
-func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, options ...string) *StakePoolReward {
+func NewStakePoolReward(pId string, pType spenum.Provider, rewardType spenum.Reward, delegateWallet string, options ...string) *StakePoolReward {
 	var spu StakePoolReward
 	spu.ID = pId
 	spu.Type = pType
 	spu.DelegateRewards = make(map[string]currency.Coin)
 	spu.DelegatePenalties = make(map[string]currency.Coin)
 	spu.RewardType = rewardType
+	spu.DelegateWallet = delegateWallet
 
 	var allocationID string
 	if len(options) > 0 {
@@ -64,5 +65,6 @@ func stakePoolRewardToStakePoolRewardEvent(spu StakePoolReward) *dbs.StakePoolRe
 		DelegatePenalties: spu.DelegatePenalties,
 		RewardType:        spu.RewardType,
 		AllocationID:      spu.AllocationID,
+		DelegateWallet:    spu.DelegateWallet,
 	}
 }

@@ -34,10 +34,11 @@ func TestBlockHandler(t *testing.T) {
 
 	sc := makeTestChain(t)
 	sc.AddBlock(b)
-	sc.SetLatestFinalizedBlock(b)
 
 	cl := initDBs(t)
 	defer cl()
+	sc.Initialize()
+	sc.SetLatestFinalizedBlock(b)
 
 	type test struct {
 		name       string

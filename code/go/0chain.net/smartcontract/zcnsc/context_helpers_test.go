@@ -91,6 +91,7 @@ func MakeMockStateContextWithoutAutorizers() *mockStateContext {
 			MinStakeAmount: 11,
 			MaxStakeAmount: 111,
 			OwnerId:        "8a15e216a3b4237330c1fff19c7b3916ece5b0f47341013ceb64d53595a4cebb",
+			MaxFee:         100,
 		},
 	}
 

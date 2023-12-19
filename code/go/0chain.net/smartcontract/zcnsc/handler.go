@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"time"
 
+	"0chain.net/smartcontract"
 	"0chain.net/smartcontract/rest"
 
 	"github.com/0chain/common/core/currency"
@@ -50,7 +52,8 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Request) {
 	values := r.URL.Query()
 	active := values.Get("active")
-	edb := zrh.GetQueryStateContext().GetEventDB()
+	stateCtx := zrh.GetQueryStateContext()
+	edb := stateCtx.GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
@@ -61,7 +64,19 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 	authorizers := make([]event.Authorizer, 0)
 
 	if active == "true" {
-		authorizers, err = edb.GetActiveAuthorizers()
+		conf, err := GetGlobalNode(stateCtx)
+		if err != nil && err != util.ErrValueNotPresent {
+			const cantGetConfigErrMsg = "can't get config"
+			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))
+			return
+		}
+
+		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+		if conf != nil {
+			healthCheckPeriod = conf.HealthCheckPeriod
+		}
+
+		authorizers, err = edb.GetActiveAuthorizers(healthCheckPeriod)
 	} else {
 		authorizers, err = edb.GetAuthorizers()
 	}
@@ -201,10 +216,6 @@ type authorizerResponse struct {
 	// Configuration
 	Fee currency.Coin `json:"fee"`
 
-	// Geolocation
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-
 	// Stats
 	LastHealthCheck int64 `json:"last_health_check"`
 
@@ -229,8 +240,6 @@ func toAuthorizerResponse(auth *event.Authorizer) *authorizerResponse {
 		AuthorizerID:    auth.ID,
 		URL:             auth.URL,
 		Fee:             auth.Fee,
-		Latitude:        auth.Latitude,
-		Longitude:       auth.Longitude,
 		LastHealthCheck: int64(auth.LastHealthCheck),
 		DelegateWallet:  auth.DelegateWallet,
 		NumDelegates:    auth.NumDelegates,

@@ -21,8 +21,7 @@ tests:
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - command:
           name: "register_authorizer"
       - wait_add:
@@ -47,8 +46,7 @@ tests:
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
-      - command:
-          name: "sleep_20s"
+      - sleep: "20s"
       - command:
           name: "register_authorizer"
       - wait_add:

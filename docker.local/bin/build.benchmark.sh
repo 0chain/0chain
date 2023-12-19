@@ -7,4 +7,3 @@ make install-mockery
 make build-mocks
 
 docker $cmd -f docker.local/build.benchmarks/Dockerfile . -t zchain_benchmarks
-

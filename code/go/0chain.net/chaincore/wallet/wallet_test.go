@@ -3,7 +3,7 @@ package wallet
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+
 	"math/rand"
 	"os"
 	"strings"
@@ -299,7 +299,7 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 			return 0
 		})
 		data := common.ToMsgpack(txn)
-		err = ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
+		err = os.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
 		if err != nil {
 			panic(err)
 		}

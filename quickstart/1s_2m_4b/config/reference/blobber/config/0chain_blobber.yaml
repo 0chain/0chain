@@ -20,14 +20,7 @@ price_worker_in_hours: 12
 #     ./zbox sc-config
 #
 
-# min_lock_demand is value in [0; 1] range; it represents number of tokens the
-# blobber earned even if a user will not read or write something
-# to an allocation; the number of tokens will be calculated by the following
-# formula (regarding the time_unit and allocation duration)
-#
-#     allocation_size * write_price * min_lock_demand
-#
-min_lock_demand: 0.1
+
 # max_offer_duration restrict long contracts where,
 # in the future, prices can be changed
 max_offer_duration: 744h # 31 day
@@ -36,7 +29,6 @@ challenge_completion_time: 2m # duration to complete a challenge
 # a task and redeem tokens, it should be big enough
 read_lock_timeout: 1m
 write_lock_timeout: 1m
-max_file_size: 10485760 #10MB
 
 # update_allocations_interval used to refresh known allocation objects from SC
 update_allocations_interval: 1m
@@ -86,14 +78,6 @@ db:
   password: blobber
   host: postgres
   port: 5432
-
-minio:
-  # Enable or disable minio backup service
-  start: false
-  # The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  worker_frequency: 3600 # In Seconds
-  # Use SSL for connection or not
-  use_ssl: false
 
 cold_storage:
   # Minimum file size to be considered for moving to cloud

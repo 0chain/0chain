@@ -3,10 +3,7 @@
 
 ./zwalletcli/zwallet create-wallet --wallet testing.json
 
-for i in $(seq 2)
-do
-  ./zwalletcli/zwallet --wallet testing.json faucet --methodName pour --input "{Pay day}"
-done
+./zwalletcli/zwallet --wallet testing.json faucet --methodName pour --input "{Pay day}" --tokens 100
 
 burn_zcn_output=$(./zwalletcli/zwallet bridge-burn-zcn --token 1 --wallet testing.json)
 

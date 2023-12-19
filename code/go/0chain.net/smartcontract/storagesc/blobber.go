@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 
 	"0chain.net/core/maths"
@@ -99,10 +98,6 @@ func (sc *StorageSmartContract) updateBlobber(
 ) (err error) {
 	// validate the new terms and update the existing blobber's terms
 	if err = validateAndSaveTerms(updateBlobber, existingBlobber, conf); err != nil {
-		return err
-	}
-
-	if err = validateAndSaveGeoLoc(updateBlobber, existingBlobber); err != nil {
 		return err
 	}
 
@@ -213,27 +208,6 @@ func validateAndSaveTerms(
 			}
 			existingBlobber.Terms.WritePrice = *updatedBlobber.Terms.WritePrice
 		}
-	}
-
-	return nil
-}
-
-func validateAndSaveGeoLoc(
-	updatedBlobberRequest *dto.StorageDtoNode,
-	existingBlobber *StorageNode,
-) error {
-	if updatedBlobberRequest.Geolocation != nil {
-		if updatedBlobberRequest.Geolocation.Latitude != nil {
-			existingBlobber.Geolocation.Latitude = *updatedBlobberRequest.Geolocation.Latitude
-		}
-
-		if updatedBlobberRequest.Geolocation.Longitude != nil {
-			existingBlobber.Geolocation.Longitude = *updatedBlobberRequest.Geolocation.Longitude
-		}
-	}
-
-	if err := existingBlobber.Geolocation.validate(); err != nil {
-		return err
 	}
 
 	return nil
@@ -492,7 +466,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_blobber_read",
 			"early reading, allocation not started yet")
-	} else if commitRead.ReadMarker.Timestamp > alloc.Until(conf.MaxChallengeCompletionTime) {
+	} else if commitRead.ReadMarker.Timestamp > alloc.Expiration {
 		return "", common.NewError("commit_blobber_read",
 			"late reading, allocation expired")
 	}
@@ -558,12 +532,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", err
 	}
 	details.ReadReward = readReward
-
-	spent, err := currency.AddCoin(details.Spent, value) // reduce min lock demand left
-	if err != nil {
-		return "", err
-	}
-	details.Spent = spent
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
@@ -656,7 +624,6 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
-	size = (int64(math.Ceil(float64(size) / CHUNK_SIZE))) * CHUNK_SIZE
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
 	}
@@ -668,15 +635,20 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 
 	var move currency.Coin
 	if size > 0 {
+		if size < CHUNK_SIZE {
+			size = CHUNK_SIZE
+		}
+
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens to challenge pool: %v", err)
 		}
 
-		move, err = details.upload(size, wmTime, rdtu)
+		move, err = details.upload(size, rdtu, alloc.WritePool)
 		if err != nil {
-			return 0, fmt.Errorf("can't move tokens to challenge pool: %v", err)
+			return 0, fmt.Errorf("can't calculate move tokens to upload: %v", err)
 		}
+
 		err = alloc.moveToChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagToChallengePool, cp.ID, event.ChallengePoolLock{
@@ -693,19 +665,21 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, err
 		}
 		alloc.MovedToChallenge = movedToChallenge
-
-		spent, err := currency.AddCoin(details.Spent, move)
-		if err != nil {
-			return 0, err
-		}
-		details.Spent = spent
 	} else {
+		if size > -CHUNK_SIZE {
+			size = -CHUNK_SIZE
+		}
+
 		rdtu, err := alloc.restDurationInTimeUnits(wmTime, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("could not move tokens from pool: %v", err)
 		}
 
-		move = details.delete(-size, wmTime, rdtu)
+		move, err = details.delete(-size, wmTime, rdtu)
+		if err != nil {
+			return 0, fmt.Errorf("can't calculate move tokens to delete: %v", err)
+		}
+
 		err = alloc.moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
@@ -802,16 +776,22 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	if blobAlloc.Stats.UsedSize == 0 {
+		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
+		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
+	}
+
+	changeSize := commitConnection.WriteMarker.Size
+
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
-		changeSize := blobAlloc.LastWriteMarker.Size
+		changeSize = -blobAlloc.LastWriteMarker.Size
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize - changeSize
-		// TODO: check if this is correct
+		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize + changeSize
 		blobAlloc.Stats.NumWrites++
-		blobber.SavedData -= changeSize
-		alloc.Stats.UsedSize -= int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+		blobber.SavedData += changeSize
+		alloc.Stats.UsedSize += int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 
 		alloc.Stats.NumWrites++
 	} else {
@@ -851,16 +831,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	movedTokens, err := sc.commitMoveTokens(conf, alloc, commitConnection.WriteMarker.Size, blobAlloc,
+	movedTokens, err := sc.commitMoveTokens(conf, alloc, changeSize, blobAlloc,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"moving tokens: %v", err)
-	}
-
-	if err := alloc.checkFunding(conf.CancellationCharge); err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"insufficient funds: %v", err)
 	}
 
 	sd, err := maths.ConvertToUint64(blobber.SavedData)
@@ -975,8 +950,7 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if err != nil {
 		return fmt.Errorf("unable to total stake pool: %v", err)
 	}
-	weight := uint64(stakedAmount) * blobUsedCapacity
-	if err := partitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, weight); err != nil {
+	if err := PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, stakedAmount, blobUsedCapacity); err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
 	}
 	return nil
@@ -1048,7 +1022,6 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
 	bb := event.Blobber{
 		Provider:  event.Provider{ID: w.BlobberID},
-		Used:      w.Size,
 		SavedData: w.Size,
 	}
 

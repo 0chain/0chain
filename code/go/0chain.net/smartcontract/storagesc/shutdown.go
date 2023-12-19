@@ -1,8 +1,12 @@
 package storagesc
 
 import (
+	"strings"
+
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -17,10 +21,20 @@ func (_ *StorageSmartContract) shutdownBlobber(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	var blobber = newBlobber("")
-	err := provider.ShutDown(
+	var (
+		blobber = newBlobber("")
+		sp      stakepool.AbstractStakePool
+	)
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewErrorf("shutdown_blobber_failed", "can't get config: %v", err)
+	}
+
+	err = provider.ShutDown(
 		input,
 		tx.ClientID,
+		conf.OwnerId,
 		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if blobber, err = getBlobber(req.ID, balances); err != nil {
@@ -29,10 +43,13 @@ func (_ *StorageSmartContract) shutdownBlobber(
 			}
 
 			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-				return nil, nil, err
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+					return nil, nil, common.NewError("shutdown_blobber_failed",
+						"remove blobber form challenge partition, "+err.Error())
+				}
 			}
 
-			sp, err := getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
+			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -44,6 +61,20 @@ func (_ *StorageSmartContract) shutdownBlobber(
 	if err != nil {
 		return "", common.NewError("shutdown_blobber_failed", err.Error())
 	}
+
+	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
+		_, err = balances.DeleteTrieNode(blobber.GetKey())
+		if err != nil {
+			return "", common.NewErrorf("shutdown_blobber_failed", "deleting blobber: %v", err)
+		}
+
+		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+			return "", common.NewErrorf("shutdown_blobber_failed", "deleting stakepool: %v", err)
+		}
+
+		return "", nil
+	}
+
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewError("shutdown_blobber_failed", "saving blobber: "+err.Error())
@@ -59,10 +90,20 @@ func (_ *StorageSmartContract) shutdownValidator(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	var validator = newValidator("")
-	err := provider.ShutDown(
+	var (
+		validator = newValidator("")
+		sp        stakepool.AbstractStakePool
+	)
+
+	conf, err := getConfig(balances)
+	if err != nil {
+		return "", common.NewErrorf("shutdown_validator_failed", "can't get config: %v", err)
+	}
+
+	err = provider.ShutDown(
 		input,
 		tx.ClientID,
+		conf.OwnerId,
 		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
@@ -77,11 +118,13 @@ func (_ *StorageSmartContract) shutdownValidator(
 			}
 
 			if err := validatorPartitions.Remove(balances, validator.Id()); err != nil {
-				return nil, nil, common.NewError("shutdown_validator_failed",
-					"failed to remove validator."+err.Error())
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+					return nil, nil, common.NewErrorf("shutdown_validator_failed",
+						"failed to remove validator: %v", err)
+				}
 			}
 
-			sp, err := getStakePoolAdapter(validator.Type(), validator.Id(), balances)
+			sp, err = getStakePoolAdapter(validator.Type(), validator.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -93,9 +136,28 @@ func (_ *StorageSmartContract) shutdownValidator(
 	if err != nil {
 		return "", common.NewError("shutdown_validator_failed", err.Error())
 	}
+
+	if len(sp.GetPools()) == 0 {
+		_, err = balances.DeleteTrieNode(validator.GetKey(""))
+		if err != nil {
+			return "", common.NewErrorf("shutdown_validator_failed", "deleting validator: %v", err)
+		}
+
+		if err = deleteStakepool(balances, validator.ProviderType, validator.Id()); err != nil {
+			return "", common.NewErrorf("shutdown_validator_failed", "deleting stakepool: %v", err)
+		}
+
+		return "", nil
+	}
+
 	_, err = balances.InsertTrieNode(validator.GetKey(""), validator)
 	if err != nil {
 		return "", common.NewError("shutdown_validator_failed", "saving validator: "+err.Error())
 	}
 	return "", nil
+}
+
+func deleteStakepool(balances cstate.StateContextI, providerType spenum.Provider, providerID string) error {
+	_, err := balances.DeleteTrieNode(stakePoolKey(providerType, providerID))
+	return err
 }
