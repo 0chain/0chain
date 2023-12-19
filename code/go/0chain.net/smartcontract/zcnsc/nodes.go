@@ -200,8 +200,8 @@ func (gn *GlobalNode) Validate() error {
 		return common.NewError(Code, fmt.Sprintf("max delegate count (%v) is less than 0", gn.MaxDelegates))
 	case gn.HealthCheckPeriod <= 0:
 		return common.NewError(Code, fmt.Sprintf("health check period (%v) is less than 0", gn.HealthCheckPeriod))
-	case gn.MinLockAmount == 0:
-		return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is equal to 0", gn.MinLockAmount))
+		// case gn.MinLockAmount == 0:
+		// 	return common.NewError(Code, fmt.Sprintf("min lock amount (%v) is equal to 0", gn.MinLockAmount))
 	}
 	return nil
 }
