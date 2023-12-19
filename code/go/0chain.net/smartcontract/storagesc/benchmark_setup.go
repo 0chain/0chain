@@ -194,6 +194,13 @@ func AddMockChallenges(
 	for i := 0; i < numAllocs; i++ {
 		startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 		blobInd := rand.Intn(startBlobbers + 1)
+		
+		// When the challenge_response is called, the challenge shouldn't be expired
+		// the challenge expires when the difference between the current round and the creation round of the challenge is more than max_challenge_completion_rounds from the configuration
+		// Current round for the benchmark tests is set to NumBlocks when executing the tests.
+		// Thus, creation round of the challenge should be less than NumBlocks by a value less than max_challenge_completion_rounds
+		round := viper.GetInt(sc.NumBlocks) - (i % viper.GetInt(sc.StorageMaxChallengeCompletionRounds))
+		
 		cs := setupMockChallenge(
 			numChallengesPerBlobber,
 			numValidators,
@@ -203,7 +210,7 @@ func AddMockChallenges(
 			&allocationChall[i],
 			eventDb,
 			balances,
-			i,
+			round,
 		)
 		challenges = append(challenges, cs...)
 	}
