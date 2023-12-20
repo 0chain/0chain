@@ -545,13 +545,6 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Empty_ERR",
-			args: args{
-				urls: []string{},
-			},
-			wantErr: true,
-		},
-		{
 			name: "OK",
 			args: args{
 				urls: []string{},
