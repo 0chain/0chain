@@ -268,8 +268,8 @@ func initGlobalSettings() {
 	}{
 		GlobalSettingName[State]:        {Boolean, false},
 		GlobalSettingName[Dkg]:          {Boolean, false},
-		GlobalSettingName[ViewChange]:   {Boolean, false},
-		GlobalSettingName[BlockRewards]: {Boolean, false},
+		GlobalSettingName[ViewChange]:   {Boolean, true},
+		GlobalSettingName[BlockRewards]: {Boolean, true},
 		GlobalSettingName[Storage]:      {Boolean, false},
 		GlobalSettingName[Faucet]:       {Boolean, false},
 		GlobalSettingName[Miner]:        {Boolean, false},
@@ -306,8 +306,8 @@ func initGlobalSettings() {
 
 		GlobalSettingName[TransactionPayloadMaxSize]: {Int, true},
 		GlobalSettingName[TransactionTimeout]:        {Int, false},
-		GlobalSettingName[TransactionMinFee]:         {Int64, true},
-		GlobalSettingName[TransactionMaxFee]:         {Int64, false},
+		GlobalSettingName[TransactionMinFee]:         {Float64, true},
+		GlobalSettingName[TransactionMaxFee]:         {Float64, true},
 		GlobalSettingName[TransactionExempt]:         {Strings, true},
 		GlobalSettingName[TransactionCostFeeCoeff]:   {Int, true},
 		GlobalSettingName[TransactionFutureNonce]:    {Int, true},
@@ -318,19 +318,19 @@ func initGlobalSettings() {
 		GlobalSettingName[MessagesVerificationTicketsTo]: {String, true},
 
 		GlobalSettingName[StatePruneBelowCount]: {Int, true},
-		GlobalSettingName[StateSyncTimeout]:     {Duration, false},
+		GlobalSettingName[StateSyncTimeout]:     {Duration, true},
 
-		GlobalSettingName[StuckCheckInterval]: {Duration, false},
-		GlobalSettingName[StuckTimeThreshold]: {Duration, false},
+		GlobalSettingName[StuckCheckInterval]: {Duration, true},
+		GlobalSettingName[StuckTimeThreshold]: {Duration, true},
 
 		GlobalSettingName[SmartContractTimeout]:             {Duration, true},
 		GlobalSettingName[SmartContractSettingUpdatePeriod]: {Int64, true},
 
-		GlobalSettingName[LfbTicketRebroadcastTimeout]: {Duration, false},
-		GlobalSettingName[LfbTicketAhead]:              {Int, false},
+		GlobalSettingName[LfbTicketRebroadcastTimeout]: {Duration, true},
+		GlobalSettingName[LfbTicketAhead]:              {Int, true},
 
-		GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {Int, false},
-		GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: {Int, false},
+		GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {Int, true},
+		GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: {Int, true},
 
 		GlobalSettingName[DbsEventsEnabled]:         {Boolean, false},
 		GlobalSettingName[DbsEventsName]:            {String, false},
