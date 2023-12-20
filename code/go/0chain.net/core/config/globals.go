@@ -306,8 +306,8 @@ func initGlobalSettings() {
 
 		GlobalSettingName[TransactionPayloadMaxSize]: {Int, true},
 		GlobalSettingName[TransactionTimeout]:        {Int, false},
-		GlobalSettingName[TransactionMinFee]:         {Int64, true},
-		GlobalSettingName[TransactionMaxFee]:         {Int64, false},
+		GlobalSettingName[TransactionMinFee]:         {Float64, true},
+		GlobalSettingName[TransactionMaxFee]:         {Float64, false},
 		GlobalSettingName[TransactionExempt]:         {Strings, true},
 		GlobalSettingName[TransactionCostFeeCoeff]:   {Int, true},
 		GlobalSettingName[TransactionFutureNonce]:    {Int, true},
