@@ -40,8 +40,6 @@ github.com/0chain/common v0.0.7-0.20231108122201-3e2bad6b9d20 h1:c46aB5l0xbD7nc/
 github.com/0chain/common v0.0.7-0.20231108122201-3e2bad6b9d20/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
-github.com/0chain/gosdk v1.10.1-0.20231216192919-bee24b781cef h1:rzFyZd1QxwXq+PF+8uiZJMMaL9QPsF8UuNL9ch+mzCA=
-github.com/0chain/gosdk v1.10.1-0.20231216192919-bee24b781cef/go.mod h1:DAg/de6vodjEa7CM1/LjElOwntRtNV5lb9rMRaR7fzU=
 github.com/0chain/gosdk v1.11.0 h1:PSD4ohQaaSOsH/sHvfnCbq35Bs5fCtL1g9S4vyvxQOY=
 github.com/0chain/gosdk v1.11.0/go.mod h1:DAg/de6vodjEa7CM1/LjElOwntRtNV5lb9rMRaR7fzU=
 github.com/0chain/msgp v1.1.62 h1:D/s/TYygUwQnMlvfHUjh56FEaI0wP2VfPVS0TTGGu9I=
