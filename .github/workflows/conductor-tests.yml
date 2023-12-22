@@ -69,7 +69,7 @@ jobs:
 
   byzantine-try-2:
     needs: byzantine-try-1
-    if: ${{ needs.byzantine-try-1.result == 'failure' }}
+    if: failure()
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -78,7 +78,7 @@ jobs:
 
   byzantine-try-3:
     needs: byzantine-try-2
-    if: ${{ needs.byzantine-try-2.result == 'failure' }}
+    if: failure()
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -114,7 +114,7 @@ jobs:
 
   blobber-02-try-2:
     needs: blobber-02-try-1
-    if: ${{ needs.blobber-02-try-1.result == 'failure' }}
+    if: failure()
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -126,7 +126,7 @@ jobs:
 
   blobber-02-try-3:
     needs: blobber-02-try-2
-    if: ${{ needs.blobber-02-try-2.result == 'failure' }}
+    if: failure()
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -206,7 +206,7 @@ jobs:
 
   node-recovery-02-try-2:
     needs: node-recovery-02-try-1
-    if: ${{ needs.node-recovery-02-try-1.result == 'failure' }}
+    if: failure()
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -219,7 +219,7 @@ jobs:
 
   node-recovery-02-try-3:
     needs: node-recovery-02-try-2
-    if: ${{ needs.node-recovery-02-try-2.result == 'failure' }}
+    if: failure()
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -240,45 +240,6 @@ jobs:
       zbox_branch: ${{ github.event.inputs.zbox-branch }}
     secrets:
       inherit
-  
-  test-success-1:
-    name: Test Success
-    runs-on: [self-hosted]
-    steps:
-      - name: "Success"
-        run: |
-          exit 0
-  
-  test-success-2:
-    name: Echo Success
-    needs: test-success-1
-    if: failure()
-    runs-on: [self-hosted]
-    steps:
-      - name: "Echo"
-        run: |
-          echo ${{ needs.test-success-1.result }}
-  test-failure-1:
-    name: Test Failure
-    runs-on: [self-hosted]
-    steps:
-      - name: "Failure"
-        run: |
-          exit -1
-  
-  test-failure-2:
-    name: Echo Failure
-    needs: test-failure-1
-    if: failure()
-    runs-on: [self-hosted]
-    steps:
-      - name: "Echo"
-        run: |
-          echo ${{ needs.test-failure-1.result }}
-  
-          
-  
-  
   
   notify_slack:
     runs-on: [self-hosted, arc-runner]
