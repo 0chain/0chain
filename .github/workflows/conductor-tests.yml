@@ -69,7 +69,7 @@ jobs:
 
   byzantine-try-2:
     needs: byzantine-try-1
-    if: failure()
+    if: always() && needs.byzantine-try-1.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -77,8 +77,8 @@ jobs:
       inherit
 
   byzantine-try-3:
-    needs: byzantine-try-2
-    if: failure()
+    needs: [byzantine-try-1, byzantine-try-2]
+    if: always() && needs.byzantine-try-1.result == 'failure' && needs.byzantine-try-2.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -114,7 +114,7 @@ jobs:
 
   blobber-02-try-2:
     needs: blobber-02-try-1
-    if: failure()
+    if: always() && needs.blobber-02-try-1.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -125,8 +125,8 @@ jobs:
       inherit
 
   blobber-02-try-3:
-    needs: blobber-02-try-2
-    if: failure()
+    needs: [blobber-02-try-1, blobber-02-try-2]
+    if: always() && needs.blobber-02-try-1.result == 'failure' && needs.blobber-02-try-2.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -206,7 +206,7 @@ jobs:
 
   node-recovery-02-try-2:
     needs: node-recovery-02-try-1
-    if: failure()
+    if: always() && needs.node-recovery-02-try-1.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -218,8 +218,8 @@ jobs:
       inherit
 
   node-recovery-02-try-3:
-    needs: node-recovery-02-try-2
-    if: failure()
+    needs: [node-recovery-02-try-1, node-recovery-02-try-2]
+    if: always() && needs.node-recovery-02-try-1.result == 'failure' && needs.node-recovery-02-try-2.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.zchain-branch }}
@@ -240,121 +240,6 @@ jobs:
       zbox_branch: ${{ github.event.inputs.zbox-branch }}
     secrets:
       inherit
-  
-  S1-1:
-    runs-on: self-hosted
-    steps:
-      - name: command
-        run: exit 0
-  S1-2:
-    runs-on: self-hosted
-    needs: S1-1
-    if: always() && needs.S1-1.result == 'failure'
-    steps:
-      - name: command
-        run: exit -1
-
-  S1-3:
-    runs-on: self-hosted
-    needs: [S1-1, S1-2]
-    if: always() && needs.S1-1.result == 'failure' && needs.S1-2.result == 'failure'
-    steps:
-      - name: command
-        run: exit -1
-
-  S2-1:
-    runs-on: self-hosted
-    steps:
-      - name: command
-        run: exit -1
-  S2-2:
-    runs-on: self-hosted
-    needs: S2-1
-    if: always() && needs.S2-1.result == 'failure'
-    steps:
-      - name: command
-        run: exit 0
-
-  S2-3:
-    runs-on: self-hosted
-    needs: [S2-1, S2-2]
-    if: always() && needs.S2-1.result == 'failure' && needs.S2-2.result == 'failure'
-    steps:
-      - name: command
-        run: exit -1
-
-  S3-1:
-    runs-on: self-hosted
-    steps:
-      - name: command
-        run: exit -1
-  S3-2:
-    runs-on: self-hosted
-    needs: S3-1
-    if: always() && needs.S3-1.result == 'failure'
-    steps:
-      - name: command
-        run: exit -1
-
-  S3-3:
-    runs-on: self-hosted
-    needs: [S3-1, S3-2]
-    if: always() && needs.S3-1.result == 'failure' && needs.S3-2.result == 'failure'
-    steps:
-      - name: command
-        run: exit 0
-  
-  F-1:
-    runs-on: self-hosted
-    steps:
-      - name: command
-        run: exit -1
-  F-2:
-    runs-on: self-hosted
-    needs: F-1
-    if: always() && needs.F-1.result == 'failure'
-    steps:
-      - name: command
-        run: exit -1
-
-  F-3:
-    runs-on: self-hosted
-    needs: [F-1, F-2]
-    if: always() && needs.F-1.result == 'failure' && needs.F-2.result == 'failure'
-    steps:
-      - name: command
-        run: exit -1
-  
-  test-output:
-    runs-on: self-hosted
-    needs: [S1-1, S1-2, S1-3, S2-1, S2-2, S2-3, S3-1, S3-2, S3-3, F-1, F-2, F-3]
-    if: always()
-    steps:
-      - name: echo output
-        run: |
-          PASSED_TEXT="PASSED ✅"
-          FAILED_TEXT="FAILED ⚠️"
-
-          S1_STATUS=$([[ "${{ needs.S1-1.result }}" = "success" || "${{ needs.S1-2.result }}" = "success" || "${{ needs.S1-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
-          S1_ATTEMPTS=$([ "${{ needs.S1-1.result}}" = "success" ] && echo "1" || echo "3")
-          S1_ATTEMPTS=$([ "${{ needs.S1-2.result}}" = "success" ] && echo "2" || echo "$S1_ATTEMPTS")
-
-          S2_STATUS=$([[ "${{ needs.S2-1.result }}" = "success" || "${{ needs.S2-2.result }}" = "success" || "${{ needs.S2-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
-          S2_ATTEMPTS=$([ "${{ needs.S2-1.result}}" = "success" ] && echo "1" || echo "3")
-          S2_ATTEMPTS=$([ "${{ needs.S2-2.result}}" = "success" ] && echo "2" || echo "$S2_ATTEMPTS")
-
-          S3_STATUS=$([[ "${{ needs.S3-1.result }}" = "success" || "${{ needs.S3-2.result }}" = "success" || "${{ needs.S3-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
-          S3_ATTEMPTS=$([ "${{ needs.S3-1.result}}" = "success" ] && echo "1" || echo "3")
-          S3_ATTEMPTS=$([ "${{ needs.S3-2.result}}" = "success" ] && echo "2" || echo "$S3_ATTEMPTS")
-
-          F_STATUS=$([[ "${{ needs.F-1.result }}" = "success" || "${{ needs.F-2.result }}" = "success" || "${{ needs.F-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
-          F_ATTEMPTS=$([ "${{ needs.F-1.result}}" = "success" ] && echo "1" || echo "3")
-          F_ATTEMPTS=$([ "${{ needs.F-2.result}}" = "success" ] && echo "2" || echo "$F_ATTEMPTS")
-      
-          echo "S1 = $S1_STATUS ($S1_ATTEMPTS/3)"
-          echo "S2 = $S2_STATUS ($S2_ATTEMPTS/3)"
-          echo "S3 = $S3_STATUS ($S3_ATTEMPTS/3)"
-          echo "F = $F_STATUS ($F_ATTEMPTS/3)"
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
@@ -384,10 +269,11 @@ jobs:
           ZCHAIN_CONFIG_STATUS=$([ "${{ needs.zchain-config.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           ZCHAIN_CONFIG_COLOR=$([ "${{ needs.zchain-config.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
         
-          BYZANTINE_STATUS=$([ "${{ needs.byzantine-try-1.result }}" = "success" || "${{ needs.byzantine-try-2.result }}" = "success" || "${{ needs.byzantine-try-3.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
+          # FLAKY
+          BYZANTINE_STATUS=$([[ "${{ needs.byzantine-try-1.result }}" = "success" || "${{ needs.byzantine-try-2.result }}" = "success" || "${{ needs.byzantine-try-3.result }}" = "success" ]] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           BYZANTINE_COLOR=$([ "$BYZANTINE_STATUS" = "$PASSED_TEXT " ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-1.result }}" = "success" ] && echo "1" || echo "3")
-          BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-2.result }}" = "success" ] && echo "2" || echo "3")
+          BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-2.result }}" = "success" ] && echo "2" || echo "$BYZANTINE_ATTEMPTS_COUNT")
           
           FAULT_TOLERANCE_STATUS=$([ "${{ needs.fault-tolerance.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           FAULT_TOLERANCE_COLOR=$([ "${{ needs.fault-tolerance.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
@@ -395,10 +281,11 @@ jobs:
           BLOBBER_01_STATUS=$([ "${{ needs.blobber-01.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           BLOBBER_01_COLOR=$([ "${{ needs.blobber-01.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           
-          BLOBBER_02_STATUS=$([ "${{ needs.blobber-02-try-1.result }}" = "success" || "${{ needs.blobber-02-try-2.result }}" = "success" || "${{ needs.blobber-02-try-3.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
+          # FLAKY
+          BLOBBER_02_STATUS=$([[ "${{ needs.blobber-02-try-1.result }}" = "success" || "${{ needs.blobber-02-try-2.result }}" = "success" || "${{ needs.blobber-02-try-3.result }}" = "success" ]] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           BLOBBER_02_COLOR=$([ "$BLOBBER_02_STATUS" = "$PASSED_TEXT" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           BLOBBER_02_ATTEMPTS_COUNT=$([ "${{ needs.blobber-02-try-1.result }}" = "success" ] && echo "1" || echo "3")
-          BLOBBER_02_ATTEMPTS_COUNT=$([ "${{ needs.blobber-02-try-2.result }}" = "success" ] && echo "2" || echo "3")
+          BLOBBER_02_ATTEMPTS_COUNT=$([ "${{ needs.blobber-02-try-2.result }}" = "success" ] && echo "2" || echo "$BLOBBER_02_ATTEMPTS_COUNT")
           
           BLOBBER_03_STATUS=$([ "${{ needs.blobber-03.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           BLOBBER_03_COLOR=$([ "${{ needs.blobber-03.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
@@ -418,10 +305,11 @@ jobs:
           NODE_RECOVERY_01_STATUS=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           NODE_RECOVERY_01_COLOR=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           
-          NODE_RECOVERY_02_STATUS=$([ "${{ needs.node-recovery-02-try-1.result }}" = "success" || "${{ needs.node-recovery-02-try-2.result }}" = "success" || "${{ needs.node-recovery-02-try-3.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
+          # FLAKY
+          NODE_RECOVERY_02_STATUS=$([[ "${{ needs.node-recovery-02-try-1.result }}" = "success" || "${{ needs.node-recovery-02-try-2.result }}" = "success" || "${{ needs.node-recovery-02-try-3.result }}" = "success" ]] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           NODE_RECOVERY_02_COLOR=$([ "$NODE_RECOVERY_02_STATUS" = "$PASSED_TEXT" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           NODE_RECOVERY_02_ATTEMPTS_COUNT=$([ "${{ needs.node-recovery-02-try-1.result }}" = "success" ] && echo "1" || echo "3")
-          NODE_RECOVERY_02_ATTEMPTS_COUNT=$([ "${{ needs.node-recovery-02-try-2.result }}" = "success" ] && echo "2" || echo "3")
+          NODE_RECOVERY_02_ATTEMPTS_COUNT=$([ "${{ needs.node-recovery-02-try-2.result }}" = "success" ] && echo "2" || echo "$NODE_RECOVERY_02_ATTEMPTS_COUNT")
           
           NODE_RECOVERY_03_STATUS=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           NODE_RECOVERY_03_COLOR=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
@@ -442,7 +330,7 @@ jobs:
               \"color\": \"$ZCHAIN_CONFIG_COLOR\"
               },
               {
-              \"text\": \"CONDUCTOR BYZANTINE TEST $BYZANTINE_STATUS\",
+              \"text\": \"CONDUCTOR BYZANTINE TEST $BYZANTINE_STATUS ($BYZANTINE_ATTEMPTS_COUNT Attempts)\",
               \"color\": \"$BYZANTINE_COLOR\"
               },
               {
@@ -454,7 +342,7 @@ jobs:
               \"color\": \"$BLOBBER_01_COLOR\"
               },
               {
-              \"text\": \"CONDUCTOR BLOBBER TEST 02 $BLOBBER_02_STATUS\",
+              \"text\": \"CONDUCTOR BLOBBER TEST 02 $BLOBBER_02_STATUS ($BLOBBER_02_ATTEMPTS_COUNT Attempts)\",
               \"color\": \"$BLOBBER_02_COLOR\"
               },
               {
@@ -482,7 +370,7 @@ jobs:
               \"color\": \"$NODE_RECOVERY_01_COLOR\"
               },
               {
-              \"text\": \"CONDUCTOR NODE RECOVERY TEST 02 $NODE_RECOVERY_02_STATUS\",
+              \"text\": \"CONDUCTOR NODE RECOVERY TEST 02 $NODE_RECOVERY_02_STATUS ($NODE_RECOVERY_02_ATTEMPTS_COUNT Attempts)\",
               \"color\": \"$NODE_RECOVERY_02_COLOR\"
               },
               {
