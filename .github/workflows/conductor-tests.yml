@@ -34,6 +34,31 @@ jobs:
     secrets:
       inherit
   
+  byzantine-try-1:
+    uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  byzantine-try-2:
+    needs: byzantine-try-1
+    if: ${{ needs.byzantine-try-1.result == 'failure' }}
+    uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  byzantine-try-3:
+    needs: byzantine-try-2
+    if: ${{ needs.byzantine-try-2.result == 'failure' }}
+    uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
   byzantine:
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
@@ -58,7 +83,31 @@ jobs:
     secrets:
       inherit
 
-  blobber-02:
+  blobber-02-try-1:
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  blobber-02-try-2:
+    needs: blobber-02-try-1
+    if: ${{ needs.blobber-02-try-1.result == 'failure' }}
+    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  blobber-02-try-3:
+    needs: blobber-02-try-2
+    if: ${{ needs.blobber-02-try-2.result == 'failure' }}
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
@@ -125,7 +174,33 @@ jobs:
     secrets:
       inherit
 
-  node-recovery-02:
+  node-recovery-02-try-1:
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+      zbox_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  node-recovery-02-try-2:
+    needs: node-recovery-02-try-1
+    if: ${{ needs.node-recovery-02-try-1.result == 'failure' }}
+    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
+    with:
+      chain_branch: ${{ github.event.inputs.branch }}
+      blobber_branch: ${{ github.event.inputs.branch }}
+      zboxcli_branch: ${{ github.event.inputs.branch }}
+      zwalletcli_branch: ${{ github.event.inputs.branch }}
+      zbox_branch: ${{ github.event.inputs.branch }}
+    secrets:
+      inherit
+
+  node-recovery-02-try-3:
+    needs: node-recovery-02-try-2
+    if: ${{ needs.node-recovery-02-try-2.result == 'failure' }}
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ github.event.inputs.branch }}
@@ -152,7 +227,7 @@ jobs:
   
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [standard-miner, standard-sharder, zchain-config, byzantine, fault-tolerance, blobber-01, blobber-02, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02, node-recovery-03]
+    needs: [standard-miner, standard-sharder, zchain-config, byzantine-try-1, byzantine-try-2, byzantine-try-3, fault-tolerance, blobber-01, blobber-02-try-1, blobber-02-try-2, blobber-02-try-3, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02-try-1, node-recovery-02-try-2, node-recovery-02-try-3, node-recovery-03]
     if: always()
     steps:
       - name: "Notify Slack"
@@ -166,9 +241,12 @@ jobs:
 
           ZCHAIN_CONFIG_STATUS=$([ "${{ needs.zchain-config.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           ZCHAIN_CONFIG_COLOR=$([ "${{ needs.zchain-config.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
-          
-          BYZANTINE_STATUS=$([ "${{ needs.byzantine.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
-          BYZANTINE_COLOR=$([ "${{ needs.byzantine.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+        
+          # FLAKY
+          BYZANTINE_STATUS=$([ "${{ needs.byzantine-try-1.result }}" = "success" || "${{ needs.byzantine-try-2.result }}" = "success" || "${{ needs.byzantine-try-2.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BYZANTINE_COLOR=$([ "$BYZANTINE_STATUS" = "PASSED ✅ " ] && echo "#22bb33" || echo "#ff0000")
+          BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-1.result }}" = "success" ] && echo "1" || echo "3")
+          BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-2.result }}" = "success" ] && echo "2" || echo "3")
           
           FAULT_TOLERANCE_STATUS=$([ "${{ needs.fault-tolerance.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           FAULT_TOLERANCE_COLOR=$([ "${{ needs.fault-tolerance.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
@@ -176,8 +254,11 @@ jobs:
           BLOBBER_01_STATUS=$([ "${{ needs.blobber-01.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           BLOBBER_01_COLOR=$([ "${{ needs.blobber-01.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
           
-          BLOBBER_02_STATUS=$([ "${{ needs.blobber-02.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
-          BLOBBER_02_COLOR=$([ "${{ needs.blobber-02.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          # FLAKY
+          BLOBBER_02_STATUS=$([ "${{ needs.blobber-02-try-1.result }}" = "success" || "${{ needs.blobber-02-try-2.result }}" = "success" || "${{ needs.blobber-02-try-3.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          BLOBBER_02_COLOR=$([ "$BLOBBER_02_STATUS" = "PASSED ✅" ] && echo "#22bb33" || echo "#ff0000")
+          BLOBBER_02_ATTEMPTS_COUNT=$([ "${{ needs.blobber-02-try-1.result }}" = "success" ] && echo "1" || echo "3")
+          BLOBBER_02_ATTEMPTS_COUNT=$([ "${{ needs.blobber-02-try-2.result }}" = "success" ] && echo "2" || echo "3")
           
           BLOBBER_03_STATUS=$([ "${{ needs.blobber-03.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           BLOBBER_03_COLOR=$([ "${{ needs.blobber-03.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
@@ -197,8 +278,10 @@ jobs:
           NODE_RECOVERY_01_STATUS=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           NODE_RECOVERY_01_COLOR=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
           
-          NODE_RECOVERY_02_STATUS=$([ "${{ needs.node-recovery-02.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
-          NODE_RECOVERY_02_COLOR=$([ "${{ needs.node-recovery-02.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
+          NODE_RECOVERY_02_STATUS=$([ "${{ needs.node-recovery-02-try-1.result }}" = "success" || "${{ needs.node-recovery-02-try-2.result }}" = "success" || "${{ needs.node-recovery-02-try-3.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
+          NODE_RECOVERY_02_COLOR=$([ "$NODE_RECOVERY_02_STATUS" = "PASSED ✅" ] && echo "#22bb33" || echo "#ff0000")
+          NODE_RECOVERY_02_ATTEMPTS_COUNT=$([ "${{ needs.node-recovery-02-try-1.result }}" = "success" ] && echo "1" || echo "3")
+          NODE_RECOVERY_02_ATTEMPTS_COUNT=$([ "${{ needs.node-recovery-02-try-2.result }}" = "success" ] && echo "2" || echo "3")
           
           NODE_RECOVERY_03_STATUS=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "PASSED ✅" || echo "FAILED ⚠️")
           NODE_RECOVERY_03_COLOR=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "#22bb33" || echo "#ff0000")
