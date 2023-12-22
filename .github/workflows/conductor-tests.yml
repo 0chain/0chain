@@ -334,24 +334,22 @@ jobs:
         run: |
           PASSED_TEXT="PASSED ✅"
           FAILED_TEXT="FAILED ⚠️"
-          PASSED_COLOR="#22bb33"
-          FAILED_COLOR="#ff0000"
 
-          S1_STATUS=$([[ "${{ needs.S1-1.result }}" = "success" || "${{ needs.S1-2.result }}" = "success" || "${{ needs.S1-3.result }}" = "success" ]] && echo $PASSED_TEST || echo $FAILED_TEST)
+          S1_STATUS=$([[ "${{ needs.S1-1.result }}" = "success" || "${{ needs.S1-2.result }}" = "success" || "${{ needs.S1-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
           S1_ATTEMPTS=$([ "${{ needs.S1-1.result}}" = "success" ] && echo "1" || echo "3")
-          S1_ATTEMPTS=$([ "${{ needs.S1-2.result}}" = "success" ] && echo "2" || echo "3")
+          S1_ATTEMPTS=$([ "${{ needs.S1-2.result}}" = "success" ] && echo "2" || echo "$S1_ATTEMPTS")
 
-          S2_STATUS=$([[ "${{ needs.S2-1.result }}" = "success" || "${{ needs.S2-2.result }}" = "success" || "${{ needs.S2-3.result }}" = "success" ]] && echo $PASSED_TEST || echo $FAILED_TEST)
+          S2_STATUS=$([[ "${{ needs.S2-1.result }}" = "success" || "${{ needs.S2-2.result }}" = "success" || "${{ needs.S2-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
           S2_ATTEMPTS=$([ "${{ needs.S2-1.result}}" = "success" ] && echo "1" || echo "3")
-          S2_ATTEMPTS=$([ "${{ needs.S2-2.result}}" = "success" ] && echo "2" || echo "3")
+          S2_ATTEMPTS=$([ "${{ needs.S2-2.result}}" = "success" ] && echo "2" || echo "$S2_ATTEMPTS")
 
-          S3_STATUS=$([[ "${{ needs.S3-1.result }}" = "success" || "${{ needs.S3-2.result }}" = "success" || "${{ needs.S3-3.result }}" = "success" ]] && echo $PASSED_TEST || echo $FAILED_TEST)
+          S3_STATUS=$([[ "${{ needs.S3-1.result }}" = "success" || "${{ needs.S3-2.result }}" = "success" || "${{ needs.S3-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
           S3_ATTEMPTS=$([ "${{ needs.S3-1.result}}" = "success" ] && echo "1" || echo "3")
-          S3_ATTEMPTS=$([ "${{ needs.S3-2.result}}" = "success" ] && echo "2" || echo "3")
+          S3_ATTEMPTS=$([ "${{ needs.S3-2.result}}" = "success" ] && echo "2" || echo "$S3_ATTEMPTS")
 
-          F_STATUS=$([[ "${{ needs.F-1.result }}" = "success" || "${{ needs.F-2.result }}" = "success" || "${{ needs.F-3.result }}" = "success" ]] && echo $PASSED_TEST || echo $FAILED_TEST)
+          F_STATUS=$([[ "${{ needs.F-1.result }}" = "success" || "${{ needs.F-2.result }}" = "success" || "${{ needs.F-3.result }}" = "success" ]] && echo $PASSED_TEXT || echo $FAILED_TEXT)
           F_ATTEMPTS=$([ "${{ needs.F-1.result}}" = "success" ] && echo "1" || echo "3")
-          F_ATTEMPTS=$([ "${{ needs.F-2.result}}" = "success" ] && echo "2" || echo "3")
+          F_ATTEMPTS=$([ "${{ needs.F-2.result}}" = "success" ] && echo "2" || echo "$F_ATTEMPTS")
       
           echo "S1 = $S1_STATUS ($S1_ATTEMPTS/3)"
           echo "S2 = $S2_STATUS ($S2_ATTEMPTS/3)"
