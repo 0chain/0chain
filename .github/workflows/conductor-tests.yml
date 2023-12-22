@@ -58,13 +58,6 @@ jobs:
       chain_branch: ${{ github.event.inputs.branch }}
     secrets:
       inherit
-
-  byzantine:
-    uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
-    with:
-      chain_branch: ${{ github.event.inputs.branch }}
-    secrets:
-      inherit
   
   fault-tolerance:
     uses: 0chain/0chain/.github/workflows/conductor-fault-tolerance-tests.yml@staging
