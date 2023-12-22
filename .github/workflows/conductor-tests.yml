@@ -252,7 +252,7 @@ jobs:
   test-success-2:
     name: Echo Success
     needs: test-success-1
-    if: always() && ${{ needs.test-success-1.result == 'failure' }}
+    if: failure()
     runs-on: [self-hosted]
     steps:
       - name: "Echo"
@@ -269,7 +269,7 @@ jobs:
   test-failure-2:
     name: Echo Failure
     needs: test-failure-1
-    if: always() && ${{ needs.test-failure-1.result == 'failure' }}
+    if: failure()
     runs-on: [self-hosted]
     steps:
       - name: "Echo"
