@@ -211,7 +211,7 @@ tests:
           shift: 250
       - start: ['blobber-3']
       - wait_round:
-          shift: 100
+          shift: 2000
       - command:
           name: "upload"
           params:
