@@ -96,7 +96,7 @@ tests:
             - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
           required: 
       - wait_round:
-          shift: 100
+          shift: 1500
       - start: ['blobber-3']
       - generate_all_challenges: true
       - command:
@@ -198,7 +198,7 @@ tests:
           name: "fill_blobber_validator_wallets"
       - stop: ['blobber-3']
       - wait_round:
-          shift: 100
+          shift: 1500
       - sync_latest_aggregates:
           blobbers:
             - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
@@ -211,7 +211,7 @@ tests:
           shift: 250
       - start: ['blobber-3']
       - wait_round:
-          shift: 2000
+          shift: 100
       - command:
           name: "upload"
           params:
