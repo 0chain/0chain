@@ -96,7 +96,7 @@ tests:
             - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
           required: 
       - wait_round:
-          shift: 1500
+          shift: 100
       - start: ['blobber-3']
       - generate_all_challenges: true
       - command:
