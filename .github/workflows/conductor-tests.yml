@@ -2,9 +2,8 @@ name: CONDUCTOR TESTS SUITE
 
 on:
   schedule:
-    #   # Runs everyday at 02:00 am
-      - cron: '* 0 * * *'
-      - cron: '36 * * * *'
+      - cron: '* 0 * * *' # for sprint
+      - cron: '36 * * * *' # for staging
 
   push:
     branches:
@@ -44,7 +43,17 @@ on:
         default: ''
       
 jobs:
+  # Succeeds if the event is scheduled for staging
+  scheduled-staging-branches:
+    runs-on: [self-hosted, arc-runner]
+    if: github.event.schedule == '36 * * * *'
+    steps:
+      - name: "Success"
+        run: exit 0
+
   compute-branches:
+    needs: scheduled-staging-branches
+    if: always()
     runs-on: [self-hosted, arc-runner]
     steps:
       - name: "Compute Branches based on event"
@@ -67,7 +76,7 @@ jobs:
             ZBOXCLI_BRANCH="${{ github.event.inputs.zboxcli-branch }}"
             ZWALLETCLI_BRANCH="${{ github.event.inputs.zwalletcli-branch }}"
           
-          elif [[ "${{ github.event_name }}" = "push" && "${{github.event.ref}}" = "refs/heads/staging" || "${{ github.event_name }}" = "schedule" && "${{ github.event.schedule }}" = "36 * * * *" ]]; then
+          elif [[ "${{ github.event_name }}" = "push" && "${{github.event.ref}}" = "refs/heads/staging" || "${{ needs.scheduled-staging-branches.result}}" = "success" ]]; then
             ZCHAIN_BRANCH="staging"
             BLOBBER_BRANCH="staging"
             AUTHORIZER_BRANCH="staging"
@@ -83,12 +92,12 @@ jobs:
           echo "ZBOXCLI_BRANCH = $ZBOXCLI_BRANCH\n"
           echo "ZWALLETCLI_BRANCH = $ZWALLETCLI_BRANCH\n"
 
-          echo "::set-output name=zchain_branch::$ZCHAIN_BRANCH"
-          echo "::set-output name=blobber_branch::$BLOBBER_BRANCH"
-          echo "::set-output name=authorizer_branch::$AUTHORIZER_BRANCH"
-          echo "::set-output name=zbox_branch::$ZBOX_BRANCH"
-          echo "::set-output name=zboxcli_branch::$ZBOXCLI_BRANCH"
-          echo "::set-output name=zwalletcli_branch::$ZWALLETCLI_BRANCH"
+          echo "zchain_branch=$ZCHAIN_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "blobber_branch=$BLOBBER_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "authorizer_branch=$AUTHORIZER_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "zbox_branch=$ZBOX_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "zboxcli_branch=$ZBOXCLI_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "zwalletcli_branch=$ZWALLETCLI_BRANCH" >> "$GITHUB_OUTPUT"
 
     outputs:
       zchain_branch: ${{ steps.compute_branches.outputs.zchain_branch }}
