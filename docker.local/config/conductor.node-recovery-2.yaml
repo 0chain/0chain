@@ -198,7 +198,7 @@ tests:
           name: "fill_blobber_validator_wallets"
       - stop: ['blobber-3']
       - wait_round:
-          shift: 100
+          shift: 500
       - sync_latest_aggregates:
           blobbers:
             - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
@@ -210,12 +210,6 @@ tests:
       - wait_round:
           shift: 250
       - start: ['blobber-3']
-      - wait_round:
-          shift: 100
-      - command:
-          name: "upload"
-          params:
-            remotepath: "/bin/uploadc.bin"
       - wait_round:
           shift: 100
       - check_aggregate_value_comparison:
