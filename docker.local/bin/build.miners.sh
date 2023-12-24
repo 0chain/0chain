@@ -1,6 +1,19 @@
 #!/bin/bash
 set -e
 
+# If --help is passed, print usage and exit.
+if [[ "$*" == *"--help"* ]]
+then
+    echo "Usage: $0 [--dev|--help]"
+    echo "Builds miner image. Need to be run from the root of the repository."
+    echo "  --dev: build miner locally (without Docker)"
+    echo "  --help: print this help message"
+    echo ""
+    echo "Related environment variables:"
+    echo "  MINER: miner number to build (1-5)"
+    exit 0
+fi
+
 GIT_COMMIT=$(git rev-list -1 HEAD)
 echo "$GIT_COMMIT"
 

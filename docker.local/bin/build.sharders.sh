@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# If --help is passed, print usage and exit.
+if [[ "$*" == *"--help"* ]]
+then
+    echo "Usage: $0 [--help]"
+    echo "Builds sharder image. Need to be run from the root of the repository."
+    echo "  --help: print this help message"
+    echo ""
+    exit 0
+fi
+
 GIT_COMMIT=$(git rev-list -1 HEAD)
 echo "$GIT_COMMIT"
 
