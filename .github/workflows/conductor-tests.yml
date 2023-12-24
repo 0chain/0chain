@@ -109,14 +109,16 @@ jobs:
   
   standard-miner:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-standard-miner-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
     secrets:
       inherit
 
-  standard-sharder:
+  standard-sharder:    
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-standard-sharder-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -125,6 +127,7 @@ jobs:
   
   zchain-config:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-0chain-config-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -134,6 +137,7 @@ jobs:
   
   byzantine-try-1:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -142,7 +146,7 @@ jobs:
 
   byzantine-try-2:
     needs: [compute-branches, byzantine-try-1]
-    if: always() && needs.byzantine-try-1.result == 'failure'
+    if: always() && needs.compute-branches.result == 'success' && needs.byzantine-try-1.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -151,7 +155,7 @@ jobs:
 
   byzantine-try-3:
     needs: [compute-branches, byzantine-try-1, byzantine-try-2]
-    if: always() && needs.byzantine-try-1.result == 'failure' && needs.byzantine-try-2.result == 'failure'
+    if: always() && needs.compute-branches.result == 'success' && needs.byzantine-try-1.result == 'failure' && needs.byzantine-try-2.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-byzantine-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -160,6 +164,7 @@ jobs:
   
   fault-tolerance:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-fault-tolerance-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -168,6 +173,7 @@ jobs:
   
   blobber-01:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-01.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -179,6 +185,7 @@ jobs:
 
   blobber-02-try-1:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -190,7 +197,7 @@ jobs:
 
   blobber-02-try-2:
     needs: [compute-branches, blobber-02-try-1]
-    if: always() && needs.blobber-02-try-1.result == 'failure'
+    if: always() && needs.compute-branches.result == 'success' && needs.blobber-02-try-1.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -202,7 +209,7 @@ jobs:
 
   blobber-02-try-3:
     needs: [compute-branches, blobber-02-try-1, blobber-02-try-2]
-    if: always() && needs.blobber-02-try-1.result == 'failure' && needs.blobber-02-try-2.result == 'failure'
+    if: always() && needs.compute-branches.result == 'success' && needs.blobber-02-try-1.result == 'failure' && needs.blobber-02-try-2.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-02.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -214,6 +221,7 @@ jobs:
 
   blobber-03:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-03.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -225,6 +233,7 @@ jobs:
 
   blobber-04:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-04.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -236,6 +245,7 @@ jobs:
 
   blobber-05:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-05.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -247,6 +257,7 @@ jobs:
 
   blobber-06:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-06.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -258,6 +269,7 @@ jobs:
   
   authorizers-standard:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-authorizer-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -269,6 +281,7 @@ jobs:
   
   node-recovery-01:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-01-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -277,6 +290,7 @@ jobs:
 
   node-recovery-02-try-1:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -289,7 +303,7 @@ jobs:
 
   node-recovery-02-try-2:
     needs: [compute-branches, node-recovery-02-try-1]
-    if: always() && needs.node-recovery-02-try-1.result == 'failure'
+    if: always() && needs.compute-branches.result == 'success' && needs.node-recovery-02-try-1.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -302,7 +316,7 @@ jobs:
 
   node-recovery-02-try-3:
     needs: [compute-branches, node-recovery-02-try-1, node-recovery-02-try-2]
-    if: always() && needs.node-recovery-02-try-1.result == 'failure' && needs.node-recovery-02-try-2.result == 'failure'
+    if: always() && needs.compute-branches.result == 'success' && needs.node-recovery-02-try-1.result == 'failure' && needs.node-recovery-02-try-2.result == 'failure'
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-02-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
@@ -315,6 +329,7 @@ jobs:
 
   node-recovery-03:
     needs: compute-branches
+    if: always() && needs.compute-branches.result == 'success'
     uses: 0chain/0chain/.github/workflows/conductor-node-recovery-03-tests.yml@staging
     with:
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
