@@ -198,7 +198,7 @@ tests:
           name: "fill_blobber_validator_wallets"
       - stop: ['blobber-3']
       - wait_round:
-          shift: 1500
+          shift: 500
       - sync_latest_aggregates:
           blobbers:
             - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
