@@ -4,7 +4,7 @@ on:
   schedule:
     #   # Runs everyday at 02:00 am
       - cron: '* 0 * * *'
-      - cron: '* 1 * * *'
+      - cron: '36 * * * *'
 
   push:
     branches:
@@ -67,7 +67,7 @@ jobs:
             ZBOXCLI_BRANCH="${{ github.event.inputs.zboxcli-branch }}"
             ZWALLETCLI_BRANCH="${{ github.event.inputs.zwalletcli-branch }}"
           
-          elif [[ "${{ github.event_name }}" = "push" && "${{github.event.ref}}" = "refs/heads/staging" || "${{ github.event_name }}" = "schedule" && "${{ github.event.schedule }}" = "* 1 * * *" ]]; then
+          elif [[ "${{ github.event_name }}" = "push" && "${{github.event.ref}}" = "refs/heads/staging" || "${{ github.event_name }}" = "schedule" && "${{ github.event.schedule }}" = "36 * * * *" ]]; then
             ZCHAIN_BRANCH="staging"
             BLOBBER_BRANCH="staging"
             AUTHORIZER_BRANCH="staging"
