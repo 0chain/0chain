@@ -1223,6 +1223,12 @@ func (r *Runner) Run() (err error, success bool) {
 
 	cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
+			for _, cf := range r.conf.ConfigFiles {
+				if err := cf.Restore(); err != nil {
+					log.Printf("[WARN] couldn't restore config file %s: %v", cf.Name, err)
+				}
+			}
+
 			_ = r.SetMagicBlock("")
 			r.conf.CleanupEnv()
 			var report reportTestCase
@@ -1289,6 +1295,14 @@ func (r *Runner) Run() (err error, success bool) {
 				log.Printf("[WARN] ⚠️ errors while exporting full logs for this test case: %v", errors)
 			} else {
 				log.Printf("[INF] ✅ all logs saved to the full logs dir successfully")
+			}
+
+			// restore any config backup
+			for _, cf := range r.conf.ConfigFiles {
+				log.Printf("[INF] restoring config file %s", cf.Name)
+				if err := cf.Restore(); err != nil {
+					log.Printf("[WARN] couldn't restore config file %s: %v", cf.Name, err)
+				}
 			}
 
 			// clear node history

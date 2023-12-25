@@ -130,6 +130,7 @@ type Executor interface {
 	SetNodeCustomConfig(cfg *NodeCustomConfig) error
 	SyncLatestAggregates(cfg *SyncAggregates) error
 	SetMissUpDownload(cfg MissUpDownload) error
+	UpdateConfig(cfg []ConfigFileChanges) error
 }
 
 //

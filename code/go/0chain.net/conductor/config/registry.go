@@ -1021,4 +1021,16 @@ func init() {
 		ex.WaitShardersFinalizeNearBlocks(command, tm)
 		return nil
 	})
+
+	register("update_config", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command []ConfigFileChanges
+		err = mapstructure.Decode(val, &command)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		log.Printf("update config %+v\n", command)
+
+		return ex.UpdateConfig(command)
+	})
 }

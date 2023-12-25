@@ -1343,3 +1343,21 @@ func (r *Runner) SetMissUpDownload(cfg config.MissUpDownload) error {
 
 	return r.SetServerState(cfg)
 }
+
+func (r *Runner) UpdateConfig(cfg []config.ConfigFileChanges) error {
+	if r.verbose {
+		log.Printf("[INF] updating 0chain config: %+v", cfg)
+	}
+
+	for _, c := range cfg {
+		cfgFile := r.conf.ConfigFiles[c.FileName]
+		if cfgFile == nil {
+			return fmt.Errorf("config file not found: %v", c.FileName)
+		}
+		if err := cfgFile.Update(c.Changes); err != nil {
+			log.Printf("[ERR] updating config file %v: %v", c.FileName, err)
+		}
+	}
+
+	return nil
+}

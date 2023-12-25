@@ -131,6 +131,8 @@ type Config struct {
 	AggregatesBaseUrl string `json:"aggregate_base_url" yaml:"aggregate_base_url" mapstructure:"aggregate_base_url"`
 	// Sharder1BaseUrl is base url of sharder1
 	Sharder1BaseURL string `json:"sharder1_base_url" yaml:"sharder1_base_url"  mapstructure:"sharder1_base_url"`
+	// ConfigFiles is a map of config files to update
+	ConfigFiles map[string]*ConfigFile `json:"config_files" yaml:"config_files" mapstructure:"config_files"`
 	// Nodes for tests.
 	Nodes Nodes `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
 	// Tests cases and related.
