@@ -440,36 +440,32 @@ jobs:
         echo FAILED_ATTEMPTS=0 >> "$GITHUB_ENV"
        
     - name: Start Flakiness Test
-      uses: nick-fields/retry@v2
-      with:
-        max_attempts: ${{ inputs.number_of_times }}
-        continue_on_error: ${{ inputs.continue_on_error }}
-        timeout_minutes: 120
-        command: |
-          echo CURRENT_ATTEMPT=$(($CURRENT_ATTEMPT + 1)) >> $GITHUB_ENV
-          export HOME="/root"
+      run: |
+        export HOME="/root"
+        for i in {1..${{ inputs.number_of_times }}}; do
+          echo "[CT-FLAKY-LOG] Starting Attempt $i"
           cd 0chain
-          
           ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}
           if [ $? -eq 0 ]; then
-            echo "[CT-FLAKY-LOG] Conductor test attempt $CURRENT_ATTEMPT succeeded ✅"
-            zip -r "condcutor-flakiness-logs-$CURRENT_ATTEMPT.zip" condcutor-flakiness-logs
+            echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $CURRENT_ATTEMPT succeeded"
+            zip -r "./conductor-flakiness-logs/attempt-$i-success.zip" ./condcutor-full-logs
             echo SUCCESSFUL_ATTEMPTS=$(($SUCCESSFUL_ATTEMPTS + 1)) >> $GITHUB_ENV
-            exit 0
           else
-            echo "[CT-FLAKY-LOG] Conductor test attempt $CURRENT_ATTEMPT failed ❌"
-            zip -r "condcutor-flakiness-logs-$CURRENT_ATTEMPT.zip" condcutor-flakiness-logs
+            echo "[CT-FLAKY-LOG] ❌ Conductor test attempt $i failed"
+            zip -r "./conductor-flakiness-logs/attempt-$i-failure.zip" ./condcutor-full-logs
             echo FAILED_ATTEMPTS=$(($FAILED_ATTEMPTS + 1)) >> $GITHUB_ENV
-            exit 1
+            if [ ${{ inputs.continue_on_error }} = "false" ]; then
+              echo "👋🏻 Exiting flakiness test"
+              exit 1
+            fi
           fi
-           
+        done
 
     - name: "Log Stats"
       if: always()
       run: |
-        echo "TOTAL_ATTEMPTS = $CURRENT_ATTEMPTS"
-        echo "SUCCESSFUL_ATTEMPTS = $SUCCESSFUL_ATTEMPTS"
-        echo "FAILED_ATTEMPTS = $FAILED_ATTEMPTS"
+        echo "SUCCESSFUL_ATTEMPTS = $SUCCESSFUL_ATTEMPTS / ${{ inputs.number_of_times }}"
+        echo "FAILED_ATTEMPTS = $FAILED_ATTEMPTS / ${{ inputs.number_of_times }}"
 
     - name: "Remove Tenderly fork"
       if: always()
