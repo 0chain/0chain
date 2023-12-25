@@ -450,7 +450,7 @@ jobs:
           export HOME="/root"
           cd 0chain
           
-          ./docker.local/bin/start.conductor.sh
+          ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}
           if [ $? -eq 0 ]; then
             echo "[CT-FLAKY-LOG] Conductor test attempt $CURRENT_ATTEMPT succeeded ✅"
             zip -r "condcutor-flakiness-logs-$CURRENT_ATTEMPT.zip" condcutor-flakiness-logs
@@ -465,6 +465,7 @@ jobs:
            
 
     - name: "Log Stats"
+      if: always()
       run: |
         echo "TOTAL_ATTEMPTS = $CURRENT_ATTEMPTS"
         echo "SUCCESSFUL_ATTEMPTS = $SUCCESSFUL_ATTEMPTS"
