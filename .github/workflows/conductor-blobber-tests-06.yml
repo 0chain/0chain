@@ -1,4 +1,4 @@
-name: CONDUCTOR BLOBBER-03 TESTS
+name: CONDUCTOR BLOBBER-06 TESTS
 
 on:
   workflow_dispatch:
@@ -42,10 +42,11 @@ on:
         default: ''
         required: false
       
-
+env:
+  OWNER_ID: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
 jobs:
-  CONDUCTOR_BLOBBERS_03_TESTS:
-    name: CONDUCTOR-BLOBBERS-03-TESTS
+  CONDUCTOR_BLOBBERS_06_TESTS:
+    name: CONDUCTOR-BLOBBERS-06-TESTS
     runs-on: [self-hosted, conductor-test]
 
     outputs:
@@ -66,52 +67,12 @@ jobs:
       run: |
         rm -rf *
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
-        
-    - name: "Setup Go"
-      shell: 'script --return --quiet --command "bash {0}"'
-      run: |
-        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
-        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
-        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
-        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
-
-        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
-        export PATH=$PATH:/usr/local/go/bin
-        export HOME="/root"
-        which go
-        go env
-
-    - name: Docker Compose Setup.
-      run: |
-        sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
 
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-    # - name: Get Branch
-    #   id: get_branch
-    #   run: |
-    #     if [[ -n "${{ inputs.branchname }}" ]]; then
-    #        BRANCH="${{ inputs.branchname }}"
-    #        echo ::set-output name=BRANCH::${BRANCH}
-    #        echo "Branch name is ${BRANCH}"
-    #     else
-    #        BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
-    #        echo ::set-output name=BRANCH::${BRANCH}
-    #        echo "Branch name is ${BRANCH}"
-    #     fi
-
-    - name: Install herumi/bls and herumi/mcl
-      run: |
-        git clone --recursive https://github.com/herumi/bls
-        cd bls
-        make -C mcl -j 4 lib/libmclbn256.a install
-        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
       run: |
@@ -131,10 +92,7 @@ jobs:
     - name: Docker Init Setup.
       run: |
         export HOME="/root"
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
-        make install-mockery
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
 
@@ -157,7 +115,7 @@ jobs:
       run: |
         cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
-
+  
     - name: Update max faucet limit
       run: |
         cd 0chain
@@ -187,7 +145,7 @@ jobs:
 
     - name: Git clone zboxcli
       run: |
-       export HOME="/root"
+        export HOME="/root"
         git clone https://github.com/0chain/zboxcli.git
         cd zboxcli
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
@@ -246,6 +204,11 @@ jobs:
       run: |
         cd blobber && ../0chain/docker.local/bin/conductor/patch-blobber-tests.sh
 
+    - name: Change blobber owner
+      run: |
+        sed -i "s,delegate_wallet: .*$,delegate_wallet: $OWNER_ID,g" ./blobber/docker.local/conductor-config/0chain_blobber.yaml
+        sed -i "s,delegate_wallet: .*$,delegate_wallet: $OWNER_ID,g" ./blobber/docker.local/conductor-config/0chain_validator.yaml
+
     - name: Build 0dns
       run: |
         cd 0dns
@@ -293,16 +256,16 @@ jobs:
       run: |
         export HOME="/root"
         cd 0chain
-        ./docker.local/bin/start.conductor.sh blobber-3
+        ./docker.local/bin/start.conductor.sh blobber-6
 
     - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: blobber-03-logs
+        name: blobber-06-logs
         path: |
           0chain/conductor-full-logs
 
     - name: Added /tmp folder cleanup.
       run: |
         cd /tmp
-        rm -rf ./*
+        rm -rf *

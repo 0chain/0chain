@@ -245,7 +245,7 @@ jobs:
         with:
             version: '1.7'
             force: 'false'
-              
+
       - name: "Create Tenderly fork"
         run: |
           echo "TENDERLY_CREATION_INFO=$(curl -X POST \
@@ -361,7 +361,7 @@ jobs:
           curl -X DELETE \
             -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
             -H "Content-Type: application/json" \
-            https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}  
+            https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}

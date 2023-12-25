@@ -1,31 +1,24 @@
-name: CONDUCTOR BYZANTINE TESTS
+name: CONDUCTOR NODE-RECOVERY-01 TESTS
 
 on:
   workflow_dispatch:
     inputs:
-      chain_branch:
-        description: 'Input branch for 0chain repo'
-        default: ''
-        required: false
+        chain_branch:
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
   workflow_call:
     inputs:
-      chain_branch:
-        type: string
-        description: 'Input branch for 0chain repo'
-        default: ''
-        required: false
-      
-env:
-  ZCHAIN_BUILDBASE: zchain_build_base
-  ZCHAIN_BUILDRUN: zchain_run_base
-
+        chain_branch:
+          type: string
+          description: 'Input branch for 0chain repo'
+          default: ''
+          required: false
+        
 jobs:
-  CONDUCTOR_BYZANTINE_TESTS:
-    name: CONDUCTOR-BYZANTINE-TESTS
+  CONDUCTOR_NODE_RECOVERY_01_TESTS:
+    name: CONDUCTOR-NODE-RECOVERY-01-TESTS
     runs-on: [self-hosted, conductor-test]
-
-    outputs:
-      branch: ${{ steps.chain.outputs.BRANCH_OUT }}
 
     steps:
     - name: Setup Environment Variables
@@ -50,18 +43,17 @@ jobs:
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Git clone 0chain
-      id: chain
       run: |
         git clone https://github.com/0chain/0chain.git
         cd 0chain
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         CHAIN_BRANCH="${{ inputs.chain_branch }}"
         if [[ -z $CHAIN_BRANCH ]]; then
-          echo "Checking for latest sprint branch"
-          git branch --sort=-committerdate | grep "sprint-*" | head -1
-          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo "Checking for latest sprint branch"
+            git branch --sort=-committerdate | grep "sprint-*" | head -1
+            CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+            echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
         fi
-        echo "BRANCH_OUT=$CHAIN_BRANCH" >>$GITHUB_OUTPUT
         echo "Branch name is ${CHAIN_BRANCH}"
         git checkout ${CHAIN_BRANCH}
 
@@ -97,17 +89,22 @@ jobs:
         cd 0chain
         bash -c 'sed -i "s/max_pour_amount: [0-9]*/max_pour_amount: 1000/g" docker.local/config/sc.yaml'
         bash -c 'grep max_pour_amount ./docker.local/config/sc.yaml'
-  
-    - name: Running No VC Byzantine Tests.
+
+    - name: View Change Rounds
       run: |
-        cd 0chain
+        awk 'NR >= 30 && NR <= 34' ./0chain/docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
+
+    - name: Starting Node Recovery 01 Tests.
+      run: |
         export HOME="/root"
-        bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+        cd 0chain
+        ./docker.local/bin/start.conductor.sh node-recovery-1
 
     - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: byzantine-logs
+        name: node-recovery-01-logs
         path: |
           0chain/conductor-full-logs
 
@@ -115,4 +112,3 @@ jobs:
       run: |
         cd /tmp
         rm -rf ./*
-    
