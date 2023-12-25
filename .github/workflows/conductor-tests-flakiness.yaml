@@ -489,6 +489,6 @@ jobs:
       if: always()
       run: |
         [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
-        rm -rf ./0chain/conductor-full-logs
+        rm -rf ./0chain/conductor-flakiness-logs
         cd /tmp
         rm -rf ./*
