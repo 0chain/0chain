@@ -448,6 +448,7 @@ jobs:
       with:
         max_attempts: ${{ inputs.number_of_times }}
         continue_on_error: ${{ inputs.continue_on_error }}
+        timeout_minutes: 120
         command: |
           echo CURRENT_ATTEMPT=$(($CURRENT_ATTEMPT + 1)) >> $GITHUB_ENV
           export HOME="/root"
