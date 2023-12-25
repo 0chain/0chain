@@ -41,7 +41,7 @@ env:
   ZDNS_URL: http://198.18.0.98:9091
 
 jobs:
-  CONDUCTOR_NODE_RECOVERY_03_TESTS:
+  CONDUCTOR_TESTS_FLAKINESS:
     name: CONDUCTOR-NODE-RECOVERY-03-TESTS
     runs-on: [self-hosted, conductor-test]
 
