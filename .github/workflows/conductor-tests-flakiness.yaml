@@ -42,7 +42,7 @@ env:
 
 jobs:
   CONDUCTOR_TESTS_FLAKINESS:
-    name: CONDUCTOR-NODE-RECOVERY-03-TESTS
+    name: CONDUCTOR_TESTS_FLAKINESS
     runs-on: [self-hosted, conductor-test]
 
     steps:
