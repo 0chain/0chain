@@ -72,8 +72,8 @@ func addMockAllocation(
 		Expiration:      benchAllocationExpire(balances.GetTransaction().CreationDate),
 		Owner:           clients[cIndex],
 		OwnerPublicKey:  publicKey,
-		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
-		WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetFloat64(sc.StorageMaxReadPrice) * 1e10)},
+		WritePriceRange: PriceRange{0, currency.Coin(viper.GetFloat64(sc.StorageMaxWritePrice) * 1e10)},
 		StartTime:       balances.GetTransaction().CreationDate,
 		Stats: &StorageAllocationStats{
 			UsedSize:                  viper.GetInt64(sc.StorageMinAllocSize) / 2,
