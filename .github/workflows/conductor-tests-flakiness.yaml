@@ -447,7 +447,7 @@ jobs:
           cd 0chain
           ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}
           if [ $? -eq 0 ]; then
-            echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $CURRENT_ATTEMPT succeeded"
+            echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $i succeeded"
             zip -r "./conductor-flakiness-logs/attempt-$i-success.zip" ./condcutor-full-logs
             echo SUCCESSFUL_ATTEMPTS=$(($SUCCESSFUL_ATTEMPTS + 1)) >> $GITHUB_ENV
           else
