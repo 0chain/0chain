@@ -594,3 +594,11 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/send_token_with_large_payload.sh"
     should_fail: true
+  random_result:
+    work_dir: "./"
+    exec: "sh -x 0chain/docker.local/bin/conductor/random_result.sh $success_percent"
+    should_fail: false
+    args:
+      success_percent:
+        required: false
+        default: 100
