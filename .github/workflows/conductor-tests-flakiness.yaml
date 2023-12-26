@@ -46,7 +46,11 @@ jobs:
     runs-on: [self-hosted, conductor-test]
 
     steps:
-
+    - name: Install zip
+      run: |
+        apt-get update
+        apt-get install -y zip
+  
     - name: Setup Environment Variables
       run: |
         export HOME="/root"
@@ -489,3 +493,4 @@ jobs:
         rm -rf ./0chain/conductor-flakiness-logs
         cd /tmp
         rm -rf ./*
+        echo -y | docker system prune
