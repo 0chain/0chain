@@ -396,6 +396,10 @@ func (edb *EventDb) WorkAggregates(
 	return gSnapshot, nil
 }
 
+func (edb *EventDb) ManagePartitions(round int64) {
+	edb.managePartitions(round)
+}
+
 func (edb *EventDb) managePartitions(round int64) {
 	logging.Logger.Info("managing partitions", zap.Int64("round", round))
 	edb.AddPartitions(round)
