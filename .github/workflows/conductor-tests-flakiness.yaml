@@ -447,6 +447,8 @@ jobs:
       run: |
         export HOME="/root"
         cd 0chain
+        success=0
+        failure=0
         
         for i in {1..${{ inputs.number_of_times }}}; do
           echo "[CT-FLAKY-LOG] Starting Attempt $i"
@@ -454,11 +456,11 @@ jobs:
           if [ $? -eq 0 ]; then
             echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $i succeeded"
             zip -r "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs
-            echo SUCCESSFUL_ATTEMPTS=$(($SUCCESSFUL_ATTEMPTS + 1)) >> $GITHUB_ENV
+            success=$((success + 1))
           else
             echo "[CT-FLAKY-LOG] ❌ Conductor test attempt $i failed"
             zip -r "./conductor-flakiness-logs/attempt-$i-failure.zip" ./conductor-full-logs
-            echo FAILED_ATTEMPTS=$(($FAILED_ATTEMPTS + 1)) >> $GITHUB_ENV
+            failure=$((failure + 1))
             if [ ${{ inputs.continue_on_error }} = "false" ]; then
               echo "👋🏻 Exiting flakiness test"
               exit 1
@@ -466,12 +468,26 @@ jobs:
           fi
         done
 
-    - name: "Log Stats"
-      if: always()
-      run: |
-        echo "SUCCESSFUL_ATTEMPTS = $SUCCESSFUL_ATTEMPTS / ${{ inputs.number_of_times }}"
-        echo "FAILED_ATTEMPTS = $FAILED_ATTEMPTS / ${{ inputs.number_of_times }}"
+        echo "SUCCESSFUL_ATTEMPTS=$success" >> "$GITHUB_ENV"
+        echo "FAILED_ATTEMPTS=$failure" >> "$GITHUB_ENV"
 
+    - name: "Compute result"
+      run: |
+        echo "✅ SUCCESSFUL_ATTEMPTS = $SUCCESSFUL_ATTEMPTS / ${{ inputs.number_of_times }}"
+        echo "❌ FAILED_ATTEMPTS = $FAILED_ATTEMPTS / ${{ inputs.number_of_times }}"
+
+        success_rate=80
+
+        if [ $SUCCESSFUL_ATTEMPTS -ge $((number_of_times * success_rate / 100)) ]; then
+          echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+          echo "🎉 Conductor test succeeded"
+          echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+          exit 0
+        else
+          echo "👋🏻 Conductor test failed"
+          exit 1
+        fi
+      
     - name: "Remove Tenderly fork"
       if: always()
       run: |
