@@ -446,19 +446,18 @@ jobs:
     - name: Start Flakiness Test
       run: |
         export HOME="/root"
+        cd 0chain
+        
         for i in {1..${{ inputs.number_of_times }}}; do
           echo "[CT-FLAKY-LOG] Starting Attempt $i"
-          cd 0chain
           ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}
           if [ $? -eq 0 ]; then
             echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $i succeeded"
-            ls -la
             zip -r "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs
             echo SUCCESSFUL_ATTEMPTS=$(($SUCCESSFUL_ATTEMPTS + 1)) >> $GITHUB_ENV
           else
             echo "[CT-FLAKY-LOG] ❌ Conductor test attempt $i failed"
-            ls -la
-            zip -r "./conductor-flakiness-logs/attempt-$i-failure.zip" ./condcutor-full-logs
+            zip -r "./conductor-flakiness-logs/attempt-$i-failure.zip" ./conductor-full-logs
             echo FAILED_ATTEMPTS=$(($FAILED_ATTEMPTS + 1)) >> $GITHUB_ENV
             if [ ${{ inputs.continue_on_error }} = "false" ]; then
               echo "👋🏻 Exiting flakiness test"
