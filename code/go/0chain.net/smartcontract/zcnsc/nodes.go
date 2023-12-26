@@ -351,7 +351,7 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	return nil
 }
 
-func (an *AuthorizerNode) ToEvent() *event.Authorizer {
+func (an *AuthorizerNode) ToEvent(round int64) *event.Authorizer {
 	if an.Config == nil {
 		an.Config = new(AuthorizerConfig)
 	}
@@ -364,9 +364,9 @@ func (an *AuthorizerNode) ToEvent() *event.Authorizer {
 			LastHealthCheck: an.LastHealthCheck,
 			IsKilled:        an.Provider.IsKilled(),
 		},
-		Fee: an.Config.Fee,
-
-		URL: an.URL,
+		Fee:           an.Config.Fee,
+		URL:           an.URL,
+		CreationRound: round,
 	}
 }
 
