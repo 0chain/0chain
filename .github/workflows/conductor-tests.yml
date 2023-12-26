@@ -3,7 +3,7 @@ name: CONDUCTOR TESTS SUITE
 on:
   schedule:
       - cron: '* 0 * * *' # for sprint
-      - cron: '36 * * * *' # for staging
+      - cron: '* 1 * * *' # for staging
 
   push:
     branches:
@@ -46,7 +46,7 @@ jobs:
   # Succeeds if the event is scheduled for staging
   scheduled-staging-branches:
     runs-on: [self-hosted, arc-runner]
-    if: github.event.schedule == '36 * * * *'
+    if: github.event.schedule == '* 1 * * *'
     steps:
       - name: "Success"
         run: exit 0
