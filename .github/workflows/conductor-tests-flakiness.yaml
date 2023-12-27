@@ -42,7 +42,7 @@ env:
 
 jobs:
   CONDUCTOR_TESTS_FLAKINESS:
-    name: CONDUCTOR_TESTS_FLAKINESS
+    name: CONDUCTOR_TESTS_FLAKINESS (${{ inputs.test_name }})
     runs-on: [self-hosted, conductor-test]
 
     steps:
@@ -452,8 +452,8 @@ jobs:
         
         for i in {1..${{ inputs.number_of_times }}}; do
           echo "[CT-FLAKY-LOG] Starting Attempt $i"
-          ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}
-          if [ $? -eq 0 ]; then
+          
+          if ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}; then
             echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $i succeeded"
             zip -r "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs
             success=$((success + 1))
