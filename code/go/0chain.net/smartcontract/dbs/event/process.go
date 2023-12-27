@@ -799,6 +799,10 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if err := edb.blobberSpecificRevenue(*spus); err != nil {
 			return fmt.Errorf("could not update blobber specific revenue: %v", err)
 		}
+		err = edb.feesSpecificRevenue(*spus)
+		if err != nil {
+			return fmt.Errorf("could not update fees specific revenue: %v", err)
+		}
 		return nil
 	case TagStakePoolPenalty:
 		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
@@ -812,10 +816,6 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		err = edb.blobberSpecificRevenue(*spus)
 		if err != nil {
 			return fmt.Errorf("could not update blobber specific revenue: %v", err)
-		}
-		err = edb.feesSpecificRevenue(*spus)
-		if err != nil {
-			return fmt.Errorf("could not update fees specific revenue: %v", err)
 		}
 		return nil
 	case TagAddAllocation:
