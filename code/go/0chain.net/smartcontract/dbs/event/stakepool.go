@@ -316,7 +316,7 @@ func (edb *EventDb) feesSpecificRevenue(spus []dbs.StakePoolReward) error {
 
 	if len(minerIDs) > 0 {
 		err := CreateBuilder("miners", "id", minerIDs).
-			AddUpdate("fee", minerFeeRewards, "miners.fee + t.fee").
+			AddUpdate("fees", minerFeeRewards, "miners.fees + t.fees").
 			Exec(edb).Debug().Error
 		if err != nil {
 			return fmt.Errorf("could not update miner fee: %v", err)
@@ -325,7 +325,7 @@ func (edb *EventDb) feesSpecificRevenue(spus []dbs.StakePoolReward) error {
 
 	if len(sharderIDs) > 0 {
 		err := CreateBuilder("sharders", "id", sharderIDs).
-			AddUpdate("fee", sharderFeeRewards, "sharders.fee + t.fee").
+			AddUpdate("fees", sharderFeeRewards, "sharders.fees + t.fees").
 			Exec(edb).Debug().Error
 		if err != nil {
 			return fmt.Errorf("could not update sharder fee: %v", err)
