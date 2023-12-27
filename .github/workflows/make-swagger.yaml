@@ -19,7 +19,7 @@ jobs:
           echo "Branch name is ${{ steps.extract_branch.outputs.branch }}"
 
       - name: build zchain_build_base image
-        run: docker build -f docker.local/build.base/Dockerfile.build_base . -t zchain_build_base
+        run: docker build -f docker.local/build.base/Dockerfile.build_base_go119 . -t zchain_build_base
 
       - name: build swagger image
         run: docker build -f docker.local/build.swagger/Dockerfile . -t make_swagger
