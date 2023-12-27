@@ -65,12 +65,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-swaggerfiles-
       
-      - name: Checkout gitbook repo
-        uses: actions/checkout@v2
-        with:
-          repository: 0chain/gitbookdocs
-          ref: "refs/heads/${{ github.event.inputs.gitbook-branch }}"
-          path: gitbookdocs
+      - name: Clone gitbook repo
+        run: |
+          git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/gitbookdocs.git
+          cd gitbookdocs
+          git checkout ${{ github.event.inputs.gitbook-branch }} 
       
       - name: Copy swagger files to gitbook repo
         run: |
