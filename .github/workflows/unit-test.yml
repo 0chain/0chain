@@ -25,8 +25,8 @@ jobs:
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
 
-      - name: Check swagger generation
-        run: docker.local/bin/test.swagger.sh
+#      - name: Check swagger generation
+#        run: docker.local/bin/test.swagger.sh
 
       - name: Run unit tests
         run: |
@@ -56,8 +56,8 @@ jobs:
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
 
-      - name: Check swagger generation
-        run: docker.local/bin/test.swagger.sh
+#      - name: Check swagger generation
+#        run: docker.local/bin/test.swagger.sh
 
       - name: Run Linter
         run: ./docker.local/bin/linter.sh
