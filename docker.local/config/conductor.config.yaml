@@ -596,7 +596,7 @@ commands:
     should_fail: true
   random_result:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/random_result.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/random_result.sh $success_percent"
     should_fail: false
     args:
       success_percent:
