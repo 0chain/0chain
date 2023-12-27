@@ -6,9 +6,9 @@ RUN apk add ca-certificates
 RUN apk add libbz2 lz4-libs snappy zstd-libs  # For RocksDB
 RUN apk add gmp libcrypto1.1 libssl1.1               # For Herumi
 
-COPY --from=zchain_build_base /usr/local/lib/librocksdb.so.*.*.* \
-                              /usr/local/lib/libmcl*.so \
+COPY --from=zchain_build_base_go119 /usr/local/lib/librocksdb.so.*.*.* \
                               /usr/local/lib/libbls*.so \
+                              /usr/local/lib/libmcl*.so \
                               /usr/local/lib/
 
 # Following standard Unix convention, the file librocksdb.x.y is a symbolic link

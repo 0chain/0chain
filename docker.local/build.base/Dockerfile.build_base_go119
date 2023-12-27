@@ -1,28 +1,48 @@
-# Run Base
+# Build Base
 # docker.local
 FROM golang:1.19-alpine3.15
-RUN apk add bash
-RUN apk add ca-certificates
-RUN apk add libbz2 lz4-libs snappy zstd-libs  # For RocksDB
-RUN apk add gmp libcrypto1.1 libssl1.1               # For Herumi
 
-COPY --from=zchain_build_base /usr/local/lib/librocksdb.so.*.*.* \
-                              /usr/local/lib/libmcl*.so \
-                              /usr/local/lib/libbls*.so \
-                              /usr/local/lib/
+RUN apk add --update --no-cache  bash build-base grep git
+# For RocksDB
+RUN apk add --update --no-cache  coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev
+# For Herumi's cryptography
+RUN apk add --update --no-cache gmp gmp-dev openssl-dev
 
-# Following standard Unix convention, the file librocksdb.x.y is a symbolic link
-# to librocksdb.x.y.z. Unfortunately, the Docker COPY command reads through
-# symbolic links and copies the file to which they point. Additionally, there is
-# no glob syntax to specify that we want to COPY the .x.y file without also
-# copying the .x.y.z file. But since librocksdb is 25 MB, we don't want to
-# duplicate it.
-#
-# Above, we copied the .x.y.z file. Now we can manually rename it from .x.y.z
-# to .x.y.
-RUN mv /usr/local/lib/librocksdb.so* $(ls /usr/local/lib/librocksdb.so* | cut -f1-4 -d.)
+RUN apk add make clang clang-dev
 
-RUN apk add git
-RUN git clone --branch v1.4.1 https://github.com/go-delve/delve
-WORKDIR ./delve
-RUN go install ./cmd/dlv
+# Install RocksDB
+RUN cd /tmp && \
+    wget -O - https://github.com/facebook/rocksdb/archive/v8.1.1.tar.gz | tar xz
+RUN cd /tmp/rocksdb* && \
+    PORTABLE=1 make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 && \
+    rm -R /tmp/rocksdb* && \
+    apk del coreutils linux-headers perl
+
+# Install Herumi's cryptography
+RUN cd /tmp && \
+    wget -O - https://github.com/herumi/mcl/archive/refs/tags/v1.81.tar.gz  | tar xz && \
+    wget -O - https://github.com/herumi/bls/archive/refs/tags/v1.35.tar.gz | tar xz && \
+    mv mcl* mcl && \
+    mv bls* bls
+
+RUN cd /tmp && \
+    make -C mcl -j $(nproc) lib/libmclbn256.so install && \
+    cp mcl/lib/libmclbn256.so /usr/local/lib && \
+    make MCL_DIR=$(pwd)/mcl -C bls -j $(nproc) install && \
+    rm -R /tmp/mcl && \
+    rm -R /tmp/bls
+
+# Build libzstd:
+# FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
+COPY ./code/go/0chain.net/go.mod /0chain/go/0chain.net/
+COPY ./code/go/0chain.net/go.sum /0chain/go/0chain.net/
+
+WORKDIR /0chain/go/0chain.net
+RUN go mod download -x github.com/valyala/gozstd
+
+RUN cp -r $GOPATH/pkg/mod/github.com/valyala/gozstd* /gozstd
+
+WORKDIR /gozstd
+
+RUN chmod -R +w .
+RUN make clean libzstd.a
