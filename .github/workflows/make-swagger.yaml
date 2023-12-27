@@ -4,7 +4,7 @@ on: [workflow_dispatch]
 
 jobs:
   swagger_file:
-    runs-on: make-swagger
+    runs-on: [self-hosted, arc-runner]
 
     steps:
       - uses: actions/checkout@v2
@@ -35,20 +35,50 @@ jobs:
           cp code/go/0chain.net/sharder/sharder/swagger.yaml ./swaggerfiles/
           cp code/go/0chain.net/sharder/sharder/swagger.md ./swaggerfiles/
           ls swaggerfiles/
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      
+      - name: Cache swagger files
+        uses: actions/cache@v2
         with:
-          personal_token: ${{ secrets.ACCESS_TOKEN }}
-          publish_dir: ./swaggerfiles
-          destination_dir: ./swaggerfiles
-          publish_branch: swagger_report
-          keep_files: true
-          external_repository: "0chain/actions"
-          user_name: "github-actions[bot]"
-          user_email: "github-actions[bot]@users.noreply.github.com"
-
-      - name: Links for swagger files
+          path: swaggerfiles
+          key: ${{ runner.os }}-swaggerfiles-${{ steps.extract_branch.outputs.branch }}
+          restore-keys: |
+            ${{ runner.os }}-swaggerfiles-
+    
+    outputs:
+      extract_branch: ${{ steps.extract_branch.outputs.branch }}
+ 
+  sync_with_gitbook:
+    runs-on: [self-hosted, arc-runner]
+    needs: [swagger_file]
+    steps:
+      - name: Restore swagger files
+        uses: actions/cache@v2
+        with:
+          path: swaggerfiles
+          key: ${{ runner.os }}-swaggerfiles-${{ needs.swagger_file.outputs.extract_branch }}
+          restore-keys: |
+            ${{ runner.os }}-swaggerfiles-
+      
+      - name: Checkout gitbook repo
+        uses: actions/checkout@v2
+        with:
+          repository: 0chain/gitbookdocs
+          ref: "refs/heads/ebrahim/refactor"
+          path: gitbookdocs
+      
+      - name: Copy swagger files to gitbook repo
         run: |
-          echo "https://github.com/0chain/actions/blob/swagger_report/swaggerfiles/swagger.md"
-          echo "https://github.com/0chain/actions/blob/swagger_report/swaggerfiles/swagger.yaml"
+          cp -r swaggerfiles/swagger.md gitbookdocs/zus-docs-public/using-the-network/http-apis/sharder-api.md
+          ls gitbookdocs/zus-docs-public/using-the-network/http-apis/
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          base: "ebrahim/refactor"
+          token: ${{ secrets.ACCESS_TOKEN }}
+          commit-message: update sharder api swagger file
+          branch: "sharder-api-swagger-file-update-${{ github.run_id }}"
+          delete-branch: true
+          title: Update sharder api swagger files (${{ github.run_id }})
+          draft: false
+          reviewers: guruhubb
