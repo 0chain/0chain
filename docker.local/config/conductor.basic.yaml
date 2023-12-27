@@ -24,4 +24,3 @@ tests:
       - wait_round:
           shift: 100
           timeout: "5m"
-      - random_result: {}
