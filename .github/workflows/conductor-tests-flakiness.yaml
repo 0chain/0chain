@@ -455,11 +455,11 @@ jobs:
           
           if ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}; then
             echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $i succeeded"
-            zip -r "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs
+            zip -r -q "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs 
             success=$((success + 1))
           else
             echo "[CT-FLAKY-LOG] ❌ Conductor test attempt $i failed"
-            zip -r "./conductor-flakiness-logs/attempt-$i-failure.zip" ./conductor-full-logs
+            zip -r -q "./conductor-flakiness-logs/attempt-$i-failure.zip" ./conductor-full-logs
             failure=$((failure + 1))
             if [ ${{ inputs.continue_on_error }} = "false" ]; then
               echo "👋🏻 Exiting flakiness test"
