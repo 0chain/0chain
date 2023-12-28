@@ -477,7 +477,7 @@ jobs:
 
         success_rate=80
 
-        if [ $SUCCESSFUL_ATTEMPTS -ge $((${{ inputs.number_of_times }} * $success_rate / 100)) ]; then
+        if [ $SUCCESSFUL_ATTEMPTS -ge $((${{ inputs.number_of_times }} * success_rate / 100)) ]; then
           echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
           echo "🎉 Conductor test succeeded"
           echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
