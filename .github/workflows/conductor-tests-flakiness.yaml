@@ -439,7 +439,6 @@ jobs:
     
     - name: Initialize stats vars
       run: |
-        echo CURRENT_ATTEMPT=0 >> "$GITHUB_ENV"
         echo SUCCESSFUL_ATTEMPTS=0 >> "$GITHUB_ENV"
         echo FAILED_ATTEMPTS=0 >> "$GITHUB_ENV"
        
@@ -478,7 +477,7 @@ jobs:
 
         success_rate=80
 
-        if [ $SUCCESSFUL_ATTEMPTS -ge $((number_of_times * success_rate / 100)) ]; then
+        if [ $SUCCESSFUL_ATTEMPTS -ge $((${{ inputs.number_of_times }} * $success_rate / 100)) ]; then
           echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
           echo "🎉 Conductor test succeeded"
           echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
