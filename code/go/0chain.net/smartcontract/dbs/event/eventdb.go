@@ -112,6 +112,7 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
 		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
 		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
+		Slowtablespace: edb.dbConfig.Slowtablespace,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
