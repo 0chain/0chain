@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -1019,6 +1020,18 @@ func init() {
 		}
 
 		ex.WaitShardersFinalizeNearBlocks(command, tm)
+		return nil
+	})
+
+	register("random_result", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		rand := rand.Uint64()
+
+		log.Printf("Random result: %d", rand)
+
+		if rand%2 == 0 {
+			return fmt.Errorf("random error")
+		}
+
 		return nil
 	})
 }
