@@ -1,0 +1,48 @@
+# Build Base
+# docker.local
+FROM golang:1.19-alpine3.15
+
+RUN apk add --update --no-cache  bash build-base grep git
+# For RocksDB
+RUN apk add --update --no-cache  coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev
+# For Herumi's cryptography
+RUN apk add --update --no-cache gmp gmp-dev openssl-dev
+
+RUN apk add make clang clang-dev
+
+# Install RocksDB
+RUN cd /tmp && \
+    wget -O - https://github.com/facebook/rocksdb/archive/v8.1.1.tar.gz | tar xz
+RUN cd /tmp/rocksdb* && \
+    PORTABLE=1 make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 && \
+    rm -R /tmp/rocksdb* && \
+    apk del coreutils linux-headers perl
+
+# Install Herumi's cryptography
+RUN cd /tmp && \
+    wget -O - https://github.com/herumi/mcl/archive/refs/tags/v1.81.tar.gz  | tar xz && \
+    wget -O - https://github.com/herumi/bls/archive/refs/tags/v1.35.tar.gz | tar xz && \
+    mv mcl* mcl && \
+    mv bls* bls
+
+RUN cd /tmp && \
+    make -C mcl -j $(nproc) lib/libmclbn256.so install && \
+    cp mcl/lib/libmclbn256.so /usr/local/lib && \
+    make MCL_DIR=$(pwd)/mcl -C bls -j $(nproc) install && \
+    rm -R /tmp/mcl && \
+    rm -R /tmp/bls
+
+# Build libzstd:
+# FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
+COPY ./code/go/0chain.net/go.mod /0chain/go/0chain.net/
+COPY ./code/go/0chain.net/go.sum /0chain/go/0chain.net/
+
+WORKDIR /0chain/go/0chain.net
+RUN go mod download -x github.com/valyala/gozstd
+
+RUN cp -r $GOPATH/pkg/mod/github.com/valyala/gozstd* /gozstd
+
+WORKDIR /gozstd
+
+RUN chmod -R +w .
+RUN make clean libzstd.a
