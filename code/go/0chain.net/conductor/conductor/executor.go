@@ -1361,3 +1361,13 @@ func (r *Runner) UpdateConfig(cfg []config.ConfigFileChanges) error {
 
 	return nil
 }
+
+func (r *Runner) WaitChallengeResponse(cfg *config.WaitChallengeResponse, tm time.Duration) error {
+	if r.verbose {
+		log.Printf("[INF] waiting for challenge response: %+v", cfg)
+	}
+
+	r.setupTimeout(tm)
+	r.waitChallengeResponse = cfg
+	return nil
+}

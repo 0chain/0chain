@@ -1033,4 +1033,15 @@ func init() {
 
 		return ex.UpdateConfig(command)
 	})
+
+	register("wait_challenge_response", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		var command WaitChallengeResponse
+		err = mapstructure.Decode(val, &command)
+		if err != nil {
+			return fmt.Errorf("error decoding directive data: %v", err)
+		}
+
+		ex.WaitChallengeResponse(&command, tm)
+		return nil
+	})
 }

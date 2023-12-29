@@ -131,6 +131,7 @@ type Executor interface {
 	SyncLatestAggregates(cfg *SyncAggregates) error
 	SetMissUpDownload(cfg MissUpDownload) error
 	UpdateConfig(cfg []ConfigFileChanges) error
+	WaitChallengeResponse(cfg *WaitChallengeResponse, tm time.Duration) error
 }
 
 //

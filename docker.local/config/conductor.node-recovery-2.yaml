@@ -180,10 +180,7 @@ tests:
           required: false
       - command:
           name: 'init_allocation_only'
-      - generate_challenge:
-          blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          expected_status: 1 # 1 --> pass, 0 --> fail
-          miner: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929" # generate challenge by this miner
+      - generate_all_challenges: true
       - wait_round:
           shift: 250
       - command:
@@ -215,13 +212,8 @@ tests:
       - start: ['blobber-3']
       - wait_round:
           shift: 100
-      - wait_blobber_commit:
+      - wait_challenge_response:
           timeout: "5m"
-      - stop_challenge_generation: false
-      - wait_challenge_generation:
-          timeout: "5m"
-      - wait_challenge_status:
-          timeout: "5m"    
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18

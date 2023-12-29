@@ -232,3 +232,8 @@ type WaitSharderLFB struct {
 	// Not part of the directive parameters
 	LFBs map[NodeID]*stats.BlockFromSharder `json:"-" yaml:"-" mapstructure:"-"`
 }
+
+type WaitChallengeResponse struct {
+	Blobber NodeName `json:"blobber" yaml:"blobber" mapstructure:"blobber"`
+	ExpectedStatus int `json:"expected_status" yaml:"expected_status" mapstructure:"expected_status"`
+}

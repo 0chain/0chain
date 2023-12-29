@@ -200,6 +200,7 @@ type Runner struct {
 	waitMinerGeneratesBlock config.WaitMinerGeneratesBlock
 	waitSharderLFB	config.WaitSharderLFB	
 	waitValidatorTicket   config.WaitValidatorTicket
+	waitChallengeResponse  *config.WaitChallengeResponse
 	chalConf               *config.GenerateChallege
 	fileMetaRoot           fileMetaRoot
 	// timeout and monitor
@@ -258,6 +259,9 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		return tm, true
 	case r.waitSharderLFB.Target != "":
 		log.Printf("wait to check sharder %v got LFB\n", r.waitSharderLFB.Target)
+		return tm, true
+	case r.waitChallengeResponse != nil:
+		log.Printf("wait for challenge response")
 		return tm, true
 	case r.waitCommand != nil:
 		// log.Println("wait for command")
@@ -1009,6 +1013,29 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 		if r.chalConf.ExpectedStatus != status {
 			return fmt.Errorf("expected challenge status %d, got %d", r.chalConf.ExpectedStatus, status)
 		}	
+	}
+
+	if r.waitChallengeResponse != nil {
+
+		blobber, ok := r.conf.Nodes.NodeByName(r.waitChallengeResponse.Blobber)
+		if !ok {
+			return fmt.Errorf("unknown blobber %v", r.waitChallengeResponse.Blobber)
+		}
+
+		expectedBlobberId := blobber.ID
+		
+		if blobberID != string(expectedBlobberId) {
+			return nil
+		}
+
+		status := m["status"].(int)
+		if r.waitChallengeResponse.ExpectedStatus != status {
+			log.Printf("[WARN] expected challenge status %d, got %d", r.waitChallengeResponse.ExpectedStatus, status)
+			return nil
+		}
+
+		log.Printf("[OK] ✅ got expected challenge response from %v\n", blobber.Name)
+		r.waitChallengeResponse = nil
 	}
 
 	return nil
