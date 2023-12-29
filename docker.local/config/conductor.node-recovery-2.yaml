@@ -213,6 +213,8 @@ tests:
       - wait_round:
           shift: 100
       - wait_challenge_response:
+          blobber: "blobber-2"
+          expected_status: 1
           timeout: "5m"
       - check_aggregate_value_comparison:
           provider_type: blobber
