@@ -513,34 +513,35 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		zap.Int64("round", lfbRound),
 		zap.String("block", lfbHash))
 
-	bl, err := sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
-	if err != nil {
-		return err
-	}
+	var bl *blocksLoaded
+	lfbr, err := sc.LoadLFBRound()
+	switch err {
+	case nil:
+		logging.Logger.Debug("load_lfb - load from stateDB",
+			zap.Int64("round", lfbr.Round),
+			zap.String("block", lfbr.Hash))
 
-	// var bl *blocksLoaded
-	// lfbr, err := sc.LoadLFBRound()
-	// switch err {
-	// case nil:
-	// 	logging.Logger.Debug("load_lfb - load from stateDB",
-	// 		zap.Int64("round", lfbr.Round),
-	// 		zap.String("block", lfbr.Hash))
-	// 	if lfbr.Round == 0 {
-	// 		return nil // use genesis
-	// 	}
-	// 	bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbr)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	logging.Logger.Debug("load_lfb - load round and block",
-	// 		zap.Int64("round", bl.lfb.Round),
-	// 		zap.String("block", bl.lfb.Hash))
-	// default:
-	// 	bl = sc.iterateRoundsLookingForLFB(ctx)
-	// 	logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
-	// 		zap.Int64("round", bl.lfb.Round),
-	// 		zap.String("block", bl.lfb.Hash))
-	// }
+		if lfbr.Round <= lfbRound {
+			// use LFB from state DB when:
+			// LFB from state DB is more old than LFB from event DB or
+			// They are in the same round
+			lfbRound = lfbr.Round
+			lfbHash = lfbr.Hash
+		}
+
+		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
+		if err != nil {
+			return err
+		}
+		logging.Logger.Debug("load_lfb - load round and block",
+			zap.Int64("round", bl.lfb.Round),
+			zap.String("block", bl.lfb.Hash))
+	default:
+		bl = sc.iterateRoundsLookingForLFB(ctx)
+		logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
+			zap.Int64("round", bl.lfb.Round),
+			zap.String("block", bl.lfb.Hash))
+	}
 
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
 	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
