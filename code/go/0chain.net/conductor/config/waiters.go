@@ -235,5 +235,6 @@ type WaitSharderLFB struct {
 
 type WaitChallengeResponse struct {
 	Blobber NodeName `json:"blobber" yaml:"blobber" mapstructure:"blobber"`
+	Count int `json:"count" yaml:"count" mapstructure:"count"`
 	ExpectedStatus int `json:"expected_status" yaml:"expected_status" mapstructure:"expected_status"`
 }

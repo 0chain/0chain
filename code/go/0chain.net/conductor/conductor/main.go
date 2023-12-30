@@ -1034,8 +1034,12 @@ func (r *Runner) onChallengeStatus(m map[string]interface{}) error {
 			return nil
 		}
 
-		log.Printf("[OK] ✅ got expected challenge response from %v\n", blobber.Name)
-		r.waitChallengeResponse = nil
+		r.waitChallengeResponse.Count--
+		log.Printf("[OK] ✅ got expected challenge response from %v, %v remaining \n", blobber.Name, r.waitChallengeResponse.Count)
+		
+		if r.waitChallengeResponse.Count == 0 {
+			r.waitChallengeResponse = nil
+		}
 	}
 
 	return nil
