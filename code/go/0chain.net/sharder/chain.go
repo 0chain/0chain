@@ -505,8 +505,13 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 	if lfbRound == 0 {
 		// use genesis
+		logging.Logger.Debug("load_lfb - load from event db, use genesis block")
 		return nil
 	}
+
+	logging.Logger.Debug("load_lfb - load from event db",
+		zap.Int64("round", lfbRound),
+		zap.String("block", lfbHash))
 
 	bl, err := sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
 	if err != nil {
