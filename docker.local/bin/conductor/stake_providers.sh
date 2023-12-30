@@ -29,7 +29,8 @@ esac
 for id in ${ids//,/ }
 do
     echo "Staking $id"
-    ./zboxcli/zbox --wallet testing.json $command \
+    ./zboxcli/zbox --wallet testing.json --with_retries 3 $command \
         --${id_field} $id \
         --tokens 5
+    sleep 10
 done
