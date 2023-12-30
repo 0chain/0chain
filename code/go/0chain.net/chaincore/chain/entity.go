@@ -280,6 +280,28 @@ func (c *Chain) SetupEventDatabase() error {
 	return nil
 }
 
+// GetLatestFinalizedBlockFromDB gets the latest finalized block hash and round number from event db
+func (c *Chain) GetLatestFinalizedBlockFromDB() (string, int64, error) {
+	if c.EventDb == nil {
+		return "", 0, errors.New("event db is not initialized")
+	}
+
+	var roundHash = struct {
+		Round int64  `json:"round"`
+		Hash  string `json:"hash"`
+	}{}
+
+	err := c.EventDb.Store.Get().Model(&event.Block{}).
+		Select("round, hash").
+		Order("round desc").
+		Limit(1).Scan(&roundHash).Error
+	if err != nil {
+		return "", 0, err
+	}
+
+	return roundHash.Hash, roundHash.Round, nil
+}
+
 func (c *Chain) GetEventDb() *event.EventDb {
 	c.eventMutex.RLock()
 	defer c.eventMutex.RUnlock()

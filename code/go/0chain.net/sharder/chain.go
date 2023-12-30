@@ -404,12 +404,12 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 	return nil, common.NewError("load_lfb", "no valid lfb found")
 }
 
-func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, lfbr *chain.LfbRound) (*blocksLoaded, error) {
-	r, err := sc.GetRoundFromStore(ctx, lfbr.Round)
+func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, hash string, round int64) (*blocksLoaded, error) {
+	r, err := sc.GetRoundFromStore(ctx, round)
 	if err != nil {
 		return nil, fmt.Errorf("load_lfb - could not load round from store: %v", err)
 	}
-	if r.BlockHash != lfbr.Hash {
+	if r.BlockHash != hash {
 		return nil, errors.New("load_lfb - block hash does not match")
 	}
 
@@ -497,29 +497,45 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
 // to corresponding fields of the sharder's Chain.
 func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
-	var bl *blocksLoaded
-	lfbr, err := sc.LoadLFBRound()
-	switch err {
-	case nil:
-		logging.Logger.Debug("load_lfb - load from stateDB",
-			zap.Int64("round", lfbr.Round),
-			zap.String("block", lfbr.Hash))
-		if lfbr.Round == 0 {
-			return nil // use genesis
-		}
-		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbr)
-		if err != nil {
-			return err
-		}
-		logging.Logger.Debug("load_lfb - load round and block",
-			zap.Int64("round", bl.lfb.Round),
-			zap.String("block", bl.lfb.Hash))
-	default:
-		bl = sc.iterateRoundsLookingForLFB(ctx)
-		logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
-			zap.Int64("round", bl.lfb.Round),
-			zap.String("block", bl.lfb.Hash))
+	lfbHash, lfbRound, err := sc.GetLatestFinalizedBlockFromDB()
+	if err != nil {
+		logging.Logger.Panic("Error getting latest finalized block from db", zap.Error(err))
+		return err
 	}
+
+	if lfbRound == 0 {
+		// use genesis
+		return nil
+	}
+
+	bl, err := sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
+	if err != nil {
+		return err
+	}
+
+	// var bl *blocksLoaded
+	// lfbr, err := sc.LoadLFBRound()
+	// switch err {
+	// case nil:
+	// 	logging.Logger.Debug("load_lfb - load from stateDB",
+	// 		zap.Int64("round", lfbr.Round),
+	// 		zap.String("block", lfbr.Hash))
+	// 	if lfbr.Round == 0 {
+	// 		return nil // use genesis
+	// 	}
+	// 	bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbr)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	logging.Logger.Debug("load_lfb - load round and block",
+	// 		zap.Int64("round", bl.lfb.Round),
+	// 		zap.String("block", bl.lfb.Hash))
+	// default:
+	// 	bl = sc.iterateRoundsLookingForLFB(ctx)
+	// 	logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
+	// 		zap.Int64("round", bl.lfb.Round),
+	// 		zap.String("block", bl.lfb.Hash))
+	// }
 
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
 	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
