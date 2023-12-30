@@ -22,6 +22,9 @@ printf '{"client_id":"e61b1d5f081c4dfa4d45c852ca8abbfcdc3023ed4ffe2402ba7e9b2ebc
 ./zwalletcli/zwallet auth-register --url http://198.18.0.134:3034 --client_key 0db96df65ad705ca3b3139b02071bfb611523c53c5ab4693cff08588a3ba5e067e4890144650ea0b0428dbd4de3ce5da6874a8822cf2838549ea5cc26f89ea1b --client_id e61b1d5f081c4dfa4d45c852ca8abbfcdc3023ed4ffe2402ba7e9b2ebc56b129 --min_stake 2 --max_stake 10 --num_delegates 5 --service_charge 0.1 --wallet wallet.json
 
 ./zboxcli/zbox sp-lock --authorizer_id 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802 --tokens 5 --wallet wallet.json
+sleep 10
 ./zboxcli/zbox sp-lock --authorizer_id 47c534abb2bcb33e9944aee9a0df0e0adc4c0b659b9499aa656920975c38a80a --tokens 5 --wallet wallet.json
+sleep 10
 ./zboxcli/zbox sp-lock --authorizer_id 7f2097074f678d08146e5585d6965b04307939fee0457ea18c4242bff197c65a --tokens 5 --wallet wallet.json
+sleep 10
 ./zboxcli/zbox sp-lock --authorizer_id d5b9204835a6ea8ba93a0b4f14ce38bc72dec5165465416f0a3b9f66f988e1ab --tokens 5 --wallet wallet.json
