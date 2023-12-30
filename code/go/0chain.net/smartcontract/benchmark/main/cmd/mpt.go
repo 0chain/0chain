@@ -79,9 +79,7 @@ func getBalances(
 
 	// add miner and sharder that is in magic block but not active for add sharder and add miner
 	magicBlock.Miners.NodesMap = make(map[string]*node.Node)
-	magicBlockMiner := &node.Node{}
-	magicBlockMiner.PublicKey = "miner's public key"
-	magicBlock.Miners.NodesMap[encryption.Hash("magic_block_miner_1")] = magicBlockMiner
+	magicBlock.Miners.NodesMap[encryption.Hash("magic_block_miner_1")] = &node.Node{}
 	magicBlockSharder := node.Node{}
 	magicBlockSharder.Type = magicBlock.Sharders.Type
 
