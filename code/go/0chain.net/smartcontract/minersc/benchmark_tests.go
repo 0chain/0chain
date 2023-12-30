@@ -116,6 +116,7 @@ func BenchmarkTests(
 					Settings: stakepool.Settings{
 						ServiceChargeRatio: viper.GetFloat64(bk.MinerMaxCharge),
 						MaxNumDelegates:    viper.GetInt(bk.MinerMaxDelegates),
+						DelegateWallet:     "random_delegate_wallet",
 					},
 				},
 			}).Encode(),
