@@ -2,8 +2,8 @@ name: CONDUCTOR TESTS SUITE
 
 on:
   schedule:
-      - cron: '* 0 * * *' # for sprint
-      - cron: '* 1 * * *' # for staging
+      - cron: '0 0 * * *' # for sprint
+      - cron: '0 1 * * *' # for staging
 
   push:
     branches:
