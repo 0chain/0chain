@@ -234,6 +234,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -263,6 +264,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -293,6 +295,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -322,6 +325,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -351,6 +355,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -366,7 +371,7 @@ func Test_validateLockRequest(t *testing.T) {
 			name: "stake should fail on delegates limit",
 			args: args{
 				t: &transaction.Transaction{
-					ClientID: clientId3,
+					ClientID: "clientIdTxn",
 					Value:    10,
 				},
 				sp: &StakePool{
@@ -377,9 +382,13 @@ func Test_validateLockRequest(t *testing.T) {
 						clientId2: {
 							Balance: 20,
 						},
+						clientId3: {
+							Balance: 20,
+						},
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{

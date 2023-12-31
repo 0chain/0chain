@@ -813,7 +813,7 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 			fmt.Sprintf("too large stake to lock: %v > %v", poolStakeAfter, vs.MaxStake))
 	}
 
-	if len(sp.GetPools()) >= vs.MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+	if len(sp.GetPools()) > sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
 			vs.MaxNumDelegates)
