@@ -60,6 +60,7 @@ dbs:
     max_open_conns: 200
     conn_max_lifetime: 20s
     aggregate_period: 5
+    slowtablespace: hdd_tablespace
   settings:
     debug: false
     aggregate_period: 10
