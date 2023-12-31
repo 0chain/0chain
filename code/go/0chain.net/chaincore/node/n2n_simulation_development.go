@@ -4,6 +4,8 @@
 package node
 
 import (
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/core/config"
@@ -19,12 +21,14 @@ var routes = make(map[string]*Route, 10)
 // InduceDelay - incude network delay
 func (n *Node) InduceDelay(toNode *Node) {
 	if route, ok := routes[toNode.N2NHost]; ok {
+		logging.Logger.Info("Jayash induce delay", zap.Any("route", route))
 		time.Sleep(route.Delay)
 	}
 	return
 }
 
 func ReadNetworkDelays(file string) {
+	logging.Logger.Info("Jayash read network delay1", zap.Any("file", file))
 	delayConfig := config.ReadConfig(file)
 	delay := delayConfig.Get("delay")
 	if configRoutes, ok := delay.([]interface{}); ok {
@@ -33,6 +37,13 @@ func ReadNetworkDelays(file string) {
 				from := routeMap["from"].(string)
 				to := routeMap["to"].(string)
 				delayTime := routeMap["time"].(int)
+
+				logging.Logger.Info("Jayash read network delay2",
+					zap.Any("from", from),
+					zap.Any("to", to),
+					zap.Any("delayTime", delayTime),
+					zap.Any("n2n_host", Self.Underlying().N2NHost))
+
 				if Self.Underlying().N2NHost == from {
 					routes[to] = &Route{To: to, Delay: time.Duration(delayTime) * time.Millisecond}
 				}
