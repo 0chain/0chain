@@ -28,10 +28,20 @@ func (n *Node) InduceDelay(toNode *Node) {
 }
 
 func ReadNetworkDelays(file string) {
-	logging.Logger.Info("Jayash read network delay1", zap.Any("file", file))
 	delayConfig := config.ReadConfig(file)
 	delay := delayConfig.Get("delay")
-	if configRoutes, ok := delay.([]interface{}); ok {
+
+	configRoutes, ok := delay.([]interface{})
+
+	logging.Logger.Info("Jayash read network delay1",
+		zap.Any("file", file),
+		zap.Any("delay", delay),
+		zap.Any("n2n_host", Self.Underlying().N2NHost),
+		zap.Any("delayConfig", delayConfig),
+		zap.Any("configRoutes", configRoutes),
+		zap.Any("ok", ok))
+
+	if ok {
 		for _, route := range configRoutes {
 			if routeMap, ok := route.(map[interface{}]interface{}); ok {
 				from := routeMap["from"].(string)
