@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math"
 	"strings"
 	"time"
@@ -647,6 +648,9 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 }
 
 func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp, sc *StorageSmartContract) (currency.Coin, currency.Coin, error) {
+
+	logging.Logger.Info("Jayash pay challenge pool pass payments", zap.Any("Jayash ba", d))
+
 	if d.LatestFinalizedChallCreatedAt == 0 {
 		return 0, 0, nil
 	}
@@ -665,6 +669,8 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 }
 
 func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+	logging.Logger.Info("Jayash challengeRewardOnFinalization start", zap.Any("Jayash ba", d))
+
 	if now <= d.LatestFinalizedChallCreatedAt {
 		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
 		return 0, nil
@@ -718,10 +724,15 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 		}
 	}
 
+	logging.Logger.Info("Jayash challengeRewardOnFinalization end", zap.Any("payment", payment), zap.Any("Jayash ba", d))
+
 	return payment, nil
 }
 
 func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances chainstate.StateContextI, sp *stakePool) (currency.Coin, error) {
+
+	logging.Logger.Info("Jayash challenge penalty on finalization", zap.Any("Jayash ba", d))
+
 	if d.LatestSuccessfulChallCreatedAt >= d.LatestFinalizedChallCreatedAt {
 		return 0, nil
 	}
@@ -1039,6 +1050,8 @@ func (sa *StorageAllocation) moveFromChallengePool(
 
 func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract, now common.Timestamp) error {
 	var passPayments currency.Coin
+
+	logging.Logger.Info("Jayash payChallengePoolPassPayments", zap.Any("passRates", passRates), zap.Any("ba", sa.BlobberAllocs))
 
 	for i, d := range sa.BlobberAllocs {
 		blobberPassPayment, _, err := d.payChallengePoolPassPayments(sa, sps[i], cp, passRates[i], balances, conf, now, sc)
@@ -1904,13 +1917,15 @@ func (sa *StorageAllocation) removeOldChallenges(
 	var nonRemovedChallenges []*AllocOpenChallenge
 	var expChalIDs []string
 
+	uniqueIdForLogging := uuid.New().String()
+
 	for _, oc := range allocChallenges.OpenChallenges {
 		if oc.RoundCreatedAt >= currentChallenge.RoundCreatedAt || oc.BlobberID != currentChallenge.BlobberID {
 			nonRemovedChallenges = append(nonRemovedChallenges, oc)
 			continue
 		}
 
-		logging.Logger.Info("removeOldChallenges",
+		logging.Logger.Info("removeOldChallenges : "+uniqueIdForLogging,
 			zap.String("challenge_id", oc.ID),
 			zap.String("blobber_id", oc.BlobberID),
 			zap.Int64("round_created_at", oc.RoundCreatedAt),

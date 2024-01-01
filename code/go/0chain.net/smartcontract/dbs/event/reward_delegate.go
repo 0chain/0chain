@@ -6,6 +6,8 @@ import (
 	"0chain.net/smartcontract/dbs/model"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 )
 
@@ -33,6 +35,10 @@ func (edb *EventDb) insertDelegateReward(inserts []dbs.StakePoolReward, round in
 				AllocationID: sp.AllocationID,
 			}
 			drs = append(drs, dr)
+
+			if sp.RewardType == 9 {
+				logging.Logger.Info("Jayash insertDelegateReward", zap.Any("dr", dr), zap.Any("sp", sp))
+			}
 		}
 		for poolId, amount := range sp.DelegatePenalties {
 			dp := RewardDelegate{

@@ -536,6 +536,11 @@ func (sp *StakePool) DistributeRewards(
 	balances cstate.StateContextI,
 	options ...string,
 ) (err error) {
+
+	if rewardType == spenum.ChallengePassReward {
+		logging.Logger.Info("Jayash challenge pass reward", zap.Any("value", value), zap.Any("providerId", providerId), zap.Any("providerType", providerType), zap.Any("options", options))
+	}
+
 	total, err := sp.stake()
 	if err != nil {
 		return err
@@ -646,7 +651,10 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 	}
+
+	logging.Logger.Info("Jayash stake pool reward", zap.Any("value", value), zap.Any("providerId", providerId), zap.Any("providerType", providerType), zap.Any("options", options))
 	if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+		logging.Logger.Info("Jayash stake pool reward error", zap.Any("err", err))
 		return err
 	}
 

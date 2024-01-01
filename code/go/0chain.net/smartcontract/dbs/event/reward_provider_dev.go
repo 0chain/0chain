@@ -310,6 +310,24 @@ func (edb *EventDb) GetBlobberPartitionSelectionFrequency(startBlock, endBlock s
 	return frequencyMap, nil
 }
 
+func (edb *EventDb) GetFirstWMTime(allocationID string) (int64, error) {
+	var wm WriteMarker
+
+	result := edb.Get().
+		Model(&WriteMarker{
+			Allocation: Allocation{
+				AllocationID: allocationID,
+			},
+		}).
+		First(&wm)
+
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return wm.Timestamp, nil
+}
+
 type ProviderAllocationRewards struct {
 	DelegateRewards map[string]int64 `json:"delegate_rewards"`
 	Amount          int64            `json:"amount"`
