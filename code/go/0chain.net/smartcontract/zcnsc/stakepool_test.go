@@ -18,7 +18,7 @@ func Test_WhenAuthorizerExists_StakePool_IsCreated(t *testing.T) {
 	sc := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(ownerId, ctx)
 
-	resp, err := sc.AddAuthorizer(tr, CreateAuthorizerParamPayload(id, AuthorizerPublicKey), ctx)
+	resp, err := sc.AddAuthorizer(tr, CreateAuthorizerParamPayload("random_authorizer_delegate_wallet", AuthorizerPublicKey), ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
 
