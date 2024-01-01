@@ -360,6 +360,8 @@ func (an *AuthorizerNode) ToEvent(settings stakepool.Settings) *event.Authorizer
 		Provider: event.Provider{
 			ID:             an.ID,
 			DelegateWallet: settings.DelegateWallet,
+			NumDelegates:   settings.MaxNumDelegates,
+			ServiceCharge:  settings.ServiceChargeRatio,
 			Rewards: event.ProviderRewards{
 				ProviderID: an.ID,
 			},
