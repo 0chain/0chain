@@ -20,15 +20,15 @@ BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
 BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
 
 # stake blobbers
-./zboxcli/zbox --wallet testing.json --with_retries 3 sp-lock \
+./zboxcli/zbox --wallet testing.json sp-lock \
     --blobber_id $BLOBBER1 --tokens 2
 sleep 10
 
-./zboxcli/zbox --wallet testing.json --with_retries 3 sp-lock \
+./zboxcli/zbox --wallet testing.json sp-lock \
     --blobber_id $BLOBBER2 --tokens 2
 sleep 10
 
-./zboxcli/zbox --wallet testing.json --with_retries 3 sp-lock \
+./zboxcli/zbox --wallet testing.json sp-lock \
     --blobber_id $BLOBBER3 --tokens 2
 sleep 10
 
@@ -36,15 +36,15 @@ VALIDATOR1=41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
 VALIDATOR2=ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd
 VALIDATOR3=86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
 
-./zboxcli/zbox --wallet testing.json --with_retries 3 sp-lock \
+./zboxcli/zbox --wallet testing.json sp-lock \
     --validator_id $VALIDATOR1 --tokens 2
 sleep 10
 
-./zboxcli/zbox --wallet testing.json --with_retries 3 sp-lock \
+./zboxcli/zbox --wallet testing.json sp-lock \
     --validator_id $VALIDATOR2 --tokens 2
 sleep 10
 
-./zboxcli/zbox --wallet testing.json --with_retries 3 sp-lock \
+./zboxcli/zbox --wallet testing.json sp-lock \
     --validator_id $VALIDATOR3 --tokens 2
 sleep 10
 
