@@ -222,8 +222,15 @@ func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 }
 
 func (mc *Chain) MinerHealthCheck(ctx context.Context) {
-	// TODO: Move that to a unified config file.
-	const HEALTH_CHECK_TIMER = 5 * time.Minute // 5 Minute
+	gn, err := minersc.GetGlobalNode(mc.GetQueryStateContext())
+	if err != nil {
+		logging.Logger.Panic("miner health check - get global node failed", zap.Error(err))
+		return
+	}
+
+	logging.Logger.Debug("miner health check - start", zap.Any("period", gn.HealthCheckPeriod))
+	HEALTH_CHECK_TIMER := gn.HealthCheckPeriod
+
 	for {
 		select {
 		case <-ctx.Done():

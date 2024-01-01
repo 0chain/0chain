@@ -161,3 +161,8 @@ func InitConfig(balances cstate.CommonStateContextI) error {
 
 	return nil
 }
+
+// GetGlobalNode returns the global node config
+func GetGlobalNode(balances cstate.CommonStateContextI) (*GlobalNode, error) {
+	return getGlobalNode(balances)
+}
