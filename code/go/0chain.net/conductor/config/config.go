@@ -110,6 +110,7 @@ type CommandName struct {
 	Name   string                 `json:"name" yaml:"name" mapstructure:"name"`
 	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
 	FailureThreshold string `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
+	RetryCount int `json:"retry_count" yaml:"retry_count" mapstructure:"retry_count"`
 }
 
 // A Config represents conductor testing configurations.

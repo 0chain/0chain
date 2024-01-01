@@ -368,7 +368,7 @@ func init() {
 			}
 		}
 
-		ex.Command(cn.Name, cn.Params, dur, tm) // async command
+		ex.Command(cn.Name, cn.Params, cn.RetryCount, dur, tm) // async command
 		return nil
 	})
 

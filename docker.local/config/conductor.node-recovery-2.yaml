@@ -49,6 +49,7 @@ tests:
           name: "fill_blobber_validator_wallets"
       - command:
           name: "stake_providers"
+          retry_count: 3
           params:
             provider_type: blobber
             provider_ids:
@@ -57,6 +58,7 @@ tests:
                 - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
       - command:
           name: "stake_providers"
+          retry_count: 3
           params:
             provider_type: validator
             provider_ids:
@@ -69,6 +71,7 @@ tests:
           required: false
       - command:
           name: 'init_allocation_only'
+          retry_count: 3
       - generate_all_challenges: true
       - command:
           name: "upload"
@@ -160,6 +163,7 @@ tests:
           name: "fill_blobber_validator_wallets"
       - command:
           name: "stake_providers"
+          retry_count: 3
           params:
             provider_type: blobber
             provider_ids:
@@ -168,6 +172,7 @@ tests:
                 - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
       - command:
           name: "stake_providers"
+          retry_count: 3
           params:
             provider_type: validator
             provider_ids:
@@ -180,6 +185,7 @@ tests:
           required: false
       - command:
           name: 'init_allocation_only'
+          retry_count: 3
       - generate_all_challenges: true
       - wait_round:
           shift: 250
