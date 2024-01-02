@@ -36,6 +36,12 @@ func validateStakePoolSettings(
 	if sps.MaxNumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
 	}
+
+	if sps.MaxNumDelegates > conf.MaxDelegates {
+		return fmt.Errorf("num_delegates (%d) is greater than"+
+			" max allowed by SC (%d)", sps.MaxNumDelegates, conf.MaxDelegates)
+	}
+
 	return nil
 }
 
