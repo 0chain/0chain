@@ -203,8 +203,8 @@ func BenchmarkTests(
 					Owner:           data.Clients[0],
 					OwnerPublicKey:  data.PublicKeys[0],
 					Blobbers:        blobbers,
-					ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange: PriceRange{0, currency.Coin(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
+					ReadPriceRange:  PriceRange{0, currency.Coin(viper.GetFloat64(bk.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange: PriceRange{0, currency.Coin(viper.GetFloat64(bk.StorageMaxWritePrice) * 1e10)},
 				}).encode()
 				return bytes
 			}(),

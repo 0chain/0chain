@@ -283,10 +283,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 			s, err := Work(ctx, gs, es, &p)
 			if err != nil {
-				if config.Development() { //panic in case of development
+				if config.Development() {
 					logging.Logger.Error("process events", zap.Error(err))
 					if !strings.Contains(err.Error(), "transaction has already been committed or rolled back") {
-						logging.Logger.Panic(err.Error())
 					}
 					return
 				}
@@ -394,6 +393,10 @@ func (edb *EventDb) WorkAggregates(
 		return nil, err
 	}
 	return gSnapshot, nil
+}
+
+func (edb *EventDb) ManagePartitions(round int64) {
+	edb.managePartitions(round)
 }
 
 func (edb *EventDb) managePartitions(round int64) {

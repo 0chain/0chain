@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"0chain.net/core/config"
 	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -95,10 +94,6 @@ func (msc *MinerSmartContract) AddSharder(
 		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Not in magic block", zap.String("SharderID", newSharder.ID))
 		return "", common.NewErrorf("add_sharder",
 			"failed to add new sharder: Not in magic block")
-	}
-
-	if config.Development() && newSharder.Settings.DelegateWallet == "" {
-		newSharder.Settings.DelegateWallet = newSharder.ID
 	}
 
 	newSharder.LastHealthCheck = t.CreationDate
