@@ -442,10 +442,16 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewError(errCode, err.Error())
 	}
 
+	logging.Logger.Debug("before getAllocationChallenges", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
+
 	allocChallenges, err := sc.getAllocationChallenges(challenge.AllocationID, balances)
 	if err != nil {
 		return "", common.NewErrorf(errCode, "could not find allocation challenges, %v", err)
 	}
+
+	logging.Logger.Debug("before getAllocation", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
 
 	alloc, err := sc.getAllocation(challenge.AllocationID, balances)
 	if err != nil {
