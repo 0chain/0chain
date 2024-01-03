@@ -206,6 +206,8 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't save allocation: %v", err)
 	}
 
+	logging.Logger.Info("Challenge reward paid", zap.Any("challenge reward", move), zap.Any("challengeCompletedTime", challengeCompletedTime), zap.Any("latestFinalizedChallTime", latestFinalizedChallTime), zap.Any("rdtu", rdtu), zap.Any("dtu", dtu))
+
 	return nil
 }
 
@@ -681,6 +683,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 	validators := getRandomSubSlice(cab.validators, validatorsRewarded, balances.GetBlock().GetRoundRandomSeed())
 
 	if cab.latestFinalizedChallTime > cab.latestSuccessfulChallTime {
+		logging.Logger.Info("Paying blobber penalty", zap.Any("latestFinalizedChallTime", cab.latestFinalizedChallTime), zap.Any("latestSuccessfulChallTime", cab.latestSuccessfulChallTime), zap.Any("blobber", cab.blobAlloc.BlobberID))
 		err = sc.blobberPenalty(
 			cab.alloc, cab.latestSuccessfulChallTime, cab.latestFinalizedChallTime, cab.blobAlloc, validators,
 			balances,

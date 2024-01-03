@@ -320,32 +320,35 @@ func setupMockChallenge(
 	}
 
 	challenges := make([]*StorageChallenge, 0, challengesPerBlobber)
-	challenge := &StorageChallenge{
-		ID:              getMockChallengeId(blobber.ID, allocationId),
-		AllocationID:    allocationId,
-		TotalValidators: totalValidatorsNum,
-		BlobberID:       blobber.ID,
-		ValidatorIDs:    validatorIds[:viper.GetInt(sc.StorageValidatorsPerChallenge)],
-		RoundCreatedAt:  int64(index) - 1,
-	}
-	_, err := balances.InsertTrieNode(challenge.GetKey(ADDRESS), challenge)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if ac.addChallenge(challenge) {
-		challenges = append(challenges, challenge)
-	}
 
-	if viper.GetBool(sc.EventDbEnabled) {
-		challengeRow := event.Challenge{
-			ChallengeID:    challenge.ID,
-			CreatedAt:      balances.GetTransaction().CreationDate,
-			AllocationID:   challenge.AllocationID,
-			BlobberID:      challenge.BlobberID,
-			RoundResponded: int64(index),
+	for i := 0; i < challengesPerBlobber; i++ {
+		challenge := &StorageChallenge{
+			ID:              getMockChallengeId(blobber.ID, allocationId),
+			AllocationID:    allocationId,
+			TotalValidators: totalValidatorsNum,
+			BlobberID:       blobber.ID,
+			ValidatorIDs:    validatorIds[:viper.GetInt(sc.StorageValidatorsPerChallenge)],
+			RoundCreatedAt:  int64(index) - 1,
 		}
-		if err = eventDb.Store.Get().Create(&challengeRow).Error; err != nil {
+		_, err := balances.InsertTrieNode(challenge.GetKey(ADDRESS), challenge)
+		if err != nil {
 			log.Fatal(err)
+		}
+		if ac.addChallenge(challenge) {
+			challenges = append(challenges, challenge)
+		}
+
+		if viper.GetBool(sc.EventDbEnabled) {
+			challengeRow := event.Challenge{
+				ChallengeID:    challenge.ID,
+				CreatedAt:      balances.GetTransaction().CreationDate,
+				AllocationID:   challenge.AllocationID,
+				BlobberID:      challenge.BlobberID,
+				RoundResponded: int64(index),
+			}
+			if err = eventDb.Store.Get().Create(&challengeRow).Error; err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 
