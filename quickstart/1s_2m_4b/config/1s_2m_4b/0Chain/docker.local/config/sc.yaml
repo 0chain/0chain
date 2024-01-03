@@ -76,8 +76,6 @@ smart_contracts:
     max_mint: 4000000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
-    # min possible allocation duration allowed by the SC
-    min_alloc_duration: '5m'
     # max challenge completion time of a blobber allowed by the SC
     max_challenge_completion_rounds: 720
     # min blobber capacity allowed by the SC

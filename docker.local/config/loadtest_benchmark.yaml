@@ -93,7 +93,6 @@ smart_contracts:
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_alloc_size: 1024
-    min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
     max_file_size : 40000000000000

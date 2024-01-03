@@ -600,7 +600,7 @@ func BenchmarkTests(
 				var validationTickets []*ValidationTicket
 				//always use first NumBlobbersPerAllocation/2 validators the same we use for challenge creation.
 				//to randomize it we need to load challenge here, not sure if it's needed
-				for i := 0; i < viper.GetInt(bk.StorageValidatorsPerChallenge)/2; i++ {
+				for i := 0; i < viper.GetInt(bk.StorageValidatorsPerChallenge); i++ {
 					vt := &ValidationTicket{
 						ChallengeID:  getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 						BlobberID:    getMockBlobberId(0),

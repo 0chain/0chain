@@ -6,24 +6,24 @@ simulation:
   nun_sharders: 20
   nun_active_sharders: 20
   num_allocations: 300
-  num_blobbers: 100
-  num_validators: 10
+  num_blobbers: 15
+  num_validators: 15
   num_allocation_payers: 1 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 1  # number of allocation pools each contributor has
-  num_blobbers_per_Allocation: 4 # ideally make this even
+  num_blobbers_per_Allocation: 10 # ideally make this even
   num_blobber_delegates: 10
   num_miner_delegates: 10
   num_sharder_delegates: 10
   num_free_storage_assigners: 1
   num_vesting_destinations_client: 1
-  num_challenges_blobber: 1
+  num_challenges_blobber: 200
   num_authorizers: 12
   num_reward_partition_blobber: 5
-  num_blocks: 320
+  num_blocks: 300
   num_transactions_per_block: 10
   num_write_redeem_allocation: 2
   num_read_markers_allocation: 10
-  num_rounds_between_writes: 5
+  num_rounds_between_writes: 1
   num_rounds_between_reads: 10
 
 options:
@@ -125,7 +125,6 @@ smart_contracts:
   storagesc:
     owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
     min_alloc_size: 1024
-    min_alloc_duration: 50h
     max_read_price: 100.0
     max_write_price: 100.0
     max_file_size : 40000000000000
@@ -135,7 +134,7 @@ smart_contracts:
     max_charge: 0.2
     min_stake: 0.0
     max_stake: 20000.0
-    min_stake_per_delegate: 1
+    min_stake_per_delegate: 0
     max_delegates: 200
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
@@ -143,7 +142,7 @@ smart_contracts:
     max_individual_free_allocation: 1700
     max_challenges_per_generation: 1
     max_blobbers_per_allocation: 40
-    validators_per_challenge: 2
+    validators_per_challenge: 10
     num_validators_rewarded: 10
     max_blobber_select_for_challenge: 5
     readpool:
@@ -228,5 +227,5 @@ internal:
   colour: true
   control_m: 25000
   control_n: 90
-  show_output: false
+  show_output: true
   bench_data_list_length: 20
