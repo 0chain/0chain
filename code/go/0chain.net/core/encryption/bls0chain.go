@@ -325,7 +325,7 @@ func (b0 *BLS0ChainScheme) AggregateSignatures(signatures []string) (string, err
 }
 
 // FastAggregateVerify - implement interface
-func (b0 *BLS0ChainScheme) FastAggregateVerify(aggSig, hash string, pubKeys []string) (bool, error) {
+func (b0 *BLS0ChainScheme) FastAggregateVerify(aggSig string, hash []byte, pubKeys []string) (bool, error) {
 	var aggregatedSignature bls.Sign
 	err := aggregatedSignature.DeserializeHexStr(aggSig)
 	if err != nil {
@@ -337,5 +337,5 @@ func (b0 *BLS0ChainScheme) FastAggregateVerify(aggSig, hash string, pubKeys []st
 			return false, err
 		}
 	}
-	return aggregatedSignature.FastAggregateVerify(pubs, []byte(hash)), nil
+	return aggregatedSignature.FastAggregateVerify(pubs, hash), nil
 }

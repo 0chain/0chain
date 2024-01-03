@@ -90,7 +90,7 @@ func (cr *ChallengeResponse) Verify(balances cstate.StateContextI, validatorKeys
 	vt := cr.ValidationTickets[0]
 	//Result of the challenge should always be true
 	hashData := fmt.Sprintf("%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, true, vt.Timestamp)
-	hash := encryption.Hash(hashData)
+	hash := encryption.RawHash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
 	return signatureScheme.FastAggregateVerify(cr.AggregatedSignature, hash, validatorKeys)
 }

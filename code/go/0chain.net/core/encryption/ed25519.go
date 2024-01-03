@@ -140,6 +140,6 @@ func verifyED25519(publicKey interface{}, signature string, hash string) (bool, 
 }
 
 // FastAggregateVerify - implement interface
-func (ed *ED25519Scheme) FastAggregateVerify(aggSig, hash string, pubKeys []string) (bool, error) {
-	return false, nil
+func (ed *ED25519Scheme) FastAggregateVerify(aggSig string, hash []byte, pubKeys []string) (bool, error) {
+	return false, errors.New("not implemented")
 }
