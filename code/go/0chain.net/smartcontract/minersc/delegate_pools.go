@@ -49,11 +49,6 @@ func (_ *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, provider
 			"unexpected DB error: %v", err)
 	}
 
-	if err := mn.save(balances); err != nil {
-		return mn, common.NewErrorf("get_stake_pool",
-			"failed to save miner node: %v", err)
-	}
-
 	return mn, nil
 }
 
