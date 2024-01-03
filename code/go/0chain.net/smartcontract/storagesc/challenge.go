@@ -398,6 +398,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		errCode   = "verify_challenge"
 	)
 
+	start := time.Now()
+
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewErrorf(errCode,
@@ -426,6 +428,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewError(errCode, "challenge expired")
 	}
 
+	logging.Logger.Debug("before verify", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
+
 	if challenge.BlobberID != t.ClientID {
 		return "", errors.New("challenge blobber id does not match")
 	}
@@ -439,10 +444,16 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewError(errCode, err.Error())
 	}
 
+	logging.Logger.Debug("before getAllocationChallenges", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
+
 	allocChallenges, err := sc.getAllocationChallenges(challenge.AllocationID, balances)
 	if err != nil {
 		return "", common.NewErrorf(errCode, "could not find allocation challenges, %v", err)
 	}
+
+	logging.Logger.Debug("before getAllocation", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
 
 	alloc, err := sc.getAllocation(challenge.AllocationID, balances)
 	if err != nil {
@@ -487,7 +498,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return sc.challengeFailed(balances, cab)
 	}
 
-	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab)
+	logging.Logger.Debug("before challengePassed", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
+
+	return sc.challengePassed(balances, t, conf.BlockReward.TriggerPeriod, conf.NumValidatorsRewarded, cab, start)
 }
 
 type verifyTicketsResult struct {
@@ -592,7 +606,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 	t *transaction.Transaction,
 	triggerPeriod int64,
 	validatorsRewarded int,
-	cab *challengeAllocBlobberPassResult,
+	cab *challengeAllocBlobberPassResult, start time.Time,
 ) (string, error) {
 
 	err := cab.alloc.removeOldChallenges(cab.allocChallenges, balances, cab.challenge, sc)
@@ -607,6 +621,8 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("verify_challenge",
 			"cannot get ongoing partition: "+err.Error())
 	}
+	logging.Logger.Debug("after removeOldChallenges", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
 
 	blobber, err := sc.getBlobber(t.ClientID, balances)
 	if err != nil {
@@ -658,7 +674,8 @@ func (sc *StorageSmartContract) processChallengePassed(
 	}
 
 	brStats.SuccessChallenges++
-
+	logging.Logger.Debug("before completeChallenge", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
 	if !sc.completeChallenge(cab, true) {
 		return "", common.NewError("challenge_out_of_order",
 			"First challenge on the list is not same as the one"+
@@ -709,6 +726,8 @@ func (sc *StorageSmartContract) processChallengePassed(
 			return "", common.NewError("challenge_penalty_error", err.Error())
 		}
 	}
+	logging.Logger.Debug("before blobberReward", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
 
 	err = sc.blobberReward(
 		cab.alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
@@ -734,6 +753,8 @@ func (sc *StorageSmartContract) processChallengePassed(
 	if cab.success < cab.threshold {
 		return "challenge passed partially by blobber", nil
 	}
+
+	logging.Logger.Debug("end", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
 
 	return "challenge passed by blobber", nil
 }
