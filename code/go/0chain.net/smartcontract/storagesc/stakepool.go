@@ -412,5 +412,5 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	return stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter)
+	return stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
 }

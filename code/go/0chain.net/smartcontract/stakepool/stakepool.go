@@ -47,6 +47,7 @@ type AbstractStakePool interface {
 	Kill(float64, string, spenum.Provider, cstate.StateContextI) error
 	IsDead() bool
 	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
+	TotalStake() (currency.Coin, error)
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -374,6 +375,19 @@ func (sp *StakePool) SlashFraction(
 	}
 	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
 	return nil
+}
+
+// TotalStake
+// total stake pools funds
+func (sp *StakePool) TotalStake() (currency.Coin, error) {
+	orderedPoolIds := sp.OrderedPoolIds()
+	var total currency.Coin
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
+		total, _ = currency.AddCoin(total, dp.Balance)
+	}
+
+	return total, nil
 }
 
 // DistributeRewardsRandN distributes rewards to randomly selected N delegate pools
