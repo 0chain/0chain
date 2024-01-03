@@ -634,6 +634,8 @@ func TestCompleteRewardFlow(t *testing.T) {
 						}
 					}
 
+					chall.SetAggregateSignature(balances.GetSignatureScheme())
+
 					var resp string
 					resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 					if tc.errors != nil {
@@ -1113,7 +1115,7 @@ func TestVerifyChallenge(t *testing.T) {
 						continue
 					}
 				}
-
+				chall.SetAggregateSignature(balances.GetSignatureScheme())
 				var resp string
 				resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 				if tc.errors != nil {
@@ -1179,7 +1181,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 
 		tx := newTransaction(b3.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
-
+		chall.SetAggregateSignature(balances.GetSignatureScheme())
 		var resp string
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
@@ -1213,7 +1215,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 			chall1.ValidationTickets = append(chall1.ValidationTickets,
 				valids[i].validTicket(t, chall1.ID, b1.id, true, tp))
 		}
-
+		chall1.SetAggregateSignature(balances.GetSignatureScheme())
 		tx := newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall1), balances)
@@ -1245,7 +1247,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 			chall1.ValidationTickets = append(chall1.ValidationTickets,
 				valids[i].validTicket(t, chall1.ID, b1.id, true, tp))
 		}
-
+		chall1.SetAggregateSignature(balances.GetSignatureScheme())
 		tx := newTransaction(b1.id, ssc.ID, 0, tp)
 		balances.setTransaction(t, tx)
 		// update block round to ignore the ongoing blobber reward checking
@@ -1301,6 +1303,7 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 		cs := cstate.NewStateContext(balances.block, clientState,
 			balances.txn, nil, nil, nil, func() encryption.SignatureScheme { return signatureScheme }, nil, nil)
 
+		chall.SetAggregateSignature(balances.GetSignatureScheme())
 		var resp string
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), cs)
 		require.NoError(t, err)

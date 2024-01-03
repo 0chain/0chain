@@ -650,6 +650,7 @@ func Test_flow_penalty(t *testing.T) {
 			tp += step / 2
 			tx = newTransaction(b4.id, ssc.ID, 0, tp)
 			balances.setTransaction(t, tx)
+			chall.SetAggregateSignature(balances.GetSignatureScheme())
 			var resp string
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			require.NoError(t, err)

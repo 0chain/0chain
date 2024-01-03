@@ -618,10 +618,12 @@ func BenchmarkTests(
 					vt.Signature, _ = sigScheme.Sign(hash)
 					validationTickets = append(validationTickets, vt)
 				}
-				bytes, _ := json.Marshal(&ChallengeResponse{
+				chall := &ChallengeResponse{
 					ID:                getMockChallengeId(getMockBlobberId(0), getMockAllocationId(0)),
 					ValidationTickets: validationTickets,
-				})
+				}
+				chall.SetAggregateSignature(sigScheme)
+				bytes, _ := json.Marshal(chall)
 				return bytes
 			}(),
 		},

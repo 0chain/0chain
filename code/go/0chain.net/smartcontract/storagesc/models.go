@@ -95,6 +95,14 @@ func (cr *ChallengeResponse) Verify(balances cstate.StateContextI, validatorKeys
 	return signatureScheme.FastAggregateVerify(cr.AggregatedSignature, hash, validatorKeys)
 }
 
+func (cr *ChallengeResponse) SetAggregateSignature(scheme encryption.SignatureScheme) {
+	sigs := make([]string, len(cr.ValidationTickets))
+	for i, vt := range cr.ValidationTickets {
+		sigs[i] = vt.Signature
+	}
+	cr.AggregatedSignature, _ = scheme.AggregateSignatures(sigs)
+}
+
 type AllocOpenChallenge struct {
 	ID             string           `json:"id"`
 	CreatedAt      common.Timestamp `json:"created_at"`
