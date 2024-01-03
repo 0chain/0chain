@@ -78,8 +78,21 @@ func (an *Allocations) GetHashBytes() []byte {
 }
 
 type ChallengeResponse struct {
-	ID                string              `json:"challenge_id"`
-	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
+	ID                  string              `json:"challenge_id"`
+	ValidationTickets   []*ValidationTicket `json:"validation_tickets"`
+	AggregatedSignature string              `json:"aggregated_signature"`
+}
+
+func (cr *ChallengeResponse) Verify(balances cstate.StateContextI, validatorKeys []string) (bool, error) {
+	if cr.AggregatedSignature == "" {
+		return false, errors.New("aggregated signature is empty")
+	}
+	vt := cr.ValidationTickets[0]
+	//Result of the challenge should always be true
+	hashData := fmt.Sprintf("%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, true, vt.Timestamp)
+	hash := encryption.Hash(hashData)
+	signatureScheme := balances.GetSignatureScheme()
+	return signatureScheme.FastAggregateVerify(cr.AggregatedSignature, hash, validatorKeys)
 }
 
 type AllocOpenChallenge struct {
@@ -2156,8 +2169,7 @@ type ValidationTicket struct {
 }
 
 func (vt *ValidationTicket) VerifySign(balances cstate.StateContextI) (bool, error) {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
-		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(vt.ValidatorKey); err != nil {
@@ -2170,6 +2182,10 @@ func (vt *ValidationTicket) VerifySign(balances cstate.StateContextI) (bool, err
 func (vt *ValidationTicket) Validate(challengeID, blobberID string) error {
 	if err := encryption.VerifyPublicKeyClientID(vt.ValidatorKey, vt.ValidatorID); err != nil {
 		return fmt.Errorf("invalid validator tickets: %v", err)
+	}
+
+	if !vt.Result {
+		return fmt.Errorf("invalid validator tickets: result is false")
 	}
 
 	if vt.ChallengeID != challengeID {

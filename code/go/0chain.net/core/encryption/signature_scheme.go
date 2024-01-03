@@ -27,6 +27,7 @@ type SignatureScheme interface {
 
 	Sign(hash interface{}) (string, error)
 	Verify(signature string, hash string) (bool, error)
+	FastAggregateVerify(aggSig, hash string, pubKeys []string) (bool, error)
 }
 
 // AggregateSignatureScheme - a signature scheme that can aggregate individual signatures

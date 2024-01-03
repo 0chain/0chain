@@ -535,25 +535,21 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}
 
 	var (
-		success, failure int
-		validators       []string // validators for rewards
+		success       = len(cr.ValidationTickets)
+		validators    []string // validators for rewards
+		validatorKeys []string
 	)
 
 	for _, vt := range cr.ValidationTickets {
 		if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
 			return nil, fmt.Errorf("invalid validation ticket: %v", err)
 		}
-
-		if ok, err := vt.VerifySign(balances); !ok || err != nil {
-			return nil, fmt.Errorf("invalid validation ticket: %v", err)
-		}
-
 		validators = append(validators, vt.ValidatorID)
-		if !vt.Result {
-			failure++
-			continue
-		}
-		success++
+		validatorKeys = append(validatorKeys, vt.ValidatorKey)
+	}
+
+	if ok, err := cr.Verify(balances, validatorKeys); !ok || err != nil {
+		return nil, fmt.Errorf("invalid challenge response: %v", err)
 	}
 
 	var (
