@@ -18,8 +18,12 @@ import (
 
 var GenG2 *bls.G2
 
-var verifyCounter = metrics.GetOrRegisterCounter("bls_verify", nil)
-var signCounter = metrics.GetOrRegisterCounter("bls_sign", nil)
+var (
+	blsRegistery     = metrics.NewRegistry()
+	verifyCounter    = metrics.GetOrRegisterCounter("bls_verify", blsRegistery)
+	signCounter      = metrics.GetOrRegisterCounter("bls_sign", blsRegistery)
+	aggVerifyCounter = metrics.GetOrRegisterCounter("bls_agg_verify", blsRegistery)
+)
 
 func init() {
 	err := bls.Init(int(bls.CurveFp254BNb))
@@ -41,7 +45,7 @@ func init() {
 		panic(err)
 	}
 
-	go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+	go metrics.Log(blsRegistery, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 }
 
 // BLS0ChainScheme - a signature scheme for BLS0Chain Signature

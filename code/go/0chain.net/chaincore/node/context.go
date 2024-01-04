@@ -6,7 +6,7 @@ import (
 	"0chain.net/core/common"
 )
 
-//SelfNodeKey - a key for the context value
+// SelfNodeKey - a key for the context value
 const SelfNodeKey common.ContextKey = "SELF_NODE"
 
 /*GetNodeContext - setup a context with the self node */
