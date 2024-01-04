@@ -23,7 +23,7 @@ var ErrSendingToSelf = common.NewError("sending_to_self", "Message can't be sent
 /*MaxConcurrentRequests - max number of concurrent requests when sending a message to the node pool */
 var (
 	MaxConcurrentRequests        = 2
-	n2nVerifyRequestsWithContext = common.NewWithContextFunc(4)
+	n2nVerifyRequestsWithContext = common.NewWithContextFunc(2) // debug change to 2. Before was 4
 )
 
 /*SetMaxConcurrentRequests - set the max number of concurrent requests */
