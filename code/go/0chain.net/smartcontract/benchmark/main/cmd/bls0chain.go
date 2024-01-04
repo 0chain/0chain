@@ -317,7 +317,7 @@ func (b0 *BLS0ChainScheme) FastAggregateVerify(aggSig string, hash []byte, pubKe
 	}
 	pubs := make([]bls.PublicKey, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
-		if err = pubs[i].DeserializeHexStr(pubKeys[i]); err != nil {
+		if err = pubs[i].DeserializeHexStr(MiraclToHerumiPK(pubKeys[i])); err != nil {
 			return false, err
 		}
 	}

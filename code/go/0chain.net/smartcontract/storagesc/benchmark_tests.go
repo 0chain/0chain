@@ -611,8 +611,7 @@ func BenchmarkTests(
 						MessageCode:  "mock message code",
 						Timestamp:    creationTime,
 					}
-					hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
-						vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp))
+					hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.Result, vt.Timestamp))
 					_ = sigScheme.SetPublicKey(data.ValidatorPublicKeys[i])
 					sigScheme.SetPrivateKey(data.ValidatorPrivateKeys[i])
 					vt.Signature, _ = sigScheme.Sign(hash)

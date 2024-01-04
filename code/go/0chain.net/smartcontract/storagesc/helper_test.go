@@ -291,8 +291,7 @@ func (c *Client) validTicket(t testing.TB, challID, blobID string, ok bool,
 	vt.MessageCode = ""
 	vt.Timestamp = common.Timestamp(now)
 
-	var data = fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
-		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
+	var data = fmt.Sprintf("%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.Result, vt.Timestamp)
 	var (
 		hash = encryption.Hash(data)
 		err  error
