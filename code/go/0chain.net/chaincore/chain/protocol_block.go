@@ -36,7 +36,7 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 		doneC := make(chan struct{})
 		errC := make(chan error)
 		go func() {
-			if err := c.blsVerifyControl.Run(ctx, func() error {
+			if err := c.blsAggVerifyControl.Run(ctx, func() error {
 				for i, bvt := range bvts {
 					pl := c.GetMiners(round)
 					verifier := pl.GetNode(bvt.VerifierID)
