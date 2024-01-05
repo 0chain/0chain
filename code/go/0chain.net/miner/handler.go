@@ -79,6 +79,13 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprintf(w, "Available only in development mode")
 	}
+	for txnFunc, txnTimer := range chain.StartToFinalizeTxnTypeTimer {
+		fmt.Fprintf(w, "</td></tr>")
+		fmt.Fprintf(w, "<tr><td>")
+		fmt.Fprintf(w, "<h3>%v</h3>", txnFunc)
+		diagnostics.WriteTimerStatistics(w, c, txnTimer, 1000000.0)
+	}
+
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Finalization Lag Statistics</h3>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
