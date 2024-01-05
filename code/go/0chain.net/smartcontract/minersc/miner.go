@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/core/config"
 	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -64,10 +63,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
 		return "", common.NewErrorf("add_miner",
 			"failed to add new miner: Not in magic block")
-	}
-
-	if config.Development() && newMiner.Settings.DelegateWallet == "" {
-		newMiner.Settings.DelegateWallet = newMiner.ID
 	}
 
 	newMiner.LastHealthCheck = t.CreationDate

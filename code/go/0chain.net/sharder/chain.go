@@ -404,12 +404,12 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 	return nil, common.NewError("load_lfb", "no valid lfb found")
 }
 
-func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, lfbr *chain.LfbRound) (*blocksLoaded, error) {
-	r, err := sc.GetRoundFromStore(ctx, lfbr.Round)
+func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, hash string, round int64) (*blocksLoaded, error) {
+	r, err := sc.GetRoundFromStore(ctx, round)
 	if err != nil {
 		return nil, fmt.Errorf("load_lfb - could not load round from store: %v", err)
 	}
-	if r.BlockHash != lfbr.Hash {
+	if r.BlockHash != hash {
 		return nil, errors.New("load_lfb - block hash does not match")
 	}
 
@@ -497,6 +497,22 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
 // to corresponding fields of the sharder's Chain.
 func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
+	lfbHash, lfbRound, err := sc.GetLatestFinalizedBlockFromDB()
+	if err != nil {
+		logging.Logger.Panic("Error getting latest finalized block from db", zap.Error(err))
+		return err
+	}
+
+	if lfbRound == 0 {
+		// use genesis
+		logging.Logger.Debug("load_lfb - load from event db, use genesis block")
+		return nil
+	}
+
+	logging.Logger.Debug("load_lfb - load from event db",
+		zap.Int64("round", lfbRound),
+		zap.String("block", lfbHash))
+
 	var bl *blocksLoaded
 	lfbr, err := sc.LoadLFBRound()
 	switch err {
@@ -504,10 +520,16 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		logging.Logger.Debug("load_lfb - load from stateDB",
 			zap.Int64("round", lfbr.Round),
 			zap.String("block", lfbr.Hash))
-		if lfbr.Round == 0 {
-			return nil // use genesis
+
+		if lfbr.Round <= lfbRound {
+			// use LFB from state DB when:
+			// LFB from state DB is more old than LFB from event DB or
+			// They are in the same round
+			lfbRound = lfbr.Round
+			lfbHash = lfbr.Hash
 		}
-		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbr)
+
+		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
 		if err != nil {
 			return err
 		}

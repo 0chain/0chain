@@ -3,16 +3,11 @@ package common
 import (
 	"errors"
 
-	"0chain.net/core/config"
 	"0chain.net/core/encryption"
 )
 
 // ValidateDelegateWallet - Protects against using the provider's clientID (operational wallet ID) as DelegateWalletID. Checks that clientID and delegateWalletID are not the same
 func ValidateDelegateWallet(publicKey, delegateWalletID string) error {
-	if config.Development() {
-		return nil
-	}
-
 	operationalWalletID, err := encryption.GetClientIDFromPublicKey(publicKey)
 	if err != nil {
 		return errors.New("could not decode public key to compare to delegate wallet")

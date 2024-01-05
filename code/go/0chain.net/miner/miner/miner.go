@@ -346,9 +346,9 @@ func main() {
 	mc.SetStarted()
 	miner.SetupWorkers(ctx)
 
-	if config.Development() {
-		go TransactionGenerator(mc.Chain, workdir)
-	}
+	//if config.Development() {
+	//	go TransactionGenerator(mc.Chain, workdir)
+	//}
 
 	setupSCDoneC := make(chan struct{})
 	if mc.ChainConfig.IsFeeEnabled() {
