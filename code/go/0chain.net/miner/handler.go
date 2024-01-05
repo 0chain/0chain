@@ -19,17 +19,12 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/chain/get/stats", common.WithCORS(
 		common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)),
 	))
-	http.HandleFunc("/v1/txn/get/stats", common.WithCORS(
-		common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)),
-	))
 	http.HandleFunc("/_chain_stats", common.WithCORS(
 		common.UserRateLimit(ChainStatsWriter),
 	))
-	if config.Development() {
-		http.HandleFunc("/_txn_stats", common.WithCORS(
-			common.UserRateLimit(TxnStatsWriter),
-		))
-	}
+	http.HandleFunc("/_txn_stats", common.WithCORS(
+		common.UserRateLimit(TxnStatsWriter),
+	))
 }
 
 // swagger:route GET /v1/chain/get/stats chainstatus
@@ -84,13 +79,6 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprintf(w, "Available only in development mode")
 	}
-	for txnFunc, txnTimer := range chain.StartToFinalizeTxnTypeTimer {
-		fmt.Fprintf(w, "</td></tr>")
-		fmt.Fprintf(w, "<tr><td>")
-		fmt.Fprintf(w, "<h3>%v</h3>", txnFunc)
-		diagnostics.WriteTimerStatistics(w, c, txnTimer, 1000000.0)
-	}
-
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Finalization Lag Statistics</h3>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
@@ -206,7 +194,10 @@ func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Fprintf(w, "<h3>%v</h3>", txnFunc)
 		diagnostics.WriteTimerStatistics(w, c, txnTimer, 1000000.0)
-		fmt.Fprintf(w, "</td></tr>")
+
+		if count%3 == 0 {
+			fmt.Fprintf(w, "</td></tr>")
+		}
 
 		count++
 	}
