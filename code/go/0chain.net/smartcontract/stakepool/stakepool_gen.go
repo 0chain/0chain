@@ -610,9 +610,9 @@ func (z *StakePoolRequest) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StakePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 7
+	// map header, size 8
 	// string "ID"
-	o = append(o, 0x87, 0xa2, 0x49, 0x44)
+	o = append(o, 0x88, 0xa2, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ID)
 	// string "Balance"
 	o = append(o, 0xa7, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65)
@@ -650,6 +650,13 @@ func (z *StakePoolStat) MarshalMsg(b []byte) (o []byte, err error) {
 	o, err = z.Rewards.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Rewards")
+		return
+	}
+	// string "TotalRewards"
+	o = append(o, 0xac, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x52, 0x65, 0x77, 0x61, 0x72, 0x64, 0x73)
+	o, err = z.TotalRewards.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "TotalRewards")
 		return
 	}
 	// string "Settings"
@@ -729,6 +736,12 @@ func (z *StakePoolStat) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Rewards")
 				return
 			}
+		case "TotalRewards":
+			bts, err = z.TotalRewards.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "TotalRewards")
+				return
+			}
 		case "Settings":
 			bts, err = z.Settings.UnmarshalMsg(bts)
 			if err != nil {
@@ -753,7 +766,7 @@ func (z *StakePoolStat) Msgsize() (s int) {
 	for za0001 := range z.Delegate {
 		s += z.Delegate[za0001].Msgsize()
 	}
-	s += 8 + z.Penalty.Msgsize() + 8 + z.Rewards.Msgsize() + 9 + z.Settings.Msgsize()
+	s += 8 + z.Penalty.Msgsize() + 8 + z.Rewards.Msgsize() + 13 + z.TotalRewards.Msgsize() + 9 + z.Settings.Msgsize()
 	return
 }
 

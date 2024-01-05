@@ -76,13 +76,14 @@ type DelegatePool struct {
 
 // swagger:model stakePoolStat
 type StakePoolStat struct {
-	ID         string             `json:"pool_id"` // pool ID
-	Balance    currency.Coin      `json:"balance"` // total balance
-	StakeTotal currency.Coin      `json:"stake_total"`
-	Delegate   []DelegatePoolStat `json:"delegate"` // delegate pools
-	Penalty    currency.Coin      `json:"penalty"`  // total for all
-	Rewards    currency.Coin      `json:"rewards"`  // rewards
-	Settings   Settings           `json:"settings"` // Settings of the stake pool
+	ID           string             `json:"pool_id"` // pool ID
+	Balance      currency.Coin      `json:"balance"` // total balance
+	StakeTotal   currency.Coin      `json:"stake_total"`
+	Delegate     []DelegatePoolStat `json:"delegate"`      // delegate pools
+	Penalty      currency.Coin      `json:"penalty"`       // total for all
+	Rewards      currency.Coin      `json:"rewards"`       // rewards
+	TotalRewards currency.Coin      `json:"total_rewards"` // total rewards
+	Settings     Settings           `json:"settings"`      // Settings of the stake pool
 }
 
 type DelegatePoolStat struct {
@@ -115,12 +116,13 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 			MaxNumDelegates:    provider.NumDelegates,
 			ServiceChargeRatio: provider.ServiceCharge,
 		},
-		Rewards:  provider.Rewards.TotalRewards,
-		Delegate: make([]DelegatePoolStat, 0, len(delegatePools)),
+		Rewards:      provider.Rewards.Rewards,
+		TotalRewards: provider.Rewards.TotalRewards,
+		Delegate:     make([]DelegatePoolStat, 0, len(delegatePools)),
 	}
 
 	for _, dp := range delegatePools {
-		poolStatus := spenum.PoolStatus(dp.Status)
+		poolStatus := dp.Status
 		if poolStatus == spenum.Deleted {
 			continue
 		}
