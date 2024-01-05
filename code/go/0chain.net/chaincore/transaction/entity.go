@@ -72,6 +72,8 @@ type Transaction struct {
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
 	OutputHash        string `json:"txn_output_hash" msgpack:"oh"`
 	Status            int    `json:"transaction_status" msgpack:"sot"`
+
+	TxnExecutionStart common.Timestamp
 }
 
 type FeeStats struct {
@@ -456,6 +458,7 @@ func (t *Transaction) Clone() *Transaction {
 		TransactionOutput: t.TransactionOutput,
 		OutputHash:        t.OutputHash,
 		Status:            t.Status,
+		TxnExecutionStart: t.TxnExecutionStart,
 	}
 
 	if t.SmartContractData != nil {
