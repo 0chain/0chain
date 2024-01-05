@@ -540,7 +540,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
 
 			if _, ok := StartToFinalizeTxnTypeTimer[txn.FunctionName]; !ok {
-				StartToFinalizeTxnTypeTimer[txn.FunctionName] = metrics.GetOrRegisterTimer("txn_type_timer", nil)
+				StartToFinalizeTxnTypeTimer[txn.FunctionName] = metrics.GetOrRegisterTimer(txn.FunctionName, nil)
 			}
 			StartToFinalizeTxnTypeTimer[txn.FunctionName].Update(ts.Sub(common.ToTime(txn.CreationDate)))
 		}
