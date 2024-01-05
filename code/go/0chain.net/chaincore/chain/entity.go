@@ -528,7 +528,7 @@ func Provider() datastore.Entity {
 
 	c.vldTxnsMtx = &sync.Mutex{}
 	c.validatedTxnsCache = make(map[string]string)
-	c.blsVerifyControl = common.NewWithContextFunc(3) // debug change to 2, previous was 4.
+	c.blsVerifyControl = common.NewWithContextFunc(2) // debug change to 2, previous was 4.
 	c.notarizedBlockVerifyC = make(map[string]chan struct{})
 	c.nbvcMutex = &sync.Mutex{}
 	c.blockSyncC = make(map[string]chan chan *block.Block)

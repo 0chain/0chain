@@ -176,12 +176,12 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 		blsMsg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetNormalizedTimeoutCount(), prrs)
 	)
 
-	Logger.Info("BLS sign VRF share calculated for ",
-		zap.Int64("round", r.GetRoundNumber()),
-		zap.Int("round_timeout", r.GetTimeoutCount()),
-		zap.Int64("prev_rseed", pr.GetRandomSeed()),
-		zap.String("prev round vrf random seed", prrs),
-		zap.String("bls_msg", blsMsg))
+	// Logger.Info("BLS sign VRF share calculated for ",
+	// 	zap.Int64("round", r.GetRoundNumber()),
+	// 	zap.Int("round_timeout", r.GetTimeoutCount()),
+	// 	zap.Int64("prev_rseed", pr.GetRandomSeed()),
+	// 	zap.String("prev round vrf random seed", prrs),
+	// 	zap.String("bls_msg", blsMsg))
 
 	return blsMsg, nil
 }
@@ -340,12 +340,12 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 		return false
 	}
 
-	Logger.Info("verified vrf",
-		zap.Int64("round", vrfs.Round),
-		zap.String("node_id", vrfs.GetParty().GetKey()),
-		zap.String("share", share.GetHexString()),
-		zap.String("from", (&partyID).GetHexString()),
-		zap.String("message", blsMsg))
+	// Logger.Info("verified vrf",
+	// 	zap.Int64("round", vrfs.Round),
+	// 	zap.String("node_id", vrfs.GetParty().GetKey()),
+	// 	zap.String("share", share.GetHexString()),
+	// 	zap.String("from", (&partyID).GetHexString()),
+	// 	zap.String("message", blsMsg))
 	return true
 }
 

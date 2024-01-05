@@ -84,7 +84,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.notarizingBlocksTasks = make(map[string]chan struct{})
 	minerChain.notarizingBlocksResults = cache.NewLRUCache[string, bool](1000)
 	minerChain.nbmMutex = &sync.Mutex{}
-	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
+	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(1)
 	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
 	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
 	minerChain.generateBlockWorker = common.NewWithContextFunc(1)

@@ -293,11 +293,11 @@ func (mc *Chain) handleVerificationTicketMessage(ctx context.Context,
 		return
 	}
 
-	sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
-	logging.Logger.Debug("handle vt. msg - verify ticket successfully",
-		zap.Int64("round", bvt.Round),
-		zap.String("block", bvt.BlockID),
-		zap.Int("verifier", sender.SetIndex))
+	// sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
+	// logging.Logger.Debug("handle vt. msg - verify ticket successfully",
+	// 	zap.Int64("round", bvt.Round),
+	// 	zap.String("block", bvt.BlockID),
+	// 	zap.Int("verifier", sender.SetIndex))
 
 	b, err := mc.GetBlock(ctx, bvt.BlockID)
 	if err != nil {
