@@ -25,9 +25,11 @@ func SetupHandlers() {
 	http.HandleFunc("/_chain_stats", common.WithCORS(
 		common.UserRateLimit(ChainStatsWriter),
 	))
-	http.HandleFunc("/_txn_stats", common.WithCORS(
-		common.UserRateLimit(TxnStatsWriter),
-	))
+	if config.Development() {
+		http.HandleFunc("/_txn_stats", common.WithCORS(
+			common.UserRateLimit(TxnStatsWriter),
+		))
+	}
 }
 
 // swagger:route GET /v1/chain/get/stats chainstatus
