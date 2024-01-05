@@ -195,8 +195,8 @@ func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<h3>%v</h3>", txnFunc)
 		diagnostics.WriteTimerStatistics(w, c, txnTimer, 1000000.0)
 
-		if count%3 == 0 {
-			fmt.Fprintf(w, "</td></tr>")
+		if count%3 == 2 {
+			fmt.Fprintf(w, "</tr>")
 		}
 
 		count++
