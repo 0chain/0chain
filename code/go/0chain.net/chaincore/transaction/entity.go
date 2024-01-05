@@ -73,7 +73,7 @@ type Transaction struct {
 	OutputHash        string `json:"txn_output_hash" msgpack:"oh"`
 	Status            int    `json:"transaction_status" msgpack:"sot"`
 
-	TxnExecutionStart common.Timestamp
+	TxnExecutionStart common.Timestamp `json:"-" msgpack:"-"`
 }
 
 type FeeStats struct {
