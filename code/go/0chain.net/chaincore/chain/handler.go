@@ -769,7 +769,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
-	if config.Development() {
+	if config.Development() && selfNodeType == node.NodeTypeMiner {
 		fmt.Fprintf(w, "<li><a href='_txn_stats'>/_txn_stats</a></li>")
 	}
 
