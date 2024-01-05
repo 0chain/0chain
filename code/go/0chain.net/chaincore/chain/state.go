@@ -486,7 +486,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			}
 		}
 		txn.TransactionOutput = output
-		txn.TxnExecutionStart = common.Timestamp(t.Unix())
+		if _, ok := StartToFinalizeTxnTypeTimer[txn.FunctionName]; !ok {
+			StartToFinalizeTxnTypeTimer[txn.FunctionName] = metrics.GetOrRegisterTimer(txn.FunctionName, nil)
+		}
+		StartToFinalizeTxnTypeTimer[txn.FunctionName].Update(time.Since(t))
 		logging.Logger.Info("SC executed",
 			zap.String("client id", txn.ClientID),
 			zap.String("block", b.Hash),

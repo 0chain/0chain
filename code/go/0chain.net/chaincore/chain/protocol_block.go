@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rcrowley/go-metrics"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -538,11 +537,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		for _, txn := range fb.Txns {
 			ts := time.Now()
 			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
-
-			if _, ok := StartToFinalizeTxnTypeTimer[txn.FunctionName]; !ok {
-				StartToFinalizeTxnTypeTimer[txn.FunctionName] = metrics.GetOrRegisterTimer(txn.FunctionName, nil)
-			}
-			StartToFinalizeTxnTypeTimer[txn.FunctionName].Update(ts.Sub(common.ToTime(txn.TxnExecutionStart)))
 		}
 	}
 
