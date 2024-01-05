@@ -25,6 +25,26 @@ import (
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
 	return c.blsVerifyControl.Run(ctx, func() error {
+		if len(bvts) == 0 {
+			return nil
+		}
+
+		pl := c.GetMiners(round)
+		if len(bvts) == 1 {
+			// verify directly
+			bvt := bvts[0]
+			verifier := pl.GetNode(bvt.VerifierID)
+			if verifier == nil {
+				return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
+			}
+
+			if _, err := verifier.Verify(bvt.Signature, blockHash); err != nil {
+				return common.NewErrorf("verify_tickets", "verification failed: %v", err)
+			}
+
+			return nil
+		}
+
 		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
 			len(bvts), len(bvts))
 		if aggScheme == nil {
@@ -36,29 +56,26 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 		doneC := make(chan struct{})
 		errC := make(chan error)
 		go func() {
-			if err := c.blsAggVerifyControl.Run(ctx, func() error {
-				for i, bvt := range bvts {
-					pl := c.GetMiners(round)
-					verifier := pl.GetNode(bvt.VerifierID)
-					if verifier == nil {
-						return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
-					}
-
-					if verifier.SigScheme == nil {
-						return common.NewErrorf("verify_tickets", "node has no signature scheme")
-					}
-
-					if err := aggScheme.Aggregate(verifier.SigScheme, i, bvt.Signature, blockHash); err != nil {
-						return common.NewError("verify_tickets", err.Error())
-					}
+			for i, bvt := range bvts {
+				verifier := pl.GetNode(bvt.VerifierID)
+				if verifier == nil {
+					errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
+					return
 				}
 
-				if _, err := aggScheme.Verify(); err != nil {
-					return common.NewErrorf("verify_tickets", "failed to verify aggregate signatures: %v", err)
+				if verifier.SigScheme == nil {
+					errC <- common.NewErrorf("verify_tickets", "node has no signature scheme")
+					return
 				}
-				return nil
-			}); err != nil {
-				errC <- err
+
+				if err := aggScheme.Aggregate(verifier.SigScheme, i, bvt.Signature, blockHash); err != nil {
+					errC <- common.NewError("verify_tickets", err.Error())
+					return
+				}
+			}
+
+			if _, err := aggScheme.Verify(); err != nil {
+				errC <- common.NewErrorf("verify_tickets", "failed to verify aggregate signatures: %v", err)
 				return
 			}
 

@@ -201,10 +201,9 @@ type Chain struct {
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
 
-	vldTxnsMtx          *sync.Mutex
-	validatedTxnsCache  map[string]string // validated transactions, key as hash, value as signature
-	blsVerifyControl    *common.WithContextFunc
-	blsAggVerifyControl *common.WithContextFunc
+	vldTxnsMtx         *sync.Mutex
+	validatedTxnsCache map[string]string // validated transactions, key as hash, value as signature
+	blsVerifyControl   *common.WithContextFunc
 
 	notarizedBlockVerifyC map[string]chan struct{}
 	nbvcMutex             *sync.Mutex
@@ -529,8 +528,7 @@ func Provider() datastore.Entity {
 
 	c.vldTxnsMtx = &sync.Mutex{}
 	c.validatedTxnsCache = make(map[string]string)
-	c.blsVerifyControl = common.NewWithContextFunc(2) // debug change to 2, previous was 4.
-	c.blsAggVerifyControl = common.NewWithContextFunc(2)
+	c.blsVerifyControl = common.NewWithContextFunc(3) // debug change to 2, previous was 4.
 	c.notarizedBlockVerifyC = make(map[string]chan struct{})
 	c.nbvcMutex = &sync.Mutex{}
 	c.blockSyncC = make(map[string]chan chan *block.Block)
