@@ -643,8 +643,7 @@ CREATE TABLE miner_aggregates (
     fees bigint,
     total_stake bigint,
     total_rewards bigint,
-    service_charge numeric,
-    blocks_finalised bigint
+    service_charge numeric
 )
 PARTITION BY RANGE (round);
 
@@ -682,7 +681,6 @@ CREATE TABLE miner_snapshots (
     total_stake bigint,
     total_rewards bigint,
     service_charge numeric,
-    blocks_finalised bigint,
     creation_round bigint,
     is_killed boolean DEFAULT false NOT NULL,
     is_shutdown boolean DEFAULT false NOT NULL
@@ -717,7 +715,6 @@ CREATE TABLE miners (
     delete boolean,
     fees bigint,
     active boolean,
-    blocks_finalised bigint,
     creation_round bigint,
     is_killed boolean,
     is_shutdown boolean
