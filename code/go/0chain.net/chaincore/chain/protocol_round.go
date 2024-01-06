@@ -38,6 +38,7 @@ var StartToFinalizeTimer metrics.Timer
 
 // StartToFinalizeTxnTimer - a metric that trakcs the time a txn is created to finalized
 var StartToFinalizeTxnTimer metrics.Timer
+var StartToFinalizeTxnTypeTimer map[string]metrics.Timer
 
 // FinalizationLagMetric - a metric that tracks how much is the lag between current round and finalization round
 var FinalizationLagMetric metrics.Histogram
@@ -46,6 +47,7 @@ func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
+	StartToFinalizeTxnTypeTimer = make(map[string]metrics.Timer)
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
 	_ = metrics.Register("finalization_lag", FinalizationLagMetric)
 }
