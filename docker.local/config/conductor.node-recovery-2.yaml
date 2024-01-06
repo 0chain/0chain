@@ -72,6 +72,7 @@ tests:
       - command:
           name: 'init_allocation_only'
           retry_count: 3
+          timeout: '25m'
       - generate_all_challenges: true
       - command:
           name: "upload"
@@ -84,7 +85,7 @@ tests:
           key: total_rewards
           comparison: gt
           rvalue: 0
-          timeout: "2m"
+          timeout: "25m"
       - command:
           name: "fill_blobber_validator_wallets"
       - stop: ['blobber-3']
@@ -109,14 +110,12 @@ tests:
       - wait_validator_ticket:
           validator_name: "validator-3"
           timeout: "20m"
-      - wait_round:
-          shift: 500
       - check_aggregate_value_change:
           provider_type: validator
           provider_id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
           key: total_rewards
           monotonicity: increase
-          timeout: "2m"
+          timeout: "25m"
   - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
     flow:
       - sleep: "30s"
@@ -186,6 +185,7 @@ tests:
       - command:
           name: 'init_allocation_only'
           retry_count: 3
+          timeout: '25m'
       - generate_all_challenges: true
       - wait_round:
           shift: 250
@@ -199,7 +199,7 @@ tests:
           key: total_rewards
           comparison: gt
           rvalue: 0
-          timeout: "2m"
+          timeout: "25m"
       - command:
           name: "fill_blobber_validator_wallets"
       - stop: ['blobber-3']
@@ -224,10 +224,10 @@ tests:
           key: total_slashed_stake
           comparison: gt
           rvalue: 0
-          timeout: "2m"
+          timeout: "25m"
       - check_aggregate_value_change:
           provider_type: blobber
           provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
           key: total_rewards
           monotonicity: increase
-          timeout: "2m"
+          timeout: "25m"

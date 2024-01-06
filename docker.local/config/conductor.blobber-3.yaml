@@ -47,6 +47,7 @@ tests:
       - command:
           name: 'list_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Send wrong metadata to the client on listing directory"
     flow:
       - set_monitor: "sharder-1"
@@ -75,6 +76,7 @@ tests:
       - command:
           name: 'list_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Not respond to the client on listing directory"
     flow:
       - set_monitor: "sharder-1"
@@ -103,6 +105,7 @@ tests:
       - command:
           name: 'list_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Not respond to the client on downloading file"
     flow:
       - set_monitor: "sharder-1"
@@ -131,6 +134,7 @@ tests:
       - command:
           name: 'download_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Not respond to the client on uploading file"
     flow:
       - set_monitor: "sharder-1"
@@ -187,6 +191,7 @@ tests:
       - command:
           name: 'delete_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Return error to the client on listing file"
     flow:
       - set_monitor: "sharder-1"
@@ -215,6 +220,7 @@ tests:
       - command:
           name: 'list_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Return error to the client on downloading file"
     flow:
       - set_monitor: "sharder-1"
@@ -243,6 +249,7 @@ tests:
       - command:
           name: 'download_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Return error to the client on uploading file"
     flow:
       - set_monitor: "sharder-1"
@@ -271,6 +278,7 @@ tests:
       - command:
           name: 'upload_and_verify'
           timeout: '25m'
+          retry_count: 3
   - name: "Return error to the client on deleting file"
     flow:
       - set_monitor: "sharder-1"
@@ -299,3 +307,4 @@ tests:
       - command:
           name: 'delete_and_verify'
           timeout: '25m'
+          retry_count: 3

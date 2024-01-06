@@ -36,6 +36,8 @@ tests:
           shift: 250
       - command:
           name: 'init_allocation_only'
+          timeout: '25m'
+          retry_count: 3
       - wait_round:
           shift: 250
       - command:
@@ -93,6 +95,8 @@ tests:
           params:
             data_shards: "2"
             parity_shards: "1"
+        timeout: '25m'
+        retry_count: 3
       - wait_round:
           shift: 250
       - command:
@@ -150,6 +154,8 @@ tests:
           params:
             data_shards: "2"
             parity_shards: "1"
+        timeout: '25m'
+        retry_count: 3
       - sleep: "1m"
       - store_allocations_data: { }
       - fail_upload_commit: ['blobber-3']

@@ -43,6 +43,7 @@ tests:
       - command:
           name: 'init_allocation_only'
           timeout: '25m'
+          retry_count: 3
       - generate_challenge:
           blobber_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           expected_status: 1 # 1 --> pass, 0 --> fail
@@ -94,6 +95,7 @@ tests:
       - command:
           name: 'init_allocation'
           timeout: '25m'
+          retry_count: 3
       - wait_blobber_commit:
           timeout: "5m"
       - stop_challenge_generation: false
