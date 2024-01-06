@@ -739,6 +739,8 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
+	logging.Logger.Debug("blobberReward", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	start = time.Now()
 	// save allocation object
 	if err := cab.alloc.save(balances, sc.ID); err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
@@ -754,7 +756,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "challenge passed partially by blobber", nil
 	}
 
-	logging.Logger.Debug("end", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
+	logging.Logger.Debug("save alloc", zap.String("tx_hash", t.Hash), zap.Duration("time", time.Since(start)))
 
 	return "challenge passed by blobber", nil
 }

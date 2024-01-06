@@ -25,6 +25,7 @@ RUN cp -r /gozstd ./vendor/github.com/valyala/gozstd
 
 WORKDIR $SRC_DIR/miner/miner
 
+RUN go install github.com/google/gops@latest
 
 # Build it:
 ARG GIT_COMMIT
