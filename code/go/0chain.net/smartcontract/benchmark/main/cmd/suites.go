@@ -389,9 +389,6 @@ func runEventDatabaseSuite(
 		log.Fatal("creating parent postgres db:", err)
 	}
 
-	// Add edb partitions
-	edb.AddPartitions(0)
-
 	for _, bm := range suite.Benchmarks {
 		//wg.Add(1)
 		//go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
