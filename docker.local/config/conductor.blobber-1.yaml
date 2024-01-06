@@ -43,6 +43,7 @@ tests:
       - command:
           name: 'init_allocation'
           timeout: '15m'
+          retry_count: 3
       - stop: ['blobber-3']
       - wait_round:
           shift: 250

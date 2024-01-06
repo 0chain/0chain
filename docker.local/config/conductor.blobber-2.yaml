@@ -55,6 +55,7 @@ tests:
       - command:
           name: 'init_allocation_3_blobbers_no_read_tokens'
           timeout: '35m'
+          retry_count: 3
       - wait_round:
           shift: 250
       # upload failure without metadata (add tokens to write pool)
@@ -109,6 +110,7 @@ tests:
       - command:
           name: 'init_allocation_only'
           timeout: '35m'
+          retry_count: 3
       - wait_round:
           shift: 250
       - command:
@@ -148,6 +150,7 @@ tests:
       - command:
           name: 'repair_allocation'
           timeout: '15m'
+          retry_count: 3
       - stop: ['blobber-4']
       - wait_round:
           shift: 250

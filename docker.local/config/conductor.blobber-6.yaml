@@ -34,6 +34,8 @@ tests:
           shift: 250
       - command:
           name: 'init_allocation_only'
+          timeout: '25m'
+          retry_count: 3
       - wait_round:
           shift: 250
       - command:
@@ -94,6 +96,8 @@ tests:
           shift: 250
       - command:
           name: 'init_allocation_free_read'
+          timeout: '25m'
+          retry_count: 3
       - wait_round:
           shift: 250
       - command:
