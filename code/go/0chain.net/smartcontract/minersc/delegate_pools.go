@@ -5,7 +5,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
@@ -25,7 +24,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
 	}
 
-	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	activationErr := cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	if activationErr != nil {
 		return "", activationErr
@@ -80,7 +79,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 		resp, err = stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter, msc.refreshProvider)
 	}
 
-	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	activationErr := cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	if activationErr != nil {
 		return "", activationErr

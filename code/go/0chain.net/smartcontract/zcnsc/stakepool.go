@@ -6,7 +6,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
@@ -126,7 +125,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 		err = validateStakePoolSettings(settings, gn)
 	}
 
-	activationErr := common2.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
+	activationErr := cstate.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
 	if activationErr != nil {
 		return nil, activationErr
 	}

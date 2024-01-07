@@ -1,7 +1,6 @@
 package stakepool
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -844,7 +843,7 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 		}
 	}
 
-	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	activationErr := cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	if activationErr != nil {
 		return "", activationErr

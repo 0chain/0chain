@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	common2 "0chain.net/smartcontract/common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -52,7 +51,7 @@ func validateStakePoolSettings(
 
 	}
 
-	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	activationErr := chainstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	if activationErr != nil {
 		return activationErr
@@ -438,7 +437,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		resp, err = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
 	}
 
-	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	activationErr := chainstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	if activationErr != nil {
 		return "", activationErr
