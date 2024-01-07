@@ -3,7 +3,6 @@ package event
 import (
 	"time"
 
-	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
 	"github.com/lib/pq"
 	"go.uber.org/zap"
@@ -12,7 +11,6 @@ import (
 type UserAggregate struct {
 	UserID          string `json:"user_id" gorm:"uniqueIndex"`
 	Round           int64  `json:"round"`
-	ClaimableReward int64  `json:"claimable_reward"`
 	CollectedReward int64  `json:"collected_reward"`
 	TotalStake      int64  `json:"total_stake"`
 	ReadPoolTotal   int64  `json:"read_pool_total"`
@@ -164,51 +162,6 @@ var handlers = map[EventTag]func(e Event) (updatedAggrs []UserAggregate){
 		}
 		return
 	},
-	TagStakePoolReward: func(event Event) (updatedAggrs []UserAggregate) {
-		spus, ok := fromEvent[[]dbs.StakePoolReward](event.Data)
-		if !ok {
-			logging.Logger.Error("user aggregate",
-				zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
-			return
-		}
-
-		if len(*spus) == 0 {
-			return nil
-		}
-
-		rewards, err := aggregateProviderRewards(*spus)
-		if err != nil {
-			return nil
-		}
-
-		logging.Logger.Debug("reward provider for user_aggregates", zap.Any("rewards", rewards))
-
-		userRewards := make(map[string]int64)
-
-		if len(rewards.delegatePools) > 0 {
-			for _, pools := range rewards.delegatePools {
-				for userId, r := range pools {
-					if _, ok := userRewards[userId]; !ok {
-						userRewards[userId] = 0
-					}
-
-					userRewards[userId] += int64(r)
-				}
-			}
-		}
-
-		logging.Logger.Debug("reward provider for user_aggregates (aggregated)", zap.Any("userRewards", userRewards))
-
-		for userId, reward := range userRewards {
-			updatedAggrs = append(updatedAggrs, UserAggregate{
-				Round:           event.BlockNumber,
-				UserID:          userId,
-				ClaimableReward: reward,
-			})
-		}
-		
-		return
-	},
 }
 
 func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[string]*UserAggregate, error) {
@@ -225,10 +178,10 @@ func (edb *EventDb) GetLatestUserAggregates(ids map[string]interface{}) (map[str
 		return mappedAggrs, nil
 	}
 	result := edb.Store.Get().
-		Raw(`SELECT user_id, max(round), claimable_reward, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
+		Raw(`SELECT user_id, max(round), collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total 
 	FROM user_aggregates 
 	WHERE user_id IN (SELECT unnest(?::text[]))
-	GROUP BY user_id, claimable_reward, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, pq.Array(idlist)).
+	GROUP BY user_id, collected_reward, payed_fees, total_stake, read_pool_total, write_pool_total`, pq.Array(idlist)).
 		Scan(&ua)
 	if result.Error != nil {
 		logging.Logger.Error("can't select aggregates", zap.Error(result.Error))
@@ -283,7 +236,6 @@ func (edb *EventDb) updateUserAggregates(e *BlockEvents) error {
 			snapsMap[aggr.UserID] = &UserSnapshot{
 				UserID:          curAggr.UserID,
 				Round:           curAggr.Round,
-				ClaimableReward: curAggr.ClaimableReward,
 				CollectedReward: curAggr.CollectedReward,
 				PayedFees:       curAggr.PayedFees,
 				TotalStake:      curAggr.TotalStake,
@@ -300,7 +252,6 @@ func (edb *EventDb) updateUserAggregates(e *BlockEvents) error {
 		newAggregates[snap.UserID] = &UserAggregate{
 			Round:           snap.Round,
 			UserID:          snap.UserID,
-			ClaimableReward: snap.ClaimableReward,
 			CollectedReward: snap.CollectedReward,
 			PayedFees:       snap.PayedFees,
 			TotalStake:      snap.TotalStake,
@@ -334,7 +285,6 @@ func (edb *EventDb) updateUserAggregates(e *BlockEvents) error {
 
 func merge(a *UserSnapshot, u *UserAggregate) {
 	a.Round = u.Round
-	a.ClaimableReward += u.ClaimableReward
 	a.CollectedReward += u.CollectedReward
 	a.PayedFees += u.PayedFees
 	a.WritePoolTotal += u.WritePoolTotal
