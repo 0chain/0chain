@@ -1,7 +1,6 @@
-package state
+package common
 
 import (
-	"0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
 	"testing"
@@ -32,8 +31,8 @@ func TestGetItemsByIDs(t *testing.T) {
 
 	type args struct {
 		ids      []string
-		getItem  common.GetItemFunc[*testItem]
-		balances common.CommonStateContextI
+		getItem  GetItemFunc[*testItem]
+		balances CommonStateContextI
 	}
 	tests := []struct {
 		name string
@@ -45,7 +44,7 @@ func TestGetItemsByIDs(t *testing.T) {
 			name: "get one item",
 			args: args{
 				ids: []string{"t1"},
-				getItem: func(id string, _ common.CommonStateContextI) (*testItem, error) {
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
 					return items["t1"], nil
 				},
 			},
@@ -60,7 +59,7 @@ func TestGetItemsByIDs(t *testing.T) {
 			name: "get 5 item",
 			args: args{
 				ids: []string{"t1", "t2", "t3", "t4", "t5"},
-				getItem: func(id string, _ common.CommonStateContextI) (*testItem, error) {
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
 					return items[id], nil
 				},
 			},
@@ -91,7 +90,7 @@ func TestGetItemsByIDs(t *testing.T) {
 			name: "get node not found error",
 			args: args{
 				ids: []string{"t1", "t2", "t3", "t4", "t5"},
-				getItem: func(id string, _ common.CommonStateContextI) (*testItem, error) {
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
 					if id == "t2" {
 						return nil, util.ErrNodeNotFound
 					}
@@ -104,7 +103,7 @@ func TestGetItemsByIDs(t *testing.T) {
 			name: "get node not found and value not present errors",
 			args: args{
 				ids: []string{"t1", "t2", "t3", "t4", "t5"},
-				getItem: func(id string, _ common.CommonStateContextI) (*testItem, error) {
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
 					if id == "t2" {
 						return nil, util.ErrNodeNotFound
 					}
@@ -122,7 +121,7 @@ func TestGetItemsByIDs(t *testing.T) {
 			name: "get value not present error",
 			args: args{
 				ids: []string{"t1", "t2", "t3", "t4", "t5"},
-				getItem: func(id string, _ common.CommonStateContextI) (*testItem, error) {
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
 					if id == "t1" {
 						return nil, util.ErrValueNotPresent
 					}
@@ -136,7 +135,7 @@ func TestGetItemsByIDs(t *testing.T) {
 			name: "get multiple value not present errors",
 			args: args{
 				ids: []string{"t1", "t2", "t3", "t4", "t5"},
-				getItem: func(id string, _ common.CommonStateContextI) (*testItem, error) {
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
 					if id == "t1" {
 						return nil, util.ErrValueNotPresent
 					}
@@ -154,7 +153,7 @@ func TestGetItemsByIDs(t *testing.T) {
 			name: "return nil item without ErrValueNotPresent",
 			args: args{
 				ids: []string{"t1"},
-				getItem: func(id string, _ common.CommonStateContextI) (*testItem, error) {
+				getItem: func(id string, _ CommonStateContextI) (*testItem, error) {
 					return nil, nil
 				},
 			},
@@ -164,7 +163,7 @@ func TestGetItemsByIDs(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := common.GetItemsByIDs(tc.args.ids, tc.args.getItem, tc.args.balances)
+			got, err := GetItemsByIDs(tc.args.ids, tc.args.getItem, tc.args.balances)
 			require.Equal(t, tc.err, err)
 			if err != nil {
 				return
