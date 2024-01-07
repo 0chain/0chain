@@ -5,6 +5,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
@@ -14,8 +15,23 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	return stakepool.StakePoolLock(t, input, balances,
-		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
+	beforeFunc := func() {
+		resp, err = stakepool.StakePoolLock(t, input, balances,
+			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter)
+	}
+
+	afterFunc := func() {
+		resp, err = stakepool.StakePoolLock(t, input, balances,
+			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
+	}
+
+	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+
+	if activationErr != nil {
+		return "", activationErr
+	}
+
+	return resp, err
 }
 
 // getStakePool of given blobber
@@ -56,7 +72,21 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	return stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter, msc.refreshProvider)
+	beforeFunc := func() {
+		resp, err = stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter)
+	}
+
+	afterFunc := func() {
+		resp, err = stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter, msc.refreshProvider)
+	}
+
+	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+
+	if activationErr != nil {
+		return "", activationErr
+	}
+
+	return resp, err
 }
 
 // getStakePool of given blobber

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 func validateStakePoolSettings(
 	sps stakepool.Settings,
 	conf *Config,
+	balances chainstate.StateContextI,
 ) error {
 	if sps.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
@@ -37,12 +39,26 @@ func validateStakePoolSettings(
 		return errors.New("num_delegates <= 0")
 	}
 
-	if sps.MaxNumDelegates > conf.MaxDelegates {
-		return fmt.Errorf("num_delegates (%d) is greater than"+
-			" max allowed by SC (%d)", sps.MaxNumDelegates, conf.MaxDelegates)
+	var err error
+
+	beforeFunc := func() {
 	}
 
-	return nil
+	afterFunc := func() {
+		if sps.MaxNumDelegates > conf.MaxDelegates {
+			err = fmt.Errorf("num_delegates (%d) is greater than"+
+				" max allowed by SC (%d)", sps.MaxNumDelegates, conf.MaxDelegates)
+		}
+
+	}
+
+	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+
+	if activationErr != nil {
+		return activationErr
+	}
+
+	return err
 }
 
 // stake pool of a blobber
@@ -314,7 +330,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	settings stakepool.Settings,
 	balances chainstate.StateContextI,
 ) (*stakePool, error) {
-	if err := validateStakePoolSettings(settings, conf); err != nil {
+	if err := validateStakePoolSettings(settings, conf, balances); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
 
@@ -338,8 +354,9 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 func (ssc *StorageSmartContract) createStakePool(
 	conf *Config,
 	settings stakepool.Settings,
+	balances chainstate.StateContextI,
 ) (*stakePool, error) {
-	if err := validateStakePoolSettings(settings, conf); err != nil {
+	if err := validateStakePoolSettings(settings, conf, balances); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
 
@@ -412,5 +429,20 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	return stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
+
+	beforeFunc := func() {
+		resp, err = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter)
+	}
+
+	afterFunc := func() {
+		resp, err = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
+	}
+
+	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+
+	if activationErr != nil {
+		return "", activationErr
+	}
+
+	return resp, err
 }

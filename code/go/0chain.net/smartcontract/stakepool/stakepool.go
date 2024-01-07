@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -763,7 +764,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
-	if s, err2 := validateLockRequest(t, sp, vs); err2 != nil {
+	if s, err2 := validateLockRequest(t, sp, vs, balances); err2 != nil {
 		return s, err2
 	}
 
@@ -803,7 +804,7 @@ type ValidationSettings struct {
 	MaxNumDelegates int
 }
 
-func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs ValidationSettings) (string, error) {
+func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs ValidationSettings, balances cstate.StateContextI) (string, error) {
 	if t.Value == 0 {
 		return "", common.NewError("stake_pool_lock_failed",
 			fmt.Sprintf("no stake to lock: %v", t.Value))
@@ -827,13 +828,29 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 			fmt.Sprintf("too large stake to lock: %v > %v", poolStakeAfter, vs.MaxStake))
 	}
 
-	if len(sp.GetPools()) > sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"max_delegates reached: %v, no more stake pools allowed",
-			vs.MaxNumDelegates)
+	beforeFunc := func() {
+		if len(sp.GetPools()) >= vs.MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+			err = common.NewErrorf("stake_pool_lock_failed",
+				"max_delegates reached: %v, no more stake pools allowed",
+				vs.MaxNumDelegates)
+		}
 	}
 
-	return "", nil
+	afterFunc := func() {
+		if len(sp.GetPools()) > sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+			err = common.NewErrorf("stake_pool_lock_failed",
+				"max_delegates reached: %v, no more stake pools allowed",
+				vs.MaxNumDelegates)
+		}
+	}
+
+	activationErr := common2.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+
+	if activationErr != nil {
+		return "", activationErr
+	}
+
+	return "", err
 }
 
 // StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool

@@ -6,6 +6,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"errors"
@@ -109,14 +110,25 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
-	gn, err := GetGlobalNode(ctx)
-	if err != nil {
-		return nil, common.NewErrorf("get-or-update-stake-pool-failed",
-			"failed to get global node error: %v", err)
+
+	var err error
+
+	beforeFunc := func() {
+		err = validateStakePoolSettings(settings)
 	}
 
-	if err := validateStakePoolSettings(settings, gn); err != nil {
-		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
+	afterFunc := func() {
+		gn, err = GetGlobalNode(ctx)
+		if err != nil {
+			return
+		}
+
+		err = validateStakePoolSettings(settings, gn)
+	}
+
+	activationErr := common2.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
+	if activationErr != nil {
+		return nil, activationErr
 	}
 
 	changed := false
@@ -155,7 +167,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
-func validateStakePoolSettings(poolSettings stakepool.Settings, gn *GlobalNode) error {
+func validateStakePoolSettings(poolSettings stakepool.Settings, gn ...*GlobalNode) error {
 	if poolSettings.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
 	}
@@ -163,7 +175,7 @@ func validateStakePoolSettings(poolSettings stakepool.Settings, gn *GlobalNode) 
 		return errors.New("num_delegates <= 0")
 	}
 
-	if poolSettings.MaxNumDelegates > gn.MaxDelegates {
+	if len(gn) > 0 && poolSettings.MaxNumDelegates > gn[0].MaxDelegates {
 		return errors.New("num_delegates > max_delegates")
 	}
 
