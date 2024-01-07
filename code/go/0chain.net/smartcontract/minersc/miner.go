@@ -8,7 +8,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -19,7 +18,7 @@ import (
 )
 
 func doesMinerExist(pkey datastore.Key,
-	balances cstate.CommonStateContextI) (bool, error) {
+	balances commonsc.CommonStateContextI) (bool, error) {
 
 	mn := NewMinerNode()
 	err := balances.GetTrieNode(pkey, mn)
@@ -35,7 +34,7 @@ func doesMinerExist(pkey datastore.Key,
 
 // AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances commonsc.StateContextI) (
 	resp string, err error) {
 
 	var newMiner = NewMinerNode()
@@ -134,7 +133,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	_ *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) (string, error) {
 	var err error
 	var deleteMiner = NewMinerNode()
@@ -169,7 +168,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 func (msc *MinerSmartContract) deleteNode(
 	gn *GlobalNode,
 	deleteNode *MinerNode,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) (*MinerNode, error) {
 	var err error
 	deleteNode.Delete = true
@@ -217,7 +216,7 @@ func (msc *MinerSmartContract) deleteNode(
 	return deleteNode, nil
 }
 
-func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {
+func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances commonsc.StateContextI) (err error) {
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
 		return
@@ -248,7 +247,7 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 }
 
 func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances commonsc.StateContextI) (
 	resp string, err error) {
 
 	requiredUpdateInMinerNode := dto.NewMinerDtoNode()
@@ -308,7 +307,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 
 // ------------- local functions ---------------------
 
-func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI) (
+func (msc *MinerSmartContract) getMinersList(balances commonsc.QueryStateContextI) (
 	all *MinerNodes, err error) {
 
 	lockAllMiners.Lock()
@@ -316,7 +315,7 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI)
 	return getMinersList(balances)
 }
 
-func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, error) {
+func getMinerNode(id string, state commonsc.CommonStateContextI) (*MinerNode, error) {
 	mn := NewMinerNode()
 	mn.ID = id
 	err := state.GetTrieNode(mn.GetKey(), mn)

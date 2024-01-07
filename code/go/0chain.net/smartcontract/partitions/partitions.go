@@ -1,6 +1,7 @@
 package partitions
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -14,8 +15,6 @@ import (
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
-
-	"0chain.net/chaincore/chain/state"
 )
 
 const (
@@ -45,7 +44,7 @@ type PartitionItem interface {
 // CreateIfNotExists creates a partition if not exist
 // It's a common patten to call this to create partitions on
 // top-level partitions when project start
-func CreateIfNotExists(state state.StateContextI, name string, partitionSize int) (*Partitions, error) {
+func CreateIfNotExists(state common2.StateContextI, name string, partitionSize int) (*Partitions, error) {
 	p := Partitions{}
 	err := state.GetTrieNode(name, &p)
 	switch err {
@@ -68,7 +67,7 @@ func CreateIfNotExists(state state.StateContextI, name string, partitionSize int
 }
 
 // GetPartitions returns partitions of given name
-func GetPartitions(state state.StateContextI, name string) (*Partitions, error) {
+func GetPartitions(state common2.StateContextI, name string) (*Partitions, error) {
 	p := Partitions{}
 	if err := state.GetTrieNode(name, &p); err != nil {
 		return nil, err
@@ -116,7 +115,7 @@ func (p *Partitions) partitionKey(index int) datastore.Key {
 	return partitionKey(p.Name, index)
 }
 
-func (p *Partitions) Add(state state.StateContextI, item PartitionItem) error {
+func (p *Partitions) Add(state common2.StateContextI, item PartitionItem) error {
 	// duplicate item checking
 	_, ok, err := p.getItemPartIndex(state, item.GetID())
 	if err != nil {
@@ -134,7 +133,7 @@ func (p *Partitions) Add(state state.StateContextI, item PartitionItem) error {
 	return nil
 }
 
-func (p *Partitions) add(state state.StateContextI, item PartitionItem) error {
+func (p *Partitions) add(state common2.StateContextI, item PartitionItem) error {
 	_, _, ok := p.Last.find(item.GetID())
 	if ok {
 		return common.NewError(errItemExistCode, item.GetID())
@@ -154,7 +153,7 @@ func (p *Partitions) add(state state.StateContextI, item PartitionItem) error {
 	return nil
 }
 
-func (p *Partitions) pack(state state.StateContextI) error {
+func (p *Partitions) pack(state common2.StateContextI) error {
 	// separate the Last partition from the partitions and create a new empty partition
 	if err := p.Last.save(state); err != nil {
 		return err
@@ -178,7 +177,7 @@ func (p *Partitions) pack(state state.StateContextI) error {
 	return nil
 }
 
-func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) error {
+func (p *Partitions) Get(state common2.StateContextI, id string, v PartitionItem) error {
 	it, _, ok := p.Last.find(id)
 	if ok {
 		_, err := v.UnmarshalMsg(it.Data)
@@ -202,7 +201,7 @@ func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) 
 	return nil
 }
 
-func (p *Partitions) get(state state.StateContextI, partIndex int, id string, v PartitionItem) error {
+func (p *Partitions) get(state common2.StateContextI, partIndex int, id string, v PartitionItem) error {
 	pt, err := p.getPartition(state, partIndex)
 	if err != nil {
 		return err
@@ -217,7 +216,7 @@ func (p *Partitions) get(state state.StateContextI, partIndex int, id string, v 
 	return err
 }
 
-func (p *Partitions) UpdateItem(state state.StateContextI, it PartitionItem) error {
+func (p *Partitions) UpdateItem(state common2.StateContextI, it PartitionItem) error {
 	_, _, ok := p.Last.find(it.GetID())
 	if ok {
 		return p.Last.update(it)
@@ -241,7 +240,7 @@ func (p *Partitions) UpdateItem(state state.StateContextI, it PartitionItem) err
 }
 
 func (p *Partitions) updateItem(
-	state state.StateContextI,
+	state common2.StateContextI,
 	partIndex int,
 	it PartitionItem,
 ) error {
@@ -253,7 +252,7 @@ func (p *Partitions) updateItem(
 	return part.update(it)
 }
 
-func (p *Partitions) Update(state state.StateContextI, key string, f func(data []byte) ([]byte, error)) error {
+func (p *Partitions) Update(state common2.StateContextI, key string, f func(data []byte) ([]byte, error)) error {
 	v, idx, ok := p.Last.find(key)
 	if ok {
 		nData, err := f(v.Data)
@@ -297,7 +296,7 @@ func (p *Partitions) Update(state state.StateContextI, key string, f func(data [
 	return nil
 }
 
-func (p *Partitions) Remove(state state.StateContextI, id string) error {
+func (p *Partitions) Remove(state common2.StateContextI, id string) error {
 	_, idx, ok := p.Last.find(id)
 	if ok {
 		return p.removeFromLast(state, idx)
@@ -320,7 +319,7 @@ func (p *Partitions) Remove(state state.StateContextI, id string) error {
 	return p.removeItemLoc(state, id)
 }
 
-func (p *Partitions) removeFromLast(state state.StateContextI, idx int) error {
+func (p *Partitions) removeFromLast(state common2.StateContextI, idx int) error {
 	p.Last.Items[idx] = p.Last.Items[len(p.Last.Items)-1]
 	p.Last.Items = p.Last.Items[:len(p.Last.Items)-1]
 	if p.Last.length() > 0 {
@@ -331,7 +330,7 @@ func (p *Partitions) removeFromLast(state state.StateContextI, idx int) error {
 	return p.loadLastFromPrev(state)
 }
 
-func (p *Partitions) loadLastFromPrev(state state.StateContextI) error {
+func (p *Partitions) loadLastFromPrev(state common2.StateContextI) error {
 	// load previous partition
 	if p.Last.Loc == 0 {
 		// no previous partition
@@ -371,7 +370,7 @@ func (p *Partitions) loadLastFromPrev(state state.StateContextI) error {
 }
 
 func (p *Partitions) removeItem(
-	state state.StateContextI,
+	state common2.StateContextI,
 	id string,
 	index int,
 ) error {
@@ -414,7 +413,7 @@ func (p *Partitions) removeItem(
 	return p.loadLastFromPrev(state)
 }
 
-func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}) error {
+func (p *Partitions) GetRandomItems(state common2.StateContextI, r *rand.Rand, vs interface{}) error {
 	if p.Last.length() == 0 {
 		return errors.New("empty list, no items to return")
 	}
@@ -436,7 +435,7 @@ func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs 
 	return setPartitionItems(its, vs)
 }
 
-func (p *Partitions) Size(state state.StateContextI) (int, error) {
+func (p *Partitions) Size(state common2.StateContextI) (int, error) {
 	if p.Last.length() == 0 {
 		return 0, nil
 	}
@@ -444,7 +443,7 @@ func (p *Partitions) Size(state state.StateContextI) (int, error) {
 	return p.Last.Loc*p.PartitionSize + p.Last.length(), nil
 }
 
-func (p *Partitions) Exist(state state.StateContextI, id string) (bool, error) {
+func (p *Partitions) Exist(state common2.StateContextI, id string) (bool, error) {
 	_, _, ok := p.Last.find(id)
 	if ok {
 		return true, nil
@@ -458,7 +457,7 @@ func (p *Partitions) Exist(state state.StateContextI, id string) (bool, error) {
 	return ok, nil
 }
 
-func (p *Partitions) Save(state state.StateContextI) error {
+func (p *Partitions) Save(state common2.StateContextI) error {
 	keys := sortedmap.NewFromMap(p.Partitions).GetKeys()
 	for _, k := range keys {
 		part := p.Partitions[k]
@@ -521,7 +520,7 @@ func setPartitionItems(rtv []item, vs interface{}) error {
 	return nil
 }
 
-func (p *Partitions) getPartition(state state.StateContextI, i int) (*partition, error) {
+func (p *Partitions) getPartition(state common2.StateContextI, i int) (*partition, error) {
 	if i > p.Last.Loc {
 		return nil, fmt.Errorf("partition id %d overflow %d", i, p.Last.Loc)
 	}

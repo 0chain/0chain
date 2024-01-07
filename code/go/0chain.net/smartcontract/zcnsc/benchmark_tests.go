@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"log"
 	"math/rand"
 	"strconv"
@@ -15,7 +16,6 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/spf13/viper"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -181,14 +181,14 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 				}).Encode(),
 			},
 			{
-				name:    benchmark.ZcnSc + UpdateGlobalConfigFunc,
+				name:     benchmark.ZcnSc + UpdateGlobalConfigFunc,
 				endpoint: sc.UpdateGlobalConfig,
-				txn:     createTransaction(owner, "", 3000),
+				txn:      createTransaction(owner, "", 3000),
 				input: (&config2.StringMap{
 					Fields: map[string]string{
-						MinMintAmount:      "2",
-						MinBurnAmount:      "3",
-						MinStakeAmount:     "1",
+						MinMintAmount:  "2",
+						MinBurnAmount:  "3",
+						MinStakeAmount: "1",
 					},
 				}).Encode(),
 			},

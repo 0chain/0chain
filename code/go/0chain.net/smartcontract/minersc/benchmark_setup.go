@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	cstate "0chain.net/smartcontract/common"
 
 	"github.com/0chain/common/core/currency"
 
@@ -11,7 +12,6 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"

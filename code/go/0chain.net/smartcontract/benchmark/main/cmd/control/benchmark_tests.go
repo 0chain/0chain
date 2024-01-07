@@ -1,6 +1,7 @@
 package control
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"strconv"
 	"testing"
 
@@ -8,7 +9,6 @@ import (
 
 	"github.com/spf13/viper"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	bk "0chain.net/smartcontract/benchmark"
 )

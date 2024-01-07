@@ -1,10 +1,10 @@
 package control
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"strconv"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	bk "0chain.net/smartcontract/benchmark"

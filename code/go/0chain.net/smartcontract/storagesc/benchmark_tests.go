@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	bk "0chain.net/smartcontract/benchmark"

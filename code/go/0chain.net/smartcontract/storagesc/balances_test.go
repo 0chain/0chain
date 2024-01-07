@@ -1,10 +1,10 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"testing"
 	"time"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"

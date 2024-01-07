@@ -1,6 +1,7 @@
 package chain
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"container/ring"
 	"context"
 	"errors"
@@ -18,7 +19,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/rcrowley/go-metrics"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"

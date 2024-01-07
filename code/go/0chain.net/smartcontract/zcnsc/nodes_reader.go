@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/smartcontract/common"
 	"fmt"
 
 	"0chain.net/core/config"
@@ -8,8 +9,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
-
-	"0chain.net/chaincore/chain/state"
 )
 
 var (
@@ -26,7 +25,7 @@ func NewAuthorizerNode(id string) *AuthorizerNode {
 }
 
 // GetAuthorizerNode returns error if node not found
-func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, error) {
+func GetAuthorizerNode(id string, ctx common.StateContextI) (*AuthorizerNode, error) {
 	var node = NewAuthorizerNode(id)
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	if err != nil {
@@ -39,7 +38,7 @@ func GetAuthorizerNode(id string, ctx state.StateContextI) (*AuthorizerNode, err
 }
 
 // GetUserNode returns error if node not found
-func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
+func GetUserNode(id string, ctx common.StateContextI) (*UserNode, error) {
 	node := NewUserNode(id)
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {
@@ -50,7 +49,7 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 	}
 }
 
-func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
+func GetGlobalSavedNode(ctx common.CommonStateContextI) (*GlobalNode, error) {
 	node := &GlobalNode{ID: ADDRESS}
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	switch err {

@@ -1,9 +1,9 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"testing"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"github.com/0chain/common/core/util"

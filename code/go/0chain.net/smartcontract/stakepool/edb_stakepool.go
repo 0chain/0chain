@@ -1,7 +1,7 @@
 package stakepool
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"

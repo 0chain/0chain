@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/core/encryption"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -29,7 +28,7 @@ import (
 func (zcn *ZCNSmartContract) AddAuthorizer(
 	tran *transaction.Transaction,
 	input []byte,
-	ctx cstate.StateContextI,
+	ctx commonsc.StateContextI,
 ) (response string, err error) {
 	const (
 		code = "failed to add authorizer"
@@ -139,7 +138,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	return string(authorizer.Encode()), err
 }
 
-func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
+func increaseAuthorizerCount(ctx commonsc.StateContextI) (err error) {
 	numAuth := &AuthCount{}
 	numAuth.Count, err = getAuthorizerCount(ctx)
 	if err != nil {
@@ -151,7 +150,7 @@ func increaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
 	return
 }
 
-func decreaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
+func decreaseAuthorizerCount(ctx commonsc.StateContextI) (err error) {
 	numAuth := &AuthCount{}
 	numAuth.Count, err = getAuthorizerCount(ctx)
 	if err != nil {
@@ -167,7 +166,7 @@ func decreaseAuthorizerCount(ctx cstate.StateContextI) (err error) {
 	return
 }
 
-func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
+func getAuthorizerCount(ctx commonsc.StateContextI) (int, error) {
 	numAuth := &AuthCount{}
 	err := ctx.GetTrieNode(storagesc.AUTHORIZERS_COUNT_KEY, numAuth)
 	if err == util.ErrValueNotPresent {
@@ -183,7 +182,7 @@ func getAuthorizerCount(ctx cstate.StateContextI) (int, error) {
 func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	tran *transaction.Transaction,
 	input []byte,
-	ctx cstate.StateContextI,
+	ctx commonsc.StateContextI,
 ) (response string, err error) {
 	const (
 		code = "update_authorizer_staking_pool_failed"
@@ -256,7 +255,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 	}
 }
 
-func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, input []byte, ctx cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, input []byte, ctx commonsc.StateContextI) (string, error) {
 	var (
 		errorCode    = "failed to delete authorizer"
 		err          error
@@ -349,7 +348,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, inp
 func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 	t *transaction.Transaction,
 	input []byte,
-	ctx cstate.StateContextI,
+	ctx commonsc.StateContextI,
 ) (string, error) {
 	const (
 		code = "update_authorizer_settings"
@@ -418,7 +417,7 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 func (zcn *ZCNSmartContract) AuthorizerHealthCheck(
 	t *transaction.Transaction,
 	input []byte,
-	ctx cstate.StateContextI,
+	ctx commonsc.StateContextI,
 ) (string, error) {
 	const (
 		code = "authorizer_health_check"

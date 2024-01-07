@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	chainState "0chain.net/smartcontract/common"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"github.com/0chain/common/core/currency"
 
-	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

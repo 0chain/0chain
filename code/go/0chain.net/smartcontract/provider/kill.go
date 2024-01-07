@@ -1,6 +1,7 @@
 package provider
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 
@@ -9,7 +10,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 )
 

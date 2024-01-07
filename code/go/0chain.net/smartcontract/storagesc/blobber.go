@@ -12,7 +12,6 @@ import (
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -40,7 +39,7 @@ func newBlobber(id string) *StorageNode {
 
 func getBlobber(
 	blobberID string,
-	balances cstate.CommonStateContextI,
+	balances commonsc.CommonStateContextI,
 ) (*StorageNode, error) {
 	blobber := newBlobber(blobberID)
 	err := balances.GetTrieNode(blobber.GetKey(), blobber)
@@ -55,13 +54,13 @@ func getBlobber(
 
 func (_ *StorageSmartContract) getBlobber(
 	blobberID string,
-	balances cstate.CommonStateContextI,
+	balances commonsc.CommonStateContextI,
 ) (blobber *StorageNode, err error) {
 	return getBlobber(blobberID, balances)
 }
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
-	balances cstate.StateContextI) (bool, error) {
+	balances commonsc.StateContextI) (bool, error) {
 	blobber := newBlobber("")
 	blobber.BaseURL = blobberURL
 	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
@@ -94,7 +93,7 @@ func (sc *StorageSmartContract) updateBlobber(
 	updateBlobber *dto.StorageDtoNode,
 	existingBlobber *StorageNode,
 	existingSp *stakePool,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) (err error) {
 	// validate the new terms and update the existing blobber's terms
 	if err = validateAndSaveTerms(updateBlobber, existingBlobber, conf); err != nil {
@@ -218,7 +217,7 @@ func validateAndSaveSp(
 	existingBlobber *StorageNode,
 	existingSp *stakePool,
 	conf *Config,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) error {
 	if updateBlobber.StakePoolSettings != nil {
 		if updateBlobber.StakePoolSettings.DelegateWallet != nil {
@@ -246,7 +245,7 @@ func validateAndSaveSp(
 
 // remove blobber (when a blobber provides capacity = 0)
 func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
-	blobber *dto.StorageDtoNode, balances cstate.StateContextI,
+	blobber *dto.StorageDtoNode, balances commonsc.StateContextI,
 ) (err error) {
 	// get saved blobber
 	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
@@ -280,7 +279,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 // only use this function to add blobber(for update call updateBlobberSettings)
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI,
+	input []byte, balances commonsc.StateContextI,
 ) (string, error) {
 	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
@@ -332,7 +331,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 // update blobber settings by owner of DelegateWallet
 func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transaction,
-	input []byte, balances cstate.StateContextI,
+	input []byte, balances commonsc.StateContextI,
 ) (resp string, err error) {
 	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
@@ -379,7 +378,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 }
 
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
-	_ []byte, balances cstate.StateContextI,
+	_ []byte, balances commonsc.StateContextI,
 ) (string, error) {
 	var (
 		blobber  *StorageNode
@@ -411,7 +410,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 }
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI) (resp string, err error) {
+	input []byte, balances commonsc.StateContextI) (resp string, err error) {
 
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
@@ -623,7 +622,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 // (delete write marker) from challenge back to write pool
 func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
-	balances cstate.StateContextI) (currency.Coin, error) {
+	balances commonsc.StateContextI) (currency.Coin, error) {
 
 	if size == 0 {
 		return 0, nil // zero size write marker -- no tokens movements
@@ -712,7 +711,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 }
 
 func (sc *StorageSmartContract) commitBlobberConnection(
-	t *transaction.Transaction, input []byte, balances cstate.StateContextI) (
+	t *transaction.Transaction, input []byte, balances commonsc.StateContextI) (
 	string, error) {
 
 	conf, err := sc.getConfig(balances, true)
@@ -930,7 +929,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 // updateBlobberChallengeReady add or update blobber challenge weight or
 // remove itself from challenge ready partitions if there's no data stored
-func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.StateContextI,
+func (sc *StorageSmartContract) updateBlobberChallengeReady(balances commonsc.StateContextI,
 	blobAlloc *BlobberAllocation, blobUsedCapacity uint64) error {
 	logging.Logger.Info("commit_connection, add or update blobber challenge ready partitions",
 		zap.String("blobber", blobAlloc.BlobberID))
@@ -960,7 +959,7 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) (err error) {
 	_, err = sc.getBlobber(blobber.ID, balances)
 	if err == nil {
@@ -1020,7 +1019,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	return
 }
 
-func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
+func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances commonsc.StateContextI) {
 	bb := event.Blobber{
 		Provider:  event.Provider{ID: w.BlobberID},
 		SavedData: w.Size,
@@ -1029,7 +1028,7 @@ func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
 }
 
-func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI) {
+func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances commonsc.StateContextI) {
 	i, _ := big.NewFloat(r.ReadSize).Int64()
 	bb := event.Blobber{
 		Provider: event.Provider{ID: r.BlobberID},

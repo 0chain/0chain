@@ -5,8 +5,8 @@ package storagesc
 
 import (
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	cstate "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/partitions"
 	"math/rand"
 )

@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -10,7 +11,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"

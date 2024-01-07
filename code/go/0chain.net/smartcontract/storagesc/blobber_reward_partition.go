@@ -1,12 +1,12 @@
 package storagesc
 
 import (
+	c_state "0chain.net/smartcontract/common"
 	"strconv"
 	"strings"
 
 	"github.com/0chain/common/core/currency"
 
-	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/partitions"
 )

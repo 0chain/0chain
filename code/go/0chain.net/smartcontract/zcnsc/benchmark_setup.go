@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"fmt"
 	"strconv"
 
@@ -14,7 +15,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/benchmark"

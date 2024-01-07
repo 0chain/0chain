@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	chainstate "0chain.net/smartcontract/common"
 	"context"
 	"encoding/json"
 	"net/url"
@@ -10,7 +11,6 @@ import (
 
 	"0chain.net/smartcontract"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/util"
 )

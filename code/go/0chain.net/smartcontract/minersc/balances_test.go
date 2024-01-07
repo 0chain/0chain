@@ -1,9 +1,9 @@
 package minersc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"testing"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"github.com/0chain/common/core/currency"
 

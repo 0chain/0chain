@@ -1,6 +1,7 @@
 package minersc_test
 
 import (
+	chainstate "0chain.net/smartcontract/common"
 	"encoding/hex"
 	"strconv"
 	"strings"
@@ -9,8 +10,6 @@ import (
 
 	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
-
-	chainstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"

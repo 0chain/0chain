@@ -1,10 +1,10 @@
 package storagesc
 
 import (
+	chainState "0chain.net/smartcontract/common"
 	"encoding/json"
 	"testing"
 
-	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

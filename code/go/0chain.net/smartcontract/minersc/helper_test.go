@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"context"
 	"encoding/json"
 	"math/rand"
@@ -13,7 +14,6 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"

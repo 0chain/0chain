@@ -1,12 +1,12 @@
 package vestingsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"log"
 	"strconv"
 
 	"github.com/0chain/common/core/currency"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/viper"

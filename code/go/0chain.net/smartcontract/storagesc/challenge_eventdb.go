@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/event"
 	"errors"
@@ -59,7 +58,7 @@ func challengeTableToStorageChallengeInfo(ch *event.Challenge, edb *event.EventD
 func emitAddChallenge(
 	ch *StorageChallengeResponse,
 	expiredN int,
-	balances cstate.StateContextI,
+	balances common2.StateContextI,
 	allocStats *StorageAllocationStats,
 ) error {
 	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, ch.ID, storageChallengeToChallengeTable(ch, expiredN))
@@ -86,7 +85,7 @@ func emitUpdateChallenge(
 	sc *StorageChallenge,
 	passed bool,
 	responded BlobberChallengeResponded,
-	balances cstate.StateContextI,
+	balances common2.StateContextI,
 	allocStats *StorageAllocationStats,
 ) error {
 	clg := event.Challenge{
@@ -132,7 +131,7 @@ func emitUpdateChallenge(
 	return nil
 }
 
-func emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc *StorageAllocation, blobbersSettledChallengesCount []int64, balances cstate.StateContextI) {
+func emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc *StorageAllocation, blobbersSettledChallengesCount []int64, balances common2.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
 		AllocationID:         alloc.ID,
 		OpenChallenges:       alloc.Stats.OpenChallenges,
@@ -151,7 +150,7 @@ func emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc *StorageAlloca
 	}
 }
 
-func emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc *StorageAllocation, blobberID string, blobbersSettledChallengesCount int64, balances cstate.StateContextI) {
+func emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc *StorageAllocation, blobberID string, blobbersSettledChallengesCount int64, balances common2.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
 		AllocationID:         alloc.ID,
 		OpenChallenges:       alloc.Stats.OpenChallenges,

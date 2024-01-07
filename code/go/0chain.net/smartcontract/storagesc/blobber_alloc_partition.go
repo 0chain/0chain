@@ -1,11 +1,11 @@
 package storagesc
 
 import (
+	state "0chain.net/smartcontract/common"
 	"fmt"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
-	state "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
 )
 

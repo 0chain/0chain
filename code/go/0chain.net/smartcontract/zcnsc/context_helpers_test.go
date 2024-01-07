@@ -3,6 +3,7 @@ package zcnsc_test
 // StateContextI implementation
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"fmt"
 	"strings"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"0chain.net/chaincore/block"
 	"gorm.io/gorm/clause"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"

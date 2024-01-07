@@ -17,7 +17,6 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -357,7 +356,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration, isForce bool) ([]string, error) {
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances common2.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration, isForce bool) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -657,11 +656,11 @@ func (srh *StorageRestHandler) getReadPoolStat(w http.ResponseWriter, r *http.Re
 
 const cantGetConfigErrMsg = "can't get config"
 
-func GetConfig(balances cstate.CommonStateContextI) (*Config, error) {
+func GetConfig(balances common2.CommonStateContextI) (*Config, error) {
 	return getConfig(balances)
 }
 
-func getConfig(balances cstate.CommonStateContextI) (*Config, error) {
+func getConfig(balances common2.CommonStateContextI) (*Config, error) {
 	var conf = &Config{}
 	err := balances.GetTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {

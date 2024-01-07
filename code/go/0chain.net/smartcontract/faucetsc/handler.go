@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"fmt"
 	"net/http"
 	"strings"
@@ -8,8 +9,6 @@ import (
 
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/rest"
-
-	"0chain.net/chaincore/chain/state"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
@@ -195,7 +194,7 @@ func (frh *FaucetscRestHandler) getPersonalPeriodicLimit(w http.ResponseWriter, 
 	common.Respond(w, r, resp, nil)
 }
 
-func getGlobalNode(sctx state.QueryStateContextI) (GlobalNode, error) {
+func getGlobalNode(sctx common2.QueryStateContextI) (GlobalNode, error) {
 	gn := GlobalNode{ID: ADDRESS}
 	err := sctx.GetTrieNode(gn.GetKey(), &gn)
 	if err != nil {

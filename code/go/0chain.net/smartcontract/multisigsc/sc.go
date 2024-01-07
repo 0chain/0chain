@@ -1,6 +1,7 @@
 package multisigsc
 
 import (
+	c_state "0chain.net/smartcontract/common"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,8 +10,6 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 
-	"0chain.net/chaincore/chain/state"
-	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -63,7 +62,7 @@ func (ms *MultiSigSmartContract) GetCostTable(balances c_state.StateContextI) (m
 	return map[string]int{}, nil
 }
 
-func (ms *MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances state.StateContextI) (string, error) {
+func (ms *MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	if LogTimingInfo {
 		start := time.Now().UnixNano()
 		defer printTimeTaken(start)
@@ -86,7 +85,7 @@ func printTimeTaken(start int64) {
 	Logger.Info("Multi-signature smart contract execution time", zap.Int64("µs duration", duration))
 }
 
-func (ms MultiSigSmartContract) register(registeringClientID string, inputData []byte, balances state.StateContextI) (string, error) {
+func (ms MultiSigSmartContract) register(registeringClientID string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	var w Wallet
 
 	err := json.Unmarshal(inputData, &w)
@@ -128,7 +127,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	return "success: multi-signature wallet registered", nil
 }
 
-func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now common.Timestamp, inputData []byte, balances state.StateContextI) (string, error) {
+func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now common.Timestamp, inputData []byte, balances c_state.StateContextI) (string, error) {
 	// Garbage collection of old proposals happens incrementally with every
 	// incoming vote.
 	err := ms.pruneExpirationQueue(now, balances)
@@ -252,7 +251,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 }
 
 // Prune the oldest proposal if it has expired.
-func (ms MultiSigSmartContract) pruneExpirationQueue(now common.Timestamp, balances state.StateContextI) error {
+func (ms MultiSigSmartContract) pruneExpirationQueue(now common.Timestamp, balances c_state.StateContextI) error {
 	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
 		return err
@@ -347,7 +346,7 @@ func (ms MultiSigSmartContract) prune(ref proposalRef, balances c_state.StateCon
 	return nil
 }
 
-func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
+func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vote, balances c_state.StateContextI) (proposal, error) {
 	// Start by trying to find an existing proposal.
 	p, err := ms.getProposal(v.getProposalRef(), balances)
 	if err != nil {
@@ -376,7 +375,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 }
 
 // Create a proposal and add it to the expiration queue. Performs I/O.
-func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
+func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, balances c_state.StateContextI) (proposal, error) {
 	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {

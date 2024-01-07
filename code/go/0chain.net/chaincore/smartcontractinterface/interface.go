@@ -1,11 +1,11 @@
 package smartcontractinterface
 
 import (
+	c_state "0chain.net/smartcontract/common"
 	"context"
 	"encoding/json"
 	"net/url"
 
-	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 )
 

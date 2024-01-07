@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"math/rand"
 	"testing"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

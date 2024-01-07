@@ -1,6 +1,7 @@
 package miner
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"bytes"
 	"context"
 	"errors"
@@ -11,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/config"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"

@@ -2,8 +2,6 @@ package common
 
 import (
 	"math"
-
-	"0chain.net/chaincore/chain/state"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -21,7 +19,7 @@ func (h *HardFork) GetKey() string {
 
 }
 
-func GetRoundByName(c state.StateContextI, name string) (int64, error) {
+func GetRoundByName(c StateContextI, name string) (int64, error) {
 	fork := NewHardFork(name, 0)
 	err := c.GetTrieNode(fork.GetKey(), fork)
 	if err != nil {
@@ -31,7 +29,7 @@ func GetRoundByName(c state.StateContextI, name string) (int64, error) {
 	return fork.round, nil
 }
 
-func WithActivation(ctx state.StateContextI, name string, before func(), after func()) error {
+func WithActivation(ctx StateContextI, name string, before func(), after func()) error {
 	round, err := GetRoundByName(ctx, name)
 	if err != nil {
 		return err

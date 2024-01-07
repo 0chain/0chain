@@ -1,13 +1,13 @@
 package zcnsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"context"
 	"fmt"
 	"net/url"
 
 	"github.com/rcrowley/go-metrics"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"

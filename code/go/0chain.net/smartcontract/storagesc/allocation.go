@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	chainstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +17,6 @@ import (
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

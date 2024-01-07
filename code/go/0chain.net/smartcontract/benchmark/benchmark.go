@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,7 +14,6 @@ import (
 
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"
 	"github.com/spf13/viper"
@@ -375,7 +375,7 @@ func initParameterConstants() {
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
-	Run(state.TimedQueryStateContext, *testing.B) error
+	Run(common2.TimedQueryStateContext, *testing.B) error
 }
 
 type WithTimings interface {

@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -12,7 +11,7 @@ import (
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
-	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	input []byte, gn *GlobalNode, balances common2.StateContextI) (
 	resp string, err error) {
 
 	beforeFunc := func() {
@@ -36,7 +35,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 
 // getStakePool of given blobber
 func (_ *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, providerID string,
-	balances cstate.StateContextI) (sp stakepool.AbstractStakePool, err error) {
+	balances common2.StateContextI) (sp stakepool.AbstractStakePool, err error) {
 	var mn *MinerNode
 	switch pType {
 	case spenum.Miner:
@@ -70,7 +69,7 @@ func (_ *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, provider
 
 func (msc *MinerSmartContract) deleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
-	balances cstate.StateContextI) (resp string, err error) {
+	balances common2.StateContextI) (resp string, err error) {
 
 	beforeFunc := func() {
 		resp, err = stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter)
@@ -91,7 +90,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 
 // getStakePool of given blobber
 func (msc *MinerSmartContract) refreshProvider(
-	providerType spenum.Provider, providerID string, balances cstate.StateContextI,
+	providerType spenum.Provider, providerID string, balances common2.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
 
 	sp, err := getStakePool(providerType, providerID, balances)
@@ -136,7 +135,7 @@ func (msc *MinerSmartContract) refreshProvider(
 	return nil, nil
 }
 
-func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (
+func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances common2.CommonStateContextI) (
 	sp *stakepool.StakePool, err error) {
 	err = balances.GetTrieNode(stakepool.StakePoolKey(providerType, providerID), sp)
 	if err != nil {

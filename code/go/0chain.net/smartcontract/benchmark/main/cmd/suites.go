@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,7 +17,6 @@ import (
 
 	"0chain.net/smartcontract/dbs/event"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/viper"

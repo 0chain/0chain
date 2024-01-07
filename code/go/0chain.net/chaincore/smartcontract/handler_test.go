@@ -1,6 +1,7 @@
 package smartcontract_test
 
 import (
+	chstate "0chain.net/smartcontract/common"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -27,7 +28,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
 
-	chstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"

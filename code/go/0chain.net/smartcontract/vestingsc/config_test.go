@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	chainstate "0chain.net/smartcontract/common"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	config2 "0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"

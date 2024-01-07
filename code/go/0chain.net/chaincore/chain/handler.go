@@ -1,6 +1,7 @@
 package chain
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -19,7 +20,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"

@@ -1,9 +1,9 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"strconv"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/transaction"

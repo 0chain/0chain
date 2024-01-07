@@ -1,12 +1,12 @@
 package multisigsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"testing"
 
 	"0chain.net/core/common"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"

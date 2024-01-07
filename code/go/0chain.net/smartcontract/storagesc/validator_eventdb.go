@@ -1,13 +1,13 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 )
 

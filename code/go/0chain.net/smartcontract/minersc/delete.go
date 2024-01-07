@@ -1,9 +1,9 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract/common"
 	"fmt"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
@@ -19,7 +19,7 @@ var allNodeKeyMap = map[spenum.Provider]string{
 	spenum.Sharder: AllShardersKey,
 }
 
-func deleteNodesOnViewChange(state state.StateContextI, pType spenum.Provider) error {
+func deleteNodesOnViewChange(state common.StateContextI, pType spenum.Provider) error {
 	var (
 		ids NodeIDs
 		err error
@@ -91,7 +91,7 @@ func removeIDs(a, b NodeIDs) NodeIDs {
 	return a
 }
 
-func getDeleteNodeIDs(state state.StateContextI, key string) (NodeIDs, error) {
+func getDeleteNodeIDs(state common.StateContextI, key string) (NodeIDs, error) {
 	ids, err := getNodeIDs(state, key)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -102,7 +102,7 @@ func getDeleteNodeIDs(state state.StateContextI, key string) (NodeIDs, error) {
 	return ids, nil
 }
 
-func saveDeleteNodeID(state state.StateContextI, pType spenum.Provider, id string) error {
+func saveDeleteNodeID(state common.StateContextI, pType spenum.Provider, id string) error {
 	dKey, ok := deleteNodeKeyMap[pType]
 	if !ok {
 		return fmt.Errorf("save delete node key failed, invalid node type: %s", pType)
@@ -125,7 +125,7 @@ func saveDeleteNodeID(state state.StateContextI, pType spenum.Provider, id strin
 	return err
 }
 
-func resetDeleteNodeIDs(state state.StateContextI, key string) error {
+func resetDeleteNodeIDs(state common.StateContextI, key string) error {
 	_, err := state.InsertTrieNode(key, &NodeIDs{})
 	return err
 }

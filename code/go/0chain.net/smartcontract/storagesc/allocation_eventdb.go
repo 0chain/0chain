@@ -9,7 +9,6 @@ import (
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool"
@@ -217,7 +216,7 @@ func (sa *StorageAllocation) buildStakeUpdateEvent() event.Allocation {
 	}
 }
 
-func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
+func (sa *StorageAllocation) emitAdd(balances common2.StateContextI) error {
 	alloc := storageAllocationToAllocationTable(sa)
 	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
@@ -268,14 +267,14 @@ func prepareAllocationsResponse(eventDb *event.EventDb, eAllocs []event.Allocati
 	return sas, nil
 }
 
-func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
+func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances common2.StateContextI, t *transaction.Transaction) {
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.buildEventBlobberTerms())
 }
 
-func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
+func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances common2.StateContextI, t *transaction.Transaction) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, sa.ID, sa.buildEventBlobberTerms())
 }
 
-func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
+func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances common2.StateContextI, t *transaction.Transaction) {
 	balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, sa.buildEventBlobberTerms())
 }

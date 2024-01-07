@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -16,8 +17,6 @@ import (
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
 
-	chainState "0chain.net/chaincore/chain/state"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -730,7 +729,7 @@ func (conf *Config) update(changes config.StringMap) error {
 func (ssc *StorageSmartContract) updateSettings(
 	t *transaction.Transaction,
 	input []byte,
-	balances chainState.StateContextI,
+	balances cstate.StateContextI,
 ) (resp string, err error) {
 	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
@@ -778,7 +777,7 @@ func (ssc *StorageSmartContract) updateSettings(
 func (ssc *StorageSmartContract) commitSettingChanges(
 	_ *transaction.Transaction,
 	_ []byte,
-	balances chainState.StateContextI,
+	balances cstate.StateContextI,
 ) (resp string, err error) {
 	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {

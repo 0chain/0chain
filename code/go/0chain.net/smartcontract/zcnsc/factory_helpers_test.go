@@ -1,12 +1,12 @@
 package zcnsc_test
 
 import (
+	"0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
@@ -60,7 +60,7 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
-func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContextI, input []byte) (*transaction.Transaction, error) {
+func CreateDeleteAuthorizerTransaction(fromClient string, ctx common.StateContextI, input []byte) (*transaction.Transaction, error) {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 	value, err := currency.ParseZCN(1)
@@ -85,7 +85,7 @@ func CreateDeleteAuthorizerTransaction(fromClient string, ctx state.StateContext
 	return txn, nil
 }
 
-func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) *transaction.Transaction {
+func CreateAddAuthorizerTransaction(fromClient string, ctx common.StateContextI) *transaction.Transaction {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 	var txn = &transaction.Transaction{
@@ -108,7 +108,7 @@ func CreateAddAuthorizerTransaction(fromClient string, ctx state.StateContextI) 
 	return txn
 }
 
-func CreateTransaction(fromClient, method string, payload []byte, ctx state.StateContextI) (*transaction.Transaction, error) {
+func CreateTransaction(fromClient, method string, payload []byte, ctx common.StateContextI) (*transaction.Transaction, error) {
 	scheme := ctx.GetSignatureScheme()
 	_ = scheme.GenerateKeys()
 	value, err := currency.ParseZCN(1)

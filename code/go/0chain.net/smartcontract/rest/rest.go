@@ -1,9 +1,8 @@
 package rest
 
 import (
+	"0chain.net/smartcontract/common"
 	"net/http"
-
-	"0chain.net/chaincore/chain/state"
 )
 
 type Endpoint struct {
@@ -25,8 +24,8 @@ type Int64Map map[string]int64
 type InterfaceMap map[string]interface{}
 
 type QueryChainer interface {
-	GetQueryStateContext() state.TimedQueryStateContextI
-	SetQueryStateContext(state.TimedQueryStateContextI)
+	GetQueryStateContext() common.TimedQueryStateContextI
+	SetQueryStateContext(common.TimedQueryStateContextI)
 }
 
 type RestHandlerI interface {
@@ -35,14 +34,14 @@ type RestHandlerI interface {
 }
 
 type TestQueryChainer struct {
-	sctx state.TimedQueryStateContextI
+	sctx common.TimedQueryStateContextI
 }
 
-func (qc *TestQueryChainer) GetQueryStateContext() state.TimedQueryStateContextI {
+func (qc *TestQueryChainer) GetQueryStateContext() common.TimedQueryStateContextI {
 	return qc.sctx
 }
 
-func (qc *TestQueryChainer) SetQueryStateContext(sctx state.TimedQueryStateContextI) {
+func (qc *TestQueryChainer) SetQueryStateContext(sctx common.TimedQueryStateContextI) {
 	qc.sctx = sctx
 }
 

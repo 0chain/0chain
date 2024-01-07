@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/spf13/viper"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"

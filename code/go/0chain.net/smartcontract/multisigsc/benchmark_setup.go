@@ -1,9 +1,9 @@
 package multisigsc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/benchmark"
+	cstate "0chain.net/smartcontract/common"
 )
 
 func AddMockWallets(

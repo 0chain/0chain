@@ -1,15 +1,17 @@
 package storagesc
 
-import "0chain.net/chaincore/chain/state"
+import (
+	"0chain.net/smartcontract/common"
+)
 
 var (
 	initPartitionsFuncs = []initPartitionFunc{}
 )
 
-type initPartitionFunc func(state.StateContextI) error
+type initPartitionFunc func(common.StateContextI) error
 
 // InitPartitions create partitions if not exist
-func InitPartitions(state state.StateContextI) error {
+func InitPartitions(state common.StateContextI) error {
 	for _, f := range initPartitionsFuncs {
 		if err := f(state); err != nil {
 			return err

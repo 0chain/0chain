@@ -14,7 +14,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/util"
@@ -26,7 +25,7 @@ import (
 func validateStakePoolSettings(
 	sps stakepool.Settings,
 	conf *Config,
-	balances chainstate.StateContextI,
+	balances common2.StateContextI,
 ) error {
 	if sps.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
@@ -99,7 +98,7 @@ func (sp *stakePool) Decode(input []byte) error {
 
 // Save the stake pool
 func (sp *stakePool) Save(providerType spenum.Provider, providerID string,
-	balances chainstate.StateContextI) error {
+	balances common2.StateContextI) error {
 	_, err := balances.InsertTrieNode(stakePoolKey(providerType, providerID), sp)
 	if err != nil {
 		return err
@@ -137,7 +136,7 @@ func (sp *stakePool) Empty(
 	sscID,
 	poolID,
 	clientID string,
-	balances chainstate.StateContextI,
+	balances common2.StateContextI,
 ) error {
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
@@ -201,7 +200,7 @@ func (sp *stakePool) reduceOffer(amount currency.Coin) error {
 func (sp *stakePool) slash(
 	blobID string,
 	offer, slash currency.Coin,
-	balances chainstate.StateContextI,
+	balances common2.StateContextI,
 	allocationID string,
 ) (move currency.Coin, err error) {
 	if offer == 0 || slash == 0 {
@@ -286,12 +285,12 @@ func (sp *stakePool) stakedCapacity(writePrice currency.Coin) (int64, error) {
 
 // getStakePool of given blobber
 func (_ *StorageSmartContract) getStakePool(providerType spenum.Provider, providerID string,
-	balances chainstate.CommonStateContextI) (sp *stakePool, err error) {
+	balances common2.CommonStateContextI) (sp *stakePool, err error) {
 	return getStakePool(providerType, providerID, balances)
 }
 
 func getStakePoolAdapter(
-	providerType spenum.Provider, providerID string, balances chainstate.CommonStateContextI,
+	providerType spenum.Provider, providerID string, balances common2.CommonStateContextI,
 ) (sp stakepool.AbstractStakePool, err error) {
 	pool, err := getStakePool(providerType, providerID, balances)
 	if err != nil {
@@ -303,12 +302,12 @@ func getStakePoolAdapter(
 
 // getStakePool of given blobber
 func (_ *StorageSmartContract) getStakePoolAdapter(
-	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
+	providerType spenum.Provider, providerID string, balances common2.StateContextI,
 ) (sp stakepool.AbstractStakePool, err error) {
 	return getStakePoolAdapter(providerType, providerID, balances)
 }
 
-func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
+func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances common2.CommonStateContextI) (
 	sp *stakePool, err error) {
 	sp = newStakePool()
 	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
@@ -328,7 +327,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	providerType spenum.Provider,
 	providerId datastore.Key,
 	settings stakepool.Settings,
-	balances chainstate.StateContextI,
+	balances common2.StateContextI,
 ) (*stakePool, error) {
 	if err := validateStakePoolSettings(settings, conf, balances); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
@@ -342,7 +341,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 		}
 		sp = newStakePool()
 		sp.Settings.DelegateWallet = settings.DelegateWallet
-		sp.Minter = chainstate.MinterStorage
+		sp.Minter = common2.MinterStorage
 	}
 
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
@@ -354,7 +353,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 func (ssc *StorageSmartContract) createStakePool(
 	conf *Config,
 	settings stakepool.Settings,
-	balances chainstate.StateContextI,
+	balances common2.StateContextI,
 ) (*stakePool, error) {
 	if err := validateStakePoolSettings(settings, conf, balances); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
@@ -362,7 +361,7 @@ func (ssc *StorageSmartContract) createStakePool(
 
 	sp := newStakePool()
 	sp.Settings.DelegateWallet = settings.DelegateWallet
-	sp.Minter = chainstate.MinterStorage
+	sp.Minter = common2.MinterStorage
 	sp.Settings.ServiceChargeRatio = settings.ServiceChargeRatio
 	sp.Settings.MaxNumDelegates = settings.MaxNumDelegates
 	sp.Settings.MinStake = conf.MinStakePerDelegate
@@ -384,7 +383,7 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 
 // add delegated stake pool
 func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
-	input []byte, balances chainstate.StateContextI) (resp string, err error) {
+	input []byte, balances common2.StateContextI) (resp string, err error) {
 	gn, err := getConfig(balances)
 	if err != nil {
 		return "", err
@@ -396,7 +395,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 
 // getStakePool of given blobber
 func (_ *StorageSmartContract) refreshProvider(
-	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
+	providerType spenum.Provider, providerID string, balances common2.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
 	sp, err := getStakePool(providerType, providerID, balances)
 
@@ -427,7 +426,7 @@ func (_ *StorageSmartContract) refreshProvider(
 func (ssc *StorageSmartContract) stakePoolUnlock(
 	t *transaction.Transaction,
 	input []byte,
-	balances chainstate.StateContextI,
+	balances common2.StateContextI,
 ) (resp string, err error) {
 
 	beforeFunc := func() {

@@ -1,8 +1,8 @@
 package benchmark
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	cstate "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/rest"
 	"github.com/spf13/viper"
 

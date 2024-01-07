@@ -1,6 +1,7 @@
 package partitions
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -850,7 +850,7 @@ func FuzzAdd(f *testing.F) {
 
 		n = n % 100
 
-		var s state.StateContextI
+		var s common2.StateContextI
 		var num int
 		var ks int
 		partsName := "test_fr"
@@ -898,7 +898,7 @@ func FuzzRemove(f *testing.F) {
 		n = n % 100
 
 		var (
-			s   state.StateContextI
+			s   common2.StateContextI
 			num int
 			ks  int
 		)
@@ -997,7 +997,7 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 		}
 
 		var (
-			s        state.StateContextI
+			s        common2.StateContextI
 			itemsMap = make(map[string]struct{})
 		)
 
@@ -1080,7 +1080,7 @@ func FuzzPartitionsUpdateItem(f *testing.F) {
 		var (
 			pn     = "test_pu"
 			maxNum = 100
-			s      state.StateContextI
+			s      common2.StateContextI
 			num    int
 		)
 
@@ -1135,7 +1135,7 @@ func FuzzPartitionsUpdate(f *testing.F) {
 		var (
 			pn     = "test_pu"
 			maxNum = 100
-			s      state.StateContextI
+			s      common2.StateContextI
 			num    int
 		)
 
@@ -1197,7 +1197,7 @@ func FuzzPartitionsGetRandomItems(f *testing.F) {
 		var (
 			pn     = "test_get_rand_items"
 			maxNum = 100
-			s      state.StateContextI
+			s      common2.StateContextI
 		)
 
 		initN = initN % maxNum
@@ -1233,7 +1233,7 @@ func TestErrItemExist(t *testing.T) {
 	require.True(t, ErrItemExist(common.NewError(errItemExistCode, "any key")))
 }
 
-func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
+func prepareState(t *testing.T, name string, size, num int) common2.StateContextI {
 	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
 	s.StateContextI = &mocks.StateContextI{}
 	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"))

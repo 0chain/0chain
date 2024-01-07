@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -8,7 +9,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/currency"

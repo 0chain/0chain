@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"testing"
 
 	"0chain.net/core/common"
@@ -8,7 +9,6 @@ import (
 
 	"0chain.net/core/viper"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"

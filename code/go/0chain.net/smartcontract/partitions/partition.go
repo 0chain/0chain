@@ -1,10 +1,10 @@
 package partitions
 
 import (
+	"0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 )
 
@@ -27,12 +27,12 @@ type partition struct {
 	Changed bool   `json:"-" msg:"-"`
 }
 
-func (p *partition) save(state state.StateContextI) error {
+func (p *partition) save(state common.StateContextI) error {
 	_, err := state.InsertTrieNode(p.Key, p)
 	return err
 }
 
-func (p *partition) load(state state.StateContextI, key datastore.Key) error {
+func (p *partition) load(state common.StateContextI, key datastore.Key) error {
 	err := state.GetTrieNode(key, p)
 	if err != nil {
 		return fmt.Errorf("load partition failed, key: %s, %v", key, err)

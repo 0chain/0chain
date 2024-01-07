@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
 
@@ -14,7 +15,6 @@ import (
 
 	"github.com/0chain/common/core/util"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 )

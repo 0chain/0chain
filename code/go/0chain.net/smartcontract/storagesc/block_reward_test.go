@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/util"
@@ -152,7 +152,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		wp:          []currency.Coin{1, 2, 3},
 	})
 
-	setupRewards := func(t *testing.T, p params, balances state.StateContextI, sc *StorageSmartContract) state.StateContextI {
+	setupRewards := func(t *testing.T, p params, balances common.StateContextI, sc *StorageSmartContract) common.StateContextI {
 		conf := setConfig(t, balances)
 		allBR, err := getActivePassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		require.NoError(t, err)
@@ -186,7 +186,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 		return balances
 	}
 
-	compareResult := func(t *testing.T, p params, r result, balances state.StateContextI, ssc *StorageSmartContract) {
+	compareResult := func(t *testing.T, p params, r result, balances common.StateContextI, ssc *StorageSmartContract) {
 		conf, err := ssc.getConfig(balances, false)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
@@ -475,7 +475,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 }
 
-func prepareState(n, partSize int) (state.StateContextI, func()) {
+func prepareState(n, partSize int) (common.StateContextI, func()) {
 	dir, err := os.MkdirTemp("", "part_state")
 	if err != nil {
 		panic(err)
@@ -490,7 +490,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 	}
 
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
-	sctx := state.NewStateContext(nil,
+	sctx := common.NewStateContext(nil,
 		mpt, nil, nil, nil,
 		nil, nil, nil, nil)
 
@@ -591,7 +591,7 @@ func BenchmarkGetUpdateItem(b *testing.B) {
 	_ = part.Save(ps)
 }
 
-func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
+func prepareMPTState(t *testing.T) (common.StateContextI, func()) {
 	dir, err := os.MkdirTemp("", "part_state")
 	if err != nil {
 		panic(err)
@@ -606,7 +606,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	}
 
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
-	return state.NewStateContext(nil,
+	return common.NewStateContext(nil,
 		mpt, nil, nil, nil,
 		nil, nil, nil, nil), clean
 }

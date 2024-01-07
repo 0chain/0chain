@@ -1,6 +1,7 @@
 package smartcontract
 
 import (
+	c_state "0chain.net/smartcontract/common"
 	"context"
 	"errors"
 	"fmt"
@@ -10,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

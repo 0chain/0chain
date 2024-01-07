@@ -3,7 +3,6 @@ package minersc
 import (
 	"strconv"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
@@ -16,7 +15,7 @@ func (_ *MinerSmartContract) addHardFork(
 	txn *transaction.Transaction,
 	input []byte,
 	gn *GlobalNode,
-	balances cstate.StateContextI,
+	balances common2.StateContextI,
 ) (resp string, err error) {
 	var changes config.StringMap
 	if err = changes.Decode(input); err != nil {

@@ -2,13 +2,13 @@ package storagesc
 
 import (
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	cstate "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"

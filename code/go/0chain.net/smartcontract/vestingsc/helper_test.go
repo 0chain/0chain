@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	chainstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"math/rand"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

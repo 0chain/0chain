@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
 	"math"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
-	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"

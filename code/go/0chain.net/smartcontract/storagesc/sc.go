@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	chainstate "0chain.net/smartcontract/common"
 	"context"
 	"fmt"
 	"net/url"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/rcrowley/go-metrics"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

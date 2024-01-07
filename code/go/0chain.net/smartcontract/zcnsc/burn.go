@@ -1,9 +1,9 @@
 package zcnsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"fmt"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/chaincore/state"

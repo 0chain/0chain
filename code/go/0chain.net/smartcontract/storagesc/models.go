@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,7 +19,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/threshold/bls"
 	"github.com/0chain/common/core/currency"
 
@@ -26,7 +26,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -533,7 +532,7 @@ func (d *BlobberAllocation) upload(size int64, rdtu float64, writePool currency.
 	return
 }
 
-func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionRounds int64, balances chainstate.StateContextI, sc *StorageSmartContract) (float64, error) {
+func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, maxChallengeCompletionRounds int64, balances cstate.StateContextI, sc *StorageSmartContract) (float64, error) {
 
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
@@ -646,7 +645,7 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 	return passRate, nil
 }
 
-func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, conf *Config, now common.Timestamp, sc *StorageSmartContract) (currency.Coin, currency.Coin, error) {
+func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocation, sp *stakePool, cp *challengePool, passRate float64, balances cstate.StateContextI, conf *Config, now common.Timestamp, sc *StorageSmartContract) (currency.Coin, currency.Coin, error) {
 	if d.LatestFinalizedChallCreatedAt == 0 {
 		return 0, 0, nil
 	}
@@ -664,7 +663,7 @@ func (d *BlobberAllocation) payChallengePoolPassPayments(alloc *StorageAllocatio
 	return challengeRewardPaid, challengePenaltyPaid, nil
 }
 
-func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances chainstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
+func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration, now common.Timestamp, sp *stakePool, cp *challengePool, passRate float64, balances cstate.StateContextI, alloc *StorageAllocation) (currency.Coin, error) {
 	if now <= d.LatestFinalizedChallCreatedAt {
 		logging.Logger.Info("challenge reward on finalization", zap.Any("now", now), zap.Any("latest finalized challenge created at", d.LatestFinalizedChallCreatedAt))
 		return 0, nil
@@ -721,7 +720,7 @@ func (d *BlobberAllocation) challengeRewardOnFinalization(timeUnit time.Duration
 	return payment, nil
 }
 
-func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances chainstate.StateContextI, sp *stakePool) (currency.Coin, error) {
+func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *StorageAllocation, balances cstate.StateContextI, sp *stakePool) (currency.Coin, error) {
 	if d.LatestSuccessfulChallCreatedAt >= d.LatestFinalizedChallCreatedAt {
 		return 0, nil
 	}
@@ -777,7 +776,7 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 	return move, nil
 }
 
-func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI, sc *StorageSmartContract, passRate float64, totalWritePrice, cancellationCharge currency.Coin) (currency.Coin, error) {
+func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *stakePool, balances cstate.StateContextI, sc *StorageSmartContract, passRate float64, totalWritePrice, cancellationCharge currency.Coin) (currency.Coin, error) {
 	blobberWritePriceWeight := float64(d.Terms.WritePrice) / float64(totalWritePrice)
 	reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight * passRate)
 
@@ -1037,7 +1036,7 @@ func (sa *StorageAllocation) moveFromChallengePool(
 	return nil
 }
 
-func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances chainstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract, now common.Timestamp) error {
+func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, balances cstate.StateContextI, cp *challengePool, passRates []float64, conf *Config, sc *StorageSmartContract, now common.Timestamp) error {
 	var passPayments currency.Coin
 
 	for i, d := range sa.BlobberAllocs {
@@ -1087,7 +1086,7 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 	return nil
 }
 
-func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, cp *challengePool, passRate float64, conf *Config, sc *StorageSmartContract, ba *BlobberAllocation, now common.Timestamp) error {
+func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *stakePool, balances cstate.StateContextI, cp *challengePool, passRate float64, conf *Config, sc *StorageSmartContract, ba *BlobberAllocation, now common.Timestamp) error {
 	passPayment, penaltyPayment, err := ba.payChallengePoolPassPayments(sa, sp, cp, passRate, balances, conf, now, sc)
 	if err != nil {
 		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
@@ -1129,7 +1128,7 @@ func (sa *StorageAllocation) payChallengePoolPassPaymentsToRemoveBlobber(sp *sta
 }
 
 // Cancellation charge
-func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances chainstate.StateContextI, passRates []float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction) error {
+func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances cstate.StateContextI, passRates []float64, conf *Config, sc *StorageSmartContract, t *transaction.Transaction) error {
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
@@ -1187,7 +1186,7 @@ func (sa *StorageAllocation) payCancellationCharge(sps []*stakePool, balances ch
 	return nil
 }
 
-func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool, balances chainstate.StateContextI, passRate float64, conf *Config, sc *StorageSmartContract, clientID string, ba *BlobberAllocation) error {
+func (sa *StorageAllocation) payCancellationChargeToRemoveBlobber(sp *stakePool, balances cstate.StateContextI, passRate float64, conf *Config, sc *StorageSmartContract, clientID string, ba *BlobberAllocation) error {
 	cancellationCharge, err := sa.cancellationCharge(conf.CancellationCharge)
 	if err != nil {
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
@@ -1397,7 +1396,7 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) error {
+func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartContract, balances cstate.StateContextI, clientID string, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) error {
 	_, ok := sa.BlobberAllocsMap[blobberID]
 	if !ok {
 		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)

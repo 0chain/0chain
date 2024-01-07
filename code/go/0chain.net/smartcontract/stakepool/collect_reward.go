@@ -1,10 +1,10 @@
 package stakepool
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/json"
 	"fmt"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool/spenum"

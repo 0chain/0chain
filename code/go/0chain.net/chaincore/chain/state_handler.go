@@ -1,6 +1,7 @@
 package chain
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,7 +13,6 @@ import (
 	"sort"
 	"strings"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -78,16 +78,16 @@ func SetupStateHandlers() {
 	http.HandleFunc("/_smart_contract_stats", common.WithCORS(common.UserRateLimit(GetServerChain().SCStats)))
 }
 
-func (c *Chain) GetQueryStateContext() state.TimedQueryStateContextI {
-	return state.NewTimedQueryStateContext(c.GetStateContextI(), func() common.Timestamp {
+func (c *Chain) GetQueryStateContext() common2.TimedQueryStateContextI {
+	return common2.NewTimedQueryStateContext(c.GetStateContextI(), func() common.Timestamp {
 		return common.Now()
 	})
 }
 
-func (c *Chain) SetQueryStateContext(_ state.TimedQueryStateContextI) {
+func (c *Chain) SetQueryStateContext(_ common2.TimedQueryStateContextI) {
 }
 
-func (c *Chain) GetStateContextI() state.StateContextI {
+func (c *Chain) GetStateContextI() common2.StateContextI {
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.ClientState == nil {
 		logging.Logger.Error("empty latest finalized block or state")

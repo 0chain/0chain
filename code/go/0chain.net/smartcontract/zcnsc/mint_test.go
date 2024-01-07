@@ -1,13 +1,13 @@
 package zcnsc_test
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"math/rand"
 	"sort"
 	"testing"
 	"time"
 
 	"0chain.net/chaincore/chain"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/config"

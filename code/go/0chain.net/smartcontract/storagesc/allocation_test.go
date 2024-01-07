@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	chainState "0chain.net/smartcontract/common"
 	"errors"
 	"fmt"
 	"math"
@@ -27,7 +28,6 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"github.com/stretchr/testify/mock"
 
-	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -1338,9 +1338,9 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 		{
 			name: "Becomes too small",
 			uar: &updateAllocationRequest{
-				Size:          -int64(sub),
+				Size:                    -int64(sub),
 				SetThirdPartyExtendable: true,
-				OwnerID:       "owner123",
+				OwnerID:                 "owner123",
 			},
 			expectErr: true,
 		},

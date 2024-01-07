@@ -1,7 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/partitions"
 )
 
@@ -9,7 +9,7 @@ import (
 
 const allValidatorsPartitionSize = 50
 
-func getValidatorsList(state state.StateContextI) (*partitions.Partitions, error) {
+func getValidatorsList(state common.StateContextI) (*partitions.Partitions, error) {
 	return partitions.GetPartitions(state, ALL_VALIDATORS_KEY)
 }
 
@@ -23,7 +23,7 @@ func (vn *ValidationPartitionNode) GetID() string {
 }
 
 func init() {
-	regInitPartsFunc(func(state state.StateContextI) error {
+	regInitPartsFunc(func(state common.StateContextI) error {
 		_, err := partitions.CreateIfNotExists(state, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
 		return err
 	})

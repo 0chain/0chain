@@ -1,9 +1,9 @@
 package partitions
 
 import (
+	"0chain.net/smartcontract/common"
 	"fmt"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/logging"
@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (p *Partitions) getItemPartIndex(state state.StateContextI, id string) (int, bool, error) {
+func (p *Partitions) getItemPartIndex(state common.StateContextI, id string) (int, bool, error) {
 	var pl location
 
 	kid := p.getLocKey(id)
@@ -35,7 +35,7 @@ func (p *Partitions) getLocKey(id string) datastore.Key {
 	return encryption.Hash(fmt.Sprintf("%s:%s", p.Name, id))
 }
 
-func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex int) error {
+func (p *Partitions) saveItemLoc(state common.StateContextI, id string, partIndex int) error {
 	_, err := state.InsertTrieNode(p.getLocKey(id), &location{Location: partIndex})
 	if err != nil {
 		return fmt.Errorf("save item location failed: %v", err)
@@ -47,7 +47,7 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 	return nil
 }
 
-func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
+func (p *Partitions) removeItemLoc(state common.StateContextI, id string) error {
 	kid := p.getLocKey(id)
 	root := util.ToHex(state.GetState().GetRoot())
 	_, err := state.DeleteTrieNode(kid)

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	chainstate "0chain.net/smartcontract/common"
 	"encoding/hex"
 	"strconv"
 	"testing"
@@ -11,7 +12,6 @@ import (
 
 	"0chain.net/chaincore/block"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"

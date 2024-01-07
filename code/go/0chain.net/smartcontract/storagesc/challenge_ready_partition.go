@@ -1,7 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/partitions"
 	"fmt"
 	"github.com/0chain/common/core/currency"
@@ -13,7 +13,7 @@ const allChallengeReadyBlobbersPartitionSize = 50
 
 // This is a partition that will only record the blobbers ids that are ready to be challenged.
 // Only after blobbers have received writemarkers/readmarkers will it be added to the partitions.
-func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions.Partitions, error) {
+func partitionsChallengeReadyBlobbers(balances common.StateContextI) (*partitions.Partitions, error) {
 	return partitions.CreateIfNotExists(balances, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 }
 
@@ -33,7 +33,7 @@ func (bc *ChallengeReadyBlobber) GetWeight() uint64 {
 	return uint64((float64(bc.Stake) * float64(bc.UsedCapacity)) / 1e10)
 }
 
-func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
+func PartitionsChallengeReadyBlobberAddOrUpdate(state common.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
 	parts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge ready partitions, %v", err)
@@ -58,7 +58,7 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 	return nil
 }
 
-func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
+func PartitionsChallengeReadyBlobberUpdate(state common.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
 	parts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge ready partitions, %v", err)
@@ -85,7 +85,7 @@ func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID 
 	return nil
 }
 
-func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID string) error {
+func partitionsChallengeReadyBlobbersRemove(state common.StateContextI, blobberID string) error {
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID
 }
 
 func init() {
-	regInitPartsFunc(func(state state.StateContextI) error {
+	regInitPartsFunc(func(state common.StateContextI) error {
 		_, err := partitions.CreateIfNotExists(state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 		return err
 	})

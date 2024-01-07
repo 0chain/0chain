@@ -1,6 +1,7 @@
 package zcnsc_test
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
@@ -15,7 +16,6 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 
-	cstate "0chain.net/chaincore/chain/state"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"

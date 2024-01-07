@@ -8,7 +8,6 @@ import (
 
 	"0chain.net/smartcontract/provider"
 
-	state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -21,7 +20,7 @@ const (
 	validatorHealthTime = 60 * 60 // 1 hour
 )
 
-func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances commonsc.StateContextI) (string, error) {
 	newValidator := newValidator("")
 	err := newValidator.Decode(input) // json.Unmarshal(input, &newValidator)
 	if err != nil {
@@ -113,7 +112,7 @@ func newValidator(id string) *ValidationNode {
 
 func getValidator(
 	validatorID string,
-	balances state.CommonStateContextI,
+	balances commonsc.CommonStateContextI,
 ) (*ValidationNode, error) {
 	validator := newValidator(validatorID)
 	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
@@ -128,12 +127,12 @@ func getValidator(
 
 func (_ *StorageSmartContract) getValidator(
 	validatorID string,
-	balances state.StateContextI,
+	balances commonsc.StateContextI,
 ) (validator *ValidationNode, err error) {
 	return getValidator(validatorID, balances)
 }
 
-func (sc *StorageSmartContract) updateValidatorSettings(txn *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) updateValidatorSettings(txn *transaction.Transaction, input []byte, balances commonsc.StateContextI) (string, error) {
 	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
@@ -184,7 +183,7 @@ func (sc *StorageSmartContract) updateValidatorSettings(txn *transaction.Transac
 }
 
 func (sc *StorageSmartContract) hasValidatorUrl(validatorURL string,
-	balances state.StateContextI) (bool, error) {
+	balances commonsc.StateContextI) (bool, error) {
 	validator := new(ValidationNode)
 	validator.BaseURL = validatorURL
 	err := balances.GetTrieNode(validator.GetUrlKey(sc.ID), &datastore.NOIDField{})
@@ -201,7 +200,7 @@ func (sc *StorageSmartContract) hasValidatorUrl(validatorURL string,
 // update existing validator, or reborn a deleted one
 func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 	conf *Config, inputValidator *dto.ValidationDtoNode, savedValidator *ValidationNode,
-	balances state.StateContextI,
+	balances commonsc.StateContextI,
 ) (err error) {
 	// check params
 	if err = validateBaseUrl(inputValidator.BaseURL); err != nil {
@@ -286,7 +285,7 @@ func filterHealthyValidators(now common.Timestamp) filterValidatorFunc {
 }
 
 func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
-	_ []byte, balances state.StateContextI,
+	_ []byte, balances commonsc.StateContextI,
 ) (string, error) {
 
 	var (

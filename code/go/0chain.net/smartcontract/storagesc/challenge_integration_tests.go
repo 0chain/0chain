@@ -4,11 +4,11 @@
 package storagesc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"math/rand"
 	"time"
 
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/smartcontract/partitions"

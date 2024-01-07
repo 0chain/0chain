@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"context"
 	"fmt"
 	"net/url"
@@ -8,7 +9,6 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 
-	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"

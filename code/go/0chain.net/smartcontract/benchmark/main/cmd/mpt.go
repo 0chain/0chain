@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -35,7 +36,6 @@ import (
 	"0chain.net/smartcontract/benchmark"
 
 	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"

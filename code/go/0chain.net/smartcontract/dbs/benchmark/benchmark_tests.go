@@ -1,13 +1,13 @@
 package benchmark
 
 import (
+	"0chain.net/smartcontract/common"
 	"testing"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	bk "0chain.net/smartcontract/benchmark"
 	"golang.org/x/net/context"
@@ -28,7 +28,7 @@ func (et DbTest) Transaction() *transaction.Transaction {
 	return nil
 }
 
-func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
+func (et DbTest) Run(sCtx common.TimedQueryStateContext, _ *testing.B) error {
 	if len(et.events) == 0 {
 		return nil
 	}
@@ -52,7 +52,7 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 
 type DbEventTest struct{ DbTest }
 
-func (et DbEventTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
+func (et DbEventTest) Run(sCtx common.TimedQueryStateContext, _ *testing.B) error {
 	if len(et.events) == 0 {
 		return nil
 	}
@@ -75,7 +75,7 @@ func (et DbEventTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error
 
 type DbAggregateTest struct{ DbTest }
 
-func (et DbAggregateTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
+func (et DbAggregateTest) Run(sCtx common.TimedQueryStateContext, _ *testing.B) error {
 	if len(et.events) == 0 {
 		return nil
 	}

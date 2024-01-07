@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
@@ -20,7 +19,7 @@ import (
 )
 
 func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances commonsc.StateContextI) (
 	resp string, err error) {
 
 	requiredUpdateInSharderNode := dto.NewMinerDtoNode()
@@ -76,7 +75,7 @@ func (msc *MinerSmartContract) AddSharder(
 	t *transaction.Transaction,
 	input []byte,
 	gn *GlobalNode,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) (resp string, err error) {
 
 	var newSharder = NewMinerNode()
@@ -164,7 +163,7 @@ func (msc *MinerSmartContract) DeleteSharder(
 	_ *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) (string, error) {
 	var err error
 	var deleteSharder = NewMinerNode()
@@ -191,7 +190,7 @@ func (msc *MinerSmartContract) DeleteSharder(
 	return "", nil
 }
 
-func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {
+func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances commonsc.StateContextI) error {
 	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return err
@@ -244,14 +243,14 @@ func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balanc
 
 func (_ *MinerSmartContract) getSharderNode(
 	sid string,
-	balances cstate.StateContextI,
+	balances commonsc.StateContextI,
 ) (*MinerNode, error) {
 	return getSharderNode(sid, balances)
 }
 
 func getSharderNode(
 	sid string,
-	balances cstate.CommonStateContextI,
+	balances commonsc.CommonStateContextI,
 ) (*MinerNode, error) {
 	sn := NewMinerNode()
 	sn.ID = sid
@@ -266,7 +265,7 @@ func getSharderNode(
 }
 
 func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
-	input []byte, _ *GlobalNode, balances cstate.StateContextI) (
+	input []byte, _ *GlobalNode, balances commonsc.StateContextI) (
 	resp string, err2 error) {
 
 	pn, err := GetPhaseNode(balances)

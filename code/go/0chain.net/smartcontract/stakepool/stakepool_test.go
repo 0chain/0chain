@@ -1,13 +1,13 @@
 package stakepool
 
 import (
+	"0chain.net/smartcontract/common"
 	"strconv"
 	"testing"
 
 	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/require"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
@@ -29,7 +29,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 		errMsg          string
 	}
 
-	setup := func(t *testing.T, arg args) (*StakePool, state.StateContextI) {
+	setup := func(t *testing.T, arg args) (*StakePool, common.StateContextI) {
 		var (
 			balances = newTestBalances(t, false)
 			sp       = NewStakePool()

@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"context"
 
 	"os"
@@ -8,7 +9,6 @@ import (
 	"sync"
 	"testing"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/dbs/event"

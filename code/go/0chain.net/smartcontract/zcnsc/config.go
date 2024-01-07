@@ -1,10 +1,10 @@
 package zcnsc
 
 import (
+	common2 "0chain.net/smartcontract/common"
 	"fmt"
 	"strings"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
@@ -45,7 +45,7 @@ var CostFunctions = []string{
 }
 
 // InitConfig initializes global node config to MPT
-func InitConfig(ctx state.StateContextI) error {
+func InitConfig(ctx common2.StateContextI) error {
 	node := &GlobalNode{ID: ADDRESS}
 	err := ctx.GetTrieNode(node.GetKey(), node)
 	if err == util.ErrValueNotPresent {
@@ -59,11 +59,11 @@ func InitConfig(ctx state.StateContextI) error {
 	return err
 }
 
-func GetGlobalNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
+func GetGlobalNode(ctx common2.CommonStateContextI) (*GlobalNode, error) {
 	return GetGlobalSavedNode(ctx)
 }
 
-func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx state.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) UpdateGlobalConfig(t *transaction.Transaction, inputData []byte, ctx common2.StateContextI) (string, error) {
 	const (
 		Code     = "failed to update configuration"
 		FuncName = "UpdateGlobalConfig"

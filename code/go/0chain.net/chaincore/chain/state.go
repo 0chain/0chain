@@ -1,6 +1,7 @@
 package chain
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,8 +20,6 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
-	bcstate "0chain.net/chaincore/chain/state"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -121,7 +120,7 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 func (c *Chain) ExecuteSmartContract(
 	ctx context.Context,
 	txn *transaction.Transaction,
-	balances bcstate.StateContextI) (string, error) {
+	balances cstate.StateContextI) (string, error) {
 
 	type result struct {
 		output string
@@ -376,8 +375,8 @@ func (c *Chain) NewStateContext(
 	s util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
 	eventDb *event.EventDb,
-) (balances *bcstate.StateContext) {
-	return bcstate.NewStateContext(b, s, txn,
+) (balances *cstate.StateContext) {
+	return cstate.NewStateContext(b, s, txn,
 		c.GetMagicBlock,
 		func() *block.Block {
 			return c.GetLatestFinalizedMagicBlock(context.Background())
@@ -410,7 +409,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	)
 
 	defer func() {
-		if bcstate.ErrInvalidState(err) {
+		if cstate.ErrInvalidState(err) {
 			c.SyncMissingNodes(b.Round, sctx.GetMissingNodeKeys(), waitC...)
 		}
 	}()
@@ -454,7 +453,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			return nil, err
 		default:
 			if err != nil {
-				if bcstate.ErrInvalidState(err) {
+				if cstate.ErrInvalidState(err) {
 					logging.Logger.Error("Error executing the SC, internal error",
 						zap.Error(err),
 						zap.String("scname", txn.FunctionName),
@@ -611,7 +610,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	return sctx.GetEvents(), nil
 }
 
-func sumOfFromToBalance(sctx bcstate.StateContextI, from, to string) (currency.Coin, error) {
+func sumOfFromToBalance(sctx cstate.StateContextI, from, to string) (currency.Coin, error) {
 	ofb, err := sctx.GetClientBalance(from)
 	if err != nil && err != util.ErrValueNotPresent {
 		return 0, err
@@ -629,7 +628,7 @@ func sumOfFromToBalance(sctx bcstate.StateContextI, from, to string) (currency.C
 	return bal, nil
 }
 
-func (c *Chain) transferAmountWithAssert(sctx bcstate.StateContextI,
+func (c *Chain) transferAmountWithAssert(sctx cstate.StateContextI,
 	fromClient, toClient datastore.Key, amount currency.Coin) (eus []*event.User, err error) {
 	originBalance, err := sumOfFromToBalance(sctx, fromClient, toClient)
 	if err != nil {
@@ -664,7 +663,7 @@ func (c *Chain) transferAmountWithAssert(sctx bcstate.StateContextI,
 *   when there is an error getting the state of the from or to account (other than no value), the error is simply returned back
 *   when there is an error inserting/deleting the state of the from or to account, this results in fatal error when state is enabled
  */
-func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient datastore.Key,
+func (c *Chain) transferAmount(sctx cstate.StateContextI, fromClient, toClient datastore.Key,
 	amount currency.Coin) (eus []*event.User, err error) {
 	if amount == 0 {
 		return nil, nil
@@ -674,7 +673,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 
 	defer func() {
-		if bcstate.ErrInvalidState(err) {
+		if cstate.ErrInvalidState(err) {
 			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
 		}
 	}()
@@ -747,7 +746,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
 }
 
-func (c *Chain) mintAmountWithAssert(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
+func (c *Chain) mintAmountWithAssert(sctx cstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
 	originBalance, err := sctx.GetClientBalance(toClient)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, err
@@ -775,7 +774,7 @@ func (c *Chain) mintAmountWithAssert(sctx bcstate.StateContextI, toClient datast
 	return tEvent, nil
 }
 
-func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
+func (c *Chain) mintAmount(sctx cstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
 	if amount == 0 {
 		return nil, nil
 	}
@@ -786,7 +785,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	)
 
 	defer func() {
-		if bcstate.ErrInvalidState(err) {
+		if cstate.ErrInvalidState(err) {
 			c.SyncMissingNodes(sctx.GetBlock().Round, sctx.GetMissingNodeKeys())
 		}
 	}()
@@ -822,7 +821,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	return stateToUser(toClient, ts), nil
 }
 
-func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
+func (c *Chain) validateNonce(sctx cstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
 	s, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		return err
@@ -842,7 +841,7 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 	return nil
 }
 
-func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key) (*event.User, error) {
+func (c *Chain) incrementNonce(sctx cstate.StateContextI, fromClient datastore.Key) (*event.User, error) {
 	s, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		return nil, err
@@ -944,7 +943,7 @@ func stateToUser(clientID string, s *state.State) *event.User {
 	}
 }
 
-func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
+func (c *Chain) emitUserEvent(sc cstate.StateContextI, usr *event.User) {
 	if c.GetEventDb() == nil {
 		return
 	}
@@ -956,7 +955,7 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 	return
 }
 
-func (c *Chain) emitUniqueAddressEvent(sc bcstate.StateContextI, s *state.State) {
+func (c *Chain) emitUniqueAddressEvent(sc cstate.StateContextI, s *state.State) {
 	if c.GetEventDb() == nil {
 		return
 	}

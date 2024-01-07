@@ -4,9 +4,9 @@
 package zcnsc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
+	cstate "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 )
 

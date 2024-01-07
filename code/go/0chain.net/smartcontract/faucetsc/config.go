@@ -1,9 +1,9 @@
 package faucetsc
 
 import (
+	cstate "0chain.net/smartcontract/common"
 	"time"
 
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
