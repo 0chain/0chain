@@ -1,11 +1,47 @@
 package common
 
-import "0chain.net/chaincore/chain/state"
+import (
+	"math"
 
-func WithActivation(ctx state.StateContextI, round int64, before func(), after func()) {
+	"0chain.net/chaincore/chain/state"
+)
+
+//go:generate msgp -io=false -tests=false -unexported=true -v
+type HardFork struct {
+	name  string
+	round int64
+}
+
+func NewHardFork(name string, round int64) *HardFork {
+	return &HardFork{name: name, round: round}
+}
+
+func (h *HardFork) GetKey() string {
+	return "hardfork:" + h.name
+
+}
+
+func GetRoundByName(c state.StateContextI, name string) (int64, error) {
+	fork := NewHardFork(name, 0)
+	err := c.GetTrieNode(fork.GetKey(), fork)
+	if err != nil {
+		return math.MaxInt64, err
+	}
+
+	return fork.round, nil
+}
+
+func WithActivation(ctx state.StateContextI, name string, before func(), after func()) error {
+	round, err := GetRoundByName(ctx, name)
+	if err != nil {
+		return err
+	}
+
 	if ctx.GetBlock().Round < round {
 		before()
 	} else {
 		after()
 	}
+
+	return nil
 }
