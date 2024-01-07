@@ -915,12 +915,17 @@ func (r *Runner) Command(name string, params map[string]interface{}, retryCount 
 
 func (r *Runner) asyncCommand(name string, params map[string]string, retryCount int, failureThreshold time.Duration) (reply chan error) {
 	reply = make(chan error)
+	fmt.Println("async command")
 	go r.runAsyncCommand(reply, name, params, retryCount, failureThreshold)
 	return
 }
 
 func (r *Runner) runAsyncCommand(reply chan error, name string, params map[string]string, retryCount int, failureThreshold time.Duration) {
 	var err error
+	if retryCount == 0 {
+		retryCount = 1
+	}
+	
 	for i := 0; i < retryCount; i++ {
 		err = r.conf.Execute(name, params, failureThreshold)
 		if err == nil {
