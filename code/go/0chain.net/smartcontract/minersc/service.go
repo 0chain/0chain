@@ -17,6 +17,11 @@ func (_ *MinerSmartContract) addHardFork(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
+
+	if txn.ClientID != gn.OwnerId {
+		return "", common.NewError("add_hardfork", "only sc owner can add hardfork")
+	}
+
 	var changes config.StringMap
 	if err = changes.Decode(input); err != nil {
 		return "", common.NewError("add_hardfork", err.Error())
