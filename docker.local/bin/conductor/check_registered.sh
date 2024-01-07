@@ -3,8 +3,9 @@
 set -e
 
 provider_type=$1
-blobbers=$2
-found=""
+ids=$2
+
+echo "Checking providers registered: provider_type=$provider_type, ids=$ids"
 
 command=""
 case "${provider_type}" in
@@ -20,11 +21,12 @@ case "${provider_type}" in
     ;;
 esac
 
-for blobber in ${blobbers//,/ }; do
+found=""
+for blobber in ${ids//,/ }; do
     while [[ -z "$found" ]]; do
         echo "Checking blobber $blobber registered"
         # ./zboxcli/zbox --wallet testing.json ls-blobbers | grep $blobber
-        found=$(../zboxcli/zbox --wallet testing.json $command --silent | grep "$blobber" || true)
+        found=$(./zboxcli/zbox --wallet testing.json $command --silent | grep "$blobber" || true)
         echo "result: $found"
         if [ -z "$found" ]; then
             echo "Blobber $blobber not registered yet"
