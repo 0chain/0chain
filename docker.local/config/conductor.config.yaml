@@ -596,7 +596,7 @@ commands:
     should_fail: true
   check_registered:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/check_registered.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/check_registered.sh $provider_type $provider_ids"
     should_fail: false
     args:
       provider_type:
