@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/smartcontract/provider"
@@ -535,35 +537,52 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}
 
 	var (
-		success, failure int
-		validators       []string // validators for rewards
+		success, failure int32
+		validators       = make([]string, len(cr.ValidationTickets)) // validators for rewards
+		errors           = make([]error, len(cr.ValidationTickets))
+		wg               sync.WaitGroup
 	)
 
-	for _, vt := range cr.ValidationTickets {
-		if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
-			return nil, fmt.Errorf("invalid validation ticket: %v", err)
-		}
+	for i := range cr.ValidationTickets {
+		wg.Add(1)
+		go func(i int, vt *ValidationTicket) {
+			defer wg.Done()
+			if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
+				errors[i] = fmt.Errorf("invalid validation ticket: %v", err)
+				return
+			}
 
-		if ok, err := vt.VerifySign(balances); !ok || err != nil {
-			return nil, fmt.Errorf("invalid validation ticket: %v", err)
-		}
+			if ok, err := vt.VerifySign(balances); !ok || err != nil {
+				errors[i] = fmt.Errorf("invalid validation ticket: %v", err)
+				return
+			}
 
-		validators = append(validators, vt.ValidatorID)
-		if !vt.Result {
-			failure++
-			continue
+			validators[i] = vt.ValidatorID
+			if !vt.Result {
+				atomic.AddInt32(&failure, 1)
+				return
+			}
+			atomic.AddInt32(&success, 1)
+		}(i, cr.ValidationTickets[i])
+	}
+
+	wg.Wait()
+
+	// check if there is any error, return the first encountered
+	for _, err := range errors {
+		if err != nil {
+			return nil, err
 		}
-		success++
 	}
 
 	var (
-		pass = success > threshold
+		pass = int(success) > threshold
 	)
 
 	return &verifyTicketsResult{
 		pass:       pass,
 		threshold:  threshold,
-		success:    success,
+		success:    int(success),
 		validators: validators,
 	}, nil
 }

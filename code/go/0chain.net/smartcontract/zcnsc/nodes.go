@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/provider"
@@ -351,13 +352,16 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	return nil
 }
 
-func (an *AuthorizerNode) ToEvent() *event.Authorizer {
+func (an *AuthorizerNode) ToEvent(settings stakepool.Settings) *event.Authorizer {
 	if an.Config == nil {
 		an.Config = new(AuthorizerConfig)
 	}
 	return &event.Authorizer{
 		Provider: event.Provider{
-			ID: an.ID,
+			ID:             an.ID,
+			DelegateWallet: settings.DelegateWallet,
+			NumDelegates:   settings.MaxNumDelegates,
+			ServiceCharge:  settings.ServiceChargeRatio,
 			Rewards: event.ProviderRewards{
 				ProviderID: an.ID,
 			},
