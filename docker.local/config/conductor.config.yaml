@@ -594,3 +594,12 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/send_token_with_large_payload.sh"
     should_fail: true
+  check_registered:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/check_registered.sh"
+    should_fail: false
+    args:
+      provider_type:
+        required: true
+      provider_ids:
+        required: true
