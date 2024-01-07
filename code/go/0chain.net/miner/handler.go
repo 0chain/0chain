@@ -22,6 +22,9 @@ func SetupHandlers() {
 	http.HandleFunc("/_chain_stats", common.WithCORS(
 		common.UserRateLimit(ChainStatsWriter),
 	))
+	http.HandleFunc("/v1/miner/get/stats", common.WithCORS(
+		common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)),
+	))
 	http.HandleFunc("/_txn_stats", common.WithCORS(
 		common.UserRateLimit(TxnStatsWriter),
 	))
