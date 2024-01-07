@@ -11,8 +11,8 @@ import (
 	common2 "0chain.net/smartcontract/common"
 )
 
-// killMiner
-// killing is permanent and a killed miner cannot receive any rewards
+// addHardFork
+// addHardFork creates a hardfork in db
 func (_ *MinerSmartContract) addHardFork(
 	txn *transaction.Transaction,
 	input []byte,
