@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"sort"
 	"strconv"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -23,7 +24,14 @@ func (_ *MinerSmartContract) addHardFork(
 		return "", common.NewError("add_hardfork", err.Error())
 	}
 
-	for key, val := range changes.Fields {
+	sortedKeys := make([]string, len(changes.Fields))
+	for k := range changes.Fields {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+
+	for _, key := range sortedKeys {
+		val := changes.Fields[key]
 		i, err := strconv.ParseInt(val, 10, 64)
 		if err != nil {
 			return "", common.NewError("add_hardfork", err.Error())
