@@ -7,7 +7,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
-	common2 "0chain.net/smartcontract/common"
 )
 
 // killMiner
@@ -28,7 +27,7 @@ func (_ *MinerSmartContract) addHardFork(
 		if err != nil {
 			return "", common.NewError("add_hardfork", err.Error())
 		}
-		h := common2.NewHardFork(key, i)
+		h := cstate.NewHardFork(key, i)
 		if _, err := balances.InsertTrieNode(h.GetKey(), h); err != nil {
 			return "", common.NewError("add_hardfork", err.Error())
 		}
