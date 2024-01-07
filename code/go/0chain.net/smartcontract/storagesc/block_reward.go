@@ -42,8 +42,13 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
-	if conf.BlockReward.BlockReward == 0 {
+	if conf.BlockReward.BlockReward == 0 || conf.BlockReward.TriggerPeriod == 0 {
 		return nil
+	}
+
+	if balances.GetBlock().Round%conf.BlockReward.TriggerPeriod != 0 {
+		return common.NewError("blobber_block_rewards_failed",
+			"block reward trigger period not reached")
 	}
 
 	bbr, err := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
