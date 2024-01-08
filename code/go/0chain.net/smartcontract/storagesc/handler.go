@@ -272,6 +272,10 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		blobberIDs[i], blobberIDs[j] = blobberIDs[j], blobberIDs[i]
 	})
 
+	if len(blobberIDs) > 20 {
+		blobberIDs = blobberIDs[0:20]
+	}
+
 	common.Respond(w, r, blobberIDs, nil)
 
 }
