@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -221,11 +222,12 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		allocData = r.URL.Query().Get("free_allocation_data")
 	)
 
-	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
-	if err != nil {
-		common.Respond(w, r, nil, err)
-		return
-	}
+	//limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	//if err != nil {
+	//	common.Respond(w, r, nil, err)
+	//	return
+	//}
+
 	var inputObj freeStorageAllocationInput
 	if err := inputObj.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
@@ -240,8 +242,8 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 	}
 
 	balances := srh.GetQueryStateContext()
-	var conf *Config
-	if conf, err = getConfig(balances); err != nil {
+	conf, err := getConfig(balances)
+	if err != nil {
 		common.Respond(w, r, "", common.NewErrorf("free_allocation_failed",
 			"can't get config: %v", err))
 		return
@@ -260,11 +262,15 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, conf.HealthCheckPeriod, false)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, common2.Pagination{Limit: 50}, conf.HealthCheckPeriod, false)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
 	}
+
+	rand.Shuffle(len(blobberIDs), func(i, j int) {
+		blobberIDs[i], blobberIDs[j] = blobberIDs[j], blobberIDs[i]
+	})
 
 	common.Respond(w, r, blobberIDs, nil)
 
