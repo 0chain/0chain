@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
@@ -19,6 +20,13 @@ func (_ *MinerSmartContract) addHardFork(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
+	if err := smartcontractinterface.AuthorizeWithOwner("add_hardfork", func() bool {
+		get, _ := gn.Get(OwnerId)
+		return get == txn.ClientID
+	}); err != nil {
+		return "", err
+	}
+
 	var changes config.StringMap
 	if err = changes.Decode(input); err != nil {
 		return "", common.NewError("add_hardfork", err.Error())
