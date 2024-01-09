@@ -37,7 +37,6 @@ func WithActivation(ctx StateContextI, name string, before func(), after func())
 	if err != nil {
 		logging.Logger.Error("with_activation", zap.Error(err))
 	}
-
 	if ctx.GetBlock().Round < round {
 		before()
 	} else {
