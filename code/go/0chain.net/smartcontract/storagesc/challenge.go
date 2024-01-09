@@ -848,6 +848,10 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
 
+	uniqueIdForLogging := strconv.FormatInt(time.Now().UnixNano(), 10)
+
+	logging.Logger.Info("selectRandomBlobber : "+uniqueIdForLogging, zap.Any("challengeBlobbers", challengeBlobbers))
+
 	if len(challengeBlobbers) == 0 {
 		return "", errors.New("no blobbers available for challenge")
 	}
@@ -872,17 +876,26 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			blobbersSelected = challengeBlobbers[:maxBlobbersSelect]
 		}
 
+		logging.Logger.Info("selectRandomBlobber : "+uniqueIdForLogging, zap.Any("blobbersSelected", blobbersSelected))
+
 		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
 			totalWeight += bc.GetWeight()
+
+			logging.Logger.Info("selectRandomBlobber : "+uniqueIdForLogging, zap.Any("blobber", bc.BlobberID), zap.Any("totalWeight", totalWeight))
 		}
 
 		randValue := r.Float64() * float64(totalWeight)
+
+		logging.Logger.Info("selectRandomBlobber : "+uniqueIdForLogging, zap.Any("randValue", randValue))
 
 		var cumulativeWeight uint64
 		for _, bc := range blobbersSelected {
 			cumulativeWeight += bc.GetWeight()
 			if float64(cumulativeWeight) >= randValue {
+
+				logging.Logger.Info("selectRandomBlobber : "+uniqueIdForLogging, zap.Any("selectedBlobber", bc.BlobberID))
+
 				return bc.BlobberID, nil
 			}
 		}
