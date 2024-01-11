@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/smartcontract/stakepool"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -369,7 +370,7 @@ func (an *AuthorizerNode) ToEvent(settings stakepool.Settings, round int64) *eve
 		},
 		Fee: an.Config.Fee,
 
-		URL: an.URL,
+		URL:           an.URL,
 		CreationRound: round,
 	}
 }
