@@ -553,13 +553,13 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}
 
 	var (
-		pass = success > threshold
+		pass = int(success) > threshold
 	)
 
 	return &verifyTicketsResult{
 		pass:       pass,
 		threshold:  threshold,
-		success:    success,
+		success:    int(success),
 		validators: validators,
 	}, nil
 }

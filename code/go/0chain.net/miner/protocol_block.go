@@ -1333,7 +1333,11 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 		txns = append(txns, feeTxn)
 	}
 
-	if config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled") && b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.challenge_generation_gap") == 0 {
+	globalNode, err := storagesc.GetConfig(mc.GetQueryStateContext())
+	if err != nil {
+		return nil, 0, err
+	}
+	if globalNode.ChallengeEnabled && b.Round%globalNode.ChallengeGenerationGap == 0 {
 		gcTxn, err := mc.createGenerateChallengeTxn(b)
 		if err != nil {
 			return nil, 0, err
@@ -1342,9 +1346,8 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 			txns = append(txns, gcTxn)
 		}
 	}
-
 	if mc.ChainConfig.IsBlockRewardsEnabled() &&
-		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
+		b.Round%globalNode.BlockReward.TriggerPeriod == 0 {
 		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		brTxn, err := mc.createBlockRewardTxn(b)
 		if err != nil {
