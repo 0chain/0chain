@@ -125,10 +125,7 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 		err = validateStakePoolSettings(settings, gn)
 	}
 
-	activationErr := cstate.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
-	if activationErr != nil {
-		return nil, activationErr
-	}
+	cstate.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
 
 	changed := false
 

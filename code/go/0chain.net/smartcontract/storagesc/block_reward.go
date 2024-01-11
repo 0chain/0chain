@@ -61,10 +61,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		}
 	}
 
-	activationErr := cstate.WithActivation(balances, t.ClientID, beforeFunc, afterFunc)
-	if activationErr != nil {
-		return activationErr
-	}
+	cstate.WithActivation(balances, t.ClientID, beforeFunc, afterFunc)
 
 	if returnNil {
 		return nil

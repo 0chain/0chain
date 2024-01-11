@@ -51,7 +51,7 @@ func validateStakePoolSettings(
 
 	}
 
-	activationErr := chainstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	chainstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	if activationErr != nil {
 		return activationErr
@@ -437,11 +437,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 		resp, err = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
 	}
 
-	activationErr := chainstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
-
-	if activationErr != nil {
-		return "", activationErr
-	}
+	chainstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	return resp, err
 }

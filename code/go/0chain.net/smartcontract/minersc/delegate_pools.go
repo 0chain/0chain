@@ -24,11 +24,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
 	}
 
-	activationErr := cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
-
-	if activationErr != nil {
-		return "", activationErr
-	}
+	cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	return resp, err
 }
@@ -79,11 +75,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 		resp, err = stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter, msc.refreshProvider)
 	}
 
-	activationErr := cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
-
-	if activationErr != nil {
-		return "", activationErr
-	}
+	cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	return resp, err
 }
