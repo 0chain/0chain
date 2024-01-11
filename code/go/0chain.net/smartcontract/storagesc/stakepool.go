@@ -53,10 +53,6 @@ func validateStakePoolSettings(
 
 	chainstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
-	if activationErr != nil {
-		return activationErr
-	}
-
 	return err
 }
 
