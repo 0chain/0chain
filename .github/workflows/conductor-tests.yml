@@ -46,7 +46,7 @@ jobs:
   # Succeeds if the event is scheduled for staging
   scheduled-staging-branches:
     runs-on: [self-hosted, arc-runner]
-    if: github.event.schedule == '* 1 * * *'
+    if: github.event.schedule == '0 1 * * *'
     steps:
       - name: "Success"
         run: exit 0

@@ -351,21 +351,25 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	return nil
 }
 
-func (an *AuthorizerNode) ToEvent(round int64) *event.Authorizer {
+func (an *AuthorizerNode) ToEvent(settings stakepool.Settings, round int64) *event.Authorizer {
 	if an.Config == nil {
 		an.Config = new(AuthorizerConfig)
 	}
 	return &event.Authorizer{
 		Provider: event.Provider{
-			ID: an.ID,
+			ID:             an.ID,
+			DelegateWallet: settings.DelegateWallet,
+			NumDelegates:   settings.MaxNumDelegates,
+			ServiceCharge:  settings.ServiceChargeRatio,
 			Rewards: event.ProviderRewards{
 				ProviderID: an.ID,
 			},
 			LastHealthCheck: an.LastHealthCheck,
 			IsKilled:        an.Provider.IsKilled(),
 		},
-		Fee:           an.Config.Fee,
-		URL:           an.URL,
+		Fee: an.Config.Fee,
+
+		URL: an.URL,
 		CreationRound: round,
 	}
 }
