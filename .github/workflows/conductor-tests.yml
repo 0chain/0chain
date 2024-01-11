@@ -365,17 +365,17 @@ jobs:
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [standard-miner, standard-sharder, zchain-config, byzantine-try-1, byzantine-try-2, byzantine-try-3, fault-tolerance, blobber-01, blobber-02-try-1, blobber-02-try-2, blobber-02-try-3, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02-try-1, node-recovery-02-try-2, node-recovery-02-try-3, node-recovery-03]
+    needs: [compute-branches, standard-miner, standard-sharder, zchain-config, byzantine-try-1, byzantine-try-2, byzantine-try-3, fault-tolerance, blobber-01, blobber-02-try-1, blobber-02-try-2, blobber-02-try-3, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02-try-1, node-recovery-02-try-2, node-recovery-02-try-3, node-recovery-03]
     if: always()
     steps:
       - name: "Notify Slack"
         run: |
-          ZCHAIN_BRANCH=$([ -z "${{ github.event.inputs.zchain-branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.zchain-branch }}")
-          BLOBBER_BRANCH=$([ -z "${{ github.event.inputs.blobber-branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.blobber-branch }}")
-          AUTHORIZER_BRANCH=$([ -z "${{ github.event.inputs.authorizer-branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.authorizer-branch }}")
-          ZBOX_BRANCH=$([ -z "${{ github.event.inputs.zbox-branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.zbox-branch }}")
-          ZBOXCLI_BRANCH=$([ -z "${{ github.event.inputs.zboxcli-branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.zboxcli-branch }}")
-          ZWALLETCLI_BRANCH=$([ -z "${{ github.event.inputs.zwalletcli-branch }}" ] && echo "sprint" || echo "${{ github.event.inputs.zwalletcli-branch }}")
+          ZCHAIN_BRANCH=$([ -z "${{ needs.compute-branches.outputs.zchain_branch }}" ] && echo "sprint" || echo "${{ needs.compute-branches.outputs.zchain_branch }}")
+          BLOBBER_BRANCH=$([ -z "${{ needs.compute-branches.outputs.blobber_branch }}" ] && echo "sprint" || echo "${{ needs.compute-branches.outputs.blobber_branch }}")
+          AUTHORIZER_BRANCH=$([ -z "${{ needs.compute-branches.outputs.authorizer_branch }}" ] && echo "sprint" || echo "${{ needs.compute-branches.outputs.authorizer_branch }}")
+          ZBOX_BRANCH=$([ -z "${{ needs.compute-branches.outputs.zbox_branch }}" ] && echo "sprint" || echo "${{ needs.compute-branches.outputs.zbox_branch }}")
+          ZBOXCLI_BRANCH=$([ -z "${{ needs.compute-branches.outputs.zboxcli_branch }}" ] && echo "sprint" || echo "${{ needs.compute-branches.outputs.zboxcli_branch }}")
+          ZWALLETCLI_BRANCH=$([ -z "${{ needs.compute-branches.outputs.zwalletcli_branch }}" ] && echo "sprint" || echo "${{ needs.compute-branches.outputs.zwalletcli_branch }}")
 
           PASSED_TEXT="PASSED ✅"
           FAILED_TEXT="FAILED ⚠️"
