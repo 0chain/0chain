@@ -28,7 +28,7 @@ func TestMinerBenchmarkTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(msc.smartContractFunctions)+untestedFunctions,
+		len(msc.smartContractFunctions)-untestedFunctions,
 		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }
