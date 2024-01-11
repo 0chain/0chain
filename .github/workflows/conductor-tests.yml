@@ -174,10 +174,15 @@ jobs:
   blobber-01:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-01.yml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
     with:
+      test_name: "blobber-1"
+      number_of_times: 5
+      continue_on_error: true
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
+      auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
+      zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
       zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
       zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
     secrets:
@@ -222,10 +227,15 @@ jobs:
   blobber-03:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-03.yml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
     with:
+      test_name: "blobber-3"
+      number_of_times: 5
+      continue_on_error: true
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
+      auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
+      zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
       zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
       zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
     secrets:
@@ -234,10 +244,15 @@ jobs:
   blobber-04:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-04.yml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
     with:
+      test_name: "blobber-4"
+      number_of_times: 5
+      continue_on_error: true
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
+      auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
+      zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
       zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
       zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
     secrets:
@@ -246,10 +261,15 @@ jobs:
   blobber-05:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-05.yml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
     with:
+      test_name: "blobber-5"
+      number_of_times: 5
+      continue_on_error: true
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
+      auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
+      zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
       zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
       zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
     secrets:
@@ -258,14 +278,17 @@ jobs:
   blobber-06:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-blobber-tests-06.yml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
     with:
+      test_name: "blobber-6"
+      number_of_times: 5
+      continue_on_error: true
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
+      auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
+      zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
       zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
       zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
-    secrets:
-      inherit
   
   authorizers-standard:
     needs: compute-branches
