@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"sort"
 	"strconv"
 
@@ -31,7 +33,9 @@ func (_ *MinerSmartContract) addHardFork(
 		return "", common.NewError("add_hardfork", err.Error())
 	}
 
-	sortedKeys := make([]string, len(changes.Fields))
+	logging.Logger.Info("add_hardfork", zap.Any("changes", changes))
+
+	sortedKeys := make([]string, 0, len(changes.Fields))
 	for k := range changes.Fields {
 		sortedKeys = append(sortedKeys, k)
 	}
