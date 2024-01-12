@@ -22,7 +22,7 @@ on:
 
 jobs:
   system-tests:
-    uses: 0chain/actions/.github/workflows/manual_system_tests.yml@master
+    uses: 0chain/actions/.github/workflows/manual_system_tests.yml@prebuilt-binaries
     with:
       miner_branch: ${{ github.ref_name }}
       sharder_branch: ${{ github.ref_name }}
