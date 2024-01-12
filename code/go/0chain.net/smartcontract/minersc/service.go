@@ -35,7 +35,7 @@ func (_ *MinerSmartContract) addHardFork(
 
 	logging.Logger.Info("add_hardfork", zap.Any("changes", changes))
 
-	sortedKeys := make([]string, len(changes.Fields))
+	sortedKeys := make([]string, 0, len(changes.Fields))
 	for k := range changes.Fields {
 		sortedKeys = append(sortedKeys, k)
 	}
