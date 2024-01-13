@@ -42,7 +42,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.RegisterSharderKeepWorker(ctx)
 	go sc.SharderHealthCheck(ctx)
 
-	go sc.TrackTransactionErrors(ctx)
+	//go sc.TrackTransactionErrors(ctx)
 }
 
 /*BlockWorker - stores the blocks */
