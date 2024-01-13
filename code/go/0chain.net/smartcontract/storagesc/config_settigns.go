@@ -533,6 +533,18 @@ func (conf *Config) setKey(key string, change string) {
 }
 
 func (conf *Config) set(key string, change string) error {
+	if isCost(key) {
+		value, err := strconv.Atoi(change)
+		if err != nil {
+			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
+		}
+		if err := conf.setCost(key, value); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	s, ok := Settings[key]
 	if !ok {
 		return fmt.Errorf("unknown key %s, can't set value %v", key, change)
@@ -589,14 +601,6 @@ func (conf *Config) set(key string, change string) error {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
 		if err := conf.setBoolean(key, value); err != nil {
-			return err
-		}
-	case config.Cost:
-		value, err := strconv.Atoi(change)
-		if err != nil {
-			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
-		}
-		if err := conf.setCost(key, value); err != nil {
 			return err
 		}
 	case config.Key:
