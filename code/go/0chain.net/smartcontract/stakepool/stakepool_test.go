@@ -2,6 +2,7 @@ package stakepool
 
 import (
 	"0chain.net/chaincore/block"
+	"github.com/0chain/common/core/logging"
 	"strconv"
 	"testing"
 
@@ -12,6 +13,10 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
+
+func init() {
+	logging.InitLogging("development", "")
+}
 
 func TestStakePool_DistributeRewards(t *testing.T) {
 	providerID := "provider_id"
