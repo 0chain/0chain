@@ -42,7 +42,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.RegisterSharderKeepWorker(ctx)
 	go sc.SharderHealthCheck(ctx)
 
-	//go sc.TrackTransactionErrors(ctx)
+	go sc.TrackTransactionErrors(ctx)
 }
 
 /*BlockWorker - stores the blocks */
@@ -431,14 +431,17 @@ func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 		timer = time.NewTimer(10 * time.Minute)
 	)
 
-	edb := sc.GetQueryStateContext().GetEventDB()
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-
+			stateContext := sc.GetQueryStateContext()
+			if stateContext == nil {
+				logging.Logger.Warn("no context is initialized")
+				continue
+			}
+			edb := stateContext.GetEventDB()
 			err := edb.UpdateTransactionErrors()
 			if err != nil {
 				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
