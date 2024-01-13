@@ -397,6 +397,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
+				EventsComputationTimer.Update(time.Since(ts).Microseconds())
+				return err //do not remove events in case of error
 			}
 
 			EventsComputationTimer.Update(time.Since(ts).Microseconds())
