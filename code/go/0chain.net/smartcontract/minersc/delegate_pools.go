@@ -137,6 +137,8 @@ func (msc *MinerSmartContract) refreshProvider(
 
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (
 	sp *stakepool.StakePool, err error) {
+	sp = stakepool.NewStakePool()
+
 	err = balances.GetTrieNode(stakepool.StakePoolKey(providerType, providerID), sp)
 	if err != nil {
 		return nil, err

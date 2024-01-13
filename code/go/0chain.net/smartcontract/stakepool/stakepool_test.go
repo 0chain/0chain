@@ -404,7 +404,7 @@ func Test_validateLockRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := validateLockRequest(tt.args.t, tt.args.sp, tt.args.vs)
+			got, err := validateLockRequest(tt.args.t, tt.args.sp, tt.args.vs, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateLockRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
