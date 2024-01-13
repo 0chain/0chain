@@ -86,12 +86,12 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 func (msc *MinerSmartContract) refreshProvider(
 	providerType spenum.Provider, providerID string, balances cstate.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
+	logging.Logger.Info("refresh_provider", zap.Any("provider_type", providerType), zap.String("provider_id", providerID))
 
-	logging.Logger.Info("refresh_provider", zap.String("provider_type", providerType.String()), zap.String("provider_id", providerID))
-
-	sp, err := getStakePool(providerType, providerID, balances)
-	if err != nil {
-		return nil, err
+	var sp stakepool.AbstractStakePool
+	if sp, err = msc.getStakePoolAdapter(providerType, providerID, balances); err != nil {
+		return nil, common.NewErrorf("stake_pool_lock_failed",
+			"can't get stake pool: %v", err)
 	}
 
 	logging.Logger.Info("refresh_provider", zap.Any("stake_pool", sp))
