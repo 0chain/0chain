@@ -653,8 +653,6 @@ func newEventsDb() *event.EventDb {
 			PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
 		}
 
-		log.Println("creating event database with config: DBAccess : %+v, DBSettings: %+v", dbAccessConfig, dbSettingsConfig)
-
 		return event.NewEventDbWithoutWorker(dbAccessConfig, dbSettingsConfig)
 	}
 
