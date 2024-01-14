@@ -7,9 +7,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
-	"go.uber.org/zap"
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
@@ -86,15 +84,11 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 func (msc *MinerSmartContract) refreshProvider(
 	providerType spenum.Provider, providerID string, balances cstate.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
-	logging.Logger.Info("refresh_provider", zap.Any("provider_type", providerType), zap.String("provider_id", providerID))
-
 	var sp stakepool.AbstractStakePool
 	if sp, err = msc.getStakePoolAdapter(providerType, providerID, balances); err != nil {
 		return nil, common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
-
-	logging.Logger.Info("refresh_provider", zap.Any("stake_pool", sp))
 
 	totalStakePoolBalance, err := sp.TotalStake()
 	if err != nil {
@@ -106,8 +100,6 @@ func (msc *MinerSmartContract) refreshProvider(
 		if err != nil {
 			return nil, err
 		}
-
-		logging.Logger.Info("refresh_provider", zap.Any("miner_node", mn))
 
 		mn.TotalStaked = totalStakePoolBalance
 
