@@ -35,7 +35,7 @@ jobs:
           repository: 0chain/0helm
           fetch-depth: 1
           path: ./0helm
-          token: ${{ secrets.ACCESS_TOKEN }}
+          token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
       - name: "Copy 0chain.yaml and sc.yaml in 0helm one-pool-staging-test branch"
         if: ${{ contains(steps.changed-files.outputs.modified_files, 'docker.local/config/0chain.yaml') || contains(steps.changed-files.outputs.modified_files, 'docker.local/config/sc.yaml') }}
@@ -49,7 +49,7 @@ jobs:
       - name: Push Updated Code in 0helm one-pool-staging-test branch
         uses: peaceiris/actions-gh-pages@v3
         with:
-          personal_token: ${{ secrets.ACCESS_TOKEN }}
+          personal_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
           publish_dir: ./0helm/updated_configs
           destination_dir: updated_configs
           publish_branch: one-pool-staging-test
@@ -66,7 +66,7 @@ jobs:
       - name: Raise PR
         run: |
           curl -X POST \
-          -H "Authorization: Bearer ${{secrets.ACCESS_TOKEN}}" \
+          -H "Authorization: Bearer ${{secrets.SVC_ACCOUNT_SECRET}}" \
           -H "Accept: application/vnd.github.v3+json" \
           https://api.github.com/repos/0chain/0helm/actions/workflows/raise_pr.yaml/dispatches \
           -d '{"ref": "staging"}'

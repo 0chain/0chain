@@ -67,7 +67,7 @@ jobs:
       
       - name: Clone gitbook repo
         run: |
-          git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/gitbookdocs.git
+          git clone https://${{ secrets.SVC_ACCOUNT_USER }}:${{ secrets.SVC_ACCOUNT_SECRET }}@github.com/0chain/gitbookdocs.git
           cd gitbookdocs
           git checkout ${{ github.event.inputs.gitbook-branch }} 
       
@@ -81,7 +81,7 @@ jobs:
         with:
           path: gitbookdocs
           base: "${{ github.event.inputs.gitbook-branch }}"
-          token: ${{ secrets.ACCESS_TOKEN }}
+          token: ${{ secrets.SVC_ACCOUNT_SECRET }}
           commit-message: update sharder api swagger file
           branch: "sharder-api-swagger-file-update-${{ github.run_id }}"
           delete-branch: true
