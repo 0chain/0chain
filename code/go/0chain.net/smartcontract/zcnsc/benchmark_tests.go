@@ -180,6 +180,18 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 					ProviderType: spenum.Authorizer,
 				}).Encode(),
 			},
+			{
+				name:    benchmark.ZcnSc + UpdateGlobalConfigFunc,
+				endpoint: sc.UpdateGlobalConfig,
+				txn:     createTransaction(owner, "", 3000),
+				input: (&config2.StringMap{
+					Fields: map[string]string{
+						MinMintAmount:      "2",
+						MinBurnAmount:      "3",
+						MinStakeAmount:     "1",
+					},
+				}).Encode(),
+			},
 		},
 	)
 }
