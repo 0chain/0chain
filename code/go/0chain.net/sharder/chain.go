@@ -25,6 +25,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const errInvalidStateCode = "invalid_state"
+
+var errInvalidState = common.NewError(errInvalidStateCode, "")
+
 var sharderChain = &Chain{}
 
 /*SetupSharderChain - setup the sharder's chain */
@@ -187,8 +191,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		bl.lfb.SetStateStatus(0)
 		logging.Logger.Error("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
-		// return common.NewErrorf("load_lfb",
-		//	"can't init block state: %v", err) // fatal
+		return common.NewErrorf(errInvalidStateCode, "can't init block state: %v", err) // fatal
 	}
 
 	// setup lfmb first
@@ -515,12 +518,16 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 	var bl *blocksLoaded
 	lfbr, err := sc.LoadLFBRound()
-	switch err {
-	case nil:
+	if err != nil {
+		// use the LFB info from event db
+		logging.Logger.Warn("load_lfb - could not load lfb from state DB, continue using the one from event db",
+			zap.Int64("lfb_round", lfbRound),
+			zap.String("lfb_hash", lfbHash),
+			zap.Error(err))
+	} else {
 		logging.Logger.Debug("load_lfb - load from stateDB",
 			zap.Int64("round", lfbr.Round),
 			zap.String("block", lfbr.Hash))
-
 		if lfbr.Round <= lfbRound {
 			// use LFB from state DB when:
 			// LFB from state DB is more old than LFB from event DB or
@@ -528,19 +535,50 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 			lfbRound = lfbr.Round
 			lfbHash = lfbr.Hash
 		}
+	}
 
+	const maxRollbackRounds = 100
+	var i int
+
+loop:
+	for {
+		logging.Logger.Debug("load_lfb - load round and block",
+			zap.Int64("round", lfbRound),
+			zap.String("block", lfbHash))
 		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
 		if err != nil {
 			return err
 		}
-		logging.Logger.Debug("load_lfb - load round and block",
-			zap.Int64("round", bl.lfb.Round),
-			zap.String("block", bl.lfb.Hash))
-	default:
-		bl = sc.iterateRoundsLookingForLFB(ctx)
-		logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
-			zap.Int64("round", bl.lfb.Round),
-			zap.String("block", bl.lfb.Hash))
+
+		// setup all related for a non-genesis case
+		err := sc.setupLatestBlocks(ctx, bl)
+		switch err {
+		case nil:
+			break loop
+		default:
+			logging.Logger.Error("load_lfb - setup latest blocks failed", zap.Error(err))
+			if lfbRound == 0 {
+				return err
+			}
+
+			cerr, ok := err.(*common.Error)
+			if ok && cerr.Is(errInvalidState) {
+				logging.Logger.Error("load_lfb - check previous block",
+					zap.Int64("round", lfbRound-1),
+					zap.String("hash", bl.lfb.PrevHash))
+				lfbRound = lfbRound - 1
+				lfbHash = bl.lfb.PrevHash
+
+				i++
+				if i >= maxRollbackRounds {
+					logging.Logger.Error("load_lfb - rollback max count meet", zap.Int("max", maxRollbackRounds))
+					return err
+				}
+
+				continue
+			}
+			return err
+		}
 	}
 
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
@@ -585,9 +623,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		logging.Logger.Debug("load_lfb from store (nlfmb)",
 			zap.Int64("round", bl.nlfmb.Round))
 	}
-
-	// setup all related for a non-genesis case
-	return sc.setupLatestBlocks(ctx, bl)
+	return nil
 }
 
 // SaveMagicBlockHandler used on sharder startup to save received
