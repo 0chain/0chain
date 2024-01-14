@@ -96,7 +96,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -142,7 +142,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -188,7 +188,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -234,7 +234,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -279,7 +279,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -325,7 +325,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -371,7 +371,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -417,7 +417,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
@@ -463,7 +463,7 @@ tests:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
               - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
               - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-              - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+              - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
       - command:
           name: "check_registered"
           params:
