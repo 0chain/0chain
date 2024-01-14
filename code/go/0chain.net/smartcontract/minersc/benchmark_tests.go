@@ -463,6 +463,20 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
+		{
+			name: "miner.add_hardfork",
+			endpoint: msc.addHardFork,
+			txn: &transaction.Transaction{
+				ClientID:     owner,
+				CreationDate: creationTime,
+			},
+			input: (&sc.StringMap{
+				Fields: map[string]string{
+					"hardfork_1": "1",
+					"hardfork_2": "2",
+				},
+			}).Encode(),
+		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
