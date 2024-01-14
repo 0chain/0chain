@@ -572,6 +572,14 @@ loop:
 				i++
 				if i >= maxRollbackRounds {
 					logging.Logger.Error("load_lfb - rollback max count meet", zap.Int("max", maxRollbackRounds))
+
+					bl = sc.iterateRoundsLookingForLFB(ctx)
+					if bl != nil {
+						logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
+							zap.Int64("round", bl.lfb.Round),
+							zap.String("block", bl.lfb.Hash))
+					}
+
 					return err
 				}
 
