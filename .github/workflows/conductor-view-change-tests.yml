@@ -381,7 +381,7 @@ jobs:
   #       id: send-slack-notification
   #       uses: peter-murray/value-as-flag-action@0.0.1
   #       with:
-  #         value: ${{ secrets.SEND_SLACK_NOTIFICATION }}
+  #         value: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
   #         default: false
 
   #     - name: "Notify Slack"
