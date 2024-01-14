@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"0chain.net/chaincore/state"
-	"0chain.net/core/config"
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -283,13 +281,9 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 			s, err := Work(ctx, gs, es, &p)
 			if err != nil {
-				if config.Development() {
-					logging.Logger.Error("process events", zap.Error(err))
-					if !strings.Contains(err.Error(), "transaction has already been committed or rolled back") {
-					}
-					return
-				}
-
+				logging.Logger.Error("process events", zap.Error(err))
+				commit = false
+				return
 			}
 			commit = true
 			if s != nil {
