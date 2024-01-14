@@ -103,10 +103,10 @@ func BenchmarkTests(
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					Provider: provider.Provider{
-						ID:           encryption.Hash("magic_block_miner_1"),
+						ID:           data.InactiveSharder,
 						ProviderType: spenum.Miner,
 					},
-					PublicKey: "miner's public key",
+					PublicKey: data.InactiveSharderPK,
 					N2NHost:   "new n2n_host",
 					Host:      "new host",
 					Port:      1234,
