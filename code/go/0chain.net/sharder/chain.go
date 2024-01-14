@@ -362,7 +362,10 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 			logging.Logger.Warn("load_lfb, could not sync LFB from remote",
 				zap.Int64("round", lfb.Round),
 				zap.String("lfb", lfb.Hash))
-			return
+
+			rollBackCount++
+			continue
+			// return
 		}
 
 		logging.Logger.Debug("load_lfb, got notarized block from remote and compare with local")
