@@ -395,8 +395,15 @@ func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 }
 
 func (sc *Chain) SharderHealthCheck(ctx context.Context) {
-	// TODO: Move to a config file
-	const HEALTH_CHECK_TIMER = 5 * time.Minute // 5 Minute
+	gn, err := minersc.GetGlobalNode(sc.GetQueryStateContext())
+	if err != nil {
+		logging.Logger.Panic("sharder health check - get global node failed", zap.Error(err))
+		return
+	}
+
+	logging.Logger.Debug("sharder health check - start", zap.Any("period", gn.HealthCheckPeriod))
+	HEALTH_CHECK_TIMER := gn.HealthCheckPeriod
+
 	for {
 		select {
 		case <-ctx.Done():

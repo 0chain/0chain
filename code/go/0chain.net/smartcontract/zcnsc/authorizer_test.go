@@ -243,7 +243,7 @@ func Test_AuthorizerHealthCheck(t *testing.T) {
 
 	tr.ClientID = globalNode.ZCNSConfig.OwnerId
 
-	addAuthorizerPayload := CreateAuthorizerParam(tr.ClientID, tr.PublicKey)
+	addAuthorizerPayload := CreateAuthorizerParam("random_authorizer_delegate_wallet", tr.PublicKey)
 	data, err := json.Marshal(addAuthorizerPayload)
 	require.NoError(t, err)
 

@@ -1299,22 +1299,6 @@ l:
 		return err
 	}
 
-	//TODO delete it when cost don't need further debugging
-	if config.Development() {
-		var costs []int
-		cost := 0
-		for _, txn := range b.Txns {
-			c, err := mc.EstimateTransactionCost(ctx, lfb, txn, chain.WithSync())
-			if err != nil {
-				logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
-				break
-			}
-			costs = append(costs, c)
-			cost += c
-		}
-		logging.Logger.Debug("calculated cost", zap.Int("cost", cost), zap.Ints("costs", costs), zap.String("block_hash", b.Hash))
-	}
-
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
 	logging.Logger.Info("generate block (assemble+update+sign)",
@@ -1349,7 +1333,11 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 		txns = append(txns, feeTxn)
 	}
 
-	if config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled") && b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.challenge_generation_gap") == 0 {
+	globalNode, err := storagesc.GetConfig(mc.GetQueryStateContext())
+	if err != nil {
+		return nil, 0, err
+	}
+	if globalNode.ChallengeEnabled && b.Round%globalNode.ChallengeGenerationGap == 0 {
 		gcTxn, err := mc.createGenerateChallengeTxn(b)
 		if err != nil {
 			return nil, 0, err
@@ -1358,9 +1346,8 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 			txns = append(txns, gcTxn)
 		}
 	}
-
 	if mc.ChainConfig.IsBlockRewardsEnabled() &&
-		b.Round%config.SmartContractConfig.GetInt64("smart_contracts.storagesc.block_reward.trigger_period") == 0 {
+		b.Round%globalNode.BlockReward.TriggerPeriod == 0 {
 		logging.Logger.Info("start_block_rewards", zap.Int64("round", b.Round))
 		brTxn, err := mc.createBlockRewardTxn(b)
 		if err != nil {

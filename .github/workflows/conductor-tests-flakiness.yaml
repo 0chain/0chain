@@ -41,16 +41,16 @@ env:
   ZDNS_URL: http://198.18.0.98:9091
 
 jobs:
-  CONDUCTOR_NODE_RECOVERY_03_TESTS:
-    name: CONDUCTOR-NODE-RECOVERY-03-TESTS
+  CONDUCTOR_TESTS_FLAKINESS:
+    name: CONDUCTOR_TESTS_FLAKINESS (${{ inputs.test_name }})
     runs-on: [self-hosted, conductor-test]
 
     steps:
-    - name: Install NodeJS
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-
+    - name: Install zip
+      run: |
+        apt-get update
+        apt-get install -y zip
+  
     - name: Setup Environment Variables
       run: |
         export HOME="/root"
@@ -144,7 +144,7 @@ jobs:
 
     - name: Git clone authorizer
       run: |
-        git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
+        git clone https://${{ secrets.SVC_ACCOUNT_USER }}:${{ secrets.SVC_ACCOUNT_SECRET }}@github.com/0chain/token_bridge_authserver.git
         cd token_bridge_authserver
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         AUTH_BRANCH="${{ inputs.auth_branch }}"
@@ -196,7 +196,7 @@ jobs:
     - name: Git clone 0box
       run: |
         export HOME="/root"
-        git clone https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PAT }}@github.com/0chain/0box.git
+        git clone https://${{ secrets.SVC_ACCOUNT_USER }}:${{ secrets.SVC_ACCOUNT_SECRET }}@github.com/0chain/0box.git
         cd 0box
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZBOX_BRANCH="${{ inputs.zbox_branch }}"
@@ -346,7 +346,7 @@ jobs:
       run: |
         cd 0box
         chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
-        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.R53_ACCESS_KEY_ID }} ${{ secrets.R53_SECRET_KEY_ID }} $ZDNS_URL
   
     - name: Build 0dns
       run: |
@@ -433,16 +433,60 @@ jobs:
       run: |
         cat ~/.zcn/wallets/UTC--2023-10-26T00-34-42.327566000Z--8e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97
   
+    - name: Make logs directory
+      run: |
+        mkdir -p ./0chain/conductor-flakiness-logs
+    
+    - name: Initialize stats vars
+      run: |
+        echo SUCCESSFUL_ATTEMPTS=0 >> "$GITHUB_ENV"
+        echo FAILED_ATTEMPTS=0 >> "$GITHUB_ENV"
+       
     - name: Start Flakiness Test
-      uses: nick-fields/retry@v2
-      with:
-        max_attempts: ${{ inputs.number_of_times }}
-        continue_on_error: ${{ inputs.continue_on_error }}
-        command: |
-          export HOME="/root"
-          cd 0chain
-          ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}
+      run: |
+        export HOME="/root"
+        cd 0chain
+        success=0
+        failure=0
+        
+        for i in {1..${{ inputs.number_of_times }}}; do
+          echo "[CT-FLAKY-LOG] Starting Attempt $i"
+          
+          if ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}; then
+            echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $i succeeded"
+            zip -r -q "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs 
+            success=$((success + 1))
+          else
+            echo "[CT-FLAKY-LOG] ❌ Conductor test attempt $i failed"
+            zip -r -q "./conductor-flakiness-logs/attempt-$i-failure.zip" ./conductor-full-logs
+            failure=$((failure + 1))
+            if [ ${{ inputs.continue_on_error }} = "false" ]; then
+              echo "👋🏻 Exiting flakiness test"
+              exit 1
+            fi
+          fi
+        done
 
+        echo "SUCCESSFUL_ATTEMPTS=$success" >> "$GITHUB_ENV"
+        echo "FAILED_ATTEMPTS=$failure" >> "$GITHUB_ENV"
+
+    - name: "Compute result"
+      run: |
+        echo "✅ SUCCESSFUL_ATTEMPTS = $SUCCESSFUL_ATTEMPTS / ${{ inputs.number_of_times }}"
+        echo "❌ FAILED_ATTEMPTS = $FAILED_ATTEMPTS / ${{ inputs.number_of_times }}"
+
+        success_rate=80
+
+        if [ $SUCCESSFUL_ATTEMPTS -ge $((${{ inputs.number_of_times }} * success_rate / 100)) ]; then
+          echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+          echo "🎉 Conductor test succeeded"
+          echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+          exit 0
+        else
+          echo "👋🏻 Conductor test failed"
+          exit 1
+        fi
+      
     - name: "Remove Tenderly fork"
       if: always()
       run: |
@@ -454,11 +498,15 @@ jobs:
     - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: node-recovery-03-logs
+        name: conductor-flakiness-logs
         path: |
-          0chain/conductor-full-logs
+          0chain/conductor-flakiness-logs
 
-    - name: Added /tmp folder cleanup.
+    - name: Cleanup.
+      if: always()
       run: |
+        [ "$(docker ps -a -q)" ] && docker rm -f $(docker ps -a -q) || true
+        rm -rf ./0chain/conductor-flakiness-logs
         cd /tmp
         rm -rf ./*
+        echo -y | docker system prune

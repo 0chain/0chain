@@ -25,6 +25,9 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/miner/get/stats", common.WithCORS(
 		common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)),
 	))
+	http.HandleFunc("/_txn_stats", common.WithCORS(
+		common.UserRateLimit(TxnStatsWriter),
+	))
 }
 
 // swagger:route GET /v1/chain/get/stats chainstatus
@@ -168,4 +171,39 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 		AverageBlockSize:   node.Self.Underlying().Info.AvgBlockTxns,
 		NetworkTime:        networkTimes,
 	}, nil
+}
+
+// TxnStatsWriter - display the current txn stats
+func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	c := GetMinerChain().Chain
+	chain.PrintCSS(w)
+	diagnostics.WriteStatisticsCSS(w)
+
+	self := node.Self.Underlying()
+	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<br>")
+
+	fmt.Fprintf(w, "<table>")
+
+	count := 0
+
+	for txnFunc, txnTimer := range chain.StartToFinalizeTxnTypeTimer {
+		if count%3 == 0 {
+			fmt.Fprintf(w, "<tr><td>")
+		} else {
+			fmt.Fprintf(w, "</td><td valign='top'>")
+		}
+
+		fmt.Fprintf(w, "<h3>%v</h3>", txnFunc)
+		diagnostics.WriteTimerStatistics(w, c, txnTimer, 1000000.0)
+
+		if count%3 == 2 {
+			fmt.Fprintf(w, "</tr>")
+		}
+
+		count++
+	}
+
+	fmt.Fprintf(w, "</table>")
 }
