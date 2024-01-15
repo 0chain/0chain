@@ -40,7 +40,17 @@ func BlobberRewardKey(round int64) datastore.Key {
 // getActivePassedBlobberRewardsPartitions gets blobbers passed challenge from last challenge period
 func getActivePassedBlobberRewardsPartitions(balances c_state.StateContextI, period int64) (*partitions.Partitions, error) {
 	key := BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, period))
-	return partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
+	p, err := partitions.CreateIfNotExists(balances, key, blobberRewardsPartitionSize)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = balances.DeleteTrieNode(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
 
 // getOngoingPassedBlobberRewardsPartitions gets blobbers passed challenge from ongoing challenge period
