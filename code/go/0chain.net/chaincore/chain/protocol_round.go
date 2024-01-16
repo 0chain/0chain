@@ -151,6 +151,7 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	select {
 	case c.finalizedRoundsChannel <- r:
 	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
+		r.ResetFinalizingState()
 		logging.Logger.Info("finalize round - push round to finalizedRoundsChannel timeout",
 			zap.Int64("round", r.GetRoundNumber()))
 	}
@@ -327,6 +328,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			fb := frchain[len(frchain)-1-idx]
 			if roundNumber-fb.Round < 3 {
 				// finalize the block only when it has at least 3 confirmation
+				logging.Logger.Debug("finalize round - block has less than 3 confirmation")
 				continue
 			}
 
