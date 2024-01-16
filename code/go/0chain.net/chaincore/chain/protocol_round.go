@@ -361,11 +361,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				resultC: make(chan error, 1),
 			}
 
+			rd := c.GetRound(fb.Round)
 			select {
 			case <-ctx.Done():
 				logging.Logger.Info("finalize round - context done",
 					zap.Error(ctx.Err()),
 					zap.Int64("round", roundNumber))
+				rd.ResetFinalizingState()
 				return
 			case c.finalizedBlocksChannel <- fbWithReply:
 				ts := time.Now()
@@ -374,12 +376,15 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					logging.Logger.Error("finalize round - context done",
 						zap.Error(ctx.Err()),
 						zap.Int64("round", roundNumber))
+					rd.ResetFinalizingState()
+					return
 				case err := <-fbWithReply.resultC:
 					if err != nil {
 						logging.Logger.Error("finalize round - finalize block failed",
 							zap.Int64("round", fb.Round),
 							zap.String("block", fb.Hash),
 							zap.Error(err))
+						rd.ResetFinalizingState()
 						return
 					}
 

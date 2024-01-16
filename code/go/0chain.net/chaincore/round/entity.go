@@ -470,6 +470,12 @@ func (r *Round) SetFinalizing() bool {
 	return true
 }
 
+func (r *Round) ResetFinalizingState() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.setFinalizingPhase(NotFinalized)
+}
+
 /*IsFinalizing - is the round finalizing */
 func (r *Round) IsFinalizing() bool {
 	r.mutex.RLock()
