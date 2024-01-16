@@ -101,7 +101,7 @@ func (edb *EventDb) ProcessEvents(
 				return nil, err
 			}
 
-			return nil, err
+			return nil, errors.New("process events failed")
 		}
 
 		var opt ProcessEventsOptions
