@@ -36,6 +36,8 @@ func CommitNow() ProcessEventsOptionsFunc {
 // or rollback.
 type CommitOrRollbackFunc func(rollback bool) error
 
+var debugCount int
+
 // ProcessEvents - process events and return commit function or error if any
 // The commit function can be called to commit the events changes when needed
 func (edb *EventDb) ProcessEvents(
@@ -102,6 +104,16 @@ func (edb *EventDb) ProcessEvents(
 			}
 
 			return nil, errors.New("process events failed")
+		}
+
+		// debug when round is 1000, faile the event process and should trigger FB retry
+		if round == 1000 {
+			debugCount++
+			if debugCount < 3 {
+				logging.Logger.Error("debug - process events failed, chain should stop and retry",
+					zap.Int("retry", debugCount))
+				return nil, errors.New("debug - process events failed, chain should stop and retry")
+			}
 		}
 
 		var opt ProcessEventsOptions
