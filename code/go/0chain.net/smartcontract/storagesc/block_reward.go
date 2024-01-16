@@ -62,8 +62,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 	defer cstate.WithActivation(balances, "hard_fork_1", func() {
 	}, func() {
 		logging.Logger.Info("blobber_block_rewards : cleaning older partition",
-			zap.Int64("round", balances.GetBlock().Round),
-			zap.String("block_hash", balances.GetBlock().Hash))
+			zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
 
 		_, err = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
 		if err != nil {
