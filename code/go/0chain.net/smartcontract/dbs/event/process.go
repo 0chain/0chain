@@ -363,7 +363,7 @@ func (edb *EventDb) WorkEvents(
 	blockEvents BlockEvents,
 	currentPartition *int64,
 ) ([]string, error) {
-	if !isEDBConnectionLost(edb) {
+	if isEDBConnectionLost(edb) {
 		logging.Logger.Warn("work events - lost connection")
 	}
 
