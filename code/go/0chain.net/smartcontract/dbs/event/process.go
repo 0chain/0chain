@@ -37,8 +37,6 @@ func CommitNow() ProcessEventsOptionsFunc {
 // or rollback.
 type CommitOrRollbackFunc func(rollback bool) error
 
-var debugCount int
-
 // ProcessEvents - process events and return commit function or error if any
 // The commit function can be called to commit the events changes when needed
 func (edb *EventDb) ProcessEvents(
