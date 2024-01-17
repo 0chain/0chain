@@ -581,6 +581,12 @@ loop:
 						logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
 							zap.Int64("round", bl.lfb.Round),
 							zap.String("block", bl.lfb.Hash))
+						err := sc.setupLatestBlocks(ctx, bl)
+						if err != nil {
+							logging.Logger.Error("load_lfb - setup latest blocks failed", zap.Error(err))
+							return err
+						}
+						break loop
 					}
 
 					return err
