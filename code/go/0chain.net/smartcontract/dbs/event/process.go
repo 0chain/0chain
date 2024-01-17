@@ -108,6 +108,16 @@ func (edb *EventDb) ProcessEvents(
 				zap.Int("block size", blockSize))
 		}
 
+		// debug when round is 1000, faile the event process and should trigger FB retry
+		if round == 123 {
+			debugCount++
+			if debugCount < 3 {
+				logging.Logger.Error("debug - process events failed, chain should stop and retry",
+					zap.Int("retry", debugCount))
+				commit = false
+			}
+		}
+
 		if !commit {
 			err := txRollback()
 			if err != nil {
@@ -115,16 +125,6 @@ func (edb *EventDb) ProcessEvents(
 			}
 
 			return nil, errors.New("process events failed")
-		}
-
-		// debug when round is 1000, faile the event process and should trigger FB retry
-		if round == 1000 {
-			debugCount++
-			if debugCount < 3 {
-				logging.Logger.Error("debug - process events failed, chain should stop and retry",
-					zap.Int("retry", debugCount))
-				return nil, errors.New("debug - process events failed, chain should stop and retry")
-			}
 		}
 
 		var opt ProcessEventsOptions
@@ -330,6 +330,7 @@ func Work(
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Debug("work aggregates - start")
 
 	gSnapshot, err = tx.WorkAggregates(gSnapshot, blockEvents)
 	if err != nil {
@@ -351,6 +352,8 @@ func Work(
 			zap.String("block", blockEvents.block),
 			zap.Int("block size", blockEvents.blockSize))
 	}
+	logging.Logger.Debug("work aggregates - finished")
+
 	return gSnapshot, nil
 }
 
@@ -394,9 +397,11 @@ func (edb *EventDb) WorkEvents(
 		return nil, err
 	}
 
-	logging.Logger.Debug("work events - process events")
+	logging.Logger.Debug("work events - process events", zap.Int64("round", blockEvents.round),
+		zap.Int("len_events", len(blockEvents.events)))
 	tags := make([]string, 0, len(blockEvents.events))
-	for _, event := range blockEvents.events {
+	for i, event := range blockEvents.events {
+		logging.Logger.Debug("work events - process event", zap.Int("i", i), zap.Any("event", event))
 		tags, err = edb.processEvent(event, tags, blockEvents.round, blockEvents.block, blockEvents.blockSize)
 		if err != nil {
 			logging.Logger.Error("error processing event",
@@ -406,6 +411,8 @@ func (edb *EventDb) WorkEvents(
 			return tags, err
 		}
 	}
+	logging.Logger.Debug("work events - finished")
+
 	return tags, nil
 }
 
