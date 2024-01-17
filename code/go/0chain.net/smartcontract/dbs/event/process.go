@@ -36,7 +36,7 @@ func CommitNow() ProcessEventsOptionsFunc {
 // or rollback.
 type CommitOrRollbackFunc func(rollback bool) error
 
-// var debugCount int
+var debugCount int
 
 // ProcessEvents - process events and return commit function or error if any
 // The commit function can be called to commit the events changes when needed
@@ -107,14 +107,14 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		// debug when round is 1000, faile the event process and should trigger FB retry
-		// if round == 1000 {
-		// 	debugCount++
-		// 	if debugCount < 3 {
-		// 		logging.Logger.Error("debug - process events failed, chain should stop and retry",
-		// 			zap.Int("retry", debugCount))
-		// 		return nil, errors.New("debug - process events failed, chain should stop and retry")
-		// 	}
-		// }
+		if round == 1000 {
+			debugCount++
+			if debugCount < 3 {
+				logging.Logger.Error("debug - process events failed, chain should stop and retry",
+					zap.Int("retry", debugCount))
+				return nil, errors.New("debug - process events failed, chain should stop and retry")
+			}
+		}
 
 		var opt ProcessEventsOptions
 		for _, f := range opts {
@@ -343,16 +343,37 @@ func Work(
 	return gSnapshot, nil
 }
 
+func isEDBConnectionLost(edb *EventDb) bool {
+	sqlDB, err := edb.Get().DB()
+	if err != nil {
+		logging.Logger.Debug("could not get db", zap.Error(err))
+		return true
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		logging.Logger.Debug("could not reach out to db", zap.Error(err))
+		return true
+	}
+
+	return false
+}
+
 func (edb *EventDb) WorkEvents(
 	ctx context.Context,
 	blockEvents BlockEvents,
 	currentPartition *int64,
 ) ([]string, error) {
+	if !isEDBConnectionLost(edb) {
+		logging.Logger.Warn("work events - lost connection")
+	}
+
+	logging.Logger.Debug("work events - in")
 	if *currentPartition < blockEvents.round/edb.settings.PartitionChangePeriod {
 		edb.managePartitions(blockEvents.round)
 		*currentPartition = blockEvents.round / edb.settings.PartitionChangePeriod
 	}
 
+	logging.Logger.Debug("work events - add events")
 	var err error
 	if err = edb.addEvents(ctx, blockEvents); err != nil {
 		logging.Logger.Error("error saving events",
@@ -362,6 +383,7 @@ func (edb *EventDb) WorkEvents(
 		return nil, err
 	}
 
+	logging.Logger.Debug("work events - process events")
 	tags := make([]string, 0, len(blockEvents.events))
 	for _, event := range blockEvents.events {
 		tags, err = edb.processEvent(event, tags, blockEvents.round, blockEvents.block, blockEvents.blockSize)
