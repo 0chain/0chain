@@ -540,7 +540,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		}
 	}
 
-	const maxRollbackRounds = 100
+	const maxRollbackRounds = 5
 	var i int
 
 loop:
@@ -551,6 +551,18 @@ loop:
 		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
 		if err != nil {
 			return err
+		}
+
+		logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")
+		// and then, check out related LFMB can be missing
+		bl.lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, bl.lfb)
+		if err != nil {
+			logging.Logger.Warn("load_lfb, missing corresponding lfmb",
+				zap.Int64("round", bl.r.Number),
+				zap.String("block_hash", bl.r.BlockHash),
+				zap.String("lfmb_hash", bl.lfb.LatestFinalizedMagicBlockHash))
+			// we can't skip to starting round, because we don't know it
+			return err // the nil is 'use genesis'
 		}
 
 		// setup all related for a non-genesis case
@@ -581,12 +593,9 @@ loop:
 						logging.Logger.Debug("load_lfb - iterate rounds looking for lfb",
 							zap.Int64("round", bl.lfb.Round),
 							zap.String("block", bl.lfb.Hash))
-						err := sc.setupLatestBlocks(ctx, bl)
-						if err != nil {
-							logging.Logger.Error("load_lfb - setup latest blocks failed", zap.Error(err))
-							return err
-						}
-						break loop
+						lfbRound = bl.lfb.Round
+						lfbHash = bl.lfb.Hash
+						continue
 					}
 
 					return err
@@ -601,17 +610,10 @@ loop:
 	magicBlockMiners := sc.GetMiners(bl.r.GetRoundNumber())
 	bl.r.SetRandomSeedForNotarizedBlock(bl.lfb.GetRoundRandomSeed(), magicBlockMiners.Size())
 
-	logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")
-	// and then, check out related LFMB can be missing
-	bl.lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, bl.lfb)
-	if err != nil {
-		logging.Logger.Warn("load_lfb, missing corresponding lfmb",
-			zap.Int64("round", bl.r.Number),
-			zap.String("block_hash", bl.r.BlockHash),
-			zap.String("lfmb_hash", bl.lfb.LatestFinalizedMagicBlockHash))
-		// we can't skip to starting round, because we don't know it
-		return nil // the nil is 'use genesis'
-	}
+	// if err := sc.setupLatestBlocks(ctx, bl); err != nil {
+	// 	logging.Logger.Error("load_lfb - setup latest blocks failed", zap.Error(err))
+	// 	return err
+	// }
 
 	// but the lfmb can be less than real latest finalized magic block,
 	// the lfmb is just magic block related to the lfb, for example for
