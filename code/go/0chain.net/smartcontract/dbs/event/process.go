@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/state"
@@ -60,6 +61,16 @@ func (edb *EventDb) ProcessEvents(
 		return nil, err
 	}
 
+	var doOnce sync.Once
+
+	txRollback := func() error {
+		var err error
+		doOnce.Do(func() {
+			err = tx.Rollback()
+		})
+		return err
+	}
+
 	event := BlockEvents{
 		events:    es,
 		round:     round,
@@ -77,7 +88,7 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
-		err := tx.Rollback()
+		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
 			return nil, ctx.Err()
@@ -98,7 +109,7 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if !commit {
-			err := tx.Rollback()
+			err := txRollback()
 			if err != nil {
 				return nil, err
 			}
@@ -134,7 +145,7 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
-		err := tx.Rollback()
+		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
 			return nil, ctx.Err()
