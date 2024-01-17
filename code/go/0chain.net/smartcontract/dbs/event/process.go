@@ -721,6 +721,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
+		logging.Logger.Debug("add or overwrite user", zap.Any("users", users))
 		return edb.addOrUpdateUsers(*users)
 	case TagAddTransactions:
 		txns, ok := fromEvent[[]Transaction](event.Data)
