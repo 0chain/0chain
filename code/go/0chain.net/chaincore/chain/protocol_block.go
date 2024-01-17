@@ -389,7 +389,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	var eventTx *event.EventDb
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() error {
-			fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
+			if !hasBlockFinalizeEvent(fb.Events) {
+				fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
+			}
 			ts := time.Now()
 			eventTx, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
 			if err != nil {
@@ -397,8 +399,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
-				// EventsComputationTimer.Update(time.Since(ts).Microseconds())
-				// return err //do not remove events in case of error
+				EventsComputationTimer.Update(time.Since(ts).Microseconds())
+				return err //do not remove events in case of error
 			}
 
 			EventsComputationTimer.Update(time.Since(ts).Microseconds())
@@ -546,6 +548,15 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 		zap.Duration("duration", time.Since(ts)))
 	return nil
+}
+
+func hasBlockFinalizeEvent(events []event.Event) bool {
+	for _, e := range events {
+		if e.Type == event.TypeChain && e.Tag == event.TagFinalizeBlock {
+			return true
+		}
+	}
+	return false
 }
 
 // IsFinalizedDeterministically - checks if a block is finalized deterministically
