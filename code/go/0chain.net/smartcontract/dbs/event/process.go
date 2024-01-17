@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/state"
@@ -58,6 +59,16 @@ func (edb *EventDb) ProcessEvents(
 		return nil, err
 	}
 
+	var doOnce sync.Once
+
+	txRollback := func() error {
+		var err error
+		doOnce.Do(func() {
+			err = tx.Rollback()
+		})
+		return err
+	}
+
 	event := BlockEvents{
 		events:    es,
 		round:     round,
@@ -75,7 +86,7 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
-		err := tx.Rollback()
+		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
 			return nil, ctx.Err()
@@ -96,12 +107,12 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if !commit {
-			err := tx.Rollback()
+			err := txRollback()
 			if err != nil {
 				return nil, err
 			}
 
-			return nil, err
+			return nil, errors.New("process events failed")
 		}
 
 		var opt ProcessEventsOptions
@@ -122,7 +133,7 @@ func (edb *EventDb) ProcessEvents(
 			zap.Int64("round", round),
 			zap.String("block", block),
 			zap.Int("block size", blockSize))
-		err := tx.Rollback()
+		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
 			return nil, ctx.Err()
@@ -328,7 +339,23 @@ func Work(
 			zap.String("block", blockEvents.block),
 			zap.Int("block size", blockEvents.blockSize))
 	}
+
 	return gSnapshot, nil
+}
+
+func isEDBConnectionLost(edb *EventDb) bool {
+	sqlDB, err := edb.Get().DB()
+	if err != nil {
+		logging.Logger.Debug("could not get db", zap.Error(err))
+		return true
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		logging.Logger.Debug("could not reach out to db", zap.Error(err))
+		return true
+	}
+
+	return false
 }
 
 func (edb *EventDb) WorkEvents(
@@ -336,6 +363,10 @@ func (edb *EventDb) WorkEvents(
 	blockEvents BlockEvents,
 	currentPartition *int64,
 ) ([]string, error) {
+	if isEDBConnectionLost(edb) {
+		logging.Logger.Warn("work events - lost connection")
+	}
+
 	if *currentPartition < blockEvents.round/edb.settings.PartitionChangePeriod {
 		edb.managePartitions(blockEvents.round)
 		*currentPartition = blockEvents.round / edb.settings.PartitionChangePeriod
@@ -350,6 +381,8 @@ func (edb *EventDb) WorkEvents(
 		return nil, err
 	}
 
+	logging.Logger.Debug("work events - processing events", zap.Int64("round", blockEvents.round),
+		zap.Int("len_events", len(blockEvents.events)))
 	tags := make([]string, 0, len(blockEvents.events))
 	for _, event := range blockEvents.events {
 		tags, err = edb.processEvent(event, tags, blockEvents.round, blockEvents.block, blockEvents.blockSize)
@@ -361,6 +394,7 @@ func (edb *EventDb) WorkEvents(
 			return tags, err
 		}
 	}
+
 	return tags, nil
 }
 

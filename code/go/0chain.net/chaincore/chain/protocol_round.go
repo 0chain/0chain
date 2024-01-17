@@ -151,6 +151,7 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	select {
 	case c.finalizedRoundsChannel <- r:
 	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
+		r.ResetFinalizingState()
 		logging.Logger.Info("finalize round - push round to finalizedRoundsChannel timeout",
 			zap.Int64("round", r.GetRoundNumber()))
 	}
@@ -327,6 +328,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			fb := frchain[len(frchain)-1-idx]
 			if roundNumber-fb.Round < 3 {
 				// finalize the block only when it has at least 3 confirmation
+				logging.Logger.Debug("finalize round - block has less than 3 confirmation")
 				continue
 			}
 
@@ -361,11 +363,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				resultC: make(chan error, 1),
 			}
 
+			rd := c.GetRound(fb.Round)
 			select {
 			case <-ctx.Done():
 				logging.Logger.Info("finalize round - context done",
 					zap.Error(ctx.Err()),
 					zap.Int64("round", roundNumber))
+				rd.ResetFinalizingState()
 				return
 			case c.finalizedBlocksChannel <- fbWithReply:
 				ts := time.Now()
@@ -374,12 +378,15 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					logging.Logger.Error("finalize round - context done",
 						zap.Error(ctx.Err()),
 						zap.Int64("round", roundNumber))
+					rd.ResetFinalizingState()
+					return
 				case err := <-fbWithReply.resultC:
 					if err != nil {
 						logging.Logger.Error("finalize round - finalize block failed",
 							zap.Int64("round", fb.Round),
 							zap.String("block", fb.Hash),
 							zap.Error(err))
+						rd.ResetFinalizingState()
 						return
 					}
 
