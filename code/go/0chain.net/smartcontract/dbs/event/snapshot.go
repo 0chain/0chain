@@ -60,6 +60,7 @@ type Snapshot struct {
 	SuccessfulChallenges int64 `json:"successful_challenges"`            //*493 SUM percentage of challenges failed by a particular blobber
 	TotalChallenges      int64 `json:"total_challenges"`                 //*493 SUM percentage of challenges failed by a particular blobber
 	AllocatedStorage     int64 `json:"allocated_storage"`                //*490 SUM clients have locked up storage by purchasing allocations (new + previous + update -sub fin+cancel or reduceed)
+	TotalAllocations	 int64 `json:"total_allocations"`                //*490 SUM total number of allocations
 	MaxCapacityStorage   int64 `json:"max_capacity_storage"`             //*491 SUM all storage from blobber settings
 	StakedStorage        int64 `json:"staked_storage"`                   //*491 SUM staked capacity by delegates
 	UsedStorage          int64 `json:"used_storage"`                     //*491 SUM this is the actual usage or data that is in the server - write markers (triggers challenge pool / the price).(bytes written used capacity)
@@ -155,6 +156,7 @@ func (s *Snapshot) ApplyDiff(diff *Snapshot) {
 	s.SuccessfulChallenges += diff.SuccessfulChallenges
 	s.TotalChallenges += diff.TotalChallenges
 	s.AllocatedStorage += diff.AllocatedStorage
+	s.TotalAllocations += diff.TotalAllocations
 	s.MaxCapacityStorage += diff.MaxCapacityStorage
 	s.StakedStorage += diff.StakedStorage
 	s.UsedStorage += diff.UsedStorage
@@ -447,6 +449,8 @@ func (edb *EventDb) UpdateSnapshotFromEvents(gs *Snapshot, e []Event) error {
 					gs.ZCNSupply += d.Amount
 				}
 			}
+		case TagAddAllocation:
+			gs.TotalAllocations += 1
 		case TagUnlockWritePool:
 			ds, ok := fromEvent[[]WritePoolLock](event.Data)
 			if !ok {
