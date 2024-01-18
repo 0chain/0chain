@@ -431,6 +431,17 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return nil
 	})
 
+	// the bsh.UpdateFinalizedBlock() above will set the round as finalized, but following process
+	// could fail, so should reset the finalized state if any error occurs
+	defer func() {
+		if err != nil {
+			fr := c.GetRound(fb.Round)
+			if fr != nil {
+				fr.ResetFinalizingState()
+			}
+		}
+	}()
+
 	if err = wg.Wait(); err != nil {
 		if !waitgroup.ErrIsPanic(err) {
 			return err
