@@ -151,7 +151,7 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	select {
 	case c.finalizedRoundsChannel <- r:
 	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
-		r.ResetFinalizingState()
+		r.ResetFinalizingStateIfNotFinalized()
 		logging.Logger.Info("finalize round - push round to finalizedRoundsChannel timeout",
 			zap.Int64("round", r.GetRoundNumber()))
 	}
@@ -369,7 +369,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				logging.Logger.Info("finalize round - context done",
 					zap.Error(ctx.Err()),
 					zap.Int64("round", roundNumber))
-				rd.ResetFinalizingState()
+				rd.ResetFinalizingStateIfNotFinalized()
 				return
 			case c.finalizedBlocksChannel <- fbWithReply:
 				ts := time.Now()
@@ -378,7 +378,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					logging.Logger.Error("finalize round - context done",
 						zap.Error(ctx.Err()),
 						zap.Int64("round", roundNumber))
-					rd.ResetFinalizingState()
+					rd.ResetFinalizingStateIfNotFinalized()
 					return
 				case err := <-fbWithReply.resultC:
 					if err != nil {
@@ -386,7 +386,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 							zap.Int64("round", fb.Round),
 							zap.String("block", fb.Hash),
 							zap.Error(err))
-						rd.ResetFinalizingState()
+						rd.ResetFinalizingStateIfNotFinalized()
 						return
 					}
 
