@@ -492,6 +492,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
 				zap.Error(err))
+			return err // should return error if event commit failed
 		} else {
 			logging.Logger.Debug("finalize block - commit events",
 				zap.Int64("round", fb.Round),
