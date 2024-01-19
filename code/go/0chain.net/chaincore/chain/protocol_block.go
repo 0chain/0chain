@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -292,8 +291,6 @@ func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.Verificati
 	}
 }
 
-var mockCount int32
-
 func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) (err error) {
 	logging.Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
@@ -487,16 +484,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.String("hash", fb.Hash))
 		// continue panic
 		panic(err)
-	}
-
-	// DEBUG - mock error to trigger round reprocess and round state resetting
-	if fb.Round == 1000 {
-		if atomic.AddInt32(&mockCount, 1) < 2 {
-			if eventTx != nil {
-				eventTx.Rollback()
-			}
-			return errors.New("mock finalize round error")
-		}
 	}
 
 	if eventTx != nil {
