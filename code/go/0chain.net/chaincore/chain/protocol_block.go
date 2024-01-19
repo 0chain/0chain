@@ -438,6 +438,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			fr := c.GetRound(fb.Round)
 			if fr != nil {
 				fr.ResetFinalizingState()
+			} else {
+				logging.Logger.Error("finalize block - reset round finalizing state failed, could not find the round")
 			}
 		}
 	}()

@@ -34,6 +34,7 @@ type RoundI interface {
 	IsFinalizing() bool
 	SetFinalizing() bool
 	ResetFinalizingState()
+	ResetFinalizingStateIfNotFinalized()
 	IsFinalized() bool
 	Clear()
 
