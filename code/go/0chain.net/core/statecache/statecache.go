@@ -62,9 +62,10 @@ func (sc *StateCache) Remove(key string) {
 	delete(sc.cache, key)
 }
 
-// CacheTx is a transaction for pre commit cache, it
-// would cache all the changed values and commit when block execution is completed
-type CacheTx struct {
+// BlockCache is a pre commit cache for all changes in a block.
+// Call `Commit()` method to merge
+// the changes to the StateCache when the block is executed.
+type BlockCache struct {
 	mu            sync.RWMutex
 	cache         map[string]Value
 	main          *StateCache
@@ -72,8 +73,8 @@ type CacheTx struct {
 	prevBlockHash string
 }
 
-func NewCacheTx(main *StateCache, prevBlockHash, blockHash string) *CacheTx {
-	return &CacheTx{
+func NewBlockCache(main *StateCache, prevBlockHash, blockHash string) *BlockCache {
+	return &BlockCache{
 		cache:         make(map[string]Value),
 		main:          main,
 		blockHash:     blockHash,
@@ -82,7 +83,7 @@ func NewCacheTx(main *StateCache, prevBlockHash, blockHash string) *CacheTx {
 }
 
 // Set sets the value with the given key in the pre-commit cache
-func (pcc *CacheTx) Set(key string, value Value) {
+func (pcc *BlockCache) Set(key string, value Value) {
 	pcc.mu.Lock()
 	defer pcc.mu.Unlock()
 
@@ -90,7 +91,7 @@ func (pcc *CacheTx) Set(key string, value Value) {
 }
 
 // Get returns the value with the given key
-func (pcc *CacheTx) Get(key string) (Value, bool) {
+func (pcc *BlockCache) Get(key string) (Value, bool) {
 	pcc.mu.RLock()
 	defer pcc.mu.RUnlock()
 
@@ -109,7 +110,7 @@ func (pcc *CacheTx) Get(key string) (Value, bool) {
 }
 
 // Remove marks the value with the given key as deleted in the pre-commit cache
-func (pcc *CacheTx) Remove(key string) {
+func (pcc *BlockCache) Remove(key string) {
 	pcc.mu.Lock()
 	defer pcc.mu.Unlock()
 
@@ -130,7 +131,7 @@ func (pcc *CacheTx) Remove(key string) {
 }
 
 // Commit moves the values from the pre-commit cache to the main cache
-func (pcc *CacheTx) Commit() {
+func (pcc *BlockCache) Commit() {
 	pcc.mu.Lock()
 	defer pcc.mu.Unlock()
 
@@ -147,4 +148,59 @@ func (pcc *CacheTx) Commit() {
 
 	// Clear the pre-commit cache
 	pcc.cache = make(map[string]Value)
+}
+
+type TransactionCache struct {
+	main  *BlockCache
+	cache map[string]Value
+	mu    sync.RWMutex
+}
+
+func NewTransactionCache(main *BlockCache) *TransactionCache {
+	return &TransactionCache{
+		main:  main,
+		cache: make(map[string]Value),
+	}
+}
+
+func (tc *TransactionCache) Set(key string, value Value) {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+
+	tc.cache[key] = value
+}
+
+func (tc *TransactionCache) Get(key string) (Value, bool) {
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
+
+	value, ok := tc.cache[key]
+	if ok {
+		return value, ok
+	}
+
+	return tc.main.Get(key)
+}
+
+func (tc *TransactionCache) Remove(key string) {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+
+	value, ok := tc.cache[key]
+	if ok {
+		value.Deleted = true
+		tc.cache[key] = value
+	}
+}
+
+func (tc *TransactionCache) Commit() {
+	tc.mu.Lock()
+	defer tc.mu.Unlock()
+
+	for key, value := range tc.cache {
+		tc.main.Set(key, value)
+	}
+
+	// Clear the transaction cache
+	tc.cache = make(map[string]Value)
 }
