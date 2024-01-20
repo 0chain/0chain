@@ -1,6 +1,8 @@
 package statecache
 
 import (
+	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -78,6 +80,57 @@ func (sc *StateCache) PruneRoundBelow(round int64) {
 		// Delete the map if it becomes empty
 		if len(blockValues) == 0 {
 			delete(sc.cache, key)
+		}
+	}
+}
+
+// PrettyPrint prints the state cache in a pretty format
+func (sc *StateCache) PrettyPrint() {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	// Sort keys in alphabetical order
+	var keys []string
+	for key := range sc.cache {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	// Print values for each key
+	for _, key := range keys {
+		fmt.Printf("Key: %s\n", key)
+
+		blockValues := sc.cache[key]
+
+		// Sort block hashes by round number in descending order
+		var rounds []int64
+		for _, value := range blockValues {
+			rounds = append(rounds, value.Round)
+		}
+		sort.Slice(rounds, func(i, j int) bool {
+			return rounds[i] > rounds[j]
+		})
+
+		// Print values for each round
+		for _, round := range rounds {
+			fmt.Printf("  Round: %d\n", round)
+
+			// Sort block hashes for the same round
+			var hashes []string
+			for hash, value := range blockValues {
+				if value.Round == round {
+					hashes = append(hashes, hash)
+				}
+			}
+			sort.Strings(hashes)
+
+			// Print values for each hash
+			for _, hash := range hashes {
+				value := blockValues[hash]
+				fmt.Printf("    Hash: %s\n", hash)
+				fmt.Printf("      Data: %s\n", string(value.Data))
+				fmt.Printf("      Deleted: %v\n", value.Deleted)
+			}
 		}
 	}
 }

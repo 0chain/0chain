@@ -320,6 +320,7 @@ func TestTransactionCache(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, value2, string(vv2.Data))
 	}
+
 }
 func TestStateCache_PruneRoundBelow(t *testing.T) {
 	sc := NewStateCache()
@@ -337,6 +338,8 @@ func TestStateCache_PruneRoundBelow(t *testing.T) {
 		"hash4": value4,
 	}
 
+	sc.PrettyPrint()
+
 	// Prune values with round below 3
 	sc.PruneRoundBelow(3)
 
@@ -353,6 +356,8 @@ func TestStateCache_PruneRoundBelow(t *testing.T) {
 	_, ok = sc.cache["key1"]["hash4"]
 	require.True(t, ok)
 
+	sc.PrettyPrint()
+
 	// Prune values with round below 5
 	sc.PruneRoundBelow(5)
 
@@ -368,4 +373,5 @@ func TestStateCache_PruneRoundBelow(t *testing.T) {
 
 	_, ok = sc.cache["key1"]["hash4"]
 	require.False(t, ok)
+	sc.PrettyPrint()
 }
