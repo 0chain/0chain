@@ -6,18 +6,21 @@ type TransactionCache struct {
 	main  *BlockCache
 	cache map[string]Value
 	mu    sync.RWMutex
+	round int64
 }
 
 func NewTransactionCache(main *BlockCache) *TransactionCache {
 	return &TransactionCache{
 		main:  main,
 		cache: make(map[string]Value),
+		round: main.Round,
 	}
 }
 
 func (tc *TransactionCache) Set(key string, value Value) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
+	value.Round = tc.round
 
 	tc.cache[key] = value
 }

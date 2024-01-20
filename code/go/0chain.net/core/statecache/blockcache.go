@@ -11,11 +11,13 @@ type BlockCache struct {
 	main          *StateCache
 	blockHash     string
 	prevBlockHash string
+	Round         int64
 }
 
 type BlockHash struct {
 	PrevHash string // previous hash of the block
 	Hash     string // block hash
+	Round    int64  // round number when this block cache is created
 }
 
 func NewBlockCache(main *StateCache, blockHash BlockHash) *BlockCache {
@@ -24,6 +26,7 @@ func NewBlockCache(main *StateCache, blockHash BlockHash) *BlockCache {
 		main:          main,
 		blockHash:     blockHash.Hash,
 		prevBlockHash: blockHash.PrevHash,
+		Round:         blockHash.Round,
 	}
 }
 

@@ -7,7 +7,8 @@ import (
 type Value struct {
 	// Define your value type here
 	Data    []byte
-	Deleted bool // indicates the value was removed
+	Deleted bool  // indicates the value was removed
+	Round   int64 // round number when this value is updated
 }
 
 type StateCache struct {
@@ -60,4 +61,23 @@ func (sc *StateCache) Remove(key string) {
 	defer sc.mu.Unlock()
 
 	delete(sc.cache, key)
+}
+
+// PruneRoundBelow removes all values that are below the given round
+func (sc *StateCache) PruneRoundBelow(round int64) {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+
+	for key, blockValues := range sc.cache {
+		for blockHash, value := range blockValues {
+			if value.Round < round {
+				delete(blockValues, blockHash)
+			}
+		}
+
+		// Delete the map if it becomes empty
+		if len(blockValues) == 0 {
+			delete(sc.cache, key)
+		}
+	}
 }

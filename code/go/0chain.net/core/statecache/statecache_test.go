@@ -321,3 +321,51 @@ func TestTransactionCache(t *testing.T) {
 		require.Equal(t, value2, string(vv2.Data))
 	}
 }
+func TestStateCache_PruneRoundBelow(t *testing.T) {
+	sc := NewStateCache()
+
+	// Add some values to the cache
+	value1 := Value{Data: []byte("data1"), Round: 1}
+	value2 := Value{Data: []byte("data2"), Round: 2}
+	value3 := Value{Data: []byte("data3"), Round: 3}
+	value4 := Value{Data: []byte("data4"), Round: 4}
+
+	sc.cache["key1"] = map[string]Value{
+		"hash1": value1,
+		"hash2": value2,
+		"hash3": value3,
+		"hash4": value4,
+	}
+
+	// Prune values with round below 3
+	sc.PruneRoundBelow(3)
+
+	// Verify that values with round below 3 are pruned
+	_, ok := sc.cache["key1"]["hash1"]
+	require.False(t, ok)
+
+	_, ok = sc.cache["key1"]["hash2"]
+	require.False(t, ok)
+
+	_, ok = sc.cache["key1"]["hash3"]
+	require.True(t, ok)
+
+	_, ok = sc.cache["key1"]["hash4"]
+	require.True(t, ok)
+
+	// Prune values with round below 5
+	sc.PruneRoundBelow(5)
+
+	// Verify that all values are pruned
+	_, ok = sc.cache["key1"]["hash1"]
+	require.False(t, ok)
+
+	_, ok = sc.cache["key1"]["hash2"]
+	require.False(t, ok)
+
+	_, ok = sc.cache["key1"]["hash3"]
+	require.False(t, ok)
+
+	_, ok = sc.cache["key1"]["hash4"]
+	require.False(t, ok)
+}
