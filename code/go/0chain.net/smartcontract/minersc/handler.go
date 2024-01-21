@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract/storagesc"
 	"errors"
 	"fmt"
 	"net/http"
@@ -829,8 +830,8 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var ups = new(stakepool.UserPoolStat)
-	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat, len(minerPools)+len(sharderPools))
+	var ups = new(storagesc.UserPoolStat)
+	ups.Pools = make(map[datastore.Key][]*storagesc.DelegatePoolStat, len(minerPools)+len(sharderPools))
 	for _, pool := range minerPools {
 		dp := toUPS(pool)
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
@@ -845,9 +846,9 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, ups, nil)
 }
 
-func toUPS(pool event.DelegatePool) stakepool.DelegatePoolStat {
+func toUPS(pool event.DelegatePool) storagesc.DelegatePoolStat {
 
-	dp := stakepool.DelegatePoolStat{
+	dp := storagesc.DelegatePoolStat{
 		ID:     pool.PoolID,
 		Status: spenum.PoolStatus(pool.Status).String(),
 	}
@@ -908,7 +909,7 @@ func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, res, nil)
 }
 
-func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
+func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*storagesc.StakePoolStat, error) {
 	delegatePoolsChan := make(chan []event.DelegatePool)
 	errChan := make(chan error)
 
@@ -963,9 +964,9 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 
 	switch p := provider.(type) {
 	case event.Miner:
-		return stakepool.ToProviderStakePoolStats(&p.Provider, delegatePools)
+		return storagesc.ToProviderStakePoolStats(&p.Provider, delegatePools)
 	case event.Sharder:
-		return stakepool.ToProviderStakePoolStats(&p.Provider, delegatePools)
+		return storagesc.ToProviderStakePoolStats(&p.Provider, delegatePools)
 	default:
 		return nil, fmt.Errorf("unexpected provider type")
 	}

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/hex"
-	"fmt"
 	"os"
 	"path"
 	"sync"
@@ -123,7 +122,7 @@ func getBalances(
 func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in getMpt", r)
+			log.Println("Recovered in getMpt", r)
 		}
 	}()
 	var mptDir string
@@ -196,7 +195,7 @@ func setUpMpt(
 ) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in setUpMpt", r)
+			log.Println("Recovered in setUpMpt", r)
 		}
 	}()
 
@@ -634,26 +633,27 @@ func newEventsDb() *event.EventDb {
 	timer := time.Now()
 	var eventDb *event.EventDb
 	tick := func() (*event.EventDb, error) {
-		return event.NewEventDbWithoutWorker(
-			config.DbAccess{
-				Enabled:         viper.GetBool(benchmark.EventDbEnabled),
-				Name:            viper.GetString(benchmark.EventDbName),
-				User:            viper.GetString(benchmark.EventDbUser),
-				Password:        viper.GetString(benchmark.EventDbPassword),
-				Host:            viper.GetString(benchmark.EventDbHost),
-				Port:            viper.GetString(benchmark.EventDbPort),
-				MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
-				MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
-				ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-			},
-			config.DbSettings{
-				Debug:                 viper.GetBool(benchmark.EventDbDebug),
-				AggregatePeriod:       viper.GetInt64(benchmark.EventDbAggregatePeriod),
-				PartitionChangePeriod: viper.GetInt64(benchmark.EventDbPartitionChangePeriod),
-				PartitionKeepCount:    viper.GetInt64(benchmark.EventDbPartitionKeepCount),
-				PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
-			},
-		)
+		dbAccessConfig := config.DbAccess{
+			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+			Name:            viper.GetString(benchmark.EventDbName),
+			User:            viper.GetString(benchmark.EventDbUser),
+			Password:        viper.GetString(benchmark.EventDbPassword),
+			Host:            viper.GetString(benchmark.EventDbHost),
+			Port:            viper.GetString(benchmark.EventDbPort),
+			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+			Slowtablespace:  viper.GetString(benchmark.EventDbSlowTableSpace),
+		}
+		dbSettingsConfig := config.DbSettings{
+			Debug:                 viper.GetBool(benchmark.EventDbDebug),
+			AggregatePeriod:       viper.GetInt64(benchmark.EventDbAggregatePeriod),
+			PartitionChangePeriod: viper.GetInt64(benchmark.EventDbPartitionChangePeriod),
+			PartitionKeepCount:    viper.GetInt64(benchmark.EventDbPartitionKeepCount),
+			PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
+		}
+
+		return event.NewEventDbWithoutWorker(dbAccessConfig, dbSettingsConfig)
 	}
 
 	t := time.NewTicker(time.Second)
