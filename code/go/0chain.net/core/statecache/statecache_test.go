@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStateCache_Get(t *testing.T) {
+func TestStateCacheSetGet(t *testing.T) {
 	sc := NewStateCache()
 
 	// Test Get method when cache is empty
@@ -17,31 +17,23 @@ func TestStateCache_Get(t *testing.T) {
 		t.Error("Expected false, got ", ok)
 	}
 
-	// Add a value to the cache
-	value := Value{Data: []byte("data1"), Deleted: false}
-	sc.cache["key1"] = map[string]Value{"hash1": value}
+	bc := NewBlockCache(sc, Block{Hash: "hash1"})
+	bc.Set("key1", String("data1"))
+	bc.Commit()
 
 	// Test Get method when cache has a value
 	v, ok := sc.Get("key1", "hash1")
 	if !ok {
 		t.Error("Expected true, got ", ok)
 	}
-	if string(v.Data) != "data1" {
-		t.Error("Expected data1, got ", v.Data)
-	}
-
-	// Test Get method when cache has a deleted value
-	value.Deleted = true
-	sc.cache["key1"]["hash1"] = value
-	_, ok = sc.Get("key1", "hash1")
-	if ok {
-		t.Error("Expected false, got ", ok)
+	if v.(String) != "data1" {
+		t.Error("Expected data1, got ", v)
 	}
 }
 
-func TestCacheTx(t *testing.T) {
+func TestBlockCache(t *testing.T) {
 	sc := NewStateCache()
-	ct := NewBlockCache(sc, Block{PrevHash: "prevHash", Hash: "hash1"})
+	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Test Get method when cache is empty
 	_, ok := ct.Get("key1")
@@ -50,21 +42,21 @@ func TestCacheTx(t *testing.T) {
 	}
 
 	// Test Set method
-	ct.Set("key1", Value{Data: []byte("value1")})
+	ct.Set("key1", String("value1"))
 	value, ok := ct.Get("key1")
 	require.True(t, ok)
-	require.Equal(t, "value1", string(value.Data))
+	require.EqualValues(t, "value1", value)
 
 	// Test Commit method
-	ct.Set("key2", Value{Data: []byte("value2")})
+	ct.Set("key2", String("value2"))
 
 	ct.Commit()
 	value, ok = sc.Get("key2", "hash1")
 	require.True(t, ok)
-	require.Equal(t, "value2", string(value.Data))
+	require.EqualValues(t, "value2", value)
 
 	// Add a new value to the cache for key1 in hash2 block
-	value2 := Value{Data: []byte("data2")}
+	value2 := String("data2")
 	ct2 := NewBlockCache(sc, Block{PrevHash: "hash1", Hash: "hash2"})
 	ct2.Set("key1", value2)
 	ct2.Commit()
@@ -72,12 +64,12 @@ func TestCacheTx(t *testing.T) {
 	// Get cache in current block
 	v2, ok := sc.Get("key1", "hash2")
 	require.True(t, ok)
-	require.Equal(t, "data2", string(v2.Data))
+	require.EqualValues(t, "data2", v2)
 
 	// Get cache in prior block
 	v1, ok := sc.Get("key1", "hash1")
 	require.True(t, ok)
-	require.Equal(t, "value1", string(v1.Data))
+	require.EqualValues(t, "value1", v1)
 }
 
 func TestCacheTx_NotCommitted(t *testing.T) {
@@ -91,10 +83,10 @@ func TestCacheTx_NotCommitted(t *testing.T) {
 	}
 
 	// Test Set method
-	ct.Set("key1", Value{Data: []byte("value1")})
+	ct.Set("key1", String("value1"))
 	value, ok := ct.Get("key1")
 	require.True(t, ok)
-	require.Equal(t, "value1", string(value.Data))
+	require.EqualValues(t, "value1", value)
 
 	// Test Get method in state cache before committing
 	_, ok = sc.Get("key1", "hash1")
@@ -121,7 +113,7 @@ func TestCacheTx_SkipBlock(t *testing.T) {
 	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Add values to the cache in block "hash1"
-	ct.Set("key1", Value{Data: []byte("value1")})
+	ct.Set("key1", String("value1"))
 
 	// Commit the changes to the main cache
 	ct.Commit()
@@ -133,7 +125,7 @@ func TestCacheTx_SkipBlock(t *testing.T) {
 	require.False(t, ok)
 
 	// Add a new value to the cache in block "hash3"
-	ct.Set("key1", Value{Data: []byte("value3")})
+	ct.Set("key1", String("value3"))
 
 	_, ok = ct.Get("key1")
 	require.True(t, ok)
@@ -141,7 +133,7 @@ func TestCacheTx_SkipBlock(t *testing.T) {
 	ct.Commit()
 	v, ok := sc.Get("key1", "hash3")
 	require.True(t, ok)
-	require.Equal(t, "value3", string(v.Data))
+	require.EqualValues(t, "value3", v)
 }
 
 func TestCacheTx_Shift(t *testing.T) {
@@ -149,44 +141,44 @@ func TestCacheTx_Shift(t *testing.T) {
 	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Add values to the cache in block "hash1"
-	ct.Set("key1", Value{Data: []byte("value1_h1")})
-	ct.Set("key2", Value{Data: []byte("value2_h1")})
+	ct.Set("key1", String("value1_h1"))
+	ct.Set("key2", String("value2_h1"))
 
 	// Commit the changes to the main cache
 	ct.Commit()
 
 	// New block that update key1 only
 	ct = NewBlockCache(sc, Block{PrevHash: "hash1", Hash: "hash2"})
-	ct.Set("key1", Value{Data: []byte("value1_h2")})
+	ct.Set("key1", String("value1_h2"))
 	ct.Commit()
 
 	// Commit should trigger shift of key2 from hash1 to hash2
 	v, ok := sc.Get("key2", "hash2")
 	require.True(t, ok)
-	require.Equal(t, "value2_h1", string(v.Data))
+	require.EqualValues(t, "value2_h1", v)
 
 	// New block to update both key1 and key2
 	ct = NewBlockCache(sc, Block{PrevHash: "hash2", Hash: "hash3"})
-	ct.Set("key1", Value{Data: []byte("value1_h3")})
-	ct.Set("key2", Value{Data: []byte("value2_h3")})
+	ct.Set("key1", String("value1_h3"))
+	ct.Set("key2", String("value2_h3"))
 
 	v1, ok := ct.Get("key1")
 	require.True(t, ok)
-	require.Equal(t, "value1_h3", string(v1.Data))
+	require.EqualValues(t, "value1_h3", v1)
 
 	v2, ok := ct.Get("key2")
 	require.True(t, ok)
-	require.Equal(t, "value2_h3", string(v2.Data))
+	require.EqualValues(t, "value2_h3", v2)
 
 	ct.Commit()
 
 	v1, ok = sc.Get("key1", "hash3")
 	require.True(t, ok)
-	require.Equal(t, "value1_h3", string(v1.Data))
+	require.EqualValues(t, "value1_h3", v1)
 
 	v2, ok = sc.Get("key2", "hash3")
 	require.True(t, ok)
-	require.Equal(t, "value2_h3", string(v2.Data))
+	require.EqualValues(t, "value2_h3", v2)
 }
 
 func TestConcurrentExecutionAndCommit(t *testing.T) {
@@ -197,8 +189,8 @@ func TestConcurrentExecutionAndCommit(t *testing.T) {
 	ct2 := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Set values in both CacheTx instances
-	ct1.Set("key1", Value{Data: []byte("value1_h1")})
-	ct2.Set("key1", Value{Data: []byte("value1_h1")})
+	ct1.Set("key1", String("value1_h1"))
+	ct2.Set("key1", String("value1_h1"))
 
 	// Concurrently commit both CacheTx instances
 	var wg sync.WaitGroup
@@ -219,7 +211,7 @@ func TestConcurrentExecutionAndCommit(t *testing.T) {
 	// Verify that the cache is the same after concurrent execution and commit
 	v1, ok := sc.Get("key1", "hash1")
 	require.True(t, ok)
-	require.Equal(t, "value1_h1", string(v1.Data))
+	require.EqualValues(t, "value1_h1", v1)
 }
 
 func TestAddRemoveAdd(t *testing.T) {
@@ -229,7 +221,7 @@ func TestAddRemoveAdd(t *testing.T) {
 	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Add a value to the CacheTx
-	ct.Set("key1", Value{Data: []byte("value1")})
+	ct.Set("key1", String(string([]byte("value1"))))
 
 	// Commit the CacheTx
 	ct.Commit()
@@ -237,7 +229,7 @@ func TestAddRemoveAdd(t *testing.T) {
 	// Verify that the value is added to the StateCache
 	v1, ok := sc.Get("key1", "hash1")
 	require.True(t, ok)
-	require.Equal(t, "value1", string(v1.Data))
+	require.EqualValues(t, "value1", v1)
 
 	// Create another CacheTx instance
 	ct2 := NewBlockCache(sc, Block{PrevHash: "hash1", Hash: "hash2"})
@@ -253,7 +245,7 @@ func TestAddRemoveAdd(t *testing.T) {
 	require.False(t, ok)
 
 	// Add the value again to the CacheTx
-	ct2.Set("key1", Value{Data: []byte("value1")})
+	ct2.Set("key1", String("value1"))
 
 	// Commit the CacheTx
 	ct2.Commit()
@@ -261,7 +253,7 @@ func TestAddRemoveAdd(t *testing.T) {
 	// Verify that the value is added back to the StateCache
 	v2, ok := sc.Get("key1", "hash2")
 	require.True(t, ok)
-	require.Equal(t, "value1", string(v2.Data))
+	require.EqualValues(t, "value1", v2)
 }
 
 func TestTransactionCache(t *testing.T) {
@@ -285,23 +277,23 @@ func TestTransactionCache(t *testing.T) {
 
 		// Test Set method
 		value1 := fmt.Sprintf("value1_%s", hash)
-		tc.Set("key1", Value{Data: []byte(fmt.Sprintf("value1_%s", hash))})
+		tc.Set("key1", String(fmt.Sprintf("value1_%s", hash)))
 		value, ok := tc.Get("key1")
 		require.True(t, ok)
-		require.Equal(t, value1, string(value.Data))
+		require.EqualValues(t, value1, value)
 
 		// Test Commit method
 		value2 := fmt.Sprintf("value2_%s", hash)
-		tc.Set("key2", Value{Data: []byte(value2)})
+		tc.Set("key2", String(value2))
 		tc.Commit()
 
 		v1, ok := bc.Get("key1")
 		require.True(t, ok)
-		require.Equal(t, value1, string(v1.Data))
+		require.EqualValues(t, value1, v1)
 
 		v2, ok := bc.Get("key2")
 		require.True(t, ok)
-		require.Equal(t, value2, string(v2.Data))
+		require.EqualValues(t, value2, v2)
 
 		// sc should not have the values yet before commit
 		_, ok = sc.Get("key1", hash)
@@ -314,11 +306,11 @@ func TestTransactionCache(t *testing.T) {
 		bc.Commit()
 		vv1, ok := sc.Get("key1", hash)
 		require.True(t, ok)
-		require.Equal(t, value1, string(vv1.Data))
+		require.EqualValues(t, value1, vv1)
 
 		vv2, ok := sc.Get("key2", hash)
 		require.True(t, ok)
-		require.Equal(t, value2, string(vv2.Data))
+		require.EqualValues(t, value2, vv2)
 	}
 
 }
@@ -326,12 +318,12 @@ func TestStateCache_PruneRoundBelow(t *testing.T) {
 	sc := NewStateCache()
 
 	// Add some values to the cache
-	value1 := Value{Data: []byte("data1"), Round: 1}
-	value2 := Value{Data: []byte("data2"), Round: 2}
-	value3 := Value{Data: []byte("data3"), Round: 3}
-	value4 := Value{Data: []byte("data4"), Round: 4}
+	value1 := valueNode{data: String("data1"), round: 1}
+	value2 := valueNode{data: String("data2"), round: 2}
+	value3 := valueNode{data: String("data3"), round: 3}
+	value4 := valueNode{data: String("data4"), round: 4}
 
-	sc.cache["key1"] = map[string]Value{
+	sc.cache["key1"] = map[string]valueNode{
 		"hash1": value1,
 		"hash2": value2,
 		"hash3": value3,

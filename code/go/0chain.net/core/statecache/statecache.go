@@ -6,21 +6,31 @@ import (
 	"sync"
 )
 
-type Value struct {
-	// Define your value type here
-	Data    []byte
-	Deleted bool  // indicates the value was removed
-	Round   int64 // round number when this value is updated
+// Value is an interface that all values in the state cache must implement
+type Value interface {
+	Clone() interface{}
+}
+
+type String string
+
+func (se String) Clone() interface{} {
+	return se
+}
+
+type valueNode struct {
+	data    Value
+	deleted bool  // indicates the value was removed
+	round   int64 // round number when this value is updated
 }
 
 type StateCache struct {
 	mu    sync.RWMutex
-	cache map[string]map[string]Value
+	cache map[string]map[string]valueNode
 }
 
 func NewStateCache() *StateCache {
 	return &StateCache{
-		cache: make(map[string]map[string]Value),
+		cache: make(map[string]map[string]valueNode),
 	}
 }
 
@@ -31,27 +41,42 @@ func (sc *StateCache) Get(key, blockHash string) (Value, bool) {
 
 	blockValues, ok := sc.cache[key]
 	if !ok {
-		return Value{}, false
+		return nil, false
 	}
 
 	v, ok := blockValues[blockHash]
-	if ok && !v.Deleted {
-		return v, true
+	if ok && !v.deleted {
+		return v.data, true
 	}
-	return Value{}, false
+	return nil, false
 }
 
-// shift moves the value from previous block hash to current if current not exists
+func (sc *StateCache) getValue(key, blockHash string) (valueNode, bool) {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	blockValues, ok := sc.cache[key]
+	if !ok {
+		return valueNode{}, false
+	}
+
+	v, ok := blockValues[blockHash]
+	if ok && !v.deleted {
+		return v, true
+	}
+	return valueNode{}, false
+}
+
+// shift copy the value from previous block to current
 func (sc *StateCache) shift(prevHash, blockHash string) {
 	for key, blockValues := range sc.cache {
-		value, ok := blockValues[prevHash]
+		v, ok := blockValues[prevHash]
 		if ok {
 			if _, exists := blockValues[blockHash]; !exists {
 				if sc.cache[key] == nil {
-					sc.cache[key] = make(map[string]Value)
+					sc.cache[key] = make(map[string]valueNode)
 				}
-				sc.cache[key][blockHash] = value
-				// delete(sc.cache[key], prevHash)
+				sc.cache[key][blockHash] = v
 			}
 		}
 	}
@@ -72,7 +97,7 @@ func (sc *StateCache) PruneRoundBelow(round int64) {
 
 	for key, blockValues := range sc.cache {
 		for blockHash, value := range blockValues {
-			if value.Round < round {
+			if value.round < round {
 				delete(blockValues, blockHash)
 			}
 		}
@@ -105,7 +130,7 @@ func (sc *StateCache) PrettyPrint() {
 		// Sort block hashes by round number in descending order
 		var rounds []int64
 		for _, value := range blockValues {
-			rounds = append(rounds, value.Round)
+			rounds = append(rounds, value.round)
 		}
 		sort.Slice(rounds, func(i, j int) bool {
 			return rounds[i] > rounds[j]
@@ -118,7 +143,7 @@ func (sc *StateCache) PrettyPrint() {
 			// Sort block hashes for the same round
 			var hashes []string
 			for hash, value := range blockValues {
-				if value.Round == round {
+				if value.round == round {
 					hashes = append(hashes, hash)
 				}
 			}
@@ -128,8 +153,7 @@ func (sc *StateCache) PrettyPrint() {
 			for _, hash := range hashes {
 				value := blockValues[hash]
 				fmt.Printf("    Hash: %s\n", hash)
-				fmt.Printf("      Data: %s\n", string(value.Data))
-				fmt.Printf("      Deleted: %v\n", value.Deleted)
+				fmt.Printf("      Deleted: %v\n", value.deleted)
 			}
 		}
 	}

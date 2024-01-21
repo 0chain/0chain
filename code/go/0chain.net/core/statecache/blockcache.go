@@ -7,11 +7,11 @@ import "sync"
 // the changes to the StateCache when the block is executed.
 type BlockCache struct {
 	mu            sync.RWMutex
-	cache         map[string]Value
+	cache         map[string]valueNode
 	main          *StateCache
 	blockHash     string
 	prevBlockHash string
-	Round         int64
+	round         int64
 }
 
 type Block struct {
@@ -20,22 +20,32 @@ type Block struct {
 	PrevHash string // previous hash of the block
 }
 
-func NewBlockCache(main *StateCache, blockHash Block) *BlockCache {
+func NewBlockCache(main *StateCache, b Block) *BlockCache {
 	return &BlockCache{
-		cache:         make(map[string]Value),
+		cache:         make(map[string]valueNode),
 		main:          main,
-		blockHash:     blockHash.Hash,
-		prevBlockHash: blockHash.PrevHash,
-		Round:         blockHash.Round,
+		blockHash:     b.Hash,
+		prevBlockHash: b.PrevHash,
+		round:         b.Round,
 	}
 }
 
 // Set sets the value with the given key in the pre-commit cache
-func (pcc *BlockCache) Set(key string, value Value) {
+func (pcc *BlockCache) Set(key string, e Value) {
 	pcc.mu.Lock()
 	defer pcc.mu.Unlock()
 
-	pcc.cache[key] = value
+	pcc.cache[key] = valueNode{
+		data:  e,
+		round: pcc.round,
+	}
+}
+
+func (pcc *BlockCache) setValue(key string, v valueNode) {
+	pcc.mu.Lock()
+	defer pcc.mu.Unlock()
+
+	pcc.cache[key] = v
 }
 
 // Get returns the value with the given key
@@ -45,13 +55,13 @@ func (pcc *BlockCache) Get(key string) (Value, bool) {
 
 	// Check the pre-commit cache first
 	value, ok := pcc.cache[key]
-	if ok && !value.Deleted {
-		return value, ok
+	if ok && !value.deleted {
+		return value.data, ok
 	}
 
 	// Should not return deleted value
-	if ok && value.Deleted {
-		return Value{}, false
+	if ok && value.deleted {
+		return nil, false
 	}
 
 	return pcc.main.Get(key, pcc.prevBlockHash)
@@ -64,16 +74,16 @@ func (pcc *BlockCache) Remove(key string) {
 
 	value, ok := pcc.cache[key]
 	if ok {
-		value.Deleted = true
+		value.deleted = true
 		pcc.cache[key] = value
 		return
 	}
 
 	// If the value is not in the pre-commit cache, check it in main cache,
 	// and if found mark it as deleted in the current cache
-	value, ok = pcc.main.Get(key, pcc.prevBlockHash)
+	value, ok = pcc.main.getValue(key, pcc.prevBlockHash)
 	if ok {
-		value.Deleted = true
+		value.deleted = true
 		pcc.cache[key] = value
 	}
 }
@@ -84,16 +94,16 @@ func (pcc *BlockCache) Commit() {
 	defer pcc.mu.Unlock()
 
 	pcc.main.mu.Lock()
-	for key, value := range pcc.cache {
+	for key, v := range pcc.cache {
 		if _, ok := pcc.main.cache[key]; !ok {
-			pcc.main.cache[key] = make(map[string]Value)
+			pcc.main.cache[key] = make(map[string]valueNode)
 		}
-		pcc.main.cache[key][pcc.blockHash] = value
+		pcc.main.cache[key][pcc.blockHash] = v
 	}
 
 	pcc.main.shift(pcc.prevBlockHash, pcc.blockHash)
 	pcc.main.mu.Unlock()
 
 	// Clear the pre-commit cache
-	pcc.cache = make(map[string]Value)
+	pcc.cache = make(map[string]valueNode)
 }

@@ -4,7 +4,7 @@ import "sync"
 
 type TransactionCache struct {
 	main  *BlockCache
-	cache map[string]Value
+	cache map[string]valueNode
 	mu    sync.RWMutex
 	round int64
 }
@@ -12,17 +12,19 @@ type TransactionCache struct {
 func NewTransactionCache(main *BlockCache) *TransactionCache {
 	return &TransactionCache{
 		main:  main,
-		cache: make(map[string]Value),
-		round: main.Round,
+		cache: make(map[string]valueNode),
+		round: main.round,
 	}
 }
 
-func (tc *TransactionCache) Set(key string, value Value) {
+func (tc *TransactionCache) Set(key string, e Value) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	value.Round = tc.round
 
-	tc.cache[key] = value
+	tc.cache[key] = valueNode{
+		data:  e,
+		round: tc.round,
+	}
 }
 
 func (tc *TransactionCache) Get(key string) (Value, bool) {
@@ -31,7 +33,7 @@ func (tc *TransactionCache) Get(key string) (Value, bool) {
 
 	value, ok := tc.cache[key]
 	if ok {
-		return value, ok
+		return value.data, ok
 	}
 
 	return tc.main.Get(key)
@@ -43,7 +45,7 @@ func (tc *TransactionCache) Remove(key string) {
 
 	value, ok := tc.cache[key]
 	if ok {
-		value.Deleted = true
+		value.deleted = true
 		tc.cache[key] = value
 	}
 }
@@ -53,9 +55,9 @@ func (tc *TransactionCache) Commit() {
 	defer tc.mu.Unlock()
 
 	for key, value := range tc.cache {
-		tc.main.Set(key, value)
+		tc.main.setValue(key, value)
 	}
 
 	// Clear the transaction cache
-	tc.cache = make(map[string]Value)
+	tc.cache = make(map[string]valueNode)
 }
