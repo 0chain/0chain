@@ -58,6 +58,15 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 	return nil
 }
 
+func ParitionChallengeReadyBlobberExists(state state.StateContextI, blobberID string) (bool, error) {
+	parts, err := partitionsChallengeReadyBlobbers(state)
+	if err != nil {
+		return false, fmt.Errorf("could not get challenge ready partitions, %v", err)
+	}
+
+	return parts.Exist(state, blobberID)
+}
+
 func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
 	parts, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {

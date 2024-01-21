@@ -410,8 +410,11 @@ func (_ *StorageSmartContract) refreshProvider(
 			return nil, err
 		}
 
-		if err := PartitionsChallengeReadyBlobberUpdate(balances, providerID, spBalance, sd); err != nil {
-			return nil, err
+		paritionChallengeReadyBlobberExists, err := ParitionChallengeReadyBlobberExists(balances, providerID)
+		if err == nil && paritionChallengeReadyBlobberExists {
+			if err := PartitionsChallengeReadyBlobberUpdate(balances, providerID, spBalance, sd); err != nil {
+				return nil, err
+			}
 		}
 	}
 
