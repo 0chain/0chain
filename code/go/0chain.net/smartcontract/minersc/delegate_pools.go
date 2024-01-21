@@ -7,7 +7,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
@@ -24,7 +26,15 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
 	}
 
-	cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	beforeFunc = func() {
+		cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	}
+
+	afterFunc = func() {
+		logging.Logger.Info("afterFunc", zap.Any("", "Just for testing purpose"))
+	}
+
+	cstate.WithActivation(balances, "hard_fork_2", beforeFunc, afterFunc)
 
 	return resp, err
 }
