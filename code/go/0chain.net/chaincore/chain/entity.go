@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -216,6 +217,8 @@ type Chain struct {
 	computeBlockStateC chan struct{}
 
 	OnBlockAdded func(b *block.Block)
+
+	stateCache *statecache.StateCache
 }
 
 type stateNodeStat struct {
@@ -278,6 +281,14 @@ func (c *Chain) SetupEventDatabase() error {
 		return err
 	}
 	return nil
+}
+
+func (c *Chain) SetupStateCache() {
+	c.stateCache = statecache.NewStateCache()
+}
+
+func (c *Chain) GetStateCache() *statecache.StateCache {
+	return c.stateCache
 }
 
 // GetLatestFinalizedBlockFromDB gets the latest finalized block hash and round number from event db
@@ -638,7 +649,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
 
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
-	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
+	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb(), c.GetStateCache())
 	mustInitPartitions(stateCtx)
 
 	c.mustInitGBState(initStates, stateCtx)

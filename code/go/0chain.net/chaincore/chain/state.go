@@ -386,6 +386,7 @@ func (c *Chain) NewStateContext(
 		c.GetSignatureScheme,
 		c.GetLatestFinalizedBlock,
 		eventDb,
+		c.GetStateCache(),
 	)
 }
 

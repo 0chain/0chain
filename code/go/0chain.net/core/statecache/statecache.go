@@ -6,6 +6,13 @@ import (
 	"sync"
 )
 
+// NewBlockTxnCaches creates a new block cache and a transaction cache for the given block
+func NewBlockTxnCaches(sc *StateCache, b Block) (*BlockCache, *TransactionCache) {
+	bc := NewBlockCache(sc, b)
+	tc := NewTransactionCache(bc)
+	return bc, tc
+}
+
 // Value is an interface that all values in the state cache must implement
 type Value interface {
 	Clone() interface{}

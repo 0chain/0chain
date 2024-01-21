@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
@@ -109,6 +110,8 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetMissingNodeKeys() []util.Key
+	GetBlockStateCache() *statecache.BlockCache
+	GetTxnStateCache() *statecache.TransactionCache
 }
 
 // StateContext - a context object used to manipulate global state
@@ -128,6 +131,8 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+	blockStateCache               *statecache.BlockCache
+	txnStateCache                 *statecache.TransactionCache
 }
 
 type GetNow func() common.Timestamp
@@ -159,9 +164,16 @@ func NewStateContext(
 	getChainSignature func() encryption.SignatureScheme,
 	getLatestFinalizedBlock func() *block.Block,
 	eventDb *event.EventDb,
+	stateCache *statecache.StateCache,
 ) (
 	balances *StateContext,
 ) {
+
+	blockCache, txnCache := statecache.NewBlockTxnCaches(stateCache, statecache.Block{
+		Round:    b.Round,
+		Hash:     b.Hash,
+		PrevHash: b.PrevHash,
+	})
 	return &StateContext{
 		block:                         b,
 		state:                         s,
@@ -174,6 +186,8 @@ func NewStateContext(
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
+		blockStateCache:               blockCache,
+		txnStateCache:                 txnCache,
 	}
 }
 
@@ -424,6 +438,14 @@ func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
 // GetMissingNodeKeys returns missing node keys
 func (sc *StateContext) GetMissingNodeKeys() []util.Key {
 	return sc.state.GetMissingNodeKeys()
+}
+
+func (sc *StateContext) GetBlockStateCache() *statecache.BlockCache {
+	return sc.blockStateCache
+}
+
+func (sc *StateContext) GetTxnStateCache() *statecache.TransactionCache {
+	return sc.txnStateCache
 }
 
 // ErrInvalidState checks if the error is an invalid state error

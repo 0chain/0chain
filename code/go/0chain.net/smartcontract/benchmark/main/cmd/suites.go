@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/dbs/postgresql"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -460,6 +461,7 @@ func runEventDatabaseBenchmark(
 		nil,
 		nil,
 		cloneEdb,
+		statecache.NewStateCache(),
 	)
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/dbs/goose"
 
 	"golang.org/x/net/context"
@@ -117,6 +118,7 @@ func getBalances(
 		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 		func() *block.Block { return bk },
 		edb,
+		statecache.NewStateCache(),
 	)
 }
 
@@ -243,6 +245,7 @@ func setUpMpt(
 		func() encryption.SignatureScheme { return signatureScheme },
 		nil,
 		nil,
+		statecache.NewStateCache(),
 	)
 
 	initSCTokens := currency.Coin(viper.GetInt64(benchmark.StartTokens))
