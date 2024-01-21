@@ -75,7 +75,7 @@ type DelegatePool struct {
 	StakedAt     common.Timestamp  `json:"staked_at"`
 }
 
-// swagger:model stakePoolStat
+// StakePoolStat Deprecated
 type StakePoolStat struct {
 	ID         string             `json:"pool_id"` // pool ID
 	Balance    currency.Coin      `json:"balance"` // total balance
@@ -86,6 +86,7 @@ type StakePoolStat struct {
 	Settings   Settings           `json:"settings"` // Settings of the stake pool
 }
 
+// DelegatePoolStat Deprecated
 type DelegatePoolStat struct {
 	ID           string          `json:"id"`            // blobber ID
 	Balance      currency.Coin   `json:"balance"`       // current balance
@@ -102,7 +103,7 @@ type DelegatePoolStat struct {
 	StakedAt     common.Timestamp `json:"staked_at"`
 }
 
-// swagger:model userPoolStat
+// UserPoolStat Deprecated
 type UserPoolStat struct {
 	Pools map[datastore.Key][]*DelegatePoolStat `json:"pools"`
 }
