@@ -318,6 +318,18 @@ func isCost(key string) bool {
 }
 
 func (gn *GlobalNode) set(key string, change string) error {
+	if isCost(key) {
+		value, err := strconv.Atoi(change)
+		if err != nil {
+			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
+		}
+		if err := gn.setCost(key, value); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	settings, ok := Settings[key]
 	if !ok {
 		return fmt.Errorf("unsupported key %v", key)
@@ -373,14 +385,6 @@ func (gn *GlobalNode) set(key string, change string) error {
 			return fmt.Errorf("%s must be a hex string: %v", key, err)
 		}
 		gn.setKey(key, change)
-	case config.Cost:
-		value, err := strconv.Atoi(change)
-		if err != nil {
-			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
-		}
-		if err := gn.setCost(key, value); err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("unsupported type setting %v", config.ConfigTypeName[Settings[key].ConfigType])
 	}

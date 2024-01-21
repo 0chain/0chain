@@ -60,4 +60,5 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
 
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
+	msc.smartContractFunctions["add_hardfork"] = msc.addHardFork
 }

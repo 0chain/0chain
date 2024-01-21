@@ -7,16 +7,17 @@ import (
 
 // swagger:model MinerSnapshot
 type MinerSnapshot struct {
-	MinerID  string `json:"id" gorm:"uniqueIndex"`
-	Round    int64  `json:"round"`
+	MinerID string `json:"id" gorm:"uniqueIndex"`
+	Round   int64  `json:"round"`
 
-	Fees          currency.Coin `json:"fees"`
-	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin `json:"total_rewards"`
-	ServiceCharge float64       `json:"service_charge"`
-	CreationRound int64         `json:"creation_round"`
-	IsKilled      bool          `json:"is_killed"`
-	IsShutdown    bool          `json:"is_shutdown"`
+	Fees            currency.Coin `json:"fees"`
+	TotalStake      currency.Coin `json:"total_stake"`
+	TotalRewards    currency.Coin `json:"total_rewards"`
+	ServiceCharge   float64       `json:"service_charge"`
+	BlocksFinalised int64         `json:"blocks_finalised"`
+	CreationRound   int64         `json:"creation_round"`
+	IsKilled        bool          `json:"is_killed"`
+	IsShutdown      bool          `json:"is_shutdown"`
 }
 
 func (ms *MinerSnapshot) GetID() string {
@@ -70,21 +71,22 @@ func (edb *EventDb) addMinerSnapshot(miners []*Miner, round int64) error {
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "miner_id"}},
+		Columns:   []clause.Column{{Name: "miner_id"}},
 		UpdateAll: true,
 	}).Create(&snapshots).Error
 }
 
 func createMinerSnapshotFromMiner(m *Miner, round int64) *MinerSnapshot {
 	return &MinerSnapshot{
-		MinerID:       m.ID,
-		Round:         round,
-		Fees:          m.Fees,
-		TotalStake:    m.TotalStake,
-		ServiceCharge: m.ServiceCharge,
-		CreationRound: m.CreationRound,
-		TotalRewards:  m.Rewards.TotalRewards,
-		IsKilled:      m.IsKilled,
-		IsShutdown:    m.IsShutdown,
+		MinerID:         m.ID,
+		Round:           round,
+		Fees:            m.Fees,
+		TotalStake:      m.TotalStake,
+		ServiceCharge:   m.ServiceCharge,
+		BlocksFinalised: m.BlocksFinalised,
+		CreationRound:   m.CreationRound,
+		TotalRewards:    m.Rewards.TotalRewards,
+		IsKilled:        m.IsKilled,
+		IsShutdown:      m.IsShutdown,
 	}
 }
