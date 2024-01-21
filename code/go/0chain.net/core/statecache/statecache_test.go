@@ -41,7 +41,7 @@ func TestStateCache_Get(t *testing.T) {
 
 func TestCacheTx(t *testing.T) {
 	sc := NewStateCache()
-	ct := NewBlockCache(sc, BlockHash{PrevHash: "prevHash", Hash: "hash1"})
+	ct := NewBlockCache(sc, Block{PrevHash: "prevHash", Hash: "hash1"})
 
 	// Test Get method when cache is empty
 	_, ok := ct.Get("key1")
@@ -65,7 +65,7 @@ func TestCacheTx(t *testing.T) {
 
 	// Add a new value to the cache for key1 in hash2 block
 	value2 := Value{Data: []byte("data2")}
-	ct2 := NewBlockCache(sc, BlockHash{PrevHash: "hash1", Hash: "hash2"})
+	ct2 := NewBlockCache(sc, Block{PrevHash: "hash1", Hash: "hash2"})
 	ct2.Set("key1", value2)
 	ct2.Commit()
 
@@ -82,7 +82,7 @@ func TestCacheTx(t *testing.T) {
 
 func TestCacheTx_NotCommitted(t *testing.T) {
 	sc := NewStateCache()
-	ct := NewBlockCache(sc, BlockHash{Hash: "hash1"})
+	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Test Get method when cache is empty
 	_, ok := ct.Get("key1")
@@ -118,7 +118,7 @@ func TestCacheTx_NotCommitted(t *testing.T) {
 
 func TestCacheTx_SkipBlock(t *testing.T) {
 	sc := NewStateCache()
-	ct := NewBlockCache(sc, BlockHash{Hash: "hash1"})
+	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Add values to the cache in block "hash1"
 	ct.Set("key1", Value{Data: []byte("value1")})
@@ -127,7 +127,7 @@ func TestCacheTx_SkipBlock(t *testing.T) {
 	ct.Commit()
 
 	// Skip one block
-	ct = NewBlockCache(sc, BlockHash{PrevHash: "hash2", Hash: "hash3"})
+	ct = NewBlockCache(sc, Block{PrevHash: "hash2", Hash: "hash3"})
 
 	_, ok := ct.Get("key1")
 	require.False(t, ok)
@@ -146,7 +146,7 @@ func TestCacheTx_SkipBlock(t *testing.T) {
 
 func TestCacheTx_Shift(t *testing.T) {
 	sc := NewStateCache()
-	ct := NewBlockCache(sc, BlockHash{Hash: "hash1"})
+	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Add values to the cache in block "hash1"
 	ct.Set("key1", Value{Data: []byte("value1_h1")})
@@ -156,7 +156,7 @@ func TestCacheTx_Shift(t *testing.T) {
 	ct.Commit()
 
 	// New block that update key1 only
-	ct = NewBlockCache(sc, BlockHash{PrevHash: "hash1", Hash: "hash2"})
+	ct = NewBlockCache(sc, Block{PrevHash: "hash1", Hash: "hash2"})
 	ct.Set("key1", Value{Data: []byte("value1_h2")})
 	ct.Commit()
 
@@ -166,7 +166,7 @@ func TestCacheTx_Shift(t *testing.T) {
 	require.Equal(t, "value2_h1", string(v.Data))
 
 	// New block to update both key1 and key2
-	ct = NewBlockCache(sc, BlockHash{PrevHash: "hash2", Hash: "hash3"})
+	ct = NewBlockCache(sc, Block{PrevHash: "hash2", Hash: "hash3"})
 	ct.Set("key1", Value{Data: []byte("value1_h3")})
 	ct.Set("key2", Value{Data: []byte("value2_h3")})
 
@@ -193,8 +193,8 @@ func TestConcurrentExecutionAndCommit(t *testing.T) {
 	sc := NewStateCache()
 
 	// Create two concurrent CacheTx instances for the same block
-	ct1 := NewBlockCache(sc, BlockHash{Hash: "hash1"})
-	ct2 := NewBlockCache(sc, BlockHash{Hash: "hash1"})
+	ct1 := NewBlockCache(sc, Block{Hash: "hash1"})
+	ct2 := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Set values in both CacheTx instances
 	ct1.Set("key1", Value{Data: []byte("value1_h1")})
@@ -226,7 +226,7 @@ func TestAddRemoveAdd(t *testing.T) {
 	sc := NewStateCache()
 
 	// Create a CacheTx instance
-	ct := NewBlockCache(sc, BlockHash{Hash: "hash1"})
+	ct := NewBlockCache(sc, Block{Hash: "hash1"})
 
 	// Add a value to the CacheTx
 	ct.Set("key1", Value{Data: []byte("value1")})
@@ -240,7 +240,7 @@ func TestAddRemoveAdd(t *testing.T) {
 	require.Equal(t, "value1", string(v1.Data))
 
 	// Create another CacheTx instance
-	ct2 := NewBlockCache(sc, BlockHash{PrevHash: "hash1", Hash: "hash2"})
+	ct2 := NewBlockCache(sc, Block{PrevHash: "hash1", Hash: "hash2"})
 
 	// Remove the value from the CacheTx
 	ct2.Remove("key1")
@@ -274,7 +274,7 @@ func TestTransactionCache(t *testing.T) {
 			preHash = fmt.Sprintf("hash%d", i-1)
 		}
 
-		bc := NewBlockCache(sc, BlockHash{PrevHash: preHash, Hash: hash})
+		bc := NewBlockCache(sc, Block{PrevHash: preHash, Hash: hash})
 		tc := NewTransactionCache(bc)
 
 		// Test Get method when cache is empty

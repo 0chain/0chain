@@ -14,13 +14,13 @@ type BlockCache struct {
 	Round         int64
 }
 
-type BlockHash struct {
-	PrevHash string // previous hash of the block
-	Hash     string // block hash
+type Block struct {
 	Round    int64  // round number when this block cache is created
+	Hash     string // block hash
+	PrevHash string // previous hash of the block
 }
 
-func NewBlockCache(main *StateCache, blockHash BlockHash) *BlockCache {
+func NewBlockCache(main *StateCache, blockHash Block) *BlockCache {
 	return &BlockCache{
 		cache:         make(map[string]Value),
 		main:          main,
