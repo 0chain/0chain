@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/smartcontract/stakepool"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/provider"
@@ -352,7 +352,7 @@ func (an *AuthorizerNode) Save(ctx cstate.StateContextI) (err error) {
 	return nil
 }
 
-func (an *AuthorizerNode) ToEvent(settings stakepool.Settings) *event.Authorizer {
+func (an *AuthorizerNode) ToEvent(settings stakepool.Settings, round int64) *event.Authorizer {
 	if an.Config == nil {
 		an.Config = new(AuthorizerConfig)
 	}
@@ -370,7 +370,8 @@ func (an *AuthorizerNode) ToEvent(settings stakepool.Settings) *event.Authorizer
 		},
 		Fee: an.Config.Fee,
 
-		URL: an.URL,
+		URL:           an.URL,
+		CreationRound: round,
 	}
 }
 

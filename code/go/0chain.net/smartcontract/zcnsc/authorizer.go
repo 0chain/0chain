@@ -130,7 +130,8 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	// Events emission
-	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent(sp.Settings))
+	currentRound := ctx.GetBlock().Round
+	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, authorizer.ToEvent(sp.Settings, currentRound))
 
 	err = increaseAuthorizerCount(ctx)
 
@@ -410,7 +411,8 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerConfig(
 		return "", err
 	}
 
-	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, authorizer.ID, authorizer.ToEvent(sp.Settings))
+	currentRound := ctx.GetBlock().Round
+	ctx.EmitEvent(event.TypeStats, event.TagUpdateAuthorizer, authorizer.ID, authorizer.ToEvent(sp.Settings, currentRound))
 
 	return string(authorizer.Encode()), nil
 }

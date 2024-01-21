@@ -709,7 +709,10 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrUpdateBlock(*block)
+		if err := edb.addOrUpdateBlock(*block); err != nil {
+			return err
+		}
+		return edb.updateMinerBlocksFinalised(block.MinerID)
 	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
@@ -801,6 +804,10 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		if err := edb.blobberSpecificRevenue(*spus); err != nil {
 			return fmt.Errorf("could not update blobber specific revenue: %v", err)
+		}
+		err = edb.feesSpecificRevenue(*spus)
+		if err != nil {
+			return fmt.Errorf("could not update fees specific revenue: %v", err)
 		}
 		return nil
 	case TagStakePoolPenalty:

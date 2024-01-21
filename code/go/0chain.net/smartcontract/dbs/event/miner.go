@@ -15,17 +15,18 @@ import (
 
 type Miner struct {
 	Provider
-	N2NHost       string `gorm:"column:n2n_host"`
-	Host          string
-	Port          int
-	Path          string
-	PublicKey     string
-	ShortName     string
-	BuildTag      string
-	Delete        bool
-	Fees          currency.Coin
-	Active        bool
-	CreationRound int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
+	N2NHost         string `gorm:"column:n2n_host"`
+	Host            string
+	Port            int
+	Path            string
+	PublicKey       string
+	ShortName       string
+	BuildTag        string
+	Delete          bool
+	Fees            currency.Coin
+	Active          bool
+	BlocksFinalised int64
+	CreationRound   int64 `json:"creation_round" gorm:"index:idx_miner_creation_round"`
 }
 
 func (m Miner) GetID() string {
@@ -248,6 +249,15 @@ func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 		Model(&Miner{}).
 		Where(&Miner{Provider: Provider{ID: miner.ID}}).
 		Updates(updates.Updates)
+
+	return result.Error
+}
+
+func (edb *EventDb) updateMinerBlocksFinalised(minerID string) error {
+	result := edb.Store.Get().
+		Model(&Miner{}).
+		Where(&Miner{Provider: Provider{ID: minerID}}).
+		Update("blocks_finalised", gorm.Expr("blocks_finalised + ?", 1))
 
 	return result.Error
 }

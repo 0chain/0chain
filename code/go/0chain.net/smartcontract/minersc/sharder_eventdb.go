@@ -65,7 +65,7 @@ func sharderTableToSharderNode(edbSharder event.Sharder, delegates []event.Deleg
 
 }
 
-func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
+func sharderNodeToSharderTable(sn *MinerNode, round int64) event.Sharder {
 	return event.Sharder{
 		N2NHost:   sn.N2NHost,
 		Host:      sn.Host,
@@ -91,11 +91,13 @@ func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 		},
 
 		Active: sn.Status == node.NodeStatusActive,
+
+		CreationRound: round,
 	}
 }
 
 func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn))
+	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn, balances.GetBlock().Round))
 }
 
 func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) {
