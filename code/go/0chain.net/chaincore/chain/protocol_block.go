@@ -389,7 +389,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	var eventTx *event.EventDb
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() error {
-			fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
+			if !hasBlockFinalizeEvent(fb.Events) {
+				fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
+			}
 			ts := time.Now()
 			eventTx, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
 			if err != nil {
@@ -428,6 +430,19 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		fbPersisted = true
 		return nil
 	})
+
+	// the bsh.UpdateFinalizedBlock() above will set the round as finalized, but following process
+	// could fail, so should reset the finalized state if any error occurs
+	defer func() {
+		if err != nil {
+			fr := c.GetRound(fb.Round)
+			if fr != nil {
+				fr.ResetFinalizingState()
+			} else {
+				logging.Logger.Error("finalize block - reset round finalizing state failed, could not find the round")
+			}
+		}
+	}()
 
 	if err = wg.Wait(); err != nil {
 		if !waitgroup.ErrIsPanic(err) {
@@ -477,6 +492,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
 				zap.Error(err))
+			return err // should return error if event commit failed
 		} else {
 			logging.Logger.Debug("finalize block - commit events",
 				zap.Int64("round", fb.Round),
@@ -546,6 +562,15 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 		zap.Duration("duration", time.Since(ts)))
 	return nil
+}
+
+func hasBlockFinalizeEvent(events []event.Event) bool {
+	for _, e := range events {
+		if e.Type == event.TypeChain && e.Tag == event.TagFinalizeBlock {
+			return true
+		}
+	}
+	return false
 }
 
 // IsFinalizedDeterministically - checks if a block is finalized deterministically
