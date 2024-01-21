@@ -13,6 +13,7 @@ type BlobberAggregate struct {
 	LastHealthCheck     common.Timestamp	`json:"last_health_check"`
 	WritePrice          currency.Coin 		`json:"write_price"`
 	Capacity            int64         		`json:"capacity"`  // total blobber capacity
+	ServiceCharge	    float64				`json:"service_charge"` // blobber service charge ratio (0-1)
 	Allocated           int64         		`json:"allocated"` // allocated capacity
 	SavedData           int64         		`json:"saved_data"`
 	ReadData            int64         		`json:"read_data"`
@@ -43,6 +44,7 @@ func (edb *EventDb) CreateBlobberAggregates(blobbers []*Blobber, round int64) er
 		}
 		aggregate.WritePrice = blobber.WritePrice
 		aggregate.Capacity = blobber.Capacity
+		aggregate.ServiceCharge = blobber.ServiceCharge
 		aggregate.Allocated = blobber.Allocated
 		aggregate.SavedData = blobber.SavedData
 		aggregate.ReadData = blobber.ReadData

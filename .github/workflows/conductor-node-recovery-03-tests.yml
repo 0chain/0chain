@@ -138,7 +138,7 @@ jobs:
 
     - name: Git clone authorizer
       run: |
-        git clone https://service-0chain:${{ secrets.CHAIN_PAT }}@github.com/0chain/token_bridge_authserver.git
+        git clone https://${{ secrets.SVC_ACCOUNT_USER }}:${{ secrets.SVC_ACCOUNT_SECRET }}@github.com/0chain/token_bridge_authserver.git
         cd token_bridge_authserver
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         AUTH_BRANCH="${{ inputs.auth_branch }}"
@@ -190,7 +190,7 @@ jobs:
     - name: Git clone 0box
       run: |
         export HOME="/root"
-        git clone https://${{ secrets.GIT_USER }}:${{ secrets.GIT_PAT }}@github.com/0chain/0box.git
+        git clone https://${{ secrets.SVC_ACCOUNT_USER }}:${{ secrets.SVC_ACCOUNT_SECRET }}@github.com/0chain/0box.git
         cd 0box
         git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
         ZBOX_BRANCH="${{ inputs.zbox_branch }}"
@@ -336,7 +336,7 @@ jobs:
       run: |
         cd 0box
         chmod +x ../0chain/docker.local/bin/conductor/patch-0box-tests.sh
-        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.ZBOX_ACCESS_KEY }} ${{ secrets.ZBOX_SECRET_KEY }} $ZDNS_URL
+        ../0chain/docker.local/bin/conductor/patch-0box-tests.sh ${{ secrets.R53_ACCESS_KEY_ID }} ${{ secrets.R53_SECRET_KEY_ID }} $ZDNS_URL
   
     - name: Build 0dns
       run: |
