@@ -393,17 +393,9 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 func (_ *StorageSmartContract) refreshProvider(
 	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
-	if providerType != spenum.Blobber {
-		return nil, nil
-	}
+	sp, err := getStakePool(providerType, providerID, balances)
 
-	paritionChallengeReadyBlobberExists, err := ParitionChallengeReadyBlobberExists(balances, providerID)
-	if err == nil && paritionChallengeReadyBlobberExists {
-		sp, err := getStakePool(providerType, providerID, balances)
-		if err != nil {
-			return nil, err
-		}
-
+	if providerType == spenum.Blobber {
 		spBalance, err := sp.stake()
 		if err != nil {
 			return nil, err
@@ -418,8 +410,11 @@ func (_ *StorageSmartContract) refreshProvider(
 			return nil, err
 		}
 
-		if err := PartitionsChallengeReadyBlobberUpdate(balances, providerID, spBalance, sd); err != nil {
-			return nil, err
+		paritionChallengeReadyBlobberExists, err := ParitionChallengeReadyBlobberExists(balances, providerID)
+		if err == nil && paritionChallengeReadyBlobberExists {
+			if err := PartitionsChallengeReadyBlobberUpdate(balances, providerID, spBalance, sd); err != nil {
+				return nil, err
+			}
 		}
 	}
 
