@@ -15,7 +15,7 @@ func NewBlockTxnCaches(sc *StateCache, b Block) (*BlockCache, *TransactionCache)
 
 // Value is an interface that all values in the state cache must implement
 type Value interface {
-	Clone() interface{}
+	Clone() Value
 }
 
 type String string

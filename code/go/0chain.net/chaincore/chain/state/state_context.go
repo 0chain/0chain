@@ -110,8 +110,7 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetMissingNodeKeys() []util.Key
-	GetBlockStateCache() *statecache.BlockCache
-	GetTxnStateCache() *statecache.TransactionCache
+	Cache() *statecache.TransactionCache
 }
 
 // StateContext - a context object used to manipulate global state
@@ -444,7 +443,7 @@ func (sc *StateContext) GetBlockStateCache() *statecache.BlockCache {
 	return sc.blockStateCache
 }
 
-func (sc *StateContext) GetTxnStateCache() *statecache.TransactionCache {
+func (sc *StateContext) Cache() *statecache.TransactionCache {
 	return sc.txnStateCache
 }
 
