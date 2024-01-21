@@ -74,13 +74,11 @@ func TestBlockCache(t *testing.T) {
 
 func TestCacheTx_NotCommitted(t *testing.T) {
 	sc := NewStateCache()
-	ct := NewBlockCache(sc, Block{Hash: "hash1"})
+	ct := NewBlockCache(sc, Block{Round: 1, Hash: "hash1"})
 
 	// Test Get method when cache is empty
 	_, ok := ct.Get("key1")
-	if ok {
-		t.Error("Expected false, got ", ok)
-	}
+	require.False(t, ok)
 
 	// Test Set method
 	ct.Set("key1", String("value1"))
@@ -90,22 +88,33 @@ func TestCacheTx_NotCommitted(t *testing.T) {
 
 	// Test Get method in state cache before committing
 	_, ok = sc.Get("key1", "hash1")
-	if ok {
-		t.Error("Expected false, got ", ok)
-	}
+	require.False(t, ok)
+
+	ct.Commit()
+	_, ok = sc.Get("key1", "hash1")
+	require.True(t, ok)
+
+	ct = NewBlockCache(sc, Block{Round: 2, Hash: "hash2", PrevHash: "hash1"})
+	_, ok = ct.Get("key1")
+	require.True(t, ok)
 
 	// Test Remove method
 	ct.Remove("key1")
 	_, ok = ct.Get("key1")
+	require.False(t, ok)
 	if ok {
 		t.Error("Expected false, got ", ok)
 	}
 
-	// Test Get method in state cache before committing
-	_, ok = sc.Get("key1", "hash1")
-	if ok {
-		t.Error("Expected false, got ", ok)
-	}
+	ct.Commit()
+
+	_, ok = sc.Get("key1", "hash2")
+	require.False(t, ok)
+
+	// should be exist in hash1
+	v, ok := sc.Get("key1", "hash1")
+	require.True(t, ok)
+	require.EqualValues(t, "value1", v)
 }
 
 func TestCacheTx_SkipBlock(t *testing.T) {
@@ -313,6 +322,13 @@ func TestTransactionCache(t *testing.T) {
 		require.EqualValues(t, value2, vv2)
 	}
 
+	for i := 0; i < 10; i++ {
+		hash := fmt.Sprintf("hash%d", i)
+		value1 := fmt.Sprintf("value1_%s", hash)
+		v, ok := sc.Get("key1", hash)
+		require.True(t, ok)
+		require.EqualValues(t, value1, v)
+	}
 }
 func TestStateCache_PruneRoundBelow(t *testing.T) {
 	sc := NewStateCache()
