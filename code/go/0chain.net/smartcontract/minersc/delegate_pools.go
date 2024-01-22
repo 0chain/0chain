@@ -17,20 +17,16 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	resp string, err error) {
 
 	beforeFunc := func() {
-		resp, err = stakepool.StakePoolLock(t, input, balances,
-			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter)
+		cstate.WithActivation(balances, "hard_fork_1", func() {
+			resp, err = stakepool.StakePoolLock(t, input, balances,
+				stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter)
+		}, func() {
+			resp, err = stakepool.StakePoolLock(t, input, balances,
+				stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
+		})
 	}
 
 	afterFunc := func() {
-		resp, err = stakepool.StakePoolLock(t, input, balances,
-			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
-	}
-
-	beforeFunc = func() {
-		cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
-	}
-
-	afterFunc = func() {
 		logging.Logger.Info("afterFunc", zap.Any("", "Just for testing purpose"))
 	}
 
