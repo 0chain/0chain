@@ -451,6 +451,8 @@ func runEventDatabaseBenchmark(
 			log.Println("error deleting event database: " + deleteError.Error())
 		}
 	}()
+	blockStateCache := statecache.NewQueryBlockCache(statecache.NewStateCache(), "hash")
+	txnStateCache := statecache.NewTransactionCache(blockStateCache)
 	balances := cstate.NewStateContext(
 		nil,
 		nil,
@@ -461,7 +463,7 @@ func runEventDatabaseBenchmark(
 		nil,
 		nil,
 		cloneEdb,
-		statecache.NewStateCache(),
+		txnStateCache,
 	)
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0

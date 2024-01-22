@@ -108,6 +108,15 @@ func getBalances(
 		edb = data.EventDb
 	}
 
+	sc := statecache.NewStateCache()
+	blockStateCache := statecache.NewBlockCache(sc, statecache.Block{
+		Round:    bk.Round,
+		Hash:     bk.Hash,
+		PrevHash: bk.PrevHash,
+	})
+
+	txnStateCache := statecache.NewTransactionCache(blockStateCache)
+
 	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
@@ -118,7 +127,7 @@ func getBalances(
 		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 		func() *block.Block { return bk },
 		edb,
-		statecache.NewStateCache(),
+		txnStateCache,
 	)
 }
 
@@ -230,6 +239,13 @@ func setUpMpt(
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	var benchmarkTime = common.Now()
+	blockStateCache := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
+		Round:    bk.Round,
+		Hash:     bk.Hash,
+		PrevHash: bk.PrevHash,
+	})
+	txnStateCache := statecache.NewTransactionCache(blockStateCache)
+
 	balances := cstate.NewStateContext(
 		bk,
 		pMpt,
@@ -245,7 +261,7 @@ func setUpMpt(
 		func() encryption.SignatureScheme { return signatureScheme },
 		nil,
 		nil,
-		statecache.NewStateCache(),
+		txnStateCache,
 	)
 
 	initSCTokens := currency.Coin(viper.GetInt64(benchmark.StartTokens))

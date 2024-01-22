@@ -649,7 +649,12 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
 
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
-	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb(), c.GetStateCache())
+	blockStateCache := statecache.NewBlockCache(c.GetStateCache(), statecache.Block{
+		Round: gb.Round,
+		Hash:  gb.Hash,
+	})
+	txnStateCache := statecache.NewTransactionCache(blockStateCache)
+	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb(), txnStateCache)
 	mustInitPartitions(stateCtx)
 
 	c.mustInitGBState(initStates, stateCtx)
@@ -712,6 +717,9 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	default:
 		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
 	}
+
+	txnStateCache.Commit()
+	blockStateCache.Commit()
 
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
