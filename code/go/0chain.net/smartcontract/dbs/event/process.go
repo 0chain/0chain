@@ -280,7 +280,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
 	p := int64(-1)
-	edb.managePartitions(0)
+	err := edb.managePartitions(0)
+	if err != nil {
+		logging.Logger.Error("can't manage partitions")
+	}
 
 	for {
 		es := <-edb.eventsChannel
@@ -425,8 +428,8 @@ func (edb *EventDb) WorkAggregates(
 	return gSnapshot, nil
 }
 
-func (edb *EventDb) ManagePartitions(round int64) {
-	edb.managePartitions(round)
+func (edb *EventDb) ManagePartitions(round int64) error {
+	return edb.managePartitions(round)
 }
 
 func (edb *EventDb) managePartitions(round int64) error {
@@ -709,7 +712,10 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.addOrUpdateBlock(*block)
+		if err := edb.addOrUpdateBlock(*block); err != nil {
+			return err
+		}
+		return edb.updateMinerBlocksFinalised(block.MinerID)
 	case TagAddOrOverwiteValidator:
 		vns, ok := fromEvent[[]Validator](event.Data)
 		if !ok {
@@ -801,6 +807,10 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		}
 		if err := edb.blobberSpecificRevenue(*spus); err != nil {
 			return fmt.Errorf("could not update blobber specific revenue: %v", err)
+		}
+		err = edb.feesSpecificRevenue(*spus)
+		if err != nil {
+			return fmt.Errorf("could not update fees specific revenue: %v", err)
 		}
 		return nil
 	case TagStakePoolPenalty:
