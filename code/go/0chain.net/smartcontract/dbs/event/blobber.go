@@ -209,15 +209,30 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Limit(limit.Limit).
 		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
-			Column: clause.Column{Name: "write_price"},
+			Column: clause.Column{Name: "unallocated"},
 			Desc:   limit.IsDescending,
 		}).
 		Order(clause.OrderByColumn{
 			Column: clause.Column{Name: "id"},
 			Desc:   limit.IsDescending,
 		})
-	var blobberIDs []string
-	return blobberIDs, dbStore.Select("id").Find(&blobberIDs).Error
+	var result []Result
+	err := dbStore.Select("id, (capacity - allocated) as unallocated").Find(&result).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var blobebrIds []string
+	for _, r := range result {
+		blobebrIds = append(blobebrIds, r.Id)
+	}
+
+	return blobebrIds, nil
+}
+
+type Result struct {
+	Id          string
+	Unallocated int64
 }
 
 func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
