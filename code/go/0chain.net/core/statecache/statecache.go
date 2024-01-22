@@ -25,9 +25,20 @@ func (se String) Clone() Value {
 }
 
 // Cacheable checks if the given value is able to be cached
-func Cacheable(v interface{}) bool {
-	_, ok := v.(Value)
-	return ok
+func Cacheable(v interface{}) (Value, bool) {
+	cv, ok := v.(Value)
+	return cv, ok
+}
+
+type Copyer interface {
+	// CopyFrom copies the value from the given value, returns false if not able to copy
+	CopyFrom(v interface{}) bool
+}
+
+// Copyable checks if the given value is able to be copied
+func Copyable(v interface{}) (Copyer, bool) {
+	cv, ok := v.(Copyer)
+	return cv, ok
 }
 
 type valueNode struct {

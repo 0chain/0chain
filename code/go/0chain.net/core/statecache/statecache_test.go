@@ -410,10 +410,29 @@ func TestEnableCache(t *testing.T) {
 	f := &Foo{V: "foo"}
 	fi := MsgInterface(f)
 
-	ok := Cacheable(fi)
+	_, ok := Cacheable(fi)
 	require.True(t, ok)
 
 	b := &Bar{}
-	ok = Cacheable(b)
+	_, ok = Cacheable(b)
+	require.False(t, ok)
+}
+
+func TestEmptyBlockCache(t *testing.T) {
+	// Create a new state cache
+	sc := NewStateCache()
+
+	// Add a value to the state cache for a specific block
+	blockHash := "block123"
+	key := "key123"
+	value := String("value123")
+
+	bc := NewBlockCache(sc, Block{Hash: blockHash})
+	bc.Set(key, value)
+	bc.Commit()
+
+	// Create an empty block cache linked to the state cache
+	bc2 := NewBlockCache(sc, Block{Hash: blockHash})
+	_, ok := bc2.Get(key)
 	require.False(t, ok)
 }
