@@ -1188,7 +1188,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			break
 		}
 
-		success, err := txnProcessor(ctx, blockState, txn, iterInfo, waitC)
+		success, err := txnProcessor(ctx, blockState, txn, iterInfo, blockStateCache, waitC)
 		if err != nil {
 			// optimistic block generation. Same as EstimateTransactionCost above
 			logging.Logger.Debug("generate block - process failed and ignored", zap.Error(err))
