@@ -36,6 +36,7 @@ var (
 	minValue int64
 )
 
+// nolint
 /*TransactionGenerator - generates a steady stream of transactions */
 func TransactionGenerator(c *chain.Chain, workdir string) {
 	wallet.SetupWallet()

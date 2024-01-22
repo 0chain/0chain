@@ -106,7 +106,7 @@ func BenchmarkTests(
 						ID:           encryption.Hash("magic_block_miner_1"),
 						ProviderType: spenum.Miner,
 					},
-					PublicKey: "miner's public key",
+					PublicKey: "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929",
 					N2NHost:   "new n2n_host",
 					Host:      "new host",
 					Port:      1234,
@@ -462,6 +462,20 @@ func BenchmarkTests(
 				})
 				return bytes
 			}(),
+		},
+		{
+			name: "miner.add_hardfork",
+			endpoint: msc.addHardFork,
+			txn: &transaction.Transaction{
+				ClientID:     owner,
+				CreationDate: creationTime,
+			},
+			input: (&sc.StringMap{
+				Fields: map[string]string{
+					"hardfork_1": "1",
+					"hardfork_2": "2",
+				},
+			}).Encode(),
 		},
 	}
 	var testsI []bk.BenchTestI
