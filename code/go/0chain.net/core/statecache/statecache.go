@@ -24,6 +24,12 @@ func (se String) Clone() Value {
 	return se
 }
 
+// Cacheable checks if the given value is able to be cached
+func Cacheable(v interface{}) bool {
+	_, ok := v.(Value)
+	return ok
+}
+
 type valueNode struct {
 	data    Value
 	deleted bool  // indicates the value was removed

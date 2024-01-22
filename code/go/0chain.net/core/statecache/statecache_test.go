@@ -383,3 +383,37 @@ func TestStateCache_PruneRoundBelow(t *testing.T) {
 	require.False(t, ok)
 	sc.PrettyPrint()
 }
+
+type Foo struct {
+	V string
+}
+
+func (f *Foo) Clone() Value {
+	return &Foo{V: f.V}
+}
+
+func (f *Foo) Add() {
+
+}
+
+type Bar struct {
+}
+
+func (b *Bar) Add() {
+}
+
+type MsgInterface interface {
+	Add()
+}
+
+func TestEnableCache(t *testing.T) {
+	f := &Foo{V: "foo"}
+	fi := MsgInterface(f)
+
+	ok := Cacheable(fi)
+	require.True(t, ok)
+
+	b := &Bar{}
+	ok = Cacheable(b)
+	require.False(t, ok)
+}
