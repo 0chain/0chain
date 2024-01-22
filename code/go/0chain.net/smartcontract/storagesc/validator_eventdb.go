@@ -58,6 +58,7 @@ func (vn *ValidationNode) emitUpdate(sp *stakePool, balances cstate.StateContext
 			ServiceCharge:   vn.StakePoolSettings.ServiceChargeRatio,
 			LastHealthCheck: vn.LastHealthCheck,
 		},
+		CreationRound: balances.GetBlock().Round,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateValidator, vn.ID, data)
@@ -82,6 +83,7 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 			Rewards:         event.ProviderRewards{ProviderID: vn.ID},
 			LastHealthCheck: vn.LastHealthCheck,
 		},
+		CreationRound: balances.GetBlock().Round,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwiteValidator, vn.ID, data)

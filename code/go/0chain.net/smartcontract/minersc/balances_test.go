@@ -30,7 +30,7 @@ type testBalances struct {
 }
 
 func newTestBalances() *testBalances {
-	return &testBalances{
+	balances := &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 		magicBlock: &block.MagicBlock{
@@ -38,6 +38,11 @@ func newTestBalances() *testBalances {
 			Sharders: node.NewPool(node.NodeTypeSharder),
 		},
 	}
+	b := &block.Block{}
+	b.Round = 100
+	balances.block = b
+
+	return balances
 }
 
 func (tb *testBalances) zeroize() { //nolint
