@@ -130,7 +130,7 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
-	blockStateCache               *statecache.BlockCache
+	blockStateCache               statecache.BlockCacher
 	txnStateCache                 *statecache.TransactionCache
 }
 
@@ -163,16 +163,11 @@ func NewStateContext(
 	getChainSignature func() encryption.SignatureScheme,
 	getLatestFinalizedBlock func() *block.Block,
 	eventDb *event.EventDb,
-	stateCache *statecache.StateCache,
+	txnStateCache *statecache.TransactionCache,
 ) (
 	balances *StateContext,
 ) {
 
-	blockCache, txnCache := statecache.NewBlockTxnCaches(stateCache, statecache.Block{
-		Round:    b.Round,
-		Hash:     b.Hash,
-		PrevHash: b.PrevHash,
-	})
 	return &StateContext{
 		block:                         b,
 		state:                         s,
@@ -185,8 +180,7 @@ func NewStateContext(
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
-		blockStateCache:               blockCache,
-		txnStateCache:                 txnCache,
+		txnStateCache:                 txnStateCache,
 	}
 }
 
@@ -391,14 +385,46 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	return sc.getNodeValue(key, v)
+	if cv, ok := sc.Cache().Get(key); ok {
+		// call CopyFrom to copy values directly if it's copyable
+		copyV, ok := statecache.Copyable(v)
+		if ok {
+			copyV.CopyFrom(cv)
+			return nil
+		}
+
+		// otherwise do marshal/unmarshal to get copy of the data
+		cmv, err := cv.(util.MPTSerializable).MarshalMsg(nil)
+		if err != nil {
+			return err
+		}
+		_, err = v.UnmarshalMsg(cmv)
+		return err
+	}
+
+	// get from MPT
+	if err := sc.getNodeValue(key, v); err != nil {
+		fmt.Println("get node value error", err)
+		return err
+	}
+
+	// cache it if it's cacheable
+	if cv, ok := statecache.Cacheable(v); ok {
+		sc.Cache().Set(key, cv)
+	}
+	return nil
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
+	vn, ok := statecache.Cacheable(node)
+	if ok {
+		sc.Cache().Set(key, vn)
+	}
 	return sc.setNodeValue(key, node)
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
+	sc.Cache().Remove(key)
 	return sc.deleteNode(key)
 }
 
@@ -437,10 +463,6 @@ func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
 // GetMissingNodeKeys returns missing node keys
 func (sc *StateContext) GetMissingNodeKeys() []util.Key {
 	return sc.state.GetMissingNodeKeys()
-}
-
-func (sc *StateContext) GetBlockStateCache() *statecache.BlockCache {
-	return sc.blockStateCache
 }
 
 func (sc *StateContext) Cache() *statecache.TransactionCache {

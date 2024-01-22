@@ -17,6 +17,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -94,7 +95,9 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 		return nil
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
-	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
+	qbc := statecache.NewQueryBlockCache(c.GetStateCache(), lfb.Hash)
+	tbc := statecache.NewTransactionCache(qbc)
+	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, tbc, c.GetEventDb())
 }
 
 func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {

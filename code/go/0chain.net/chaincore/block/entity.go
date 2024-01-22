@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -811,8 +812,13 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block, waitC ...chan struct{}) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC ...chan struct{}) ([]event.Event, error)
+	UpdateState(ctx context.Context,
+		b *Block, bState util.MerklePatriciaTrieI,
+		txn *transaction.Transaction,
+		blockStateCache *statecache.BlockCache,
+		waitC ...chan struct{}) ([]event.Event, error)
 	GetEventDb() *event.EventDb
+	GetStateCache() *statecache.StateCache
 }
 
 // CreateStateWithPreviousBlock creates block client state with previous block
@@ -923,6 +929,11 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 	//b.SetStateDB(pb, c.GetStateDB())
 
 	bState := CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
+	blockStateCache := statecache.NewBlockCache(c.GetStateCache(), statecache.Block{
+		Round:    b.Round,
+		Hash:     b.Hash,
+		PrevHash: b.PrevHash,
+	})
 
 	beginStateRoot := bState.GetRoot()
 	b.Events = []event.Event{}
@@ -952,7 +963,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			},
 		})
 
-		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)
+		events, err := c.UpdateState(ctx, b, bState, txn, blockStateCache, waitC...)
 		switch err {
 		case context.Canceled:
 			b.SetStateStatus(StateCancelled)
@@ -1041,6 +1052,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 		zap.String("prev_block", b.PrevHash),
 		zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
+
+	// commit the block state cache to the global state cache
+	blockStateCache.Commit()
 	return nil
 }
 

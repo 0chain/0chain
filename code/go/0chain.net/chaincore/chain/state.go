@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -185,11 +186,12 @@ func (c *Chain) UpdateState(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
+	blockStateCache *statecache.BlockCache,
 	waitC ...chan struct{},
 ) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, bState, txn, waitC...)
+	return c.updateState(ctx, b, bState, txn, blockStateCache, waitC...)
 }
 
 type SyncReplyC struct {
@@ -218,7 +220,9 @@ func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block, txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction
-		sctx        = c.NewStateContext(b, clientState, txn, nil)
+		qbc         = statecache.NewQueryBlockCache(c.GetStateCache(), b.Hash)
+		tbc         = statecache.NewTransactionCache(qbc)
+		sctx        = c.NewStateContext(b, clientState, txn, tbc, nil)
 	)
 
 	switch txn.TransactionType {
@@ -332,7 +336,9 @@ func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
 
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction
-		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, nil)
+		qbc         = statecache.NewQueryBlockCache(c.GetStateCache(), b.Hash)
+		tbc         = statecache.NewTransactionCache(qbc)
+		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, tbc, nil)
 	)
 
 	table := smartcontract.GetTransactionCostTable(sctx)
@@ -375,6 +381,7 @@ func (c *Chain) NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
+	txnStateCache *statecache.TransactionCache,
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, txn,
@@ -386,12 +393,16 @@ func (c *Chain) NewStateContext(
 		c.GetSignatureScheme,
 		c.GetLatestFinalizedBlock,
 		eventDb,
-		c.GetStateCache(),
+		txnStateCache,
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, waitC ...chan struct{}) (es []event.Event, err error) {
+func (c *Chain) updateState(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	blockStateCache *statecache.BlockCache,
+	waitC ...chan struct{}) (es []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
@@ -405,12 +416,18 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	var (
-		clientState = CreateTxnMPT(bState) // begin transaction
-		sctx        = c.NewStateContext(b, clientState, txn, nil)
-		startRoot   = sctx.GetState().GetRoot()
+		clientState   = CreateTxnMPT(bState) // begin transaction
+		txnStateCache = statecache.NewTransactionCache(blockStateCache)
+		sctx          = c.NewStateContext(b, clientState, txn, txnStateCache, nil)
+		startRoot     = sctx.GetState().GetRoot()
 	)
 
 	defer func() {
+		if err == nil {
+			// commit transaction state cache
+			txnStateCache.Commit()
+		}
+
 		if bcstate.ErrInvalidState(err) {
 			c.SyncMissingNodes(b.Round, sctx.GetMissingNodeKeys(), waitC...)
 		}
@@ -478,7 +495,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
 				clientState = CreateTxnMPT(bState) // begin transaction
-				sctx = c.NewStateContext(b, clientState, txn, nil)
+				txnStateCache = statecache.NewTransactionCache(blockStateCache)
+				sctx = c.NewStateContext(b, clientState, txn, txnStateCache, nil)
 				// records chargeable error event
 				sctx.EmitError(err)
 
