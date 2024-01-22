@@ -3,17 +3,17 @@ package statecache
 import "sync"
 
 type TransactionCache struct {
-	main  *BlockCache
+	main  BlockCacher
 	cache map[string]valueNode
 	mu    sync.RWMutex
 	round int64
 }
 
-func NewTransactionCache(main *BlockCache) *TransactionCache {
+func NewTransactionCache(main BlockCacher) *TransactionCache {
 	return &TransactionCache{
 		main:  main,
 		cache: make(map[string]valueNode),
-		round: main.round,
+		round: main.Round(),
 	}
 }
 
@@ -46,6 +46,7 @@ func (tc *TransactionCache) Remove(key string) {
 	value, ok := tc.cache[key]
 	if ok {
 		value.deleted = true
+		value.data = value.data.Clone()
 		tc.cache[key] = value
 	}
 }

@@ -2,7 +2,21 @@ package statecache
 
 import "sync"
 
+type BlockCacher interface {
+	Get(key string) (Value, bool)
+	Round() int64
+	Commit()
+	setValue(key string, v valueNode)
+}
+
 // BlockCache is a pre commit cache for all changes in a block.
+// This is mainly for caching values in current block when executing blocks.
+//
+// Querying from this BlockCache will only return value from current block, and previous block if not found
+// in current block. That means if there are no changes happen in current block yet,
+// querying the value from current block hash will return nothing even the StateCache does has the value.
+// So please remember to use QueryBlockCache to get values from current block.
+//
 // Call `Commit()` method to merge
 // the changes to the StateCache when the block is executed.
 type BlockCache struct {
@@ -39,6 +53,10 @@ func (pcc *BlockCache) Set(key string, e Value) {
 		data:  e.Clone(),
 		round: pcc.round,
 	}
+}
+
+func (pcc *BlockCache) Round() int64 {
+	return pcc.round
 }
 
 func (pcc *BlockCache) setValue(key string, v valueNode) {
