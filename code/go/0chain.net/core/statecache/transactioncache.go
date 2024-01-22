@@ -22,7 +22,7 @@ func (tc *TransactionCache) Set(key string, e Value) {
 	defer tc.mu.Unlock()
 
 	tc.cache[key] = valueNode{
-		data:  e,
+		data:  e.Clone(),
 		round: tc.round,
 	}
 }
@@ -33,7 +33,7 @@ func (tc *TransactionCache) Get(key string) (Value, bool) {
 
 	value, ok := tc.cache[key]
 	if ok {
-		return value.data, ok
+		return value.data.Clone(), ok
 	}
 
 	return tc.main.Get(key)

@@ -20,7 +20,7 @@ type Value interface {
 
 type String string
 
-func (se String) Clone() interface{} {
+func (se String) Clone() Value {
 	return se
 }
 
@@ -53,7 +53,7 @@ func (sc *StateCache) Get(key, blockHash string) (Value, bool) {
 
 	v, ok := blockValues[blockHash]
 	if ok && !v.deleted {
-		return v.data, true
+		return v.data.Clone(), true
 	}
 	return nil, false
 }
@@ -69,6 +69,7 @@ func (sc *StateCache) getValue(key, blockHash string) (valueNode, bool) {
 
 	v, ok := blockValues[blockHash]
 	if ok && !v.deleted {
+		v.data = v.data.Clone()
 		return v, true
 	}
 	return valueNode{}, false
@@ -83,6 +84,7 @@ func (sc *StateCache) shift(prevHash, blockHash string) {
 				if sc.cache[key] == nil {
 					sc.cache[key] = make(map[string]valueNode)
 				}
+				v.data = v.data.Clone()
 				sc.cache[key][blockHash] = v
 			}
 		}

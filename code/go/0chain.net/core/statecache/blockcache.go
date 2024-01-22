@@ -36,7 +36,7 @@ func (pcc *BlockCache) Set(key string, e Value) {
 	defer pcc.mu.Unlock()
 
 	pcc.cache[key] = valueNode{
-		data:  e,
+		data:  e.Clone(),
 		round: pcc.round,
 	}
 }
@@ -45,6 +45,7 @@ func (pcc *BlockCache) setValue(key string, v valueNode) {
 	pcc.mu.Lock()
 	defer pcc.mu.Unlock()
 
+	v.data = v.data.Clone()
 	pcc.cache[key] = v
 }
 
@@ -56,7 +57,7 @@ func (pcc *BlockCache) Get(key string) (Value, bool) {
 	// Check the pre-commit cache first
 	value, ok := pcc.cache[key]
 	if ok && !value.deleted {
-		return value.data, ok
+		return value.data.Clone(), ok
 	}
 
 	// Should not return deleted value
@@ -98,6 +99,7 @@ func (pcc *BlockCache) Commit() {
 		if _, ok := pcc.main.cache[key]; !ok {
 			pcc.main.cache[key] = make(map[string]valueNode)
 		}
+		v.data = v.data.Clone()
 		pcc.main.cache[key][pcc.blockHash] = v
 	}
 
