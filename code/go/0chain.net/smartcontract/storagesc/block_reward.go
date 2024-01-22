@@ -61,7 +61,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		}
 	}
 
-	cstate.WithActivation(balances, t.ClientID, beforeFunc, afterFunc)
+	cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	if returnNil {
 		return nil
