@@ -82,6 +82,18 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 			"cannot get all blobbers list: "+err.Error())
 	}
 
+	defer cstate.WithActivation(balances, "hard_fork_1", func() {
+	}, func() {
+		logging.Logger.Info("blobber_block_rewards : cleaning older partition",
+			zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
+
+		_, err = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
+		if err != nil {
+			logging.Logger.Error("blobber_block_rewards_failed",
+				zap.String("deleting blobber reward node", err.Error()))
+		}
+	})
+
 	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)
 	var randomSeed int64
 	randomSeed, err = strconv.ParseInt(hashString[0:15], 16, 64)
