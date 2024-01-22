@@ -652,7 +652,6 @@ func newEventsDb() *event.EventDb {
 			PartitionKeepCount:    viper.GetInt64(benchmark.EventDbPartitionKeepCount),
 			PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
 		}
-
 		return event.NewEventDbWithoutWorker(dbAccessConfig, dbSettingsConfig)
 	}
 

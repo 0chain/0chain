@@ -280,7 +280,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
 	p := int64(-1)
-	edb.managePartitions(0)
+	err := edb.managePartitions(0)
+	if err != nil {
+		logging.Logger.Error("can't manage partitions")
+	}
 
 	for {
 		es := <-edb.eventsChannel
@@ -425,8 +428,8 @@ func (edb *EventDb) WorkAggregates(
 	return gSnapshot, nil
 }
 
-func (edb *EventDb) ManagePartitions(round int64) {
-	edb.managePartitions(round)
+func (edb *EventDb) ManagePartitions(round int64) error {
+	return edb.managePartitions(round)
 }
 
 func (edb *EventDb) managePartitions(round int64) error {
