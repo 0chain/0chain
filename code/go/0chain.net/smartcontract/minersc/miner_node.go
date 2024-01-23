@@ -8,6 +8,7 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 )
@@ -31,6 +32,31 @@ func NewMinerNode() *MinerNode {
 
 	mn.Minter = cstate.MinterMiner
 	return mn
+}
+
+func (m *MinerNode) clone() *MinerNode {
+	clone := &MinerNode{}
+	*clone.SimpleNode = *m.SimpleNode
+	*clone.StakePool = *m.StakePool
+	clone.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
+	for k, v := range m.StakePool.Pools {
+		dp := *v
+		clone.StakePool.Pools[k] = &dp
+	}
+	return clone
+}
+
+func (m *MinerNode) Clone() statecache.Value {
+	return m.clone()
+}
+
+func (m *MinerNode) CopyFrom(v interface{}) bool {
+	if mn, ok := v.(*MinerNode); ok {
+		cmn := mn.clone()
+		*m = *cmn
+		return true
+	}
+	return false
 }
 
 // swagger:model NodePool
