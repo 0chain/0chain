@@ -389,8 +389,10 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 		// call CopyFrom to copy values directly if it's copyable
 		copyV, ok := statecache.Copyable(v)
 		if ok {
-			copyV.CopyFrom(cv)
-			return nil
+			logging.Logger.Debug("state context - get trie node from cache", zap.String("key", key))
+			if copyV.CopyFrom(cv) {
+				return nil
+			}
 		}
 
 		// otherwise do marshal/unmarshal to get copy of the data
