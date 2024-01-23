@@ -95,7 +95,6 @@ func CreateIfNotExists(state state.StateContextI, name string, partitionSize int
 	err := state.GetTrieNode(name, &p)
 	switch err {
 	case nil:
-		state.Cache().Set(name, &p)
 		return &p, nil
 	case util.ErrValueNotPresent:
 		p, err := newPartitions(name, partitionSize)
@@ -115,16 +114,10 @@ func CreateIfNotExists(state state.StateContextI, name string, partitionSize int
 
 // GetPartitions returns partitions of given name
 func GetPartitions(state state.StateContextI, name string) (*Partitions, error) {
-	v, ok := state.Cache().Get(name)
-	if ok {
-		return v.(*Partitions), nil
-	}
-
 	p := Partitions{}
 	if err := state.GetTrieNode(name, &p); err != nil {
 		return nil, err
 	}
-	state.Cache().Set(name, &p)
 	return &p, nil
 }
 
@@ -526,9 +519,6 @@ func (p *Partitions) Save(state state.StateContextI) error {
 	if err != nil {
 		return err
 	}
-
-	// cache this partitions
-	state.Cache().Set(p.Name, p)
 
 	logging.Logger.Debug("save partitions",
 		zap.String("name", p.Name),
