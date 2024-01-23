@@ -20,7 +20,7 @@ func (qbc *QueryBlockCache) Get(key string) (Value, bool) {
 }
 
 func (qbc *QueryBlockCache) Round() int64 {
-	panic("Round should not be called on QueryBlockCache")
+	return 0
 }
 
 func (qbc *QueryBlockCache) Commit() {
