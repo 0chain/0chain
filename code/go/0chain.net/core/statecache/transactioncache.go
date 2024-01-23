@@ -44,6 +44,16 @@ func (tc *TransactionCache) Get(key string) (Value, bool) {
 	return tc.main.Get(key)
 }
 
+type EmptyValue struct{}
+
+func (e *EmptyValue) Clone() Value {
+	return e
+}
+
+func (e *EmptyValue) CopyFrom(interface{}) bool {
+	return true
+}
+
 func (tc *TransactionCache) Remove(key string) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
@@ -57,6 +67,7 @@ func (tc *TransactionCache) Remove(key string) {
 		tc.cache[key] = valueNode{
 			deleted: true,
 			round:   tc.round,
+			data:    &EmptyValue{},
 		}
 	}
 }
