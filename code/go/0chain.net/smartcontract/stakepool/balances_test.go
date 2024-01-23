@@ -20,6 +20,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 
@@ -34,6 +35,7 @@ type testBalances struct {
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
 	block     *block.Block
+	tc        *statecache.TransactionCache
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
@@ -46,6 +48,9 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		txn:      new(transaction.Transaction),
 		block:    new(block.Block),
 	}
+
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
+	tb.tc = statecache.NewTransactionCache(bc)
 
 	if mpts {
 		tb.mpts = newMptStore(t)
@@ -192,6 +197,10 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 }
 
 func (tb *testBalances) GetInvalidStateErrors() []error { return nil }
+
+func (tb *testBalances) Cache() *statecache.TransactionCache {
+	return tb.tc
+}
 
 type mptStore struct {
 	mpt  util.MerklePatriciaTrieI

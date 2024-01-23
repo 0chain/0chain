@@ -1298,7 +1298,7 @@ func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
 		balances.setBlock(t, bk)
 
 		cs := cstate.NewStateContext(balances.block, clientState,
-			balances.txn, nil, nil, nil, balances.GetSignatureScheme, nil, nil)
+			balances.txn, nil, nil, nil, balances.GetSignatureScheme, nil, nil, newTxnStateCache())
 
 		var resp string
 		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), cs)
@@ -1732,6 +1732,7 @@ func setupChallengeMocks(
 			nil,
 			nil,
 			nil,
+			newTxnStateCache(),
 		),
 		clientBalance: zcnToBalance(3),
 		store:         make(map[datastore.Key]util.MPTSerializable),

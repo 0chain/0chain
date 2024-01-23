@@ -1,6 +1,11 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -9,16 +14,13 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"strings"
-	"testing"
 )
 
 const (
@@ -182,6 +184,11 @@ func TestCommitBlobberRead(t *testing.T) {
 
 }
 
+func newTxnStateCache() *statecache.TransactionCache {
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
+	return statecache.NewTransactionCache(bc)
+}
+
 func testCommitBlobberRead(
 	t *testing.T,
 	blobberYaml mockBlobberYaml,
@@ -229,6 +236,7 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 			nil,
+			newTxnStateCache(),
 		),
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}

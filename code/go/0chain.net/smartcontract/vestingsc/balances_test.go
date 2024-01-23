@@ -8,6 +8,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
@@ -22,13 +23,21 @@ type testBalances struct {
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
+	tc        *statecache.TransactionCache
 }
 
 func newTestBalances() *testBalances {
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
+
 	return &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
+		tc:       statecache.NewTransactionCache(bc),
 	}
+}
+
+func (tb *testBalances) Cache() *statecache.TransactionCache {
+	return tb.tc
 }
 
 func (tb *testBalances) setBalance(key datastore.Key, b currency.Coin) { //nolint

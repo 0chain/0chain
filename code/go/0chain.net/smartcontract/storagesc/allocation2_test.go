@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 
 	"0chain.net/smartcontract/provider"
 
@@ -133,6 +134,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	bk := &block.Block{}
 	bk.Round = 1100
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
+		Round: bk.Round,
+	})
+	tc := statecache.NewTransactionCache(bc)
 	ctx.StateContext = *cstate.NewStateContext(
 		bk,
 		&util.MerklePatriciaTrie{},
@@ -143,6 +148,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		tc,
 	)
 
 	setConfig(t, ctx)
@@ -273,6 +279,10 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	bk := &block.Block{}
 	bk.Round = 1100
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
+		Round: bk.Round,
+	})
+	tc := statecache.NewTransactionCache(bc)
 	ctx.StateContext = *cstate.NewStateContext(
 		bk,
 		&util.MerklePatriciaTrie{},
@@ -283,6 +293,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		tc,
 	)
 
 	setConfig(t, ctx)
@@ -699,6 +710,10 @@ func setupMocksFinishAllocation(
 
 	block := &block.Block{}
 	block.Round = 1100
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
+		Round: block.Round,
+	})
+	tc := statecache.NewTransactionCache(bc)
 
 	ctx.StateContext = *cstate.NewStateContext(
 		block,
@@ -710,6 +725,7 @@ func setupMocksFinishAllocation(
 		nil,
 		nil,
 		nil,
+		tc,
 	)
 
 	var ssc = &StorageSmartContract{
@@ -974,6 +990,9 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	}
 	defer eventDb.Close()
 
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
+	tc := statecache.NewTransactionCache(bc)
+
 	ctx.StateContext = *cstate.NewStateContext(
 		nil,
 		&util.MerklePatriciaTrie{},
@@ -984,6 +1003,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		nil,
 		nil,
 		eventDb,
+		tc,
 	)
 
 	var ssc = &StorageSmartContract{

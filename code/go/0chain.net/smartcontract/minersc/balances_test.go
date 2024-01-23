@@ -13,6 +13,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
@@ -27,9 +28,11 @@ type testBalances struct {
 	blockSharders []string
 	lfmb          *block.Block
 	magicBlock    *block.MagicBlock
+	tc            *statecache.TransactionCache
 }
 
 func newTestBalances() *testBalances {
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
 	return &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
@@ -37,7 +40,12 @@ func newTestBalances() *testBalances {
 			Miners:   node.NewPool(node.NodeTypeMiner),
 			Sharders: node.NewPool(node.NodeTypeSharder),
 		},
+		tc: statecache.NewTransactionCache(bc),
 	}
+}
+
+func (tb *testBalances) Cache() *statecache.TransactionCache {
+	return tb.tc
 }
 
 func (tb *testBalances) zeroize() { //nolint
