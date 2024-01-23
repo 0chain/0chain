@@ -54,12 +54,22 @@ func (p *partition) Clone() statecache.Value {
 }
 
 func (p *partition) CopyFrom(v interface{}) bool {
-	if p2, ok := v.(*partition); ok {
-		p.Key = p2.Key
-		p.Loc = p2.Loc
-		p.Items = make([]item, len(p2.Items))
-		copy(p.Items, p2.Items)
-		p.Changed = p2.Changed
+	if ps, ok := v.(*partition); ok {
+		p.Key = ps.Key
+		p.Loc = ps.Loc
+		p.Items = make([]item, len(ps.Items))
+
+		for i, it := range ps.Items {
+			nit := item{
+				ID:   it.ID,
+				Data: make([]byte, len(it.Data)),
+			}
+			copy(nit.Data, it.Data)
+
+			p.Items[i] = nit
+		}
+
+		p.Changed = ps.Changed
 		return true
 	}
 	return false
