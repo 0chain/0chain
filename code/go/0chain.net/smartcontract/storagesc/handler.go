@@ -1089,6 +1089,13 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 		}
 
 		return ToProviderStakePoolStats(&validator.Provider, delegatePools)
+	case spenum.Authorizer:
+		authorizer, err := edb.GetAuthorizer(providerID)
+		if err != nil {
+			return nil, fmt.Errorf("can't find validator: %s", err.Error())
+		}
+
+		return ToProviderStakePoolStats(&authorizer.Provider, delegatePools)
 	}
 
 	return nil, fmt.Errorf("unknown provider type")
