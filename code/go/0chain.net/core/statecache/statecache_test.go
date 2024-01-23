@@ -99,7 +99,7 @@ func TestCacheTx_NotCommitted(t *testing.T) {
 	require.True(t, ok)
 
 	// Test Remove method
-	ct.Remove("key1")
+	ct.remove("key1")
 	_, ok = ct.Get("key1")
 	require.False(t, ok)
 	if ok {
@@ -244,7 +244,7 @@ func TestAddRemoveAdd(t *testing.T) {
 	ct2 := NewBlockCache(sc, Block{PrevHash: "hash1", Hash: "hash2"})
 
 	// Remove the value from the CacheTx
-	ct2.Remove("key1")
+	ct2.remove("key1")
 
 	// Commit the CacheTx
 	ct2.Commit()

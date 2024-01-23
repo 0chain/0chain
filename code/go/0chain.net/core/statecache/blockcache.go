@@ -87,7 +87,7 @@ func (pcc *BlockCache) Get(key string) (Value, bool) {
 }
 
 // Remove marks the value with the given key as deleted in the pre-commit cache
-func (pcc *BlockCache) Remove(key string) {
+func (pcc *BlockCache) remove(key string) {
 	pcc.mu.Lock()
 	defer pcc.mu.Unlock()
 
@@ -96,14 +96,11 @@ func (pcc *BlockCache) Remove(key string) {
 		value.deleted = true
 		pcc.cache[key] = value
 		return
-	}
-
-	// If the value is not in the pre-commit cache, check it in main cache,
-	// and if found mark it as deleted in the current cache
-	value, ok = pcc.main.getValue(key, pcc.prevBlockHash)
-	if ok {
-		value.deleted = true
-		pcc.cache[key] = value
+	} else {
+		pcc.cache[key] = valueNode{
+			deleted: true,
+			round:   pcc.round,
+		}
 	}
 }
 

@@ -250,6 +250,10 @@ func (v *testCacheValueNotCopyable) Clone() statecache.Value {
 	}
 }
 
+func (v *testCacheValueNotCopyable) CopyFrom(src interface{}) bool {
+	return false
+}
+
 type mockStateContext struct {
 	*StateContext
 }

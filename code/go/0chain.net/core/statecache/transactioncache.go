@@ -53,6 +53,11 @@ func (tc *TransactionCache) Remove(key string) {
 		value.deleted = true
 		value.data = value.data.Clone()
 		tc.cache[key] = value
+	} else {
+		tc.cache[key] = valueNode{
+			deleted: true,
+			round:   tc.round,
+		}
 	}
 }
 

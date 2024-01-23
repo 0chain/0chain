@@ -419,6 +419,11 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
+	k, err := sc.setNodeValue(key, node)
+	if err != nil {
+		return "", err
+	}
+
 	vn, ok := statecache.Cacheable(node)
 	if ok {
 		sc.Cache().Set(key, vn)
@@ -438,12 +443,17 @@ func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializa
 		}
 	}
 
-	return sc.setNodeValue(key, node)
+	return k, nil
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
+	k, err := sc.deleteNode(key)
+	if err != nil {
+		return "", err
+	}
+
 	sc.Cache().Remove(key)
-	return sc.deleteNode(key)
+	return k, nil
 }
 
 // SetStateContext - set the state context
