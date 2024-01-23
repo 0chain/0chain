@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 // NewBlockTxnCaches creates a new block cache and a transaction cache for the given block
@@ -126,9 +129,11 @@ func (sc *StateCache) PruneRoundBelow(round int64) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
+	var count int
 	for key, blockValues := range sc.cache {
 		for blockHash, value := range blockValues {
 			if value.round < round {
+				count++
 				delete(blockValues, blockHash)
 			}
 		}
@@ -138,6 +143,8 @@ func (sc *StateCache) PruneRoundBelow(round int64) {
 			delete(sc.cache, key)
 		}
 	}
+
+	logging.Logger.Debug("state cache - prune_round_below", zap.Int64("round", round), zap.Int("count", count))
 }
 
 // PrettyPrint prints the state cache in a pretty format
