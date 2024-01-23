@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"reflect"
@@ -421,7 +422,22 @@ func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializa
 	vn, ok := statecache.Cacheable(node)
 	if ok {
 		sc.Cache().Set(key, vn)
+		// DEBUG:
+		v, err := vn.Clone().(util.MPTSerializable).MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		dc, err := node.MarshalMsg(nil)
+		if err != nil {
+			panic(err)
+		}
+
+		if !bytes.Equal(v, dc) {
+			panic("state context - saving cache data mismatch")
+		}
 	}
+
 	return sc.setNodeValue(key, node)
 }
 
