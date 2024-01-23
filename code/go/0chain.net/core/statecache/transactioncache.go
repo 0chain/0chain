@@ -1,6 +1,11 @@
 package statecache
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+)
 
 type TransactionCache struct {
 	main  BlockCacher
@@ -55,9 +60,13 @@ func (tc *TransactionCache) Commit() {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 
+	var count int
 	for key, value := range tc.cache {
 		tc.main.setValue(key, value)
+		count++
 	}
+
+	logging.Logger.Debug("transaction cache commit", zap.Int("count", count))
 
 	// Clear the transaction cache
 	tc.cache = make(map[string]valueNode)
