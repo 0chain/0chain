@@ -16,12 +16,17 @@ func NewBlockTxnCaches(sc *StateCache, b Block) (*BlockCache, *TransactionCache)
 // Value is an interface that all values in the state cache must implement
 type Value interface {
 	Clone() Value
+	CopyFrom(v interface{}) bool
 }
 
 type String string
 
 func (se String) Clone() Value {
 	return se
+}
+
+func (set String) CopyFrom(v interface{}) bool {
+	return false
 }
 
 // Cacheable checks if the given value is able to be cached

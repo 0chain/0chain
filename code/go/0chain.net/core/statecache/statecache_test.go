@@ -392,6 +392,14 @@ func (f *Foo) Clone() Value {
 	return &Foo{V: f.V}
 }
 
+func (f *Foo) CopyFrom(v interface{}) bool {
+	if v, ok := v.(*Foo); ok {
+		f.V = v.V
+		return true
+	}
+	return false
+}
+
 func (f *Foo) Add() {
 
 }
