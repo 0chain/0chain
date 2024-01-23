@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/sortedmap"
+	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -37,6 +38,48 @@ type Partitions struct {
 	locations  map[string]int     `msg:"-"`
 }
 
+// Clone implements the statecache.Clone() interface to make it cachable
+func (p *Partitions) Clone() statecache.Value {
+	newPartitions := &Partitions{
+		Name:          p.Name,
+		PartitionSize: p.PartitionSize,
+		Last:          p.Last.clone(),
+		Partitions:    make(map[int]*partition),
+		locations:     make(map[string]int),
+	}
+
+	for key, value := range p.Partitions {
+		newPartitions.Partitions[key] = value.clone()
+	}
+
+	for key, value := range p.locations {
+		newPartitions.locations[key] = value
+	}
+
+	return newPartitions
+}
+
+func (p *Partitions) CopyFrom(v interface{}) bool {
+	cp, ok := v.(*Partitions)
+	if !ok {
+		return false
+	}
+
+	p.Name = cp.Name
+	p.PartitionSize = cp.PartitionSize
+	p.Last = cp.Last.clone()
+
+	for key, value := range cp.Partitions {
+		p.Partitions[key] = value.clone()
+	}
+
+	for key, value := range cp.locations {
+		p.locations[key] = value
+	}
+
+	return true
+}
+
 type PartitionItem interface {
 	util.MPTSerializableSize
 	GetID() string
@@ -50,6 +93,7 @@ func CreateIfNotExists(state state.StateContextI, name string, partitionSize int
 	err := state.GetTrieNode(name, &p)
 	switch err {
 	case nil:
+		state.Cache().Set(name, &p)
 		return &p, nil
 	case util.ErrValueNotPresent:
 		p, err := newPartitions(name, partitionSize)
@@ -69,10 +113,16 @@ func CreateIfNotExists(state state.StateContextI, name string, partitionSize int
 
 // GetPartitions returns partitions of given name
 func GetPartitions(state state.StateContextI, name string) (*Partitions, error) {
+	v, ok := state.Cache().Get(name)
+	if ok {
+		return v.(*Partitions), nil
+	}
+
 	p := Partitions{}
 	if err := state.GetTrieNode(name, &p); err != nil {
 		return nil, err
 	}
+	state.Cache().Set(name, &p)
 	return &p, nil
 }
 
@@ -474,10 +524,15 @@ func (p *Partitions) Save(state state.StateContextI) error {
 	if err != nil {
 		return err
 	}
+
+	// cache this partitions
+	state.Cache().Set(p.Name, p)
+
 	logging.Logger.Debug("save partitions",
 		zap.String("name", p.Name),
 		zap.Int("loc", p.Last.Loc),
 		zap.Int("items", len(p.Last.Items)))
+
 	return nil
 }
 

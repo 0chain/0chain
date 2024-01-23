@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
+	"0chain.net/core/statecache"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -25,6 +26,27 @@ type partition struct {
 	Loc     int    `json:"loc"`
 	Items   []item `json:"items"`
 	Changed bool   `json:"-" msg:"-"`
+}
+
+func (p *partition) clone() *partition {
+	newPartition := &partition{
+		Key:     p.Key,
+		Loc:     p.Loc,
+		Items:   make([]item, len(p.Items)),
+		Changed: p.Changed,
+	}
+
+	for i, it := range p.Items {
+		nit := item{
+			ID:   it.ID,
+			Data: make([]byte, len(it.Data)),
+		}
+		copy(nit.Data, it.Data)
+
+		newPartition.Items[i] = nit
+	}
+
+	return newPartition
 }
 
 func (p *partition) save(state state.StateContextI) error {
@@ -152,4 +174,16 @@ func (p *partition) findIndex(id string) int {
 
 type location struct {
 	Location int
+}
+
+func (l *location) Clone() statecache.Value {
+	return &location{Location: l.Location}
+}
+
+func (l *location) CopyFrom(v interface{}) bool {
+	if l2, ok := v.(*location); ok {
+		l.Location = l2.Location
+		return true
+	}
+	return false
 }
