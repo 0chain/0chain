@@ -49,6 +49,22 @@ func (p *partition) clone() *partition {
 	return newPartition
 }
 
+func (p *partition) Clone() statecache.Value {
+	return p.clone()
+}
+
+func (p *partition) CopyFrom(v interface{}) bool {
+	if p2, ok := v.(*partition); ok {
+		p.Key = p2.Key
+		p.Loc = p2.Loc
+		p.Items = make([]item, len(p2.Items))
+		copy(p.Items, p2.Items)
+		p.Changed = p2.Changed
+		return true
+	}
+	return false
+}
+
 func (p *partition) save(state state.StateContextI) error {
 	_, err := state.InsertTrieNode(p.Key, p)
 	return err
