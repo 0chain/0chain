@@ -35,7 +35,10 @@ func NewMinerNode() *MinerNode {
 }
 
 func (m *MinerNode) clone() *MinerNode {
-	clone := &MinerNode{}
+	clone := &MinerNode{
+		SimpleNode: &SimpleNode{},
+		StakePool:  &stakepool.StakePool{},
+	}
 	*clone.SimpleNode = *m.SimpleNode
 	*clone.StakePool = *m.StakePool
 	clone.StakePool.Pools = make(map[string]*stakepool.DelegatePool)
