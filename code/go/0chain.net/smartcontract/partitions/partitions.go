@@ -68,6 +68,8 @@ func (p *Partitions) CopyFrom(v interface{}) bool {
 	p.Name = cp.Name
 	p.PartitionSize = cp.PartitionSize
 	p.Last = cp.Last.clone()
+	p.Partitions = make(map[int]*partition)
+	p.locations = make(map[string]int)
 
 	for key, value := range cp.Partitions {
 		p.Partitions[key] = value.clone()
