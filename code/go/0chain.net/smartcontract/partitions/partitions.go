@@ -289,48 +289,49 @@ func (p *Partitions) updateItem(
 	return part.update(it)
 }
 
-func (p *Partitions) Update(state state.StateContextI, key string, f func(data []byte) ([]byte, error)) error {
+func (p *Partitions) Update(state state.StateContextI, key string,
+	f func(data []byte) ([]byte, error)) (int, error) {
 	v, idx, ok := p.Last.find(key)
 	if ok {
 		nData, err := f(v.Data)
 		if err != nil {
-			return err
+			return -1, err
 		}
 
 		v.Data = nData
 		p.Last.Items[idx] = v
-		return nil
+		return p.Last.Loc, nil
 	}
 
 	l, ok, err := p.getItemPartIndex(state, key)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	if !ok {
-		return common.NewError(ErrItemNotFoundCode, key)
+		return -1, common.NewError(ErrItemNotFoundCode, key)
 	}
 
 	part, err := p.getPartition(state, l)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	v, idx, ok = part.find(key)
 	if !ok {
-		return common.NewError(ErrItemNotFoundCode, key)
+		return -1, common.NewError(ErrItemNotFoundCode, key)
 	}
 
 	nData, err := f(v.Data)
 	if err != nil {
-		return err
+		return -1, err
 	}
 	v.Data = nData
 	part.Items[idx] = v
 	part.Changed = true
 
 	p.loadLocations(l)
-	return nil
+	return l, nil
 }
 
 func (p *Partitions) Remove(state state.StateContextI, id string) error {

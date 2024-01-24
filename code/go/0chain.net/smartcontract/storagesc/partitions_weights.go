@@ -30,7 +30,6 @@ func (bw *BlobberWeight) GetID() string {
 
 // PartitionWeight represents weight of a partition
 type PartitionWeight struct {
-	Index  int `msg:"i"` // partition index
 	Weight int `msg:"w"`
 }
 
@@ -61,12 +60,12 @@ func (pws *PartitionsWeights) totalWeight() int {
 func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp *blobberWeightPartitionsWrap) (string, error) {
 	r := rd.Intn(pws.totalWeight())
 	var blobberID string
-	for _, pw := range pws.Parts {
+	for pidx, pw := range pws.Parts {
 		br := r // remaining weight before minus the whole partition weight
 		r -= pw.Weight
 		if r <= 0 {
 			// iterate through the partition to find the blobber
-			if err := bwp.iterBlobberWeight(state, pw.Index,
+			if err := bwp.iterBlobberWeight(state, pidx,
 				func(id string, bw *BlobberWeight) (stop bool) {
 					br -= bw.Weight
 					if br <= 0 {
@@ -141,11 +140,33 @@ func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights [
 	partWeights := make([]PartitionWeight, 0, len(partWeightMap))
 	for _, partIndex := range partIndexs {
 		w := partWeightMap[partIndex]
-		partWeights = append(partWeights, PartitionWeight{Index: partIndex, Weight: w})
+		// partWeights = append(partWeights, PartitionWeight{Index: partIndex, Weight: w})
+		partWeights = append(partWeights, PartitionWeight{Weight: w})
 	}
 
 	bp.partWeights.set(partWeights)
 
+	return bp.save(state)
+}
+
+func (bp *blobberWeightPartitionsWrap) updateWeight(state state.StateContextI, bw BlobberWeight) error {
+	var diff int
+	partIndex, err := bp.p.Update(state, bw.BlobberID, func(v []byte) ([]byte, error) {
+		savedBw := BlobberWeight{}
+		_, err := savedBw.UnmarshalMsg(v)
+		if err != nil {
+			return nil, err
+		}
+
+		diff = bw.Weight - savedBw.Weight
+		savedBw.Weight = bw.Weight
+		return savedBw.MarshalMsg(nil)
+	})
+	if err != nil {
+		return err
+	}
+
+	bp.partWeights.Parts[partIndex].Weight += diff
 	return bp.save(state)
 }
 

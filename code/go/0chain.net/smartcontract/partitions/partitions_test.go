@@ -638,7 +638,7 @@ func TestPartitionsUpdate(t *testing.T) {
 			p, err := GetPartitions(s, pn)
 			require.NoError(t, err)
 
-			err = p.Update(s, tc.update.ID, func(data []byte) ([]byte, error) {
+			_, err = p.Update(s, tc.update.ID, func(data []byte) ([]byte, error) {
 				var it testItem
 				_, err = it.UnmarshalMsg(data)
 				require.NoError(t, err)
@@ -1153,7 +1153,7 @@ func FuzzPartitionsUpdate(f *testing.F) {
 		require.NoError(t, err)
 
 		k := fmt.Sprintf("k%d", updateK)
-		err = p.Update(s, k, func(data []byte) ([]byte, error) {
+		_, err = p.Update(s, k, func(data []byte) ([]byte, error) {
 			var it testItem
 			_, err = it.UnmarshalMsg(data)
 			require.NoError(t, err)
