@@ -1071,7 +1071,7 @@ func (r *Runner) stopAll() {
 
 func (r *Runner) proceedWaiting() (err error) {
 	for tm, ok := r.isWaiting(); ok; tm, ok = r.isWaiting() {
-		log.Println("Challenge generation complete : ", r.chalConf.WaitOnChallengeGeneration)
+		log.Println("Challenge generation complete : ", r.chalConf)
 		select {
 		case vce := <-r.server.OnViewChange():
 			err = r.acceptViewChange(vce)
