@@ -1253,3 +1253,58 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 	require.NoError(t, err)
 	return s
 }
+func TestPartitionsForEach(t *testing.T) {
+	partsName := "test_pa"
+	s := prepareState(t, partsName, 3, 5)
+	p, err := GetPartitions(s, partsName)
+	require.NoError(t, err)
+
+	var result []string
+	err = p.ForEach(s, 0, func(id string, v []byte) bool {
+		vd := testItem{}
+		_, err := vd.UnmarshalMsg(v)
+		require.NoError(t, err)
+		result = append(result, fmt.Sprintf("%s:%s", id, vd.V))
+		return true
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"k0:v0", "k1:v1", "k2:v2"}, result)
+
+	result = nil
+	err = p.ForEach(s, 1, func(id string, v []byte) bool {
+		vd := testItem{}
+		_, err := vd.UnmarshalMsg(v)
+		require.NoError(t, err)
+		result = append(result, fmt.Sprintf("%s:%s", id, vd.V))
+		return true
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"k3:v3", "k4:v4"}, result)
+}
+
+func TestPartitionsForEachBreak(t *testing.T) {
+	partsName := "test_pa"
+	s := prepareState(t, partsName, 3, 5)
+	p, err := GetPartitions(s, partsName)
+	require.NoError(t, err)
+
+	var result []string
+	var count int
+	err = p.ForEach(s, 0, func(id string, v []byte) bool {
+		count++
+		if count > 2 {
+			// break
+			return false
+		}
+		vd := testItem{}
+		_, err := vd.UnmarshalMsg(v)
+		require.NoError(t, err)
+		result = append(result, fmt.Sprintf("%s:%s", id, vd.V))
+		return true
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"k0:v0", "k1:v1"}, result)
+}
