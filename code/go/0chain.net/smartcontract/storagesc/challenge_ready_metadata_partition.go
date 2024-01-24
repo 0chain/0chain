@@ -28,48 +28,99 @@ func (bw *BlobberWeight) GetID() string {
 	return bw.BlobberID
 }
 
-// PartitionWeightBlobber represents weight of a partition
-type PartitionWeightBlobber struct {
+// PartitionWeight represents weight of a partition
+type PartitionWeight struct {
 	Index  int `msg:"i"` // partition index
 	Weight int `msg:"w"`
 }
 
-// type PartitionWeightsBlobber struct {
-// 	Parts []PartitionWeightBlobber `msg:"ps"`
-// }
-
-// blobberWeightPartitions is a wrapper for blobber weights partitions.Partitions
-type blobberWeightPartitions struct {
-	p           *partitions.Partitions
-	partWeights *BlobberPartitionsWeights
+// PartitionsWeights stores all the partitions weight
+type PartitionsWeights struct {
+	Parts []PartitionWeight `msg:"ps"`
 }
 
-func (bp *blobberWeightPartitions) iterBlobberWeight(state state.StateContextI, partIndex int, cf forEachFunc) error {
-	var err error
-	if ferr := bp.p.ForEach(state, partIndex, func(id string, v []byte) (stop bool) {
-		bw := BlobberWeight{}
-		_, err = bw.UnmarshalMsg(v)
-		if err != nil {
-			err = fmt.Errorf("unmarshal blobber weight: %v", err)
-			stop = true
-			return
-		}
+func (pws *PartitionsWeights) set(pwv []PartitionWeight) {
+	pws.Parts = make([]PartitionWeight, len(pwv))
+	copy(pws.Parts, pwv)
+}
 
-		stop, err = cf(id, &bw)
-		if err != nil {
-			stop = true
-			return
-		}
-
-		return stop
-	}); ferr != nil {
-		return ferr
-	}
-
+func (pws *PartitionsWeights) save(state state.StateContextI) error {
+	_, err := state.InsertTrieNode(blobberPartWeightPartitionsKey, pws)
 	return err
 }
 
-func (bp *blobberWeightPartitions) init(state state.StateContextI, weights []BlobberWeight) error {
+func (pws *PartitionsWeights) totalWeight() int {
+	total := 0
+	for _, w := range pws.Parts {
+		total += w.Weight
+	}
+	return total
+}
+
+// pick picks a blobber based on the random value and weights
+func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp *blobberWeightPartitionsWrap) (string, error) {
+	r := rd.Intn(pws.totalWeight())
+	var blobberID string
+	for _, pw := range pws.Parts {
+		br := r // remaining weight before minus the whole partition weight
+		r -= pw.Weight
+		if r <= 0 {
+			// iterate through the partition to find the blobber
+			if err := bwp.iterBlobberWeight(state, pw.Index,
+				func(id string, bw *BlobberWeight) (stop bool) {
+					br -= bw.Weight
+					if br <= 0 {
+						blobberID = bw.BlobberID
+						// find the blobber, break and return
+						stop = true
+					}
+					return
+				}); err != nil {
+				return "", err
+			}
+
+			if blobberID == "" {
+				return "", fmt.Errorf("could not pic a blobber, blobber weights may not synced")
+			}
+
+			return blobberID, nil
+		}
+	}
+	return "", fmt.Errorf("could not pick a blobber, blobber weights may not synced")
+}
+
+// blobberWeightPartitionsWrap is a wrapper for blobber weights partitions.Partitions and
+// partitions weights node
+type blobberWeightPartitionsWrap struct {
+	p           *partitions.Partitions
+	partWeights *PartitionsWeights
+}
+
+func blobberWeightsPartitions(state state.StateContextI) (*blobberWeightPartitionsWrap, error) {
+	p, err := partitions.CreateIfNotExists(state, blobberWeightPartitionKey, blobberWeightPartitionSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// load the partition weight if exist
+	var partWeights PartitionsWeights
+	if err := state.GetTrieNode(blobberPartWeightPartitionsKey, &partWeights); err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+	}
+
+	return &blobberWeightPartitionsWrap{p: p, partWeights: &partWeights}, nil
+}
+
+type forEachFunc func(id string, bw *BlobberWeight) bool
+type iterPartFunc func(partIndex int, cf forEachFunc) error
+
+func (bp *blobberWeightPartitionsWrap) pick(state state.StateContextI, rd *rand.Rand) (string, error) {
+	return bp.partWeights.pick(state, rd, bp)
+}
+
+func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights []BlobberWeight) error {
 	// TODO: init with hard fork activator
 	partWeightMap := make(map[int]int)
 	for _, w := range weights {
@@ -87,80 +138,41 @@ func (bp *blobberWeightPartitions) init(state state.StateContextI, weights []Blo
 
 	sort.Ints(partIndexs)
 	// add to partition weight
+	partWeights := make([]PartitionWeight, 0, len(partWeightMap))
 	for _, partIndex := range partIndexs {
 		w := partWeightMap[partIndex]
-		if err := bp.partWeights.add(state, w); err != nil {
-			return err
-		}
+		partWeights = append(partWeights, PartitionWeight{Index: partIndex, Weight: w})
 	}
+
+	bp.partWeights.set(partWeights)
 
 	return bp.save(state)
 }
 
-func BlobberWeightsPartitions(state state.StateContextI) (*blobberWeightPartitions, error) {
-	p, err := partitions.CreateIfNotExists(state, blobberWeightPartitionKey, blobberWeightPartitionSize)
-	if err != nil {
-		return nil, err
-	}
-
-	// load the partition weight if exist
-	var partWeights BlobberPartitionsWeights
-	if err := state.GetTrieNode(blobberPartWeightPartitionsKey, &partWeights); err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
+func (bp *blobberWeightPartitionsWrap) iterBlobberWeight(state state.StateContextI, partIndex int, cf forEachFunc) error {
+	var err error
+	if ferr := bp.p.ForEach(state, partIndex, func(id string, v []byte) (stop bool) {
+		bw := BlobberWeight{}
+		_, err = bw.UnmarshalMsg(v)
+		if err != nil {
+			err = fmt.Errorf("unmarshal blobber weight: %v", err)
+			stop = true
+			return
 		}
 
-		// TODO: insert if not exist
+		return cf(id, &bw)
+	}); ferr != nil {
+		return ferr
 	}
 
-	return &blobberWeightPartitions{p: p, partWeights: &partWeights}, nil
+	return err
 }
 
-// BlobberPartitionsWeights stores all the partitions weight
-// this will be store in a MPT node instead of partitions
-type BlobberPartitionsWeights struct {
-	Parts []PartitionWeightBlobber `msg:"ps"`
-}
-
-type forEachFunc func(id string, bw *BlobberWeight) (bool, error)
-type iterPartFunc func(partIndex int, cf forEachFunc) error
-
-func (bpw *BlobberPartitionsWeights) TotalWeight() int {
-	total := 0
-	for _, w := range bpw.Parts {
-		total += w.Weight
+// save saves both the partitions and the partitions weights node to MPT
+func (bp *blobberWeightPartitionsWrap) save(state state.StateContextI) error {
+	if err := bp.partWeights.save(state); err != nil {
+		return err
 	}
-	return total
-}
 
-// Pick picks a blobber based on the random value and weight
-func (bpw *BlobberPartitionsWeights) Pick(state state.StateContextI, rd *rand.Rand, bwp *blobberWeightPartitions) (string, error) {
-	r := rd.Intn(bpw.TotalWeight())
-	var blobberID string
-	for _, p := range bpw.Parts {
-		br := r // remaining weight before minus the whole partition weight
-		r -= p.Weight
-		if r <= 0 {
-			// iterate through the partition to find the blobber
-			if err := bwp.iterBlobberWeight(state, p.Index,
-				func(id string, bw *BlobberWeight) (stop bool, err error) {
-					br -= bw.Weight
-					if br <= 0 {
-						blobberID = bw.BlobberID
-						// find the blobber, break and return
-						return true, nil
-					}
-					return false, nil
-				}); err != nil {
-				return "", err
-			}
-
-			if blobberID == "" {
-				return "", fmt.Errorf("could not pick a blobber, should not happen")
-			}
-
-			return blobberID, nil
-		}
-	}
-	return "", fmt.Errorf("could not pick a blobber, should not happen")
+	return bp.p.Save(state)
 }
