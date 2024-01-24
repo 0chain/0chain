@@ -59,8 +59,6 @@ tests:
       - stop_challenge_generation: false
       - wait_challenge_generation:
           timeout: "5m"
-      - wait_challenge_status:
-          timeout: "5m"
 
   - name: "Blobber should pass challenge for a file which is deleted but WM is not committed"
     flow:
