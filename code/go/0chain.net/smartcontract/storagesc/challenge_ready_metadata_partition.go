@@ -34,14 +34,14 @@ type PartitionWeightBlobber struct {
 	Weight int `msg:"w"`
 }
 
-type PartitionWeightsBlobber struct {
-	Parts []PartitionWeightBlobber `msg:"ps"`
-}
+// type PartitionWeightsBlobber struct {
+// 	Parts []PartitionWeightBlobber `msg:"ps"`
+// }
 
 // blobberWeightPartitions is a wrapper for blobber weights partitions.Partitions
 type blobberWeightPartitions struct {
 	p           *partitions.Partitions
-	partWeights *PartitionWeightsBlobber
+	partWeights *BlobberPartitionsWeights
 }
 
 func (bp *blobberWeightPartitions) iterBlobberWeight(state state.StateContextI, partIndex int, cf forEachFunc) error {
@@ -104,7 +104,7 @@ func BlobberWeightsPartitions(state state.StateContextI) (*blobberWeightPartitio
 	}
 
 	// load the partition weight if exist
-	var partWeights PartitionWeightsBlobber
+	var partWeights BlobberPartitionsWeights
 	if err := state.GetTrieNode(blobberPartWeightPartitionsKey, &partWeights); err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
