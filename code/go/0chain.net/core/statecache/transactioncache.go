@@ -38,6 +38,7 @@ func (tc *TransactionCache) Get(key string) (Value, bool) {
 
 	value, ok := tc.cache[key]
 	if ok {
+		logging.Logger.Debug("txn cache get", zap.String("key", key))
 		return value.data.Clone(), ok
 	}
 

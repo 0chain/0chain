@@ -1,6 +1,11 @@
 package statecache
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
+)
 
 type BlockCacher interface {
 	Get(key string) (Value, bool)
@@ -75,11 +80,13 @@ func (pcc *BlockCache) Get(key string) (Value, bool) {
 	// Check the pre-commit cache first
 	value, ok := pcc.cache[key]
 	if ok && !value.deleted {
+		logging.Logger.Debug("block cache get", zap.String("key", key))
 		return value.data.Clone(), ok
 	}
 
 	// Should not return deleted value
 	if ok && value.deleted {
+		logging.Logger.Debug("block cache get - deleted", zap.String("key", key))
 		return nil, false
 	}
 
