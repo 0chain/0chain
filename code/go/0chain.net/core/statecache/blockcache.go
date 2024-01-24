@@ -117,15 +117,21 @@ func (pcc *BlockCache) Commit() {
 	defer pcc.mu.Unlock()
 
 	pcc.main.mu.Lock()
+	pcc.main.shift(pcc.prevBlockHash, pcc.blockHash)
+
 	for key, v := range pcc.cache {
 		if _, ok := pcc.main.cache[key]; !ok {
 			pcc.main.cache[key] = make(map[string]valueNode)
 		}
 		v.data = v.data.Clone()
+		logging.Logger.Debug("block cache commit",
+			zap.String("key", key),
+			zap.String("block", pcc.blockHash),
+			zap.Int64("round", v.round),
+			zap.Bool("deleted", v.deleted))
 		pcc.main.cache[key][pcc.blockHash] = v
 	}
 
-	pcc.main.shift(pcc.prevBlockHash, pcc.blockHash)
 	pcc.main.mu.Unlock()
 
 	// Clear the pre-commit cache

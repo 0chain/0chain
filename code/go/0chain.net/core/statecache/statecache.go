@@ -78,10 +78,16 @@ func (sc *StateCache) Get(key, blockHash string) (Value, bool) {
 	}
 
 	v, ok := blockValues[blockHash]
-	if ok && !v.deleted {
+	if !ok {
+		logging.Logger.Debug("state cache get - key found, value not found", zap.String("key", key))
+		return nil, false
+	}
+
+	if !v.deleted {
 		logging.Logger.Debug("state cache get", zap.String("key", key))
 		return v.data.Clone(), true
 	}
+
 	logging.Logger.Debug("state cache get - deleted", zap.String("key", key))
 	return nil, false
 }
@@ -105,18 +111,22 @@ func (sc *StateCache) getValue(key, blockHash string) (valueNode, bool) {
 
 // shift copy the value from previous block to current
 func (sc *StateCache) shift(prevHash, blockHash string) {
-	// for key, blockValues := range sc.cache {
-	// 	v, ok := blockValues[prevHash]
-	// 	if ok {
-	// 		if _, exists := blockValues[blockHash]; !exists {
-	// 			if sc.cache[key] == nil {
-	// 				sc.cache[key] = make(map[string]valueNode)
-	// 			}
-	// 			v.data = v.data.Clone()
-	// 			sc.cache[key][blockHash] = v
-	// 		}
-	// 	}
-	// }
+	if prevHash == "" || blockHash == "" {
+		return
+	}
+
+	for key, blockValues := range sc.cache {
+		v, ok := blockValues[prevHash]
+		if ok {
+			if _, exists := blockValues[blockHash]; !exists {
+				if sc.cache[key] == nil {
+					sc.cache[key] = make(map[string]valueNode)
+				}
+				v.data = v.data.Clone()
+				sc.cache[key][blockHash] = v
+			}
+		}
+	}
 }
 
 // Remove removes the values map with the given key

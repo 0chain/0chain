@@ -84,6 +84,7 @@ func (tc *TransactionCache) Commit() {
 		tc.main.setValue(key, value)
 		logging.Logger.Debug("transaction cache commit",
 			zap.String("key", key),
+			zap.Int64("round", value.round),
 			zap.Bool("deleted", value.deleted))
 		count++
 	}
