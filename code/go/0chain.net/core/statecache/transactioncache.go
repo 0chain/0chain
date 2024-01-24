@@ -26,6 +26,7 @@ func (tc *TransactionCache) Set(key string, e Value) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
 
+	logging.Logger.Debug("txn cache set", zap.String("key", key))
 	tc.cache[key] = valueNode{
 		data:  e.Clone(),
 		round: tc.round,
@@ -58,6 +59,7 @@ func (e *EmptyValue) CopyFrom(interface{}) bool {
 func (tc *TransactionCache) Remove(key string) {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
+	logging.Logger.Debug("txn cache remove", zap.String("key", key))
 
 	value, ok := tc.cache[key]
 	if ok {
@@ -80,10 +82,13 @@ func (tc *TransactionCache) Commit() {
 	var count int
 	for key, value := range tc.cache {
 		tc.main.setValue(key, value)
+		logging.Logger.Debug("transaction cache commit",
+			zap.String("key", key),
+			zap.Bool("deleted", value.deleted))
 		count++
 	}
 
-	logging.Logger.Debug("transaction cache commit", zap.Int("count", count))
+	logging.Logger.Debug("transaction cache commit - total", zap.Int("count", count))
 
 	// Clear the transaction cache
 	tc.cache = make(map[string]valueNode)
