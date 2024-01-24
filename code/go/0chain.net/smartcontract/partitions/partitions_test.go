@@ -1260,24 +1260,24 @@ func TestPartitionsForEach(t *testing.T) {
 	require.NoError(t, err)
 
 	var result []string
-	err = p.ForEach(s, 0, func(id string, v []byte) bool {
+	err = p.ForEach(s, 0, func(id string, v []byte) (stop bool) {
 		vd := testItem{}
 		_, err := vd.UnmarshalMsg(v)
 		require.NoError(t, err)
 		result = append(result, fmt.Sprintf("%s:%s", id, vd.V))
-		return true
+		return false
 	})
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"k0:v0", "k1:v1", "k2:v2"}, result)
 
 	result = nil
-	err = p.ForEach(s, 1, func(id string, v []byte) bool {
+	err = p.ForEach(s, 1, func(id string, v []byte) (stop bool) {
 		vd := testItem{}
 		_, err := vd.UnmarshalMsg(v)
 		require.NoError(t, err)
 		result = append(result, fmt.Sprintf("%s:%s", id, vd.V))
-		return true
+		return false
 	})
 
 	require.NoError(t, err)
@@ -1292,17 +1292,17 @@ func TestPartitionsForEachBreak(t *testing.T) {
 
 	var result []string
 	var count int
-	err = p.ForEach(s, 0, func(id string, v []byte) bool {
+	err = p.ForEach(s, 0, func(id string, v []byte) (stop bool) {
 		count++
 		if count > 2 {
 			// break
-			return false
+			return true
 		}
 		vd := testItem{}
 		_, err := vd.UnmarshalMsg(v)
 		require.NoError(t, err)
 		result = append(result, fmt.Sprintf("%s:%s", id, vd.V))
-		return true
+		return false
 	})
 
 	require.NoError(t, err)

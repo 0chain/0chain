@@ -127,31 +127,51 @@ func (p *Partitions) Add(state state.StateContextI, item PartitionItem) error {
 		return common.NewError(errItemExistCode, item.GetID())
 	}
 
-	if err := p.add(state, item); err != nil {
+	if _, err := p.add(state, item); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *Partitions) add(state state.StateContextI, item PartitionItem) error {
+// AddX add item to the partition and return location or error if any
+func (p *Partitions) AddX(state state.StateContextI, item PartitionItem) (int, error) {
+	// duplicate item checking
+	_, ok, err := p.getItemPartIndex(state, item.GetID())
+	if err != nil {
+		return -1, err
+	}
+
+	if ok {
+		return -1, common.NewError(errItemExistCode, item.GetID())
+	}
+
+	loc, err := p.add(state, item)
+	if err != nil {
+		return -1, err
+	}
+
+	return loc, nil
+}
+
+func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, error) {
 	_, _, ok := p.Last.find(item.GetID())
 	if ok {
-		return common.NewError(errItemExistCode, item.GetID())
+		return -1, common.NewError(errItemExistCode, item.GetID())
 	}
 
 	// check if Last is full
 	if p.Last.length() == p.PartitionSize {
 		if err := p.pack(state); err != nil {
-			return fmt.Errorf("could not pack partition: %v", err)
+			return -1, fmt.Errorf("could not pack partition: %v", err)
 		}
 	}
 
 	if err := p.Last.add(item); err != nil {
-		return fmt.Errorf("could not save item to partition: %v", err)
+		return -1, fmt.Errorf("could not save item to partition: %v", err)
 	}
 
-	return nil
+	return p.Last.Loc, nil
 }
 
 func (p *Partitions) pack(state state.StateContextI) error {
@@ -204,14 +224,14 @@ func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) 
 
 // ForEach iterates all items in specific partition,
 // break whenever the callback function returns false
-func (p *Partitions) ForEach(state state.StateContextI, partIndex int, f func(id string, data []byte) bool) error {
+func (p *Partitions) ForEach(state state.StateContextI, partIndex int, f func(id string, data []byte) (stop bool)) error {
 	part, err := p.getPartition(state, partIndex)
 	if err != nil {
 		return err
 	}
 
 	for _, it := range part.Items {
-		if !f(it.ID, it.Data) {
+		if f(it.ID, it.Data) {
 			break
 		}
 	}
