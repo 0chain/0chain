@@ -2,11 +2,17 @@ package statecache
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 
+	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	logging.InitLogging("development", "")
+}
 
 func TestStateCacheSetGet(t *testing.T) {
 	sc := NewStateCache()
@@ -443,4 +449,24 @@ func TestEmptyBlockCache(t *testing.T) {
 	bc2 := NewBlockCache(sc, Block{Hash: blockHash})
 	_, ok := bc2.Get(key)
 	require.False(t, ok)
+}
+
+func TestStateCache_Shift(t *testing.T) {
+	sc := NewStateCache()
+
+	bc := NewBlockCache(sc, Block{Hash: "hash1"})
+	tc := NewTransactionCache(bc)
+	tc.Set("key1", String("value1"))
+	tc.Commit()
+	bc.Commit()
+
+	// Test shift method
+	for i := 2; i <= 11; i++ {
+		sc.shift("hash"+strconv.Itoa(i-1), "hash"+strconv.Itoa(i))
+	}
+
+	value, ok := sc.Get("key1", "hash11")
+	if !ok || value.(String) != "value1" {
+		t.Error("Expected value1, got ", value)
+	}
 }
