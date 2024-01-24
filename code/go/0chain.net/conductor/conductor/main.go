@@ -222,7 +222,7 @@ type Runner struct {
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	tm = r.timer
 
-	log.Println("Waiting Challenge generation : ", r.chalConf.WaitOnChallengeGeneration)
+	log.Println("Waiting Challenge generation : ", r.chalConf)
 
 	switch {
 	case len(r.waitNodes) > 0:
@@ -991,7 +991,7 @@ func (r *Runner) onChallengeGeneration(txnHash string) {
 	log.Printf("Value of waitonchallengegeneration %v\n", r.chalConf)
 
 	if r.chalConf != nil {
-		log.Printf("Updating WaitOnChallengeGeneration")
+		log.Println("Updating WaitOnChallengeGeneration", r.chalConf)
 		r.chalConf.WaitOnChallengeGeneration = false
 	}
 }
