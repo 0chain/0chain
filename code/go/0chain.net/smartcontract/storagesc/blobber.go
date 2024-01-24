@@ -155,7 +155,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
 	}
 
-	if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf); err != nil {
+	if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf, balances); err != nil {
 		return err
 	}
 
@@ -218,6 +218,7 @@ func validateAndSaveSp(
 	existingBlobber *StorageNode,
 	existingSp *stakePool,
 	conf *Config,
+	balances cstate.StateContextI,
 ) error {
 	if updateBlobber.StakePoolSettings != nil {
 		if updateBlobber.StakePoolSettings.DelegateWallet != nil {
@@ -235,7 +236,7 @@ func validateAndSaveSp(
 			existingBlobber.StakePoolSettings.MaxNumDelegates = *updateBlobber.StakePoolSettings.MaxNumDelegates
 		}
 
-		if err := validateStakePoolSettings(existingBlobber.StakePoolSettings, conf); err != nil {
+		if err := validateStakePoolSettings(existingBlobber.StakePoolSettings, conf, balances); err != nil {
 			return fmt.Errorf("invalid new stake pool settings:  %v", err)
 		}
 	}
@@ -989,7 +990,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.createStakePool(conf, blobber.StakePoolSettings)
+	sp, err = sc.createStakePool(conf, blobber.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
 	}

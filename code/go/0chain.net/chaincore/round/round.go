@@ -5,7 +5,7 @@ import (
 	"0chain.net/chaincore/node"
 )
 
-//RoundI - an interface that represents a blockchain round
+// RoundI - an interface that represents a blockchain round
 type RoundI interface {
 	GetRoundNumber() int64
 	GetBlockHash() string
@@ -33,6 +33,8 @@ type RoundI interface {
 	Finalize(b *block.Block)
 	IsFinalizing() bool
 	SetFinalizing() bool
+	ResetFinalizingState()
+	ResetFinalizingStateIfNotFinalized()
 	IsFinalized() bool
 	Clear()
 

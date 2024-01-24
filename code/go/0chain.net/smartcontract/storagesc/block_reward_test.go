@@ -187,7 +187,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 
 	compareResult := func(t *testing.T, p params, r result, balances state.StateContextI, ssc *StorageSmartContract) {
-		conf, err := ssc.getConfig(balances, false)
+		_, err := ssc.getConfig(balances, false)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
@@ -211,10 +211,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				require.InDelta(t, resultDelegateReward, actualDelegateReward, errDelta, message)
 			}
 		}
-		_, err = balances.DeleteTrieNode(
-			BlobberRewardKey(
-				GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
-		)
 		require.NoError(t, err)
 	}
 
