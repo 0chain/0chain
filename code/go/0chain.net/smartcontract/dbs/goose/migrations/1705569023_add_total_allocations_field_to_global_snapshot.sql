@@ -4,7 +4,7 @@ ALTER TABLE snapshots ADD COLUMN total_allocations BIGINT NOT NULL DEFAULT 0;
 
 UPDATE snapshots
 SET total_allocations = (select count(*) from allocations)
-WHERE id = (select max(id) from snapshots);
+WHERE round = (select max(round) from snapshots);
 
 -- +goose StatementEnd
 
