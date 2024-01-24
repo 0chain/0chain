@@ -222,6 +222,8 @@ type Runner struct {
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	tm = r.timer
 
+	log.Println("Waiting Challenge generation : ", r.chalConf.WaitOnChallengeGeneration)
+
 	switch {
 	case len(r.waitNodes) > 0:
 		log.Printf("wait for %d nodes", len(r.waitNodes))
@@ -1069,6 +1071,7 @@ func (r *Runner) stopAll() {
 
 func (r *Runner) proceedWaiting() (err error) {
 	for tm, ok := r.isWaiting(); ok; tm, ok = r.isWaiting() {
+		log.Println("Challenge generation complete : ", r.chalConf.WaitOnChallengeGeneration)
 		select {
 		case vce := <-r.server.OnViewChange():
 			err = r.acceptViewChange(vce)
