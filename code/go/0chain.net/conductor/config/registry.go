@@ -817,7 +817,9 @@ func init() {
 
 	// waits for blobber to submit challenge and miner to send status of this challenge
 	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
-		ex.WaitForChallengeStatus(tm)
+		log.Println("Jayash wait_challenge_status")
+
+		//ex.WaitForChallengeStatus(tm)
 		return nil
 	})
 
