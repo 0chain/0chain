@@ -70,12 +70,9 @@ func (z BlobberWeight) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z PartitionWeight) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
-	// string "i"
-	o = append(o, 0x82, 0xa1, 0x69)
-	o = msgp.AppendInt(o, z.Index)
+	// map header, size 1
 	// string "w"
-	o = append(o, 0xa1, 0x77)
+	o = append(o, 0x81, 0xa1, 0x77)
 	o = msgp.AppendInt(o, z.Weight)
 	return
 }
@@ -98,12 +95,6 @@ func (z *PartitionWeight) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			return
 		}
 		switch msgp.UnsafeString(field) {
-		case "i":
-			z.Index, bts, err = msgp.ReadIntBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Index")
-				return
-			}
 		case "w":
 			z.Weight, bts, err = msgp.ReadIntBytes(bts)
 			if err != nil {
@@ -124,7 +115,7 @@ func (z *PartitionWeight) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z PartitionWeight) Msgsize() (s int) {
-	s = 1 + 2 + msgp.IntSize + 2 + msgp.IntSize
+	s = 1 + 2 + msgp.IntSize
 	return
 }
 
@@ -136,12 +127,9 @@ func (z *PartitionsWeights) MarshalMsg(b []byte) (o []byte, err error) {
 	o = append(o, 0x81, 0xa2, 0x70, 0x73)
 	o = msgp.AppendArrayHeader(o, uint32(len(z.Parts)))
 	for za0001 := range z.Parts {
-		// map header, size 2
-		// string "i"
-		o = append(o, 0x82, 0xa1, 0x69)
-		o = msgp.AppendInt(o, z.Parts[za0001].Index)
+		// map header, size 1
 		// string "w"
-		o = append(o, 0xa1, 0x77)
+		o = append(o, 0x81, 0xa1, 0x77)
 		o = msgp.AppendInt(o, z.Parts[za0001].Weight)
 	}
 	return
@@ -192,12 +180,6 @@ func (z *PartitionsWeights) UnmarshalMsg(bts []byte) (o []byte, err error) {
 						return
 					}
 					switch msgp.UnsafeString(field) {
-					case "i":
-						z.Parts[za0001].Index, bts, err = msgp.ReadIntBytes(bts)
-						if err != nil {
-							err = msgp.WrapError(err, "Parts", za0001, "Index")
-							return
-						}
 					case "w":
 						z.Parts[za0001].Weight, bts, err = msgp.ReadIntBytes(bts)
 						if err != nil {
@@ -227,6 +209,6 @@ func (z *PartitionsWeights) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *PartitionsWeights) Msgsize() (s int) {
-	s = 1 + 3 + msgp.ArrayHeaderSize + (len(z.Parts) * (5 + msgp.IntSize + msgp.IntSize))
+	s = 1 + 3 + msgp.ArrayHeaderSize + (len(z.Parts) * (3 + msgp.IntSize))
 	return
 }
