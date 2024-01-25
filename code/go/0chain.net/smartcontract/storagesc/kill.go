@@ -69,9 +69,6 @@ func (_ *StorageSmartContract) killBlobber(
 		},
 		balances,
 	)
-	if err != nil {
-		return "", common.NewError("kill_blobber_failed", err.Error())
-	}
 
 	cstate.WithActivation(balances, "hard_fork_1", func() {
 		// delete the blobber from MPT if it's empty and has no stake pools
@@ -90,11 +87,15 @@ func (_ *StorageSmartContract) killBlobber(
 		}
 	}, func() {})
 
+	if err != nil {
+		return "", common.NewError("kill_blobber_failed", err.Error())
+	}
+
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewError("kill_blobber_failed", "saving blobber: "+err.Error())
 	}
-	return "", err
+	return "", nil
 }
 
 // killValidator
