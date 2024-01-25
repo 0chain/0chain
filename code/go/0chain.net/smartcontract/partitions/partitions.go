@@ -367,6 +367,7 @@ type RemoveLocs struct {
 func (p *Partitions) RemoveX(state state.StateContextI, id string) (*RemoveLocs, error) {
 	replaceLoc := p.Last.Loc
 	replaceItem := p.Last.tail()
+	fromLoc := p.Last.Loc
 	_, idx, ok := p.Last.find(id)
 	if ok {
 		if err := p.removeFromLast(state, idx); err != nil {
@@ -374,7 +375,7 @@ func (p *Partitions) RemoveX(state state.StateContextI, id string) (*RemoveLocs,
 		}
 
 		return &RemoveLocs{
-			From:        p.Last.Loc,
+			From:        fromLoc,
 			Replace:     replaceLoc,
 			ReplaceItem: replaceItem.Data,
 		}, nil
@@ -389,6 +390,8 @@ func (p *Partitions) RemoveX(state state.StateContextI, id string) (*RemoveLocs,
 		return nil, common.NewError(ErrItemNotFoundCode, id)
 	}
 
+	fromLoc = loc
+
 	if err := p.removeItem(state, id, loc); err != nil {
 		return nil, err
 	}
@@ -399,7 +402,7 @@ func (p *Partitions) RemoveX(state state.StateContextI, id string) (*RemoveLocs,
 	}
 
 	return &RemoveLocs{
-		From:        loc,
+		From:        fromLoc,
 		Replace:     replaceLoc,
 		ReplaceItem: replaceItem.Data,
 	}, nil

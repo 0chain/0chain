@@ -1253,6 +1253,7 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 	require.NoError(t, err)
 	return s
 }
+
 func TestPartitionsForEach(t *testing.T) {
 	partsName := "test_pa"
 	s := prepareState(t, partsName, 3, 5)
@@ -1347,6 +1348,17 @@ func TestPartitionsRemoveX(t *testing.T) {
 				From:        1,
 				Replace:     1,
 				ReplaceItem: []byte(`{"ID":"k4","V":"v4"}`),
+			},
+		},
+		{
+			name:     "remove last one and shift",
+			size:     3,
+			num:      4,
+			removeID: "k3",
+			expect: RemoveLocs{
+				From:        1,
+				Replace:     1,
+				ReplaceItem: []byte(`{"ID":"k3","V":"v3"}`),
 			},
 		},
 		// Add more test cases here
