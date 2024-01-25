@@ -45,7 +45,7 @@ func Kill(
 
 	var errCode = "kill_" + p.Type().String() + "_failed"
 	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
-		return ownerId == clientID
+		return ownerId == clientID || ownerId == sp.GetSettings().DelegateWallet
 	}); err != nil {
 		return err
 	}
