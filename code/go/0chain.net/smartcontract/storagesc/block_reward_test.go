@@ -527,7 +527,7 @@ func BenchmarkPartitionsGetItem(b *testing.B) {
 	id := strconv.Itoa(10)
 	for i := 0; i < b.N; i++ {
 		var br BlobberRewardNode
-		_ = part.Get(ps, id, &br)
+		_, _ = part.Get(ps, id, &br)
 	}
 }
 

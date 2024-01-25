@@ -1338,9 +1338,9 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 		{
 			name: "Becomes too small",
 			uar: &updateAllocationRequest{
-				Size:          -int64(sub),
+				Size:                    -int64(sub),
 				SetThirdPartyExtendable: true,
-				OwnerID:       "owner123",
+				OwnerID:                 "owner123",
 			},
 			expectErr: true,
 		},
@@ -1916,7 +1916,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	baParts, err := partitionsBlobberAllocations(nb.id, balances)
 	require.NoError(t, err)
 	var noneIt BlobberAllocationNode
-	err = baParts.Get(balances, alloc.ID, &noneIt)
+	_, err = baParts.Get(balances, alloc.ID, &noneIt)
 	require.True(t, partitions.ErrItemNotFound(err))
 
 	// commit connection to get update challenge ready partition
@@ -1924,7 +1924,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
 	var cit ChallengeReadyBlobber
-	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.True(t, partitions.ErrItemNotFound(err))
 
 	tp += 1000
@@ -1955,7 +1955,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// assert nb2 is challenge ready
 	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
-	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.NoError(t, err)
 	require.Equal(t, cit.BlobberID, nb2.id)
 
@@ -1995,7 +1995,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// assert blobber nb2 is removed from challenge ready partition
 	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
-	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.True(t, partitions.ErrItemNotFound(err))
 
 	//
