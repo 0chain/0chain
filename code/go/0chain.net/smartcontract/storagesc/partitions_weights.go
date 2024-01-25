@@ -104,23 +104,27 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 type blobberWeightPartitionsWrap struct {
 	p           *partitions.Partitions
 	partWeights *PartitionsWeights
+	needMigrate bool
 }
 
 func blobberWeightsPartitions(state state.StateContextI) (*blobberWeightPartitionsWrap, error) {
+	// load the partition weight if exist
+	var partWeights PartitionsWeights
+	var needMigrate bool
+	if err := state.GetTrieNode(blobberPartWeightPartitionsKey, &partWeights); err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		// mark it as needs migrate if see 'value not present' error, means the first time
+		needMigrate = true
+	}
+
 	p, err := partitions.CreateIfNotExists(state, blobberWeightPartitionKey, blobberWeightPartitionSize)
 	if err != nil {
 		return nil, err
 	}
 
-	// load the partition weight if exist
-	var partWeights PartitionsWeights
-	if err := state.GetTrieNode(blobberPartWeightPartitionsKey, &partWeights); err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-	}
-
-	return &blobberWeightPartitionsWrap{p: p, partWeights: &partWeights}, nil
+	return &blobberWeightPartitionsWrap{p: p, partWeights: &partWeights, needMigrate: needMigrate}, nil
 }
 
 type forEachFunc func(id string, bw *BlobberWeight) bool

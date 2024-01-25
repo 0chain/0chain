@@ -908,9 +908,52 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(0) // challengeBlobberSelection(r.Intn(2))
-	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
+
+	var (
+		blobberID string
+		err       error
+	)
+
+	beforeHardFork1 := func() {
+		blobberID, err = selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
+		if err != nil {
+			err = common.NewError("add_challenge", err.Error())
+			return
+		}
+	}
+
+	afterHardFork1 := func() {
+		// load the blobber weights
+		var blobberWeights *blobberWeightPartitionsWrap
+		blobberWeights, err = blobberWeightsPartitions(balances)
+		if err != nil {
+			err = common.NewError("add_challenge", err.Error())
+			return
+		}
+
+		// check if need to migrate from challenge ready blobber partitions,
+		// this should only be done once when hard_fork_1 round hits
+		if blobberWeights.needMigrate {
+			logging.Logger.Debug("add_challenge - hard_fork_1 hit - sync blobber weights!!")
+			err = blobberWeights.migrate(balances, challengeBlobbersPartition)
+			if err != nil {
+				logging.Logger.Debug("add_challenge - sync blobber weights failed", zap.Error(err))
+				err = common.NewError("add_challenge", err.Error())
+				return
+			}
+		}
+
+		// select blobber to challenge
+		blobberID, err = blobberWeights.pick(balances, r)
+		if err != nil {
+			err = common.NewError("add_challenge", err.Error())
+		}
+	}
+
+	cstate.WithActivation(balances, "hard_fork_1", beforeHardFork1, afterHardFork1)
+
 	if err != nil {
-		return nil, common.NewError("add_challenge", err.Error())
+		return nil, err
 	}
 
 	if blobberID == "" {
