@@ -246,3 +246,32 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, "item not found: blobber12", err.Error())
 }
+
+func TestBlobberWeightPartitionsWrapMigrate(t *testing.T) {
+	state := newTestBalances(t, false)
+	bp, err := blobberWeightsPartitions(state)
+	require.NoError(t, err)
+
+	for i := 1; i <= allChallengeReadyBlobbersPartitionSize+1; i++ {
+		err = PartitionsChallengeReadyBlobberAddOrUpdate(state, fmt.Sprintf("blobber%d", i), 10*1e10, uint64(i))
+		require.NoError(t, err)
+	}
+
+	err = bp.migrate(state, nil)
+	require.NoError(t, err)
+
+	// Verify that the blobber weights are correctly migrated
+	for i := 1; i <= allChallengeReadyBlobbersPartitionSize+1; i++ {
+		bw := BlobberWeight{}
+		_, err = bp.p.Get(state, fmt.Sprintf("blobber%d", i), &bw)
+		require.NoError(t, err)
+		require.Equal(t, i*10, bw.Weight)
+	}
+
+	// Verify that the partition weights are correctly migrated
+	expectPartNum := (allChallengeReadyBlobbersPartitionSize + 1) / blobberWeightPartitionSize
+	if (allChallengeReadyBlobbersPartitionSize+1)%blobberWeightPartitionSize != 0 {
+		expectPartNum++
+	}
+	require.Equal(t, expectPartNum, len(bp.partWeights.Parts))
+}
