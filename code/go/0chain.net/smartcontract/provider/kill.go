@@ -52,7 +52,7 @@ func Kill(
 
 	err = nil
 	if p.IsKilled() {
-		cstate.WithActivation(balances, "", func() {
+		cstate.WithActivation(balances, "hard_fork_1", func() {
 			if refreshProvider != nil {
 				err = refreshProvider(req)
 			}
@@ -68,7 +68,7 @@ func Kill(
 	p.Kill()
 
 	err = nil
-	cstate.WithActivation(balances, "", func() {
+	cstate.WithActivation(balances, "hard_fork_1", func() {
 		if clientID == sp.GetSettings().DelegateWallet {
 			killSlash /= 2 // Penalise 50% only in case of provider is shutting down by delegate wallet
 		}
