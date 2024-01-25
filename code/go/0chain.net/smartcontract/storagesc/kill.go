@@ -70,25 +70,19 @@ func (_ *StorageSmartContract) killBlobber(
 		balances,
 	)
 
-	cstate.WithActivation(balances, "hard_fork_1", func() {
-		// delete the blobber from MPT if it's empty and has no stake pools
-		if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
-			// remove the blobber from MPT
-			_, err = balances.DeleteTrieNode(blobber.GetKey())
-			if err != nil {
-				err = common.NewErrorf("kill_blobber_failed", "deleting blobber: %v", err)
-				return
-			}
-
-			if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
-				err = common.NewErrorf("kill_blobber_failed", "deleting stakepool: %v", err)
-				return
-			}
+	// delete the blobber from MPT if it's empty and has no stake pools
+	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
+		// remove the blobber from MPT
+		_, err := balances.DeleteTrieNode(blobber.GetKey())
+		if err != nil {
+			return "", common.NewErrorf("kill_blobber_failed", "deleting blobber: %v", err)
 		}
-	}, func() {})
 
-	if err != nil {
-		return "", common.NewError("kill_blobber_failed", err.Error())
+		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+			return "", common.NewErrorf("kill_blobber_failed", "deleting stakepool: %v", err)
+		}
+
+		return "", nil
 	}
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
