@@ -156,7 +156,6 @@ func buildMockAuthorizer(t *testing.T, ownerId string, pid string) Authorizer {
 	authorizer.ID = pid
 	authorizer.DelegateWallet = ownerId
 	authorizer.IsKilled = false
-	authorizer.IsShutdown = false
 	authorizer.Rewards = ProviderRewards{}
 	return authorizer
 }

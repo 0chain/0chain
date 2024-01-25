@@ -834,7 +834,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		if req.Size > 0 {
-			if b.IsShutDown() || b.IsKilled() {
+			if b.IsKilled() {
 				return common.NewErrorf("allocation_extending_failed",
 					"blobber %s is not active", b.ID)
 			}

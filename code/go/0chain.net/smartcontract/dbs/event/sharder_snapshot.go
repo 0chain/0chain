@@ -16,7 +16,6 @@ type SharderSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
-	IsShutdown    bool          `json:"is_shutdown"`
 }
 
 func (ss *SharderSnapshot) GetID() string {
@@ -36,7 +35,7 @@ func (ss *SharderSnapshot) SetRound(round int64) {
 }
 
 func (s *SharderSnapshot) IsOffline() bool {
-	return s.IsKilled || s.IsShutdown
+	return s.IsKilled
 }
 
 func (s *SharderSnapshot) GetTotalStake() currency.Coin {
@@ -70,7 +69,7 @@ func (edb *EventDb) addSharderSnapshot(sharders []*Sharder, round int64) error {
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "sharder_id"}},
+		Columns:   []clause.Column{{Name: "sharder_id"}},
 		UpdateAll: true,
 	}).Create(&snapshots).Error
 }
@@ -85,6 +84,5 @@ func createSharderSnapshotFromSharder(s *Sharder, round int64) *SharderSnapshot 
 		CreationRound: s.CreationRound,
 		TotalRewards:  s.Rewards.TotalRewards,
 		IsKilled:      s.IsKilled,
-		IsShutdown:    s.IsShutdown,
 	}
 }

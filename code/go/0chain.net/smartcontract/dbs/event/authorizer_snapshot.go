@@ -18,7 +18,6 @@ type AuthorizerSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
-	IsShutdown    bool          `json:"is_shutdown"`
 }
 
 func (as *AuthorizerSnapshot) GetID() string {
@@ -38,7 +37,7 @@ func (as *AuthorizerSnapshot) SetRound(round int64) {
 }
 
 func (a *AuthorizerSnapshot) IsOffline() bool {
-	return a.IsKilled || a.IsShutdown
+	return a.IsKilled
 }
 
 func (a *AuthorizerSnapshot) GetTotalStake() currency.Coin {
@@ -72,7 +71,7 @@ func (edb *EventDb) addAuthorizerSnapshot(authorizers []*Authorizer, round int64
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "authorizer_id"}},
+		Columns:   []clause.Column{{Name: "authorizer_id"}},
 		UpdateAll: true,
 	}).Create(&snapshots).Error
 }
@@ -89,6 +88,5 @@ func createAuthorizerSnapshotFromAuthorizer(authorizer *Authorizer, round int64)
 		TotalMint:     authorizer.TotalMint,
 		TotalBurn:     authorizer.TotalBurn,
 		IsKilled:      authorizer.IsKilled,
-		IsShutdown:    authorizer.IsShutdown,
 	}
 }

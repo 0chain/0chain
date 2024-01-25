@@ -85,48 +85,6 @@ func TestTagKillProvider(t *testing.T) {
 	}
 }
 
-func TestProvidersSetBoolean(t *testing.T) {
-	edb, clean := GetTestEventDB(t)
-	defer clean()
-
-	minerIds := createMiners(t, edb, 2)
-	createSharders(t, edb, 2)
-	err := edb.addBlobbers([]Blobber{
-		{
-			Provider: Provider{ID: "blobber one"},
-			BaseURL:  "one.com",
-		}, {
-			Provider: Provider{ID: "blobber two"},
-			BaseURL:  "two.com",
-		},
-	})
-	require.NoError(t, err)
-	providers := []dbs.ProviderID{
-		{ID: minerIds[0], Type: spenum.Miner},
-		{ID: minerIds[1], Type: spenum.Miner},
-		{ID: "1", Type: spenum.Sharder},
-		{ID: "blobber two", Type: spenum.Blobber},
-	}
-	err = edb.providersSetBoolean(providers, "is_shutdown", true)
-	require.NoError(t, err)
-
-	var miners []Miner
-	edb.Get().Find(&miners)
-	for _, miner := range miners {
-		require.True(t, miner.IsShutdown)
-	}
-
-	var blobbers []Blobber
-	edb.Get().Find(&blobbers)
-	for _, blobber := range blobbers {
-		if blobber.ID == "blobber two" {
-			require.True(t, blobber.IsShutdown)
-		} else {
-			require.False(t, blobber.IsShutdown)
-		}
-	}
-}
-
 func TestUpdateProvidersHealthCheck(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()

@@ -101,7 +101,6 @@ func buildMockValidator(t *testing.T, ownerId string, pid string) Validator {
 	validator.ID = pid
 	validator.DelegateWallet = OwnerId
 	validator.IsKilled = false
-	validator.IsShutdown = false
 	validator.Rewards = ProviderRewards{}
 	return validator
 }

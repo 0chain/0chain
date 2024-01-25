@@ -17,7 +17,6 @@ type MinerSnapshot struct {
 	BlocksFinalised int64         `json:"blocks_finalised"`
 	CreationRound   int64         `json:"creation_round"`
 	IsKilled        bool          `json:"is_killed"`
-	IsShutdown      bool          `json:"is_shutdown"`
 }
 
 func (ms *MinerSnapshot) GetID() string {
@@ -37,7 +36,7 @@ func (ms *MinerSnapshot) SetRound(round int64) {
 }
 
 func (m *MinerSnapshot) IsOffline() bool {
-	return m.IsKilled || m.IsShutdown
+	return m.IsKilled
 }
 
 func (m *MinerSnapshot) GetTotalStake() currency.Coin {
@@ -87,6 +86,5 @@ func createMinerSnapshotFromMiner(m *Miner, round int64) *MinerSnapshot {
 		CreationRound:   m.CreationRound,
 		TotalRewards:    m.Rewards.TotalRewards,
 		IsKilled:        m.IsKilled,
-		IsShutdown:      m.IsShutdown,
 	}
 }

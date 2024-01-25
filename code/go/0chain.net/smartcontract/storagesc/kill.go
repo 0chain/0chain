@@ -28,7 +28,7 @@ func (_ *StorageSmartContract) killBlobber(
 
 	var (
 		blobber = &StorageNode{}
-		sp      *stakePool
+		sp      stakepool.AbstractStakePool
 	)
 
 	err = provider.Kill(
@@ -50,14 +50,7 @@ func (_ *StorageSmartContract) killBlobber(
 				}
 			}
 
-			sp, err = getStakePool(blobber.Type(), blobber.Id(), balances)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			sp.TotalOffers = 0
-
-			err = sp.Save(blobber.Type(), blobber.Id(), balances)
+			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}

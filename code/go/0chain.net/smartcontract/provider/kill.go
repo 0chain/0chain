@@ -50,20 +50,35 @@ func Kill(
 		return err
 	}
 
+	err = nil
 	if p.IsKilled() {
-		if refreshProvider != nil {
-			if err := refreshProvider(req); err != nil {
-				return err
+		cstate.WithActivation(balances, "", func() {
+			if refreshProvider != nil {
+				err = refreshProvider(req)
 			}
-		}
+		}, func() {})
 
 		return fmt.Errorf("already killed")
 	}
 
+	if err != nil {
+		return err
+	}
+
 	p.Kill()
 
-	if clientID == sp.GetSettings().DelegateWallet {
-		killSlash /= 2 // Penalise 50% only in case of provider is shutting down by delegate wallet
+	err = nil
+	cstate.WithActivation(balances, "", func() {
+		if clientID == sp.GetSettings().DelegateWallet {
+			killSlash /= 2 // Penalise 50% only in case of provider is shutting down by delegate wallet
+		}
+
+		if refreshProvider != nil {
+			err = refreshProvider(req)
+		}
+	}, func() {})
+	if err != nil {
+		return err
 	}
 
 	if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
@@ -72,12 +87,6 @@ func Kill(
 
 	if err = sp.Save(p.Type(), req.ID, balances); err != nil {
 		return err
-	}
-
-	if refreshProvider != nil {
-		if err := refreshProvider(req); err != nil {
-			return err
-		}
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagKillProvider, p.Id(), dbs.ProviderID{

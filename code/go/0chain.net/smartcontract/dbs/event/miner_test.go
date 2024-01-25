@@ -712,7 +712,6 @@ func buildMockMiner(t *testing.T, ownerId string, pid string) Miner {
 	miner.ID = pid
 	miner.DelegateWallet = ownerId
 	miner.IsKilled = false
-	miner.IsShutdown = false
 	miner.Rewards = ProviderRewards{}
 	return miner
 }

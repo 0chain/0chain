@@ -8,7 +8,7 @@ import (
 // swagger:model BlobberSnapshot
 type BlobberSnapshot struct {
 	BlobberID           string        `json:"id" gorm:"uniquIndex"`
-	Round 			 	int64         `json:"round"`
+	Round               int64         `json:"round"`
 	WritePrice          currency.Coin `json:"write_price"`
 	Capacity            int64         `json:"capacity"`  // total blobber capacity
 	Allocated           int64         `json:"allocated"` // allocated capacity
@@ -28,7 +28,6 @@ type BlobberSnapshot struct {
 	CreationRound       int64         `json:"creation_round"`
 	RankMetric          float64       `json:"rank_metric"`
 	IsKilled            bool          `json:"is_killed"`
-	IsShutdown          bool          `json:"is_shutdown"`
 }
 
 func (bs *BlobberSnapshot) GetID() string {
@@ -48,7 +47,7 @@ func (bs *BlobberSnapshot) SetRound(round int64) {
 }
 
 func (bs *BlobberSnapshot) IsOffline() bool {
-	return bs.IsKilled || bs.IsShutdown
+	return bs.IsKilled
 }
 
 func (edb *EventDb) addBlobberSnapshot(blobbers []*Blobber, round int64) error {
@@ -58,26 +57,26 @@ func (edb *EventDb) addBlobberSnapshot(blobbers []*Blobber, round int64) error {
 	}
 
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "blobber_id"}},
+		Columns:   []clause.Column{{Name: "blobber_id"}},
 		UpdateAll: true,
 	}).Create(&snapshots).Error
 }
 
 func createBlobberSnapshotFromBlobber(b *Blobber, round int64) *BlobberSnapshot {
 	return &BlobberSnapshot{
-		BlobberID:          b.ID,
-		Round: 				round,
-		WritePrice:         b.WritePrice,
-		Capacity:           b.Capacity,
-		Allocated:          b.Allocated,
-		SavedData:          b.SavedData,
-		ReadData:           b.ReadData,
-		OffersTotal:        b.OffersTotal,
-		TotalRewards:       b.Rewards.TotalRewards,
-		TotalBlockRewards:  b.TotalBlockRewards,
-		TotalStorageIncome: b.TotalStorageIncome,
-		TotalReadIncome:    b.TotalReadIncome,
-		TotalSlashedStake:  b.TotalSlashedStake,
+		BlobberID:           b.ID,
+		Round:               round,
+		WritePrice:          b.WritePrice,
+		Capacity:            b.Capacity,
+		Allocated:           b.Allocated,
+		SavedData:           b.SavedData,
+		ReadData:            b.ReadData,
+		OffersTotal:         b.OffersTotal,
+		TotalRewards:        b.Rewards.TotalRewards,
+		TotalBlockRewards:   b.TotalBlockRewards,
+		TotalStorageIncome:  b.TotalStorageIncome,
+		TotalReadIncome:     b.TotalReadIncome,
+		TotalSlashedStake:   b.TotalSlashedStake,
 		TotalStake:          b.TotalStake,
 		ChallengesPassed:    b.ChallengesPassed,
 		ChallengesCompleted: b.ChallengesCompleted,
@@ -85,6 +84,5 @@ func createBlobberSnapshotFromBlobber(b *Blobber, round int64) *BlobberSnapshot 
 		CreationRound:       b.CreationRound,
 		RankMetric:          b.RankMetric,
 		IsKilled:            b.IsKilled,
-		IsShutdown:          b.IsShutdown,
 	}
 }
