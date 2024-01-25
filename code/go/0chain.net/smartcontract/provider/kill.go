@@ -1,11 +1,10 @@
 package provider
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"encoding/json"
+	"fmt"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -31,6 +30,7 @@ func Kill(
 	clientID, ownerId string,
 	killSlash float64,
 	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
+	refreshProvider func(ProviderRequest) error,
 	balances cstate.StateContextI,
 ) error {
 	var req ProviderRequest
@@ -50,13 +50,21 @@ func Kill(
 		return err
 	}
 
-	if p.IsShutDown() {
-		return fmt.Errorf("already shutdown")
-	}
 	if p.IsKilled() {
+		if refreshProvider != nil {
+			if err := refreshProvider(req); err != nil {
+				return err
+			}
+		}
+
 		return fmt.Errorf("already killed")
 	}
+
 	p.Kill()
+
+	if clientID == sp.GetSettings().DelegateWallet {
+		killSlash /= 2 // Penalise 50% only in case of provider is shutting down by delegate wallet
+	}
 
 	if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
 		return err
@@ -64,6 +72,12 @@ func Kill(
 
 	if err = sp.Save(p.Type(), req.ID, balances); err != nil {
 		return err
+	}
+
+	if refreshProvider != nil {
+		if err := refreshProvider(req); err != nil {
+			return err
+		}
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagKillProvider, p.Id(), dbs.ProviderID{

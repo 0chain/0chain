@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"strings"
 
 	"0chain.net/smartcontract/partitions"
@@ -27,8 +28,9 @@ func (_ *StorageSmartContract) killBlobber(
 
 	var (
 		blobber = &StorageNode{}
-		sp      stakepool.AbstractStakePool
+		sp      *stakePool
 	)
+
 	err = provider.Kill(
 		input,
 		tx.ClientID,
@@ -48,12 +50,29 @@ func (_ *StorageSmartContract) killBlobber(
 				}
 			}
 
-			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
+			sp, err = getStakePool(blobber.Type(), blobber.Id(), balances)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			sp.TotalOffers = 0
+
+			err = sp.Save(blobber.Type(), blobber.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			return blobber, sp, nil
+		},
+		func(req provider.ProviderRequest) error {
+			stakePool, err := getStakePool(spenum.Blobber, req.ID, balances)
+			if err != nil {
+				return err
+			}
+
+			stakePool.TotalOffers = 0
+
+			return stakePool.Save(spenum.Blobber, req.ID, balances)
 		},
 		balances,
 	)
@@ -61,26 +80,28 @@ func (_ *StorageSmartContract) killBlobber(
 		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
 
-	// delete the blobber from MPT if it's empty and has no stake pools
-	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
-		// remove the blobber from MPT
-		_, err := balances.DeleteTrieNode(blobber.GetKey())
-		if err != nil {
-			return "", common.NewErrorf("kill_blobber_failed", "deleting blobber: %v", err)
-		}
+	cstate.WithActivation(balances, "hard_fork_1", func() {
+		// delete the blobber from MPT if it's empty and has no stake pools
+		if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
+			// remove the blobber from MPT
+			_, err = balances.DeleteTrieNode(blobber.GetKey())
+			if err != nil {
+				err = common.NewErrorf("kill_blobber_failed", "deleting blobber: %v", err)
+				return
+			}
 
-		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
-			return "", common.NewErrorf("kill_blobber_failed", "deleting stakepool: %v", err)
+			if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+				err = common.NewErrorf("kill_blobber_failed", "deleting stakepool: %v", err)
+				return
+			}
 		}
-
-		return "", nil
-	}
+	}, func() {})
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
 		return "", common.NewError("kill_blobber_failed", "saving blobber: "+err.Error())
 	}
-	return "", nil
+	return "", err
 }
 
 // killValidator
@@ -131,6 +152,7 @@ func (_ *StorageSmartContract) killValidator(
 			}
 			return validator, sp, nil
 		},
+		nil,
 		balances,
 	)
 	if err != nil {
