@@ -9,6 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	// set for testing only
+	blobberWeightPartitionSize = 5
+}
+
 func TestBlobberWeightPartitionsWrapPick(t *testing.T) {
 	state := newTestBalances(t, false)
 	bp, err := blobberWeightsPartitions(state)
@@ -94,7 +99,7 @@ func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 	require.NoError(t, err)
 
 	b1w := BlobberWeight{}
-	err = bp.p.Get(state, "blobber1", &b1w)
+	_, err = bp.p.Get(state, "blobber1", &b1w)
 	require.NoError(t, err)
 	require.Equal(t, 11, b1w.Weight)
 
@@ -102,10 +107,84 @@ func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 
 	// reload from state
 	nbp, err := blobberWeightsPartitions(state)
-	err = nbp.p.Get(state, "blobber1", &b1w)
+	loc, err := nbp.p.Get(state, "blobber1", &b1w)
 	require.NoError(t, err)
 	require.Equal(t, 11, b1w.Weight)
 
 	require.NoError(t, err)
-	require.Equal(t, 101, nbp.partWeights.Parts[0].Weight)
+	require.Equal(t, 101, nbp.partWeights.Parts[loc].Weight)
+}
+
+func TestBlobberWeightPartitionsWrapAdd(t *testing.T) {
+	weights := []BlobberWeight{
+		{BlobberID: "blobber1", Weight: 10},
+		{BlobberID: "blobber2", Weight: 20},
+		{BlobberID: "blobber3", Weight: 30},
+		{BlobberID: "blobber4", Weight: 40},
+		{BlobberID: "blobber5", Weight: 50},
+		{BlobberID: "blobber6", Weight: 60},
+	}
+
+	testCases := []struct {
+		name               string
+		bw                 BlobberWeight
+		initWeights        []BlobberWeight
+		expectedPartWeight int
+	}{
+		{
+			name:               "Add new BlobberWeight",
+			initWeights:        weights[:3],
+			bw:                 BlobberWeight{BlobberID: "blobber4", Weight: 40},
+			expectedPartWeight: 100,
+		},
+		{
+			name:               "Add to empty partition",
+			initWeights:        []BlobberWeight{},
+			bw:                 BlobberWeight{BlobberID: "blobber1", Weight: 10},
+			expectedPartWeight: 10,
+		},
+		{
+			name:               "Add to last one of a partition",
+			initWeights:        weights[:4],
+			bw:                 BlobberWeight{BlobberID: "blobber5", Weight: 50},
+			expectedPartWeight: 150,
+		},
+		{
+			name:               "Add to first one of a new partition",
+			initWeights:        weights[:5],
+			bw:                 BlobberWeight{BlobberID: "blobber6", Weight: 60},
+			expectedPartWeight: 60,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			state := newTestBalances(t, false)
+			bp, err := blobberWeightsPartitions(state)
+			require.NoError(t, err)
+
+			err = bp.init(state, tc.initWeights)
+			require.NoError(t, err)
+
+			err = bp.add(state, tc.bw)
+			require.NoError(t, err)
+
+			// Verify that the new BlobberWeight is added correctly
+			bw := BlobberWeight{}
+			_, err = bp.p.Get(state, tc.bw.BlobberID, &bw)
+			require.NoError(t, err)
+			require.Equal(t, tc.bw, bw)
+
+			// load bp from state
+			bp, err = blobberWeightsPartitions(state)
+			require.NoError(t, err)
+
+			var bw2 BlobberWeight
+			loc, err := bp.p.Get(state, tc.bw.BlobberID, &bw2)
+			require.NoError(t, err)
+			require.Equal(t, tc.bw, bw2)
+
+			require.Equal(t, tc.expectedPartWeight, bp.partWeights.Parts[loc].Weight)
+		})
+	}
 }

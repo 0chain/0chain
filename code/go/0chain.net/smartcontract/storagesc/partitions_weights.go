@@ -15,7 +15,7 @@ import (
 
 var (
 	blobberWeightPartitionKey      = encryption.Hash("blobber_weight_partitions")
-	blobberWeightPartitionSize     = 5 // debug, change to 50 to align with the blobber challenge ready partitions later
+	blobberWeightPartitionSize     = 50
 	blobberPartWeightPartitionsKey = encryption.Hash("blobber_part_weight_partitions")
 )
 
@@ -146,6 +146,75 @@ func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights [
 
 	bp.partWeights.set(partWeights)
 
+	return bp.save(state)
+}
+
+func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw BlobberWeight) error {
+	loc, err := bp.p.AddX(state, &bw)
+	if err != nil {
+		return err
+	}
+
+	// update the partition weight
+	if loc >= len(bp.partWeights.Parts) {
+		bp.partWeights.Parts = append(bp.partWeights.Parts, PartitionWeight{Weight: bw.Weight})
+		return bp.save(state)
+	}
+
+	bp.partWeights.Parts[loc].Weight += bw.Weight
+	return bp.save(state)
+}
+
+// remove removes the blobber weight from the partitions and update the partition weight.
+// remove  is a bit complex as partitions will replace the removed one with the last part's tail item, so
+// the partition weight should be updated accordingly. Also,
+// if the last partition is empty, the partion weight should be removed
+func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobberID string) error {
+	// get the blobber weight to be removed
+	bw := BlobberWeight{}
+	_, err := bp.p.Get(state, blobberID, &bw)
+	if err != nil {
+		return err
+	}
+
+	removeLocs, err := bp.p.RemoveX(state, blobberID)
+	if err != nil {
+		return err
+	}
+
+	if len(bp.partWeights.Parts)-1 != removeLocs.Replace {
+		return fmt.Errorf("replace item must be from the last partition")
+	}
+
+	// update the partition weight
+	//
+	// if removed item and replace item are in the same partition, just reduce the weight
+	if removeLocs.From == removeLocs.Replace {
+		bp.partWeights.Parts[removeLocs.From].Weight -= bw.Weight
+		// remove if partition weight is 0,
+		if bp.partWeights.Parts[removeLocs.From].Weight == 0 {
+			// remove the last part weight, as 0 weight could only happen when it's last part
+			bp.partWeights.Parts = bp.partWeights.Parts[:len(bp.partWeights.Parts)-1]
+		}
+
+		return bp.save(state)
+	}
+
+	// for removed item and replace item in different part
+	//
+	// 1. reduce the weight of the replace item's partition, i.e the last one
+	// 2. apply the difference to the removed item's partition
+	repBw := BlobberWeight{}
+	_, err = repBw.UnmarshalMsg(removeLocs.ReplaceItem)
+	if err != nil {
+		return err
+	}
+
+	// reduce the weight of the replace item's partition
+	bp.partWeights.Parts[removeLocs.Replace].Weight -= repBw.Weight
+	// apply the difference to the removed item's partition
+	diff := repBw.Weight - bw.Weight
+	bp.partWeights.Parts[removeLocs.From].Weight += diff
 	return bp.save(state)
 }
 
