@@ -1411,10 +1411,30 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
+			blobber, err := sc.getBlobber(d.BlobberID, balances)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't get blobber "+d.BlobberID+": "+err.Error())
+			}
+
 			if d.Stats.UsedSize > 0 {
 				if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 					return err
 				}
+			}
+
+			breakLoop := false
+			cstate.WithActivation(balances, "hard_fork_1", func() {
+				if blobber.IsKilled() {
+					sa.BlobberAllocs[i] = addedBlobberAllocation
+					sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
+
+					breakLoop = true
+				}
+			}, func() {})
+
+			if breakLoop {
+				break
 			}
 
 			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc)
@@ -1449,11 +1469,6 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
-			blobber, err := sc.getBlobber(d.BlobberID, balances)
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't get blobber "+d.BlobberID+": "+err.Error())
-			}
 			blobber.SavedData += -d.Stats.UsedSize
 			blobber.Allocated += -d.Size
 			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
@@ -1482,7 +1497,6 @@ func replaceBlobber(
 	sc *StorageSmartContract,
 	clientID string,
 	addedBlobber *StorageNode, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) ([]*StorageNode, error) {
-
 	if err := sa.replaceBlobber(blobberID, sc, balances, clientID, addedBlobberAllocation, now); err != nil {
 		return nil, err
 	}
