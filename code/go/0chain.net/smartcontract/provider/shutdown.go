@@ -17,6 +17,7 @@ func ShutDown(
 	clientId, ownerId string,
 	killSlash float64,
 	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
+	refreshProvider func(ProviderRequest) error,
 	balances cstate.StateContextI,
 ) error {
 	var req ProviderRequest
@@ -29,14 +30,38 @@ func ShutDown(
 		return err
 	}
 
-	if p.IsShutDown() {
-		return fmt.Errorf("already shutdown")
-	}
-	if p.IsKilled() {
-		return fmt.Errorf("already killed")
-	}
+	err = nil
+	cstate.WithActivation(balances, "hard_fork_1", func() {
+		if p.IsShutDown() {
+			err = fmt.Errorf("already shutdown")
+		}
+		if p.IsKilled() {
+			err = fmt.Errorf("already killed")
+		}
+	}, func() {
+		if p.IsKilled() || p.IsShutDown() {
+			if refreshProvider != nil {
+				err = refreshProvider(req)
+			}
+
+			err = fmt.Errorf("already killed or shutdown")
+		}
+	})
 
 	p.ShutDown()
+
+	err = nil
+	cstate.WithActivation(balances, "hard_fork_1", func() {
+		if refreshProvider != nil {
+			err = refreshProvider(req)
+		}
+		if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
+			err = fmt.Errorf("can't kill the stake pool: %v", err)
+		}
+	}, func() {})
+	if err != nil {
+		return err
+	}
 
 	if err = sp.Save(p.Type(), clientId, balances); err != nil {
 		return err
@@ -46,16 +71,6 @@ func ShutDown(
 	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
 		return ownerId == clientId || clientId == sp.GetSettings().DelegateWallet
 	}); err != nil {
-		return err
-	}
-
-	err = nil
-	cstate.WithActivation(balances, "hard_fork_1", func() {}, func() {
-		if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
-			err = fmt.Errorf("can't kill the stake pool: %v", err)
-		}
-	})
-	if err != nil {
 		return err
 	}
 

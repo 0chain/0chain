@@ -57,6 +57,16 @@ func (_ *StorageSmartContract) shutdownBlobber(
 
 			return blobber, sp, nil
 		},
+		func(req provider.ProviderRequest) error {
+			stakePool, err := getStakePool(spenum.Blobber, req.ID, balances)
+			if err != nil {
+				return err
+			}
+
+			stakePool.TotalOffers = 0
+
+			return stakePool.Save(spenum.Blobber, req.ID, balances)
+		},
 		balances,
 	)
 	if err != nil {
@@ -131,6 +141,16 @@ func (_ *StorageSmartContract) shutdownValidator(
 				return nil, nil, err
 			}
 			return validator, sp, nil
+		},
+		func(req provider.ProviderRequest) error {
+			stakePool, err := getStakePool(spenum.Blobber, req.ID, balances)
+			if err != nil {
+				return err
+			}
+
+			stakePool.TotalOffers = 0
+
+			return stakePool.Save(spenum.Blobber, req.ID, balances)
 		},
 		balances,
 	)
