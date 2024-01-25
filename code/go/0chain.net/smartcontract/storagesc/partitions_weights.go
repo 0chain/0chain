@@ -1,3 +1,12 @@
+// This file implements the partition weights for challenge-ready blobber partitions with metadata weights.
+//
+// There are two main parts involved: the partitions of blobber weights and a node that records the weights of each partition.
+// When selecting a blobber to challenge, a random value in the range [0, total weight of all partitions] is generated.
+// The partition is then selected based on the random value, and a blobber is picked from that partition.
+// The implementation details of this selection process can be found in the `pick()` method below.
+//
+// In addition to the `pick()` method, the core function of this partition weights is to keep the blobber weights and partition weights in sync,
+// especially when a blobber weight is added or removed.
 package storagesc
 
 import (
