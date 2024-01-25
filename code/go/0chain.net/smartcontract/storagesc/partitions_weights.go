@@ -17,7 +17,9 @@ import (
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/partitions"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -129,7 +131,6 @@ func (bp *blobberWeightPartitionsWrap) pick(state state.StateContextI, rd *rand.
 }
 
 func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights []BlobberWeight) error {
-	// TODO: init with hard fork activator
 	partWeightMap := make(map[int]int)
 	for _, w := range weights {
 		loc, err := bp.p.AddX(state, &w)
@@ -156,6 +157,48 @@ func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights [
 	bp.partWeights.set(partWeights)
 
 	return bp.save(state)
+}
+
+// migrate migrates the blobber weights from the old partitions to the new partitions
+func (bp *blobberWeightPartitionsWrap) migrate(state state.StateContextI, parts *partitions.Partitions) error {
+	// get all blobbers from the challenge ready blobber partitions
+	crp, err := partitionsChallengeReadyBlobbers(state)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+
+		// do nothing if no challenge ready blobbers
+		return nil
+	}
+
+	total, err := crp.Size(state)
+	if err != nil {
+		return err
+	}
+
+	blobberWeights := make([]BlobberWeight, 0, total)
+	if err := crp.ForEach(state, func(_ string, v []byte) (stop bool) {
+		crb := ChallengeReadyBlobber{}
+		_, err := crb.UnmarshalMsg(v)
+		if err != nil {
+			logging.Logger.Error("unmarshal challenge ready blobber failed", zap.Error(err))
+			stop = true
+			return
+		}
+
+		blobberWeights = append(blobberWeights, BlobberWeight{
+			BlobberID: crb.BlobberID,
+			Weight:    int(crb.GetWeight()),
+		})
+
+		return
+	}); err != nil {
+		return err
+	}
+
+	// init the bp
+	return bp.init(state, blobberWeights)
 }
 
 func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw BlobberWeight) error {
@@ -250,7 +293,7 @@ func (bp *blobberWeightPartitionsWrap) updateWeight(state state.StateContextI, b
 
 func (bp *blobberWeightPartitionsWrap) iterBlobberWeight(state state.StateContextI, partIndex int, cf forEachFunc) error {
 	var err error
-	if ferr := bp.p.ForEach(state, partIndex, func(id string, v []byte) (stop bool) {
+	if ferr := bp.p.ForEachPart(state, partIndex, func(id string, v []byte) (stop bool) {
 		bw := BlobberWeight{}
 		_, err = bw.UnmarshalMsg(v)
 		if err != nil {

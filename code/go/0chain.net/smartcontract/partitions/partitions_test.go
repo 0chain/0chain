@@ -1254,14 +1254,14 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 	return s
 }
 
-func TestPartitionsForEach(t *testing.T) {
+func TestPartitionsForEachPart(t *testing.T) {
 	partsName := "test_pa"
 	s := prepareState(t, partsName, 3, 5)
 	p, err := GetPartitions(s, partsName)
 	require.NoError(t, err)
 
 	var result []string
-	err = p.ForEach(s, 0, func(id string, v []byte) (stop bool) {
+	err = p.ForEachPart(s, 0, func(id string, v []byte) (stop bool) {
 		vd := testItem{}
 		_, err := vd.UnmarshalMsg(v)
 		require.NoError(t, err)
@@ -1273,7 +1273,7 @@ func TestPartitionsForEach(t *testing.T) {
 	require.Equal(t, []string{"k0:v0", "k1:v1", "k2:v2"}, result)
 
 	result = nil
-	err = p.ForEach(s, 1, func(id string, v []byte) (stop bool) {
+	err = p.ForEachPart(s, 1, func(id string, v []byte) (stop bool) {
 		vd := testItem{}
 		_, err := vd.UnmarshalMsg(v)
 		require.NoError(t, err)
@@ -1293,7 +1293,7 @@ func TestPartitionsForEachBreak(t *testing.T) {
 
 	var result []string
 	var count int
-	err = p.ForEach(s, 0, func(id string, v []byte) (stop bool) {
+	err = p.ForEachPart(s, 0, func(id string, v []byte) (stop bool) {
 		count++
 		if count > 2 {
 			// break
@@ -1388,5 +1388,44 @@ func TestPartitionsRemoveX(t *testing.T) {
 			require.Error(t, err)
 			require.True(t, ErrItemNotFound(err))
 		})
+	}
+}
+func TestPartitionsForEach(t *testing.T) {
+	// Pregenerate 20 result items
+	resultItems := make([]string, 20)
+	for i := 0; i < 20; i++ {
+		resultItems[i] = fmt.Sprintf("k%d:v%d", i, i)
+	}
+
+	testCases := []struct {
+		partSize       int
+		totalNumber    int
+		expectedResult []string
+	}{
+		{10, 20, resultItems[:20]},
+		{5, 10, resultItems[:10]},
+		{3, 6, resultItems[:6]},
+		{5, 5, resultItems[:5]},
+		{5, 2, resultItems[:2]},
+		{5, 6, resultItems[:6]},
+		{5, 0, resultItems[:0]},
+	}
+
+	for _, tc := range testCases {
+		s := prepareState(t, "test_for_each", tc.partSize, tc.totalNumber)
+		parts, err := GetPartitions(s, "test_for_each")
+		require.NoError(t, err)
+
+		result := []string{}
+		err = parts.ForEach(s, func(id string, data []byte) (stop bool) {
+			vd := testItem{}
+			_, err := vd.UnmarshalMsg(data)
+			require.NoError(t, err)
+			result = append(result, fmt.Sprintf("%s:%s", id, vd.V))
+			return false
+		})
+
+		require.NoError(t, err)
+		require.Equal(t, tc.expectedResult, result)
 	}
 }
