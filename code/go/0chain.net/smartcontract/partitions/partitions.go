@@ -198,28 +198,28 @@ func (p *Partitions) pack(state state.StateContextI) error {
 	return nil
 }
 
-func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) error {
+func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) (int, error) {
 	it, _, ok := p.Last.find(id)
 	if ok {
 		_, err := v.UnmarshalMsg(it.Data)
-		return err
+		return p.Last.Loc, err
 	}
 
 	loc, ok, err := p.getItemPartIndex(state, id)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	if !ok {
-		return common.NewError(ErrItemNotFoundCode, id)
+		return -1, common.NewError(ErrItemNotFoundCode, id)
 	}
 
 	if err := p.get(state, loc, id, v); err != nil {
-		return err
+		return -1, err
 	}
 
 	p.loadLocations(loc)
-	return nil
+	return loc, nil
 }
 
 // ForEach iterates all items in specific partition,
@@ -355,6 +355,54 @@ func (p *Partitions) Remove(state state.StateContextI, id string) error {
 
 	p.loadLocations(loc)
 	return p.removeItemLoc(state, id)
+}
+
+type RemoveLocs struct {
+	From        int    // the location where the item is removed from
+	Replace     int    // the replace item location from
+	ReplaceItem []byte // the data of the replace item
+}
+
+// RemoveX removes item from the partition and return the replacement item locations or error if any
+func (p *Partitions) RemoveX(state state.StateContextI, id string) (*RemoveLocs, error) {
+	replaceLoc := p.Last.Loc
+	replaceItem := p.Last.tail()
+	_, idx, ok := p.Last.find(id)
+	if ok {
+		if err := p.removeFromLast(state, idx); err != nil {
+			return nil, err
+		}
+
+		return &RemoveLocs{
+			From:        p.Last.Loc,
+			Replace:     replaceLoc,
+			ReplaceItem: replaceItem.Data,
+		}, nil
+	}
+
+	loc, ok, err := p.getItemPartIndex(state, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, common.NewError(ErrItemNotFoundCode, id)
+	}
+
+	if err := p.removeItem(state, id, loc); err != nil {
+		return nil, err
+	}
+
+	p.loadLocations(loc)
+	if err := p.removeItemLoc(state, id); err != nil {
+		return nil, err
+	}
+
+	return &RemoveLocs{
+		From:        loc,
+		Replace:     replaceLoc,
+		ReplaceItem: replaceItem.Data,
+	}, nil
 }
 
 func (p *Partitions) removeFromLast(state state.StateContextI, idx int) error {

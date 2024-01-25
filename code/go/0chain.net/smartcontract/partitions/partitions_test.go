@@ -131,7 +131,7 @@ func TestCreateIfNotExists(t *testing.T) {
 	require.NoError(t, err)
 
 	var it testItem
-	err = p.Get(s, "k1", &it)
+	_, err = p.Get(s, "k1", &it)
 	require.NoError(t, err)
 
 	require.Equal(t, "v1", it.V)
@@ -157,7 +157,7 @@ func TestPartitionsSave(t *testing.T) {
 	require.NoError(t, err)
 
 	var v testItem
-	err = p1.Get(balances, "k15", &v)
+	_, err = p1.Get(balances, "k15", &v)
 	require.NoError(t, err)
 	require.Equal(t, "v15", v.V)
 
@@ -175,7 +175,7 @@ func TestPartitionsSave(t *testing.T) {
 	require.Equal(t, 1, p3.Last.Loc)
 
 	var vv testItem
-	err = p3.Get(balances, "k10", &vv)
+	_, err = p3.Get(balances, "k10", &vv)
 	require.NoError(t, err)
 	require.Equal(t, "vv10", vv.V)
 }
@@ -297,7 +297,7 @@ func TestPartitionsAdd(t *testing.T) {
 			require.NoError(t, err)
 
 			var it testItem
-			err = p.Get(s, tc.it.ID, &it)
+			_, err = p.Get(s, tc.it.ID, &it)
 			require.NoError(t, err)
 			require.Equal(t, tc.it, it)
 		})
@@ -411,7 +411,7 @@ func TestPartitionsRemove(t *testing.T) {
 			// assert the item is removed before committing, i.e p.Save()
 			verify := func() {
 				var it testItem
-				err = p.Get(balances, k, &it)
+				_, err = p.Get(balances, k, &it)
 				require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err)
 
 				// all remaining items should exist
@@ -422,7 +422,7 @@ func TestPartitionsRemove(t *testing.T) {
 
 					it = testItem{}
 					k := fmt.Sprintf("k%d", i)
-					err = p.Get(balances, k, &it)
+					_, err = p.Get(balances, k, &it)
 					require.NoError(t, err)
 					require.Equal(t, &testItem{ID: k, V: fmt.Sprintf("v%d", i)}, &it)
 				}
@@ -534,7 +534,7 @@ func TestPartitionsUpdateItem(t *testing.T) {
 
 			verify := func() {
 				var it testItem
-				err = p.Get(s, tc.update.ID, &it)
+				_, err = p.Get(s, tc.update.ID, &it)
 				require.NoError(t, err)
 				require.Equal(t, &tc.update, &it)
 			}
@@ -654,7 +654,7 @@ func TestPartitionsUpdate(t *testing.T) {
 
 			verify := func() {
 				var it testItem
-				err = p.Get(s, tc.update.ID, &it)
+				_, err = p.Get(s, tc.update.ID, &it)
 				require.NoError(t, err)
 				require.Equal(t, &tc.update, &it)
 			}
@@ -832,7 +832,7 @@ func TestGetRandomItems(t *testing.T) {
 
 			for _, it := range its {
 				var sit testItem
-				err = p.Get(s, it.ID, &sit)
+				_, err = p.Get(s, it.ID, &sit)
 				require.NoError(t, err)
 				require.Equal(t, sit, it)
 			}
@@ -879,7 +879,7 @@ func FuzzAdd(f *testing.F) {
 		p, err = GetPartitions(s, partsName)
 
 		var it testItem
-		err = p.Get(s, k, &it)
+		_, err = p.Get(s, k, &it)
 		require.NoError(t, err)
 		require.Equal(t, fmt.Sprintf("v%d", ks), it.V)
 	})
@@ -966,7 +966,7 @@ func FuzzRemove(f *testing.F) {
 				continue
 			}
 
-			err = p.Get(s, fmt.Sprintf("k%d", i), &testItem{})
+			_, err = p.Get(s, fmt.Sprintf("k%d", i), &testItem{})
 			require.NoError(t, err, "i=%d, k: %d, num: %d", i, ks, num)
 		}
 	})
@@ -1104,7 +1104,7 @@ func FuzzPartitionsUpdateItem(f *testing.F) {
 			// verify the item is updated
 			verify := func() {
 				var it testItem
-				err = p.Get(s, k, &it)
+				_, err = p.Get(s, k, &it)
 				require.NoError(t, err)
 				require.Equal(t, fmt.Sprintf("v%d", updateK+100), it.V)
 			}
@@ -1165,7 +1165,7 @@ func FuzzPartitionsUpdate(f *testing.F) {
 			// verify the item is updated
 			verify := func() {
 				var it testItem
-				err = p.Get(s, k, &it)
+				_, err = p.Get(s, k, &it)
 				require.NoError(t, err)
 				require.Equal(t, fmt.Sprintf("v%d", updateK+100), it.V)
 			}
@@ -1217,7 +1217,7 @@ func FuzzPartitionsGetRandomItems(f *testing.F) {
 
 			for _, it := range its {
 				var sit testItem
-				err = p.Get(s, it.ID, &sit)
+				_, err = p.Get(s, it.ID, &sit)
 				require.NoError(t, err)
 				require.Equal(t, it, sit)
 			}
@@ -1307,4 +1307,74 @@ func TestPartitionsForEachBreak(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, []string{"k0:v0", "k1:v1"}, result)
+}
+func TestPartitionsRemoveX(t *testing.T) {
+	tt := []struct {
+		name     string
+		size     int
+		num      int
+		removeID string
+		expect   RemoveLocs
+	}{
+		{
+			name:     "remove head",
+			size:     3,
+			num:      5,
+			removeID: "k0",
+			expect: RemoveLocs{
+				From:        0,
+				Replace:     1,
+				ReplaceItem: []byte(`{"ID":"k4","V":"v4"}`),
+			},
+		},
+		{
+			name:     "remove middle",
+			size:     3,
+			num:      7,
+			removeID: "k3",
+			expect: RemoveLocs{
+				From:        1,
+				Replace:     2,
+				ReplaceItem: []byte(`{"ID":"k6","V":"v6"}`),
+			},
+		},
+		{
+			name:     "remove tail",
+			size:     3,
+			num:      5,
+			removeID: "k4",
+			expect: RemoveLocs{
+				From:        1,
+				Replace:     1,
+				ReplaceItem: []byte(`{"ID":"k4","V":"v4"}`),
+			},
+		},
+		// Add more test cases here
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			partsName := "test_pa"
+			s := prepareState(t, partsName, tc.size, tc.num)
+			p, err := GetPartitions(s, partsName)
+			require.NoError(t, err)
+
+			// Remove an item from the partition
+			removeLocs, err := p.RemoveX(s, tc.removeID)
+			require.NoError(t, err)
+			require.NotNil(t, removeLocs)
+			err = p.Save(s)
+			require.NoError(t, err)
+
+			// Verify the removed item's location and the replacement item's location
+			require.Equal(t, tc.expect.From, removeLocs.From)
+			require.Equal(t, tc.expect.Replace, removeLocs.Replace)
+			require.Equal(t, tc.expect.ReplaceItem, removeLocs.ReplaceItem)
+
+			// Verify that the removed item is no longer in the partition
+			_, err = p.Get(s, tc.removeID, &testItem{})
+			require.Error(t, err)
+			require.True(t, ErrItemNotFound(err))
+		})
+	}
 }
