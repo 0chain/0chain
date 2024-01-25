@@ -188,3 +188,61 @@ func TestBlobberWeightPartitionsWrapAdd(t *testing.T) {
 		})
 	}
 }
+func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
+	state := newTestBalances(t, false)
+	bp, err := blobberWeightsPartitions(state)
+	require.NoError(t, err)
+
+	weights := []BlobberWeight{
+		{BlobberID: "blobber1", Weight: 10},
+		{BlobberID: "blobber2", Weight: 20},
+		{BlobberID: "blobber3", Weight: 30},
+		{BlobberID: "blobber4", Weight: 15},
+		{BlobberID: "blobber5", Weight: 25},
+		{BlobberID: "blobber6", Weight: 35},
+		{BlobberID: "blobber7", Weight: 40},
+		{BlobberID: "blobber8", Weight: 50},
+		{BlobberID: "blobber9", Weight: 60},
+		{BlobberID: "blobber10", Weight: 70},
+		{BlobberID: "blobber11", Weight: 80},
+	}
+
+	// Initialize blobberWeightPartitionsWrap
+	err = bp.init(state, weights)
+	require.NoError(t, err)
+	bp.save(state)
+
+	// Test removing a blobber from the last partition
+	err = bp.remove(state, "blobber11")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(bp.partWeights.Parts))
+
+	bp.save(state)
+
+	// Test removing a blobber from the same partition as the replace item
+	bp, err = blobberWeightsPartitions(state)
+	require.NoError(t, err)
+
+	err = bp.remove(state, "blobber10")
+	require.NoError(t, err)
+	require.Equal(t, 185, bp.partWeights.Parts[1].Weight)
+	bp.save(state)
+
+	// Test removing a blobber from a different partition than the replace item
+	bp, err = blobberWeightsPartitions(state)
+	require.NoError(t, err)
+	err = bp.remove(state, "blobber2")
+	require.NoError(t, err)
+	// 100 - 20 + 60 = 140
+	require.Equal(t, 140, bp.partWeights.Parts[0].Weight)
+	// 185 - 60 = 125
+	require.Equal(t, 125, bp.partWeights.Parts[1].Weight)
+	bp.save(state)
+
+	bp, err = blobberWeightsPartitions(state)
+	require.NoError(t, err)
+	// Test removing a blobber that doesn't exist
+	err = bp.remove(state, "blobber12")
+	require.Error(t, err)
+	require.Equal(t, "item not found: blobber12", err.Error())
+}
