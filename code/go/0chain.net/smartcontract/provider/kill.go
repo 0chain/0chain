@@ -51,18 +51,22 @@ func Kill(
 	}
 
 	err = nil
-	if p.IsKilled() || p.IsShutDown() {
-		cstate.WithActivation(balances, "hard_fork_1", func() {
+	cstate.WithActivation(balances, "hard_fork_1", func() {
+		if p.IsShutDown() {
+			err = fmt.Errorf("already shutdown")
+		}
+		if p.IsKilled() {
+			err = fmt.Errorf("already killed")
+		}
+	}, func() {
+		if p.IsKilled() || p.IsShutDown() {
 			if refreshProvider != nil {
 				err = refreshProvider(req)
 			}
-		}, func() {})
 
-		return fmt.Errorf("already killed")
-	}
-	if err != nil {
-		return err
-	}
+			err = fmt.Errorf("already killed or shutdown")
+		}
+	})
 
 	p.Kill()
 
