@@ -834,20 +834,9 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		if req.Size > 0 {
-			err = nil
-			chainstate.WithActivation(balances, "hard_fork_1", func() {
-				if b.IsShutDown() || b.IsKilled() {
-					err = common.NewErrorf("allocation_extending_failed",
-						"blobber %s is not active", b.ID)
-				}
-			}, func() {
-				if b.IsKilled() {
-					err = common.NewErrorf("allocation",
-						"blobber %s is not active", b.ID)
-				}
-			})
-			if err != nil {
-				return err
+			if b.IsShutDown() || b.IsKilled() {
+				return common.NewErrorf("allocation_extending_failed",
+					"blobber %s is not active", b.ID)
 			}
 
 			stakedCapacity, err := sp.stakedCapacity(b.Terms.WritePrice)

@@ -1373,6 +1373,7 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 		UncollectedServiceCharge: v.Rewards.Rewards,
 		TotalServiceCharge:       v.Rewards.TotalRewards,
 		IsKilled:                 v.IsKilled,
+		IsShutdown:               v.IsShutdown,
 		LastHealthCheck:          v.LastHealthCheck,
 	}
 }
@@ -2500,6 +2501,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		TotalServiceCharge:       blobber.Rewards.TotalRewards,
 		UncollectedServiceCharge: blobber.Rewards.Rewards,
 		IsKilled:                 blobber.IsKilled,
+		IsShutdown:               blobber.IsShutdown,
 		SavedData:                blobber.SavedData,
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,

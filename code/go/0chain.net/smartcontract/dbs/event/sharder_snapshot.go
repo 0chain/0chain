@@ -16,6 +16,7 @@ type SharderSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
 }
 
 func (ss *SharderSnapshot) GetID() string {
@@ -35,7 +36,7 @@ func (ss *SharderSnapshot) SetRound(round int64) {
 }
 
 func (s *SharderSnapshot) IsOffline() bool {
-	return s.IsKilled
+	return s.IsKilled || s.IsShutdown
 }
 
 func (s *SharderSnapshot) GetTotalStake() currency.Coin {
@@ -84,5 +85,6 @@ func createSharderSnapshotFromSharder(s *Sharder, round int64) *SharderSnapshot 
 		CreationRound: s.CreationRound,
 		TotalRewards:  s.Rewards.TotalRewards,
 		IsKilled:      s.IsKilled,
+		IsShutdown:    s.IsShutdown,
 	}
 }

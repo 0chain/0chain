@@ -45,7 +45,7 @@ func Kill(
 
 	var errCode = "kill_" + p.Type().String() + "_failed"
 	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
-		return ownerId == clientID || ownerId == sp.GetSettings().DelegateWallet
+		return ownerId == clientID
 	}); err != nil {
 		return err
 	}
@@ -69,10 +69,6 @@ func Kill(
 
 	err = nil
 	cstate.WithActivation(balances, "hard_fork_1", func() {
-		if clientID == sp.GetSettings().DelegateWallet {
-			killSlash /= 2 // Penalise 50% only in case of provider is shutting down by delegate wallet
-		}
-
 		if refreshProvider != nil {
 			err = refreshProvider(req)
 		}

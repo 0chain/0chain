@@ -283,6 +283,7 @@ func buildMockBlobber(t *testing.T, pid string) Blobber {
 	curBlobber.WritePrice += 10
 	curBlobber.Capacity += int64(curBlobber.TotalStake) * int64(GB)
 	curBlobber.IsKilled = false
+	curBlobber.IsShutdown = false
 	curBlobber.Rewards = ProviderRewards{}
 	return curBlobber
 }

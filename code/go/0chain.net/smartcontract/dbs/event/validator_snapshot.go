@@ -15,6 +15,7 @@ type ValidatorSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
 }
 
 func (vs *ValidatorSnapshot) GetID() string {
@@ -34,7 +35,7 @@ func (vs *ValidatorSnapshot) SetRound(round int64) {
 }
 
 func (v *ValidatorSnapshot) IsOffline() bool {
-	return v.IsKilled
+	return v.IsKilled || v.IsShutdown
 }
 
 func (v *ValidatorSnapshot) GetTotalStake() currency.Coin {
@@ -82,5 +83,6 @@ func createValidatorSnapshotFromValidator(validator *Validator, round int64) *Va
 		CreationRound: validator.CreationRound,
 		TotalRewards:  validator.Rewards.TotalRewards,
 		IsKilled:      validator.IsKilled,
+		IsShutdown:    validator.IsShutdown,
 	}
 }

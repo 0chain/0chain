@@ -1448,7 +1448,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 
 			breakLoop := false
 			cstate.WithActivation(balances, "hard_fork_1", func() {
-				if blobber.IsKilled() {
+				if blobber.IsKilled() || blobber.IsShutDown() {
 					sa.BlobberAllocs[i] = addedBlobberAllocation
 					sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 

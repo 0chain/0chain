@@ -47,6 +47,7 @@ type Provider struct {
 	Downtime        uint64           `json:"downtime"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	IsKilled        bool             `json:"is_killed"`
+	IsShutdown      bool             `json:"is_shutdown"`
 }
 
 type ProviderAggregate interface {
@@ -69,7 +70,7 @@ func (p *Provider) GetID() string {
 }
 
 func (p *Provider) IsOffline() bool {
-	return p.IsKilled
+	return p.IsKilled || p.IsShutdown
 }
 
 func (p *Provider) BeforeCreate(tx *gorm.DB) (err error) {

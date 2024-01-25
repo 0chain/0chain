@@ -18,6 +18,7 @@ type AuthorizerSnapshot struct {
 	ServiceCharge float64       `json:"service_charge"`
 	CreationRound int64         `json:"creation_round"`
 	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
 }
 
 func (as *AuthorizerSnapshot) GetID() string {
@@ -37,7 +38,7 @@ func (as *AuthorizerSnapshot) SetRound(round int64) {
 }
 
 func (a *AuthorizerSnapshot) IsOffline() bool {
-	return a.IsKilled
+	return a.IsKilled || a.IsShutdown
 }
 
 func (a *AuthorizerSnapshot) GetTotalStake() currency.Coin {
@@ -88,5 +89,6 @@ func createAuthorizerSnapshotFromAuthorizer(authorizer *Authorizer, round int64)
 		TotalMint:     authorizer.TotalMint,
 		TotalBurn:     authorizer.TotalBurn,
 		IsKilled:      authorizer.IsKilled,
+		IsShutdown:    authorizer.IsShutdown,
 	}
 }

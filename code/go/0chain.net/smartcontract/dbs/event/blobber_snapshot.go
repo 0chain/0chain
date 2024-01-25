@@ -28,6 +28,7 @@ type BlobberSnapshot struct {
 	CreationRound       int64         `json:"creation_round"`
 	RankMetric          float64       `json:"rank_metric"`
 	IsKilled            bool          `json:"is_killed"`
+	IsShutdown          bool          `json:"is_shutdown"`
 }
 
 func (bs *BlobberSnapshot) GetID() string {
@@ -47,7 +48,7 @@ func (bs *BlobberSnapshot) SetRound(round int64) {
 }
 
 func (bs *BlobberSnapshot) IsOffline() bool {
-	return bs.IsKilled
+	return bs.IsKilled || bs.IsShutdown
 }
 
 func (edb *EventDb) addBlobberSnapshot(blobbers []*Blobber, round int64) error {
@@ -84,5 +85,6 @@ func createBlobberSnapshotFromBlobber(b *Blobber, round int64) *BlobberSnapshot 
 		CreationRound:       b.CreationRound,
 		RankMetric:          b.RankMetric,
 		IsKilled:            b.IsKilled,
+		IsShutdown:          b.IsShutdown,
 	}
 }

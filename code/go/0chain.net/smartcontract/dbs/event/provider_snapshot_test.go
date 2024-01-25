@@ -15,6 +15,7 @@ func buildMockBlobberSnapshot(t *testing.T, pid string) BlobberSnapshot {
 
 	snap.BlobberID = pid
 	snap.IsKilled = false
+	snap.IsShutdown = false
 	return snap
 }
 
@@ -26,6 +27,7 @@ func buildMockMinerSnapshot(t *testing.T, pid string) MinerSnapshot {
 
 	snap.MinerID = pid
 	snap.IsKilled = false
+	snap.IsShutdown = false
 	return snap
 }
 
@@ -37,6 +39,7 @@ func buildMockSharderSnapshot(t *testing.T, pid string) SharderSnapshot {
 
 	snap.SharderID = pid
 	snap.IsKilled = false
+	snap.IsShutdown = false
 	return snap
 }
 
@@ -48,6 +51,7 @@ func buildMockValidatorSnapshot(t *testing.T, pid string) ValidatorSnapshot {
 
 	snap.ValidatorID = pid
 	snap.IsKilled = false
+	snap.IsShutdown = false
 	return snap
 }
 
@@ -59,5 +63,6 @@ func buildMockAuthorizerSnapshot(t *testing.T, pid string) AuthorizerSnapshot {
 
 	snap.AuthorizerID = pid
 	snap.IsKilled = false
+	snap.IsShutdown = false
 	return snap
 }

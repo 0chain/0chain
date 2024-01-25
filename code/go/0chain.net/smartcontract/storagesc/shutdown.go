@@ -31,65 +31,56 @@ func (_ *StorageSmartContract) shutdownBlobber(
 		return "", common.NewErrorf("shutdown_blobber_failed", "can't get config: %v", err)
 	}
 
-	beforeFunc := func() {
-		err = provider.ShutDown(
-			input,
-			tx.ClientID,
-			conf.OwnerId,
-			func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
-				var err error
-				if blobber, err = getBlobber(req.ID, balances); err != nil {
+	err = provider.ShutDown(
+		input,
+		tx.ClientID,
+		conf.OwnerId,
+		conf.StakePool.KillSlash/2,
+		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
+			var err error
+			if blobber, err = getBlobber(req.ID, balances); err != nil {
+				return nil, nil, common.NewError("shutdown_blobber_failed",
+					"can't get the blobber "+tx.ClientID+": "+err.Error())
+			}
+
+			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
 					return nil, nil, common.NewError("shutdown_blobber_failed",
-						"can't get the blobber "+tx.ClientID+": "+err.Error())
+						"remove blobber form challenge partition, "+err.Error())
 				}
+			}
 
-				if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-					if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
-						return nil, nil, common.NewError("shutdown_blobber_failed",
-							"remove blobber form challenge partition, "+err.Error())
-					}
-				}
-
-				sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
-				if err != nil {
-					return nil, nil, err
-				}
-
-				return blobber, sp, nil
-			},
-			balances,
-		)
-		if err != nil {
-			err = common.NewError("shutdown_blobber_failed", err.Error())
-			return
-		}
-
-		if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
-			_, err = balances.DeleteTrieNode(blobber.GetKey())
+			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
 			if err != nil {
-				err = common.NewErrorf("shutdown_blobber_failed", "deleting blobber: %v", err)
-				return
+				return nil, nil, err
 			}
 
-			if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
-				err = common.NewErrorf("shutdown_blobber_failed", "deleting stakepool: %v", err)
-				return
-			}
-
-			return
-		}
-
-		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-		if err != nil {
-			err = common.NewError("shutdown_blobber_failed", "saving blobber: "+err.Error())
-			return
-		}
-
+			return blobber, sp, nil
+		},
+		balances,
+	)
+	if err != nil {
+		return "", common.NewError("shutdown_blobber_failed", err.Error())
 	}
 
-	cstate.WithActivation(balances, blobber.Id(), beforeFunc, func() {})
+	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
+		_, err = balances.DeleteTrieNode(blobber.GetKey())
+		if err != nil {
+			return "", common.NewErrorf("shutdown_blobber_failed", "deleting blobber: %v", err)
+		}
 
-	return "", err
+		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+			return "", common.NewErrorf("shutdown_blobber_failed", "deleting stakepool: %v", err)
+		}
+
+		return "", nil
+	}
+
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return "", common.NewError("shutdown_blobber_failed", "saving blobber: "+err.Error())
+	}
+	return "", nil
 }
 
 // shutdownValidator
@@ -114,6 +105,7 @@ func (_ *StorageSmartContract) shutdownValidator(
 		input,
 		tx.ClientID,
 		conf.OwnerId,
+		conf.StakePool.KillSlash/2,
 		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {

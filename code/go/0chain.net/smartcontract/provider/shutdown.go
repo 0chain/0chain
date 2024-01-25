@@ -15,6 +15,7 @@ import (
 func ShutDown(
 	input []byte,
 	clientId, ownerId string,
+	killSlash float64,
 	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
 	balances cstate.StateContextI,
 ) error {
@@ -45,6 +46,16 @@ func ShutDown(
 	if err := smartcontractinterface.AuthorizeWithOwner(errCode, func() bool {
 		return ownerId == clientId || clientId == sp.GetSettings().DelegateWallet
 	}); err != nil {
+		return err
+	}
+
+	err = nil
+	cstate.WithActivation(balances, "hard_fork_1", func() {}, func() {
+		if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
+			err = fmt.Errorf("can't kill the stake pool: %v", err)
+		}
+	})
+	if err != nil {
 		return err
 	}
 

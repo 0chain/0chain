@@ -346,6 +346,7 @@ func buildMockSharder(t *testing.T, ownerId string, pid string) Sharder {
 	sharder.ID = pid
 	sharder.DelegateWallet = ownerId
 	sharder.IsKilled = false
+	sharder.IsShutdown = false
 	sharder.Rewards = ProviderRewards{}
 	return sharder
 }
