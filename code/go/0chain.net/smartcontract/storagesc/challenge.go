@@ -898,6 +898,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 func (sc *StorageSmartContract) populateGenerateChallenge(
 	challengeBlobbersPartition *partitions.Partitions,
+	partsWeight *blobberWeightPartitionsWrap,
 	seed int64,
 	validators *partitions.Partitions,
 	txn *transaction.Transaction,
@@ -923,28 +924,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	afterHardFork1 := func() {
-		// load the blobber weights
-		var blobberWeights *blobberWeightPartitionsWrap
-		blobberWeights, err = blobberWeightsPartitions(balances)
-		if err != nil {
-			err = common.NewError("add_challenge", err.Error())
-			return
-		}
-
-		// check if need to migrate from challenge ready blobber partitions,
-		// this should only be done once when hard_fork_1 round hits
-		if blobberWeights.needMigrate {
-			logging.Logger.Debug("add_challenge - hard_fork_1 hit - sync blobber weights!!")
-			err = blobberWeights.migrate(balances, challengeBlobbersPartition)
-			if err != nil {
-				logging.Logger.Debug("add_challenge - sync blobber weights failed", zap.Error(err))
-				err = common.NewError("add_challenge", err.Error())
-				return
-			}
-		}
-
 		// select blobber to challenge
-		blobberID, err = blobberWeights.pick(balances, r)
+		blobberID, err = partsWeight.pick(balances, r)
 		if err != nil {
 			err = common.NewError("add_challenge", err.Error())
 		}
@@ -1202,7 +1183,7 @@ func (sc *StorageSmartContract) genChal(
 			"validators number does not meet minimum challenge requirement")
 	}
 
-	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, partsWeight, err := partitionsChallengeReadyBlobbers(balances)
 	if err != nil {
 		return common.NewErrorf("generate_challenge",
 			"error getting the blobber challenge list: %v", err)
@@ -1231,6 +1212,7 @@ func (sc *StorageSmartContract) genChal(
 
 	result, err := sc.populateGenerateChallenge(
 		challengeReadyParts,
+		partsWeight,
 		int64(seedSource),
 		validators,
 		t,

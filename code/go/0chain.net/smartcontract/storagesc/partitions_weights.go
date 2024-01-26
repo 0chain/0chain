@@ -164,18 +164,7 @@ func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights [
 }
 
 // migrate migrates the blobber weights from the old partitions to the new partitions
-func (bp *blobberWeightPartitionsWrap) migrate(state state.StateContextI, parts *partitions.Partitions) error {
-	// get all blobbers from the challenge ready blobber partitions
-	crp, err := partitionsChallengeReadyBlobbers(state)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return err
-		}
-
-		// do nothing if no challenge ready blobbers
-		return nil
-	}
-
+func (bp *blobberWeightPartitionsWrap) migrate(state state.StateContextI, crp *partitions.Partitions) error {
 	total, err := crp.Size(state)
 	if err != nil {
 		return err

@@ -347,7 +347,7 @@ func TestChangeBlobbers(t *testing.T) {
 		txn.Hash = mockHash
 
 		if arg.blobberInChallenge > 0 {
-			bcPart, err = partitionsChallengeReadyBlobbers(balances)
+			bcPart, _, err = partitionsChallengeReadyBlobbers(balances)
 			require.NoError(t, err)
 			defer func() {
 				err = bcPart.Save(balances)
@@ -511,7 +511,7 @@ func TestChangeBlobbers(t *testing.T) {
 
 		if want.challengeEnabled {
 			for i := 0; i < arg.blobberInChallenge; i++ {
-				bcPart, err := partitionsChallengeReadyBlobbers(balances)
+				bcPart, _, err := partitionsChallengeReadyBlobbers(balances)
 				require.NoError(t, err)
 
 				bcSize, err := bcPart.Size(balances)
@@ -1598,7 +1598,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			allocationID = arg.allocationID
 		)
 
-		bcpartition, err := partitionsChallengeReadyBlobbers(balances)
+		bcpartition, _, err := partitionsChallengeReadyBlobbers(balances)
 		require.NoError(t, err)
 
 		for i := 0; i < arg.numBlobbers; i++ {
@@ -1624,7 +1624,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	}
 
 	validate := func(want want, balances chainState.StateContextI) {
-		bcPart, err := partitionsChallengeReadyBlobbers(balances)
+		bcPart, _, err := partitionsChallengeReadyBlobbers(balances)
 		require.NoError(t, err)
 
 		bcPartSize, err := bcPart.Size(balances)
@@ -1921,7 +1921,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	// commit connection to get update challenge ready partition
 	// assert there's no challenge ready partition before commit connection
-	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, _, err := partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
 	var cit ChallengeReadyBlobber
 	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
@@ -1953,7 +1953,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NotZero(t, resp)
 
 	// assert nb2 is challenge ready
-	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, _, err = partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
 	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.NoError(t, err)
@@ -1993,7 +1993,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert blobber nb2 is removed from challenge ready partition
-	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, _, err = partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
 	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.True(t, partitions.ErrItemNotFound(err))

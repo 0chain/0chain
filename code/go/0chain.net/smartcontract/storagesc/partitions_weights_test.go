@@ -257,7 +257,10 @@ func TestBlobberWeightPartitionsWrapMigrate(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	err = bp.migrate(state, nil)
+	crp, _, err := partitionsChallengeReadyBlobbers(state)
+	require.NoError(t, err)
+
+	err = bp.migrate(state, crp)
 	require.NoError(t, err)
 
 	// Verify that the blobber weights are correctly migrated
