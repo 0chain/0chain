@@ -96,7 +96,7 @@ func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 	b1PartWeight := bp.partWeights.Parts[0]
 	require.Equal(t, 100, b1PartWeight.Weight)
 
-	err = bp.updateWeight(state, ChallengeReadyBlobber{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 11})
+	err = bp.update(state, ChallengeReadyBlobber{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 11})
 	require.NoError(t, err)
 
 	b1w := ChallengeReadyBlobber{}

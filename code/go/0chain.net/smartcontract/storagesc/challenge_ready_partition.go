@@ -105,7 +105,7 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 
 		if exist {
 			// update
-			err = partsWeight.updateWeight(state, *crb)
+			err = partsWeight.update(state, *crb)
 			if err != nil {
 				err = fmt.Errorf("could not update blobber weight: %v", err)
 			}
@@ -151,7 +151,7 @@ func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID 
 	}
 
 	afterHardFork1 := func() {
-		err = partsWeight.updateWeight(state, *crb)
+		err = partsWeight.update(state, *crb)
 	}
 
 	cstate.WithActivation(state, "hard_fork_1", beforeHardFork1, afterHardFork1)
