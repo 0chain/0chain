@@ -1,16 +1,19 @@
 package provider
 
 import (
-	"0chain.net/smartcontract/dbs"
-	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
+
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/stakepool"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 )
+
+var AlreadyKilledError = fmt.Errorf("already killed or shutdown")
 
 type ProviderRequest struct {
 	ID string `json:"provider_id"`
@@ -59,26 +62,21 @@ func Kill(
 			err = fmt.Errorf("already killed")
 		}
 	}, func() {
-		if p.IsKilled() || p.IsShutDown() {
-			if refreshProvider != nil {
-				err = refreshProvider(req)
-			}
-
-			err = fmt.Errorf("already killed or shutdown")
-		}
-	})
-
-	p.Kill()
-
-	err = nil
-	cstate.WithActivation(balances, "hard_fork_1", func() {
 		if refreshProvider != nil {
 			err = refreshProvider(req)
+			if err != nil {
+				return
+			}
 		}
-	}, func() {})
+
+		if p.IsKilled() || p.IsShutDown() {
+			err = AlreadyKilledError
+		}
+	})
 	if err != nil {
 		return err
 	}
+	p.Kill()
 
 	if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
 		return err

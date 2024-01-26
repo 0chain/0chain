@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"errors"
 	"strings"
 
 	"0chain.net/smartcontract/partitions"
@@ -69,6 +70,12 @@ func (_ *StorageSmartContract) shutdownBlobber(
 		},
 		balances,
 	)
+
+	//we intentionally will skip this error and return normally, to be able to refresh the provider
+	if errors.Is(err, provider.AlreadyShutdownError) {
+		return provider.AlreadyShutdownError.Error(), nil
+	}
+
 	if err != nil {
 		return "", common.NewError("shutdown_blobber_failed", err.Error())
 	}

@@ -1411,33 +1411,36 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
-			returnBlobberErrorIfKilled := false
+			blobberIsKilled := false
 			var getBlobberError, activatorError error
-			blobber, err := sc.getBlobber(d.BlobberID, balances)
-			cstate.WithActivation(balances, "hard_fork_1", func() {
-				if blobber.IsKilled() {
-					returnBlobberErrorIfKilled = true
-					getBlobberError = err
-
-					cp, err := sc.getChallengePool(sa.ID, balances)
+			cstate.WithActivation(balances, "hard_fork_1", func() {},
+				func() {
+					blobber, err := sc.getBlobber(d.BlobberID, balances)
 					if err != nil {
-						activatorError = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)
+						getBlobberError = err
+						return
 					}
 
-					err = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
-					if err != nil {
-						activatorError = fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+					if blobber.IsKilled() || blobber.IsShutDown() {
+						blobberIsKilled = true
+
+						cp, err := sc.getChallengePool(sa.ID, balances)
+						if err != nil {
+							activatorError = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)
+						}
+
+						err = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
+						if err != nil {
+							activatorError = fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+						}
 					}
-				}
-			}, func() {})
-			if returnBlobberErrorIfKilled {
-				if getBlobberError != nil {
-					return common.NewError("remove_blobber_failed",
-						"can't get blobber "+d.BlobberID+": "+err.Error())
-				}
-				if activatorError != nil {
-					return common.NewError("remove_blobber_failed", activatorError.Error())
-				}
+				})
+			if getBlobberError != nil {
+				return common.NewError("remove_blobber_failed",
+					"can't get blobber "+d.BlobberID+": "+err.Error())
+			}
+			if activatorError != nil {
+				return common.NewError("remove_blobber_failed", activatorError.Error())
 			}
 
 			if d.Stats.UsedSize > 0 {
@@ -1446,16 +1449,9 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				}
 			}
 
-			breakLoop := false
-			cstate.WithActivation(balances, "hard_fork_1", func() {
-				if blobber.IsKilled() || blobber.IsShutDown() {
-					sa.BlobberAllocs[i] = addedBlobberAllocation
-					sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
-
-					breakLoop = true
-				}
-			}, func() {})
-			if breakLoop {
+			if blobberIsKilled {
+				sa.BlobberAllocs[i] = addedBlobberAllocation
+				sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 				break
 			}
 
@@ -1491,7 +1487,8 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
-			if !returnBlobberErrorIfKilled && getBlobberError != nil {
+			blobber, err := sc.getBlobber(d.BlobberID, balances)
+			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"can't get blobber "+d.BlobberID+": "+err.Error())
 			}

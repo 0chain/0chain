@@ -1,8 +1,10 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
+	"errors"
 	"strings"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
@@ -69,6 +71,15 @@ func (_ *StorageSmartContract) killBlobber(
 		},
 		balances,
 	)
+
+	//we intentionally will skip this error and return normally, to be able to refresh the provider
+	if errors.Is(err, provider.AlreadyKilledError) {
+		return provider.AlreadyKilledError.Error(), nil
+	}
+
+	if err != nil {
+		return "", common.NewError("kill_blobber_failed", err.Error())
+	}
 
 	// delete the blobber from MPT if it's empty and has no stake pools
 	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {

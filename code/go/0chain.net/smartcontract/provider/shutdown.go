@@ -12,6 +12,8 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 )
 
+var AlreadyShutdownError = fmt.Errorf("already killed or shutdown")
+
 func ShutDown(
 	input []byte,
 	clientId, ownerId string,
@@ -44,21 +46,23 @@ func ShutDown(
 				err = refreshProvider(req)
 			}
 
-			err = fmt.Errorf("already killed or shutdown")
+			err = AlreadyShutdownError
 		}
 	})
 
+	if err != nil {
+		return err
+	}
+
 	p.ShutDown()
 
-	err = nil
 	cstate.WithActivation(balances, "hard_fork_1", func() {
-		if refreshProvider != nil {
-			err = refreshProvider(req)
-		}
+	}, func() {
 		if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
 			err = fmt.Errorf("can't kill the stake pool: %v", err)
 		}
-	}, func() {})
+	})
+
 	if err != nil {
 		return err
 	}
