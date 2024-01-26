@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -602,7 +603,8 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	}
 
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
-	return state.NewStateContext(nil,
+	b := block.Block{}
+	return state.NewStateContext(&b,
 		mpt, nil, nil, nil,
 		nil, nil, nil, nil), clean
 }
