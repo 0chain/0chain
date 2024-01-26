@@ -12,7 +12,6 @@ package storagesc
 import (
 	"fmt"
 	"math/rand"
-	"sort"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/encryption"
@@ -36,11 +35,6 @@ type PartitionWeight struct {
 // PartitionsWeights stores all the partitions weight
 type PartitionsWeights struct {
 	Parts []PartitionWeight `msg:"ps"`
-}
-
-func (pws *PartitionsWeights) set(pwv []PartitionWeight) {
-	pws.Parts = make([]PartitionWeight, len(pwv))
-	copy(pws.Parts, pwv)
 }
 
 func (pws *PartitionsWeights) save(state state.StateContextI) error {
@@ -116,35 +110,6 @@ type iterPartFunc func(partIndex int, cf forEachFunc) error
 
 func (bp *blobberWeightPartitionsWrap) pick(state state.StateContextI, rd *rand.Rand) (string, error) {
 	return bp.partWeights.pick(state, rd, bp)
-}
-
-func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights []ChallengeReadyBlobber) error {
-	partWeightMap := make(map[int]int)
-	for _, w := range weights {
-		loc, err := bp.p.AddX(state, &w)
-		if err != nil {
-			return err
-		}
-		partWeightMap[loc] += int(w.GetWeight())
-	}
-
-	partIndexs := make([]int, 0, len(partWeightMap))
-	for pi := range partWeightMap {
-		partIndexs = append(partIndexs, pi)
-	}
-
-	sort.Ints(partIndexs)
-	// add to partition weight
-	partWeights := make([]PartitionWeight, 0, len(partWeightMap))
-	for _, partIndex := range partIndexs {
-		w := partWeightMap[partIndex]
-		// partWeights = append(partWeights, PartitionWeight{Index: partIndex, Weight: w})
-		partWeights = append(partWeights, PartitionWeight{Weight: w})
-	}
-
-	bp.partWeights.set(partWeights)
-
-	return bp.save(state)
 }
 
 // migrate migrates the blobber weights from the challenge ready partitions to the partitions weight

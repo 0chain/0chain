@@ -3,6 +3,7 @@ package storagesc
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"testing"
 	"time"
 
@@ -19,6 +20,39 @@ func testPreparePartWeights(t *testing.T, state state.StateContextI) *blobberWei
 	bp, err := blobberWeightsPartitions(state, p)
 	require.NoError(t, err)
 	return bp
+}
+
+func initBlobberWeightParts(state state.StateContextI, bp *blobberWeightPartitionsWrap, weights []ChallengeReadyBlobber) error {
+	partWeightMap := make(map[int]int)
+	for _, w := range weights {
+		loc, err := bp.p.AddX(state, &w)
+		if err != nil {
+			return err
+		}
+		partWeightMap[loc] += int(w.GetWeight())
+	}
+
+	partIndexs := make([]int, 0, len(partWeightMap))
+	for pi := range partWeightMap {
+		partIndexs = append(partIndexs, pi)
+	}
+
+	sort.Ints(partIndexs)
+	// add to partition weight
+	partWeights := make([]PartitionWeight, 0, len(partWeightMap))
+	for _, partIndex := range partIndexs {
+		w := partWeightMap[partIndex]
+		// partWeights = append(partWeights, PartitionWeight{Index: partIndex, Weight: w})
+		partWeights = append(partWeights, PartitionWeight{Weight: w})
+	}
+
+	// func (pws *PartitionsWeights) set(pwv []PartitionWeight) {
+	bp.partWeights.Parts = make([]PartitionWeight, len(partWeights))
+	copy(bp.partWeights.Parts, partWeights)
+
+	// bp.partWeights.set(partWeights)
+
+	return bp.save(state)
 }
 
 func TestBlobberWeightPartitionsWrapPick(t *testing.T) {
@@ -38,7 +72,7 @@ func TestBlobberWeightPartitionsWrapPick(t *testing.T) {
 
 	state := newTestBalances(t, false)
 	bp := testPreparePartWeights(t, state)
-	err := bp.init(state, weights)
+	err := initBlobberWeightParts(state, bp, weights)
 	require.NoError(t, err)
 
 	// Pick a blobber
@@ -89,7 +123,7 @@ func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 	}
 
 	// Initialize blobberWeightPartitionsWrap
-	err := bp.init(state, weights)
+	err := initBlobberWeightParts(state, bp, weights)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +196,7 @@ func TestBlobberWeightPartitionsWrapAdd(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			state := newTestBalances(t, false)
 			bp := testPreparePartWeights(t, state)
-			err := bp.init(state, tc.initWeights)
+			err := initBlobberWeightParts(state, bp, tc.initWeights)
 			require.NoError(t, err)
 
 			err = bp.add(state, tc.bw)
@@ -204,7 +238,7 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 	}
 
 	// Initialize blobberWeightPartitionsWrap
-	err := bp.init(state, weights)
+	err := initBlobberWeightParts(state, bp, weights)
 	require.NoError(t, err)
 
 	// Test removing a blobber from the last partition
