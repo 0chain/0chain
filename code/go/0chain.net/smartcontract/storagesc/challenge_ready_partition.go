@@ -39,7 +39,7 @@ func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions
 		// this should only be done once when hard_fork_1 round hits
 		if partWeights.needMigrate {
 			logging.Logger.Debug("add_challenge - hard_fork_1 hit - sync blobber weights!!")
-			partWeights.migrate(balances, p)
+			err = partWeights.migrate(balances, p)
 		}
 	}
 
