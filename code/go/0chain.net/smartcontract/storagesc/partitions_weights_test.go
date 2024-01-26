@@ -6,38 +6,40 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/partitions"
 	"github.com/stretchr/testify/require"
 )
 
-func init() {
-	// set for testing only
-	blobberWeightPartitionSize = 5
+var challengeReadyPartSize = 5
+
+func testPreparePartWeights(t *testing.T, state state.StateContextI) *blobberWeightPartitionsWrap {
+	p, err := partitions.CreateIfNotExists(state, "test_challenge_ready_partitions", challengeReadyPartSize)
+	require.NoError(t, err)
+	bp, err := blobberWeightsPartitions(state, p)
+	require.NoError(t, err)
+	return bp
 }
 
 func TestBlobberWeightPartitionsWrapPick(t *testing.T) {
+	weights := []ChallengeReadyBlobber{
+		{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 10},
+		{BlobberID: "blobber2", Stake: 1e10, UsedCapacity: 20},
+		{BlobberID: "blobber3", Stake: 1e10, UsedCapacity: 30},
+		{BlobberID: "blobber4", Stake: 1e10, UsedCapacity: 15},
+		{BlobberID: "blobber5", Stake: 1e10, UsedCapacity: 25},
+		{BlobberID: "blobber6", Stake: 1e10, UsedCapacity: 35},
+		{BlobberID: "blobber7", Stake: 1e10, UsedCapacity: 40},
+		{BlobberID: "blobber8", Stake: 1e10, UsedCapacity: 50},
+		{BlobberID: "blobber9", Stake: 1e10, UsedCapacity: 60},
+		{BlobberID: "blobber10", Stake: 1e10, UsedCapacity: 70},
+		{BlobberID: "blobber11", Stake: 1e10, UsedCapacity: 80},
+	}
+
 	state := newTestBalances(t, false)
-	bp, err := blobberWeightsPartitions(state)
+	bp := testPreparePartWeights(t, state)
+	err := bp.init(state, weights)
 	require.NoError(t, err)
-
-	weights := []BlobberWeight{
-		{BlobberID: "blobber1", Weight: 10},
-		{BlobberID: "blobber2", Weight: 20},
-		{BlobberID: "blobber3", Weight: 30},
-		{BlobberID: "blobber4", Weight: 15},
-		{BlobberID: "blobber5", Weight: 25},
-		{BlobberID: "blobber6", Weight: 35},
-		{BlobberID: "blobber7", Weight: 40},
-		{BlobberID: "blobber8", Weight: 50},
-		{BlobberID: "blobber9", Weight: 60},
-		{BlobberID: "blobber10", Weight: 70},
-		{BlobberID: "blobber11", Weight: 80},
-	}
-
-	// Initialize blobberWeightPartitionsWrap
-	err = bp.init(state, weights)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Pick a blobber
 	rd := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -63,96 +65,95 @@ func TestBlobberWeightPartitionsWrapPick(t *testing.T) {
 		}
 	}
 	for _, bw := range weights {
-		fmt.Println("blobberID:", bw.BlobberID, "weight:", bw.Weight, "picked:", pickMap[bw.BlobberID])
+		fmt.Println("blobberID:", bw.BlobberID, "weight:", bw.GetWeight(), "picked:", pickMap[bw.BlobberID])
 	}
 
 }
 
 func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 	state := newTestBalances(t, false)
-	bp, err := blobberWeightsPartitions(state)
-	require.NoError(t, err)
+	bp := testPreparePartWeights(t, state)
 
-	weights := []BlobberWeight{
-		{BlobberID: "blobber1", Weight: 10},
-		{BlobberID: "blobber2", Weight: 20},
-		{BlobberID: "blobber3", Weight: 30},
-		{BlobberID: "blobber4", Weight: 15},
-		{BlobberID: "blobber5", Weight: 25},
-		{BlobberID: "blobber6", Weight: 35},
-		{BlobberID: "blobber7", Weight: 40},
-		{BlobberID: "blobber8", Weight: 50},
-		{BlobberID: "blobber9", Weight: 60},
-		{BlobberID: "blobber10", Weight: 70},
-		{BlobberID: "blobber11", Weight: 80},
+	weights := []ChallengeReadyBlobber{
+		{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 10},
+		{BlobberID: "blobber2", Stake: 1e10, UsedCapacity: 20},
+		{BlobberID: "blobber3", Stake: 1e10, UsedCapacity: 30},
+		{BlobberID: "blobber4", Stake: 1e10, UsedCapacity: 15},
+		{BlobberID: "blobber5", Stake: 1e10, UsedCapacity: 25},
+		{BlobberID: "blobber6", Stake: 1e10, UsedCapacity: 35},
+		{BlobberID: "blobber7", Stake: 1e10, UsedCapacity: 40},
+		{BlobberID: "blobber8", Stake: 1e10, UsedCapacity: 50},
+		{BlobberID: "blobber9", Stake: 1e10, UsedCapacity: 60},
+		{BlobberID: "blobber10", Stake: 1e10, UsedCapacity: 70},
+		{BlobberID: "blobber11", Stake: 1e10, UsedCapacity: 80},
 	}
 
 	// Initialize blobberWeightPartitionsWrap
-	err = bp.init(state, weights)
+	err := bp.init(state, weights)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b1PartWeight := bp.partWeights.Parts[0]
 	require.Equal(t, 100, b1PartWeight.Weight)
 
-	err = bp.updateWeight(state, BlobberWeight{BlobberID: "blobber1", Weight: 11})
+	err = bp.updateWeight(state, ChallengeReadyBlobber{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 11})
 	require.NoError(t, err)
 
-	b1w := BlobberWeight{}
+	b1w := ChallengeReadyBlobber{}
 	_, err = bp.p.Get(state, "blobber1", &b1w)
 	require.NoError(t, err)
-	require.Equal(t, 11, b1w.Weight)
+	require.Equal(t, 11, int(b1w.UsedCapacity))
 
 	require.Equal(t, 101, bp.partWeights.Parts[0].Weight)
 
 	// reload from state
-	nbp, err := blobberWeightsPartitions(state)
+	nbp := testPreparePartWeights(t, state)
 	loc, err := nbp.p.Get(state, "blobber1", &b1w)
 	require.NoError(t, err)
-	require.Equal(t, 11, b1w.Weight)
+	require.Equal(t, 11, int(b1w.GetWeight()))
 
 	require.NoError(t, err)
 	require.Equal(t, 101, nbp.partWeights.Parts[loc].Weight)
 }
 
 func TestBlobberWeightPartitionsWrapAdd(t *testing.T) {
-	weights := []BlobberWeight{
-		{BlobberID: "blobber1", Weight: 10},
-		{BlobberID: "blobber2", Weight: 20},
-		{BlobberID: "blobber3", Weight: 30},
-		{BlobberID: "blobber4", Weight: 40},
-		{BlobberID: "blobber5", Weight: 50},
-		{BlobberID: "blobber6", Weight: 60},
+	weights := []ChallengeReadyBlobber{
+		{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 10},
+		{BlobberID: "blobber2", Stake: 1e10, UsedCapacity: 20},
+		{BlobberID: "blobber3", Stake: 1e10, UsedCapacity: 30},
+		{BlobberID: "blobber4", Stake: 1e10, UsedCapacity: 40},
+		{BlobberID: "blobber5", Stake: 1e10, UsedCapacity: 50},
+		{BlobberID: "blobber6", Stake: 1e10, UsedCapacity: 60},
 	}
 
 	testCases := []struct {
 		name               string
-		bw                 BlobberWeight
-		initWeights        []BlobberWeight
+		bw                 ChallengeReadyBlobber
+		initWeights        []ChallengeReadyBlobber
 		expectedPartWeight int
 	}{
 		{
 			name:               "Add new BlobberWeight",
 			initWeights:        weights[:3],
-			bw:                 BlobberWeight{BlobberID: "blobber4", Weight: 40},
+			bw:                 ChallengeReadyBlobber{BlobberID: "blobber4", Stake: 1e10, UsedCapacity: 40},
 			expectedPartWeight: 100,
 		},
 		{
 			name:               "Add to empty partition",
-			initWeights:        []BlobberWeight{},
-			bw:                 BlobberWeight{BlobberID: "blobber1", Weight: 10},
+			initWeights:        []ChallengeReadyBlobber{},
+			bw:                 ChallengeReadyBlobber{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 10},
 			expectedPartWeight: 10,
 		},
 		{
 			name:               "Add to last one of a partition",
 			initWeights:        weights[:4],
-			bw:                 BlobberWeight{BlobberID: "blobber5", Weight: 50},
+			bw:                 ChallengeReadyBlobber{BlobberID: "blobber5", Stake: 1e10, UsedCapacity: 50},
 			expectedPartWeight: 150,
 		},
 		{
 			name:               "Add to first one of a new partition",
 			initWeights:        weights[:5],
-			bw:                 BlobberWeight{BlobberID: "blobber6", Weight: 60},
+			bw:                 ChallengeReadyBlobber{BlobberID: "blobber6", Stake: 1e10, UsedCapacity: 60},
 			expectedPartWeight: 60,
 		},
 	}
@@ -160,26 +161,23 @@ func TestBlobberWeightPartitionsWrapAdd(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			state := newTestBalances(t, false)
-			bp, err := blobberWeightsPartitions(state)
-			require.NoError(t, err)
-
-			err = bp.init(state, tc.initWeights)
+			bp := testPreparePartWeights(t, state)
+			err := bp.init(state, tc.initWeights)
 			require.NoError(t, err)
 
 			err = bp.add(state, tc.bw)
 			require.NoError(t, err)
 
 			// Verify that the new BlobberWeight is added correctly
-			bw := BlobberWeight{}
+			bw := ChallengeReadyBlobber{}
 			_, err = bp.p.Get(state, tc.bw.BlobberID, &bw)
 			require.NoError(t, err)
 			require.Equal(t, tc.bw, bw)
 
 			// load bp from state
-			bp, err = blobberWeightsPartitions(state)
-			require.NoError(t, err)
+			bp = testPreparePartWeights(t, state)
 
-			var bw2 BlobberWeight
+			var bw2 ChallengeReadyBlobber
 			loc, err := bp.p.Get(state, tc.bw.BlobberID, &bw2)
 			require.NoError(t, err)
 			require.Equal(t, tc.bw, bw2)
@@ -190,27 +188,24 @@ func TestBlobberWeightPartitionsWrapAdd(t *testing.T) {
 }
 func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 	state := newTestBalances(t, false)
-	bp, err := blobberWeightsPartitions(state)
-	require.NoError(t, err)
-
-	weights := []BlobberWeight{
-		{BlobberID: "blobber1", Weight: 10},
-		{BlobberID: "blobber2", Weight: 20},
-		{BlobberID: "blobber3", Weight: 30},
-		{BlobberID: "blobber4", Weight: 15},
-		{BlobberID: "blobber5", Weight: 25},
-		{BlobberID: "blobber6", Weight: 35},
-		{BlobberID: "blobber7", Weight: 40},
-		{BlobberID: "blobber8", Weight: 50},
-		{BlobberID: "blobber9", Weight: 60},
-		{BlobberID: "blobber10", Weight: 70},
-		{BlobberID: "blobber11", Weight: 80},
+	bp := testPreparePartWeights(t, state)
+	weights := []ChallengeReadyBlobber{
+		{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 10},
+		{BlobberID: "blobber2", Stake: 1e10, UsedCapacity: 20},
+		{BlobberID: "blobber3", Stake: 1e10, UsedCapacity: 30},
+		{BlobberID: "blobber4", Stake: 1e10, UsedCapacity: 15},
+		{BlobberID: "blobber5", Stake: 1e10, UsedCapacity: 25},
+		{BlobberID: "blobber6", Stake: 1e10, UsedCapacity: 35},
+		{BlobberID: "blobber7", Stake: 1e10, UsedCapacity: 40},
+		{BlobberID: "blobber8", Stake: 1e10, UsedCapacity: 50},
+		{BlobberID: "blobber9", Stake: 1e10, UsedCapacity: 60},
+		{BlobberID: "blobber10", Stake: 1e10, UsedCapacity: 70},
+		{BlobberID: "blobber11", Stake: 1e10, UsedCapacity: 80},
 	}
 
 	// Initialize blobberWeightPartitionsWrap
-	err = bp.init(state, weights)
+	err := bp.init(state, weights)
 	require.NoError(t, err)
-	bp.save(state)
 
 	// Test removing a blobber from the last partition
 	err = bp.remove(state, "blobber11")
@@ -220,7 +215,7 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 	bp.save(state)
 
 	// Test removing a blobber from the same partition as the replace item
-	bp, err = blobberWeightsPartitions(state)
+	bp = testPreparePartWeights(t, state)
 	require.NoError(t, err)
 
 	err = bp.remove(state, "blobber10")
@@ -229,7 +224,7 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 	bp.save(state)
 
 	// Test removing a blobber from a different partition than the replace item
-	bp, err = blobberWeightsPartitions(state)
+	bp = testPreparePartWeights(t, state)
 	require.NoError(t, err)
 	err = bp.remove(state, "blobber2")
 	require.NoError(t, err)
@@ -239,7 +234,7 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 	require.Equal(t, 125, bp.partWeights.Parts[1].Weight)
 	bp.save(state)
 
-	bp, err = blobberWeightsPartitions(state)
+	bp = testPreparePartWeights(t, state)
 	require.NoError(t, err)
 	// Test removing a blobber that doesn't exist
 	err = bp.remove(state, "blobber12")
@@ -249,31 +244,31 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 
 func TestBlobberWeightPartitionsWrapMigrate(t *testing.T) {
 	state := newTestBalances(t, false)
-	bp, err := blobberWeightsPartitions(state)
-	require.NoError(t, err)
+	bp := testPreparePartWeights(t, state)
+	// p, err := partitions.CreateIfNotExists(state, "test_crp", challengeReadyPartSize)
 
-	for i := 1; i <= allChallengeReadyBlobbersPartitionSize+1; i++ {
-		err = PartitionsChallengeReadyBlobberAddOrUpdate(state, fmt.Sprintf("blobber%d", i), 10*1e10, uint64(i))
+	for i := 1; i <= challengeReadyPartSize+1; i++ {
+		err := bp.p.Add(state, &ChallengeReadyBlobber{
+			BlobberID:    fmt.Sprintf("blobber%d", i),
+			Stake:        1e10,
+			UsedCapacity: uint64(i * 10)})
 		require.NoError(t, err)
 	}
 
-	crp, _, err := partitionsChallengeReadyBlobbers(state)
-	require.NoError(t, err)
-
-	err = bp.migrate(state, crp)
+	err := bp.migrate(state, bp.p)
 	require.NoError(t, err)
 
 	// Verify that the blobber weights are correctly migrated
-	for i := 1; i <= allChallengeReadyBlobbersPartitionSize+1; i++ {
-		bw := BlobberWeight{}
+	for i := 1; i <= challengeReadyPartSize+1; i++ {
+		bw := ChallengeReadyBlobber{}
 		_, err = bp.p.Get(state, fmt.Sprintf("blobber%d", i), &bw)
 		require.NoError(t, err)
-		require.Equal(t, i*10, bw.Weight)
+		require.Equal(t, i*10, int(bw.GetWeight()))
 	}
 
 	// Verify that the partition weights are correctly migrated
-	expectPartNum := (allChallengeReadyBlobbersPartitionSize + 1) / blobberWeightPartitionSize
-	if (allChallengeReadyBlobbersPartitionSize+1)%blobberWeightPartitionSize != 0 {
+	expectPartNum := (challengeReadyPartSize + 1) / challengeReadyPartSize
+	if (challengeReadyPartSize+1)%challengeReadyPartSize != 0 {
 		expectPartNum++
 	}
 	require.Equal(t, expectPartNum, len(bp.partWeights.Parts))

@@ -224,14 +224,14 @@ func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) 
 
 // ForEachPart iterates all items in specific partition,
 // break whenever the callback function returns false
-func (p *Partitions) ForEachPart(state state.StateContextI, partIndex int, f func(id string, data []byte) (stop bool)) error {
+func (p *Partitions) ForEachPart(state state.StateContextI, partIndex int, f func(partIndex int, id string, data []byte) (stop bool)) error {
 	part, err := p.getPartition(state, partIndex)
 	if err != nil {
 		return err
 	}
 
 	for _, it := range part.Items {
-		if f(it.ID, it.Data) {
+		if f(partIndex, it.ID, it.Data) {
 			break
 		}
 	}
@@ -239,7 +239,7 @@ func (p *Partitions) ForEachPart(state state.StateContextI, partIndex int, f fun
 }
 
 // ForEach iterates all items in all partitions
-func (p *Partitions) ForEach(state state.StateContextI, f func(id string, data []byte) (stop bool)) error {
+func (p *Partitions) ForEach(state state.StateContextI, f func(partIndex int, id string, data []byte) (stop bool)) error {
 	lastIdx := p.Last.Loc
 	for i := 0; i <= lastIdx; i++ {
 		if err := p.ForEachPart(state, i, f); err != nil {

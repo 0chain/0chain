@@ -7,67 +7,6 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z BlobberWeight) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
-	// string "bid"
-	o = append(o, 0x82, 0xa3, 0x62, 0x69, 0x64)
-	o = msgp.AppendString(o, z.BlobberID)
-	// string "w"
-	o = append(o, 0xa1, 0x77)
-	o = msgp.AppendInt(o, z.Weight)
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *BlobberWeight) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var field []byte
-	_ = field
-	var zb0001 uint32
-	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	for zb0001 > 0 {
-		zb0001--
-		field, bts, err = msgp.ReadMapKeyZC(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		case "bid":
-			z.BlobberID, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "BlobberID")
-				return
-			}
-		case "w":
-			z.Weight, bts, err = msgp.ReadIntBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "Weight")
-				return
-			}
-		default:
-			bts, err = msgp.Skip(bts)
-			if err != nil {
-				err = msgp.WrapError(err)
-				return
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z BlobberWeight) Msgsize() (s int) {
-	s = 1 + 4 + msgp.StringPrefixSize + len(z.BlobberID) + 2 + msgp.IntSize
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
 func (z PartitionWeight) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1

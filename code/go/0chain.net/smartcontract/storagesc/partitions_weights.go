@@ -25,19 +25,8 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 var (
-	blobberWeightPartitionKey      = encryption.Hash("blobber_weight_partitions")
-	blobberWeightPartitionSize     = 50
 	blobberPartWeightPartitionsKey = encryption.Hash("blobber_part_weight_partitions")
 )
-
-type BlobberWeight struct {
-	BlobberID string `msg:"bid"`
-	Weight    int    `msg:"w"`
-}
-
-func (bw *BlobberWeight) GetID() string {
-	return bw.BlobberID
-}
 
 // PartitionWeight represents weight of a partition
 type PartitionWeight struct {
@@ -77,8 +66,8 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 		if r <= 0 {
 			// iterate through the partition to find the blobber
 			if err := bwp.iterBlobberWeight(state, pidx,
-				func(id string, bw *BlobberWeight) (stop bool) {
-					br -= bw.Weight
+				func(id string, bw *ChallengeReadyBlobber) (stop bool) {
+					br -= int(bw.GetWeight())
 					if br <= 0 {
 						blobberID = bw.BlobberID
 						// find the blobber, break and return
@@ -102,12 +91,12 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 // blobberWeightPartitionsWrap is a wrapper for blobber weights partitions.Partitions and
 // partitions weights node
 type blobberWeightPartitionsWrap struct {
-	p           *partitions.Partitions
-	partWeights *PartitionsWeights
-	needMigrate bool
+	p           *partitions.Partitions // challenge ready blobbers partitions
+	partWeights *PartitionsWeights     // partitions weights
+	needMigrate bool                   // indicates if the partitions weights need to be migrated
 }
 
-func blobberWeightsPartitions(state state.StateContextI) (*blobberWeightPartitionsWrap, error) {
+func blobberWeightsPartitions(state state.StateContextI, p *partitions.Partitions) (*blobberWeightPartitionsWrap, error) {
 	// load the partition weight if exist
 	var partWeights PartitionsWeights
 	var needMigrate bool
@@ -119,29 +108,24 @@ func blobberWeightsPartitions(state state.StateContextI) (*blobberWeightPartitio
 		needMigrate = true
 	}
 
-	p, err := partitions.CreateIfNotExists(state, blobberWeightPartitionKey, blobberWeightPartitionSize)
-	if err != nil {
-		return nil, err
-	}
-
 	return &blobberWeightPartitionsWrap{p: p, partWeights: &partWeights, needMigrate: needMigrate}, nil
 }
 
-type forEachFunc func(id string, bw *BlobberWeight) bool
+type forEachFunc func(id string, bw *ChallengeReadyBlobber) bool
 type iterPartFunc func(partIndex int, cf forEachFunc) error
 
 func (bp *blobberWeightPartitionsWrap) pick(state state.StateContextI, rd *rand.Rand) (string, error) {
 	return bp.partWeights.pick(state, rd, bp)
 }
 
-func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights []BlobberWeight) error {
+func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights []ChallengeReadyBlobber) error {
 	partWeightMap := make(map[int]int)
 	for _, w := range weights {
 		loc, err := bp.p.AddX(state, &w)
 		if err != nil {
 			return err
 		}
-		partWeightMap[loc] += w.Weight
+		partWeightMap[loc] += int(w.GetWeight())
 	}
 
 	partIndexs := make([]int, 0, len(partWeightMap))
@@ -163,15 +147,10 @@ func (bp *blobberWeightPartitionsWrap) init(state state.StateContextI, weights [
 	return bp.save(state)
 }
 
-// migrate migrates the blobber weights from the old partitions to the new partitions
+// migrate migrates the blobber weights from the challenge ready partitions to the partitions weight
 func (bp *blobberWeightPartitionsWrap) migrate(state state.StateContextI, crp *partitions.Partitions) error {
-	total, err := crp.Size(state)
-	if err != nil {
-		return err
-	}
-
-	blobberWeights := make([]BlobberWeight, 0, total)
-	if err := crp.ForEach(state, func(_ string, v []byte) (stop bool) {
+	bp.partWeights.Parts = make([]PartitionWeight, crp.Last.Loc+1)
+	if err := crp.ForEach(state, func(partIndex int, _ string, v []byte) (stop bool) {
 		crb := ChallengeReadyBlobber{}
 		_, err := crb.UnmarshalMsg(v)
 		if err != nil {
@@ -180,21 +159,17 @@ func (bp *blobberWeightPartitionsWrap) migrate(state state.StateContextI, crp *p
 			return
 		}
 
-		blobberWeights = append(blobberWeights, BlobberWeight{
-			BlobberID: crb.BlobberID,
-			Weight:    int(crb.GetWeight()),
-		})
-
+		bp.partWeights.Parts[partIndex].Weight += int(crb.GetWeight())
 		return
 	}); err != nil {
 		return err
 	}
+	bp.p = crp
 
-	// init the bp
-	return bp.init(state, blobberWeights)
+	return bp.partWeights.save(state)
 }
 
-func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw BlobberWeight) error {
+func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw ChallengeReadyBlobber) error {
 	loc, err := bp.p.AddX(state, &bw)
 	if err != nil {
 		return err
@@ -202,11 +177,11 @@ func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw Blobber
 
 	// update the partition weight
 	if loc >= len(bp.partWeights.Parts) {
-		bp.partWeights.Parts = append(bp.partWeights.Parts, PartitionWeight{Weight: bw.Weight})
+		bp.partWeights.Parts = append(bp.partWeights.Parts, PartitionWeight{Weight: int(bw.GetWeight())})
 		return bp.save(state)
 	}
 
-	bp.partWeights.Parts[loc].Weight += bw.Weight
+	bp.partWeights.Parts[loc].Weight += int(bw.GetWeight())
 	return bp.save(state)
 }
 
@@ -216,7 +191,7 @@ func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw Blobber
 // if the last partition is empty, the partion weight should be removed
 func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobberID string) error {
 	// get the blobber weight to be removed
-	bw := BlobberWeight{}
+	bw := ChallengeReadyBlobber{}
 	_, err := bp.p.Get(state, blobberID, &bw)
 	if err != nil {
 		return err
@@ -235,7 +210,7 @@ func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobber
 	//
 	// if removed item and replace item are in the same partition, just reduce the weight
 	if removeLocs.From == removeLocs.Replace {
-		bp.partWeights.Parts[removeLocs.From].Weight -= bw.Weight
+		bp.partWeights.Parts[removeLocs.From].Weight -= int(bw.GetWeight())
 		// remove if partition weight is 0,
 		if bp.partWeights.Parts[removeLocs.From].Weight == 0 {
 			// remove the last part weight, as 0 weight could only happen when it's last part
@@ -249,32 +224,31 @@ func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobber
 	//
 	// 1. reduce the weight of the replace item's partition, i.e the last one
 	// 2. apply the difference to the removed item's partition
-	repBw := BlobberWeight{}
+	repBw := ChallengeReadyBlobber{}
 	_, err = repBw.UnmarshalMsg(removeLocs.ReplaceItem)
 	if err != nil {
 		return err
 	}
 
 	// reduce the weight of the replace item's partition
-	bp.partWeights.Parts[removeLocs.Replace].Weight -= repBw.Weight
+	bp.partWeights.Parts[removeLocs.Replace].Weight -= int(repBw.GetWeight())
 	// apply the difference to the removed item's partition
-	diff := repBw.Weight - bw.Weight
+	diff := int(repBw.GetWeight()) - int(bw.GetWeight())
 	bp.partWeights.Parts[removeLocs.From].Weight += diff
 	return bp.save(state)
 }
 
-func (bp *blobberWeightPartitionsWrap) updateWeight(state state.StateContextI, bw BlobberWeight) error {
+func (bp *blobberWeightPartitionsWrap) updateWeight(state state.StateContextI, bw ChallengeReadyBlobber) error {
 	var diff int
 	partIndex, err := bp.p.Update(state, bw.BlobberID, func(v []byte) ([]byte, error) {
-		savedBw := BlobberWeight{}
+		savedBw := ChallengeReadyBlobber{}
 		_, err := savedBw.UnmarshalMsg(v)
 		if err != nil {
 			return nil, err
 		}
 
-		diff = bw.Weight - savedBw.Weight
-		savedBw.Weight = bw.Weight
-		return savedBw.MarshalMsg(nil)
+		diff = int(bw.GetWeight()) - int(savedBw.GetWeight())
+		return bw.MarshalMsg(nil)
 	})
 	if err != nil {
 		return err
@@ -286,8 +260,8 @@ func (bp *blobberWeightPartitionsWrap) updateWeight(state state.StateContextI, b
 
 func (bp *blobberWeightPartitionsWrap) iterBlobberWeight(state state.StateContextI, partIndex int, cf forEachFunc) error {
 	var err error
-	if ferr := bp.p.ForEachPart(state, partIndex, func(id string, v []byte) (stop bool) {
-		bw := BlobberWeight{}
+	if ferr := bp.p.ForEachPart(state, partIndex, func(_ int, id string, v []byte) (stop bool) {
+		bw := ChallengeReadyBlobber{}
 		_, err = bw.UnmarshalMsg(v)
 		if err != nil {
 			err = fmt.Errorf("unmarshal blobber weight: %v", err)
