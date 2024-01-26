@@ -62,14 +62,13 @@ func Kill(
 			err = fmt.Errorf("already killed")
 		}
 	}, func() {
-		if refreshProvider != nil {
-			err = refreshProvider(req)
-			if err != nil {
-				return
-			}
-		}
-
 		if p.IsKilled() || p.IsShutDown() {
+			if refreshProvider != nil {
+				err = refreshProvider(req)
+				if err != nil {
+					return
+				}
+			}
 			err = AlreadyKilledError
 		}
 	})
