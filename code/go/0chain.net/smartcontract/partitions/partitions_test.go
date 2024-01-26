@@ -1261,7 +1261,7 @@ func TestPartitionsForEachPart(t *testing.T) {
 	require.NoError(t, err)
 
 	var result []string
-	err = p.ForEachPart(s, 0, func(id string, v []byte) (stop bool) {
+	err = p.ForEachPart(s, 0, func(_ int, id string, v []byte) (stop bool) {
 		vd := testItem{}
 		_, err := vd.UnmarshalMsg(v)
 		require.NoError(t, err)
@@ -1273,7 +1273,7 @@ func TestPartitionsForEachPart(t *testing.T) {
 	require.Equal(t, []string{"k0:v0", "k1:v1", "k2:v2"}, result)
 
 	result = nil
-	err = p.ForEachPart(s, 1, func(id string, v []byte) (stop bool) {
+	err = p.ForEachPart(s, 1, func(_ int, id string, v []byte) (stop bool) {
 		vd := testItem{}
 		_, err := vd.UnmarshalMsg(v)
 		require.NoError(t, err)
@@ -1293,7 +1293,7 @@ func TestPartitionsForEachBreak(t *testing.T) {
 
 	var result []string
 	var count int
-	err = p.ForEachPart(s, 0, func(id string, v []byte) (stop bool) {
+	err = p.ForEachPart(s, 0, func(_ int, id string, v []byte) (stop bool) {
 		count++
 		if count > 2 {
 			// break
@@ -1417,7 +1417,7 @@ func TestPartitionsForEach(t *testing.T) {
 		require.NoError(t, err)
 
 		result := []string{}
-		err = parts.ForEach(s, func(id string, data []byte) (stop bool) {
+		err = parts.ForEach(s, func(_ int, id string, data []byte) (stop bool) {
 			vd := testItem{}
 			_, err := vd.UnmarshalMsg(data)
 			require.NoError(t, err)
