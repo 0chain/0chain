@@ -25,7 +25,7 @@ const (
 
 const notFoundIndex = -1
 
-//msgp:ignore Partitions idIndex
+//msgp:ignore Partitions idIndex RemoveLocs
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type Partitions struct {
