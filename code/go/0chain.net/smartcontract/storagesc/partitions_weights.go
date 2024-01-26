@@ -87,22 +87,22 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 type blobberWeightPartitionsWrap struct {
 	p           *partitions.Partitions // challenge ready blobbers partitions
 	partWeights *PartitionsWeights     // partitions weights
-	needMigrate bool                   // indicates if the partitions weights need to be migrated
+	needSync    bool                   // indicates if the partitions weights need to be synced
 }
 
 func blobberWeightsPartitions(state state.StateContextI, p *partitions.Partitions) (*blobberWeightPartitionsWrap, error) {
 	// load the partition weight if exist
 	var partWeights PartitionsWeights
-	var needMigrate bool
+	var needSync bool
 	if err := state.GetTrieNode(blobberPartWeightPartitionsKey, &partWeights); err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		// mark it as needs migrate if see 'value not present' error, means the first time
-		needMigrate = true
+		// mark it as needs sync if see 'value not present' error, means the first time
+		needSync = true
 	}
 
-	return &blobberWeightPartitionsWrap{p: p, partWeights: &partWeights, needMigrate: needMigrate}, nil
+	return &blobberWeightPartitionsWrap{p: p, partWeights: &partWeights, needSync: needSync}, nil
 }
 
 type forEachFunc func(id string, bw *ChallengeReadyBlobber) bool
@@ -112,8 +112,8 @@ func (bp *blobberWeightPartitionsWrap) pick(state state.StateContextI, rd *rand.
 	return bp.partWeights.pick(state, rd, bp)
 }
 
-// migrate migrates the blobber weights from the challenge ready partitions to the partitions weight
-func (bp *blobberWeightPartitionsWrap) migrate(state state.StateContextI, crp *partitions.Partitions) error {
+// sync syncs the blobber weights from the challenge ready partitions to the partitions weight
+func (bp *blobberWeightPartitionsWrap) sync(state state.StateContextI, crp *partitions.Partitions) error {
 	bp.partWeights.Parts = make([]PartitionWeight, crp.Last.Loc+1)
 	if err := crp.ForEach(state, func(partIndex int, _ string, v []byte) (stop bool) {
 		crb := ChallengeReadyBlobber{}

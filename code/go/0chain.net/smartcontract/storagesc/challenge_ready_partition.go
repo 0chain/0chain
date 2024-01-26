@@ -8,6 +8,7 @@ import (
 	"0chain.net/smartcontract/partitions"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 const allChallengeReadyBlobbersPartitionSize = 50
@@ -37,9 +38,12 @@ func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions
 
 		// check if need to migrate from challenge ready blobber partitions,
 		// this should only be done once when hard_fork_1 round hits
-		if partWeights.needMigrate {
+		if partWeights.needSync {
 			logging.Logger.Debug("add_challenge - hard_fork_1 hit - sync blobber weights!!")
-			err = partWeights.migrate(balances, p)
+			err = partWeights.sync(balances, p)
+			if err != nil {
+				logging.Logger.Error("add_challenge - hard_fork_1 hit - sync blobber weights failed", zap.Error(err))
+			}
 		}
 	}
 

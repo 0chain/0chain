@@ -289,7 +289,7 @@ func TestBlobberWeightPartitionsWrapMigrate(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	err := bp.migrate(state, bp.p)
+	err := bp.sync(state, bp.p)
 	require.NoError(t, err)
 
 	// Verify that the blobber weights are correctly migrated
