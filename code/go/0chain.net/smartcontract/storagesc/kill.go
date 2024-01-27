@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"errors"
 	"strings"
+
+	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
@@ -29,6 +32,7 @@ func (_ *StorageSmartContract) killBlobber(
 		blobber = &StorageNode{}
 		sp      stakepool.AbstractStakePool
 	)
+
 	err = provider.Kill(
 		input,
 		tx.ClientID,
@@ -55,8 +59,24 @@ func (_ *StorageSmartContract) killBlobber(
 
 			return blobber, sp, nil
 		},
+		func(req provider.ProviderRequest) error {
+			stakePool, err := getStakePool(spenum.Blobber, req.ID, balances)
+			if err != nil {
+				return err
+			}
+
+			stakePool.TotalOffers = 0
+
+			return stakePool.Save(spenum.Blobber, req.ID, balances)
+		},
 		balances,
 	)
+
+	//we intentionally will skip this error and return normally, to be able to refresh the provider
+	if errors.Is(err, provider.AlreadyKilledError) {
+		return provider.AlreadyKilledError.Error(), nil
+	}
+
 	if err != nil {
 		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
@@ -131,6 +151,7 @@ func (_ *StorageSmartContract) killValidator(
 			}
 			return validator, sp, nil
 		},
+		nil,
 		balances,
 	)
 	if err != nil {
