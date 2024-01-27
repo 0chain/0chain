@@ -12,10 +12,14 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 )
 
+var AlreadyShutdownError = fmt.Errorf("already killed or shutdown")
+
 func ShutDown(
 	input []byte,
 	clientId, ownerId string,
+	killSlash float64,
 	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
+	refreshProvider func(ProviderRequest) error,
 	balances cstate.StateContextI,
 ) error {
 	var req ProviderRequest
@@ -28,14 +32,40 @@ func ShutDown(
 		return err
 	}
 
-	if p.IsShutDown() {
-		return fmt.Errorf("already shutdown")
-	}
-	if p.IsKilled() {
-		return fmt.Errorf("already killed")
+	err = nil
+	cstate.WithActivation(balances, "hard_fork_1", func() {
+		if p.IsShutDown() {
+			err = fmt.Errorf("already shutdown")
+		}
+		if p.IsKilled() {
+			err = fmt.Errorf("already killed")
+		}
+	}, func() {
+		if p.IsKilled() || p.IsShutDown() {
+			if refreshProvider != nil {
+				err = refreshProvider(req)
+			}
+
+			err = AlreadyShutdownError
+		}
+	})
+
+	if err != nil {
+		return err
 	}
 
 	p.ShutDown()
+
+	cstate.WithActivation(balances, "hard_fork_1", func() {
+	}, func() {
+		if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
+			err = fmt.Errorf("can't kill the stake pool: %v", err)
+		}
+	})
+
+	if err != nil {
+		return err
+	}
 
 	if err = sp.Save(p.Type(), clientId, balances); err != nil {
 		return err
