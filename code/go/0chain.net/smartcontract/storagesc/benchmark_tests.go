@@ -330,11 +330,11 @@ func BenchmarkTests(
 					FreeTokens: request.FreeTokens,
 					Nonce:      request.Nonce,
 					Signature:  signature,
+					Blobbers:   freeBlobbers,
 				})
 				bytes, _ := json.Marshal(&freeStorageAllocationInput{
 					RecipientPublicKey: data.PublicKeys[1],
 					Marker:             string(fsmBytes),
-					Blobbers:           freeBlobbers,
 				})
 				return bytes
 			}(),

@@ -23,11 +23,12 @@ const (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type freeStorageMarker struct {
-	Assigner   string  `json:"assigner"`
-	Recipient  string  `json:"recipient"`
-	FreeTokens float64 `json:"free_tokens"`
-	Nonce      int64   `json:"nonce"`
-	Signature  string  `json:"signature"`
+	Assigner   string   `json:"assigner"`
+	Recipient  string   `json:"recipient"`
+	FreeTokens float64  `json:"free_tokens"`
+	Nonce      int64    `json:"nonce"`
+	Signature  string   `json:"signature"`
+	Blobbers   []string `json:"blobbers"`
 }
 
 func (frm *freeStorageMarker) decode(b []byte) error {
@@ -35,9 +36,8 @@ func (frm *freeStorageMarker) decode(b []byte) error {
 }
 
 type freeStorageAllocationInput struct {
-	RecipientPublicKey string   `json:"recipient_public_key"`
-	Marker             string   `json:"marker"`
-	Blobbers           []string `json:"blobbers"`
+	RecipientPublicKey string `json:"recipient_public_key"`
+	Marker             string `json:"marker"`
 }
 
 func (frm *freeStorageAllocationInput) decode(b []byte) error {
@@ -196,7 +196,11 @@ func verifyFreeAllocationRequest(
 	publicKey string,
 	balances cstate.StateContextI,
 ) (bool, error) {
-	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
+	var ids string
+	for _, b := range frm.Blobbers {
+		ids += b
+	}
+	marker := fmt.Sprintf("%s:%f:%d:%s", frm.Recipient, frm.FreeTokens, frm.Nonce, ids)
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
@@ -258,7 +262,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		OwnerPublicKey:       inputObj.RecipientPublicKey,
 		ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
-		Blobbers:             inputObj.Blobbers,
+		Blobbers:             marker.Blobbers,
 		ThirdPartyExtendable: true,
 	}
 
