@@ -887,7 +887,7 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 }
 
 // Command executing.
-func (r *Runner) Command(name string, params map[string]interface{}, failureThreshold, tm time.Duration) {
+func (r *Runner) Command(name string, params map[string]interface{}, retryCount int, failureThreshold, tm time.Duration) {
 	r.setupTimeout(tm)
 
 	if r.verbose {
@@ -910,21 +910,32 @@ func (r *Runner) Command(name string, params map[string]interface{}, failureThre
 		}
 	}
 
-	r.waitCommand = r.asyncCommand(name, stringParams, failureThreshold)
+	r.waitCommand = r.asyncCommand(name, stringParams, retryCount, failureThreshold)
 }
 
-func (r *Runner) asyncCommand(name string, params map[string]string, failureThreshold time.Duration) (reply chan error) {
+func (r *Runner) asyncCommand(name string, params map[string]string, retryCount int, failureThreshold time.Duration) (reply chan error) {
 	reply = make(chan error)
-	go r.runAsyncCommand(reply, name, params, failureThreshold)
+	fmt.Println("async command")
+	go r.runAsyncCommand(reply, name, params, retryCount, failureThreshold)
 	return
 }
 
-func (r *Runner) runAsyncCommand(reply chan error, name string, params map[string]string, failureThreshold time.Duration) {
-	var err = r.conf.Execute(name, params, failureThreshold)
-	if err != nil {
-		err = fmt.Errorf("%q: %v", name, err)
+func (r *Runner) runAsyncCommand(reply chan error, name string, params map[string]string, retryCount int, failureThreshold time.Duration) {
+	var err error
+	if retryCount == 0 {
+		retryCount = 1
 	}
-	reply <- err // nil or error
+	
+	for i := 0; i < retryCount; i++ {
+		err = r.conf.Execute(name, params, failureThreshold)
+		if err == nil {
+			reply <- nil
+			return
+		}
+		log.Printf(" [ERR] command %q failed: %v", name, err)
+	}
+	
+	reply <- err // nil or error (of the latest run)
 }
 
 //
