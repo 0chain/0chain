@@ -54,7 +54,7 @@ func Kill(
 	}
 
 	err = nil
-	cstate.WithActivation(balances, "hard_fork_1", func() {
+	actErr := cstate.WithActivation(balances, "hard_fork_1", func() {
 		if p.IsShutDown() {
 			err = fmt.Errorf("already shutdown")
 		}
@@ -72,6 +72,9 @@ func Kill(
 			err = AlreadyKilledError
 		}
 	})
+	if actErr != nil {
+		return actErr
+	}
 	if err != nil {
 		return err
 	}

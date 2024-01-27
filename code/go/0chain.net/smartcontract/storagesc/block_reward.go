@@ -25,7 +25,7 @@ type BlobberBlockRewardsInput struct {
 	Round int64 `json:"round,omitempty"`
 }
 
-func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction, input []byte, balances cstate.StateContextI) error {
+func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (ferr error) {
 	logging.Logger.Info("blobberBlockRewards started",
 		zap.Int64("round", balances.GetBlock().Round),
 		zap.String("block_hash", balances.GetBlock().Hash))
@@ -61,7 +61,10 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		}
 	}
 
-	cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	actErr := cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	if actErr != nil {
+		return actErr
+	}
 
 	if returnNil {
 		return nil
@@ -82,17 +85,18 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 			"cannot get all blobbers list: "+err.Error())
 	}
 
-	defer cstate.WithActivation(balances, "hard_fork_1", func() {
-	}, func() {
-		logging.Logger.Info("blobber_block_rewards : cleaning older partition",
-			zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
+	defer func() {
+		ferr = cstate.WithActivation(balances, "hard_fork_1", func() {}, func() {
+			logging.Logger.Info("blobber_block_rewards : cleaning older partition",
+				zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
 
-		_, err = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
-		if err != nil {
-			logging.Logger.Error("blobber_block_rewards_failed",
-				zap.String("deleting blobber reward node", err.Error()))
-		}
-	})
+			_, err = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
+			if err != nil {
+				logging.Logger.Error("blobber_block_rewards_failed",
+					zap.String("deleting blobber reward node", err.Error()))
+			}
+		})
+	}()
 
 	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)
 	var randomSeed int64

@@ -844,7 +844,7 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 		}
 	}
 
-	cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	err = cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
 
 	return "", err
 }

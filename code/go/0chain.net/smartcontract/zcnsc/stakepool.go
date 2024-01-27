@@ -1,6 +1,9 @@
 package zcnsc
 
 import (
+	"errors"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -8,8 +11,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"errors"
-	"fmt"
 	"github.com/0chain/common/core/util"
 )
 
@@ -125,7 +126,10 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 		err = validateStakePoolSettings(settings, gn)
 	}
 
-	cstate.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
+	actErr := cstate.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
+	if actErr != nil {
+		return nil, actErr
+	}
 
 	changed := false
 

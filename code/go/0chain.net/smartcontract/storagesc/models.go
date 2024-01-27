@@ -1413,7 +1413,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 		if d.BlobberID == blobberID {
 			blobberIsKilled := false
 			var getBlobberError, activatorError error
-			cstate.WithActivation(balances, "hard_fork_1", func() {},
+			actErr := cstate.WithActivation(balances, "hard_fork_1", func() {},
 				func() {
 					blobber, err := sc.getBlobber(d.BlobberID, balances)
 					if err != nil {
@@ -1435,6 +1435,9 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 						}
 					}
 				})
+			if actErr != nil {
+				return actErr
+			}
 			if getBlobberError != nil {
 				return common.NewError("remove_blobber_failed",
 					"can't get blobber "+d.BlobberID+": "+err.Error())

@@ -33,7 +33,7 @@ func ShutDown(
 	}
 
 	err = nil
-	cstate.WithActivation(balances, "hard_fork_1", func() {
+	actErr := cstate.WithActivation(balances, "hard_fork_1", func() {
 		if p.IsShutDown() {
 			err = fmt.Errorf("already shutdown")
 		}
@@ -50,19 +50,25 @@ func ShutDown(
 		}
 	})
 
+	if actErr != nil {
+		return actErr
+	}
 	if err != nil {
 		return err
 	}
 
 	p.ShutDown()
 
-	cstate.WithActivation(balances, "hard_fork_1", func() {
+	actErr = cstate.WithActivation(balances, "hard_fork_1", func() {
 	}, func() {
 		if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
 			err = fmt.Errorf("can't kill the stake pool: %v", err)
 		}
 	})
 
+	if actErr != nil {
+		return actErr
+	}
 	if err != nil {
 		return err
 	}
