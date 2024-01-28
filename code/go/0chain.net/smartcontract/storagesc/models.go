@@ -2176,8 +2176,13 @@ type ValidationTicket struct {
 	Signature    string           `json:"signature"`
 }
 
-func (vt *ValidationTicket) VerifySign(balances cstate.StateContextI) (bool, error) {
-	hashData := fmt.Sprintf("%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.Result, vt.Timestamp)
+func (vt *ValidationTicket) VerifySign(balances cstate.StateContextI, version int) (bool, error) {
+	var hashData string
+	if version == 2 {
+		hashData = fmt.Sprintf("%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.Result, vt.Timestamp)
+	} else {
+		hashData = fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
+	}
 	hash := encryption.Hash(hashData)
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(vt.ValidatorKey); err != nil {

@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/smartcontract/provider"
@@ -535,11 +537,63 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 	}
 
 	var (
-		success       = len(cr.ValidationTickets)
 		validators    []string // validators for rewards
 		validatorKeys []string
+		errors        = make([]error, len(cr.ValidationTickets))
+		version       = 1
+		pass          bool
+		wg            sync.WaitGroup
 	)
 
+	if cr.AggregatedSignature != "" {
+		version = 2
+	}
+
+	if version == 1 {
+		var success, failure int32
+		for i := range cr.ValidationTickets {
+			wg.Add(1)
+			go func(i int, vt *ValidationTicket) {
+				defer wg.Done()
+				if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
+					errors[i] = fmt.Errorf("invalid validation ticket: %v", err)
+					return
+				}
+
+				if ok, err := vt.VerifySign(balances, version); !ok || err != nil {
+					errors[i] = fmt.Errorf("invalid validation ticket: %v", err)
+					return
+				}
+
+				validators[i] = vt.ValidatorID
+				if !vt.Result {
+					atomic.AddInt32(&failure, 1)
+					return
+				}
+				atomic.AddInt32(&success, 1)
+			}(i, cr.ValidationTickets[i])
+		}
+
+		wg.Wait()
+
+		// check if there is any error, return the first encountered
+		for _, err := range errors {
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		pass = int(success) > threshold
+
+		return &verifyTicketsResult{
+			pass:       pass,
+			threshold:  threshold,
+			success:    int(success),
+			validators: validators,
+		}, nil
+
+	}
+	success := len(cr.ValidationTickets)
 	for _, vt := range cr.ValidationTickets {
 		if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
 			return nil, fmt.Errorf("invalid validation ticket: %v", err)
@@ -552,14 +606,12 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		return nil, fmt.Errorf("invalid challenge response: %v", err)
 	}
 
-	var (
-		pass = int(success) > threshold
-	)
+	pass = success > threshold
 
 	return &verifyTicketsResult{
 		pass:       pass,
 		threshold:  threshold,
-		success:    int(success),
+		success:    success,
 		validators: validators,
 	}, nil
 }
