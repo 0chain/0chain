@@ -36,8 +36,9 @@ func (frm *freeStorageMarker) decode(b []byte) error {
 }
 
 type freeStorageAllocationInput struct {
-	RecipientPublicKey string `json:"recipient_public_key"`
-	Marker             string `json:"marker"`
+	RecipientPublicKey string   `json:"recipient_public_key"`
+	Marker             string   `json:"marker"`
+	Blobbers           []string `json:"blobbers"`
 }
 
 func (frm *freeStorageAllocationInput) decode(b []byte) error {
@@ -97,7 +98,16 @@ func (fsa *freeStorageAssigner) validate(
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
+	verified := false
+	var err error
+	var beforeHardfork = func() {
+		verified, err = verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
+	}
+	var afterHardfork = func() {
+		verified, err = verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
+	}
+	cstate.WithActivation(balances, "hard_fork_1", beforeHardfork, afterHardfork)
+
 	if err != nil {
 		return err
 	}
@@ -196,6 +206,19 @@ func verifyFreeAllocationRequest(
 	publicKey string,
 	balances cstate.StateContextI,
 ) (bool, error) {
+	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
+	signatureScheme := balances.GetSignatureScheme()
+	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
+		return false, err
+	}
+	return signatureScheme.Verify(frm.Signature, hex.EncodeToString([]byte(marker)))
+}
+
+func verifyFreeAllocationRequestNew(
+	frm freeStorageMarker,
+	publicKey string,
+	balances cstate.StateContextI,
+) (bool, error) {
 	var ids string
 	for _, b := range frm.Blobbers {
 		ids += b
@@ -254,17 +277,35 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marker verification failed: %v", err)
 	}
 
-	var request = newAllocationRequest{
-		DataShards:           conf.FreeAllocationSettings.DataShards,
-		ParityShards:         conf.FreeAllocationSettings.ParityShards,
-		Size:                 conf.FreeAllocationSettings.Size,
-		Owner:                marker.Recipient,
-		OwnerPublicKey:       inputObj.RecipientPublicKey,
-		ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
-		WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
-		Blobbers:             marker.Blobbers,
-		ThirdPartyExtendable: true,
+	var request newAllocationRequest
+	var beforeHardfork = func() {
+		request = newAllocationRequest{
+			DataShards:           conf.FreeAllocationSettings.DataShards,
+			ParityShards:         conf.FreeAllocationSettings.ParityShards,
+			Size:                 conf.FreeAllocationSettings.Size,
+			Owner:                marker.Recipient,
+			OwnerPublicKey:       inputObj.RecipientPublicKey,
+			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
+			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
+			Blobbers:             inputObj.Blobbers,
+			ThirdPartyExtendable: true,
+		}
 	}
+	var afterHardfork = func() {
+		request = newAllocationRequest{
+			DataShards:           conf.FreeAllocationSettings.DataShards,
+			ParityShards:         conf.FreeAllocationSettings.ParityShards,
+			Size:                 conf.FreeAllocationSettings.Size,
+			Owner:                marker.Recipient,
+			OwnerPublicKey:       inputObj.RecipientPublicKey,
+			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
+			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
+			Blobbers:             marker.Blobbers,
+			ThirdPartyExtendable: true,
+		}
+	}
+
+	cstate.WithActivation(balances, "hard_fork_1", beforeHardfork, afterHardfork)
 
 	arBytes, err := request.encode()
 	if err != nil {
