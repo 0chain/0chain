@@ -174,7 +174,7 @@ jobs:
   blobber-01:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@wf/hotfix/flakiness-ct-file
     with:
       test_name: "blobber-1"
       number_of_times: 5
@@ -227,7 +227,7 @@ jobs:
   blobber-03:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@wf/hotfix/flakiness-ct-file
     with:
       test_name: "blobber-3"
       number_of_times: 5
@@ -244,7 +244,7 @@ jobs:
   blobber-04:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@wf/hotfix/flakiness-ct-file
     with:
       test_name: "blobber-4"
       number_of_times: 5
@@ -261,7 +261,7 @@ jobs:
   blobber-05:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@wf/hotfix/flakiness-ct-file
     with:
       test_name: "blobber-5"
       number_of_times: 5
@@ -278,7 +278,7 @@ jobs:
   blobber-06:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@staging
+    uses: 0chain/0chain/.github/workflows/conductor-tests-flakiness.yaml@wf/hotfix/flakiness-ct-file
     with:
       test_name: "blobber-6"
       number_of_times: 5
