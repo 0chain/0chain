@@ -45,7 +45,7 @@ on:
         number_of_times:
           description: 'How many times should the test run'
           type: number
-          default: '10'
+          default: 10
         continue_on_error:
           description: 'Set to true if you want the test to continue if a try was unsuccessful'
           type: boolean
