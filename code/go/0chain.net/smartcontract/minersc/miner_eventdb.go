@@ -101,7 +101,7 @@ func minerTableToMinerNode(edbMiner event.Miner, delegates []event.DelegatePool)
 	return mn
 }
 
-func minerNodeToMinerTable(mn *MinerNode) event.Miner {
+func minerNodeToMinerTable(mn *MinerNode, round int64) event.Miner {
 	return event.Miner{
 		N2NHost:   mn.N2NHost,
 		Host:      mn.Host,
@@ -126,13 +126,14 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 			IsKilled:        mn.Provider.IsKilled(),
 		},
 
-		Active: mn.Status == node.NodeStatusActive,
+		Active:        mn.Status == node.NodeStatusActive,
+		CreationRound: round,
 	}
 }
 
 func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	logging.Logger.Info("emitting add or overwrite miner event")
-	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn))
+	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn, balances.GetBlock().Round))
 }
 
 func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) {

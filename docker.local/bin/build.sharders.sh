@@ -7,8 +7,8 @@ echo "$GIT_COMMIT"
 cmd="build"
 
 # generate swagger
-echo "generating swagger.yaml file"
-docker.local/bin/test.swagger.sh
+#echo "generating swagger.yaml file"
+#docker.local/bin/test.swagger.sh
 
 docker $cmd --build-arg GIT_COMMIT="$GIT_COMMIT" -f docker.local/build.sharder/Dockerfile . -t sharder
 

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
-
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 
@@ -22,7 +21,7 @@ func AddMockEvents(eventDb *event.EventDb) {
 
 	var events []event.Event
 	for round := benchmark.GetOldestAggregateRound(); round < viper.GetInt64(benchmark.NumBlocks); round++ {
-		eventDb.ManagePartitions(round)
+		_ = eventDb.ManagePartitions(round)
 		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			events = append(events, event.Event{
 				BlockNumber: round,
@@ -66,7 +65,7 @@ func AddMockTransactions(
 	}
 	const txnTxnSmartContract = 1000
 	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
-		eventDb.ManagePartitions(blockNumber)
+		_ = eventDb.ManagePartitions(blockNumber)
 		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			if viper.GetBool(benchmark.EventDbEnabled) {
 				transaction := event.Transaction{
@@ -108,7 +107,7 @@ func AddMockBlocks(
 		return
 	}
 	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
-		eventDb.ManagePartitions(blockNumber)
+		_ = eventDb.ManagePartitions(blockNumber)
 		if viper.GetBool(benchmark.EventDbEnabled) {
 			block := event.Block{
 				Hash:                  GetMockBlockHash(blockNumber),
@@ -200,6 +199,8 @@ func AddAggregatePartitions(edb *event.EventDb) {
 			break
 		}
 
-		edb.AddPartitions(round)
+		if err := edb.AddPartitions(round); err != nil {
+			log.Println(err)
+		}
 	}
 }

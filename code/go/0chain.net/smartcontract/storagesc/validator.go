@@ -261,7 +261,7 @@ func (sc *StorageSmartContract) updateValidator(txn *transaction.Transaction,
 			savedValidator.StakePoolSettings.DelegateWallet = *inputValidator.StakePoolSettings.DelegateWallet
 		}
 
-		if err = validateStakePoolSettings(sp.StakePool.Settings, conf); err != nil {
+		if err = validateStakePoolSettings(sp.StakePool.Settings, conf, balances); err != nil {
 			return fmt.Errorf("invalid new stake pool settings:  %v", err)
 		}
 

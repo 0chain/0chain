@@ -110,8 +110,25 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
-	if err := validateStakePoolSettings(settings); err != nil {
-		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
+
+	var err error
+
+	beforeFunc := func() {
+		err = validateStakePoolSettings(settings)
+	}
+
+	afterFunc := func() {
+		gn, err = GetGlobalNode(ctx)
+		if err != nil {
+			return
+		}
+
+		err = validateStakePoolSettings(settings, gn)
+	}
+
+	actErr := cstate.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
+	if actErr != nil {
+		return nil, actErr
 	}
 
 	changed := false
@@ -150,12 +167,16 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 	return nil, fmt.Errorf("no changes have been made to stakepool for authorizerID (%s)", authorizerID)
 }
 
-func validateStakePoolSettings(poolSettings stakepool.Settings) error {
+func validateStakePoolSettings(poolSettings stakepool.Settings, gn ...*GlobalNode) error {
 	if poolSettings.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
 	}
 	if poolSettings.MaxNumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
+	}
+
+	if len(gn) > 0 && poolSettings.MaxNumDelegates > gn[0].MaxDelegates {
+		return errors.New("num_delegates > max_delegates")
 	}
 
 	return nil

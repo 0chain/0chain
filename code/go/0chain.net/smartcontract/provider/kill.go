@@ -13,6 +13,8 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 )
 
+var AlreadyKilledError = fmt.Errorf("already killed or shutdown")
+
 type ProviderRequest struct {
 	ID string `json:"provider_id"`
 }
@@ -31,6 +33,7 @@ func Kill(
 	clientID, ownerId string,
 	killSlash float64,
 	providerSpecific func(ProviderRequest) (AbstractProvider, stakepool.AbstractStakePool, error),
+	refreshProvider func(ProviderRequest) error,
 	balances cstate.StateContextI,
 ) error {
 	var req ProviderRequest
@@ -50,11 +53,30 @@ func Kill(
 		return err
 	}
 
-	if p.IsShutDown() {
-		return fmt.Errorf("already shutdown")
+	err = nil
+	actErr := cstate.WithActivation(balances, "hard_fork_1", func() {
+		if p.IsShutDown() {
+			err = fmt.Errorf("already shutdown")
+		}
+		if p.IsKilled() {
+			err = fmt.Errorf("already killed")
+		}
+	}, func() {
+		if p.IsKilled() || p.IsShutDown() {
+			if refreshProvider != nil {
+				err = refreshProvider(req)
+				if err != nil {
+					return
+				}
+			}
+			err = AlreadyKilledError
+		}
+	})
+	if actErr != nil {
+		return actErr
 	}
-	if p.IsKilled() {
-		return fmt.Errorf("already killed")
+	if err != nil {
+		return err
 	}
 	p.Kill()
 

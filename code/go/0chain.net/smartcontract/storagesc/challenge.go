@@ -681,7 +681,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 	}
 
 	var brStats BlobberRewardNode
-	if err := ongoingParts.Get(balances, blobber.ID, &brStats); err != nil {
+	if _, err := ongoingParts.Get(balances, blobber.ID, &brStats); err != nil {
 		return "", common.NewError("verify_challenge",
 			"can't get blobber reward from partition list: "+err.Error())
 	}
@@ -927,6 +927,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 func (sc *StorageSmartContract) populateGenerateChallenge(
 	challengeBlobbersPartition *partitions.Partitions,
+	partsWeight *blobberWeightPartitionsWrap,
 	seed int64,
 	validators *partitions.Partitions,
 	txn *transaction.Transaction,
@@ -937,9 +938,32 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
 	blobberSelection := challengeBlobberSelection(0) // challengeBlobberSelection(r.Intn(2))
-	blobberID, err := selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
+
+	var (
+		blobberID string
+		err       error
+	)
+
+	beforeHardFork1 := func() {
+		blobberID, err = selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
+		if err != nil {
+			err = common.NewError("add_challenge", err.Error())
+			return
+		}
+	}
+
+	afterHardFork1 := func() {
+		// select blobber to challenge
+		blobberID, err = partsWeight.pick(balances, r)
+		if err != nil {
+			err = common.NewError("add_challenge", err.Error())
+		}
+	}
+
+	cstate.WithActivation(balances, "hard_fork_1", beforeHardFork1, afterHardFork1)
+
 	if err != nil {
-		return nil, common.NewError("add_challenge", err.Error())
+		return nil, err
 	}
 
 	if blobberID == "" {
@@ -1188,7 +1212,7 @@ func (sc *StorageSmartContract) genChal(
 			"validators number does not meet minimum challenge requirement")
 	}
 
-	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, partsWeight, err := partitionsChallengeReadyBlobbers(balances)
 	if err != nil {
 		return common.NewErrorf("generate_challenge",
 			"error getting the blobber challenge list: %v", err)
@@ -1217,6 +1241,7 @@ func (sc *StorageSmartContract) genChal(
 
 	result, err := sc.populateGenerateChallenge(
 		challengeReadyParts,
+		partsWeight,
 		int64(seedSource),
 		validators,
 		t,

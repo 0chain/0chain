@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/hex"
-	"fmt"
 	"os"
 	"path"
 	"sync"
@@ -123,7 +122,7 @@ func getBalances(
 func getMpt(loadPath, _ string, exec *common.WithContextFunc) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in getMpt", r)
+			log.Println("Recovered in getMpt", r)
 		}
 	}()
 	var mptDir string
@@ -196,7 +195,7 @@ func setUpMpt(
 ) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in setUpMpt", r)
+			log.Println("Recovered in setUpMpt", r)
 		}
 	}()
 
@@ -653,9 +652,6 @@ func newEventsDb() *event.EventDb {
 			PartitionKeepCount:    viper.GetInt64(benchmark.EventDbPartitionKeepCount),
 			PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
 		}
-
-		fmt.Println("creating event database with config: DBAccess : %+v, DBSettings: %+v\n", dbAccessConfig, dbSettingsConfig)
-
 		return event.NewEventDbWithoutWorker(dbAccessConfig, dbSettingsConfig)
 	}
 

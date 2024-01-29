@@ -1432,10 +1432,51 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
+			blobberIsKilled := false
+			var getBlobberError, activatorError error
+			actErr := cstate.WithActivation(balances, "hard_fork_1", func() {},
+				func() {
+					blobber, err := sc.getBlobber(d.BlobberID, balances)
+					if err != nil {
+						getBlobberError = err
+						return
+					}
+
+					if blobber.IsKilled() || blobber.IsShutDown() {
+						blobberIsKilled = true
+
+						cp, err := sc.getChallengePool(sa.ID, balances)
+						if err != nil {
+							activatorError = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)
+						}
+
+						err = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
+						if err != nil {
+							activatorError = fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
+						}
+					}
+				})
+			if actErr != nil {
+				return actErr
+			}
+			if getBlobberError != nil {
+				return common.NewError("remove_blobber_failed",
+					"can't get blobber "+d.BlobberID+": "+err.Error())
+			}
+			if activatorError != nil {
+				return common.NewError("remove_blobber_failed", activatorError.Error())
+			}
+
 			if d.Stats.UsedSize > 0 {
 				if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 					return err
 				}
+			}
+
+			if blobberIsKilled {
+				sa.BlobberAllocs[i] = addedBlobberAllocation
+				sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
+				break
 			}
 
 			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc)
@@ -1475,6 +1516,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return common.NewError("fini_alloc_failed",
 					"can't get blobber "+d.BlobberID+": "+err.Error())
 			}
+
 			blobber.SavedData += -d.Stats.UsedSize
 			blobber.Allocated += -d.Size
 			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
@@ -1503,7 +1545,6 @@ func replaceBlobber(
 	sc *StorageSmartContract,
 	clientID string,
 	addedBlobber *StorageNode, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) ([]*StorageNode, error) {
-
 	if err := sa.replaceBlobber(blobberID, sc, balances, clientID, addedBlobberAllocation, now); err != nil {
 		return nil, err
 	}
