@@ -555,7 +555,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 					return
 				}
 
-				if ok, verifyErr := vt.VerifySign(balances, 1); !ok || verifyErr != nil {
+				if ok, verifyErr := vt.VerifySign(balances); !ok || verifyErr != nil {
 					errors[i] = fmt.Errorf("invalid validation ticket: %v", verifyErr)
 					return
 				}
