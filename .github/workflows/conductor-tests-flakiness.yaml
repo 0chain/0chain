@@ -36,6 +36,50 @@ on:
           description: 'Input branch for zwalletcli repo'
           default: ''
           required: false
+  workflow_call:
+    inputs:
+        test_name:
+          description: 'Input name of the conductor test you need to test for flakiness'
+          type: string
+          required: false
+        number_of_times:
+          description: 'How many times should the test run'
+          type: number
+          default: 10
+        continue_on_error:
+          description: 'Set to true if you want the test to continue if a try was unsuccessful'
+          type: boolean
+          default: false
+        chain_branch:
+          description: 'Input branch for 0chain repo'
+          type: string
+          default: ''
+          required: false
+        blobber_branch:
+          description: 'Input branch for blobber repo'
+          type: string
+          default: ''
+          required: false          
+        auth_branch:
+          description: 'Input branch for authorizer repo'
+          type: string
+          default: ''
+          required: false
+        zbox_branch:
+          description: 'Input branch for 0box repo'
+          type: string
+          default: ''
+          required: false
+        zboxcli_branch:
+          description: 'Input branch for zboxcli repo'
+          type: string
+          default: ''
+          required: false
+        zwalletcli_branch:
+          description: 'Input branch for zwalletcli repo'
+          type: string
+          default: ''
+          required: false
 
 env:
   ZDNS_URL: http://198.18.0.98:9091
@@ -460,7 +504,7 @@ jobs:
             echo "[CT-FLAKY-LOG] ❌ Conductor test attempt $i failed"
             zip -r -q "./conductor-flakiness-logs/attempt-$i-failure.zip" ./conductor-full-logs
             failure=$((failure + 1))
-            if [ ${{ inputs.continue_on_error }} = "false" ]; then
+            if [ ${{ inputs.continue_on_error }} ]; then
               echo "👋🏻 Exiting flakiness test"
               exit 1
             fi
