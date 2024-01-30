@@ -76,5 +76,6 @@ tests:
       - stop_challenge_generation: false
       - wait_challenge_generation:
           timeout: "5m"
+      - sleep: "10s"
       - wait_challenge_status:
           timeout: "5m"
