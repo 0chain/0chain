@@ -819,7 +819,7 @@ func init() {
 	register("wait_challenge_status", func(_ string, ex Executor, _ interface{}, tm time.Duration) (err error) {
 		log.Println("Jayash wait_challenge_status")
 
-		//ex.WaitForChallengeStatus(tm)
+		ex.WaitForChallengeStatus(tm)
 		return nil
 	})
 
