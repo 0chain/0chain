@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"errors"
 	"strings"
 
 	"0chain.net/smartcontract/partitions"
@@ -35,6 +36,7 @@ func (_ *StorageSmartContract) shutdownBlobber(
 		input,
 		tx.ClientID,
 		conf.OwnerId,
+		conf.StakePool.KillSlash/2,
 		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if blobber, err = getBlobber(req.ID, balances); err != nil {
@@ -56,8 +58,24 @@ func (_ *StorageSmartContract) shutdownBlobber(
 
 			return blobber, sp, nil
 		},
+		func(req provider.ProviderRequest) error {
+			stakePool, err := getStakePool(spenum.Blobber, req.ID, balances)
+			if err != nil {
+				return err
+			}
+
+			stakePool.TotalOffers = 0
+
+			return stakePool.Save(spenum.Blobber, req.ID, balances)
+		},
 		balances,
 	)
+
+	//we intentionally will skip this error and return normally, to be able to refresh the provider
+	if errors.Is(err, provider.AlreadyShutdownError) {
+		return provider.AlreadyShutdownError.Error(), nil
+	}
+
 	if err != nil {
 		return "", common.NewError("shutdown_blobber_failed", err.Error())
 	}
@@ -104,6 +122,7 @@ func (_ *StorageSmartContract) shutdownValidator(
 		input,
 		tx.ClientID,
 		conf.OwnerId,
+		conf.StakePool.KillSlash/2,
 		func(req provider.ProviderRequest) (provider.AbstractProvider, stakepool.AbstractStakePool, error) {
 			var err error
 			if err = balances.GetTrieNode(provider.GetKey(req.ID), validator); err != nil {
@@ -129,6 +148,16 @@ func (_ *StorageSmartContract) shutdownValidator(
 				return nil, nil, err
 			}
 			return validator, sp, nil
+		},
+		func(req provider.ProviderRequest) error {
+			stakePool, err := getStakePool(spenum.Blobber, req.ID, balances)
+			if err != nil {
+				return err
+			}
+
+			stakePool.TotalOffers = 0
+
+			return stakePool.Save(spenum.Blobber, req.ID, balances)
 		},
 		balances,
 	)
