@@ -5,9 +5,9 @@ enable:
 
 # sets of test cases
 sets:
-#  - name: "Adversarial validator"
-#    tests:
-#      - "Challenge should pass with minority validator being adversarial"
+  - name: "Adversarial validator"
+    tests:
+      - "Challenge should pass with minority validator being adversarial"
   - name: "Client Operation"
     tests:
       - "Blobber should pass challenge for a file which is deleted but WM is not committed"
