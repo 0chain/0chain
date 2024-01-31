@@ -96,7 +96,7 @@ smart_contracts:
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1048576
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_rounds: 100
+    max_challenge_completion_rounds: 1200
     # min blobber capacity allowed by the SC
     min_blobber_capacity: 10737418240
     # fraction of the allocation cost that is locked in the cancellation charge
@@ -152,7 +152,7 @@ smart_contracts:
     challenge_enabled: true
     challenge_generation_gap : 3
     # number of validators per challenge
-    validators_per_challenge: 2
+    validators_per_challenge: 3
     num_validators_rewarded: 10
     max_blobber_select_for_challenge: 5
     # max delegates per stake pool allowed by SC
