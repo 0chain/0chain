@@ -106,7 +106,6 @@ func blobberWeightsPartitions(state state.StateContextI, p *partitions.Partition
 }
 
 type forEachFunc func(id string, bw *ChallengeReadyBlobber) bool
-type iterPartFunc func(partIndex int, cf forEachFunc) error
 
 func (bp *blobberWeightPartitionsWrap) pick(state state.StateContextI, rd *rand.Rand) (string, error) {
 	return bp.partWeights.pick(state, rd, bp)

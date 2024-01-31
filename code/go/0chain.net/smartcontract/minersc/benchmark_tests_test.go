@@ -16,9 +16,6 @@ func TestMinerBenchmarkTests(t *testing.T) {
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()
 	mockSigScheme.On("Sign", mock.Anything).Return("", nil)
 
-	// TODO: get them tested and remove
-	untestedFunctions := 1
-
 	var msc = &MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 		bcContext:     &smartcontract.BCContext{},
@@ -28,7 +25,7 @@ func TestMinerBenchmarkTests(t *testing.T) {
 
 	require.EqualValues(
 		t,
-		len(msc.smartContractFunctions)-untestedFunctions,
+		len(msc.smartContractFunctions),
 		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }
