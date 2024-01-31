@@ -139,4 +139,4 @@ tests:
       - wait_challenge_generation:
           timeout: "5m"
       - wait_challenge_status:
-          timeout: "50m"
+          timeout: "5m"
