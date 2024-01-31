@@ -203,6 +203,8 @@ func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobber
 }
 
 func (bp *blobberWeightPartitionsWrap) update(state state.StateContextI, bw ChallengeReadyBlobber) error {
+	logging.Logger.Info("update blobber weight", zap.Any("bw", bw), zap.Any("weight", bw.GetWeight()))
+
 	var diff int
 	partIndex, err := bp.p.Update(state, bw.BlobberID, func(v []byte) ([]byte, error) {
 		savedBw := ChallengeReadyBlobber{}
