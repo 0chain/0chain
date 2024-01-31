@@ -10,7 +10,7 @@ sets:
       - "Challenge should pass with minority validator being adversarial"
   - name: "Client Operation"
     tests:
-      - "Chain should generate challenges for a file which is deleted but WM is not committed"
+      - "Blobber should pass challenge for a file which is deleted but WM is not committed"
 
 # test cases
 tests:
@@ -78,7 +78,7 @@ tests:
       - wait_challenge_status:
           timeout: "5m"
 
-  - name: "Chain should generate challenges for a file which is deleted but WM is not committed"
+  - name: "Blobber should pass challenge for a file which is deleted but WM is not committed"
     flow:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
@@ -142,4 +142,6 @@ tests:
           name: "delete"
       - stop_challenge_generation: false
       - wait_challenge_generation:
+          timeout: "5m"
+      - wait_challenge_status:
           timeout: "5m"
