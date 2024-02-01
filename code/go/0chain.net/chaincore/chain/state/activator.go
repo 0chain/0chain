@@ -1,12 +1,7 @@
 package state
 
 import (
-	"errors"
 	"math"
-
-	"github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/util"
-	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -34,19 +29,17 @@ func GetRoundByName(c StateContextI, name string) (int64, error) {
 	return fork.round, nil
 }
 
-func WithActivation(ctx StateContextI, name string, before func(), after func()) error {
+func WithActivation(ctx StateContextI, name string, before func() error, after func() error) error {
 	round, err := GetRoundByName(ctx, name)
 	if err != nil {
-		logging.Logger.Error("with_activation", zap.Error(err))
-	}
-	if errors.Is(err, util.ErrNodeNotFound) {
 		return err
 	}
+
 	if ctx.GetBlock().Round < round {
-		before()
+		err = before()
 	} else {
-		after()
+		err = after()
 	}
 
-	return nil
+	return err
 }

@@ -110,23 +110,20 @@ func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
 	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
-
-	var err error
-
-	beforeFunc := func() {
-		err = validateStakePoolSettings(settings)
+	beforeFunc := func() (e error) {
+		return validateStakePoolSettings(settings)
 	}
 
-	afterFunc := func() {
-		gn, err = GetGlobalNode(ctx)
-		if err != nil {
+	afterFunc := func() (e error) {
+		gn, e = GetGlobalNode(ctx)
+		if e != nil {
 			return
 		}
 
-		err = validateStakePoolSettings(settings, gn)
+		return validateStakePoolSettings(settings, gn)
 	}
 
-	actErr := cstate.WithActivation(ctx, "hard_fork_1", beforeFunc, afterFunc)
+	actErr := cstate.WithActivation(ctx, "apollo", beforeFunc, afterFunc)
 	if actErr != nil {
 		return nil, actErr
 	}
