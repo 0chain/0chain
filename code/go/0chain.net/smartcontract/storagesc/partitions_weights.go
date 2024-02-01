@@ -222,7 +222,10 @@ func (bp *blobberWeightPartitionsWrap) update(state state.StateContextI, bw Chal
 		return err
 	}
 
-	logging.Logger.Info("2update blobber weight", zap.Any("diff", diff), zap.Any("bp", bp))
+	logging.Logger.Info("2update blobber weight", zap.Any("diff", diff), zap.Any("bp", bp), zap.Any("partIndex", partIndex),
+		zap.Any("bp.partWeights.Parts", bp.partWeights.Parts),
+		zap.Any("bp.partWeights.Parts[partIndex]", bp.partWeights.Parts[partIndex]),
+		zap.Any("p", bp.p))
 
 	bp.partWeights.Parts[partIndex].Weight += diff
 	return bp.save(state)
