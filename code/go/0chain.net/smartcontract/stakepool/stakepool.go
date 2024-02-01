@@ -837,7 +837,7 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 	}
 
 	afterFunc := func() {
-		if len(sp.GetPools()) > sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+		if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
 			err = common.NewErrorf("stake_pool_lock_failed",
 				"max_delegates reached: %v, no more stake pools allowed",
 				vs.MaxNumDelegates)
