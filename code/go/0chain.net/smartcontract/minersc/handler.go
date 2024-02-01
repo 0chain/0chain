@@ -354,11 +354,10 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var err error
-	var miner event.Miner
-	miner, err = edb.GetMiner(id)
+	miner, dp, err := edb.GetMinerWithDelegatePools(id)
 	if err == nil {
 		common.Respond(w, r, nodeStat{
-			NodeResponse: minerTableToMinerNode(miner, nil),
+			NodeResponse: minerTableToMinerNode(miner, dp),
 			TotalReward:  int64(miner.Rewards.TotalRewards),
 		}, nil)
 		return
