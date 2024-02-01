@@ -99,17 +99,18 @@ func (fsa *freeStorageAssigner) validate(
 	balances cstate.StateContextI,
 ) error {
 	verified := false
-	var err error
-	var beforeHardfork = func() {
-		verified, err = verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
+	var beforeHardfork = func() (e error) {
+		verified, e = verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
+		return e
 	}
-	var afterHardfork = func() {
-		verified, err = verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
+	var afterHardfork = func() (e error) {
+		verified, e = verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
+		return e
 	}
-	cstate.WithActivation(balances, "hard_fork_1", beforeHardfork, afterHardfork)
+	actErr := cstate.WithActivation(balances, "hard_fork_1", beforeHardfork, afterHardfork)
 
-	if err != nil {
-		return err
+	if actErr != nil {
+		return actErr
 	}
 	if !verified {
 		return fmt.Errorf("failed to verify signature")
@@ -278,7 +279,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	var request newAllocationRequest
-	var beforeHardfork = func() {
+	var beforeHardfork = func() (e error) {
 		request = newAllocationRequest{
 			DataShards:           conf.FreeAllocationSettings.DataShards,
 			ParityShards:         conf.FreeAllocationSettings.ParityShards,
@@ -290,8 +291,10 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			Blobbers:             inputObj.Blobbers,
 			ThirdPartyExtendable: true,
 		}
+
+		return
 	}
-	var afterHardfork = func() {
+	var afterHardfork = func() (e error) {
 		request = newAllocationRequest{
 			DataShards:           conf.FreeAllocationSettings.DataShards,
 			ParityShards:         conf.FreeAllocationSettings.ParityShards,
@@ -303,9 +306,14 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			Blobbers:             marker.Blobbers,
 			ThirdPartyExtendable: true,
 		}
+
+		return
 	}
 
-	cstate.WithActivation(balances, "hard_fork_1", beforeHardfork, afterHardfork)
+	err = cstate.WithActivation(balances, "apollo", beforeHardfork, afterHardfork)
+	if err != nil {
+		return "", err
+	}
 
 	arBytes, err := request.encode()
 	if err != nil {
