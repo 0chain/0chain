@@ -53,28 +53,30 @@ func Kill(
 		return err
 	}
 
-	err = nil
-	cstate.WithActivation(balances, "hard_fork_1", func() {
+	actErr := cstate.WithActivation(balances, "apollo", func() (e error) {
 		if p.IsShutDown() {
-			err = fmt.Errorf("already shutdown")
+			return fmt.Errorf("already shutdown")
 		}
 		if p.IsKilled() {
-			err = fmt.Errorf("already killed")
+			return fmt.Errorf("already killed")
 		}
-	}, func() {
+		return nil
+	}, func() (e error) {
 		if p.IsKilled() || p.IsShutDown() {
 			if refreshProvider != nil {
-				err = refreshProvider(req)
-				if err != nil {
-					return
+				e = refreshProvider(req)
+				if e != nil {
+					return e
 				}
 			}
-			err = AlreadyKilledError
+			e = AlreadyKilledError
 		}
+		return e
 	})
-	if err != nil {
-		return err
+	if actErr != nil {
+		return actErr
 	}
+
 	p.Kill()
 
 	if err := sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
