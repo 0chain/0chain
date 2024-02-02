@@ -44,6 +44,9 @@ func ShutDown(
 		if p.IsKilled() || p.IsShutDown() {
 			if refreshProvider != nil {
 				e = refreshProvider(req)
+				if e != nil {
+					return e
+				}
 			}
 
 			e = AlreadyShutdownError
