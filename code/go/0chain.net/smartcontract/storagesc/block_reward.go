@@ -44,32 +44,33 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 
 	var returnNil bool
 
-	beforeFunc := func() {
+	beforeFunc := func() (e error) {
 		if conf.BlockReward.BlockReward == 0 {
 			returnNil = true
 		}
+		return nil
 	}
 
-	afterFunc := func() {
+	afterFunc := func() (e error) {
 		if conf.BlockReward.BlockReward == 0 || conf.BlockReward.TriggerPeriod == 0 {
 			returnNil = true
 		}
 
 		if balances.GetBlock().Round%conf.BlockReward.TriggerPeriod != 0 {
-			err = common.NewError("blobber_block_rewards_failed",
+			e = common.NewError("blobber_block_rewards_failed",
 				"block reward trigger period not reached")
 		}
+
+		return e
 	}
 
-	actErr := cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	actErr := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
 	if actErr != nil {
 		return actErr
 	}
 
 	if returnNil {
 		return nil
-	} else if err != nil {
-		return err
 	}
 
 	bbr, err := getBlockReward(conf.BlockReward.BlockReward, balances.GetBlock().Round,
@@ -86,7 +87,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 	}
 
 	defer func() {
-		ferr = cstate.WithActivation(balances, "hard_fork_1", func() {}, func() {
+		ferr = cstate.WithActivation(balances, "apollo", func() (e error) { return nil }, func() (e error) {
 			logging.Logger.Info("blobber_block_rewards : cleaning older partition",
 				zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
 
@@ -95,6 +96,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 				logging.Logger.Error("blobber_block_rewards_failed",
 					zap.String("deleting blobber reward node", err.Error()))
 			}
+			return e
 		})
 	}()
 
