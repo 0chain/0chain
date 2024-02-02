@@ -1033,6 +1033,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	if len(randValidators) < needValidNum {
+		logging.Logger.Info("2Jayash generate_challenge", zap.Int("validator num", len(randValidators)), zap.Int("minimum required", needValidNum))
+
 		return nil, errors.New("validators number does not meet minimum challenge requirement")
 	}
 
@@ -1047,6 +1049,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	for i := 0; i < len(randValidators) && len(selectedValidators) < needValidNum; i++ {
 		if remainingValidators < needValidNum {
+			logging.Logger.Info("3Jayash generate_challenge", zap.Int("validator num", remainingValidators), zap.Int("minimum required", needValidNum))
+
 			return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
 		}
 		randValidator := randValidators[perm[i]]
@@ -1097,6 +1101,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	if len(selectedValidators) < needValidNum {
+		logging.Logger.Info("4Jayash generate_challenge", zap.Int("validator num", len(selectedValidators)), zap.Int("minimum required", needValidNum))
+
 		return nil, errors.New("validators number does not meet minimum challenge requirement after filtering")
 	}
 
@@ -1173,6 +1179,8 @@ func (sc *StorageSmartContract) genChal(
 	if err != nil {
 		return fmt.Errorf("can't get validators partition size: %v", err.Error())
 	}
+
+	logging.Logger.Info("1Jayash generate_challenge", zap.Int("validator num", currentValidatorsCount), zap.Int("minimum required", needValidNum))
 
 	if currentValidatorsCount < needValidNum {
 		err := errors.New("validators number does not meet minimum challenge requirement")
