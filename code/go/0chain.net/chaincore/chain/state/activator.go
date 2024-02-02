@@ -24,7 +24,7 @@ func (h *HardFork) GetKey() string {
 
 }
 
-func GetRoundByName(c StateContextI, name string) (int64, error) {
+func GetRoundByName(c CommonStateContextI, name string) (int64, error) {
 	fork := NewHardFork(name, 0)
 	err := c.GetTrieNode(fork.GetKey(), fork)
 	if err != nil {
