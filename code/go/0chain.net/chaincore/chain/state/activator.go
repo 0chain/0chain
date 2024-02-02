@@ -24,7 +24,7 @@ func (h *HardFork) GetKey() string {
 
 }
 
-func GetRoundByName(c StateContextI, name string) (int64, error) {
+func GetRoundByName(c CommonStateContextI, name string) (int64, error) {
 	fork := NewHardFork(name, 0)
 	err := c.GetTrieNode(fork.GetKey(), fork)
 	if err != nil {
@@ -34,7 +34,7 @@ func GetRoundByName(c StateContextI, name string) (int64, error) {
 	return fork.round, nil
 }
 
-func WithActivation(ctx StateContextI, name string, before func(), after func()) error {
+func WithActivation(ctx StateContextI, name string, before func() error, after func() error) error {
 	round, err := GetRoundByName(ctx, name)
 	if err != nil {
 		logging.Logger.Error("with_activation", zap.Error(err))
@@ -43,10 +43,10 @@ func WithActivation(ctx StateContextI, name string, before func(), after func())
 		return err
 	}
 	if ctx.GetBlock().Round < round {
-		before()
+		err = before()
 	} else {
-		after()
+		err = after()
 	}
 
-	return nil
+	return err
 }

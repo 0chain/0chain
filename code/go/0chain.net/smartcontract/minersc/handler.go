@@ -1,12 +1,14 @@
 package minersc
 
 import (
-	"0chain.net/smartcontract/storagesc"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/storagesc"
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
@@ -57,6 +59,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/nodeStat", common.UserRateLimit(mrh.getNodeStat)),
 		rest.MakeEndpoint(miner+"/nodePoolStat", common.UserRateLimit(mrh.getNodePoolStat)),
 		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
+		rest.MakeEndpoint(miner+"/hardfork", common.UserRateLimit(mrh.getHardfork)),
 		rest.MakeEndpoint(miner+"/provider-rewards", common.UserRateLimit(mrh.getProviderRewards)),
 		rest.MakeEndpoint(miner+"/delegate-rewards", common.UserRateLimit(mrh.getDelegateRewards)),
 
@@ -195,6 +198,28 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 	}
 	rtv, err := gn.getConfigMap()
 	common.Respond(w, r, rtv, err)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/hardfork hardfork
+// get hardfork by name
+//
+// responses:
+//
+//	200: StringMap
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getHardfork(w http.ResponseWriter, r *http.Request) {
+	n := r.URL.Query().Get("name")
+	if len(n) == 0 {
+		common.Respond(w, r, nil, common.NewErrInternal("empty name"))
+		return
+	}
+	round, err := state.GetRoundByName(mrh.GetQueryStateContext(), n)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	common.Respond(w, r, map[string]string{"round": strconv.FormatInt(round, 10)}, err)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat
