@@ -32,4 +32,5 @@ do
     ./zboxcli/zbox --wallet testing.json $command \
         --${id_field} $id \
         --tokens 5
+    sleep 10
 done

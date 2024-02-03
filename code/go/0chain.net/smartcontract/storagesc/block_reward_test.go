@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -187,7 +188,7 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	}
 
 	compareResult := func(t *testing.T, p params, r result, balances state.StateContextI, ssc *StorageSmartContract) {
-		conf, err := ssc.getConfig(balances, false)
+		_, err := ssc.getConfig(balances, false)
 		require.NoError(t, err)
 		for i := 0; i < p.numBlobbers; i++ {
 			bID := "blobber" + strconv.Itoa(i)
@@ -211,10 +212,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 				require.InDelta(t, resultDelegateReward, actualDelegateReward, errDelta, message)
 			}
 		}
-		_, err = balances.DeleteTrieNode(
-			BlobberRewardKey(
-				GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)),
-		)
 		require.NoError(t, err)
 	}
 
@@ -531,7 +528,7 @@ func BenchmarkPartitionsGetItem(b *testing.B) {
 	id := strconv.Itoa(10)
 	for i := 0; i < b.N; i++ {
 		var br BlobberRewardNode
-		_ = part.Get(ps, id, &br)
+		_, _ = part.Get(ps, id, &br)
 	}
 }
 
@@ -606,7 +603,8 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	}
 
 	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
-	return state.NewStateContext(nil,
+	b := block.Block{}
+	return state.NewStateContext(&b,
 		mpt, nil, nil, nil,
 		nil, nil, nil, nil, newTxnStateCache()), clean
 }
@@ -618,7 +616,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	_, err := partitions.CreateIfNotExists(state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 	require.NoError(t, err)
 
-	p, err := partitionsChallengeReadyBlobbers(state)
+	p, _, err := partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
 	err = p.Add(state, &ChallengeReadyBlobber{BlobberID: "blobber_id_1"})
@@ -626,7 +624,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	err = p.Save(state)
 	require.NoError(t, err)
 
-	p, err = partitionsChallengeReadyBlobbers(state)
+	p, _, err = partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 	s, err := p.Size(state)
 	require.NoError(t, err)
@@ -638,7 +636,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	err = p.Save(state)
 	require.NoError(t, err)
 
-	p, err = partitionsChallengeReadyBlobbers(state)
+	p, _, err = partitionsChallengeReadyBlobbers(state)
 	require.NoError(t, err)
 
 	s, err = p.Size(state)

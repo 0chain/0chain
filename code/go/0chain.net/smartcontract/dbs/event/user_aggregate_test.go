@@ -1,39 +1,27 @@
 package event
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs"
+	"github.com/0chain/common/core/currency"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEventDb_updateUserAggregates(t *testing.T) {
-	edb, clean := GetTestEventDB(t)
-	defer clean()
-
-	if err := edb.addPartition(0, "user_aggregates"); err != nil {
-		t.Error()
-	}
-
-	snap := UserSnapshot{
-		UserID:          "client31",
-		Round:           3,
-		CollectedReward: 44,
-		TotalStake:      55,
-		ReadPoolTotal:   66,
-		WritePoolTotal:  77,
-		PayedFees:       88,
-		CreatedAt:       time.Time{},
-	}
-	if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{&snap}); err != nil {
-		t.Error(err)
-	}
+	var (
+		edb *EventDb
+		clean func()
+	)
+	
 	type args struct {
+		clientWithSnapshot string
 		e *BlockEvents
 	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -41,85 +29,208 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 	}{
 		{
 			name: "single event",
-			args: args{e: &BlockEvents{events: []Event{{
-				BlockNumber: 1,
-				TxHash:      "qwerty",
-				Tag:         TagLockReadPool,
-				Index:       "qwety",
-				Data: &[]ReadPoolLock{{
-					Client: "client1",
-					PoolId: "pool1",
-					Amount: 10,
-				}},
-			}}}},
+			args: args{
+				clientWithSnapshot: "client31",
+				e: &BlockEvents{
+					events: []Event{{
+						BlockNumber: 1,
+						TxHash:      "qwerty",
+						Tag:         TagLockReadPool,
+						Index:       "qwety",
+						Data: &[]ReadPoolLock{{
+							Client: "client1",
+							PoolId: "pool1",
+							Amount: 10,
+						}},
+					}},
+				},
+			},
 			wantErr: assert.NoError,
 		}, {
 			name: "two event",
-			args: args{e: &BlockEvents{events: []Event{{
-				BlockNumber: 2,
-				TxHash:      "qwerty21",
-				Tag:         TagLockReadPool,
-				Index:       "qwety21",
-				Data: &[]ReadPoolLock{{
-					Client: "client21",
-					PoolId: "pool21",
-					Amount: 10,
-				}}}, {
-				BlockNumber: 2,
-				TxHash:      "qwerty22",
-				Tag:         TagLockReadPool,
-				Index:       "qwety22",
-				Data: &[]ReadPoolLock{{
-					Client: "client22",
-					PoolId: "pool22",
-					Amount: 10,
-				}}},
-			}}},
+			args: args{
+				clientWithSnapshot: "client31",
+				e: &BlockEvents{
+					events: []Event{{
+						BlockNumber: 2,
+						TxHash:      "qwerty21",
+						Tag:         TagLockReadPool,
+						Index:       "qwety21",
+						Data: &[]ReadPoolLock{{
+							Client: "client21",
+							PoolId: "pool21",
+							Amount: 10,
+						}}}, {
+						BlockNumber: 2,
+						TxHash:      "qwerty22",
+						Tag:         TagLockReadPool,
+						Index:       "qwety22",
+						Data: &[]ReadPoolLock{{
+							Client: "client22",
+							PoolId: "pool22",
+							Amount: 10,
+						}},
+					}},
+				},
+
+			},
 			wantErr: assert.NoError,
 		}, {
 			name: "two event with aggr",
-			args: args{e: &BlockEvents{events: []Event{{
-				BlockNumber: 4,
-				TxHash:      "qwerty31",
-				Tag:         TagLockReadPool,
-				Index:       "qwety21",
-				Data: &[]ReadPoolLock{{
-					Client: "client31",
-					PoolId: "pool21",
-					Amount: 10,
-				}}}, {
-				BlockNumber: 4,
-				TxHash:      "qwerty32",
-				Tag:         TagLockReadPool,
-				Index:       "qwety22",
-				Data: &[]ReadPoolLock{{
-					Client: "client32",
-					PoolId: "pool22",
-					Amount: 10,
-				}}},
-			}}},
+			args: args{
+				clientWithSnapshot: "client31",
+				e: &BlockEvents{
+					events: []Event{{
+						BlockNumber: 4,
+						TxHash:      "qwerty31",
+						Tag:         TagLockReadPool,
+						Index:       "qwety21",
+						Data: &[]ReadPoolLock{{
+							Client: "client31",
+							PoolId: "pool21",
+							Amount: 10,
+						}}}, {
+						BlockNumber: 4,
+						TxHash:      "qwerty32",
+						Tag:         TagLockReadPool,
+						Index:       "qwety22",
+						Data: &[]ReadPoolLock{{
+							Client: "client32",
+							PoolId: "pool22",
+							Amount: 10,
+						}},
+					}},
+				},
+			},
 			wantErr: func(t assert.TestingT, err error, msgAndArgs ...interface{}) bool {
-				if err := edb.Commit(); err != nil {
-					return true
-				}
-				edb, err = edb.Begin(context.Background())
-				if err != nil {
-					return true
-				}
-
 				a := map[string]interface{}{
 					"client31": struct {
 					}{},
 				}
 				aggregates, err := edb.GetLatestUserAggregates(a)
-				return assert.Equal(t, 76, aggregates["client31"].ReadPoolTotal)
+				return assert.Equal(t, int64(76), aggregates["client31"].ReadPoolTotal)
+			},
+		}, 
+		{
+			name: "user claimable rewards",
+			args: args{
+				clientWithSnapshot: "client41",
+				e: &BlockEvents{
+					events: []Event{
+						{
+							BlockNumber: 5,
+							TxHash:      "qwerty41",
+							Tag:         TagStakePoolReward,
+							Index:       "qwety41",
+							Data: &[]dbs.StakePoolReward{{
+								ProviderID: dbs.ProviderID{
+									ID: "provider1",
+								},
+								DelegateRewards: map[string]currency.Coin{
+									"client41": 100,
+									"client42": 200,
+								},
+							}, {
+								ProviderID: dbs.ProviderID{
+									ID: "provider2",
+								},
+								DelegateRewards: map[string]currency.Coin{
+									"client43": 300,
+									"client44": 400,
+								},
+							}},
+						},
+						{
+							BlockNumber: 5,
+							TxHash:      "qwerty41",
+							Tag:         TagStakePoolReward,
+							Index:       "qwety41",
+							Data: &[]dbs.StakePoolReward{{
+								ProviderID: dbs.ProviderID{
+									ID: "provider1",
+								},
+								DelegateRewards: map[string]currency.Coin{
+									"client41": 1000,
+									"client42": 2000,
+								},
+							}, {
+								ProviderID: dbs.ProviderID{
+									ID: "provider2",
+								},
+								DelegateRewards: map[string]currency.Coin{
+									"client43": 3000,
+									"client44": 4000,
+								},
+							}},
+						},
+					},
+				},
+			},
+			wantErr: func(tt assert.TestingT, err error, i ...interface{}) bool {
+				if ! assert.NoError(tt, err) {
+					tt.Errorf("updateUserAggregates() error = %v", err, i)
+					return false
+				}
+				
+				a := map[string]interface{}{
+					"client41": struct {
+					}{},
+					"client42": struct {
+					}{},
+					"client43": struct {
+					}{},
+					"client44": struct {
+					}{},
+				}
+
+				aggregates, err := edb.GetLatestUserAggregates(a)
+				if err != nil {
+					tt.Errorf("updateUserAggregates() error = %v", err, i)
+					return false
+				}
+
+				fmt.Printf("testing aggregates: %+v\n", aggregates)
+
+				fmt.Printf("testing aggregates: %+v\n", aggregates)
+				fmt.Printf("testing client41: %+v\n", aggregates["client41"])
+				assert.Equal(tt, int64(1133), aggregates["client41"].ClaimableReward) // had 33 in the user snampshot
+				fmt.Printf("testing client42: %+v\n", aggregates["client42"])
+				assert.Equal(tt, int64(2200), aggregates["client42"].ClaimableReward)
+				fmt.Printf("testing client43: %+v\n", aggregates["client43"])
+				assert.Equal(tt, int64(3300), aggregates["client43"].ClaimableReward)
+				fmt.Printf("testing client44: %+v\n", aggregates["client44"])
+				assert.Equal(tt, int64(4400), aggregates["client44"].ClaimableReward)
+
+				return true
 			},
 		},
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.wantErr(t, edb.updateUserAggregates(tt.args.e), fmt.Sprintf("updateUserAggregates(%v)", tt.args.e))
+			edb, clean = GetTestEventDB(t)
+			defer clean()
+
+			if err := edb.addPartition(0, "user_aggregates"); err != nil {
+				t.Error()
+			}
+
+			snap := UserSnapshot{
+				UserID:          tt.args.clientWithSnapshot,
+				Round:           3,
+				ClaimableReward: 33,
+				CollectedReward: 44,
+				TotalStake:      55,
+				ReadPoolTotal:   66,
+				WritePoolTotal:  77,
+				PayedFees:       88,
+				CreatedAt:       time.Time{},
+			}
+
+			if err := edb.AddOrOverwriteUserSnapshots([]*UserSnapshot{&snap}); err != nil {
+				t.Error(err)
+			}
+
+			require.True(t, tt.wantErr(t, edb.updateUserAggregates(tt.args.e), fmt.Sprintf("updateUserAggregates(%v)", tt.args.e)))
 		})
 	}
 }

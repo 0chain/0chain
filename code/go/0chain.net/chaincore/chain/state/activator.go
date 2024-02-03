@@ -1,9 +1,11 @@
 package state
 
 import (
+	"errors"
 	"math"
 
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -22,7 +24,7 @@ func (h *HardFork) GetKey() string {
 
 }
 
-func GetRoundByName(c StateContextI, name string) (int64, error) {
+func GetRoundByName(c CommonStateContextI, name string) (int64, error) {
 	fork := NewHardFork(name, 0)
 	err := c.GetTrieNode(fork.GetKey(), fork)
 	if err != nil {
@@ -32,14 +34,19 @@ func GetRoundByName(c StateContextI, name string) (int64, error) {
 	return fork.round, nil
 }
 
-func WithActivation(ctx StateContextI, name string, before func(), after func()) {
+func WithActivation(ctx StateContextI, name string, before func() error, after func() error) error {
 	round, err := GetRoundByName(ctx, name)
 	if err != nil {
 		logging.Logger.Error("with_activation", zap.Error(err))
 	}
-	if ctx.GetBlock().Round < round {
-		before()
-	} else {
-		after()
+	if errors.Is(err, util.ErrNodeNotFound) {
+		return err
 	}
+	if ctx.GetBlock().Round < round {
+		err = before()
+	} else {
+		err = after()
+	}
+
+	return err
 }

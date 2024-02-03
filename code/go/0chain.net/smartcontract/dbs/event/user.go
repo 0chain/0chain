@@ -13,7 +13,6 @@ type User struct {
 	UserID    string        `json:"user_id" gorm:"uniqueIndex"`
 	TxnHash   string        `json:"txn_hash"`
 	Balance   currency.Coin `json:"balance"`
-	Change    currency.Coin `json:"change"`
 	Round     int64         `json:"round"`
 	Nonce     int64         `json:"nonce"`
 	MintNonce int64         `json:"mint_nonce"`

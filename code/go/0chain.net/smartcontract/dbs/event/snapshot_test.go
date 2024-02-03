@@ -579,6 +579,9 @@ func TestSnapshotFunctions(t *testing.T) {
 					}, // blobber block reward
 				},
 			},
+			{ // [12]
+				Tag: TagAddAllocation,
+			},
 		}
 
 		snapDiff := Snapshot{
@@ -607,6 +610,7 @@ func TestSnapshotFunctions(t *testing.T) {
 			TransactionsCount: int64(len(events[10].Data.([]Transaction))),
 			TotalTxnFee: int64(events[10].Data.([]Transaction)[0].Fee) +
 				int64(events[10].Data.([]Transaction)[1].Fee),
+			TotalAllocations: 1, // refers to event [12]
 		}
 
 		err = eventDb.UpdateSnapshotFromEvents(&s, events)
@@ -621,6 +625,7 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.Equal(t, snapBefore.UniqueAddresses+snapDiff.UniqueAddresses, snapAfter.UniqueAddresses)
 		require.Equal(t, snapBefore.TransactionsCount+snapDiff.TransactionsCount, snapAfter.TransactionsCount)
 		require.Equal(t, snapBefore.TotalTxnFee+snapDiff.TotalTxnFee, snapAfter.TotalTxnFee)
+		require.Equal(t, snapBefore.TotalAllocations+snapDiff.TotalAllocations, snapAfter.TotalAllocations)
 	})
 
 	t.Run("test UpdateSnapshot with provider-related events", func(t *testing.T) {

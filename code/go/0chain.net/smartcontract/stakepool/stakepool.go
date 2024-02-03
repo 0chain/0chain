@@ -47,6 +47,7 @@ type AbstractStakePool interface {
 	Kill(float64, string, spenum.Provider, cstate.StateContextI) error
 	IsDead() bool
 	SlashFraction(float64, string, spenum.Provider, cstate.StateContextI) error
+	TotalStake() (currency.Coin, error)
 }
 
 // StakePool holds delegate information for an 0chain providers
@@ -74,7 +75,7 @@ type DelegatePool struct {
 	StakedAt     common.Timestamp  `json:"staked_at"`
 }
 
-// swagger:model stakePoolStat
+// StakePoolStat Deprecated
 type StakePoolStat struct {
 	ID         string             `json:"pool_id"` // pool ID
 	Balance    currency.Coin      `json:"balance"` // total balance
@@ -85,6 +86,7 @@ type StakePoolStat struct {
 	Settings   Settings           `json:"settings"` // Settings of the stake pool
 }
 
+// DelegatePoolStat Deprecated
 type DelegatePoolStat struct {
 	ID           string          `json:"id"`            // blobber ID
 	Balance      currency.Coin   `json:"balance"`       // current balance
@@ -101,7 +103,7 @@ type DelegatePoolStat struct {
 	StakedAt     common.Timestamp `json:"staked_at"`
 }
 
-// swagger:model userPoolStat
+// UserPoolStat Deprecated
 type UserPoolStat struct {
 	Pools map[datastore.Key][]*DelegatePoolStat `json:"pools"`
 }
@@ -374,6 +376,19 @@ func (sp *StakePool) SlashFraction(
 	}
 	sp.EmitStakePoolBalanceUpdate(providerId, providerType, balances)
 	return nil
+}
+
+// TotalStake
+// total stake pools funds
+func (sp *StakePool) TotalStake() (currency.Coin, error) {
+	orderedPoolIds := sp.OrderedPoolIds()
+	var total currency.Coin
+	for _, id := range orderedPoolIds {
+		dp := sp.Pools[id]
+		total, _ = currency.AddCoin(total, dp.Balance)
+	}
+
+	return total, nil
 }
 
 // DistributeRewardsRandN distributes rewards to randomly selected N delegate pools
@@ -749,7 +764,7 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
-	if s, err2 := validateLockRequest(t, sp, vs); err2 != nil {
+	if s, err2 := validateLockRequest(t, sp, vs, balances); err2 != nil {
 		return s, err2
 	}
 
@@ -789,7 +804,7 @@ type ValidationSettings struct {
 	MaxNumDelegates int
 }
 
-func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs ValidationSettings) (string, error) {
+func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs ValidationSettings, balances cstate.StateContextI) (string, error) {
 	if t.Value == 0 {
 		return "", common.NewError("stake_pool_lock_failed",
 			fmt.Sprintf("no stake to lock: %v", t.Value))
@@ -813,13 +828,30 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 			fmt.Sprintf("too large stake to lock: %v > %v", poolStakeAfter, vs.MaxStake))
 	}
 
-	if len(sp.GetPools()) >= vs.MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"max_delegates reached: %v, no more stake pools allowed",
-			vs.MaxNumDelegates)
+	beforeFunc := func() (e error) {
+		if len(sp.GetPools()) >= vs.MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+			e = common.NewErrorf("stake_pool_lock_failed",
+				"max_delegates reached: %v, no more stake pools allowed",
+				vs.MaxNumDelegates)
+		}
+		return e
 	}
 
-	return "", nil
+	afterFunc := func() (e error) {
+		if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+			e = common.NewErrorf("stake_pool_lock_failed",
+				"max_delegates reached: %v, no more stake pools allowed",
+				vs.MaxNumDelegates)
+		}
+		return e
+	}
+
+	actError := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	if actError != nil {
+		return "", actError
+	}
+
+	return "", err
 }
 
 // StakePoolUnlock unlock tokens from provider, stake pool can return excess tokens from stake pool

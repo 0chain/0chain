@@ -198,6 +198,7 @@ smart_contracts:
     min_lock: 0
     min_authorizers: 1
     percent_authorizers: 0
+    health_check_period: 1h
     max_delegates: 10
     max_fee: 100
     burn_address: "0000000000000000000000000000000000000000000000000000000000000123"

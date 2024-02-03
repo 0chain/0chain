@@ -347,7 +347,7 @@ func TestChangeBlobbers(t *testing.T) {
 		txn.Hash = mockHash
 
 		if arg.blobberInChallenge > 0 {
-			bcPart, err = partitionsChallengeReadyBlobbers(balances)
+			bcPart, _, err = partitionsChallengeReadyBlobbers(balances)
 			require.NoError(t, err)
 			defer func() {
 				err = bcPart.Save(balances)
@@ -511,7 +511,7 @@ func TestChangeBlobbers(t *testing.T) {
 
 		if want.challengeEnabled {
 			for i := 0; i < arg.blobberInChallenge; i++ {
-				bcPart, err := partitionsChallengeReadyBlobbers(balances)
+				bcPart, _, err := partitionsChallengeReadyBlobbers(balances)
 				require.NoError(t, err)
 
 				bcSize, err := bcPart.Size(balances)
@@ -1311,30 +1311,117 @@ func Test_updateAllocationRequest_decode(t *testing.T) {
 
 func Test_updateAllocationRequest_validate(t *testing.T) {
 
-	var (
-		conf  Config
-		uar   updateAllocationRequest
-		alloc StorageAllocation
-	)
+	config := &Config{
+		MinAllocSize: 1 * GB,
+	}
+	alloc := &StorageAllocation{
+		BlobberAllocsMap: make(map[string]*BlobberAllocation),
+		Owner:            "owner123",
+		FileOptions:      32,
+	}
+	alloc.BlobberAllocsMap["blobber1"] = &BlobberAllocation{}
 
-	alloc.Size = 10 * GB
-
-	// 1. zero
-	assert.Error(t, uar.validate(&conf, &alloc))
-
-	// 2. becomes to small
 	var sub = 9.01 * GB
-	uar.Size -= int64(sub)
-	conf.MinAllocSize = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc))
 
-	// 3. no blobbers (invalid allocation, panic check)
-	uar.Size = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc))
+	tests := []struct {
+		name      string
+		uar       *updateAllocationRequest
+		expectErr bool
+	}{
+		{
+			name: "Zero size",
+			uar: &updateAllocationRequest{
+				OwnerID: "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Becomes too small",
+			uar: &updateAllocationRequest{
+				Size:                    -int64(sub),
+				SetThirdPartyExtendable: true,
+				OwnerID:                 "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "No blobbers (invalid allocation)",
+			uar: &updateAllocationRequest{
+				Size:    1 * GB,
+				OwnerID: "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Positive case",
+			uar: &updateAllocationRequest{
+				Size:    1 * GB,
+				OwnerID: "owner123",
+			},
+			expectErr: false,
+		},
+		{
+			name: "No changes",
+			uar: &updateAllocationRequest{
+				OwnerID: "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Negative size",
+			uar: &updateAllocationRequest{
+				Size:    -1,
+				OwnerID: "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Invalid allocation (no blobbers)",
+			uar: &updateAllocationRequest{
+				OwnerID: "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Add existing blobber",
+			uar: &updateAllocationRequest{
+				AddBlobberId: "blobber1",
+				OwnerID:      "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "Remove non-existing blobber",
+			uar: &updateAllocationRequest{
+				RemoveBlobberId: "nonexistent_blobber",
+				OwnerID:         "owner123",
+			},
+			expectErr: true,
+		},
+		{
+			name: "FileOptions out of range",
+			uar: &updateAllocationRequest{
+				FileOptions: 64,
+				OwnerID:     "owner123",
+			},
+			expectErr: true,
+		},
+	}
 
-	// 4. ok
-	alloc.BlobberAllocs = []*BlobberAllocation{{}}
-	assert.NoError(t, uar.validate(&conf, &alloc))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.name == "Positive case" {
+				alloc.BlobberAllocs = []*BlobberAllocation{{}}
+			}
+			err := tt.uar.validate(config, alloc)
+
+			if tt.expectErr && err == nil {
+				t.Error("Expected an error, but got nil")
+			} else if !tt.expectErr && err != nil {
+				t.Errorf("Expected no error, but got: %v", err)
+			}
+		})
+	}
 }
 
 func Test_updateAllocationRequest_getBlobbersSizeDiff(t *testing.T) {
@@ -1511,7 +1598,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			allocationID = arg.allocationID
 		)
 
-		bcpartition, err := partitionsChallengeReadyBlobbers(balances)
+		bcpartition, _, err := partitionsChallengeReadyBlobbers(balances)
 		require.NoError(t, err)
 
 		for i := 0; i < arg.numBlobbers; i++ {
@@ -1537,7 +1624,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	}
 
 	validate := func(want want, balances chainState.StateContextI) {
-		bcPart, err := partitionsChallengeReadyBlobbers(balances)
+		bcPart, _, err := partitionsChallengeReadyBlobbers(balances)
 		require.NoError(t, err)
 
 		bcPartSize, err := bcPart.Size(balances)
@@ -1829,15 +1916,15 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	baParts, err := partitionsBlobberAllocations(nb.id, balances)
 	require.NoError(t, err)
 	var noneIt BlobberAllocationNode
-	err = baParts.Get(balances, alloc.ID, &noneIt)
+	_, err = baParts.Get(balances, alloc.ID, &noneIt)
 	require.True(t, partitions.ErrItemNotFound(err))
 
 	// commit connection to get update challenge ready partition
 	// assert there's no challenge ready partition before commit connection
-	challengeReadyParts, err := partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, _, err := partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
 	var cit ChallengeReadyBlobber
-	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.True(t, partitions.ErrItemNotFound(err))
 
 	tp += 1000
@@ -1866,9 +1953,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NotZero(t, resp)
 
 	// assert nb2 is challenge ready
-	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, _, err = partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
-	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.NoError(t, err)
 	require.Equal(t, cit.BlobberID, nb2.id)
 
@@ -1906,9 +1993,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert blobber nb2 is removed from challenge ready partition
-	challengeReadyParts, err = partitionsChallengeReadyBlobbers(balances)
+	challengeReadyParts, _, err = partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
-	err = challengeReadyParts.Get(balances, nb2.id, &cit)
+	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
 	require.True(t, partitions.ErrItemNotFound(err))
 
 	//

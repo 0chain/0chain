@@ -159,6 +159,15 @@ func (p *partition) cutTail() *item {
 	return &tail
 }
 
+func (p *partition) tail() *item {
+	if len(p.Items) == 0 {
+		return nil
+	}
+
+	tail := p.Items[len(p.Items)-1]
+	return &tail
+}
+
 func (p *partition) length() int {
 	return len(p.Items)
 }
