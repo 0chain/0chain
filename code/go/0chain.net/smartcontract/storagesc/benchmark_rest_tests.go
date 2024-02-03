@@ -303,21 +303,21 @@ func BenchmarkRestTests(
 						if err != nil {
 							panic(err)
 						}
+						var freeBlobbers []string
+						for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
+							freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
+						}
 						fsmBytes, _ := json.Marshal(&freeStorageMarker{
 							Assigner:   data.Clients[0],
 							Recipient:  request.Recipient,
 							FreeTokens: request.FreeTokens,
 							Nonce:      request.Nonce,
 							Signature:  signature,
+							Blobbers:   freeBlobbers,
 						})
-						var freeBlobbers []string
-						for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
-							freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
-						}
 						bytes, _ := json.Marshal(&freeStorageAllocationInput{
 							RecipientPublicKey: data.PublicKeys[1],
 							Marker:             string(fsmBytes),
-							Blobbers:           freeBlobbers,
 						})
 						return string(bytes)
 					}(),
