@@ -511,8 +511,9 @@ type challengeAllocBlobberPassResult struct {
 func verifyChallengeTickets(balances cstate.StateContextI,
 	challenge *StorageChallenge,
 	cr *ChallengeResponse,
-) (verifyRes *verifyTicketsResult, err error) {
+) (*verifyTicketsResult, error) {
 	// get unique validation tickets map
+	verifyRes := &verifyTicketsResult{}
 	vtsMap := make(map[string]struct{}, len(cr.ValidationTickets))
 	for _, vt := range cr.ValidationTickets {
 		if vt == nil {
@@ -544,13 +545,13 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		wg            sync.WaitGroup
 	)
 
-	beforeFunc := func() {
+	beforeFunc := func() error {
 		var success, failure int32
 		for i := range cr.ValidationTickets {
 			wg.Add(1)
 			go func(i int, vt *ValidationTicket) {
 				defer wg.Done()
-				if err = vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
+				if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
 					errors[i] = fmt.Errorf("invalid validation ticket: %v", err)
 					return
 				}
@@ -572,9 +573,9 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		wg.Wait()
 
 		// check if there is any error, return the first encountered
-		for _, err = range errors {
+		for _, err := range errors {
 			if err != nil {
-				return
+				return err
 			}
 		}
 
@@ -585,22 +586,21 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 			success:    int(success),
 			validators: validators,
 		}
+		return nil
 	}
 
-	afterFunc := func() {
+	afterFunc := func() error {
 		success := len(cr.ValidationTickets)
 		for _, vt := range cr.ValidationTickets {
-			if err = vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
-				err = fmt.Errorf("invalid validation ticket: %v", err)
-				return
+			if err := vt.Validate(challenge.ID, challenge.BlobberID); err != nil {
+				return fmt.Errorf("invalid validation ticket: %v", err)
 			}
 			validators = append(validators, vt.ValidatorID)
 			validatorKeys = append(validatorKeys, vt.ValidatorKey)
 		}
 
 		if ok, verifyErr := cr.Verify(balances, validatorKeys); !ok || verifyErr != nil {
-			err = fmt.Errorf("invalid challenge response: %v", verifyErr)
-			return
+			return fmt.Errorf("invalid challenge response: %v", verifyErr)
 		}
 
 		pass = success > threshold
@@ -611,9 +611,10 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 			success:    success,
 			validators: validators,
 		}
+		return nil
 	}
-	cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
-	return
+	err := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	return verifyRes, err
 }
 
 func (sc *StorageSmartContract) processChallengePassed(
