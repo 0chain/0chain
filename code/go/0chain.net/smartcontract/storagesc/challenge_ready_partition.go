@@ -29,27 +29,28 @@ func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions
 		return nil, nil, err
 	}
 
-	afterHardFork1 := func() {
-		partWeights, err = blobberWeightsPartitions(balances, p)
-		if err != nil {
-			err = fmt.Errorf("could not get blobber weights partitions: %v", err)
+	afterHardFork1 := func() (e error) {
+		partWeights, e = blobberWeightsPartitions(balances, p)
+		if e != nil {
+			e = fmt.Errorf("could not get blobber weights partitions: %v", e)
 			return
 		}
 
 		// check if need to migrate from challenge ready blobber partitions,
-		// this should only be done once when hard_fork_1 round hits
+		// this should only be done once when apollo round hits
 		if partWeights.needSync {
-			logging.Logger.Debug("add_challenge - hard_fork_1 hit - sync blobber weights!!")
-			err = partWeights.sync(balances, p)
-			if err != nil {
-				logging.Logger.Error("add_challenge - hard_fork_1 hit - sync blobber weights failed", zap.Error(err))
+			logging.Logger.Debug("add_challenge - apollo hit - sync blobber weights!!")
+			e = partWeights.sync(balances, p)
+			if e != nil {
+				logging.Logger.Error("add_challenge - apollo hit - sync blobber weights failed", zap.Error(e))
 			}
 		}
+		return
 	}
 
-	cstate.WithActivation(balances, "hard_fork_1", func() {}, afterHardFork1)
-	if err != nil {
-		return nil, nil, err
+	actError := cstate.WithActivation(balances, "apollo", func() (e error) { return }, afterHardFork1)
+	if actError != nil {
+		return nil, nil, actError
 	}
 
 	return p, partWeights, nil
@@ -79,54 +80,53 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 
 	crb := &ChallengeReadyBlobber{BlobberID: blobberID, UsedCapacity: usedCapacity, Stake: stake}
 
-	beforeHardFork1 := func() {
-		err = parts.Add(state, crb)
+	beforeHardFork1 := func() (e error) {
+		e = parts.Add(state, crb)
 		if err != nil {
-			if !partitions.ErrItemExist(err) {
+			if !partitions.ErrItemExist(e) {
 				return
 			}
 
 			// item exists, update
-			err = parts.UpdateItem(state, crb)
-			if err != nil {
+			e = parts.UpdateItem(state, crb)
+			if e != nil {
 				return
 			}
 		}
 
-		err := parts.Save(state)
-		if err != nil {
-			err = fmt.Errorf("could not add or update challenge ready partitions: %v", err)
+		e = parts.Save(state)
+		if e != nil {
+			e = fmt.Errorf("could not add or update challenge ready partitions: %v", e)
 		}
+		return
 	}
 
-	afterHardFork1 := func() {
+	afterHardFork1 := func() (e error) {
 		var exist bool
-		exist, err = parts.Exist(state, blobberID)
-		if err != nil {
-			err = fmt.Errorf("could not check if blobber exists: %v", err)
+		exist, e = parts.Exist(state, blobberID)
+		if e != nil {
+			e = fmt.Errorf("could not check if blobber exists: %v", e)
 			return
 		}
 
 		if exist {
 			// update
-			err = partsWeight.update(state, *crb)
-			if err != nil {
-				err = fmt.Errorf("could not update blobber weight: %v", err)
+			e = partsWeight.update(state, *crb)
+			if e != nil {
+				e = fmt.Errorf("could not update blobber weight: %v", e)
 			}
 			return
 		}
 
 		// add new item
-		err = partsWeight.add(state, *crb)
-		if err != nil {
-			err = fmt.Errorf("could not add blobber to challenge ready partition: %v", err)
+		e = partsWeight.add(state, *crb)
+		if e != nil {
+			e = fmt.Errorf("could not add blobber to challenge ready partition: %v", e)
 		}
 		return
 	}
 
-	cstate.WithActivation(state, "hard_fork_1", beforeHardFork1, afterHardFork1)
-
-	return err
+	return cstate.WithActivation(state, "apollo", beforeHardFork1, afterHardFork1)
 }
 
 func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
@@ -145,22 +145,20 @@ func PartitionsChallengeReadyBlobberUpdate(state state.StateContextI, blobberID 
 	}
 
 	crb := &ChallengeReadyBlobber{BlobberID: blobberID, UsedCapacity: usedCapacity, Stake: stake}
-	beforeHardFork1 := func() {
-		err = parts.UpdateItem(state, crb)
-		if err != nil {
+	beforeHardFork1 := func() (e error) {
+		e = parts.UpdateItem(state, crb)
+		if e != nil {
 			return
 		}
 
-		err = parts.Save(state)
+		return parts.Save(state)
 	}
 
-	afterHardFork1 := func() {
-		err = partsWeight.update(state, *crb)
+	afterHardFork1 := func() (e error) {
+		return partsWeight.update(state, *crb)
 	}
 
-	cstate.WithActivation(state, "hard_fork_1", beforeHardFork1, afterHardFork1)
-
-	return err
+	return cstate.WithActivation(state, "apollo", beforeHardFork1, afterHardFork1)
 }
 
 func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID string) error {
@@ -169,21 +167,20 @@ func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID
 		return err
 	}
 
-	beforeHardFork1 := func() {
+	beforeHardFork1 := func() (e error) {
 		err = challengeReadyParts.Remove(state, blobberID)
 		if err != nil {
 			return
 		}
 
-		err = challengeReadyParts.Save(state)
+		return challengeReadyParts.Save(state)
 	}
 
-	afterHardFork1 := func() {
-		err = partsWeight.remove(state, blobberID)
+	afterHardFork1 := func() (e error) {
+		return partsWeight.remove(state, blobberID)
 	}
 
-	cstate.WithActivation(state, "hard_fork_1", beforeHardFork1, afterHardFork1)
-	return err
+	return cstate.WithActivation(state, "apollo", beforeHardFork1, afterHardFork1)
 }
 
 func init() {

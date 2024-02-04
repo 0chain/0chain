@@ -131,6 +131,13 @@ func BenchmarkRestTests(
 				Endpoint: mrh.getConfigs,
 			},
 			{
+				FuncName: "hardfork",
+				Endpoint: mrh.getHardfork,
+				Params: map[string]string{
+					"name": "apollo",
+				},
+			},
+			{
 				FuncName: "provider-rewards",
 				Params: map[string]string{
 					"id":    data.Miners[0],
