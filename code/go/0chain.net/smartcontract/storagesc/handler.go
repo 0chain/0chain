@@ -190,6 +190,15 @@ func (srh *StorageRestHandler) getBlobberIdsByUrls(w http.ResponseWriter, r *htt
 	common.Respond(w, r, ids, err)
 }
 
+type freeStorageAllocationInputHandler struct {
+	RecipientPublicKey string `json:"recipient_public_key"`
+	Marker             string `json:"marker"`
+}
+
+func (frm *freeStorageAllocationInputHandler) decode(b []byte) error {
+	return json.Unmarshal(b, frm)
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers free_alloc_blobbers
 // returns list of all blobbers alive that match the free allocation request.
 //
@@ -228,7 +237,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 	//	return
 	//}
 
-	var inputObj freeStorageAllocationInput
+	var inputObj freeStorageAllocationInputHandler
 	if err := inputObj.decode([]byte(allocData)); err != nil {
 		common.Respond(w, r, "", common.NewErrInternal("can't decode allocation request", err.Error()))
 		return
