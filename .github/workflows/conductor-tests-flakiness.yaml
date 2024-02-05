@@ -535,17 +535,7 @@ jobs:
               exit 1
             fi
             ;;
-          on_failure)
-            if [ $FAILED_ATTEMPTS -ge 1 ]; then
-              echo "👋🏻 Conductor test failed"
-              exit 1
-            else
-              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
-              echo "🎉 Conductor test succeeded"
-              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
-              exit 0
-            fi
-            ;;
+
           never)
             success_rate=80
 
@@ -557,6 +547,18 @@ jobs:
             else
               echo "👋🏻 Conductor test failed"
               exit 1
+            fi
+            ;;
+
+          *)
+            if [ $FAILED_ATTEMPTS -ge 1 ]; then
+              echo "👋🏻 Conductor test failed"
+              exit 1
+            else
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              echo "🎉 Conductor test succeeded"
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              exit 0
             fi
             ;;
         esac
