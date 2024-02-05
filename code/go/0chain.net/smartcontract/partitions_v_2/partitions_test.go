@@ -1227,7 +1227,7 @@ func FuzzPartitionsGetRandomItems(f *testing.F) {
 }
 
 func TestErrItemNotFound(t *testing.T) {
-	require.True(t, ErrItemNotFound(common.NewError(common2.ErrItemNotFoundCode, "any key")))
+	require.True(t, common2.ErrItemNotFound(common.NewError(common2.ErrItemNotFoundCode, "any key")))
 }
 
 func TestErrItemExist(t *testing.T) {
@@ -1387,7 +1387,7 @@ func TestPartitionsRemoveX(t *testing.T) {
 			// Verify that the removed item is no longer in the partition
 			_, err = p.Get(s, tc.removeID, &testItem{})
 			require.Error(t, err)
-			require.True(t, ErrItemNotFound(err))
+			require.True(t, common2.ErrItemNotFound(err))
 		})
 	}
 }

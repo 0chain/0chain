@@ -61,9 +61,9 @@ func partitionsBlobberAllocationsAdd_v_1(state state.StateContextI, blobberID, a
 	}
 
 	err = blobAllocsParts.Add(state, &BlobberAllocationNode{ID: allocID})
-	if err != nil && !partitions_v_1.ErrItemExist(err) {
+	if err != nil && !partitions.ErrItemExist(err) {
 		return err
-	} else if partitions_v_1.ErrItemExist(err) {
+	} else if partitions.ErrItemExist(err) {
 		return nil
 	}
 

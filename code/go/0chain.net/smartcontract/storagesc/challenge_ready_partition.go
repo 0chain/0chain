@@ -116,7 +116,7 @@ func PartitionsChallengeReadyBlobberAddOrUpdate_v_1(state state.StateContextI, b
 
 	e := parts.Add(state, crb)
 	if err != nil {
-		if !partitions_v_1.ErrItemExist(e) {
+		if !common2.ErrItemExist(e) {
 			return e
 		}
 
