@@ -24,12 +24,11 @@ const (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type freeStorageMarker struct {
-	Assigner   string   `json:"assigner"`
-	Recipient  string   `json:"recipient"`
-	FreeTokens float64  `json:"free_tokens"`
-	Nonce      int64    `json:"nonce"`
-	Signature  string   `json:"signature"`
-	Blobbers   []string `json:"blobbers"`
+	Assigner   string  `json:"assigner"`
+	Recipient  string  `json:"recipient"`
+	FreeTokens float64 `json:"free_tokens"`
+	Nonce      int64   `json:"nonce"`
+	Signature  string  `json:"signature"`
 }
 
 func (frm *freeStorageMarker) decode(b []byte) error {
