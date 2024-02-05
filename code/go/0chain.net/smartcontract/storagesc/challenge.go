@@ -915,26 +915,26 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		err       error
 	)
 
-	beforeHardFork1 := func() {
-		blobberID, err = selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
-		if err != nil {
-			err = common.NewError("add_challenge", err.Error())
-			return
+	beforeHardFork1 := func() (e error) {
+		blobberID, e = selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
+		if e != nil {
+			e = common.NewError("add_challenge", err.Error())
 		}
+		return e
 	}
 
-	afterHardFork1 := func() {
+	afterHardFork1 := func() (e error) {
 		// select blobber to challenge
-		blobberID, err = partsWeight.pick(balances, r)
-		if err != nil {
-			err = common.NewError("add_challenge", err.Error())
+		blobberID, e = partsWeight.pick(balances, r)
+		if e != nil {
+			e = common.NewError("add_challenge", e.Error())
 		}
+		return e
 	}
 
-	cstate.WithActivation(balances, "hard_fork_1", beforeHardFork1, afterHardFork1)
-
-	if err != nil {
-		return nil, err
+	actErr := cstate.WithActivation(balances, "apollo", beforeHardFork1, afterHardFork1)
+	if actErr != nil {
+		return nil, actErr
 	}
 
 	if blobberID == "" {

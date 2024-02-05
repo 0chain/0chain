@@ -828,23 +828,28 @@ func validateLockRequest(t *transaction.Transaction, sp AbstractStakePool, vs Va
 			fmt.Sprintf("too large stake to lock: %v > %v", poolStakeAfter, vs.MaxStake))
 	}
 
-	beforeFunc := func() {
+	beforeFunc := func() (e error) {
 		if len(sp.GetPools()) >= vs.MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
-			err = common.NewErrorf("stake_pool_lock_failed",
+			e = common.NewErrorf("stake_pool_lock_failed",
 				"max_delegates reached: %v, no more stake pools allowed",
 				vs.MaxNumDelegates)
 		}
+		return e
 	}
 
-	afterFunc := func() {
-		if len(sp.GetPools()) > sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
-			err = common.NewErrorf("stake_pool_lock_failed",
+	afterFunc := func() (e error) {
+		if len(sp.GetPools()) >= sp.GetSettings().MaxNumDelegates && !sp.HasStakePool(t.ClientID) {
+			e = common.NewErrorf("stake_pool_lock_failed",
 				"max_delegates reached: %v, no more stake pools allowed",
 				vs.MaxNumDelegates)
 		}
+		return e
 	}
 
-	err = cstate.WithActivation(balances, "hard_fork_1", beforeFunc, afterFunc)
+	actError := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	if actError != nil {
+		return "", actError
+	}
 
 	return "", err
 }

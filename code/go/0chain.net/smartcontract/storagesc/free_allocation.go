@@ -23,11 +23,12 @@ const (
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type freeStorageMarker struct {
-	Assigner   string  `json:"assigner"`
-	Recipient  string  `json:"recipient"`
-	FreeTokens float64 `json:"free_tokens"`
-	Nonce      int64   `json:"nonce"`
-	Signature  string  `json:"signature"`
+	Assigner   string   `json:"assigner"`
+	Recipient  string   `json:"recipient"`
+	FreeTokens float64  `json:"free_tokens"`
+	Nonce      int64    `json:"nonce"`
+	Signature  string   `json:"signature"`
+	Blobbers   []string `json:"blobbers"`
 }
 
 func (frm *freeStorageMarker) decode(b []byte) error {
@@ -97,9 +98,19 @@ func (fsa *freeStorageAssigner) validate(
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
-	if err != nil {
-		return err
+	verified := false
+	var beforeHardfork = func() (e error) {
+		verified, e = verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
+		return e
+	}
+	var afterHardfork = func() (e error) {
+		verified, e = verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
+		return e
+	}
+	actErr := cstate.WithActivation(balances, "hard_fork_1", beforeHardfork, afterHardfork)
+
+	if actErr != nil {
+		return actErr
 	}
 	if !verified {
 		return fmt.Errorf("failed to verify signature")
@@ -204,6 +215,23 @@ func verifyFreeAllocationRequest(
 	return signatureScheme.Verify(frm.Signature, hex.EncodeToString([]byte(marker)))
 }
 
+func verifyFreeAllocationRequestNew(
+	frm freeStorageMarker,
+	publicKey string,
+	balances cstate.StateContextI,
+) (bool, error) {
+	var ids string
+	for _, b := range frm.Blobbers {
+		ids += b
+	}
+	marker := fmt.Sprintf("%s:%f:%d:%s", frm.Recipient, frm.FreeTokens, frm.Nonce, ids)
+	signatureScheme := balances.GetSignatureScheme()
+	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
+		return false, err
+	}
+	return signatureScheme.Verify(frm.Signature, hex.EncodeToString([]byte(marker)))
+}
+
 func (ssc *StorageSmartContract) freeAllocationRequest(
 	txn *transaction.Transaction,
 	input []byte,
@@ -250,16 +278,41 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marker verification failed: %v", err)
 	}
 
-	var request = newAllocationRequest{
-		DataShards:           conf.FreeAllocationSettings.DataShards,
-		ParityShards:         conf.FreeAllocationSettings.ParityShards,
-		Size:                 conf.FreeAllocationSettings.Size,
-		Owner:                marker.Recipient,
-		OwnerPublicKey:       inputObj.RecipientPublicKey,
-		ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
-		WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
-		Blobbers:             inputObj.Blobbers,
-		ThirdPartyExtendable: true,
+	var request newAllocationRequest
+	var beforeHardfork = func() (e error) {
+		request = newAllocationRequest{
+			DataShards:           conf.FreeAllocationSettings.DataShards,
+			ParityShards:         conf.FreeAllocationSettings.ParityShards,
+			Size:                 conf.FreeAllocationSettings.Size,
+			Owner:                marker.Recipient,
+			OwnerPublicKey:       inputObj.RecipientPublicKey,
+			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
+			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
+			Blobbers:             inputObj.Blobbers,
+			ThirdPartyExtendable: true,
+		}
+
+		return
+	}
+	var afterHardfork = func() (e error) {
+		request = newAllocationRequest{
+			DataShards:           conf.FreeAllocationSettings.DataShards,
+			ParityShards:         conf.FreeAllocationSettings.ParityShards,
+			Size:                 conf.FreeAllocationSettings.Size,
+			Owner:                marker.Recipient,
+			OwnerPublicKey:       inputObj.RecipientPublicKey,
+			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
+			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
+			Blobbers:             marker.Blobbers,
+			ThirdPartyExtendable: true,
+		}
+
+		return
+	}
+
+	err = cstate.WithActivation(balances, "apollo", beforeHardfork, afterHardfork)
+	if err != nil {
+		return "", err
 	}
 
 	arBytes, err := request.encode()
