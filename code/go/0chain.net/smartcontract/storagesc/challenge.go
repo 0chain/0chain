@@ -11,14 +11,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	common2 "0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
-
-	"0chain.net/smartcontract/stakepool/spenum"
-
-	"0chain.net/smartcontract/partitions"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -26,6 +23,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
@@ -839,7 +837,7 @@ const (
 )
 
 // selectBlobberForChallenge select blobber for challenge in random manner
-func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersPartition *partitions.Partitions,
+func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersPartition common2.Partitions,
 	r *rand.Rand, balances cstate.StateContextI, conf *Config) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
@@ -897,10 +895,10 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 }
 
 func (sc *StorageSmartContract) populateGenerateChallenge(
-	challengeBlobbersPartition *partitions.Partitions,
+	challengeBlobbersPartition common2.Partitions,
 	partsWeight *blobberWeightPartitionsWrap,
 	seed int64,
-	validators *partitions.Partitions,
+	validators common2.Partitions,
 	txn *transaction.Transaction,
 	challengeID string,
 	balances cstate.StateContextI,

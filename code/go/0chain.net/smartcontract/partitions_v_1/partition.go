@@ -1,4 +1,4 @@
-package partitions
+package partitions_v1
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/partitions"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -42,7 +43,7 @@ func (p *partition) load(state state.StateContextI, key datastore.Key) error {
 	return nil
 }
 
-func (p *partition) add(it PartitionItem) error {
+func (p *partition) add(it partitions.PartitionItem) error {
 	for _, bi := range p.Items {
 		if bi.ID == it.GetID() {
 			return ErrPartitionItemAlreadyExist
@@ -70,7 +71,7 @@ func (p *partition) addRaw(it item) error {
 	return nil
 }
 
-func (p *partition) update(it PartitionItem) error {
+func (p *partition) update(it partitions.PartitionItem) error {
 	for i := 0; i < p.length(); i++ {
 		if p.Items[i].ID == it.GetID() {
 			v, err := it.MarshalMsg(nil)
@@ -108,15 +109,6 @@ func (p *partition) cutTail() *item {
 	tail := p.Items[len(p.Items)-1]
 	p.Items = p.Items[:len(p.Items)-1]
 	p.Changed = true
-	return &tail
-}
-
-func (p *partition) tail() *item {
-	if len(p.Items) == 0 {
-		return nil
-	}
-
-	tail := p.Items[len(p.Items)-1]
 	return &tail
 }
 

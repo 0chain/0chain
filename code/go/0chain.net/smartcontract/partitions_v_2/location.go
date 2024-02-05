@@ -1,4 +1,4 @@
-package partitions
+package partitions_v2
 
 import (
 	"fmt"

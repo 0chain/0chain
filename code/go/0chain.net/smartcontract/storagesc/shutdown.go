@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"0chain.net/smartcontract/partitions"
+	common2 "0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -45,7 +45,7 @@ func (_ *StorageSmartContract) shutdownBlobber(
 			}
 
 			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+				if !strings.HasPrefix(err.Error(), common2.ErrItemNotFoundCode) {
 					return nil, nil, common.NewError("shutdown_blobber_failed",
 						"remove blobber form challenge partition, "+err.Error())
 				}
@@ -137,7 +137,7 @@ func (_ *StorageSmartContract) shutdownValidator(
 			}
 
 			if err := validatorPartitions.Remove(balances, validator.Id()); err != nil {
-				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+				if !strings.HasPrefix(err.Error(), common2.ErrItemNotFoundCode) {
 					return nil, nil, common.NewErrorf("shutdown_validator_failed",
 						"failed to remove validator: %v", err)
 				}

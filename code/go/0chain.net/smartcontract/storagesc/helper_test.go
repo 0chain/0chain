@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	common2 "0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/threshold/bls"
@@ -21,7 +22,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/partitions"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
@@ -451,7 +451,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 }
 
 func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64, challID string, seed int64,
-	valids *partitions.Partitions, allocID string,
+	valids common2.Partitions, allocID string,
 	blobber *StorageNode, balances chainState.StateContextI) {
 
 	alloc, err := ssc.getAllocation(allocID, balances)

@@ -4,11 +4,12 @@
 package storagesc
 
 import (
+	"math/rand"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract/partitions"
-	"math/rand"
+	common2 "0chain.net/smartcontract/partitions"
 )
 
 func (sc *StorageSmartContract) generateChallenge(
@@ -24,7 +25,7 @@ func (sc *StorageSmartContract) generateChallenge(
 // selectBlobberForChallenge select blobber for challenge in random manner
 func selectBlobberForChallenge(
 	selection challengeBlobberSelection,
-	challengeBlobbersPartition *partitions.Partitions,
+	challengeBlobbersPartition common2.Partitions,
 	r *rand.Rand,
 	balances cstate.StateContextI,
 	conf *Config,

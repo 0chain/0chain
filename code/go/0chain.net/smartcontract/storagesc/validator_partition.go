@@ -2,15 +2,28 @@ package storagesc
 
 import (
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/partitions"
+	common2 "0chain.net/smartcontract/partitions"
+	partitions_v1 "0chain.net/smartcontract/partitions_v_1"
+	partitions_v2 "0chain.net/smartcontract/partitions_v_2"
 )
 
 //go:generate msgp -v -io=false -tests=false -unexported=true
 
 const allValidatorsPartitionSize = 50
 
-func getValidatorsList(state state.StateContextI) (*partitions.Partitions, error) {
-	return partitions.GetPartitions(state, ALL_VALIDATORS_KEY)
+func getValidatorsList(balances state.StateContextI) (res common2.Partitions, err error) {
+	actError := state.WithActivation(balances, "apollo", func() error {
+		res, err = partitions_v1.GetPartitions(balances, ALL_VALIDATORS_KEY)
+		return nil
+	}, func() error {
+		res, err = partitions_v2.GetPartitions(balances, ALL_VALIDATORS_KEY)
+		return nil
+	})
+	if actError != nil {
+		return nil, actError
+	}
+
+	return
 }
 
 type ValidationPartitionNode struct {
@@ -23,8 +36,13 @@ func (vn *ValidationPartitionNode) GetID() string {
 }
 
 func init() {
-	regInitPartsFunc(func(state state.StateContextI) error {
-		_, err := partitions.CreateIfNotExists(state, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
-		return err
+	regInitPartsFunc(func(balances state.StateContextI) error {
+		return state.WithActivation(balances, "apollo", func() error {
+			_, err := partitions_v1.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
+			return err
+		}, func() error {
+			_, err := partitions_v2.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
+			return err
+		})
 	})
 }

@@ -1,4 +1,4 @@
-package partitions
+package partitions_v2
 
 import (
 	"encoding/json"
@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	common2 "0chain.net/smartcontract/partitions"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
@@ -41,7 +42,7 @@ func (si *StringItem) Msgsize() int {
 	return len(*si)
 }
 
-func ItemFromString(name string) PartitionItem {
+func ItemFromString(name string) common2.PartitionItem {
 	v := StringItem(name)
 	return &v
 }
@@ -347,14 +348,14 @@ func TestPartitionsRemove(t *testing.T) {
 			size:      10,
 			num:       5,
 			removeIdx: 5,
-			expectErr: common.NewError(ErrItemNotFoundCode, fmt.Sprintf("k%d", 5)),
+			expectErr: common.NewError(common2.ErrItemNotFoundCode, fmt.Sprintf("k%d", 5)),
 		},
 		{
 			name:      "1 partition, remove beyond partition size, not found",
 			size:      10,
 			num:       5,
 			removeIdx: 15,
-			expectErr: common.NewError(ErrItemNotFoundCode, fmt.Sprintf("k%d", 15)),
+			expectErr: common.NewError(common2.ErrItemNotFoundCode, fmt.Sprintf("k%d", 15)),
 		},
 		{
 			name:      "2 partition, remove from 2, head",
@@ -412,7 +413,7 @@ func TestPartitionsRemove(t *testing.T) {
 			verify := func() {
 				var it testItem
 				_, err = p.Get(balances, k, &it)
-				require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err)
+				require.Equal(t, common.NewError(common2.ErrItemNotFoundCode, k), err)
 
 				// all remaining items should exist
 				for i := 0; i < tc.num; i++ {
@@ -515,7 +516,7 @@ func TestPartitionsUpdateItem(t *testing.T) {
 			size:      10,
 			num:       10,
 			update:    testItem{ID: "k100", V: "v100"},
-			expectErr: common.NewError(ErrItemNotFoundCode, "k100"),
+			expectErr: common.NewError(common2.ErrItemNotFoundCode, "k100"),
 		},
 	}
 
@@ -627,7 +628,7 @@ func TestPartitionsUpdate(t *testing.T) {
 			size:      10,
 			num:       10,
 			update:    testItem{ID: "k100", V: "v100"},
-			expectErr: common.NewError(ErrItemNotFoundCode, "k100"),
+			expectErr: common.NewError(common2.ErrItemNotFoundCode, "k100"),
 		},
 	}
 
@@ -920,14 +921,14 @@ func FuzzRemove(f *testing.F) {
 		if n == 0 || num == 0 {
 			require.Equal(t, 0, p.Last.length())
 			err = p.Remove(s, k)
-			require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err)
+			require.Equal(t, common.NewError(common2.ErrItemNotFoundCode, k), err)
 			return
 		}
 
 		// remove item that does not exist in the partition
 		if ks >= num {
 			err = p.Remove(s, k)
-			require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err)
+			require.Equal(t, common.NewError(common2.ErrItemNotFoundCode, k), err)
 			return
 		}
 
@@ -1046,7 +1047,7 @@ func FuzzPartitionsAddRemove(f *testing.F) {
 			_, ok := itemsMap[k]
 			err = p.Remove(s, k)
 			if !ok {
-				require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err, p.locations)
+				require.Equal(t, common.NewError(common2.ErrItemNotFoundCode, k), err, p.locations)
 			} else {
 				// remove item not exist
 				delete(itemsMap, k)
@@ -1116,7 +1117,7 @@ func FuzzPartitionsUpdateItem(f *testing.F) {
 			verify()
 		} else {
 			// item not exist
-			require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err)
+			require.Equal(t, common.NewError(common2.ErrItemNotFoundCode, k), err)
 		}
 	})
 }
@@ -1177,7 +1178,7 @@ func FuzzPartitionsUpdate(f *testing.F) {
 			verify()
 		} else {
 			// item not exist
-			require.Equal(t, common.NewError(ErrItemNotFoundCode, k), err)
+			require.Equal(t, common.NewError(common2.ErrItemNotFoundCode, k), err)
 		}
 	})
 }
@@ -1226,7 +1227,7 @@ func FuzzPartitionsGetRandomItems(f *testing.F) {
 }
 
 func TestErrItemNotFound(t *testing.T) {
-	require.True(t, ErrItemNotFound(common.NewError(ErrItemNotFoundCode, "any key")))
+	require.True(t, ErrItemNotFound(common.NewError(common2.ErrItemNotFoundCode, "any key")))
 }
 
 func TestErrItemExist(t *testing.T) {

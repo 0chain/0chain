@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
+	common2 "0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool/spenum"
 
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 
@@ -46,7 +46,7 @@ func (_ *StorageSmartContract) killBlobber(
 			}
 
 			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+				if !strings.HasPrefix(err.Error(), common2.ErrItemNotFoundCode) {
 					return nil, nil, common.NewError("kill_blobber_failed",
 						"remove blobber form challenge partition, "+err.Error())
 				}
@@ -139,7 +139,7 @@ func (_ *StorageSmartContract) killValidator(
 			}
 
 			if err := validatorPartitions.Remove(balances, validator.Id()); err != nil {
-				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+				if !strings.HasPrefix(err.Error(), common2.ErrItemNotFoundCode) {
 					return nil, nil, common.NewError("kill_validator_failed",
 						"failed to remove validator from partition, "+err.Error())
 				}

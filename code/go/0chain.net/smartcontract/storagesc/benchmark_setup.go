@@ -8,14 +8,13 @@ import (
 
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/benchmark"
+	partitions_v2 "0chain.net/smartcontract/partitions_v_2"
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/smartcontract/stakepool"
-
-	"0chain.net/smartcontract/partitions"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -176,7 +175,7 @@ func AddMockChallenges(
 	numAllocations := viper.GetInt(sc.NumAllocations)
 	allocationChall := make([]AllocationChallenges, numAllocations)
 
-	challengeReadyBlobbersPart, err := partitions.CreateIfNotExists(balances,
+	challengeReadyBlobbersPart, err := partitions_v2.CreateIfNotExists(balances,
 		ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 	if err != nil {
 		log.Fatal(err)
@@ -560,7 +559,7 @@ func AddMockValidators(
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 
-	valParts, err := partitions.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
+	valParts, err := partitions_v2.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
 	if err != nil {
 		panic(err)
 	}

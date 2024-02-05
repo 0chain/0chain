@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/partitions"
+	partitions_v2 "0chain.net/smartcontract/partitions_v_2"
 	"github.com/stretchr/testify/require"
 )
 
 var challengeReadyPartSize = 5
 
 func testPreparePartWeights(t *testing.T, state state.StateContextI) *blobberWeightPartitionsWrap {
-	p, err := partitions.CreateIfNotExists(state, "test_challenge_ready_partitions", challengeReadyPartSize)
+	p, err := partitions_v2.CreateIfNotExists(state, "test_challenge_ready_partitions", challengeReadyPartSize)
 	require.NoError(t, err)
 	bp, err := blobberWeightsPartitions(state, p)
 	require.NoError(t, err)

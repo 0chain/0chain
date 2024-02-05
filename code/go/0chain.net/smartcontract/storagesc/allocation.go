@@ -1439,6 +1439,7 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	for _, d := range alloc.BlobberAllocs {
 		if d.Stats.UsedSize > 0 {
+
 			if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 				return err
 			}

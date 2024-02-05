@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/tokenpool"
+	common2 "0chain.net/smartcontract/partitions"
 
 	"0chain.net/smartcontract/provider"
 
@@ -16,8 +17,6 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
-
-	"0chain.net/smartcontract/partitions"
 
 	"0chain.net/smartcontract/dbs/event"
 
@@ -335,7 +334,7 @@ func TestChangeBlobbers(t *testing.T) {
 			mockReadPrice        = zcnToBalance(0.01)
 			mockWritePrice       = zcnToBalance(0.10)
 			mockMaxPrice         = zcnToBalance(100.0)
-			bcPart               *partitions.Partitions
+			bcPart               common2.Partitions
 			err                  error
 		)
 
@@ -1917,7 +1916,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	var noneIt BlobberAllocationNode
 	_, err = baParts.Get(balances, alloc.ID, &noneIt)
-	require.True(t, partitions.ErrItemNotFound(err))
+	require.True(t, common2.ErrItemNotFound(err))
 
 	// commit connection to get update challenge ready partition
 	// assert there's no challenge ready partition before commit connection
@@ -1925,7 +1924,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	var cit ChallengeReadyBlobber
 	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
-	require.True(t, partitions.ErrItemNotFound(err))
+	require.True(t, common2.ErrItemNotFound(err))
 
 	tp += 1000
 	// write
@@ -1996,7 +1995,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	challengeReadyParts, _, err = partitionsChallengeReadyBlobbers(balances)
 	require.NoError(t, err)
 	_, err = challengeReadyParts.Get(balances, nb2.id, &cit)
-	require.True(t, partitions.ErrItemNotFound(err))
+	require.True(t, common2.ErrItemNotFound(err))
 
 	//
 	// increase duration

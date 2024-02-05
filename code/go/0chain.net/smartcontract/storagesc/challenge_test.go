@@ -12,6 +12,8 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/event"
+	common2 "0chain.net/smartcontract/partitions"
+	partitions_v2 "0chain.net/smartcontract/partitions_v_2"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
@@ -23,7 +25,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
@@ -84,7 +85,7 @@ func TestAddChallenge(t *testing.T) {
 			store: make(map[datastore.Key]util.MPTSerializable),
 		}
 
-		challengeReadyParts, err := partitions.CreateIfNotExists(
+		challengeReadyParts, err := partitions_v2.CreateIfNotExists(
 			balances,
 			ALL_CHALLENGE_READY_BLOBBERS_KEY,
 			allChallengeReadyBlobbersPartitionSize)
@@ -1353,7 +1354,7 @@ func TestGetRandomSubSlice(t *testing.T) {
 }
 
 func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
-	*StorageAllocation, []*Client, []*Client, *partitions.Partitions, []*StorageNode, *Client) {
+	*StorageAllocation, []*Client, []*Client, common2.Partitions, []*StorageNode, *Client) {
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, true)
@@ -1404,7 +1405,7 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 }
 
 func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
-	*StorageAllocation, *Client, []*Client, *partitions.Partitions, *StorageNode, []*Client, *Client) {
+	*StorageAllocation, *Client, []*Client, common2.Partitions, *StorageNode, []*Client, *Client) {
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, true)

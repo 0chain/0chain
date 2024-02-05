@@ -12,12 +12,12 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
+	partitions_v2 "0chain.net/smartcontract/partitions_v_2"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/stakepool"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
@@ -491,7 +491,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 		mpt, nil, nil, nil,
 		nil, nil, nil, nil)
 
-	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize)
+	part, err := partitions_v2.CreateIfNotExists(sctx, "brn_test", partSize)
 	if err != nil {
 		panic(err)
 	}
@@ -522,7 +522,7 @@ func BenchmarkPartitionsGetItem(b *testing.B) {
 	ps, clean := prepareState(100, 100)
 	defer clean()
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
+	part, err := partitions_v2.GetPartitions(ps, "brn_test")
 	require.NoError(b, err)
 
 	id := strconv.Itoa(10)
@@ -538,7 +538,7 @@ func BenchmarkGetRandomItems(b *testing.B) {
 	ps, clean := prepareState(100, 100)
 	defer clean()
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
+	part, err := partitions_v2.GetPartitions(ps, "brn_test")
 	require.NoError(b, err)
 	//ids := make([]string, 100)
 	//for i := 0; i < 100; i++ {
@@ -557,7 +557,7 @@ func TestPartitionRandomItems(t *testing.T) {
 	ps, clean := prepareState(6, 10)
 	defer clean()
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
+	part, err := partitions_v2.GetPartitions(ps, "brn_test")
 	require.NoError(t, err)
 	ids := make([]string, 100)
 	for i := 0; i < 100; i++ {
@@ -578,7 +578,7 @@ func BenchmarkGetUpdateItem(b *testing.B) {
 	ps, clean := prepareState(100, 100)
 	defer clean()
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
+	part, err := partitions_v2.GetPartitions(ps, "brn_test")
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {
@@ -613,7 +613,7 @@ func TestAddBlobberChallengeItems(t *testing.T) {
 	state, clean := prepareMPTState(t)
 	defer clean()
 
-	_, err := partitions.CreateIfNotExists(state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
+	_, err := partitions_v2.CreateIfNotExists(state, ALL_CHALLENGE_READY_BLOBBERS_KEY, allChallengeReadyBlobbersPartitionSize)
 	require.NoError(t, err)
 
 	p, _, err := partitionsChallengeReadyBlobbers(state)

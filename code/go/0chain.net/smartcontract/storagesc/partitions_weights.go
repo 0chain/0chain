@@ -15,7 +15,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/partitions"
+	partitions_v2 "0chain.net/smartcontract/partitions_v_2"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -85,12 +85,12 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 // blobberWeightPartitionsWrap is a wrapper for blobber weights partitions.Partitions and
 // partitions weights node
 type blobberWeightPartitionsWrap struct {
-	p           *partitions.Partitions // challenge ready blobbers partitions
-	partWeights *PartitionsWeights     // partitions weights
-	needSync    bool                   // indicates if the partitions weights need to be synced
+	p           *partitions_v2.Partitions // challenge ready blobbers partitions
+	partWeights *PartitionsWeights        // partitions weights
+	needSync    bool                      // indicates if the partitions weights need to be synced
 }
 
-func blobberWeightsPartitions(state state.StateContextI, p *partitions.Partitions) (*blobberWeightPartitionsWrap, error) {
+func blobberWeightsPartitions(state state.StateContextI, p *partitions_v2.Partitions) (*blobberWeightPartitionsWrap, error) {
 	// load the partition weight if exist
 	var partWeights PartitionsWeights
 	var needSync bool
@@ -112,7 +112,7 @@ func (bp *blobberWeightPartitionsWrap) pick(state state.StateContextI, rd *rand.
 }
 
 // sync syncs the blobber weights from the challenge ready partitions to the partitions weight
-func (bp *blobberWeightPartitionsWrap) sync(state state.StateContextI, crp *partitions.Partitions) error {
+func (bp *blobberWeightPartitionsWrap) sync(state state.StateContextI, crp *partitions_v2.Partitions) error {
 	bp.partWeights.Parts = make([]PartitionWeight, crp.Last.Loc+1)
 	if err := crp.ForEach(state, func(partIndex int, _ string, v []byte) (stop bool) {
 		crb := ChallengeReadyBlobber{}
