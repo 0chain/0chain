@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/formatters"
 	"strconv"
 	"time"
 
@@ -307,7 +308,7 @@ func BenchmarkRestTests(
 						for i := 0; i < viper.GetInt(bk.StorageFasDataShards)+viper.GetInt(bk.StorageFasParityShards); i++ {
 							freeBlobbers = append(freeBlobbers, getMockBlobberId(i))
 						}
-						fsmBytes, _ := json.Marshal(&freeStorageMarker{
+						fsmBytes, _ := json.Marshal(&formatters.FreeStorageMarker{
 							Assigner:   data.Clients[0],
 							Recipient:  request.Recipient,
 							FreeTokens: request.FreeTokens,
