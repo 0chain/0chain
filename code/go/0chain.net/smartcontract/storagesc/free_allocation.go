@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/formatters"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -93,7 +94,7 @@ func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContext
 
 // TODO test that we really send some value here
 func (fsa *freeStorageAssigner) validate(
-	marker freeStorageMarker,
+	marker formatters.FreeStorageMarker,
 	now common.Timestamp,
 	value currency.Coin,
 	balances cstate.StateContextI,
@@ -203,7 +204,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 }
 
 func verifyFreeAllocationRequest(
-	frm freeStorageMarker,
+	frm formatters.FreeStorageMarker,
 	publicKey string,
 	balances cstate.StateContextI,
 ) (bool, error) {
@@ -216,7 +217,7 @@ func verifyFreeAllocationRequest(
 }
 
 func verifyFreeAllocationRequestNew(
-	frm freeStorageMarker,
+	frm formatters.FreeStorageMarker,
 	publicKey string,
 	balances cstate.StateContextI,
 ) (bool, error) {
@@ -238,14 +239,14 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	balances cstate.StateContextI,
 ) (string, error) {
 	var err error
-	var inputObj freeStorageAllocationInput
-	if err := inputObj.decode(input); err != nil {
+	var inputObj formatters.FreeStorageAllocationInput
+	if err := inputObj.Decode(input); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"unmarshal input: %v", err)
 	}
 
-	var marker freeStorageMarker
-	if err := marker.decode([]byte(inputObj.Marker)); err != nil {
+	var marker formatters.FreeStorageMarker
+	if err := marker.Decode([]byte(inputObj.Marker)); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"unmarshal request: %v", err)
 	}

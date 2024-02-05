@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/formatters"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -324,7 +325,7 @@ func BenchmarkTests(
 				if err != nil {
 					panic(err)
 				}
-				fsmBytes, _ := json.Marshal(&freeStorageMarker{
+				fsmBytes, _ := json.Marshal(&formatters.FreeStorageMarker{
 					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
 					Recipient:  request.Recipient,
 					FreeTokens: request.FreeTokens,
@@ -332,7 +333,7 @@ func BenchmarkTests(
 					Signature:  signature,
 					Blobbers:   freeBlobbers,
 				})
-				bytes, _ := json.Marshal(&freeStorageAllocationInput{
+				bytes, _ := json.Marshal(&formatters.FreeStorageAllocationInput{
 					RecipientPublicKey: data.PublicKeys[1],
 					Marker:             string(fsmBytes),
 				})
