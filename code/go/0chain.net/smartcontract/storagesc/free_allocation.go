@@ -7,6 +7,8 @@ import (
 
 	"0chain.net/chaincore/smartcontractinterface"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -209,6 +211,7 @@ func verifyFreeAllocationRequest(
 ) (bool, error) {
 	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
 	signatureScheme := balances.GetSignatureScheme()
+	logging.Logger.Debug("verifying marker signature", zap.String("message", marker))
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
@@ -225,6 +228,7 @@ func verifyFreeAllocationRequestNew(
 		ids += b
 	}
 	marker := fmt.Sprintf("%s:%f:%d:%s", frm.Recipient, frm.FreeTokens, frm.Nonce, ids)
+	logging.Logger.Debug("verifying marker signature", zap.String("message", marker))
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
