@@ -5,15 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/chaincore/smartcontractinterface"
-	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
-
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 )
 
@@ -109,7 +106,7 @@ func (fsa *freeStorageAssigner) validate(
 		verified, e = verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
 		return e
 	}
-	actErr := cstate.WithActivation(balances, "hard_fork_1", beforeHardfork, afterHardfork)
+	actErr := cstate.WithActivation(balances, "apollo", beforeHardfork, afterHardfork)
 
 	if actErr != nil {
 		return actErr
@@ -211,7 +208,6 @@ func verifyFreeAllocationRequest(
 ) (bool, error) {
 	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
 	signatureScheme := balances.GetSignatureScheme()
-	logging.Logger.Debug("verifying marker signature", zap.String("message", marker))
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
@@ -228,7 +224,6 @@ func verifyFreeAllocationRequestNew(
 		ids += b
 	}
 	marker := fmt.Sprintf("%s:%f:%d:%s", frm.Recipient, frm.FreeTokens, frm.Nonce, ids)
-	logging.Logger.Debug("verifying marker signature", zap.String("message", marker))
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
