@@ -87,14 +87,18 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 	}
 
 	defer func() {
+		//we are returning error here and can't shadow it with return of next calls
+		if ferr != nil {
+			return
+		}
 		ferr = cstate.WithActivation(balances, "apollo", func() (e error) { return nil }, func() (e error) {
 			logging.Logger.Info("blobber_block_rewards : cleaning older partition",
 				zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
 
-			_, err = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
-			if err != nil {
+			_, e = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
+			if e != nil {
 				logging.Logger.Error("blobber_block_rewards_failed",
-					zap.String("deleting blobber reward node", err.Error()))
+					zap.String("deleting blobber reward node", e.Error()))
 			}
 			return e
 		})
