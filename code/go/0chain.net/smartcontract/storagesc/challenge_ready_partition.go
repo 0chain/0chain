@@ -82,7 +82,7 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 
 	beforeHardFork1 := func() (e error) {
 		e = parts.Add(state, crb)
-		if err != nil {
+		if e != nil {
 			if !partitions.ErrItemExist(e) {
 				return
 			}
@@ -167,16 +167,16 @@ func partitionsChallengeReadyBlobbersRemove(state state.StateContextI, blobberID
 		return err
 	}
 
-	beforeHardFork1 := func() (e error) {
+	beforeHardFork1 := func() error {
 		err = challengeReadyParts.Remove(state, blobberID)
 		if err != nil {
-			return
+			return err
 		}
 
 		return challengeReadyParts.Save(state)
 	}
 
-	afterHardFork1 := func() (e error) {
+	afterHardFork1 := func() error {
 		return partsWeight.remove(state, blobberID)
 	}
 
