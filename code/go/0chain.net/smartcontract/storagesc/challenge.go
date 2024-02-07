@@ -613,7 +613,7 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 		}
 		return nil
 	}
-	err := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	err := cstate.WithActivation(balances, "hard_fork_2", beforeFunc, afterFunc)
 	return verifyRes, err
 }
 
