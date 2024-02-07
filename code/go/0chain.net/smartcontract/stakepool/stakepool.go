@@ -267,18 +267,29 @@ func (sp *StakePool) MintRewards(
 	providerType spenum.Provider,
 	balances cstate.StateContextI,
 ) (currency.Coin, error) {
+	logging.Logger.Info("0Jayash mint_rewards", zap.String("client_id", clientId), zap.String("provider_id", providerId))
+
 	var delegateReward, serviceCharge currency.Coin
 	var err error
 	if clientId == sp.Settings.DelegateWallet && sp.Reward > 0 {
+		logging.Logger.Info("1Jayash mint_rewards", zap.String("client_id", clientId), zap.String("provider_id", providerId), zap.String("provider_type", providerType.String()))
+
 		serviceCharge, err = sp.MintServiceCharge(balances)
 		if err != nil {
 			return 0, err
 		}
+
+		logging.Logger.Info("2Jayash mint_rewards", zap.String("client_id", clientId), zap.String("provider_id", providerId), zap.String("provider_type", providerType.String()), zap.Int64("service_charge", int64(serviceCharge)))
+
 		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId, dbs.ProviderID{
 			ID:   providerId,
 			Type: providerType,
 		})
+
+		logging.Logger.Info("3Jayash mint_rewards", zap.String("client_id", clientId), zap.String("provider_id", providerId), zap.String("provider_type", providerType.String()), zap.Int64("service_charge", int64(serviceCharge)))
 	}
+
+	logging.Logger.Info("4Jayash mint_rewards", zap.String("client_id", clientId), zap.String("provider_id", providerId), zap.String("provider_type", providerType.String()), zap.Int64("service_charge", int64(serviceCharge)))
 
 	dPool, ok := sp.Pools[clientId]
 	if !ok {
