@@ -1,16 +1,17 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/encryption"
 	"context"
 	"fmt"
-	"github.com/0chain/common/core/util"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/util"
 
 	"github.com/stretchr/testify/require"
 )
@@ -464,6 +465,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				// 6.4 prepare transaction
 				tp += 1
 				tx = newTransaction(blobberID, ssc.ID, 0, tp)
+				challResp.SetAggregateSignature(balances.GetSignatureScheme())
 				input = mustEncode(b, challResp)
 				balances.setTransaction(b, tx)
 			}

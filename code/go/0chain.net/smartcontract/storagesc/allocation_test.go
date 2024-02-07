@@ -2210,7 +2210,7 @@ func Test_finalize_allocation(t *testing.T) {
 		b := &block.Block{}
 		b.Round = 100 + i
 		balances.setBlock(t, b)
-
+		chall.SetAggregateSignature(balances.GetSignatureScheme())
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
 	}
@@ -2386,6 +2386,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		b := &block.Block{}
 		b.Round = 100 + i
 		balances.setBlock(t, b)
+		chall.SetAggregateSignature(balances.GetSignatureScheme())
 		_, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
 	}
