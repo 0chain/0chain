@@ -280,41 +280,90 @@ func (sp *StakePool) MintRewards(
 		})
 	}
 
-	dPool, ok := sp.Pools[clientId]
-	if !ok {
-		if serviceCharge == 0 {
-			return 0, fmt.Errorf("cannot find rewards for %s", clientId)
+	beforeFunc := func() error {
+		dPool, ok := sp.Pools[clientId]
+		if !ok {
+			if serviceCharge == 0 {
+				return fmt.Errorf("cannot find rewards for %s", clientId)
+			}
+			return nil
 		}
-		return serviceCharge, nil
+
+		if dPool.Reward > 0 {
+			minter, err := cstate.GetMinter(sp.Minter)
+			if err != nil {
+				return err
+			}
+			if err := balances.AddTransfer(&state.Transfer{
+				ClientID:   minter,
+				ToClientID: clientId,
+				Amount:     dPool.Reward,
+			}); err != nil {
+				return fmt.Errorf("could not transfer rewards: %v", err)
+			}
+			balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
+				Amount:       int64(dPool.Reward),
+				BlockNumber:  balances.GetBlock().Round,
+				ClientID:     clientId,
+				ProviderType: providerType.String(),
+				ProviderID:   providerId,
+			})
+
+			balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.UserAggregate{
+				CollectedReward: int64(dPool.Reward),
+				UserID:          clientId,
+			})
+
+			delegateReward = dPool.Reward
+			dPool.Reward = 0
+		}
+
+		return nil
 	}
 
-	if dPool.Reward > 0 {
+	afterFunc := func() error {
+		dPool, ok := sp.Pools[clientId]
+		if !ok {
+			if serviceCharge == 0 {
+				return fmt.Errorf("cannot find rewards for %s", clientId)
+			}
+		}
+
+		if dPool.Reward > 0 {
+			balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
+				Amount:       int64(dPool.Reward),
+				BlockNumber:  balances.GetBlock().Round,
+				ClientID:     clientId,
+				ProviderType: providerType.String(),
+				ProviderID:   providerId,
+			})
+
+			balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.UserAggregate{
+				CollectedReward: int64(dPool.Reward),
+				UserID:          clientId,
+			})
+
+			delegateReward = dPool.Reward
+			dPool.Reward = 0
+		}
+
 		minter, err := cstate.GetMinter(sp.Minter)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		if err := balances.AddTransfer(&state.Transfer{
 			ClientID:   minter,
 			ToClientID: clientId,
-			Amount:     dPool.Reward,
+			Amount:     dPool.Reward + serviceCharge,
 		}); err != nil {
-			return 0, fmt.Errorf("could not transfer rewards: %v", err)
+			return fmt.Errorf("could not transfer rewards: %v", err)
 		}
-		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
-			Amount:       int64(dPool.Reward),
-			BlockNumber:  balances.GetBlock().Round,
-			ClientID:     clientId,
-			ProviderType: providerType.String(),
-			ProviderID:   providerId,
-		})
+		return nil
+	}
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.UserAggregate{
-			CollectedReward: int64(dPool.Reward),
-			UserID:          clientId,
-		})
-
-		delegateReward = dPool.Reward
-		dPool.Reward = 0
+	err = cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	if err != nil {
+		return 0, err
 	}
 
 	var dpUpdate = newDelegatePoolUpdate(clientId, providerId, providerType)
