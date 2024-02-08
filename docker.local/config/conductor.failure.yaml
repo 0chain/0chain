@@ -1,0 +1,15 @@
+---
+enable:
+  - "Failure"
+
+# sets of test cases
+sets:
+  - name: "Failure"
+    tests:
+      - "failure"
+
+tests:
+  - name: "failure"
+    flow:
+      - command:
+          name: "failure"

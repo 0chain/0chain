@@ -304,6 +304,15 @@ nodes:
 
 # named system commands
 commands:
+  success:
+    work_dir: "./"
+    exec: "echo 'success'"
+  failure:
+    work_dir: "./"
+    exec: "echo 'failure'; exit 1"
+  random:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/random.sh"
   build_base:
     work_dir: "./."
     exec: "./docker.local/bin/build.base.sh"

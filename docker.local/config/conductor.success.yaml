@@ -1,0 +1,15 @@
+---
+enable:
+  - "Success"
+
+# sets of test cases
+sets:
+  - name: "Success"
+    tests:
+      - "success"
+
+tests:
+  - name: "success"
+    flow:
+      - command:
+          name: "success"

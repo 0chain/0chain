@@ -1,0 +1,15 @@
+---
+enable:
+  - "Random"
+
+# sets of test cases
+sets:
+  - name: "Random"
+    tests:
+      - "random"
+
+tests:
+  - name: "random"
+    flow:
+      - command:
+          name: "random"
