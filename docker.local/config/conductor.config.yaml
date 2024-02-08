@@ -309,7 +309,7 @@ commands:
     exec: "echo 'success'"
   failure:
     work_dir: "./"
-    exec: "echo 'failure'; exit 1"
+    exec: "exit 1"
   random:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/random.sh"
