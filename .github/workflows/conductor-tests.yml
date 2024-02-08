@@ -289,6 +289,8 @@ jobs:
       zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
       zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
       zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
+    secrets:
+      inherit
   
   authorizers-standard:
     needs: compute-branches
