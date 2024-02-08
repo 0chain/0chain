@@ -25,6 +25,7 @@ import (
 func validateStakePoolSettings(
 	sps stakepool.Settings,
 	conf *Config,
+	balances chainstate.StateContextI,
 ) error {
 	if sps.ServiceChargeRatio < 0.0 {
 		return errors.New("negative service charge")
@@ -36,7 +37,20 @@ func validateStakePoolSettings(
 	if sps.MaxNumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
 	}
-	return nil
+
+	beforeFunc := func() (e error) {
+		return
+	}
+
+	afterFunc := func() (e error) {
+		if sps.MaxNumDelegates > conf.MaxDelegates {
+			return fmt.Errorf("num_delegates (%d) is greater than"+
+				" max allowed by SC (%d)", sps.MaxNumDelegates, conf.MaxDelegates)
+		}
+		return
+	}
+
+	return chainstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
 }
 
 // stake pool of a blobber
@@ -308,7 +322,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 	settings stakepool.Settings,
 	balances chainstate.StateContextI,
 ) (*stakePool, error) {
-	if err := validateStakePoolSettings(settings, conf); err != nil {
+	if err := validateStakePoolSettings(settings, conf, balances); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
 
@@ -332,8 +346,9 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(
 func (ssc *StorageSmartContract) createStakePool(
 	conf *Config,
 	settings stakepool.Settings,
+	balances chainstate.StateContextI,
 ) (*stakePool, error) {
-	if err := validateStakePoolSettings(settings, conf); err != nil {
+	if err := validateStakePoolSettings(settings, conf, balances); err != nil {
 		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
 	}
 
@@ -406,5 +421,17 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	return stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter)
+
+	beforeFunc := func() (e error) {
+		resp, e = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter)
+		return e
+	}
+
+	afterFunc := func() (e error) {
+		resp, e = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
+		return e
+	}
+
+	actErr := chainstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	return resp, actErr
 }

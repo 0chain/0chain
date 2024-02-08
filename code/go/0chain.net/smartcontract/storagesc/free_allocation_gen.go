@@ -134,9 +134,9 @@ func (z *freeStorageAssigner) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *freeStorageMarker) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 5
+	// map header, size 6
 	// string "Assigner"
-	o = append(o, 0x85, 0xa8, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72)
+	o = append(o, 0x86, 0xa8, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72)
 	o = msgp.AppendString(o, z.Assigner)
 	// string "Recipient"
 	o = append(o, 0xa9, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74)
@@ -150,6 +150,12 @@ func (z *freeStorageMarker) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Signature"
 	o = append(o, 0xa9, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65)
 	o = msgp.AppendString(o, z.Signature)
+	// string "Blobbers"
+	o = append(o, 0xa8, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Blobbers)))
+	for za0001 := range z.Blobbers {
+		o = msgp.AppendString(o, z.Blobbers[za0001])
+	}
 	return
 }
 
@@ -201,6 +207,25 @@ func (z *freeStorageMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Signature")
 				return
 			}
+		case "Blobbers":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Blobbers")
+				return
+			}
+			if cap(z.Blobbers) >= int(zb0002) {
+				z.Blobbers = (z.Blobbers)[:zb0002]
+			} else {
+				z.Blobbers = make([]string, zb0002)
+			}
+			for za0001 := range z.Blobbers {
+				z.Blobbers[za0001], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Blobbers", za0001)
+					return
+				}
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -215,7 +240,10 @@ func (z *freeStorageMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *freeStorageMarker) Msgsize() (s int) {
-	s = 1 + 9 + msgp.StringPrefixSize + len(z.Assigner) + 10 + msgp.StringPrefixSize + len(z.Recipient) + 11 + msgp.Float64Size + 6 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.Signature)
+	s = 1 + 9 + msgp.StringPrefixSize + len(z.Assigner) + 10 + msgp.StringPrefixSize + len(z.Recipient) + 11 + msgp.Float64Size + 6 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.Signature) + 9 + msgp.ArrayHeaderSize
+	for za0001 := range z.Blobbers {
+		s += msgp.StringPrefixSize + len(z.Blobbers[za0001])
+	}
 	return
 }
 

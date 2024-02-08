@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
 	"time"
 
@@ -283,4 +284,62 @@ func (edb *EventDb) penaltyProviderDelegates(dps map[string]map[string]currency.
 		Exec(edb)
 
 	return ret.Error
+}
+
+func (edb *EventDb) feesSpecificRevenue(spus []dbs.StakePoolReward) error {
+	var (
+		minerIDs          []string
+		sharderIDs        []string
+		authorizerIDs     []string
+		minerFeeRewards   []int64
+		sharderFeeRewards []int64
+		authorizerRewards []int64
+	)
+
+	for _, spu := range spus {
+		if spu.Type != spenum.Miner && spu.Type != spenum.Sharder && spu.Type != spenum.Authorizer {
+			continue
+		}
+
+		switch spu.RewardType {
+		case spenum.FeeRewardMiner:
+			minerIDs = append(minerIDs, spu.ProviderID.ID)
+			minerFeeRewards = append(minerFeeRewards, int64(spu.TotalReward()))
+		case spenum.FeeRewardSharder:
+			sharderIDs = append(sharderIDs, spu.ProviderID.ID)
+			sharderFeeRewards = append(sharderFeeRewards, int64(spu.TotalReward()))
+		case spenum.FeeRewardAuthorizer:
+			authorizerIDs = append(authorizerIDs, spu.ProviderID.ID)
+			authorizerRewards = append(authorizerRewards, int64(spu.TotalReward()))
+		}
+	}
+
+	if len(minerIDs) > 0 {
+		err := CreateBuilder("miners", "id", minerIDs).
+			AddUpdate("fees", minerFeeRewards, "miners.fees + t.fees").
+			Exec(edb).Debug().Error
+		if err != nil {
+			return fmt.Errorf("could not update miner fee: %v", err)
+		}
+	}
+
+	if len(sharderIDs) > 0 {
+		err := CreateBuilder("sharders", "id", sharderIDs).
+			AddUpdate("fees", sharderFeeRewards, "sharders.fees + t.fees").
+			Exec(edb).Debug().Error
+		if err != nil {
+			return fmt.Errorf("could not update sharder fee: %v", err)
+		}
+	}
+
+	if len(authorizerIDs) > 0 {
+		err := CreateBuilder("authorizers", "id", authorizerIDs).
+			AddUpdate("fee", authorizerRewards, "authorizers.fee + t.fee").
+			Exec(edb).Debug().Error
+		if err != nil {
+			return fmt.Errorf("could not update authorizer fee: %v", err)
+		}
+	}
+
+	return nil
 }

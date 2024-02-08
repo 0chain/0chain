@@ -25,7 +25,7 @@ type BlobberBlockRewardsInput struct {
 	Round int64 `json:"round,omitempty"`
 }
 
-func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction, input []byte, balances cstate.StateContextI) error {
+func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (ferr error) {
 	logging.Logger.Info("blobberBlockRewards started",
 		zap.Int64("round", balances.GetBlock().Round),
 		zap.String("block_hash", balances.GetBlock().Hash))
@@ -42,7 +42,34 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
-	if conf.BlockReward.BlockReward == 0 {
+	var returnNil bool
+
+	beforeFunc := func() (e error) {
+		if conf.BlockReward.BlockReward == 0 {
+			returnNil = true
+		}
+		return nil
+	}
+
+	afterFunc := func() (e error) {
+		if conf.BlockReward.BlockReward == 0 || conf.BlockReward.TriggerPeriod == 0 {
+			returnNil = true
+		}
+
+		if balances.GetBlock().Round%conf.BlockReward.TriggerPeriod != 0 {
+			e = common.NewError("blobber_block_rewards_failed",
+				"block reward trigger period not reached")
+		}
+
+		return e
+	}
+
+	actErr := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	if actErr != nil {
+		return actErr
+	}
+
+	if returnNil {
 		return nil
 	}
 
@@ -58,6 +85,24 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get all blobbers list: "+err.Error())
 	}
+
+	defer func() {
+		//we are returning error here and can't shadow it with return of next calls
+		if ferr != nil {
+			return
+		}
+		ferr = cstate.WithActivation(balances, "apollo", func() (e error) { return nil }, func() (e error) {
+			logging.Logger.Info("blobber_block_rewards : cleaning older partition",
+				zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
+
+			_, e = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
+			if e != nil {
+				logging.Logger.Error("blobber_block_rewards_failed",
+					zap.String("deleting blobber reward node", e.Error()))
+			}
+			return e
+		})
+	}()
 
 	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)
 	var randomSeed int64
