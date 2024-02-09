@@ -12,7 +12,7 @@ sets:
 # test cases
 #
 tests:
-  - name: "Wait network to produce 100 rounds"
+  - name: "Wait network to produce 100 rounds, then generate random result"
     flow:
       - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
       - set_monitor: "sharder-1"
