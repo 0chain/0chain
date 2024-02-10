@@ -149,19 +149,19 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			b := bItem.Data.(*block.Block)
-
-			if lfb.Round > 0 && b.Round < lfb.Round+3 {
-				// lfb is confirmed by 3 rounds, so round that is between lfb and lfb+3 must have been processed already,
-				// so ignore them
-				sc.blockBuffer.Pop()
-				logging.Logger.Debug("process block, ignore block < lfb+3",
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash),
-					zap.Int64("lfb", lfb.Round))
-				continue
-			}
-
 			sc.blockBuffer.Pop()
+
+			// if lfb.Round > 0 && b.Round < lfb.Round+3 {
+			// 	// lfb is confirmed by 3 rounds, so round that is between lfb and lfb+3 must have been processed already,
+			// 	// so ignore them
+			// 	sc.blockBuffer.Pop()
+			// 	logging.Logger.Debug("process block, ignore block < lfb+3",
+			// 		zap.Int64("round", b.Round),
+			// 		zap.String("block", b.Hash),
+			// 		zap.Int64("lfb", lfb.Round))
+			// 	continue
+			// }
+
 			// b, err := sc.GetBlock(ctx, bItem.Data.(string))
 			// if err != nil {
 			// 	logging.Logger.Error("process block, get block failed",
