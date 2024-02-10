@@ -2547,25 +2547,29 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	values := r.URL.Query()
 	active := values.Get("active")
 	idsStr := values.Get("blobber_ids")
+	stakable := values.Get("stakeable")
+
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
 
+	conf, err2 := getConfig(srh.GetQueryStateContext())
+	if err2 != nil && err2 != util.ErrValueNotPresent {
+		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
+		return
+	}
+
+	healthCheckPeriod := 60 * time.Minute // set default as 1 hour
+	if conf != nil {
+		healthCheckPeriod = conf.HealthCheckPeriod
+	}
+
 	var blobbers []event.Blobber
-	if active == "true" {
-		conf, err2 := getConfig(srh.GetQueryStateContext())
-		if err2 != nil && err2 != util.ErrValueNotPresent {
-			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
-			return
-		}
-
-		healthCheckPeriod := 60 * time.Minute // set default as 1 hour
-		if conf != nil {
-			healthCheckPeriod = conf.HealthCheckPeriod
-		}
-
+	if stakable == "true" {
+		blobbers, err = edb.GetStakableBlobbers(limit, healthCheckPeriod)
+	} else if active == "true" {
 		blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
 	} else if idsStr != "" {
 		var blobber_ids []string

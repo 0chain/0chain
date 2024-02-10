@@ -118,6 +118,33 @@ func (edb *EventDb) GetActiveBlobbers(limit common2.Pagination, healthCheckTimeL
 	return blobbers, result.Error
 }
 
+func (edb *EventDb) GetStakableBlobbers(limit common2.Pagination, healthCheckTimeLimit time.Duration) ([]Blobber, error) {
+	now := common.Now()
+	var blobbers []Blobber
+	subQuery := edb.Store.Get().Model(&DelegatePool{}).
+		Select("provider_id").
+		Group("provider_id").
+		Having("COUNT(provider_id) < MAX(blobbers.max_delegates)")
+
+	result := edb.Store.Get().
+		Preload("Rewards").
+		Model(&Blobber{}).Offset(limit.Offset).
+		Where("last_health_check > ? AND is_killed = ? AND is_shutdown = ?",
+			common.ToTime(now).Add(-healthCheckTimeLimit).Unix(), false, false).
+		Where("id IN (?)", subQuery).
+		Limit(limit.Limit).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   limit.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   limit.IsDescending,
+		}).
+		Find(&blobbers)
+	return blobbers, result.Error
+}
+
 func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	var blobbers []Blobber
 

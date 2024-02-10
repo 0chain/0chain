@@ -47,6 +47,21 @@ func (edb *EventDb) GetDelegatePools(id string) ([]DelegatePool, error) {
 	return dps, nil
 }
 
+func (edb *EventDb) GetDelegatePoolsCount(id string) (int, error) {
+	var count int64
+	acceptableStatuses := []spenum.PoolStatus{spenum.Active, spenum.Pending}
+
+	result := edb.Store.Get().
+		Model(&DelegatePool{}).
+		Where("provider_id = ? AND status IN (?)", id, acceptableStatuses).
+		Count(&count)
+
+	if result.Error != nil {
+		return 0, fmt.Errorf("error getting delegate pool count: %v", result.Error)
+	}
+	return int(count), nil
+}
+
 func (edb *EventDb) GetDelegatePool(poolID, pID string) (*DelegatePool, error) {
 	var dp DelegatePool
 	err := edb.Store.Get().Model(&DelegatePool{}).
