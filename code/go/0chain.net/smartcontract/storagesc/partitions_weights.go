@@ -53,6 +53,7 @@ func (pws *PartitionsWeights) totalWeight() int {
 // pick picks a blobber based on the random value and weights
 func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp *blobberWeightPartitionsWrap) (string, error) {
 	r := rd.Intn(pws.totalWeight())
+	logging.Logger.Info("Jayash picking a blobber", zap.Int("random", r), zap.Any("weight", pws.totalWeight()), zap.Any("parts", pws.Parts))
 	var blobberID string
 	for pidx, pw := range pws.Parts {
 		br := r // remaining weight before minus the whole partition weight
@@ -61,6 +62,7 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 			// iterate through the partition to find the blobber
 			if err := bwp.iterBlobberWeight(state, pidx,
 				func(id string, bw *ChallengeReadyBlobber) (stop bool) {
+					logging.Logger.Info("Jayash picking a blobber 2", zap.String("blobber_id", id), zap.Any("weight", bw.GetWeight()), zap.Any("br", br))
 					br -= int(bw.GetWeight())
 					if br <= 0 {
 						blobberID = bw.BlobberID
