@@ -73,7 +73,7 @@ type Chain struct {
 
 // PushToBlockProcessor pushs the block to processor,
 func (sc *Chain) PushToBlockProcessor(b *block.Block) error {
-	sc.blockBuffer.Add(b.Round, b.Hash)
+	sc.blockBuffer.Add(b.Round, b)
 	return nil
 	// select {
 	// case sc.blockChannel <- b:
