@@ -148,7 +148,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
-			if bItem.Round < lfb.Round+3 {
+			if lfb.Round > 0 && bItem.Round < lfb.Round+3 {
 				// lfb is confirmed by 3 rounds, so round that is between lfb and lfb+3 must have been processed already,
 				// so ignore them
 				sc.blockBuffer.Pop()
