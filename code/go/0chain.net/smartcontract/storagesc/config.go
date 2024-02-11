@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -288,6 +289,37 @@ func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 
 func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
 	return conf.validateStakeRange(min, max)
+}
+
+func (conf *Config) Clone() statecache.Value {
+	cc := *conf
+	cc.ReadPool = &readPoolConfig{}
+	cc.WritePool = &writePoolConfig{}
+	cc.StakePool = &stakePoolConfig{}
+	cc.BlockReward = &blockReward{}
+
+	*cc.ReadPool = *conf.ReadPool
+	*cc.WritePool = *conf.WritePool
+	*cc.StakePool = *conf.StakePool
+	*cc.BlockReward = *conf.BlockReward
+
+	cc.Cost = make(map[string]int, len(conf.Cost))
+	for k, v := range conf.Cost {
+		cc.Cost[k] = v
+	}
+
+	return &cc
+}
+
+func (conf *Config) CopyFrom(v interface{}) bool {
+	cc, ok := v.(*Config)
+	if !ok {
+		return false
+	}
+
+	cv := cc.Clone().(*Config)
+	*conf = *cv
+	return true
 }
 
 // configs from sc.yaml
