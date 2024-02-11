@@ -73,6 +73,7 @@ func (bc *ChallengeReadyBlobber) GetWeight() uint64 {
 }
 
 func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
+	logging.Logger.Info("PartitionsChallengeReadyBlobberAddOrUpdate", zap.Any("blobberID", blobberID), zap.Any("stake", stake), zap.Any("usedCapacity", usedCapacity))
 	parts, partsWeight, err := partitionsChallengeReadyBlobbers(state)
 	if err != nil {
 		return fmt.Errorf("could not get challenge ready partitions, %v", err)

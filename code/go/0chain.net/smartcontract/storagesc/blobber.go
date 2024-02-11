@@ -933,7 +933,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.StateContextI,
 	blobAlloc *BlobberAllocation, blobUsedCapacity uint64) error {
 	logging.Logger.Info("commit_connection, add or update blobber challenge ready partitions",
-		zap.String("blobber", blobAlloc.BlobberID))
+		zap.String("blobber", blobAlloc.BlobberID), zap.Uint64("blobUsedCapacity", blobUsedCapacity))
 	if blobUsedCapacity == 0 {
 		// remove from challenge ready partitions if this blobber has no data stored
 		err := partitionsChallengeReadyBlobbersRemove(balances, blobAlloc.BlobberID)
@@ -951,6 +951,7 @@ func (sc *StorageSmartContract) updateBlobberChallengeReady(balances cstate.Stat
 	if err != nil {
 		return fmt.Errorf("unable to total stake pool: %v", err)
 	}
+
 	if err := PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobAlloc.BlobberID, stakedAmount, blobUsedCapacity); err != nil {
 		return fmt.Errorf("could not add blobber to challenge ready partitions: %v", err)
 	}
