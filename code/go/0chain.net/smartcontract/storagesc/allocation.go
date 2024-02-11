@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/maths"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1464,7 +1465,13 @@ func (sc *StorageSmartContract) finishAllocation(
 					"can't get stake of "+d.BlobberID+": "+err.Error())
 			}
 
-			err = PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobber.ID, blobberStake, uint64(blobber.SavedData))
+			sd, err := maths.ConvertToUint64(blobber.SavedData)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't convert saved data of "+d.BlobberID+": "+err.Error())
+			}
+
+			err = PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobber.ID, blobberStake, sd)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"can't update blobber "+d.BlobberID+": "+err.Error())
