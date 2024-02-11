@@ -13,6 +13,7 @@ import (
 	"time"
 
 	config2 "0chain.net/core/config"
+	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/provider"
 
 	"github.com/0chain/common/core/currency"
@@ -607,6 +608,28 @@ func (gn *GlobalNode) GetHash() string {
 
 func (gn *GlobalNode) GetHashBytes() []byte {
 	return encryption.RawHash(gn.Encode())
+}
+
+func (gn *GlobalNode) Clone() statecache.Value {
+	cg := &GlobalNode{}
+	*cg = *gn
+
+	if gn.PrevMagicBlock != nil {
+		cg.PrevMagicBlock = gn.PrevMagicBlock.Clone()
+	}
+
+	return cg
+}
+
+func (gn *GlobalNode) CopyFrom(v interface{}) bool {
+	cg, ok := v.(*GlobalNode)
+	if !ok {
+		return false
+	}
+
+	ccg := cg.Clone().(*GlobalNode)
+	*gn = *ccg
+	return true
 }
 
 // NodeType used in pools statistic.
