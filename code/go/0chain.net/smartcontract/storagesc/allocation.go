@@ -1464,7 +1464,7 @@ func (sc *StorageSmartContract) finishAllocation(
 					"can't get stake of "+d.BlobberID+": "+err.Error())
 			}
 
-			err = PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobber.ID, currency.Coin(blobber.SavedData), uint64(blobberStake))
+			err = PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobber.ID, blobberStake, uint64(blobber.SavedData))
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"can't update blobber "+d.BlobberID+": "+err.Error())
