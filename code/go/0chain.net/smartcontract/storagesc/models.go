@@ -31,6 +31,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/statecache"
 )
 
 //msgp:ignore StorageAllocation AllocationChallenges
@@ -352,6 +353,26 @@ func (sn *StorageNode) Decode(input []byte) error {
 		return err
 	}
 	return nil
+}
+
+// Clone implements the statecache.Value interface to make it cacheable
+func (sn *StorageNode) Clone() statecache.Value {
+	clone := &StorageNode{}
+	*clone = *sn
+
+	return clone
+}
+
+// CopyFrom implements the statecache.Value interface to make it cacheable
+func (sn *StorageNode) CopyFrom(v interface{}) bool {
+	vs, ok := v.(*StorageNode)
+	if !ok {
+		return false
+	}
+
+	clone := vs.Clone().(*StorageNode)
+	*sn = *clone
+	return true
 }
 
 type StorageNodes struct {
