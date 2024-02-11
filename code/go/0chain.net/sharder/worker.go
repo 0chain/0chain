@@ -149,7 +149,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			b := bItem.Data.(*block.Block)
-			sc.blockBuffer.Pop()
 
 			logging.Logger.Debug("process block, received block",
 				zap.Int64("block round", b.Round))
@@ -173,6 +172,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
+			sc.blockBuffer.Pop()
 			if err := sc.processBlock(ctx, b); err != nil {
 				logging.Logger.Error("process block failed",
 					zap.Error(err),
