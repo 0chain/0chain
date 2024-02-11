@@ -49,13 +49,11 @@ func (p *Partitions) saveItemLoc(state state.StateContextI, id string, partIndex
 
 func (p *Partitions) removeItemLoc(state state.StateContextI, id string) error {
 	kid := p.getLocKey(id)
-	root := util.ToHex(state.GetState().GetRoot())
 	_, err := state.DeleteTrieNode(kid)
 	if err != nil {
 		logging.Logger.Error("remove item location failed",
 			zap.String("kid", kid),
 			zap.String("id", id),
-			zap.String("state root", root),
 			zap.Int64("round", state.GetBlock().Round),
 			zap.String("block", state.GetBlock().Hash),
 			zap.Error(err),

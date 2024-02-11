@@ -25,7 +25,7 @@ const (
 
 const notFoundIndex = -1
 
-//msgp:ignore Partitions idIndex
+//msgp:ignore Partitions idIndex RemoveLocs
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
 type Partitions struct {
@@ -127,31 +127,51 @@ func (p *Partitions) Add(state state.StateContextI, item PartitionItem) error {
 		return common.NewError(errItemExistCode, item.GetID())
 	}
 
-	if err := p.add(state, item); err != nil {
+	if _, err := p.add(state, item); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *Partitions) add(state state.StateContextI, item PartitionItem) error {
+// AddX add item to the partition and return location or error if any
+func (p *Partitions) AddX(state state.StateContextI, item PartitionItem) (int, error) {
+	// duplicate item checking
+	_, ok, err := p.getItemPartIndex(state, item.GetID())
+	if err != nil {
+		return -1, err
+	}
+
+	if ok {
+		return -1, common.NewError(errItemExistCode, item.GetID())
+	}
+
+	loc, err := p.add(state, item)
+	if err != nil {
+		return -1, err
+	}
+
+	return loc, nil
+}
+
+func (p *Partitions) add(state state.StateContextI, item PartitionItem) (int, error) {
 	_, _, ok := p.Last.find(item.GetID())
 	if ok {
-		return common.NewError(errItemExistCode, item.GetID())
+		return -1, common.NewError(errItemExistCode, item.GetID())
 	}
 
 	// check if Last is full
 	if p.Last.length() == p.PartitionSize {
 		if err := p.pack(state); err != nil {
-			return fmt.Errorf("could not pack partition: %v", err)
+			return -1, fmt.Errorf("could not pack partition: %v", err)
 		}
 	}
 
 	if err := p.Last.add(item); err != nil {
-		return fmt.Errorf("could not save item to partition: %v", err)
+		return -1, fmt.Errorf("could not save item to partition: %v", err)
 	}
 
-	return nil
+	return p.Last.Loc, nil
 }
 
 func (p *Partitions) pack(state state.StateContextI) error {
@@ -178,27 +198,55 @@ func (p *Partitions) pack(state state.StateContextI) error {
 	return nil
 }
 
-func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) error {
+func (p *Partitions) Get(state state.StateContextI, id string, v PartitionItem) (int, error) {
 	it, _, ok := p.Last.find(id)
 	if ok {
 		_, err := v.UnmarshalMsg(it.Data)
-		return err
+		return p.Last.Loc, err
 	}
 
 	loc, ok, err := p.getItemPartIndex(state, id)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	if !ok {
-		return common.NewError(ErrItemNotFoundCode, id)
+		return -1, common.NewError(ErrItemNotFoundCode, id)
 	}
 
 	if err := p.get(state, loc, id, v); err != nil {
-		return err
+		return -1, err
 	}
 
 	p.loadLocations(loc)
+	return loc, nil
+}
+
+// ForEachPart iterates all items in specific partition,
+// break whenever the callback function returns false
+func (p *Partitions) ForEachPart(state state.StateContextI, partIndex int, f func(partIndex int, id string, data []byte) (stop bool)) error {
+	part, err := p.getPartition(state, partIndex)
+	if err != nil {
+		return err
+	}
+
+	for _, it := range part.Items {
+		if f(partIndex, it.ID, it.Data) {
+			break
+		}
+	}
+	return nil
+}
+
+// ForEach iterates all items in all partitions
+func (p *Partitions) ForEach(state state.StateContextI, f func(partIndex int, id string, data []byte) (stop bool)) error {
+	lastIdx := p.Last.Loc
+	for i := 0; i <= lastIdx; i++ {
+		if err := p.ForEachPart(state, i, f); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -253,48 +301,49 @@ func (p *Partitions) updateItem(
 	return part.update(it)
 }
 
-func (p *Partitions) Update(state state.StateContextI, key string, f func(data []byte) ([]byte, error)) error {
+func (p *Partitions) Update(state state.StateContextI, key string,
+	f func(data []byte) ([]byte, error)) (int, error) {
 	v, idx, ok := p.Last.find(key)
 	if ok {
 		nData, err := f(v.Data)
 		if err != nil {
-			return err
+			return -1, err
 		}
 
 		v.Data = nData
 		p.Last.Items[idx] = v
-		return nil
+		return p.Last.Loc, nil
 	}
 
 	l, ok, err := p.getItemPartIndex(state, key)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	if !ok {
-		return common.NewError(ErrItemNotFoundCode, key)
+		return -1, common.NewError(ErrItemNotFoundCode, key)
 	}
 
 	part, err := p.getPartition(state, l)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	v, idx, ok = part.find(key)
 	if !ok {
-		return common.NewError(ErrItemNotFoundCode, key)
+		return -1, common.NewError(ErrItemNotFoundCode, key)
 	}
 
 	nData, err := f(v.Data)
 	if err != nil {
-		return err
+		return -1, err
 	}
 	v.Data = nData
 	part.Items[idx] = v
 	part.Changed = true
 
 	p.loadLocations(l)
-	return nil
+	return l, nil
 }
 
 func (p *Partitions) Remove(state state.StateContextI, id string) error {
@@ -318,6 +367,57 @@ func (p *Partitions) Remove(state state.StateContextI, id string) error {
 
 	p.loadLocations(loc)
 	return p.removeItemLoc(state, id)
+}
+
+type RemoveLocs struct {
+	From        int    // the location where the item is removed from
+	Replace     int    // the replace item location from
+	ReplaceItem []byte // the data of the replace item
+}
+
+// RemoveX removes item from the partition and return the replacement item locations or error if any
+func (p *Partitions) RemoveX(state state.StateContextI, id string) (*RemoveLocs, error) {
+	replaceLoc := p.Last.Loc
+	replaceItem := p.Last.tail()
+	fromLoc := p.Last.Loc
+	_, idx, ok := p.Last.find(id)
+	if ok {
+		if err := p.removeFromLast(state, idx); err != nil {
+			return nil, err
+		}
+
+		return &RemoveLocs{
+			From:        fromLoc,
+			Replace:     replaceLoc,
+			ReplaceItem: replaceItem.Data,
+		}, nil
+	}
+
+	loc, ok, err := p.getItemPartIndex(state, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, common.NewError(ErrItemNotFoundCode, id)
+	}
+
+	fromLoc = loc
+
+	if err := p.removeItem(state, id, loc); err != nil {
+		return nil, err
+	}
+
+	p.loadLocations(loc)
+	if err := p.removeItemLoc(state, id); err != nil {
+		return nil, err
+	}
+
+	return &RemoveLocs{
+		From:        fromLoc,
+		Replace:     replaceLoc,
+		ReplaceItem: replaceItem.Data,
+	}, nil
 }
 
 func (p *Partitions) removeFromLast(state state.StateContextI, idx int) error {

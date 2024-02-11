@@ -7,6 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/storagesc"
+
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/core/datastore"
 	common2 "0chain.net/smartcontract/common"
@@ -56,6 +59,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(miner+"/nodeStat", common.UserRateLimit(mrh.getNodeStat)),
 		rest.MakeEndpoint(miner+"/nodePoolStat", common.UserRateLimit(mrh.getNodePoolStat)),
 		rest.MakeEndpoint(miner+"/configs", common.UserRateLimit(mrh.getConfigs)),
+		rest.MakeEndpoint(miner+"/hardfork", common.UserRateLimit(mrh.getHardfork)),
 		rest.MakeEndpoint(miner+"/provider-rewards", common.UserRateLimit(mrh.getProviderRewards)),
 		rest.MakeEndpoint(miner+"/delegate-rewards", common.UserRateLimit(mrh.getDelegateRewards)),
 
@@ -194,6 +198,28 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 	}
 	rtv, err := gn.getConfigMap()
 	common.Respond(w, r, rtv, err)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/hardfork hardfork
+// get hardfork by name
+//
+// responses:
+//
+//	200: StringMap
+//	400:
+//	484:
+func (mrh *MinerRestHandler) getHardfork(w http.ResponseWriter, r *http.Request) {
+	n := r.URL.Query().Get("name")
+	if len(n) == 0 {
+		common.Respond(w, r, nil, common.NewErrInternal("empty name"))
+		return
+	}
+	round, err := state.GetRoundByName(mrh.GetQueryStateContext(), n)
+	if err != nil {
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+		return
+	}
+	common.Respond(w, r, map[string]string{"round": strconv.FormatInt(round, 10)}, err)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat nodePoolStat
@@ -829,8 +855,8 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var ups = new(stakepool.UserPoolStat)
-	ups.Pools = make(map[datastore.Key][]*stakepool.DelegatePoolStat, len(minerPools)+len(sharderPools))
+	var ups = new(storagesc.UserPoolStat)
+	ups.Pools = make(map[datastore.Key][]*storagesc.DelegatePoolStat, len(minerPools)+len(sharderPools))
 	for _, pool := range minerPools {
 		dp := toUPS(pool)
 		ups.Pools[pool.ProviderID] = append(ups.Pools[pool.ProviderID], &dp)
@@ -845,9 +871,9 @@ func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, ups, nil)
 }
 
-func toUPS(pool event.DelegatePool) stakepool.DelegatePoolStat {
+func toUPS(pool event.DelegatePool) storagesc.DelegatePoolStat {
 
-	dp := stakepool.DelegatePoolStat{
+	dp := storagesc.DelegatePoolStat{
 		ID:     pool.PoolID,
 		Status: spenum.PoolStatus(pool.Status).String(),
 	}
@@ -908,7 +934,7 @@ func (mrh *MinerRestHandler) getStakePoolStat(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, res, nil)
 }
 
-func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*stakepool.StakePoolStat, error) {
+func getProviderStakePoolStats(providerType int, providerID string, edb *event.EventDb) (*storagesc.StakePoolStat, error) {
 	delegatePoolsChan := make(chan []event.DelegatePool)
 	errChan := make(chan error)
 
@@ -963,9 +989,9 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 
 	switch p := provider.(type) {
 	case event.Miner:
-		return stakepool.ToProviderStakePoolStats(&p.Provider, delegatePools)
+		return storagesc.ToProviderStakePoolStats(&p.Provider, delegatePools)
 	case event.Sharder:
-		return stakepool.ToProviderStakePoolStats(&p.Provider, delegatePools)
+		return storagesc.ToProviderStakePoolStats(&p.Provider, delegatePools)
 	default:
 		return nil, fmt.Errorf("unexpected provider type")
 	}

@@ -1,6 +1,8 @@
 package stakepool
 
 import (
+	"0chain.net/chaincore/block"
+	"github.com/0chain/common/core/logging"
 	"strconv"
 	"testing"
 
@@ -11,6 +13,10 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
+
+func init() {
+	logging.InitLogging("development", "")
+}
 
 func TestStakePool_DistributeRewards(t *testing.T) {
 	providerID := "provider_id"
@@ -234,6 +240,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -263,6 +270,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -293,6 +301,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -322,6 +331,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -351,6 +361,7 @@ func Test_validateLockRequest(t *testing.T) {
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -366,7 +377,7 @@ func Test_validateLockRequest(t *testing.T) {
 			name: "stake should fail on delegates limit",
 			args: args{
 				t: &transaction.Transaction{
-					ClientID: clientId3,
+					ClientID: "clientIdTxn",
 					Value:    10,
 				},
 				sp: &StakePool{
@@ -377,9 +388,13 @@ func Test_validateLockRequest(t *testing.T) {
 						clientId2: {
 							Balance: 20,
 						},
+						clientId3: {
+							Balance: 20,
+						},
 					},
 					Settings: Settings{
 						ServiceChargeRatio: 0,
+						MaxNumDelegates:    2,
 					},
 				},
 				vs: ValidationSettings{
@@ -395,7 +410,13 @@ func Test_validateLockRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := validateLockRequest(tt.args.t, tt.args.sp, tt.args.vs)
+			balances := newTestBalances(t, false)
+
+			b := &block.Block{}
+			b.Round = 1
+			balances.block = b
+
+			got, err := validateLockRequest(tt.args.t, tt.args.sp, tt.args.vs, balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateLockRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return

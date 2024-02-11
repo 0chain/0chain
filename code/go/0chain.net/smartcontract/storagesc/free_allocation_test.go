@@ -305,7 +305,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		inputObj := freeStorageAllocationInput{
 			RecipientPublicKey: mockUserPublicKey,
 			Marker:             string(inputBytes),
-			Blobbers:           blob,
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
@@ -326,6 +325,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
 					Nonce:      mockNonce,
+					Blobbers:   blob,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "ok_no_previous",
@@ -345,6 +345,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
 					Nonce:      mockNonce,
+					Blobbers:   blob,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "Total_limit_exceeded",
@@ -366,6 +367,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					Recipient:  mockRecipient,
 					FreeTokens: mockIndividualTokenLimit + 1,
 					Nonce:      mockNonce,
+					Blobbers:   blob,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "individual_limit_exceeded",
@@ -387,6 +389,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					Recipient:  mockRecipient,
 					FreeTokens: mockFreeTokens,
 					Nonce:      mockNonce,
+					Blobbers:   blob,
 				},
 				assigner: freeStorageAssigner{
 					ClientId:        mockCooperationId + "repeated_old_nonce",
