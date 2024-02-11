@@ -178,7 +178,7 @@ jobs:
     with:
       test_name: "blobber-1"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -231,7 +231,7 @@ jobs:
     with:
       test_name: "blobber-3"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -248,7 +248,7 @@ jobs:
     with:
       test_name: "blobber-4"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -265,7 +265,7 @@ jobs:
     with:
       test_name: "blobber-5"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -282,7 +282,7 @@ jobs:
     with:
       test_name: "blobber-6"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
