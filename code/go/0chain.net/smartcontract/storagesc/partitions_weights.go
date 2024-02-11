@@ -62,7 +62,7 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 			// iterate through the partition to find the blobber
 			if err := bwp.iterBlobberWeight(state, pidx,
 				func(id string, bw *ChallengeReadyBlobber) (stop bool) {
-					logging.Logger.Info("Jayash picking a blobber 2", zap.String("blobber_id", id), zap.Any("weight", bw.GetWeight()), zap.Any("br", br))
+					logging.Logger.Info("Jayash picking a blobber 2", zap.String("blobber_id", id), zap.Any("weight", bw.GetWeight()), zap.Any("bw", bw), zap.Any("br", br))
 					br -= int(bw.GetWeight())
 					if br <= 0 {
 						blobberID = bw.BlobberID
