@@ -1457,13 +1457,20 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 
-		blobberStake, err := sps[i].stake()
-		if err != nil {
-			return common.NewError("fini_alloc_failed",
-				"can't get stake of "+d.BlobberID+": "+err.Error())
-		}
+		err = chainstate.WithActivation(balances, "apollo", func() error { return nil }, func() error {
+			blobberStake, err := sps[i].stake()
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't get stake of "+d.BlobberID+": "+err.Error())
+			}
 
-		err = PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobber.ID, currency.Coin(blobber.SavedData), uint64(blobberStake))
+			err = PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobber.ID, currency.Coin(blobber.SavedData), uint64(blobberStake))
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 		if err != nil {
 			return err
 		}
