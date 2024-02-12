@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"fmt"
+	"math"
 
 	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
@@ -68,8 +69,26 @@ func (bc *ChallengeReadyBlobber) GetID() string {
 	return bc.BlobberID
 }
 
+// GetWeight
+// weight = 20*stake + 10k*log(used + 1)
+// stake in ZCN
+// used in MB
+// weight is capped with 10KK
 func (bc *ChallengeReadyBlobber) GetWeight() uint64 {
-	return uint64((float64(bc.Stake) * float64(bc.UsedCapacity)) / 1e10)
+	stake, err := bc.Stake.ToZCN()
+	if err != nil {
+		return 0
+	}
+	used := float64(bc.UsedCapacity) / 1e6
+
+	weightFloat := 20*stake + 10000*math.Log2(used+2)
+	weight := uint64(10000000)
+
+	if weightFloat < float64(weight) {
+		weight = uint64(weightFloat)
+	}
+
+	return weight
 }
 
 func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobberID string, stake currency.Coin, usedCapacity uint64) error {
