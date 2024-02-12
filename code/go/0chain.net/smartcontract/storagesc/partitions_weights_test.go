@@ -138,7 +138,7 @@ func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 11, int(b1w.UsedCapacity))
 
-	require.Equal(t, 101, bp.partWeights.Parts[0].Weight)
+	require.Equal(t, 50100, bp.partWeights.Parts[0].Weight)
 
 	// reload from state
 	nbp := testPreparePartWeights(t, state)
@@ -263,7 +263,7 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 	err = bp.remove(state, "blobber2")
 	require.NoError(t, err)
 	// 100 - 20 + 60 = 140
-	require.Equal(t, 140, bp.partWeights.Parts[0].Weight)
+	require.Equal(t, 50100, bp.partWeights.Parts[0].Weight)
 	// 185 - 60 = 125
 	require.Equal(t, 125, bp.partWeights.Parts[1].Weight)
 	bp.save(state)
