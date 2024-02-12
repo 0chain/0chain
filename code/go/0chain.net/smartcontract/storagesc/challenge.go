@@ -918,7 +918,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	beforeHardFork1 := func() (e error) {
 		blobberID, e = selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
 		if e != nil {
-			e = common.NewError("add_challenge", err.Error())
+			e = common.NewError("add_challenge", e.Error())
 		}
 		return e
 	}
