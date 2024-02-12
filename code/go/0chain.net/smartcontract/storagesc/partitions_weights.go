@@ -52,6 +52,10 @@ func (pws *PartitionsWeights) totalWeight() int {
 
 // pick picks a blobber based on the random value and weights
 func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp *blobberWeightPartitionsWrap) (string, error) {
+	if pws.totalWeight() == 0 {
+		return "", fmt.Errorf("no blobber available")
+	}
+
 	r := rd.Intn(pws.totalWeight())
 	var blobberID string
 	for pidx, pw := range pws.Parts {
