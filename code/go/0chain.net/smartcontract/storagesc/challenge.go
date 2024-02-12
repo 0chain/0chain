@@ -927,6 +927,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		// select blobber to challenge
 		blobberID, e = partsWeight.pick(balances, r)
 		if e != nil {
+			logging.Logger.Error("Jayash error picking blobber for challenge", zap.Error(e))
 			e = common.NewError("add_challenge", e.Error())
 		}
 		return e
