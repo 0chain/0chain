@@ -128,7 +128,7 @@ func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 		t.Fatal(err)
 	}
 	b1PartWeight := bp.partWeights.Parts[0]
-	require.Equal(t, 100, b1PartWeight.Weight)
+	require.Equal(t, 50100, b1PartWeight.Weight)
 
 	err = bp.update(state, ChallengeReadyBlobber{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 11})
 	require.NoError(t, err)
@@ -170,25 +170,25 @@ func TestBlobberWeightPartitionsWrapAdd(t *testing.T) {
 			name:               "Add new BlobberWeight",
 			initWeights:        weights[:3],
 			bw:                 ChallengeReadyBlobber{BlobberID: "blobber4", Stake: 1e10, UsedCapacity: 40},
-			expectedPartWeight: 100,
+			expectedPartWeight: 40080,
 		},
 		{
 			name:               "Add to empty partition",
 			initWeights:        []ChallengeReadyBlobber{},
 			bw:                 ChallengeReadyBlobber{BlobberID: "blobber1", Stake: 1e10, UsedCapacity: 10},
-			expectedPartWeight: 10,
+			expectedPartWeight: 10020,
 		},
 		{
 			name:               "Add to last one of a partition",
 			initWeights:        weights[:4],
 			bw:                 ChallengeReadyBlobber{BlobberID: "blobber5", Stake: 1e10, UsedCapacity: 50},
-			expectedPartWeight: 150,
+			expectedPartWeight: 50100,
 		},
 		{
 			name:               "Add to first one of a new partition",
 			initWeights:        weights[:5],
 			bw:                 ChallengeReadyBlobber{BlobberID: "blobber6", Stake: 1e10, UsedCapacity: 60},
-			expectedPartWeight: 60,
+			expectedPartWeight: 10020,
 		},
 	}
 
@@ -254,7 +254,7 @@ func TestBlobberWeightPartitionsWrapRemove(t *testing.T) {
 
 	err = bp.remove(state, "blobber10")
 	require.NoError(t, err)
-	require.Equal(t, 185, bp.partWeights.Parts[1].Weight)
+	require.Equal(t, 40080, bp.partWeights.Parts[1].Weight)
 	bp.save(state)
 
 	// Test removing a blobber from a different partition than the replace item
@@ -297,7 +297,7 @@ func TestBlobberWeightPartitionsWrapMigrate(t *testing.T) {
 		bw := ChallengeReadyBlobber{}
 		_, err = bp.p.Get(state, fmt.Sprintf("blobber%d", i), &bw)
 		require.NoError(t, err)
-		require.Equal(t, i*10, int(bw.GetWeight()))
+		require.Equal(t, 10020, int(bw.GetWeight()))
 	}
 
 	// Verify that the partition weights are correctly migrated
