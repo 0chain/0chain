@@ -29,7 +29,7 @@ func initBlobberWeightParts(state state.StateContextI, bp *blobberWeightPartitio
 		if err != nil {
 			return err
 		}
-		partWeightMap[loc] += int(w.GetWeight())
+		partWeightMap[loc] += int(w.GetWeightV2())
 	}
 
 	partIndexs := make([]int, 0, len(partWeightMap))
@@ -99,7 +99,7 @@ func TestBlobberWeightPartitionsWrapPick(t *testing.T) {
 		}
 	}
 	for _, bw := range weights {
-		fmt.Println("blobberID:", bw.BlobberID, "weight:", bw.GetWeight(), "picked:", pickMap[bw.BlobberID])
+		fmt.Println("blobberID:", bw.BlobberID, "weight:", bw.GetWeightV2(), "picked:", pickMap[bw.BlobberID])
 	}
 
 }
@@ -144,7 +144,7 @@ func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {
 	nbp := testPreparePartWeights(t, state)
 	loc, err := nbp.p.Get(state, "blobber1", &b1w)
 	require.NoError(t, err)
-	require.Equal(t, 10020, int(b1w.GetWeight()))
+	require.Equal(t, 10020, int(b1w.GetWeightV2()))
 
 	require.NoError(t, err)
 	require.Equal(t, 50100, nbp.partWeights.Parts[loc].Weight)
@@ -297,7 +297,7 @@ func TestBlobberWeightPartitionsWrapMigrate(t *testing.T) {
 		bw := ChallengeReadyBlobber{}
 		_, err = bp.p.Get(state, fmt.Sprintf("blobber%d", i), &bw)
 		require.NoError(t, err)
-		require.Equal(t, 10020, int(bw.GetWeight()))
+		require.Equal(t, 10020, int(bw.GetWeightV2()))
 	}
 
 	// Verify that the partition weights are correctly migrated

@@ -69,12 +69,16 @@ func (bc *ChallengeReadyBlobber) GetID() string {
 	return bc.BlobberID
 }
 
-// GetWeight
+func (bc *ChallengeReadyBlobber) GetWeightV1() uint64 {
+	return uint64((float64(bc.Stake) * float64(bc.UsedCapacity)) / 1e10)
+}
+
+// GetWeightV2
 // weight = 20*stake + 10k*log(used + 1)
 // stake in ZCN
 // used in MB
 // weight is capped with 10KK
-func (bc *ChallengeReadyBlobber) GetWeight() uint64 {
+func (bc *ChallengeReadyBlobber) GetWeightV2() uint64 {
 	stake, err := bc.Stake.ToZCN()
 	if err != nil {
 		return 0
