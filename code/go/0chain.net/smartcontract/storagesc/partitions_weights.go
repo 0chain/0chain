@@ -57,7 +57,7 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 	totalWeight := pws.totalWeight()
 	logging.Logger.Info("Jayash picking a blobber", zap.Any("weight", totalWeight), zap.Any("parts", pws.Parts))
 	if totalWeight <= 0 {
-		logging.Logger.Error("Jayash bad weight", zap.Any("weight", totalWeight))
+		logging.Logger.Error("Jayash bad weight", zap.Any("weight", totalWeight), zap.Any("parts", pws.Parts))
 		return "", errors.New("bad weight")
 	}
 	r := rd.Intn(totalWeight)
