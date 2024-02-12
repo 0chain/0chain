@@ -293,15 +293,25 @@ func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
 
 func (conf *Config) Clone() statecache.Value {
 	cc := *conf
-	cc.ReadPool = &readPoolConfig{}
-	cc.WritePool = &writePoolConfig{}
-	cc.StakePool = &stakePoolConfig{}
-	cc.BlockReward = &blockReward{}
+	if conf.ReadPool != nil {
+		cc.ReadPool = &readPoolConfig{}
+		*cc.ReadPool = *conf.ReadPool
+	}
 
-	*cc.ReadPool = *conf.ReadPool
-	*cc.WritePool = *conf.WritePool
-	*cc.StakePool = *conf.StakePool
-	*cc.BlockReward = *conf.BlockReward
+	if conf.WritePool != nil {
+		cc.WritePool = &writePoolConfig{}
+		*cc.WritePool = *conf.WritePool
+	}
+
+	if conf.StakePool != nil {
+		cc.StakePool = &stakePoolConfig{}
+		*cc.StakePool = *conf.StakePool
+	}
+
+	if conf.BlockReward != nil {
+		cc.BlockReward = &blockReward{}
+		*cc.BlockReward = *conf.BlockReward
+	}
 
 	cc.Cost = make(map[string]int, len(conf.Cost))
 	for k, v := range conf.Cost {

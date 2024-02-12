@@ -2031,11 +2031,15 @@ func (sa *StorageAllocation) Clone() statecache.Value {
 	for i, sba := range sa.BlobberAllocs {
 		ba := &BlobberAllocation{}
 		*ba = *sba
-		ba.LastWriteMarker = &WriteMarker{}
-		*ba.LastWriteMarker = *sba.LastWriteMarker
+		if sba.LastWriteMarker != nil {
+			ba.LastWriteMarker = &WriteMarker{}
+			*ba.LastWriteMarker = *sba.LastWriteMarker
+		}
 
-		ba.Stats = &StorageAllocationStats{}
-		*ba.Stats = *sba.Stats
+		if sba.Stats != nil {
+			ba.Stats = &StorageAllocationStats{}
+			*ba.Stats = *sba.Stats
+		}
 
 		clone.BlobberAllocs[i] = ba
 		clone.BlobberAllocsMap[ba.BlobberID] = ba
