@@ -434,11 +434,19 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 		return false
 	}
 	reqSignature := r.Header.Get(HeaderNodeRequestSignature)
-	if ok, _ := sender.Verify(reqSignature, reqHash); !ok {
+
+	var ok bool
+	taskqueue.Execute(taskqueue.N2NMsg, func() error {
+		ok, _ = sender.Verify(reqSignature, reqHash)
+		return nil
+	})
+
+	if !ok {
 		logging.N2n.Error("message received - invalid signature", zap.String("from", sender.GetPseudoName()),
 			zap.String("to", selfPseudoName), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata), zap.String("signature", reqSignature))
 		return false
 	}
+
 	sender.SetStatus(NodeStatusActive)
 	sender.SetLastActiveTime(time.Unix(reqTSn, 0))
 	return true

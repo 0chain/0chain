@@ -15,6 +15,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/config"
 	"0chain.net/core/statecache"
+	"0chain.net/core/util/taskqueue"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -282,12 +283,17 @@ func (b *Block) Validate(_ context.Context) error {
 				b.Hash, hash, b.getHashData()))
 	}
 	var ok bool
-	ok, err = miner.Verify(b.Signature, b.Hash)
-	if err != nil {
+	if err := taskqueue.Execute(taskqueue.Common, func() error {
+		ok, err = miner.Verify(b.Signature, b.Hash)
 		return err
-	} else if !ok {
+	}); err != nil {
+		return err
+	}
+
+	if !ok {
 		return common.NewError("signature invalid", "The block wasn't signed correctly")
 	}
+
 	return nil
 }
 
