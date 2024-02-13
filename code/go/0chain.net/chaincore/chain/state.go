@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/core/config"
 	"0chain.net/core/statecache"
+	"0chain.net/core/util/taskqueue"
 	"github.com/0chain/common/core/currency"
 
 	"0chain.net/chaincore/node"
@@ -188,10 +189,17 @@ func (c *Chain) UpdateState(ctx context.Context,
 	txn *transaction.Transaction,
 	blockStateCache *statecache.BlockCache,
 	waitC ...chan struct{},
-) ([]event.Event, error) {
-	c.stateMutex.Lock()
-	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, bState, txn, blockStateCache, waitC...)
+) (es []event.Event, err error) {
+
+	err = taskqueue.Execute(taskqueue.SCExec, func() error {
+		c.stateMutex.Lock()
+		defer c.stateMutex.Unlock()
+		var err error
+		es, err = c.updateState(ctx, b, bState, txn, blockStateCache, waitC...)
+		return err
+	})
+
+	return
 }
 
 type SyncReplyC struct {

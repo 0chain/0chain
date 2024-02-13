@@ -18,6 +18,7 @@ import (
 
 	"0chain.net/core/config"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util/taskqueue"
 	"0chain.net/rest"
 	"go.uber.org/zap"
 
@@ -82,6 +83,7 @@ func main() {
 
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
+	taskqueue.Init(ctx)
 	initEntities(workdir, redisHost, redisPort, redisTxnsHost, redisTxnsPort)
 	serverChain := chain.NewChainFromConfig()
 

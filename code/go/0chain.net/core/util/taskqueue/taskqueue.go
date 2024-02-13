@@ -10,7 +10,8 @@ import (
 
 type Task struct {
 	priority int
-	taskFunc func()
+	taskFunc func() error
+	errC     chan error
 	name     string
 	age      time.Time
 }
@@ -23,17 +24,20 @@ func Init(ctx context.Context) {
 	taskExecutor = NewTaskExecutor(ctx)
 }
 
-// AddTask adds a task to the global task executor
-func AddTask(typ TaskType, f func()) {
-	taskExecutor.Add(newTask(typ, f))
+// Execute adds a task to the global task executor, return a channel to receive the result, i.e whether the task returns error
+func Execute(typ TaskType, f func() error) error {
+	errC := make(chan error, 1)
+	taskExecutor.Add(newTask(typ, f, errC))
+	return <-errC
 }
 
 // newTask creates a new task with the given type and function
-func newTask(typ TaskType, f func()) *Task {
+func newTask(typ TaskType, f func() error, errC chan error) *Task {
 	return &Task{
 		priority: int(typ),
 		name:     typ.String(),
 		taskFunc: f,
+		errC:     errC,
 	}
 }
 
@@ -103,7 +107,8 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			}
 			task := heap.Pop(&te.tasks).(*Task)
 			te.mu.Unlock()
-			task.taskFunc()
+			// push
+			task.errC <- task.taskFunc()
 			// logging.Logger.Debug("Executing task", zap.String("name:", task.name), zap.Int("priority", task.priority))
 			fmt.Println("Executing task", task.name, "priority", task.priority)
 		}
