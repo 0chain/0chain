@@ -872,51 +872,22 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			blobbersSelected = challengeBlobbers[:maxBlobbersSelect]
 		}
 
-		var blobberId string
-		actErr := cstate.WithActivation(balances, "apollo", func() error {
-			totalWeight := uint64(0)
-			for _, bc := range blobbersSelected {
-				totalWeight += bc.GetWeightV1()
-			}
-
-			randValue := r.Float64() * float64(totalWeight)
-
-			var cumulativeWeight uint64
-			for _, bc := range blobbersSelected {
-				cumulativeWeight += bc.GetWeightV1()
-				if float64(cumulativeWeight) >= randValue {
-					blobberId = bc.BlobberID
-					return nil
-				}
-			}
-
-			blobberId = blobbersSelected[len(blobbersSelected)-1].BlobberID
-			return nil
-		}, func() error {
-			totalWeight := uint64(0)
-			for _, bc := range blobbersSelected {
-				totalWeight += bc.GetWeightV2()
-			}
-
-			randValue := r.Float64() * float64(totalWeight)
-
-			var cumulativeWeight uint64
-			for _, bc := range blobbersSelected {
-				cumulativeWeight += bc.GetWeightV2()
-				if float64(cumulativeWeight) >= randValue {
-					blobberId = bc.BlobberID
-					return nil
-				}
-			}
-
-			blobberId = blobbersSelected[len(blobbersSelected)-1].BlobberID
-			return nil
-		})
-		if err != nil {
-			return "", actErr
+		totalWeight := uint64(0)
+		for _, bc := range blobbersSelected {
+			totalWeight += bc.GetWeightV1()
 		}
 
-		return blobberId, nil
+		randValue := r.Float64() * float64(totalWeight)
+
+		var cumulativeWeight uint64
+		for _, bc := range blobbersSelected {
+			cumulativeWeight += bc.GetWeightV1()
+			if float64(cumulativeWeight) >= randValue {
+				return bc.BlobberID, nil
+			}
+		}
+
+		return blobbersSelected[len(blobbersSelected)-1].BlobberID, nil
 	case randomSelection:
 		randomIndex := r.Intn(len(challengeBlobbers))
 		return challengeBlobbers[randomIndex].BlobberID, nil
