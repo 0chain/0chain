@@ -10,6 +10,7 @@
 package storagesc
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 
