@@ -13,6 +13,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util/taskqueue"
 	"github.com/0chain/common/core/logging"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
@@ -195,12 +196,19 @@ type senderSignInfo struct {
 }
 
 func prepareSenderSign(entity datastore.Entity) (*senderSignInfo, error) {
-	ts := time.Now()
-	t := common.Timestamp(ts.Add(time.Duration(N2NTimeTolerance) * time.Second).Unix())
-	hashdata := getHashData(Self.Underlying().GetKey(), t, entity.GetKey())
-	hash := encryption.Hash(hashdata)
-	signature, err := Self.Sign(hash)
-	if err != nil {
+	var (
+		ts       = time.Now()
+		t        = common.Timestamp(ts.Add(time.Duration(N2NTimeTolerance) * time.Second).Unix())
+		hashdata = getHashData(Self.Underlying().GetKey(), t, entity.GetKey())
+		hash     = encryption.Hash(hashdata)
+		sig      string
+		err      error
+	)
+
+	if err := taskqueue.Execute(taskqueue.N2NMsg, func() error {
+		sig, err = Self.Sign(hash)
+		return err
+	}); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +216,7 @@ func prepareSenderSign(entity datastore.Entity) (*senderSignInfo, error) {
 		Ts:        t,
 		TsStr:     strconv.FormatInt(int64(t), 10),
 		Hash:      hash,
-		Signature: signature,
+		Signature: sig,
 	}, nil
 }
 
