@@ -24,14 +24,14 @@ func Init(ctx context.Context) {
 	taskExecutor = NewTaskExecutor(ctx)
 }
 
-// Execute adds a task to the global task executor, return a channel to receive the result, i.e whether the task returns error
+// Execute executes a task
 func Execute(typ TaskType, f func() error) error {
 	errC := make(chan error, 1)
 	taskExecutor.Add(newTask(typ, f, errC))
 	return <-errC
 }
 
-// newTask creates a new task with the given type and function
+// newTask creates a new task
 func newTask(typ TaskType, f func() error, errC chan error) *Task {
 	return &Task{
 		priority: int(typ),
