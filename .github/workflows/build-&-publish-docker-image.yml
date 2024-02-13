@@ -322,11 +322,12 @@ jobs:
               https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@master
+        uses: 0chain/actions/deploy-0chain@fix/repo-snapshots
         with:
           miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          repo_snapshots_branch: "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>"
+          repo_snapshots_branch:
+          ${{ github.base_ref == 'staging' ? "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>": "<CURRENT BRANCH WITH FALLBACK TO STAGING>" } }
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
@@ -337,9 +338,10 @@ jobs:
           graphnode_ethereum_node_url: https://rpc.tenderly.co/fork/${{ env.TENDERLY_FORK_ID }}
 
       - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@master
+        uses: 0chain/actions/run-system-tests@fix/repo-snapshots
         with:
-          repo_snapshots_branch: "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>"
+          repo_snapshots_branch:
+          ${{ github.base_ref == 'staging' ? "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>" : "<CURRENT BRANCH WITH FALLBACK TO STAGING>" }}
           network: ${{ env.NETWORK_URL }}
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           deploy_report_page: false
@@ -351,6 +353,8 @@ jobs:
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+
+
 
       - name: "Remove Tenderly fork"
         if: always()
