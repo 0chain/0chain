@@ -200,7 +200,7 @@ jobs:
 
 
   system-tests:
-    if: github.event_name != 'workflow_dispatch'
+    if: ${{ github.event_name != 'workflow_dispatch' }}
     needs: [miner, sharder]
     runs-on: [ tests-suite ]
     steps:
