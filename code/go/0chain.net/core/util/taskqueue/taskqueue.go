@@ -47,10 +47,25 @@ type PriorityQueue []*Task
 func (pq PriorityQueue) Len() int { return len(pq) }
 
 func (pq PriorityQueue) Less(i, j int) bool {
-	if pq[i].priority == pq[j].priority {
+	now := time.Now()
+	// Duration that a task needs to wait before its priority is increased
+	waitDuration := 10 * time.Millisecond
+
+	iPriority := pq[i].priority
+	jPriority := pq[j].priority
+
+	// Increase the priority of tasks that have been waiting for more than waitDuration
+	if now.Sub(pq[i].age) > waitDuration {
+		iPriority++
+	}
+	if now.Sub(pq[j].age) > waitDuration {
+		jPriority++
+	}
+
+	if iPriority == jPriority {
 		return pq[i].age.Before(pq[j].age)
 	}
-	return pq[i].priority > pq[j].priority
+	return iPriority > jPriority
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
@@ -81,7 +96,9 @@ type TaskExecutor struct {
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
 	te := &TaskExecutor{}
 	te.cond = sync.NewCond(&te.mu)
-	go te.worker(ctx)
+	for i := 0; i < 2; i++ {
+		go te.worker(ctx)
+	}
 
 	return te
 }
