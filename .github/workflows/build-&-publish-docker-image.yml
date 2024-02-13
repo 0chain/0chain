@@ -326,8 +326,7 @@ jobs:
         with:
           miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          repo_snapshots_branch:
-          ${{ github.base_ref == 'staging' ? "<CURRENT BRANCH WITH FALLBACK TO STAGING>": "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>" } }
+          repo_snapshots_branch: ${{ github.base_ref == 'staging' ? "<CURRENT BRANCH WITH FALLBACK TO STAGING>" : "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>" }}
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
