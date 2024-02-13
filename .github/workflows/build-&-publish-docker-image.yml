@@ -328,7 +328,7 @@ jobs:
               https://api.tenderly.co/api/v1/account/zus_network/project/project/fork/${{ env.TENDERLY_FORK_ID }}/simulate
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@fix/repo-snapshots
+        uses: 0chain/actions/deploy-0chain@master
         with:
           miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
@@ -343,7 +343,7 @@ jobs:
           graphnode_ethereum_node_url: https://rpc.tenderly.co/fork/${{ env.TENDERLY_FORK_ID }}
 
       - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@fix/repo-snapshots
+        uses: 0chain/actions/run-system-tests@master
         with:
           repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
           network: ${{ env.NETWORK_URL }}
