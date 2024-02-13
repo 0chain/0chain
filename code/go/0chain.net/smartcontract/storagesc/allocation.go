@@ -1471,7 +1471,7 @@ func (sc *StorageSmartContract) finishAllocation(
 					"can't convert saved data of "+d.BlobberID+": "+err.Error())
 			}
 
-			err = PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobber.ID, blobberStake, sd)
+			err = PartitionsChallengeReadyBlobberUpdate(balances, blobber.ID, blobberStake, sd)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"can't update blobber "+d.BlobberID+": "+err.Error())
