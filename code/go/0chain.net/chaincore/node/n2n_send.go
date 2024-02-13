@@ -194,27 +194,22 @@ type senderSignInfo struct {
 	Signature string
 }
 
-// prepareSenderSign prepare N signature in N seconds
-func prepareSenderSign(entity datastore.Entity, num int) ([]*senderSignInfo, error) {
+func prepareSenderSign(entity datastore.Entity) (*senderSignInfo, error) {
 	ts := time.Now()
-	ssis := make([]*senderSignInfo, num)
-	for i := 0; i < num; i++ {
-		t := common.Timestamp(ts.Add(time.Duration(i) * time.Second).Unix())
-		hashdata := getHashData(Self.Underlying().GetKey(), t, entity.GetKey())
-		hash := encryption.Hash(hashdata)
-		signature, err := Self.Sign(hash)
-		if err != nil {
-			return nil, err
-		}
-
-		ssis[i] = &senderSignInfo{
-			Ts:        t,
-			TsStr:     strconv.FormatInt(int64(t), 10),
-			Hash:      hash,
-			Signature: signature,
-		}
+	t := common.Timestamp(ts.Add(time.Duration(N2NTimeTolerance) * time.Second).Unix())
+	hashdata := getHashData(Self.Underlying().GetKey(), t, entity.GetKey())
+	hash := encryption.Hash(hashdata)
+	signature, err := Self.Sign(hash)
+	if err != nil {
+		return nil, err
 	}
-	return ssis, nil
+
+	return &senderSignInfo{
+		Ts:        t,
+		TsStr:     strconv.FormatInt(int64(t), 10),
+		Hash:      hash,
+		Signature: signature,
+	}, nil
 }
 
 /*SendEntityHandler provides a client API to send an entity */
@@ -243,31 +238,29 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 		}
 
-		preparedSignatures, err := prepareSenderSign(entity, 5)
+		ssi, err := prepareSenderSign(entity)
 		if err != nil {
 			logging.N2n.Panic("failed to prepare sender signature", zap.Error(err))
 		}
 
 		setSignHeader := func(r *http.Request) {
-			for _, ssi := range preparedSignatures {
-				if common.Within(int64(ssi.Ts), int64(time.Second)) {
-					r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
-					r.Header.Set(HeaderRequestHash, ssi.Hash)
-					r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
-					return
-				}
+			if common.Within(int64(ssi.Ts), int64(time.Second)) {
+				r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
+				r.Header.Set(HeaderRequestHash, ssi.Hash)
+				r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
+				return
 			}
 
 			// there's no prepared signature within valid time range.
 			// generate a new one
-			ssis, err := prepareSenderSign(entity, 1)
+			ssi, err = prepareSenderSign(entity)
 			if err != nil {
 				logging.N2n.Panic("failed to prepare sender signature", zap.Error(err))
 			}
 
-			r.Header.Set(HeaderRequestTimeStamp, ssis[0].TsStr)
-			r.Header.Set(HeaderRequestHash, ssis[0].Hash)
-			r.Header.Set(HeaderNodeRequestSignature, ssis[0].Signature)
+			r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
+			r.Header.Set(HeaderRequestHash, ssi.Hash)
+			r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
 		}
 
 		return func(ctx context.Context, receiver *Node) bool {
