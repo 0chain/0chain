@@ -238,9 +238,9 @@ jobs:
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
           
           if [[ "${{github.base_ref}}" == "staging" ]]; then
-            echo "REPO_SNAPSHOTS_BRANCH=CURRENT BRANCH WITH FALLBACK TO STAGING" >> $GITHUB_ENV
+            echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO STAGING>" >> $GITHUB_ENV
           else
-            echo "REPO_SNAPSHOTS_BRANCH=CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT" >> $GITHUB_ENV
+            echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>" >> $GITHUB_ENV
           fi
 
       - name: 'Setup jq'
