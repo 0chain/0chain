@@ -10,7 +10,6 @@
 package storagesc
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 
@@ -46,7 +45,6 @@ func (pws *PartitionsWeights) save(state state.StateContextI) error {
 func (pws *PartitionsWeights) totalWeight() int {
 	total := 0
 	for _, w := range pws.Parts {
-		logging.Logger.Info("Jayash total partition weight ", zap.Any("weight", w.Weight), zap.Any("total", total))
 		total += w.Weight
 	}
 	return total
@@ -69,8 +67,7 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 			// iterate through the partition to find the blobber
 			if err := bwp.iterBlobberWeight(state, pidx,
 				func(id string, bw *ChallengeReadyBlobber) (stop bool) {
-					logging.Logger.Info("Jayash picking a blobber 2", zap.String("blobber_id", id), zap.Any("weight", bw.GetWeight()), zap.Any("bw", bw), zap.Any("br", br))
-					br -= int(bw.GetWeight())
+					br -= int(bw.GetWeightV2())
 					if br <= 0 {
 						blobberID = bw.BlobberID
 						// find the blobber, break and return
@@ -132,7 +129,7 @@ func (bp *blobberWeightPartitionsWrap) sync(state state.StateContextI, crp *part
 			return
 		}
 
-		bp.partWeights.Parts[partIndex].Weight += int(crb.GetWeight())
+		bp.partWeights.Parts[partIndex].Weight += int(crb.GetWeightV2())
 		return
 	}); err != nil {
 		return err
@@ -150,11 +147,11 @@ func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw Challen
 
 	// update the partition weight
 	if loc >= len(bp.partWeights.Parts) {
-		bp.partWeights.Parts = append(bp.partWeights.Parts, PartitionWeight{Weight: int(bw.GetWeight())})
+		bp.partWeights.Parts = append(bp.partWeights.Parts, PartitionWeight{Weight: int(bw.GetWeightV2())})
 		return bp.save(state)
 	}
 
-	bp.partWeights.Parts[loc].Weight += int(bw.GetWeight())
+	bp.partWeights.Parts[loc].Weight += int(bw.GetWeightV2())
 	return bp.save(state)
 }
 
@@ -183,7 +180,7 @@ func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobber
 	//
 	// if removed item and replace item are in the same partition, just reduce the weight
 	if removeLocs.From == removeLocs.Replace {
-		bp.partWeights.Parts[removeLocs.From].Weight -= int(bw.GetWeight())
+		bp.partWeights.Parts[removeLocs.From].Weight -= int(bw.GetWeightV2())
 		// remove if partition weight is 0,
 		if bp.partWeights.Parts[removeLocs.From].Weight == 0 {
 			// remove the last part weight, as 0 weight could only happen when it's last part
@@ -204,9 +201,9 @@ func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobber
 	}
 
 	// reduce the weight of the replace item's partition
-	bp.partWeights.Parts[removeLocs.Replace].Weight -= int(repBw.GetWeight())
+	bp.partWeights.Parts[removeLocs.Replace].Weight -= int(repBw.GetWeightV2())
 	// apply the difference to the removed item's partition
-	diff := int(repBw.GetWeight()) - int(bw.GetWeight())
+	diff := int(repBw.GetWeightV2()) - int(bw.GetWeightV2())
 	bp.partWeights.Parts[removeLocs.From].Weight += diff
 	return bp.save(state)
 }
@@ -220,7 +217,7 @@ func (bp *blobberWeightPartitionsWrap) update(state state.StateContextI, bw Chal
 			return nil, err
 		}
 
-		diff = int(bw.GetWeight()) - int(savedBw.GetWeight())
+		diff = int(bw.GetWeightV2()) - int(savedBw.GetWeightV2())
 		return bw.MarshalMsg(nil)
 	})
 	if err != nil {
