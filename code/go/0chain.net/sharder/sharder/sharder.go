@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/util/taskqueue"
 	"0chain.net/rest"
 	"0chain.net/sharder/blockstore"
 	"go.uber.org/zap"
@@ -70,6 +71,8 @@ func main() {
 	config.SetServerChainID(config.Configuration().ChainID)
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
+
+	taskqueue.Init(ctx)
 	initEntities(workdir)
 	sViper := viper.Sub("storage")
 	blockstore.Init(workdir, sViper)
