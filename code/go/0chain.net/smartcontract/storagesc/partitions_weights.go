@@ -56,7 +56,7 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 		return "", fmt.Errorf("no blobber available")
 	}
 
-	logging.Logger.Info("Jayash", zap.Any("pws", pws.Parts), zap.Any("totalWeight", pws.totalWeight()))
+	logging.Logger.Info("Jayash printing partitions", zap.Any("pws", pws.Parts), zap.Any("totalWeight", pws.totalWeight()))
 
 	r := rd.Intn(pws.totalWeight())
 	var blobberID string
