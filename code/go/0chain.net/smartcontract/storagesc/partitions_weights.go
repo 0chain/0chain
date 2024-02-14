@@ -11,6 +11,7 @@ package storagesc
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"math/rand"
 
 	"0chain.net/chaincore/chain/state"
@@ -56,7 +57,9 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 		return "", fmt.Errorf("no blobber available")
 	}
 
-	logging.Logger.Info("Jayash printing partitions", zap.Any("pws", pws.Parts), zap.Any("totalWeight", pws.totalWeight()))
+	uniqueIdForLogging := uuid.New().String()
+
+	logging.Logger.Info("Jayash printing partitions : "+uniqueIdForLogging, zap.Any("partitions", bwp.p.Partitions), zap.Any("totalWeight", pws.totalWeight()))
 
 	r := rd.Intn(pws.totalWeight())
 	var blobberID string
@@ -67,6 +70,7 @@ func (pws *PartitionsWeights) pick(state state.StateContextI, rd *rand.Rand, bwp
 			// iterate through the partition to find the blobber
 			if err := bwp.iterBlobberWeight(state, pidx,
 				func(id string, bw *ChallengeReadyBlobber) (stop bool) {
+					logging.Logger.Info("Jayash printing specific blobbers : "+uniqueIdForLogging, zap.Any("bw", bw), zap.Any("blobberWeight", bw.GetWeightV2()))
 					br -= int(bw.GetWeightV2())
 					if br <= 0 {
 						blobberID = bw.BlobberID
