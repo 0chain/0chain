@@ -96,9 +96,12 @@ type TaskExecutor struct {
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
 	te := &TaskExecutor{}
 	te.cond = sync.NewCond(&te.mu)
-	for i := 0; i < 2; i++ {
-		go te.worker(ctx)
-	}
+	// for i := 0; i < 2; i++ {
+	// 	go te.worker(ctx)
+	// }
+	// for i := 0; i < 2; i++ {
+	go te.worker(ctx)
+	// }
 
 	return te
 }
