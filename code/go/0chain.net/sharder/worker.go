@@ -154,6 +154,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("block round", b.Round))
 			stuckCheckTimer.Reset(stuckDuration)
 			if b.Round > lfb.Round+aheadN {
+				logging.Logger.Debug("process block, b.Round > lfb.Round+aheadN")
 				// trigger sync process to pull the latest blocks when
 				// current round is > lfb.Round + aheadN to break the stuck if any.
 				if !syncing {
@@ -172,7 +173,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
-			sc.blockBuffer.Pop()
+			pop, b2 := sc.blockBuffer.Pop()
+			logging.Logger.Debug("process block, pop", zap.Bool("res", b2), zap.Any("item", pop))
 			if err := sc.processBlock(ctx, b); err != nil {
 				logging.Logger.Error("process block failed",
 					zap.Error(err),
@@ -182,9 +184,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 				var pb *block.Block
 				if err == ErrNoPreviousBlock {
+					logging.Logger.Debug("process block, rno previous block")
 					// fetch the previous block
 					pb, _ = sc.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
 				} else if ErrNoPreviousState.Is(err) {
+					logging.Logger.Debug("process block, rno previous state")
 					// get the previous block from local
 					pb, _ = sc.GetBlock(ctx, b.PrevHash)
 				} else {
@@ -192,6 +196,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				}
 
 				if pb == nil {
+					logging.Logger.Debug("process block, pb nil")
 					continue
 				}
 
@@ -203,6 +208,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 						zap.Error(err))
 					continue
 				}
+				logging.Logger.Debug("process block, process previous block")
 
 				// process this block again
 				if err := sc.processBlock(ctx, b); err != nil {
@@ -212,6 +218,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 						zap.Error(err))
 					continue
 				}
+				logging.Logger.Debug("process block, process")
+
 			}
 
 			lfbTk := sc.GetLatestLFBTicket(ctx)
