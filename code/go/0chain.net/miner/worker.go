@@ -12,6 +12,7 @@ import (
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/core/util/taskqueue"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
@@ -39,10 +40,8 @@ func SetupWorkers(ctx context.Context) {
 	go mc.SyncAllMissingNodesWorker(ctx)
 }
 
-/*BlockWorker - a job that does all the work related to blocks in each round */
-func (mc *Chain) BlockWorker(ctx context.Context) {
+func (mc *Chain) startMessageWorker(ctx context.Context) {
 	var protocol Protocol = mc
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -51,7 +50,8 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			if !mc.isStarted() {
 				break
 			}
-			go func(bmsg *BlockMessage) {
+
+			func(bmsg *BlockMessage) {
 				ts := time.Now()
 				if bmsg.Sender != nil {
 					logging.Logger.Debug("message",
@@ -61,18 +61,23 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				} else {
 					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
 				}
-				switch bmsg.Type {
-				case MessageVRFShare:
-					protocol.HandleVRFShare(ctx, bmsg)
-				case MessageVerify:
-					protocol.HandleVerifyBlockMessage(ctx, bmsg)
-				case MessageVerificationTicket:
-					protocol.HandleVerificationTicketMessage(ctx, bmsg)
-				case MessageNotarization:
-					protocol.HandleNotarizationMessage(ctx, bmsg)
-				case MessageNotarizedBlock:
-					protocol.HandleNotarizedBlockMessage(ctx, bmsg)
-				}
+
+				taskqueue.Execute(taskqueue.Common, func() error {
+					switch bmsg.Type {
+					case MessageVRFShare:
+						protocol.HandleVRFShare(ctx, bmsg)
+					case MessageVerify:
+						protocol.HandleVerifyBlockMessage(ctx, bmsg)
+					case MessageVerificationTicket:
+						protocol.HandleVerificationTicketMessage(ctx, bmsg)
+					case MessageNotarization:
+						protocol.HandleNotarizationMessage(ctx, bmsg)
+					case MessageNotarizedBlock:
+						protocol.HandleNotarizedBlockMessage(ctx, bmsg)
+					}
+					return nil
+				})
+
 				if bmsg.Sender != nil {
 					logging.Logger.Debug("message (done)",
 						zap.Any("msg", GetMessageLookup(bmsg.Type)),
@@ -86,6 +91,14 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				}
 			}(msg)
 		}
+	}
+}
+
+/*BlockWorker - a job that does all the work related to blocks in each round */
+func (mc *Chain) BlockWorker(ctx context.Context) {
+	// start 10 workers to process the incoming messages
+	for i := 0; i < 10; i++ {
+		mc.startMessageWorker(ctx)
 	}
 }
 
