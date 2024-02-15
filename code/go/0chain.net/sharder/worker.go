@@ -154,10 +154,12 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("block round", b.Round))
 			stuckCheckTimer.Reset(stuckDuration)
 			if b.Round > lfb.Round+aheadN {
-				logging.Logger.Debug("process block, b.Round > lfb.Round+aheadN")
+				logging.Logger.Debug("process block, b.Round > lfb.Round+aheadN",
+					zap.Int64("round", b.Round), zap.Int64("lfb_round", lfb.Round))
 				// trigger sync process to pull the latest blocks when
 				// current round is > lfb.Round + aheadN to break the stuck if any.
 				if !syncing {
+					logging.Logger.Debug("process block, not syncing")
 					syncBlocksTimer.Reset(0)
 				}
 
