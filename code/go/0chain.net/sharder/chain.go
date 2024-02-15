@@ -73,6 +73,7 @@ type Chain struct {
 
 // PushToBlockProcessor pushs the block to processor,
 func (sc *Chain) PushToBlockProcessor(b *block.Block) error {
+	logging.Logger.Warn("pushing block to buffer")
 	sc.blockBuffer.Add(b.Round, b)
 	return nil
 	// select {
