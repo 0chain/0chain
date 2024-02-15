@@ -200,7 +200,7 @@ jobs:
 
 
   system-tests:
-    if: github.event_name != 'workflow_dispatch'
+    if: ${{ github.event_name != 'workflow_dispatch' }}
     needs: [miner, sharder]
     runs-on: [ tests-suite ]
     steps:
@@ -236,6 +236,12 @@ jobs:
 
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
+          
+          if [[ "${{github.base_ref}}" == "staging" ]]; then
+            echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO STAGING>" >> $GITHUB_ENV
+          else
+            echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>" >> $GITHUB_ENV
+          fi
 
       - name: 'Setup jq'
         uses: dcarbone/install-jq-action@v2.1.0
@@ -326,7 +332,7 @@ jobs:
         with:
           miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          repo_snapshots_branch: "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>"
+          repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
@@ -339,7 +345,7 @@ jobs:
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
         with:
-          repo_snapshots_branch: "<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>"
+          repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
           network: ${{ env.NETWORK_URL }}
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           deploy_report_page: false
@@ -351,6 +357,8 @@ jobs:
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+
+
 
       - name: "Remove Tenderly fork"
         if: always()

@@ -874,14 +874,14 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 
 		totalWeight := uint64(0)
 		for _, bc := range blobbersSelected {
-			totalWeight += bc.GetWeight()
+			totalWeight += bc.GetWeightV1()
 		}
 
 		randValue := r.Float64() * float64(totalWeight)
 
 		var cumulativeWeight uint64
 		for _, bc := range blobbersSelected {
-			cumulativeWeight += bc.GetWeight()
+			cumulativeWeight += bc.GetWeightV1()
 			if float64(cumulativeWeight) >= randValue {
 				return bc.BlobberID, nil
 			}
@@ -918,7 +918,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	beforeHardFork1 := func() (e error) {
 		blobberID, e = selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
 		if e != nil {
-			e = common.NewError("add_challenge", err.Error())
+			e = common.NewError("add_challenge", e.Error())
 		}
 		return e
 	}
