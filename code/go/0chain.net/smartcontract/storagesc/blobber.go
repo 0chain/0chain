@@ -1,13 +1,13 @@
 package storagesc
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 
-	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dto"
 
@@ -734,6 +734,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewError("commit_connection_failed", "Invalid input")
 	}
 
+	if commitConnection.WriteMarker.ChainSize < 0 {
+		return "", common.NewError("commit_connection_failed",
+			"Chain size cannot be negative")
+	}
+
 	if commitConnection.WriteMarker.BlobberID != t.ClientID {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid Blobber ID for closing connection. Write marker not for this blobber")
@@ -789,11 +794,30 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid chain data")
 	}
 
+	changeSize := commitConnection.WriteMarker.ChainSize
+
 	if blobAlloc.LastWriteMarker != nil {
-		firstRoot := commitConnection.ChainData[:32]
-		if hex.EncodeToString(firstRoot) != blobAlloc.LastWriteMarker.AllocationRoot {
+		changeSize -= blobAlloc.LastWriteMarker.ChainSize
+		hasher := sha256.New()
+		prevChainHashBytes, err := hex.DecodeString(blobAlloc.LastWriteMarker.ChainHash)
+		if err != nil {
 			return "", common.NewError("commit_connection_failed",
-				"Invalid chain data first root is not equal to last write marker allocation root")
+				"error decoding previous chain hash: "+err.Error())
+		}
+		_, err = hasher.Write(prevChainHashBytes)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error hashing previous chain hash: "+err.Error())
+		}
+		_, err = hasher.Write(commitConnection.ChainData)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"error hashing chain data: "+err.Error())
+		}
+		chainHash := hex.EncodeToString(hasher.Sum(nil))
+		if chainHash != commitConnection.WriteMarker.ChainHash {
+			return "", common.NewError("commit_connection_failed",
+				"Invalid chain hash")
 		}
 	}
 
@@ -803,17 +827,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid chain data last root is not equal to allocation root")
 	}
 
-	chainHash := encryption.Hash(commitConnection.ChainData)
-	if chainHash != commitConnection.WriteMarker.ChainHash {
-		return "", common.NewError("commit_connection_failed",
-			"Invalid chain hash")
-	}
-
-	changeSize := commitConnection.WriteMarker.ChainSize
-
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 
-	if blobAlloc.Stats.UsedSize+commitConnection.WriteMarker.ChainSize >
+	if blobAlloc.Stats.UsedSize+changeSize >
 		blobAlloc.Size {
 
 		return "", common.NewError("commit_connection_failed",
@@ -822,11 +838,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
-	blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.ChainSize
+	blobAlloc.Stats.UsedSize += changeSize
 	blobAlloc.Stats.NumWrites++
 
-	blobber.SavedData += commitConnection.WriteMarker.ChainSize
-	alloc.Stats.UsedSize += int64(float64(commitConnection.WriteMarker.ChainSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+	blobber.SavedData += changeSize
+	alloc.Stats.UsedSize += int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 
 	alloc.Stats.NumWrites++
 
@@ -856,7 +872,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return "", common.NewErrorf("commit_connection_failed", err.Error())
 	}
 
-	if blobberAllocSizeBefore == 0 && commitConnection.WriteMarker.ChainSize > 0 {
+	if blobberAllocSizeBefore == 0 && changeSize > 0 {
 		if err := partitionsBlobberAllocationsAdd(balances, blobAlloc.BlobberID, blobAlloc.AllocationID); err != nil {
 			logging.Logger.Error("add_blobber_allocation_to_partitions_error",
 				zap.String("blobber", blobAlloc.BlobberID),
@@ -864,7 +880,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				zap.Error(err))
 			return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
 		}
-	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.ChainSize < 0 {
+	} else if blobAlloc.Stats.UsedSize == 0 && changeSize < 0 {
 		if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
 			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
 				zap.String("blobber", blobber.ID),
