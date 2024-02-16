@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/maths"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1437,7 +1438,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("4 error paying cancellation charge: %v", err)
 	}
 
-	for _, d := range alloc.BlobberAllocs {
+	for i, d := range alloc.BlobberAllocs {
 		if d.Stats.UsedSize > 0 {
 			if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 				return err
@@ -1455,6 +1456,31 @@ func (sc *StorageSmartContract) finishAllocation(
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"saving blobber "+d.BlobberID+": "+err.Error())
+		}
+
+		err = chainstate.WithActivation(balances, "apollo", func() error { return nil }, func() error {
+			blobberStake, err := sps[i].stake()
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't get stake of "+d.BlobberID+": "+err.Error())
+			}
+
+			sd, err := maths.ConvertToUint64(blobber.SavedData)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't convert saved data of "+d.BlobberID+": "+err.Error())
+			}
+
+			err = PartitionsChallengeReadyBlobberUpdate(balances, blobber.ID, blobberStake, sd)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't update blobber "+d.BlobberID+": "+err.Error())
+			}
+
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 
 		// Update saved data on events_db
