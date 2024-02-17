@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -311,6 +312,8 @@ type StorageNode struct {
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
 	NotAvailable      bool               `json:"not_available"`
+
+	IsRestricted bool `json:"is_restricted"`
 }
 
 func GetUrlKey(baseUrl, globalKey string) datastore.Key {
@@ -1550,7 +1553,7 @@ func replaceBlobber(
 func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
 	blobbers []*StorageNode,
-	addId, removeId string,
+	addId, authTicket, removeId string,
 	now common.Timestamp,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
@@ -1584,6 +1587,20 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	if err := sa.isActive(addedBlobber, staked, sp.TotalOffers, stakedCapacity, conf, now); err != nil {
 		return nil, err
+	}
+
+	actErr := cstate.WithActivation(balances, "apollo", func() (e error) { return },
+		func() (e error) {
+			if addedBlobber.IsRestricted {
+				if success, err := verifyBlobberAuthTicket(balances, sa.Owner, addedBlobber.ID, authTicket, addedBlobber.PublicKey); err != nil || !success {
+					return fmt.Errorf("blobber %s auth ticket verification failed: %v", addedBlobber.ID, err.Error())
+				}
+			}
+
+			return nil
+		})
+	if actErr != nil {
+		return nil, actErr
 	}
 
 	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
@@ -1669,7 +1686,9 @@ List:
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(
+	balances cstate.StateContextI,
 	blobbers []*storageNodeResponse,
+	blobberAuthTickets []string,
 	creationDate common.Timestamp,
 	conf *Config,
 ) ([]*StorageNode, []string) {
@@ -1677,7 +1696,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 		errs     = make([]string, 0, len(blobbers))
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
-	for _, b := range blobbers {
+	for i, b := range blobbers {
 		sn := StoragNodeResponseToStorageNode(*b)
 		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
 		if err != nil {
@@ -1685,9 +1704,38 @@ func (sa *StorageAllocation) validateEachBlobber(
 			errs = append(errs, err.Error())
 			continue
 		}
+
+		actErr := cstate.WithActivation(balances, "apollo", func() (e error) { return },
+			func() (e error) {
+				if sn.IsRestricted {
+					success, err := verifyBlobberAuthTicket(balances, sa.Owner, b.ID, blobberAuthTickets[i], sn.PublicKey)
+					if !success || err != nil {
+						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err)
+					}
+				}
+				return nil
+			})
+		if actErr != nil {
+			errs = append(errs, actErr.Error())
+			continue
+		}
+
 		filtered = append(filtered, &sn)
 	}
 	return filtered, errs
+}
+
+func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, blobberID, authTicket, publicKey string) (bool, error) {
+	if authTicket == "" {
+		return false, common.NewError("invalid_auth_ticket", "empty auth ticket")
+	}
+
+	ticket := fmt.Sprintf("%s:%s", blobberID, clientID)
+	signatureScheme := balances.GetSignatureScheme()
+	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
+		return false, err
+	}
+	return signatureScheme.Verify(authTicket, hex.EncodeToString([]byte(ticket)))
 }
 
 // Until returns allocation expiration.

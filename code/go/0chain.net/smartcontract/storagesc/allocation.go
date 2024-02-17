@@ -293,7 +293,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		sns = append(sns, &snr)
 	}
 
-	sa, blobberNodes, err := setupNewAllocation(request, sns, m, txn.CreationDate, conf, txn.Hash)
+	sa, blobberNodes, err := setupNewAllocation(balances, request, sns, m, txn.CreationDate, conf, txn.Hash)
 	if err != nil {
 		return "", err
 	}
@@ -363,6 +363,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 }
 
 func setupNewAllocation(
+	balances chainstate.StateContextI,
 	request newAllocationRequest,
 	blobbers []*storageNodeResponse,
 	m Timings,
@@ -397,7 +398,7 @@ func setupNewAllocation(
 	sa.ID = allocId
 	sa.Tx = allocId
 
-	blobberNodes, bSize, err := validateBlobbers(common.ToTime(now), sa, blobbers, conf)
+	blobberNodes, bSize, err := validateBlobbers(balances, common.ToTime(now), sa, blobbers, request.BlobberAuthTickets, conf)
 	if err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error validating blobbers",
 			zap.Error(err))
@@ -442,9 +443,11 @@ func (t *Timings) tick(name string) {
 }
 
 func validateBlobbers(
+	balances chainstate.StateContextI,
 	creationDate time.Time,
 	sa *StorageAllocation,
 	blobbers []*storageNodeResponse,
+	blobberAuthTickets []string,
 	conf *Config,
 ) ([]*StorageNode, int64, error) {
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
@@ -453,7 +456,7 @@ func validateBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list, errs = sa.validateEachBlobber(blobbers, common.Timestamp(creationDate.Unix()), conf)
+	var list, errs = sa.validateEachBlobber(balances, blobbers, blobberAuthTickets, common.Timestamp(creationDate.Unix()), conf)
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))
@@ -473,6 +476,7 @@ type updateAllocationRequest struct {
 	Size                    int64  `json:"size"`             // difference
 	Extend                  bool   `json:"extend"`
 	AddBlobberId            string `json:"add_blobber_id"`
+	AddBlobberAuthTicket    string `json:"add_blobber_auth_ticket"`
 	RemoveBlobberId         string `json:"remove_blobber_id"`
 	SetThirdPartyExtendable bool   `json:"set_third_party_extendable"`
 	FileOptionsChanged      bool   `json:"file_options_changed"`
@@ -993,7 +997,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.RemoveBlobberId, t.CreationDate, balances, sc, t.ClientID,
+				conf, blobbers, request.AddBlobberId, request.AddBlobberAuthTicket, request.RemoveBlobberId, t.CreationDate, balances, sc, t.ClientID,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())
