@@ -32,6 +32,7 @@ type Blobber struct {
 	SavedData    int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData     int64 `json:"read_data"`
 	NotAvailable bool  `json:"not_available"`
+	IsRestricted bool  `json:"is_restricted"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	// todo update
