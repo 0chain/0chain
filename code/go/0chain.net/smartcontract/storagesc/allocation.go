@@ -89,6 +89,7 @@ type newAllocationRequest struct {
 	Owner                string     `json:"owner_id"`
 	OwnerPublicKey       string     `json:"owner_public_key"`
 	Blobbers             []string   `json:"blobbers"`
+	BlobberAuthTickets   []string   `json:"blobber_auth_tickets"`
 	ReadPriceRange       PriceRange `json:"read_price_range"`
 	WritePriceRange      PriceRange `json:"write_price_range"`
 	ThirdPartyExtendable bool       `json:"third_party_extendable"`
