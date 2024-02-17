@@ -279,7 +279,12 @@ type blockTicketTS struct {
 }
 
 func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
-	// tm := time.Now()
+	var (
+		mb        = mc.GetMagicBlock(round)
+		num       = mb.Miners.Size()
+		threshold = mc.GetNotarizationThresholdCount(num)
+	)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -288,15 +293,16 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 			var btks []*blockTicketTS
 			mc.blockTicketLock.Lock()
 			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
-			st := mc.blockTickets[ticket.BlockID][0]
-			et := mc.blockTickets[ticket.BlockID][len(mc.blockTickets[ticket.BlockID])-1]
+			btks = mc.blockTickets[ticket.BlockID]
+			st := btks[0]
+			et := btks[len(btks)-1]
 			td := et.Ts.UnixMilli() - st.Ts.UnixMilli()
-			if td > 10 {
-				btks = mc.blockTickets[ticket.BlockID]
+			if td > 10 || len(btks) >= threshold {
+				// btks = mc.blockTickets[ticket.BlockID]
 				mc.blockTickets[ticket.BlockID] = []*blockTicketTS{}
 			}
 			mc.blockTicketLock.Unlock()
-			logging.Logger.Debug("verify ticket worker", zap.Int64("duration", td))
+			logging.Logger.Debug("verify ticket worker", zap.Int64("duration", td), zap.Int("num", len(btks)))
 
 			var tickets []*block.BlockVerificationTicket
 			for _, tk := range btks {
