@@ -75,8 +75,8 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.subRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.restartRoundEventChannel = make(chan struct{})
-	minerChain.blockTicketsChannel = make(chan *block.BlockVerificationTicket, 10)
-	minerChain.blockTickets = make(map[string][]*block.BlockVerificationTicket)
+	minerChain.blockTicketsChannel = make(chan *blockTicketTS, 10)
+	minerChain.blockTickets = make(map[string][]*blockTicketTS)
 	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
 	minerChain.nbpMutex = &sync.Mutex{}
 	minerChain.notarizationBlockProcessMap = make(map[string]struct{})

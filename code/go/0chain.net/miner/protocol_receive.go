@@ -353,12 +353,6 @@ func (mc *Chain) verifyTickets(ctx context.Context, round int64, hash string,
 	}
 }
 
-type blockTicket struct {
-	Round int64
-	Hash  string
-	Bvt   *block.BlockVerificationTicket
-}
-
 // handleVerificationTicketMessage - handles the verification ticket message.
 func (mc *Chain) handleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
 	// var (
