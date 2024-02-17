@@ -273,22 +273,33 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
+type blockTicketTS struct {
+	*block.BlockVerificationTicket
+	Ts time.Time
+}
+
 func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
-	tm := time.Now()
+	// tm := time.Now()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case ticket := <-mc.blockTicketsChannel:
-			var tickets []*block.BlockVerificationTicket
+			var btks []*blockTicketTS
 			mc.blockTicketLock.Lock()
 			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
-			if time.Since(tm).Milliseconds() > 10 {
-				tickets = mc.blockTickets[ticket.BlockID]
-				mc.blockTickets[ticket.BlockID] = []*block.BlockVerificationTicket{}
-				tm = time.Now()
+			st := mc.blockTickets[ticket.BlockID][0]
+			et := mc.blockTickets[ticket.BlockID][len(mc.blockTickets[ticket.BlockID])-1]
+			if et.Ts.UnixMilli()-st.Ts.UnixMilli() > 10 {
+				mc.blockTickets[ticket.BlockID] = []*blockTicketTS{}
+				btks = mc.blockTickets[ticket.BlockID]
 			}
 			mc.blockTicketLock.Unlock()
+
+			var tickets []*block.BlockVerificationTicket
+			for _, tk := range btks {
+				tickets = append(tickets, tk.BlockVerificationTicket)
+			}
 
 			if len(tickets) > 0 {
 				go mc.verifyTickets(ctx, ticket.Round, ticket.BlockID, tickets)
@@ -356,7 +367,10 @@ func (mc *Chain) handleVerificationTicketMessage(ctx context.Context, msg *Block
 	// 	mr  = mc.GetMinerRound(rn)
 	// )
 
-	mc.blockTicketsChannel <- msg.BlockVerificationTicket
+	mc.blockTicketsChannel <- &blockTicketTS{
+		BlockVerificationTicket: msg.BlockVerificationTicket,
+		Ts:                      time.Now(),
+	}
 
 	// cctx, cancel := context.WithTimeout(ctx, time.Second)
 	// defer cancel()

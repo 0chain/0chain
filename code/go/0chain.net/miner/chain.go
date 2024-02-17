@@ -142,8 +142,8 @@ type Chain struct {
 	discoverClients     bool
 	started             uint32
 	blockTicketLock     sync.Mutex
-	blockTickets        map[string][]*block.BlockVerificationTicket
-	blockTicketsChannel chan *block.BlockVerificationTicket
+	blockTickets        map[string][]*blockTicketTS
+	blockTicketsChannel chan *blockTicketTS
 
 	// view change process control
 	viewChangeProcess
