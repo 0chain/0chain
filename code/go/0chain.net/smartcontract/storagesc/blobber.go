@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dto"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"github.com/minio/sha256-simd"
 	"go.uber.org/zap"
 )
 
@@ -784,7 +784,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
 	}
 
-	if len(commitConnection.ChainData) == 0 || len(commitConnection.ChainData)%32 != 0 {
+	if len(commitConnection.ChainData)%32 != 0 {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid chain data")
 	}
@@ -795,23 +795,29 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	changeSize := commitConnection.WriteMarker.ChainSize
+	hasher := sha256.New()
 
 	if blobAlloc.LastWriteMarker != nil {
 		changeSize -= blobAlloc.LastWriteMarker.ChainSize
-		firstRoot := commitConnection.ChainData[:32]
-		if hex.EncodeToString(firstRoot) != blobAlloc.LastWriteMarker.AllocationRoot {
-			return "", common.NewError("commit_connection_failed",
-				"Invalid chain data first root is not equal to last write marker allocation root")
-		}
+		prevChainHash, _ := hex.DecodeString(blobAlloc.LastWriteMarker.ChainHash)
+		hasher.Write(prevChainHash) //nolint:errcheck
 	}
 
-	lastRoot := commitConnection.ChainData[len(commitConnection.ChainData)-32:]
-	if hex.EncodeToString(lastRoot) != commitConnection.AllocationRoot {
+	for i := 0; i < len(commitConnection.ChainData); i += 32 {
+		hasher.Write(commitConnection.ChainData[i : i+32]) //nolint:errcheck
+		sum := hasher.Sum(nil)
+		hasher.Reset()
+		hasher.Write(sum) //nolint:errcheck
+	}
+
+	allocRootBytes, err := hex.DecodeString(commitConnection.AllocationRoot)
+	if err != nil {
 		return "", common.NewError("commit_connection_failed",
-			"Invalid chain data last root is not equal to allocation root")
+			"Error decoding allocation root")
 	}
+	hasher.Write(allocRootBytes) //nolint:errcheck
 
-	chainHash := encryption.Hash(commitConnection.ChainData)
+	chainHash := hex.EncodeToString(hasher.Sum(nil))
 	if chainHash != commitConnection.WriteMarker.ChainHash {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid chain hash")
