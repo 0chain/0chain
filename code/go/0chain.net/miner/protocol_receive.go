@@ -280,7 +280,7 @@ type blockTicketTS struct {
 
 func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 	var (
-		mb        = mc.GetMagicBlock(round)
+		mb        = mc.GetCurrentMagicBlock()
 		num       = mb.Miners.Size()
 		threshold = mc.GetNotarizationThresholdCount(num)
 	)
