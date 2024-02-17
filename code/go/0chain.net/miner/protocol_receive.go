@@ -275,14 +275,16 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 
 type blockTicketTS struct {
 	*block.BlockVerificationTicket
-	Ts time.Time
+	Ts                time.Time
+	reachedThreashold bool
 }
 
 func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 	var (
-		mb        = mc.GetCurrentMagicBlock()
-		num       = mb.Miners.Size()
-		threshold = mc.GetNotarizationThresholdCount(num)
+		mb                 = mc.GetCurrentMagicBlock()
+		num                = mb.Miners.Size()
+		threshold          = mc.GetNotarizationThresholdCount(num)
+		blockReadyToVerify = make(map[string]struct{})
 	)
 
 	for {
@@ -290,20 +292,46 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case ticket := <-mc.blockTicketsChannel:
+			// func() {
 			var btks []*blockTicketTS
-			mc.blockTicketLock.Lock()
+			// mc.blockTicketLock.Lock()
+			// defer mc.blockTicketLock.Unlock()
+			b, err := mc.GetBlock(ctx, ticket.BlockID)
+			if err != nil {
+				// mc.blockTicketLock.Unlock()
+				logging.Logger.Error("verify ticket worker - block does not exist", zap.String("block", ticket.BlockID))
+				continue
+			}
+
+			if b.IsBlockNotarized() {
+				// mc.blockTicketLock.Unlock()
+				continue
+			}
+
+			_, ok := blockReadyToVerify[ticket.BlockID]
+			if ok {
+				// mc.blockTicketLock.Unlock()
+				continue
+			}
+
 			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
 			btks = mc.blockTickets[ticket.BlockID]
 			var ptks []*blockTicketTS
 			st := btks[0]
 			et := btks[len(btks)-1]
 			td := et.Ts.UnixMilli() - st.Ts.UnixMilli()
-			if td > 10 || len(btks) >= threshold {
+			// if td >= 10 || len(btks) >= threshold {
+			if len(btks) >= threshold {
 				ptks = btks
-				mc.blockTickets[ticket.BlockID] = []*blockTicketTS{}
+				mc.blockTickets[ticket.BlockID] = nil
+				blockReadyToVerify[ticket.BlockID] = struct{}{}
 			}
-			mc.blockTicketLock.Unlock()
-			logging.Logger.Debug("verify ticket worker", zap.Int64("duration", td), zap.Int("num", len(btks)))
+			// mc.blockTicketLock.Unlock()
+			logging.Logger.Debug("verify ticket worker",
+				zap.Int64("duration", td),
+				zap.Int("num", len(btks)),
+				zap.Int("threshold", threshold),
+				zap.String("block", ticket.BlockID))
 
 			var tickets []*block.BlockVerificationTicket
 			for _, tk := range ptks {
@@ -313,6 +341,7 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 			if len(tickets) > 0 {
 				go mc.verifyTickets(ctx, ticket.Round, ticket.BlockID, tickets)
 			}
+			// }()
 		}
 	}
 }
