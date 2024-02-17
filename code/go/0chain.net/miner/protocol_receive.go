@@ -290,11 +290,13 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
 			st := mc.blockTickets[ticket.BlockID][0]
 			et := mc.blockTickets[ticket.BlockID][len(mc.blockTickets[ticket.BlockID])-1]
-			if et.Ts.UnixMilli()-st.Ts.UnixMilli() > 10 {
+			td := et.Ts.UnixMilli() - st.Ts.UnixMilli()
+			if td > 10 {
 				mc.blockTickets[ticket.BlockID] = []*blockTicketTS{}
 				btks = mc.blockTickets[ticket.BlockID]
 			}
 			mc.blockTicketLock.Unlock()
+			logging.Logger.Debug("verify ticket worker", zap.Int64("duration", td))
 
 			var tickets []*block.BlockVerificationTicket
 			for _, tk := range btks {
