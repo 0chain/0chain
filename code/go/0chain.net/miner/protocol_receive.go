@@ -292,8 +292,8 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 			et := mc.blockTickets[ticket.BlockID][len(mc.blockTickets[ticket.BlockID])-1]
 			td := et.Ts.UnixMilli() - st.Ts.UnixMilli()
 			if td > 10 {
-				mc.blockTickets[ticket.BlockID] = []*blockTicketTS{}
 				btks = mc.blockTickets[ticket.BlockID]
+				mc.blockTickets[ticket.BlockID] = []*blockTicketTS{}
 			}
 			mc.blockTicketLock.Unlock()
 			logging.Logger.Debug("verify ticket worker", zap.Int64("duration", td))
