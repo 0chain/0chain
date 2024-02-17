@@ -283,7 +283,7 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 			var tickets []*block.BlockVerificationTicket
 			mc.blockTicketLock.Lock()
 			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
-			if time.Since(tm).Abs().Milliseconds() > 10 {
+			if time.Since(tm).Milliseconds() > 10 {
 				tickets = mc.blockTickets[ticket.BlockID]
 				mc.blockTickets[ticket.BlockID] = []*block.BlockVerificationTicket{}
 				tm = time.Now()
