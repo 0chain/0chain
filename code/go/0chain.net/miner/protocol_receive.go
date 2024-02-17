@@ -273,43 +273,117 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-// handleVerificationTicketMessage - handles the verification ticket message.
-func (mc *Chain) handleVerificationTicketMessage(ctx context.Context,
-	msg *BlockMessage) {
+func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
+	tm := time.Now()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ticket := <-mc.blockTicketsChannel:
+			var tickets []*block.BlockVerificationTicket
+			mc.blockTicketLock.Lock()
+			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
+			if time.Since(tm).Abs().Milliseconds() > 10 {
+				tickets = mc.blockTickets[ticket.BlockID]
+				mc.blockTickets[ticket.BlockID] = []*block.BlockVerificationTicket{}
+			}
+			mc.blockTicketLock.Unlock()
 
-	var (
-		bvt = msg.BlockVerificationTicket
-		rn  = bvt.Round
-		mr  = mc.GetMinerRound(rn)
-	)
+			if len(tickets) > 0 {
+				go mc.verifyTickets(ctx, ticket.Round, ticket.BlockID, tickets)
+			}
+		}
+	}
+}
 
+func (mc *Chain) verifyTickets(ctx context.Context, round int64, hash string,
+	tickets []*block.BlockVerificationTicket) {
+	logging.Logger.Debug("verify tickets",
+		zap.Int64("round", round),
+		zap.String("hash", hash),
+		zap.Int("tickets", len(tickets)))
 	cctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	if err := mc.VerifyTickets(cctx, bvt.BlockID, []*block.VerificationTicket{&bvt.VerificationTicket}, rn); err != nil {
+	vts := make([]*block.VerificationTicket, 0, len(tickets))
+	// bvts := make([]*block.BlockVerificationTicket, 0, len(tickets))
+	for _, ticket := range tickets {
+		vts = append(vts, &ticket.VerificationTicket)
+		// bvts = append(bvts, ticket)
+	}
+
+	if err := mc.VerifyTickets(cctx, hash, vts, round); err != nil {
 		logging.Logger.Error("handle vt. msg - verification ticket failed",
 			zap.Error(err),
-			zap.Int64("round", bvt.Round),
-			zap.String("block", bvt.BlockID))
+			zap.Int64("round", round),
+			zap.String("block", hash))
 		return
 	}
 
-	sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
+	// sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
 	logging.Logger.Debug("handle vt. msg - verify ticket successfully",
-		zap.Int64("round", bvt.Round),
-		zap.String("block", bvt.BlockID),
-		zap.Int("verifier", sender.SetIndex))
+		zap.Int64("round", round),
+		zap.String("block", hash),
+		zap.Int("tickets num", len(tickets)))
 
-	b, err := mc.GetBlock(ctx, bvt.BlockID)
+	mr := mc.GetMinerRound(round)
+	b, err := mc.GetBlock(ctx, hash)
 	if err != nil {
 		logging.Logger.Debug("handle vt. msg - block does not exist, collect tickets though",
-			zap.Int64("round", bvt.Round),
-			zap.String("block", bvt.BlockID))
+			zap.Int64("round", round),
+			zap.String("block", hash))
 
-		mr.AddVerificationTickets([]*block.BlockVerificationTicket{bvt})
+		mr.AddVerificationTickets(tickets)
 		return
 	}
 
-	mc.ProcessVerifiedTicket(ctx, mr, b, &bvt.VerificationTicket)
+	for _, ticket := range tickets {
+		go mc.ProcessVerifiedTicket(ctx, mr, b, &ticket.VerificationTicket)
+	}
+}
+
+type blockTicket struct {
+	Round int64
+	Hash  string
+	Bvt   *block.BlockVerificationTicket
+}
+
+// handleVerificationTicketMessage - handles the verification ticket message.
+func (mc *Chain) handleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
+	// var (
+	// 	bvt = msg.BlockVerificationTicket
+	// 	rn  = bvt.Round
+	// 	mr  = mc.GetMinerRound(rn)
+	// )
+
+	mc.blockTicketsChannel <- msg.BlockVerificationTicket
+
+	// cctx, cancel := context.WithTimeout(ctx, time.Second)
+	// defer cancel()
+	// if err := mc.VerifyTickets(cctx, bvt.BlockID, []*block.VerificationTicket{&bvt.VerificationTicket}, rn); err != nil {
+	// 	logging.Logger.Error("handle vt. msg - verification ticket failed",
+	// 		zap.Error(err),
+	// 		zap.Int64("round", bvt.Round),
+	// 		zap.String("block", bvt.BlockID))
+	// 	return
+	// }
+
+	// sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
+	// logging.Logger.Debug("handle vt. msg - verify ticket successfully",
+	// 	zap.Int64("round", bvt.Round),
+	// 	zap.String("block", bvt.BlockID),
+	// 	zap.Int("verifier", sender.SetIndex))
+
+	// b, err := mc.GetBlock(ctx, bvt.BlockID)
+	// if err != nil {
+	// 	logging.Logger.Debug("handle vt. msg - block does not exist, collect tickets though",
+	// 		zap.Int64("round", bvt.Round),
+	// 		zap.String("block", bvt.BlockID))
+
+	// 	mr.AddVerificationTickets([]*block.BlockVerificationTicket{bvt})
+	// 	return
+	// }
+
+	// mc.ProcessVerifiedTicket(ctx, mr, b, &bvt.VerificationTicket)
 }
 
 func (mc *Chain) isNotarizing(hash string) (notarizing bool) {
