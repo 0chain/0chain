@@ -176,6 +176,8 @@ func (sc *StorageSmartContract) updateBlobber(
 
 	existingBlobber.IsRestricted = *updateBlobber.IsRestricted
 
+	logging.Logger.Info("Jayash update blobber", zap.Any("blobber", existingBlobber))
+
 	_, err = balances.InsertTrieNode(existingBlobber.GetKey(), existingBlobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
