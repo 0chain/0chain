@@ -285,6 +285,7 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 		num                = mb.Miners.Size()
 		threshold          = mc.GetNotarizationThresholdCount(num)
 		blockReadyToVerify = make(map[string]struct{})
+		brtvLock           = sync.Mutex{}
 	)
 
 	for {
@@ -308,11 +309,14 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 				continue
 			}
 
+			brtvLock.Lock()
 			_, ok := blockReadyToVerify[ticket.BlockID]
 			if ok {
+				brtvLock.Unlock()
 				// mc.blockTicketLock.Unlock()
 				continue
 			}
+			brtvLock.Unlock()
 
 			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
 			btks = mc.blockTickets[ticket.BlockID]
@@ -324,7 +328,20 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 			if len(btks) >= threshold {
 				ptks = btks
 				mc.blockTickets[ticket.BlockID] = nil
+
+				brtvLock.Lock()
 				blockReadyToVerify[ticket.BlockID] = struct{}{}
+				brtvLock.Unlock()
+				go func(hash string) {
+					// remove from the ready to verify list after 1 second
+					// this is to prevent the blockReadyToVerify map increase indefinitely
+					select {
+					case <-time.After(1 * time.Second):
+						brtvLock.Lock()
+						delete(blockReadyToVerify, hash)
+						brtvLock.Unlock()
+					}
+				}(ticket.BlockID)
 			}
 			// mc.blockTicketLock.Unlock()
 			logging.Logger.Debug("verify ticket worker",
