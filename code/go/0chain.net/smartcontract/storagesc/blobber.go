@@ -96,6 +96,8 @@ func (sc *StorageSmartContract) updateBlobber(
 	existingSp *stakePool,
 	balances cstate.StateContextI,
 ) (err error) {
+	logging.Logger.Info("Jayash update blobber", zap.Any("blobber", updateBlobber))
+
 	// validate the new terms and update the existing blobber's terms
 	if err = validateAndSaveTerms(updateBlobber, existingBlobber, conf); err != nil {
 		return err
@@ -348,6 +350,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
 	}
+	logging.Logger.Info("Jayash update blobber settings", zap.Any("blobber", updatedBlobber))
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
