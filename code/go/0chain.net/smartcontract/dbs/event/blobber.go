@@ -252,6 +252,7 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"allocated",
 		"saved_data",
 		"not_available",
+		"is_restricted",
 		"offers_total",
 		"delegate_wallet",
 		"num_delegates",
