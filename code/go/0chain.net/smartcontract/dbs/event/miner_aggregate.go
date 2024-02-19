@@ -16,6 +16,8 @@ type MinerAggregate struct {
 	TotalRewards    currency.Coin    `json:"total_rewards"`
 	BlocksFinalised int64            `json:"blocks_finalised"`
 	ServiceCharge   float64          `json:"service_charge"`
+	IsKilled        bool             `json:"is_killed"`
+	IsShutdown      bool             `json:"is_shutdown"`
 }
 
 func (m *MinerAggregate) GetTotalStake() currency.Coin {
