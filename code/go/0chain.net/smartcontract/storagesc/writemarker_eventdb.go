@@ -17,6 +17,8 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, t
 		PreviousAllocationRoot: wm.PreviousAllocationRoot,
 		FileMetaRoot:           wm.FileMetaRoot,
 		Size:                   wm.Size,
+		ChainSize:              wm.ChainSize,
+		ChainHash:              wm.ChainHash,
 		Timestamp:              int64(wm.Timestamp),
 		Signature:              wm.Signature,
 		MovedTokens:            movedTokens,
