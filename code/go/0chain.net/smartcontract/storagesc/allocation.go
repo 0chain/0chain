@@ -371,6 +371,7 @@ func setupNewAllocation(
 	conf *Config,
 	allocId string,
 ) (*StorageAllocation, []*StorageNode, error) {
+	logging.Logger.Info("new_allocation_request", zap.String("alloc_id", allocId), zap.Any("request", request))
 	var err error
 	m.tick("decode")
 	if len(request.Blobbers) < (request.DataShards + request.ParityShards) {

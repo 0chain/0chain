@@ -1714,6 +1714,8 @@ func (sa *StorageAllocation) validateEachBlobber(
 					if !success || err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err)
 					}
+
+					logging.Logger.Info("blobber auth ticket verified", zap.String("id", b.ID), zap.Any("success", success), zap.String("auth_ticket", blobberAuthTickets[i]), zap.String("public_key", sn.PublicKey))
 				}
 				return nil
 			})
