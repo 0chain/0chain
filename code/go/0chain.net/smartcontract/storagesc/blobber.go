@@ -796,11 +796,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	changeSize := commitConnection.WriteMarker.ChainSize
 	hasher := sha256.New()
-
+	prevHash := "no_hash"
 	if blobAlloc.LastWriteMarker != nil {
 		changeSize -= blobAlloc.LastWriteMarker.ChainSize
 		prevChainHash, _ := hex.DecodeString(blobAlloc.LastWriteMarker.ChainHash)
 		hasher.Write(prevChainHash) //nolint:errcheck
+		prevHash = blobAlloc.LastWriteMarker.ChainHash
 	}
 
 	for i := 0; i < len(commitConnection.ChainData); i += 32 {
@@ -820,7 +821,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	chainHash := hex.EncodeToString(hasher.Sum(nil))
 	if chainHash != commitConnection.WriteMarker.ChainHash {
 		return "", common.NewError("commit_connection_failed",
-			"Invalid chain hash")
+			fmt.Sprintf("Invalid chain hash:expected %s got %s and prevChainHash %s", commitConnection.WriteMarker.ChainHash, chainHash, prevHash))
 	}
 
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
