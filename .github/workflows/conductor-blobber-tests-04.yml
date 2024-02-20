@@ -42,11 +42,13 @@ on:
         default: ''
         required: false
       
-
 jobs:
   CONDUCTOR_BLOBBERS_04_TESTS:
     name: CONDUCTOR-BLOBBERS-04-TESTS
     runs-on: [self-hosted, conductor-test]
+
+    outputs:
+      branch: ${{ steps.blobber.outputs.BRANCH_OUT }}
 
     steps:
     - name: Setup Environment Variables
@@ -69,31 +71,25 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
-    
-    - name: Get Branch
-      id: get_branch
-      run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo "Branch name is ${BRANCH}"
-
-    - name: Install herumi/bls and herumi/mcl
-      run: |
-        git clone --recursive https://github.com/herumi/bls
-        cd bls
-        make -C mcl -j 4 lib/libmclbn256.a install
-        make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
 
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
-        cd 0chain && git checkout ${{ steps.get_branch.outputs.BRANCH }}
+        cd 0chain
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        CHAIN_BRANCH="${{ inputs.chain_branch }}"
+        if [[ -z $CHAIN_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          CHAIN_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=CHAIN_BRANCH::${CHAIN_BRANCH}
+        fi
+        echo "Branch name is ${CHAIN_BRANCH}"
+        git checkout ${CHAIN_BRANCH}
 
     - name: Docker Init Setup.
       run: |
         export HOME="/root"
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
         cd 0chain
         make build-mocks
         bash ./docker.local/bin/init.setup.sh
@@ -130,18 +126,52 @@ jobs:
         awk 'NR >= 9 && NR <= 14' ./0chain/docker.local/config/0chain.yaml
 
     - name: Git clone blobber
+      id: blobber
       run: |
         git clone https://github.com/0chain/blobber.git
+        cd blobber
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        BLOBBER_BRANCH="${{ inputs.blobber_branch }}"
+        if [[ -z $BLOBBER_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          BLOBBER_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+        fi
+        echo "BRANCH_OUT=$BLOBBER_BRANCH" >>$GITHUB_OUTPUT
+        echo "Branch name is ${BLOBBER_BRANCH}"
+        git checkout ${BLOBBER_BRANCH}
 
     - name: Git clone zboxcli
       run: |
-       export HOME="/root"
+        export HOME="/root"
         git clone https://github.com/0chain/zboxcli.git
+        cd zboxcli
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZBOXCLI_BRANCH="${{ inputs.zboxcli_branch }}"
+        if [[ -z $ZBOXCLI_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZBOXCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZBOXCLI_BRANCH::${ZBOXCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZBOXCLI_BRANCH}"
+        git checkout ${ZBOXCLI_BRANCH}
 
     - name: Git clone zwalletcli
       run: |
         export HOME="/root"
         git clone https://github.com/0chain/zwalletcli.git
+        cd zwalletcli
+        git branch -r | grep -v '\->' | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" | while read remote; do git branch --track "${remote#origin/}" "$remote"; done || true
+        ZWALLETCLI_BRANCH="${{ inputs.zwalletcli_branch }}"
+        if [[ -z $ZWALLETCLI_BRANCH ]]; then
+          echo "Checking for latest sprint branch"
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          ZWALLETCLI_BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          echo ::set-output name=ZWALLETCLI_BRANCH::${ZWALLETCLI_BRANCH}
+        fi
+        echo "Branch name is ${ZWALLETCLI_BRANCH}"
+        git checkout ${ZWALLETCLI_BRANCH}
 
     - name: Git clone 0dns
       run: |

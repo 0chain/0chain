@@ -34,7 +34,6 @@ jobs:
            echo ::set-output name=BRANCH::${BRANCH}
            echo "Branch name is ${BRANCH}"
         fi
-
     - name: Go 1.20 setup.
       uses: actions/setup-go@v2
       with:

@@ -14,11 +14,6 @@ on:
         description: 'Input branch for 0chain repo'
         default: ''
         required: false
-  schedule:
-    # Runs everyday at 01:00 am
-    - cron: '0 9 * * * '
-  workflow_dispatch:
-
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
   ZCHAIN_BUILDRUN: zchain_run_base
@@ -28,22 +23,12 @@ jobs:
     name: CONDUCTOR-FAULT-TOLERANCE-TESTS
     runs-on: [self-hosted, conductor-test]
 
+    outputs:
+      branch: ${{ steps.chain.outputs.BRANCH_OUT }}
+
     steps:
     - name: Setup Environment Variables
       run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo "Branch name is ${BRANCH}"
-
-    - name: "Setup Go"
-      shell: 'script --return --quiet --command "bash {0}"'
-      run: |
-        [ -f ./https://go.dev/dl/go1.20.3.linux-amd64.tar.gz ] || wget https://go.dev/dl/go1.20.3.linux-amd64.tar.gz
-        [ -d /usr/local/go ] &&  rm -rf /usr/local/go
-        [ -f /usr/local/bin/go ] &&  rm -rf /usr/local/bin/go
-        tar -C /usr/local -xzf ./go1.20.3.linux-amd64.tar.gz
-        echo "PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
-        export PATH=$PATH:/usr/local/go/bin
         export HOME="/root"
         go env -w GO111MODULE=auto
         go env GOROOT
@@ -88,18 +73,22 @@ jobs:
 
     - name: Docker Network Setup.
       run: |
+        cd 0chain
         bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.base.sh
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Update max faucet limit
@@ -110,6 +99,7 @@ jobs:
   
     - name: Running No VC Fault Tolerance Tests.
       run: |
+        cd 0chain
         export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
 

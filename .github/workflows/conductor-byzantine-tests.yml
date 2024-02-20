@@ -1,9 +1,6 @@
 name: CONDUCTOR BYZANTINE TESTS
 
 on:
-  schedule:
-    # Runs everyday at 01:00 am
-    - cron: '0 5 * * *'
   workflow_dispatch:
     inputs:
       chain_branch:
@@ -26,6 +23,9 @@ jobs:
   CONDUCTOR_BYZANTINE_TESTS:
     name: CONDUCTOR-BYZANTINE-TESTS
     runs-on: [self-hosted, conductor-test]
+
+    outputs:
+      branch: ${{ steps.chain.outputs.BRANCH_OUT }}
 
     steps:
     - name: Setup Environment Variables
@@ -74,18 +74,22 @@ jobs:
 
     - name: Docker Network Setup.
       run: |
+        cd 0chain
         bash ./docker.local/bin/setup.network.sh || true
 
     - name: Building Base Images
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.base.sh
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
+        cd 0chain
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Update max faucet limit
@@ -96,6 +100,7 @@ jobs:
   
     - name: Running No VC Byzantine Tests.
       run: |
+        cd 0chain
         export HOME="/root"
         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
 
@@ -104,63 +109,10 @@ jobs:
       with:
         name: byzantine-logs
         path: |
-<<<<<<< HEAD
           0chain/conductor-full-logs
-=======
-          conductor/
-          docker.local/miner*/log
-          docker.local/sharder*/log
-
-    - name: Cleanup
-      run: |
-        rm -rf *
->>>>>>> 862850e5e (revert)
 
     - name: Added /tmp folder cleanup.
       run: |
         cd /tmp
         rm -rf ./*
-<<<<<<< HEAD
     
-=======
-
-  notify_slack_on_failure:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_BYZANTINE_TESTS]
-    if: always() && (needs.CONDUCTOR_BYZANTINE_TESTS.result == 'failure')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR BYZANTINE TEST FAILED ⚠️",
-              "color": "#ff0000"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS FAILED on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-
-  notify_slack_on_success:
-    runs-on: [self-hosted, arc-runner]
-    needs: [CONDUCTOR_BYZANTINE_TESTS]
-    if: always() && (needs.CONDUCTOR_BYZANTINE_TESTS.result == 'success')
-    steps:
-      - name: "Notify Slack"
-        run: |
-          payload='{
-          "text": "'"<!here> CONDUCTOR_BYZANTINE_TESTS PASSING on $(echo ${GITHUB_REF#refs/heads/})!.\n View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}"'",
-          "attachments": [
-              {
-              "text": "CONDUCTOR BYZANTINE TESTS PASSED ✅",
-              "color": "#22bb33"
-              }
-          ]
-          }'
-          curl -X POST -H 'Content-type: application/json' --data "${payload}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          
-          # curl -X POST -H "Content-type: application/json" --data "{\"text\":\"<!here> CONDUCTOR_BYZANTINE_TESTS ARE PASSING on $(echo ${GITHUB_REF#refs/heads/})!. View the test results on Github: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\"}" ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
->>>>>>> 862850e5e (revert)
