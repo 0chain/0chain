@@ -351,27 +351,27 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 }
 
 /*SetStateDB - set the state from the previous block */
-func (b *Block) SetStateDB(prevBlock *Block, stateDB util.NodeDB) {
-	var pndb util.NodeDB
-	var rootHash util.Key
-	if prevBlock.ClientState == nil {
-		logging.Logger.Error("set state db - prior state not available",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int64("previous round", prevBlock.Round),
-			zap.String("previous block", prevBlock.Hash))
-		pndb = stateDB
-	} else {
-		pndb = prevBlock.ClientState.GetNodeDB()
-	}
-	rootHash = prevBlock.ClientStateHash
-	logging.Logger.Warn("set state db",
-		zap.Int64("round", b.Round),
-		zap.String("block", b.Hash),
-		zap.String("prev_block", prevBlock.Hash),
-		zap.String("root", util.ToHex(rootHash)))
-	b.CreateState(pndb, rootHash)
-}
+// func (b *Block) SetStateDB(prevBlock *Block, stateDB util.NodeDB) {
+// 	var pndb util.NodeDB
+// 	var rootHash util.Key
+// 	if prevBlock.ClientState == nil {
+// 		logging.Logger.Error("set state db - prior state not available",
+// 			zap.Int64("round", b.Round),
+// 			zap.String("block", b.Hash),
+// 			zap.Int64("previous round", prevBlock.Round),
+// 			zap.String("previous block", prevBlock.Hash))
+// 		pndb = stateDB
+// 	} else {
+// 		pndb = prevBlock.ClientState.GetNodeDB()
+// 	}
+// 	rootHash = prevBlock.ClientStateHash
+// 	logging.Logger.Warn("set state db",
+// 		zap.Int64("round", b.Round),
+// 		zap.String("block", b.Hash),
+// 		zap.String("prev_block", prevBlock.Hash),
+// 		zap.String("root", util.ToHex(rootHash)))
+// 	b.CreateState(pndb, rootHash)
+// }
 
 // InitStateDB - initialize the block's state from the db
 // (assuming it's already computed).
@@ -390,7 +390,7 @@ func (b *Block) InitStateDB(ndb util.NodeDB) error {
 func (b *Block) CreateState(pndb util.NodeDB, root util.Key) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round), root)
+	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round), root, statecache.NewEmpty())
 }
 
 // setClientState sets the block client state
@@ -856,7 +856,7 @@ func CreateStateWithPreviousBlock(prevBlock *Block, stateDB util.NodeDB, round i
 func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePatriciaTrieI {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, stateDB, false)
-	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root)
+	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root, statecache.NewEmpty())
 }
 
 // ComputeState computes block client state
