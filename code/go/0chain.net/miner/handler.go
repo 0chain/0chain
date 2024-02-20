@@ -12,6 +12,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
+	"0chain.net/core/sortedmap"
+	"github.com/rcrowley/go-metrics"
 )
 
 /*SetupHandlers - setup miner handlers */
@@ -188,7 +190,11 @@ func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 	count := 0
 
-	for txnFunc, txnTimer := range chain.StartToFinalizeTxnTypeTimer {
+	// show consistent UI for txn stats
+	sm := sortedmap.NewFromMap[string, metrics.Timer](chain.StartToFinalizeTxnTypeTimer)
+	keys := sm.GetKeys()
+	for _, txnFunc := range keys {
+		txnTimer, _ := sm.Get(txnFunc)
 		if count%3 == 0 {
 			fmt.Fprintf(w, "<tr><td>")
 		} else {
