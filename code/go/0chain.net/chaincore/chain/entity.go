@@ -350,10 +350,7 @@ func (c *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSer
 			"client state is nil, round %d", block.Round)
 	}
 
-	sc := statecache.NewStateCache()
-	_, txnCache := statecache.NewBlockTxnCaches(sc, statecache.Block{})
-
-	s := CreateTxnMPT(block.ClientState, txnCache)
+	s := CreateTxnMPT(block.ClientState, statecache.NewEmpty())
 	return s.GetNodeValue(getNodePath(path), v)
 }
 
@@ -1536,6 +1533,7 @@ func (c *Chain) HasClientStateStored(clientStateHash util.Key) bool {
 
 // InitBlockState - initialize the block's state with the database state.
 func (c *Chain) InitBlockState(b *block.Block) (err error) {
+	c.GetStateCache()
 	if err = b.InitStateDB(c.stateDB); err != nil {
 		logging.Logger.Error("init block state", zap.Int64("round", b.Round),
 			zap.String("state", util.ToHex(b.ClientStateHash)),

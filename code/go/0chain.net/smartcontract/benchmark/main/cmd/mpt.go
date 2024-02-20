@@ -56,7 +56,7 @@ func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatrici
 		pNode,
 		false,
 	)
-	return util.NewMerklePatriciaTrie(levelNode, 1, root)
+	return util.NewMerklePatriciaTrie(levelNode, 1, root, statecache.NewEmpty())
 }
 
 func getBalances(
@@ -171,7 +171,7 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, *benchmark.Be
 	if err != nil {
 		log.Fatal(err)
 	}
-	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
+	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil, statecache.NewEmpty())
 
 	root := viper.GetString(benchmark.MptRoot)
 	rootBytes, err := hex.DecodeString(root)
@@ -220,7 +220,7 @@ func setUpMpt(
 	if err != nil {
 		panic(err)
 	}
-	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
+	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil, statecache.NewEmpty())
 	log.Println("made empty blockchain")
 
 	timer := time.Now()
