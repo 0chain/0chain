@@ -285,6 +285,7 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 		num                = mb.Miners.Size()
 		threshold          = mc.GetNotarizationThresholdCount(num)
 		blockReadyToVerify = make(map[string]struct{})
+		uniqueTicketsMap   = make(map[string]map[string]struct{})
 		brtvLock           = sync.Mutex{}
 	)
 
@@ -316,6 +317,22 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 				// mc.blockTicketLock.Unlock()
 				continue
 			}
+
+			tks, ok := uniqueTicketsMap[ticket.BlockID]
+			if !ok {
+				tks = make(map[string]struct{})
+				uniqueTicketsMap[ticket.BlockID] = tks
+			}
+
+			_, ok = tks[ticket.VerifierID]
+			if ok {
+				// ignore duplicate tickets
+				brtvLock.Unlock()
+				continue
+			}
+
+			tks[ticket.VerifierID] = struct{}{}
+
 			brtvLock.Unlock()
 
 			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
@@ -339,6 +356,7 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 					case <-time.After(1 * time.Second):
 						brtvLock.Lock()
 						delete(blockReadyToVerify, hash)
+						delete(uniqueTicketsMap, hash)
 						brtvLock.Unlock()
 					}
 				}(ticket.BlockID)

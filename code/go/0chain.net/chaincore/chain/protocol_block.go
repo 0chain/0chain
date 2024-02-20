@@ -36,8 +36,8 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 		doneC := make(chan struct{})
 		errC := make(chan error)
 		go func() {
+			pl := c.GetMiners(round)
 			for i, bvt := range bvts {
-				pl := c.GetMiners(round)
 				verifier := pl.GetNode(bvt.VerifierID)
 				if verifier == nil {
 					errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
