@@ -448,19 +448,19 @@ func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializa
 	if ok {
 		sc.Cache().Set(key, vn)
 		// DEBUG:
-		v, err := vn.Clone().(util.MPTSerializable).MarshalMsg(nil)
-		if err != nil {
-			panic(err)
-		}
+		// v, err := vn.Clone().(util.MPTSerializable).MarshalMsg(nil)
+		// if err != nil {
+		// 	panic(err)
+		// }
 
-		dc, err := node.MarshalMsg(nil)
-		if err != nil {
-			panic(err)
-		}
+		// dc, err := node.MarshalMsg(nil)
+		// if err != nil {
+		// 	panic(err)
+		// }
 
-		if !bytes.Equal(v, dc) {
-			panic("state context - saving cache data mismatch")
-		}
+		// if !bytes.Equal(v, dc) {
+		// 	panic("state context - saving cache data mismatch")
+		// }
 	}
 
 	return k, nil
