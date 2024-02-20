@@ -13,7 +13,6 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -28,6 +27,7 @@ import (
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 

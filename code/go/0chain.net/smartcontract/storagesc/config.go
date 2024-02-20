@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/currency"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"0chain.net/core/util/taskqueue"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"

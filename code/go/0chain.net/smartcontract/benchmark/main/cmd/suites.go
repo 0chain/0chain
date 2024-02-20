@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/dbs/postgresql"
 
 	"0chain.net/smartcontract/dbs/event"
@@ -30,6 +29,7 @@ import (
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/smartcontract/benchmark"
 	"github.com/0chain/common/core/util"

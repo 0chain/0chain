@@ -13,6 +13,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/state"
@@ -31,7 +32,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/statecache"
 )
 
 //msgp:ignore StorageAllocation AllocationChallenges

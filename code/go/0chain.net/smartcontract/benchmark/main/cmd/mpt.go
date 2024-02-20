@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/dbs/goose"
 
 	"golang.org/x/net/context"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/zcnsc"

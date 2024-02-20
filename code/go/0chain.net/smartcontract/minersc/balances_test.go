@@ -6,6 +6,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -13,7 +14,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
