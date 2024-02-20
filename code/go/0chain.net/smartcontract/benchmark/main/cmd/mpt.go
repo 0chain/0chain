@@ -126,7 +126,7 @@ func getBalances(
 		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 		func() *block.Block { return bk },
 		edb,
-		txnStateCache,
+		// txnStateCache,
 	)
 }
 

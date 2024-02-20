@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -350,7 +350,10 @@ func (c *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSer
 			"client state is nil, round %d", block.Round)
 	}
 
-	s := CreateTxnMPT(block.ClientState)
+	sc := statecache.NewStateCache()
+	_, txnCache := statecache.NewBlockTxnCaches(sc, statecache.Block{})
+
+	s := CreateTxnMPT(block.ClientState, txnCache)
 	return s.GetNodeValue(getNodePath(path), v)
 }
 
@@ -646,15 +649,15 @@ func mustInitialState(tokens currency.Coin) *state.State {
 /*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
-	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
 
-	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
 	blockStateCache := statecache.NewBlockCache(c.GetStateCache(), statecache.Block{
 		Round: gb.Round,
 		Hash:  gb.Hash,
 	})
 	txnStateCache := statecache.NewTransactionCache(blockStateCache)
-	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb(), txnStateCache)
+	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil, txnStateCache)
+	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
+	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
 
 	c.mustInitGBState(initStates, stateCtx)

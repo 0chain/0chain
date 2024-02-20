@@ -219,10 +219,10 @@ func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block, txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
 	var (
-		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		qbc         = statecache.NewQueryBlockCache(c.GetStateCache(), b.Hash)
 		tbc         = statecache.NewTransactionCache(qbc)
-		sctx        = c.NewStateContext(b, clientState, txn, tbc, nil)
+		clientState = CreateTxnMPT(b.ClientState, tbc) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
 
 	switch txn.TransactionType {
@@ -335,10 +335,10 @@ func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
 	opts ...SyncNodesOption) map[string]map[string]int64 {
 
 	var (
-		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		qbc         = statecache.NewQueryBlockCache(c.GetStateCache(), b.Hash)
 		tbc         = statecache.NewTransactionCache(qbc)
-		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, tbc, nil)
+		clientState = CreateTxnMPT(b.ClientState, tbc) // begin transaction
+		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, nil)
 	)
 
 	table := smartcontract.GetTransactionCostTable(sctx)
@@ -381,7 +381,6 @@ func (c *Chain) NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
-	txnStateCache *statecache.TransactionCache,
 	eventDb *event.EventDb,
 ) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, txn,
@@ -393,7 +392,6 @@ func (c *Chain) NewStateContext(
 		c.GetSignatureScheme,
 		c.GetLatestFinalizedBlock,
 		eventDb,
-		txnStateCache,
 	)
 }
 
@@ -416,9 +414,9 @@ func (c *Chain) updateState(ctx context.Context,
 	}
 
 	var (
-		clientState   = CreateTxnMPT(bState) // begin transaction
 		txnStateCache = statecache.NewTransactionCache(blockStateCache)
-		sctx          = c.NewStateContext(b, clientState, txn, txnStateCache, nil)
+		clientState   = CreateTxnMPT(bState, txnStateCache) // begin transaction
+		sctx          = c.NewStateContext(b, clientState, txn, nil)
 		startRoot     = sctx.GetState().GetRoot()
 	)
 
@@ -494,9 +492,9 @@ func (c *Chain) updateState(ctx context.Context,
 					zap.Any("txn", txn))
 
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
-				clientState = CreateTxnMPT(bState) // begin transaction
 				txnStateCache = statecache.NewTransactionCache(blockStateCache)
-				sctx = c.NewStateContext(b, clientState, txn, txnStateCache, nil)
+				clientState = CreateTxnMPT(bState, txnStateCache) // begin transaction
+				sctx = c.NewStateContext(b, clientState, txn, nil)
 				// records chargeable error event
 				sctx.EmitError(err)
 
@@ -889,9 +887,9 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	return stateToUser(fromClient, s), nil
 }
 
-func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+func CreateTxnMPT(mpt util.MerklePatriciaTrieI, cache *statecache.TransactionCache) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
-	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot(), cache)
 	return tmpt
 }
 

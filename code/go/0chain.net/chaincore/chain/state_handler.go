@@ -94,10 +94,10 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 		logging.Logger.Error("empty latest finalized block or state")
 		return nil
 	}
-	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	qbc := statecache.NewQueryBlockCache(c.GetStateCache(), lfb.Hash)
 	tbc := statecache.NewTransactionCache(qbc)
-	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, tbc, c.GetEventDb())
+	clientState := CreateTxnMPT(lfb.ClientState, tbc) // begin transaction
+	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 }
 
 func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
