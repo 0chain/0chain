@@ -8,9 +8,9 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
-	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/statecache"
 )
 
 //go:generate msgp -io=false -tests=false -unexported -v

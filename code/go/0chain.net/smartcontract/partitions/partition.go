@@ -6,7 +6,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
-	"0chain.net/core/statecache"
+	"github.com/0chain/common/core/statecache"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v

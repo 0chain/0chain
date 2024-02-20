@@ -11,10 +11,10 @@ import (
 
 	"0chain.net/chaincore/block"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"go.uber.org/zap"
 
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 
 	"0chain.net/smartcontract/provider"
 

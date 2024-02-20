@@ -13,8 +13,8 @@ import (
 	"time"
 
 	config2 "0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"0chain.net/smartcontract/provider"
+	"github.com/0chain/common/core/statecache"
 
 	"github.com/0chain/common/core/currency"
 

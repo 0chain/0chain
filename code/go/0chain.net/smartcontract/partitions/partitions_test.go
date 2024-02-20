@@ -13,8 +13,8 @@ import (
 	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
