@@ -10,13 +10,14 @@ import (
 	"sync"
 
 	"0chain.net/core/config"
-	"0chain.net/core/statecache"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 
 	"github.com/0chain/common/core/currency"
+
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -132,7 +133,7 @@ type StateContext struct {
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 	blockStateCache               statecache.BlockCacher
-	txnStateCache                 *statecache.TransactionCache
+	// txnStateCache                 *statecache.TransactionCache
 }
 
 type GetNow func() common.Timestamp
@@ -164,7 +165,6 @@ func NewStateContext(
 	getChainSignature func() encryption.SignatureScheme,
 	getLatestFinalizedBlock func() *block.Block,
 	eventDb *event.EventDb,
-	txnStateCache *statecache.TransactionCache,
 ) (
 	balances *StateContext,
 ) {
@@ -181,7 +181,6 @@ func NewStateContext(
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
-		txnStateCache:                 txnStateCache,
 	}
 }
 
@@ -514,7 +513,7 @@ func (sc *StateContext) GetMissingNodeKeys() []util.Key {
 }
 
 func (sc *StateContext) Cache() *statecache.TransactionCache {
-	return sc.txnStateCache
+	return sc.state.Cache()
 }
 
 // ErrInvalidState checks if the error is an invalid state error
