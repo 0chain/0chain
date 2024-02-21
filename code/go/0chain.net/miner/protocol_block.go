@@ -33,6 +33,8 @@ import (
 // InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
+const NoTransactionCost = "no_transaction_cost"
+
 // ErrLFBClientStateNil is returned when client state of latest finalized block is nil
 var ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
 
@@ -1173,6 +1175,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			// would not be wasted. Therefore, we will pack the block anyway.
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
 			break
+		}
+		if cost == math.MaxInt {
+			logging.Logger.Debug("No transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
+			return common.NewError(NoTransactionCost, fmt.Sprintf("No transaction cost for txn %v", txn.Hash))
 		}
 		if iterInfo.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
