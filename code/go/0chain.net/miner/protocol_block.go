@@ -353,6 +353,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 			if err != nil {
 				return err
 			}
+			if c == math.MaxInt {
+				return block.ErrCostNotFound
+			}
 
 			cost += c
 			costs = append(costs, c)
