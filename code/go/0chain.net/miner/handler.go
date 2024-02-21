@@ -13,6 +13,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/core/sortedmap"
+	"github.com/0chain/common/core/util"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -184,6 +185,10 @@ func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 	self := node.Self.Underlying()
 	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<br>")
+
+	find, missed := util.CacheStats()
+	fmt.Fprintf(w, "<h3>find/missed: %v/%v</h3>", find, missed)
 	fmt.Fprintf(w, "<br>")
 
 	fmt.Fprintf(w, "<table>")
