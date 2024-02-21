@@ -1497,6 +1497,11 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 
 			blobber.SavedData += -d.Stats.UsedSize
 			blobber.Allocated += -d.Size
+
+			logging.Logger.Info("Jayash blobber removed from allocation",
+				zap.Any("blobberAlloc", d),
+				zap.Any("blobber", blobber))
+
 			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
