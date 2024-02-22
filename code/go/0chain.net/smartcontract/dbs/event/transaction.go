@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -50,12 +51,13 @@ func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
 // GetTransactionByHash finds the transaction record by hash
 // Used Index: idx_thash
 func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
-	tr := Transaction{}
-	res := edb.Store.
-		Get().
-		Model(&Transaction{}).
-		Where(Transaction{Hash: hash}).
-		First(&tr)
+	var tr Transaction
+	res := edb.Store.Get().
+		Where(&Transaction{Hash: hash}).
+		Find(&tr)
+	if res.RowsAffected == 0 {
+		return tr, errors.New("record not found")
+	}
 	return tr, res.Error
 }
 
