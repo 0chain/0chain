@@ -4,6 +4,8 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
@@ -72,7 +74,9 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	return nil
 }
 
-func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI) {
+func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI, updateType string) {
+	logging.Logger.Info("emitUpdateBlobberAllocatedSavedHealth", zap.Any("sn", sn), zap.Any("updateType", updateType))
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, sn.ID, event.Blobber{
 		Provider: event.Provider{
 			ID:              sn.ID,

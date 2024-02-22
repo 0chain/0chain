@@ -1509,7 +1509,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			}
 
 			// Update saved data on events_db
-			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+			emitUpdateBlobberAllocatedSavedHealth(blobber, balances, "remove_blobber")
 
 			sa.BlobberAllocs[i] = addedBlobberAllocation
 			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation

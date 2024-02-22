@@ -323,7 +323,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
 
-		emitUpdateBlobberAllocatedSavedHealth(b, balances)
+		emitUpdateBlobberAllocatedSavedHealth(b, balances, "new_allocation_request")
 	}
 
 	// create write pool and lock tokens
@@ -604,7 +604,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		if _, err = balances.InsertTrieNode(b.GetKey(), b); err != nil {
 			return
 		}
-		emitUpdateBlobberAllocatedSavedHealth(b, balances)
+		emitUpdateBlobberAllocatedSavedHealth(b, balances, "save_updated_allocation")
 	}
 	// Save allocation
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
@@ -1484,7 +1484,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 
 		// Update saved data on events_db
-		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+		emitUpdateBlobberAllocatedSavedHealth(blobber, balances, "finish_allocation")
 	}
 
 	for i, sp := range sps {
