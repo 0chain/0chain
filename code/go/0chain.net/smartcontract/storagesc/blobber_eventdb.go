@@ -75,7 +75,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 }
 
 func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI, updateType string) {
-	logging.Logger.Info("emitUpdateBlobberAllocatedSavedHealth", zap.Any("sn", sn), zap.Any("updateType", updateType))
+	logging.Logger.Info("Jayash emitUpdateBlobberAllocatedSavedHealth", zap.Any("sn", sn), zap.Any("updateType", updateType))
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, sn.ID, event.Blobber{
 		Provider: event.Provider{
