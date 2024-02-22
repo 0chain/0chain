@@ -1502,6 +1502,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				zap.Any("blobberAlloc", d),
 				zap.Any("blobber", blobber))
 
+			// Saving removed blobber to mpt here
 			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
@@ -1532,11 +1533,9 @@ func replaceBlobber(
 		return nil, err
 	}
 
-	var removedBlobber *StorageNode
 	var found bool
 	for i, d := range blobbers {
 		if d.ID == blobberID {
-			removedBlobber = blobbers[i]
 			blobbers[i] = addedBlobber
 			found = true
 			break
@@ -1546,9 +1545,6 @@ func replaceBlobber(
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
-	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
-	}
 	return blobbers, nil
 }
 
