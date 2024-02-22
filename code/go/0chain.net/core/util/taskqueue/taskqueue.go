@@ -127,10 +127,14 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			task := heap.Pop(&te.tasks).(*Task)
 			te.mu.Unlock()
 
-			select {
-			case ssc := <-te.scLock:
-				<-ssc
-			default:
+		l:
+			for {
+				select {
+				case ssc := <-te.scLock:
+					<-ssc
+				default:
+					break l
+				}
 			}
 
 			if task.priority == int(SCExec) {
