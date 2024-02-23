@@ -768,9 +768,67 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid signature for write marker")
 	}
 
-	if blobAlloc.AllocationRoot == commitConnection.AllocationRoot && blobAlloc.LastWriteMarker != nil &&
-		blobAlloc.LastWriteMarker.ChainHash == commitConnection.WriteMarker.ChainHash {
-		return string(blobAllocBytes), nil
+	if len(commitConnection.ChainData)%32 != 0 {
+		return "", common.NewError("commit_connection_failed",
+			"Invalid chain data")
+	}
+
+	if commitConnection.WriteMarker.ChainSize < 0 {
+		return "", common.NewError("commit_connection_failed",
+			"Invalid chain size")
+	}
+
+	var changeSize int64
+	//branch logic according to ChainHash being present or not
+	if commitConnection.WriteMarker.ChainHash != "" {
+		if blobAlloc.AllocationRoot == commitConnection.AllocationRoot && blobAlloc.LastWriteMarker != nil &&
+			blobAlloc.LastWriteMarker.ChainHash == commitConnection.WriteMarker.ChainHash {
+			return string(blobAllocBytes), nil
+		}
+
+		changeSize = commitConnection.WriteMarker.ChainSize
+		hasher := sha256.New()
+		var prevHash string
+		if blobAlloc.LastWriteMarker != nil {
+			changeSize -= blobAlloc.LastWriteMarker.ChainSize
+			prevChainHash, _ := hex.DecodeString(blobAlloc.LastWriteMarker.ChainHash)
+			hasher.Write(prevChainHash) //nolint:errcheck
+			prevHash = blobAlloc.LastWriteMarker.ChainHash
+		}
+
+		for i := 0; i < len(commitConnection.ChainData); i += 32 {
+			hasher.Write(commitConnection.ChainData[i : i+32]) //nolint:errcheck
+			sum := hasher.Sum(nil)
+			hasher.Reset()
+			hasher.Write(sum) //nolint:errcheck
+		}
+
+		allocRootBytes, err := hex.DecodeString(commitConnection.AllocationRoot)
+		if err != nil {
+			return "", common.NewError("commit_connection_failed",
+				"Error decoding allocation root")
+		}
+		hasher.Write(allocRootBytes) //nolint:errcheck
+
+		chainHash := hex.EncodeToString(hasher.Sum(nil))
+		if chainHash != commitConnection.WriteMarker.ChainHash {
+			return "", common.NewError("commit_connection_failed",
+				fmt.Sprintf("Invalid chain hash:expected %s got %s and prevChainHash %s", commitConnection.WriteMarker.ChainHash, chainHash, prevHash))
+		}
+	} else {
+		if blobAlloc.AllocationRoot == commitConnection.AllocationRoot && blobAlloc.LastWriteMarker != nil &&
+			blobAlloc.LastWriteMarker.PreviousAllocationRoot == commitConnection.PrevAllocationRoot {
+			return string(blobAllocBytes), nil
+		}
+		changeSize = commitConnection.WriteMarker.Size
+		if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
+			changeSize -= blobAlloc.LastWriteMarker.Size
+		} else {
+			if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
+				return "", common.NewError("commit_connection_failed",
+					"Previous allocation root does not match the latest allocation root")
+			}
+		}
 	}
 
 	blobber, err := sc.getBlobber(blobAlloc.BlobberID, balances)
@@ -782,46 +840,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if blobAlloc.Stats.UsedSize == 0 {
 		blobAlloc.LatestFinalizedChallCreatedAt = commitConnection.WriteMarker.Timestamp
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitConnection.WriteMarker.Timestamp
-	}
-
-	if len(commitConnection.ChainData)%32 != 0 {
-		return "", common.NewError("commit_connection_failed",
-			"Invalid chain data")
-	}
-
-	if commitConnection.WriteMarker.ChainSize < 0 {
-		return "", common.NewError("commit_connection_failed",
-			"Invalid chain size")
-	}
-
-	changeSize := commitConnection.WriteMarker.ChainSize
-	hasher := sha256.New()
-	prevHash := "no_hash"
-	if blobAlloc.LastWriteMarker != nil {
-		changeSize -= blobAlloc.LastWriteMarker.ChainSize
-		prevChainHash, _ := hex.DecodeString(blobAlloc.LastWriteMarker.ChainHash)
-		hasher.Write(prevChainHash) //nolint:errcheck
-		prevHash = blobAlloc.LastWriteMarker.ChainHash
-	}
-
-	for i := 0; i < len(commitConnection.ChainData); i += 32 {
-		hasher.Write(commitConnection.ChainData[i : i+32]) //nolint:errcheck
-		sum := hasher.Sum(nil)
-		hasher.Reset()
-		hasher.Write(sum) //nolint:errcheck
-	}
-
-	allocRootBytes, err := hex.DecodeString(commitConnection.AllocationRoot)
-	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"Error decoding allocation root")
-	}
-	hasher.Write(allocRootBytes) //nolint:errcheck
-
-	chainHash := hex.EncodeToString(hasher.Sum(nil))
-	if chainHash != commitConnection.WriteMarker.ChainHash {
-		return "", common.NewError("commit_connection_failed",
-			fmt.Sprintf("Invalid chain hash:expected %s got %s and prevChainHash %s", commitConnection.WriteMarker.ChainHash, chainHash, prevHash))
 	}
 
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
@@ -1059,4 +1077,8 @@ func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
+}
+
+func isRollback(commitConnection BlobberCloseConnection, lastWM *WriteMarker) bool {
+	return commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitConnection.WriteMarker.Size == 0 && lastWM != nil && commitConnection.WriteMarker.Timestamp == lastWM.Timestamp && commitConnection.AllocationRoot == lastWM.PreviousAllocationRoot
 }

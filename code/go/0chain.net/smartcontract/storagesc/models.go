@@ -2068,10 +2068,18 @@ func (wm *WriteMarker) VerifySignature(
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%d:%d:%d",
-		wm.AllocationRoot, wm.PreviousAllocationRoot,
-		wm.FileMetaRoot, wm.ChainHash, wm.AllocationID, wm.BlobberID,
-		wm.ClientID, wm.Size, wm.ChainSize, wm.Timestamp)
+	var hashData string
+	if wm.ChainHash != "" {
+		hashData = fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%d:%d:%d",
+			wm.AllocationRoot, wm.PreviousAllocationRoot,
+			wm.FileMetaRoot, wm.ChainHash, wm.AllocationID, wm.BlobberID,
+			wm.ClientID, wm.Size, wm.ChainSize, wm.Timestamp)
+	} else {
+		hashData = fmt.Sprintf("%s:%s:%s:%s:%s:%s:%d:%d",
+			wm.AllocationRoot, wm.PreviousAllocationRoot,
+			wm.FileMetaRoot, wm.AllocationID, wm.BlobberID,
+			wm.ClientID, wm.Size, wm.Timestamp)
+	}
 	return hashData
 }
 
