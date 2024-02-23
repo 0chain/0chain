@@ -143,6 +143,8 @@ smart_contracts:
     min_write_price: 0.001
     # max file size on blobber
     max_file_size: 40000000000000 # 5TB
+    # max chain length 
+    max_chain_length: 32
     # max number of blobbers per allocation
     max_blobbers_per_allocation: 40
     #

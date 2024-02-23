@@ -773,6 +773,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid chain data")
 	}
 
+	if len(commitConnection.ChainData) > (32 * conf.MaxChainLength) {
+		return "", common.NewError("commit_connection_failed",
+			"Chain data length exceeds the maximum chainlength "+string(conf.MaxChainLength))
+	}
+
 	if commitConnection.WriteMarker.ChainSize < 0 {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid chain size")

@@ -164,6 +164,8 @@ smart_contracts:
     max_read_price: 100.0
     max_write_price: 100.0
     max_file_size : 40000000000000
+    # max chain length 
+    max_chain_length: 32
     # min_write_price: 0.1
     max_blobbers_per_allocation: 40
     # allocation cancellation

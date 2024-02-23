@@ -149,6 +149,8 @@ type Config struct {
 
 	OwnerId string         `json:"owner_id"`
 	Cost    map[string]int `json:"cost"`
+	// MaxChainLength for commit_connection
+	MaxChainLength int `json:"max_chain_length"`
 }
 
 func (conf *Config) validate() (err error) {
@@ -310,6 +312,7 @@ func getConfiguredConfig() (conf *Config, err error) {
 	if err != nil {
 		return nil, err
 	}
+	conf.MaxChainLength = scc.GetInt(pfx + "max_chain_length")
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.HealthCheckPeriod = scc.GetDuration(pfx + "health_check_period")
 	conf.MaxChallengeCompletionRounds = scc.GetInt64(pfx + "max_challenge_completion_rounds")

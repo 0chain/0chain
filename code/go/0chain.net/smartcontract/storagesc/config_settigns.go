@@ -65,6 +65,7 @@ const (
 	MaxWritePrice
 	MinWritePrice
 	MaxFileSize
+	MaxChainLength
 	ChallengeEnabled
 	ChallengeGenerationGap
 	ValidatorsPerChallenge
@@ -167,6 +168,7 @@ func initSettingName() {
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
 	SettingName[MaxFileSize] = "max_file_size"
+	SettingName[MaxChainLength] = "max_chain_length"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
 	SettingName[ChallengeGenerationGap] = "challenge_generation_gap"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
@@ -248,6 +250,7 @@ func initSettings() {
 		MaxWritePrice.String():                    {MaxWritePrice, config.CurrencyCoin},
 		MinWritePrice.String():                    {MinWritePrice, config.CurrencyCoin},
 		MaxFileSize.String():                      {MaxFileSize, config.Int64},
+		MaxChainLength.String():                   {MaxChainLength, config.Int},
 		ChallengeEnabled.String():                 {ChallengeEnabled, config.Boolean},
 		ChallengeGenerationGap.String():           {ChallengeGenerationGap, config.Int64},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, config.Int},
@@ -365,6 +368,8 @@ func (conf *Config) setInt(key string, change int) error {
 		conf.MaxBlobberSelectForChallenge = change
 	case MaxDelegates:
 		conf.MaxDelegates = change
+	case MaxChainLength:
+		conf.MaxChainLength = change
 	default:
 		return fmt.Errorf("key: %v not implemented as int", key)
 	}
@@ -681,6 +686,8 @@ func (conf *Config) get(key Setting) interface{} {
 		return conf.MinWritePrice
 	case MaxFileSize:
 		return conf.MaxFileSize
+	case MaxChainLength:
+		return conf.MaxChainLength
 	case ChallengeEnabled:
 		return conf.ChallengeEnabled
 	case ChallengeGenerationGap:

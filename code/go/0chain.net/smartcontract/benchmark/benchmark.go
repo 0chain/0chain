@@ -171,6 +171,7 @@ const (
 	StorageMaxReadPrice                 = SmartContract + StorageSc + "max_read_price"
 	StorageMaxWritePrice                = SmartContract + StorageSc + "max_write_price"
 	StorageMaxFileSize                  = SmartContract + StorageSc + "max_file_size"
+	StorageMaxChainLength               = SmartContract + StorageSc + "max_chain_length"
 	StorageMaxChallengeCompletionRounds = SmartContract + StorageSc + "max_challenge_completion_rounds"
 	StorageMinBlobberCapacity           = SmartContract + StorageSc + "min_blobber_capacity"
 	StorageMaxCharge                    = SmartContract + StorageSc + "max_charge"
