@@ -14,14 +14,14 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber int64       `json:"block_number"`
-	TxHash      string      `json:"tx_hash"`
-	Type        EventType   `json:"type"`
-	Tag         EventTag    `json:"tag"`
-	Index       string      `json:"index"`
-	IsPublished bool        `json:"is_published"`
-	SequenceNumber int64	`json:"sequence_number"`
-	Data        interface{} `json:"data" gorm:"-"`
+	BlockNumber    int64       `json:"block_number"`
+	TxHash         string      `json:"tx_hash"`
+	Type           EventType   `json:"type"`
+	Tag            EventTag    `json:"tag"`
+	Index          string      `json:"index"`
+	IsPublished    bool        `json:"is_published"`
+	SequenceNumber int64       `json:"sequence_number"`
+	Data           interface{} `json:"data" gorm:"-"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -80,7 +80,7 @@ func (edb *EventDb) PublishUnpublishedEvents() {
 		logging.Logger.Error("PublishEvents: event database is nil")
 		return
 	}
-	
+
 	broker := edb.GetKafkaProv()
 	if broker == nil {
 		logging.Logger.Error("PublishEvents: kafka provider is nil")
@@ -125,8 +125,20 @@ func (edb *EventDb) PublishUnpublishedEvents() {
 }
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
+	broker := edb.GetKafkaProv()
+	if broker == nil {
+		logging.Logger.Error("Failed to get kafka instance")
+	}
+
 	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
 	if edb.Store != nil && len(events.events) > 0 {
+		eventJson, err := json.Marshal(events.events)
+		if err != nil {
+			logging.Logger.Error("Failed to get unpublished events: ", zap.Error(err))
+		} else {
+			broker.PublishToKafka(edb.dbConfig.KafkaTopic, eventJson)
+			logging.Logger.Info("Published message to kafka.")
+		}
 		return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
 	}
 
