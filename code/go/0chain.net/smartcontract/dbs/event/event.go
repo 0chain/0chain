@@ -123,6 +123,15 @@ func (edb *EventDb) PublishUnpublishedEvents() {
 		}
 	}
 }
+func filterEvents(events []Event) []Event {
+	var filteredEvents []Event
+	for _, event := range events {
+		if event.Data != nil {
+			filteredEvents = append(filteredEvents, event)
+		}
+	}
+	return filteredEvents
+}
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 	broker := edb.GetKafkaProv()
@@ -132,7 +141,7 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 
 	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
 	if edb.Store != nil && len(events.events) > 0 {
-		eventJson, err := json.Marshal(events.events)
+		eventJson, err := json.Marshal(filterEvents(events.events))
 		if err != nil {
 			logging.Logger.Error("Failed to get unpublished events: ", zap.Error(err))
 		} else {
