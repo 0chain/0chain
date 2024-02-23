@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 33
+	// map header, size 34
 	// string "TimeUnit"
-	o = append(o, 0xde, 0x0, 0x21, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
+	o = append(o, 0xde, 0x0, 0x22, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
 	o = msgp.AppendDuration(o, z.TimeUnit)
 	// string "Minted"
 	o = append(o, 0xa6, 0x4d, 0x69, 0x6e, 0x74, 0x65, 0x64)
@@ -199,6 +199,9 @@ func (z *Config) MarshalMsg(b []byte) (o []byte, err error) {
 		o = msgp.AppendString(o, k)
 		o = msgp.AppendInt(o, za0002)
 	}
+	// string "MaxChainLength"
+	o = append(o, 0xae, 0x4d, 0x61, 0x78, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x4c, 0x65, 0x6e, 0x67, 0x74, 0x68)
+	o = msgp.AppendInt(o, z.MaxChainLength)
 	return
 }
 
@@ -561,6 +564,12 @@ func (z *Config) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 				z.Cost[za0001] = za0002
 			}
+		case "MaxChainLength":
+			z.MaxChainLength, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MaxChainLength")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -606,6 +615,7 @@ func (z *Config) Msgsize() (s int) {
 			s += msgp.StringPrefixSize + len(za0001) + msgp.IntSize
 		}
 	}
+	s += 15 + msgp.IntSize
 	return
 }
 
