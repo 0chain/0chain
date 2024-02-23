@@ -13,6 +13,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
+	"0chain.net/core/util/taskqueue"
 	"0chain.net/core/util/waitgroup"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
@@ -24,7 +25,7 @@ import (
 // VerifyTickets verifies tickets aggregately
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
-	return c.verifyTicketsWithContext.Run(ctx, func() error {
+	return taskqueue.Execute(taskqueue.Common, func() error {
 		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
 			len(bvts), len(bvts))
 		if aggScheme == nil {
