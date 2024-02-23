@@ -523,12 +523,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		return nil
 	})
 
-	wg.Run("finalize block - prune state cache", fb.Round, func() error {
-		if fb.Round > 100 {
-			c.GetStateCache().PruneRoundBelow(fb.Round - 100)
-		}
-		return nil
-	})
+	// wg.Run("finalize block - prune state cache", fb.Round, func() error {
+	// 	if fb.Round > 100 {
+	// 		c.GetStateCache().PruneRoundBelow(fb.Round - 100)
+	// 	}
+	// 	return nil
+	// })
 
 	if err = wg.Wait(); err != nil {
 		if !waitgroup.ErrIsPanic(err) {
