@@ -168,7 +168,6 @@ func initSettingName() {
 	SettingName[MaxWritePrice] = "max_write_price"
 	SettingName[MinWritePrice] = "min_write_price"
 	SettingName[MaxFileSize] = "max_file_size"
-	SettingName[MaxChainLength] = "max_chain_length"
 	SettingName[ChallengeEnabled] = "challenge_enabled"
 	SettingName[ChallengeGenerationGap] = "challenge_generation_gap"
 	SettingName[ValidatorsPerChallenge] = "validators_per_challenge"
@@ -250,7 +249,6 @@ func initSettings() {
 		MaxWritePrice.String():                    {MaxWritePrice, config.CurrencyCoin},
 		MinWritePrice.String():                    {MinWritePrice, config.CurrencyCoin},
 		MaxFileSize.String():                      {MaxFileSize, config.Int64},
-		MaxChainLength.String():                   {MaxChainLength, config.Int},
 		ChallengeEnabled.String():                 {ChallengeEnabled, config.Boolean},
 		ChallengeGenerationGap.String():           {ChallengeGenerationGap, config.Int64},
 		ValidatorsPerChallenge.String():           {ValidatorsPerChallenge, config.Int},
