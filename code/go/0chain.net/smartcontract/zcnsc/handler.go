@@ -146,7 +146,7 @@ func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Reque
 
 	user, err := edb.GetUser(clientID)
 	if err != nil {
-		common.Respond(w, r, nil, errors.Wrap(err, "GetUser DB error, ID = "+clientID))
+		common.Respond(w, r, 0, nil)
 		return
 	}
 
