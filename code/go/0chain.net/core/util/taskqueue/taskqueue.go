@@ -98,7 +98,7 @@ type TaskExecutor struct {
 
 // NewTaskExecutor creates a new task executor
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
-	workerNum := 10
+	workerNum := 2
 	te := &TaskExecutor{
 		workerNum: workerNum,
 		scLock:    make(chan chan struct{}, workerNum),
