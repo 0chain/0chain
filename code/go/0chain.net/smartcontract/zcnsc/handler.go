@@ -143,6 +143,10 @@ func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	clientID := r.FormValue("client_id")
+	if clientID == "" {
+		common.Respond(w, r, nil, errors.New("'client_id' parameter is not provided"))
+		return
+	}
 
 	user, err := edb.GetUser(clientID)
 	if err != nil {

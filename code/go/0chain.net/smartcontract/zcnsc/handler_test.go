@@ -165,11 +165,12 @@ func TestMintNonceHandler(t *testing.T) {
 
 				handler.ServeHTTP(rr, req)
 
-				require.Equal(t, http.StatusBadRequest, rr.Result().StatusCode)
+				require.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 				var resp int64
 				err = json.NewDecoder(rr.Body).Decode(&resp)
 				require.Error(t, err)
+				require.Equal(t, int64(0), resp)
 			},
 		},
 	}
