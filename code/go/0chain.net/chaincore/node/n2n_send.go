@@ -222,13 +222,14 @@ func prepareSenderSign(entity datastore.Entity) (*senderSignInfo, error) {
 
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
-	var sh EntitySendHandler
-	taskqueue.Execute(taskqueue.N2NMsg, func() error {
-		timeout := 500 * time.Millisecond
-		if options.Timeout > 0 {
-			timeout = options.Timeout
-		}
-		sh = func(entity datastore.Entity) SendHandler {
+	timeout := 500 * time.Millisecond
+	if options.Timeout > 0 {
+		timeout = options.Timeout
+	}
+
+	return func(entity datastore.Entity) SendHandler {
+		var sh SendHandler
+		taskqueue.Execute(taskqueue.N2NMsg, func() error {
 			buf, err := getResponseData(options, entity)
 			if err != nil {
 				logging.N2n.Error("getResponseData failed", zap.Error(err))
@@ -273,7 +274,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
 			}
 
-			return func(ctx context.Context, receiver *Node) bool {
+			sh = func(ctx context.Context, receiver *Node) bool {
 				timer := receiver.GetTimer(uri)
 				addr := receiver.GetN2NURLBase() + uri
 				var buffer *bytes.Buffer
@@ -362,10 +363,11 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				}
 				return true
 			}
-		}
-		return nil
-	})
-	return sh
+
+			return nil
+		})
+		return sh
+	}
 }
 
 /*SetSendHeaders - sets the send request headers*/
@@ -497,15 +499,15 @@ func RejectDuplicateNotarizedBlockHandler(c Chainer, handler common.ReqRespHandl
 /*ToN2NReceiveEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
 * into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
-	var rsp common.ReqRespHandlerf
-	taskqueue.Execute(taskqueue.N2NMsg, func() error {
-		rsp = func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		taskqueue.Execute(taskqueue.N2NMsg, func() error {
+
 			defer r.Body.Close()
 
 			contentType := r.Header.Get("Content-type")
 			if !strings.HasPrefix(contentType, "application/json") {
 				http.Error(w, "Header Content-type=application/json not found", 400)
-				return
+				return nil
 			}
 			nodeID := r.Header.Get(HeaderNodeID)
 			sender := GetNode(nodeID)
@@ -514,7 +516,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 					zap.String("from", nodeID),
 					zap.String("to", Self.Underlying().GetPseudoName()),
 					zap.String("handler", r.RequestURI))
-				return
+				return nil
 			}
 
 			entityName := r.Header.Get(HeaderRequestEntityName)
@@ -522,7 +524,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			entityMetadata := datastore.GetEntityMetadata(entityName)
 			if options != nil && options.MessageFilter != nil {
 				if !options.MessageFilter.AcceptMessage(entityName, entityID) {
-					return
+					return nil
 				}
 			}
 
@@ -596,10 +598,9 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 
 			}()
 			common.Respond(w, r, nil, nil)
-		}
-		return nil
-	})
-	return rsp
+			return nil
+		})
+	}
 }
 
 // SenderValidateHandler validates the sender signature
