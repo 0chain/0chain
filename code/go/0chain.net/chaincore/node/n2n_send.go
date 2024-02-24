@@ -201,14 +201,18 @@ func prepareSenderSign(entity datastore.Entity) (*senderSignInfo, error) {
 		t        = common.Timestamp(ts.Add(time.Duration(N2NTimeTolerance) * time.Second).Unix())
 		hashdata = getHashData(Self.Underlying().GetKey(), t, entity.GetKey())
 		hash     = encryption.Hash(hashdata)
-		sig      string
-		err      error
+		// sig      string
+		// err      error
 	)
 
-	if err := taskqueue.Execute(taskqueue.N2NMsg, func() error {
-		sig, err = Self.Sign(hash)
-		return err
-	}); err != nil {
+	// if err := taskqueue.Execute(taskqueue.N2NMsg, func() error {
+	// 	sig, err = Self.Sign(hash)
+	// 	return err
+	// }); err != nil {
+	// 	return nil, err
+	// }
+	sig, err := Self.Sign(hash)
+	if err != nil {
 		return nil, err
 	}
 
@@ -442,11 +446,11 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 	}
 	reqSignature := r.Header.Get(HeaderNodeRequestSignature)
 
-	var ok bool
-	taskqueue.Execute(taskqueue.N2NMsg, func() error {
-		ok, _ = sender.Verify(reqSignature, reqHash)
-		return nil
-	})
+	// var ok bool
+	// taskqueue.Execute(taskqueue.N2NMsg, func() error {
+	ok, _ := sender.Verify(reqSignature, reqHash)
+	// return nil
+	// })
 
 	if !ok {
 		logging.N2n.Error("message received - invalid signature", zap.String("from", sender.GetPseudoName()),

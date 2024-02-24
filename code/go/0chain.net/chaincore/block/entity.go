@@ -14,7 +14,6 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/config"
-	"0chain.net/core/util/taskqueue"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -282,11 +281,15 @@ func (b *Block) Validate(_ context.Context) error {
 			fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v",
 				b.Hash, hash, b.getHashData()))
 	}
-	var ok bool
-	if err := taskqueue.Execute(taskqueue.Common, func() error {
-		ok, err = miner.Verify(b.Signature, b.Hash)
-		return err
-	}); err != nil {
+	// var ok bool
+	// if err := taskqueue.Execute(taskqueue.Common, func() error {
+	// 	ok, err = miner.Verify(b.Signature, b.Hash)
+	// 	return err
+	// }); err != nil {
+	// 	return err
+	// }
+	ok, err := miner.Verify(b.Signature, b.Hash)
+	if err != nil {
 		return err
 	}
 

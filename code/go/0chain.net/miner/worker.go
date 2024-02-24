@@ -12,7 +12,6 @@ import (
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/util/taskqueue"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
@@ -63,21 +62,21 @@ func (mc *Chain) startMessageWorker(ctx context.Context) {
 					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
 				}
 
-				taskqueue.Execute(taskqueue.Common, func() error {
-					switch bmsg.Type {
-					case MessageVRFShare:
-						protocol.HandleVRFShare(ctx, bmsg)
-					case MessageVerify:
-						protocol.HandleVerifyBlockMessage(ctx, bmsg)
-					case MessageVerificationTicket:
-						protocol.HandleVerificationTicketMessage(ctx, bmsg)
-					case MessageNotarization:
-						protocol.HandleNotarizationMessage(ctx, bmsg)
-					case MessageNotarizedBlock:
-						protocol.HandleNotarizedBlockMessage(ctx, bmsg)
-					}
-					return nil
-				})
+				// taskqueue.Execute(taskqueue.Common, func() error {
+				switch bmsg.Type {
+				case MessageVRFShare:
+					protocol.HandleVRFShare(ctx, bmsg)
+				case MessageVerify:
+					protocol.HandleVerifyBlockMessage(ctx, bmsg)
+				case MessageVerificationTicket:
+					protocol.HandleVerificationTicketMessage(ctx, bmsg)
+				case MessageNotarization:
+					protocol.HandleNotarizationMessage(ctx, bmsg)
+				case MessageNotarizedBlock:
+					protocol.HandleNotarizedBlockMessage(ctx, bmsg)
+				}
+				// return nil
+				// })
 
 				if bmsg.Sender != nil {
 					logging.Logger.Debug("message (done)",
