@@ -222,145 +222,150 @@ func prepareSenderSign(entity datastore.Entity) (*senderSignInfo, error) {
 
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
-	timeout := 500 * time.Millisecond
-	if options.Timeout > 0 {
-		timeout = options.Timeout
-	}
-	return func(entity datastore.Entity) SendHandler {
-		buf, err := getResponseData(options, entity)
-		if err != nil {
-			logging.N2n.Error("getResponseData failed", zap.Error(err))
+	var sh EntitySendHandler
+	taskqueue.Execute(taskqueue.N2NMsg, func() error {
+		timeout := 500 * time.Millisecond
+		if options.Timeout > 0 {
+			timeout = options.Timeout
 		}
-
-		data := buf.Bytes()
-
-		toPull := options.Pull
-		if len(data) > LargeMessageThreshold || toPull {
-			toPull = true
-			key := p2pKey(uri, entity.GetKey())
-			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
-			if err := pushDataCache.Add(key, pdce); err != nil {
-				logging.Logger.Error("pull data add to cache failed",
-					zap.String("key", key),
-					zap.Error(err))
-			}
-		}
-
-		ssi, err := prepareSenderSign(entity)
-		if err != nil {
-			logging.N2n.Panic("failed to prepare sender signature", zap.Error(err))
-		}
-
-		setSignHeader := func(r *http.Request) {
-			if common.Within(int64(ssi.Ts), int64(time.Second)) {
-				r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
-				r.Header.Set(HeaderRequestHash, ssi.Hash)
-				r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
-				return
+		sh = func(entity datastore.Entity) SendHandler {
+			buf, err := getResponseData(options, entity)
+			if err != nil {
+				logging.N2n.Error("getResponseData failed", zap.Error(err))
 			}
 
-			// there's no prepared signature within valid time range.
-			// generate a new one
-			ssi, err = prepareSenderSign(entity)
+			data := buf.Bytes()
+
+			toPull := options.Pull
+			if len(data) > LargeMessageThreshold || toPull {
+				toPull = true
+				key := p2pKey(uri, entity.GetKey())
+				pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
+				if err := pushDataCache.Add(key, pdce); err != nil {
+					logging.Logger.Error("pull data add to cache failed",
+						zap.String("key", key),
+						zap.Error(err))
+				}
+			}
+
+			ssi, err := prepareSenderSign(entity)
 			if err != nil {
 				logging.N2n.Panic("failed to prepare sender signature", zap.Error(err))
 			}
 
-			r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
-			r.Header.Set(HeaderRequestHash, ssi.Hash)
-			r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
-		}
-
-		return func(ctx context.Context, receiver *Node) bool {
-			timer := receiver.GetTimer(uri)
-			addr := receiver.GetN2NURLBase() + uri
-			var buffer *bytes.Buffer
-			push := !toPull || shouldPush(options, receiver, uri, entity, timer)
-			if push {
-				buffer = bytes.NewBuffer(data)
-			} else {
-				buffer = bytes.NewBuffer(nil)
-			}
-			req, err := http.NewRequest("POST", addr, buffer)
-			if err != nil {
-				return false
-			}
-			defer req.Body.Close()
-
-			if options.Compress {
-				req.Header.Set("Content-Encoding", compDecomp.Encoding())
-			}
-
-			if toPull {
-				req.Header.Set(HeaderRequestToPull, "true")
-			}
-
-			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			SetSendHeaders(req, entity, options)
-
-			setSignHeader(req)
-			// Keep the number of messages to a node bounded
-			var (
-				selfNode *Node
-				resp     *http.Response
-				ts       = time.Now()
-				cctx     context.Context
-				cancel   func()
-			)
-
-			func() {
-				receiver.Grab()
-				defer receiver.Release()
-
-				selfNode = Self.Underlying()
-				selfNode.SetLastActiveTime(ts)
-				selfNode.InduceDelay(receiver)
-
-				cctx, cancel = context.WithTimeout(ctx, timeout)
-				req = req.WithContext(cctx)
-				resp, err = httpClient.Do(req)
-			}()
-
-			defer cancel()
-
-			logging.N2n.Info("sending",
-				zap.String("from", selfNode.GetPseudoName()),
-				zap.String("to", receiver.GetPseudoName()),
-				zap.String("handler", uri),
-				zap.Duration("duration", time.Since(ts)),
-				zap.String("entity", entity.GetEntityMetadata().GetName()),
-				zap.String("id", entity.GetKey()),
-				zap.Error(err))
-			switch err {
-			case nil:
-			default:
-				ue, ok := err.(*url.Error)
-				if ok && ue.Unwrap() != context.Canceled {
-					receiver.AddSendErrors(1)
-					receiver.AddErrorCount(1)
-					logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()), zap.String("to", receiver.GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()), zap.Error(err))
+			setSignHeader := func(r *http.Request) {
+				if common.Within(int64(ssi.Ts), int64(time.Second)) {
+					r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
+					r.Header.Set(HeaderRequestHash, ssi.Hash)
+					r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
+					return
 				}
-				return false
+
+				// there's no prepared signature within valid time range.
+				// generate a new one
+				ssi, err = prepareSenderSign(entity)
+				if err != nil {
+					logging.N2n.Panic("failed to prepare sender signature", zap.Error(err))
+				}
+
+				r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
+				r.Header.Set(HeaderRequestHash, ssi.Hash)
+				r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
 			}
 
-			receiver.SetStatus(NodeStatusActive)
-			receiver.SetLastActiveTime(time.Now())
-			receiver.SetErrorCount(receiver.GetSendErrors())
+			return func(ctx context.Context, receiver *Node) bool {
+				timer := receiver.GetTimer(uri)
+				addr := receiver.GetN2NURLBase() + uri
+				var buffer *bytes.Buffer
+				push := !toPull || shouldPush(options, receiver, uri, entity, timer)
+				if push {
+					buffer = bytes.NewBuffer(data)
+				} else {
+					buffer = bytes.NewBuffer(nil)
+				}
+				req, err := http.NewRequest("POST", addr, buffer)
+				if err != nil {
+					return false
+				}
+				defer req.Body.Close()
 
-			//TODO may be we don't need to close here, since defer Body.close() is added
-			readAndClose(resp.Body)
-			if push {
-				timer.UpdateSince(ts)
-				sizer := receiver.GetSizeMetric(uri)
-				sizer.Update(int64(len(data)))
+				if options.Compress {
+					req.Header.Set("Content-Encoding", compDecomp.Encoding())
+				}
+
+				if toPull {
+					req.Header.Set(HeaderRequestToPull, "true")
+				}
+
+				req.Header.Set("Content-Type", "application/json; charset=utf-8")
+				SetSendHeaders(req, entity, options)
+
+				setSignHeader(req)
+				// Keep the number of messages to a node bounded
+				var (
+					selfNode *Node
+					resp     *http.Response
+					ts       = time.Now()
+					cctx     context.Context
+					cancel   func()
+				)
+
+				func() {
+					receiver.Grab()
+					defer receiver.Release()
+
+					selfNode = Self.Underlying()
+					selfNode.SetLastActiveTime(ts)
+					selfNode.InduceDelay(receiver)
+
+					cctx, cancel = context.WithTimeout(ctx, timeout)
+					req = req.WithContext(cctx)
+					resp, err = httpClient.Do(req)
+				}()
+
+				defer cancel()
+
+				logging.N2n.Info("sending",
+					zap.String("from", selfNode.GetPseudoName()),
+					zap.String("to", receiver.GetPseudoName()),
+					zap.String("handler", uri),
+					zap.Duration("duration", time.Since(ts)),
+					zap.String("entity", entity.GetEntityMetadata().GetName()),
+					zap.String("id", entity.GetKey()),
+					zap.Error(err))
+				switch err {
+				case nil:
+				default:
+					ue, ok := err.(*url.Error)
+					if ok && ue.Unwrap() != context.Canceled {
+						receiver.AddSendErrors(1)
+						receiver.AddErrorCount(1)
+						logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()), zap.String("to", receiver.GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()), zap.Error(err))
+					}
+					return false
+				}
+
+				receiver.SetStatus(NodeStatusActive)
+				receiver.SetLastActiveTime(time.Now())
+				receiver.SetErrorCount(receiver.GetSendErrors())
+
+				//TODO may be we don't need to close here, since defer Body.close() is added
+				readAndClose(resp.Body)
+				if push {
+					timer.UpdateSince(ts)
+					sizer := receiver.GetSizeMetric(uri)
+					sizer.Update(int64(len(data)))
+				}
+				if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent) {
+					logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()), zap.String("to", receiver.GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()), zap.Int("status_code", resp.StatusCode))
+					return false
+				}
+				return true
 			}
-			if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent) {
-				logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()), zap.String("to", receiver.GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()), zap.Int("status_code", resp.StatusCode))
-				return false
-			}
-			return true
 		}
-	}
+		return nil
+	})
+	return sh
 }
 
 /*SetSendHeaders - sets the send request headers*/
@@ -492,104 +497,109 @@ func RejectDuplicateNotarizedBlockHandler(c Chainer, handler common.ReqRespHandl
 /*ToN2NReceiveEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
 * into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
-	return func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+	var rsp common.ReqRespHandlerf
+	taskqueue.Execute(taskqueue.N2NMsg, func() error {
+		rsp = func(w http.ResponseWriter, r *http.Request) {
+			defer r.Body.Close()
 
-		contentType := r.Header.Get("Content-type")
-		if !strings.HasPrefix(contentType, "application/json") {
-			http.Error(w, "Header Content-type=application/json not found", 400)
-			return
-		}
-		nodeID := r.Header.Get(HeaderNodeID)
-		sender := GetNode(nodeID)
-		if sender == nil {
-			logging.N2n.Error("message received - request from unrecognized node",
-				zap.String("from", nodeID),
-				zap.String("to", Self.Underlying().GetPseudoName()),
-				zap.String("handler", r.RequestURI))
-			return
-		}
-
-		entityName := r.Header.Get(HeaderRequestEntityName)
-		entityID := r.Header.Get(HeaderRequestEntityID)
-		entityMetadata := datastore.GetEntityMetadata(entityName)
-		if options != nil && options.MessageFilter != nil {
-			if !options.MessageFilter.AcceptMessage(entityName, entityID) {
+			contentType := r.Header.Get("Content-type")
+			if !strings.HasPrefix(contentType, "application/json") {
+				http.Error(w, "Header Content-type=application/json not found", 400)
 				return
 			}
-		}
-
-		buf := bytes.Buffer{}
-		if _, err := buf.ReadFrom(r.Body); err != nil {
-			logging.N2n.Error("message received - read body failed",
-				zap.String("from", nodeID),
-				zap.String("to", Self.Underlying().GetPseudoName()),
-				zap.String("handler", r.RequestURI),
-				zap.Error(err))
-		}
-
-		go func() {
-			senderValidateFunc := func() error {
-				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-				defer cancel()
-				return n2nVerifyRequestsWithContext.Run(ctx, func() error {
-					if !validateSendRequest(sender, r) {
-						return errors.New("failed to validate request")
-					}
-
-					return nil
-				})
+			nodeID := r.Header.Get(HeaderNodeID)
+			sender := GetNode(nodeID)
+			if sender == nil {
+				logging.N2n.Error("message received - request from unrecognized node",
+					zap.String("from", nodeID),
+					zap.String("to", Self.Underlying().GetPseudoName()),
+					zap.String("handler", r.RequestURI))
+				return
 			}
-			// TODO:
-			root, _ := context.WithTimeout(common.GetRootContext(), 5*time.Second) //nolint:govet
-			ctx := WithSenderValidateFunc(root, senderValidateFunc)
-			initialNodeID := r.Header.Get(HeaderInitialNodeID)
-			if initialNodeID != "" {
-				initSender := GetNode(initialNodeID)
-				if initSender == nil {
+
+			entityName := r.Header.Get(HeaderRequestEntityName)
+			entityID := r.Header.Get(HeaderRequestEntityID)
+			entityMetadata := datastore.GetEntityMetadata(entityName)
+			if options != nil && options.MessageFilter != nil {
+				if !options.MessageFilter.AcceptMessage(entityName, entityID) {
 					return
 				}
-				ctx = WithNode(ctx, initSender)
-			} else {
-				ctx = WithNode(ctx, sender)
 			}
 
-			if r.Header.Get(HeaderRequestToPull) == "true" {
-				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
-				sender.AddReceived(1)
-				return
-			}
-
-			entity, err := getRequestEntity(r, &buf, entityMetadata)
-			if err != nil {
-				return
-			}
-
-			if entity.GetKey() != entityID {
-				logging.N2n.Error("message received - entity id doesn't match with signed id",
-					zap.String("from", sender.GetPseudoName()),
-					zap.String("to", Self.GetPseudoName()),
+			buf := bytes.Buffer{}
+			if _, err := buf.ReadFrom(r.Body); err != nil {
+				logging.N2n.Error("message received - read body failed",
+					zap.String("from", nodeID),
+					zap.String("to", Self.Underlying().GetPseudoName()),
 					zap.String("handler", r.RequestURI),
-					zap.String("entity_id", entityID),
-					zap.String("entity.id", entity.GetKey()))
-				return
+					zap.Error(err))
 			}
 
-			start := time.Now()
-			_, err = handler(ctx, entity)
-			duration := time.Since(start)
-			if err != nil {
-				logging.N2n.Error("message received", zap.String("from", sender.GetPseudoName()),
-					zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.String("id", entity.GetKey()), zap.Error(err))
-			} else {
-				logging.N2n.Info("message received", zap.String("from", sender.GetPseudoName()),
-					zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.String("id", entity.GetKey()))
-			}
-			sender.AddReceived(1)
+			go func() {
+				senderValidateFunc := func() error {
+					ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+					defer cancel()
+					return n2nVerifyRequestsWithContext.Run(ctx, func() error {
+						if !validateSendRequest(sender, r) {
+							return errors.New("failed to validate request")
+						}
 
-		}()
-		common.Respond(w, r, nil, nil)
-	}
+						return nil
+					})
+				}
+				// TODO:
+				root, _ := context.WithTimeout(common.GetRootContext(), 5*time.Second) //nolint:govet
+				ctx := WithSenderValidateFunc(root, senderValidateFunc)
+				initialNodeID := r.Header.Get(HeaderInitialNodeID)
+				if initialNodeID != "" {
+					initSender := GetNode(initialNodeID)
+					if initSender == nil {
+						return
+					}
+					ctx = WithNode(ctx, initSender)
+				} else {
+					ctx = WithNode(ctx, sender)
+				}
+
+				if r.Header.Get(HeaderRequestToPull) == "true" {
+					go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
+					sender.AddReceived(1)
+					return
+				}
+
+				entity, err := getRequestEntity(r, &buf, entityMetadata)
+				if err != nil {
+					return
+				}
+
+				if entity.GetKey() != entityID {
+					logging.N2n.Error("message received - entity id doesn't match with signed id",
+						zap.String("from", sender.GetPseudoName()),
+						zap.String("to", Self.GetPseudoName()),
+						zap.String("handler", r.RequestURI),
+						zap.String("entity_id", entityID),
+						zap.String("entity.id", entity.GetKey()))
+					return
+				}
+
+				start := time.Now()
+				_, err = handler(ctx, entity)
+				duration := time.Since(start)
+				if err != nil {
+					logging.N2n.Error("message received", zap.String("from", sender.GetPseudoName()),
+						zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.String("id", entity.GetKey()), zap.Error(err))
+				} else {
+					logging.N2n.Info("message received", zap.String("from", sender.GetPseudoName()),
+						zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.String("id", entity.GetKey()))
+				}
+				sender.AddReceived(1)
+
+			}()
+			common.Respond(w, r, nil, nil)
+		}
+		return nil
+	})
+	return rsp
 }
 
 // SenderValidateHandler validates the sender signature
