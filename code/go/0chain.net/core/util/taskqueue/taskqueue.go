@@ -87,18 +87,24 @@ func (pq *PriorityQueue) Pop() interface{} {
 
 // TaskExecutor is a task executor
 type TaskExecutor struct {
-	tasks  PriorityQueue
-	mu     sync.Mutex
-	cond   *sync.Cond
-	scLock chan chan struct{}
+	tasks     PriorityQueue
+	mu        sync.Mutex
+	cond      *sync.Cond
+	scLock    chan chan struct{}
+	workerNum int
 }
 
 // NewTaskExecutor creates a new task executor
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
-	te := &TaskExecutor{}
+	workerNum := 4
+	te := &TaskExecutor{
+		workerNum: workerNum,
+		scLock:    make(chan chan struct{}, workerNum),
+	}
+
 	te.cond = sync.NewCond(&te.mu)
-	te.scLock = make(chan chan struct{}, 4)
-	for i := 0; i < 4; i++ {
+
+	for i := 0; i < te.workerNum; i++ {
 		go te.worker(ctx)
 	}
 
@@ -139,7 +145,9 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 
 			if task.priority == int(SCExec) {
 				ssc := make(chan struct{})
-				te.scLock <- ssc
+				for i := 0; i < te.workerNum-1; i++ {
+					te.scLock <- ssc
+				}
 				task.errC <- task.taskFunc()
 				close(ssc)
 			} else {
