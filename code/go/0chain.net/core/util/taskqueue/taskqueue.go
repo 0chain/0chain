@@ -3,9 +3,11 @@ package taskqueue
 import (
 	"container/heap"
 	"context"
-	"fmt"
 	"sync"
 	"time"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 type Task struct {
@@ -96,7 +98,7 @@ type TaskExecutor struct {
 
 // NewTaskExecutor creates a new task executor
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
-	workerNum := 4
+	workerNum := 2
 	te := &TaskExecutor{
 		workerNum: workerNum,
 		scLock:    make(chan chan struct{}, workerNum),
@@ -144,7 +146,8 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			}
 
 			if task.priority == int(SCExec) {
-				fmt.Println("Executing task start", task.name, "priority", task.priority)
+				logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+				// fmt.Println("Executing task start", task.name, "priority", task.priority)
 				ssc := make(chan struct{})
 				for i := 0; i < te.workerNum-1; i++ {
 					te.scLock <- ssc
@@ -152,12 +155,14 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 				task.errC <- task.taskFunc()
 				close(ssc)
 			} else {
-				fmt.Println("Executing task start", task.name, "priority", task.priority)
+				// fmt.Println("Executing task start", task.name, "priority", task.priority)
+				logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
 				task.errC <- task.taskFunc()
 			}
 
 			// logging.Logger.Debug("Executing task", zap.String("name:", task.name), zap.Int("priority", task.priority))
-			fmt.Println("Executing task end", task.name, "priority", task.priority)
+			// fmt.Println("Executing task end", task.name, "priority", task.priority)
+			logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
 		}
 	}
 }
