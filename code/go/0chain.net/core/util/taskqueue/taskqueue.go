@@ -148,12 +148,11 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			if task.priority == int(SCExec) {
 				// fmt.Println("Executing task start", task.name, "priority", task.priority)
 				ssc := make(chan struct{})
-				te.scLock <- ssc
-				logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
-				task.errC <- task.taskFunc()
-				for i := 0; i < te.workerNum-2; i++ {
+				for i := 0; i < te.workerNum-1; i++ {
 					te.scLock <- ssc
 				}
+				logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+				task.errC <- task.taskFunc()
 				close(ssc)
 			} else {
 				// fmt.Println("Executing task start", task.name, "priority", task.priority)
