@@ -98,7 +98,7 @@ type TaskExecutor struct {
 
 // NewTaskExecutor creates a new task executor
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
-	workerNum := 2
+	workerNum := 10
 	te := &TaskExecutor{
 		workerNum: workerNum,
 		scLock:    make(chan chan struct{}, workerNum),
@@ -148,11 +148,12 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			if task.priority == int(SCExec) {
 				// fmt.Println("Executing task start", task.name, "priority", task.priority)
 				ssc := make(chan struct{})
-				for i := 0; i < te.workerNum-1; i++ {
-					te.scLock <- ssc
-				}
+				te.scLock <- ssc
 				logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
 				task.errC <- task.taskFunc()
+				for i := 0; i < te.workerNum-2; i++ {
+					te.scLock <- ssc
+				}
 				close(ssc)
 			} else {
 				// fmt.Println("Executing task start", task.name, "priority", task.priority)
