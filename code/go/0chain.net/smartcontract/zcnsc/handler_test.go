@@ -169,7 +169,7 @@ func TestMintNonceHandler(t *testing.T) {
 
 				var resp int64
 				err = json.NewDecoder(rr.Body).Decode(&resp)
-				require.Error(t, err)
+				require.NoError(t, err)
 				require.Equal(t, int64(0), resp)
 			},
 		},
