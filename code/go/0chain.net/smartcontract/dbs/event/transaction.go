@@ -64,6 +64,14 @@ func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 // GetTransactionByClientId searches for transaction by clientID
 // Used Index: idx_tclient_id
 func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagination) ([]Transaction, error) {
+	userExist := edb.Store.Get().Model(&User{}).Find(&User{
+		UserID: clientID,
+	})
+
+	if userExist.RowsAffected == 0 {
+		return nil, errors.New("user not found")
+	}
+
 	var tr []Transaction
 	res := edb.Store.
 		Get().
