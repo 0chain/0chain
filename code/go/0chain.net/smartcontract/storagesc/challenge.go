@@ -166,6 +166,7 @@ func (sc *StorageSmartContract) blobberReward(
 	if err != nil {
 		return fmt.Errorf("rewarding blobbers: %v", err)
 	}
+	logging.Logger.Debug("challenge pass - move to blobbers")
 
 	newChallengeReward, err := currency.AddCoin(blobAlloc.ChallengeReward, blobberReward)
 	if err != nil {
@@ -183,6 +184,7 @@ func (sc *StorageSmartContract) blobberReward(
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
+	logging.Logger.Debug("challenge pass - move to validators")
 
 	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
 	if err != nil {
@@ -194,20 +196,24 @@ func (sc *StorageSmartContract) blobberReward(
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
 		return err
 	}
+	logging.Logger.Debug("challenge pass - save validator stake pools")
 
 	// Save the pools
 	if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't save sake pool: %v", err)
 	}
 
+	logging.Logger.Debug("challenge pass - save stake pools")
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
+	logging.Logger.Debug("challenge pass - save cp")
 	if err = alloc.saveUpdatedStakes(balances); err != nil {
 		return fmt.Errorf("can't save allocation: %v", err)
 	}
 
+	logging.Logger.Debug("challenge pass - save updated stakes")
 	return nil
 }
 
@@ -439,6 +445,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewError(errCode, err.Error())
 	}
 
+	logging.Logger.Debug("challenge_response after verify tickets", zap.String("txn", t.Hash))
+
 	allocChallenges, err := sc.getAllocationChallenges(challenge.AllocationID, balances)
 	if err != nil {
 		return "", common.NewErrorf(errCode, "could not find allocation challenges, %v", err)
@@ -483,6 +491,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		latestFinalizedChallTime:  latestFinalizedChallTime,
 	}
 
+	logging.Logger.Debug("challenge_response before challenge passed", zap.String("txn", t.Hash))
 	if !(result.pass) {
 		return sc.challengeFailed(balances, cab)
 	}
@@ -725,12 +734,15 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
+	logging.Logger.Debug("challenge response alloc save")
+
 	// Clean up challenge on MPT
 	_, err = balances.DeleteTrieNode(storageChallengeKey(sc.ID, cab.challenge.ID))
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
+	logging.Logger.Debug("challenge response delete challenge")
 	if cab.success < cab.threshold {
 		return "challenge passed partially by blobber", nil
 	}

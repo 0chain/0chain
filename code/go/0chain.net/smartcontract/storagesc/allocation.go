@@ -617,10 +617,11 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 
 func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI) (err error) {
 	// Save allocation
-	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
-	if err != nil {
-		return
-	}
+	// TODO: hardfork to remove this duplicate alloc saving
+	// _, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+	// if err != nil {
+	// 	return
+	// }
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStakes, sa.ID, sa.buildStakeUpdateEvent())
 	return
