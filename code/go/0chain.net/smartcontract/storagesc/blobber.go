@@ -80,7 +80,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 		return "", err
 	}
 
-	// Update blobber details
+	// Update blobber details in mpt and eventsdb
 
 	var fixRequest = &dto.ResetBlobberStatsDto{}
 	if err = json.Unmarshal(input, fixRequest); err != nil {
@@ -101,6 +101,13 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 
 	blobber.SavedData = fixRequest.NewSavedData
 	blobber.Allocated = fixRequest.NewAllocated
+
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"can't Save blobber: "+err.Error())
+	}
+	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
 	// Update challenge ready blobber partition
 
@@ -155,14 +162,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 			"error saving ongoing blobber reward partition: %v", err)
 	}
 
-	// Update blobber in mpt and eventsdb
-
-	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't Save blobber: "+err.Error())
-	}
-	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+	// Return blobber struct in response
 
 	return string(blobber.Encode()), nil
 }
