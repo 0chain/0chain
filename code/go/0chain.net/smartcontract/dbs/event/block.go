@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"time"
 
 	"0chain.net/smartcontract/common"
@@ -55,15 +56,25 @@ func (edb *EventDb) GetRoundFromTime(at time.Time, asc bool) (int64, error) {
 }
 
 func (edb *EventDb) GetBlockByHash(hash string) (Block, error) {
-	block := Block{}
-	res := edb.Store.Get().Table("blocks").Where("hash = ?", hash).First(&block)
-	return block, res.Error
+	var b Block
+	res := edb.Store.Get().
+		Where(&Block{Hash: hash}).
+		Find(&b)
+	if res.RowsAffected == 0 {
+		return b, errors.New("record not found")
+	}
+	return b, res.Error
 }
 
 func (edb *EventDb) GetBlockByRound(round int64) (Block, error) {
-	block := Block{}
-	res := edb.Store.Get().Table("blocks").Where(Block{Round: round}).First(&block)
-	return block, res.Error
+	var b Block
+	res := edb.Store.Get().
+		Where(&Block{Round: round}).
+		Find(&b)
+	if res.RowsAffected == 0 {
+		return b, errors.New("record not found")
+	}
+	return b, res.Error
 }
 
 func (edb *EventDb) GetBlockByDate(date string) (Block, error) {
