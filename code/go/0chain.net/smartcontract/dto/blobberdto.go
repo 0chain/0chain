@@ -34,7 +34,7 @@ type Terms struct {
 	WritePrice *currency.Coin `json:"write_price,omitempty"`
 }
 
-type FixBlobberRequestDto struct {
+type ResetBlobberStatsDto struct {
 	BlobberID     string `json:"blobber_id"`
 	PravAllocated int64  `json:"prav_allocated"`
 	PravSavedData int64  `json:"prav_saved_data"`

@@ -82,7 +82,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 
 	// Update blobber details
 
-	var fixRequest = &dto.FixBlobberRequestDto{}
+	var fixRequest = &dto.ResetBlobberStatsDto{}
 	if err = json.Unmarshal(input, fixRequest); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"malformed request: "+err.Error())
