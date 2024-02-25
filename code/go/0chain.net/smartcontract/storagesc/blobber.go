@@ -94,7 +94,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 			"can't get the blobber: "+err.Error())
 	}
 
-	if blobber.Allocated != fixRequest.PravAllocated || blobber.SavedData != fixRequest.PravSavedData {
+	if blobber.Allocated != fixRequest.PrevAllocated || blobber.SavedData != fixRequest.PrevSavedData {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"blobber's allocated or saved_data doesn't match with the provided values")
 	}

@@ -36,8 +36,8 @@ type Terms struct {
 
 type ResetBlobberStatsDto struct {
 	BlobberID     string `json:"blobber_id"`
-	PravAllocated int64  `json:"prav_allocated"`
-	PravSavedData int64  `json:"prav_saved_data"`
+	PrevAllocated int64  `json:"prev_allocated"`
+	PrevSavedData int64  `json:"prev_saved_data"`
 	NewAllocated  int64  `json:"new_allocated"`
 	NewSavedData  int64  `json:"new_saved_data"`
 }
