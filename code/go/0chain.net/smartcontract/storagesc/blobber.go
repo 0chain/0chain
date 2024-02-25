@@ -138,13 +138,13 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 
 	parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
+		return "", common.NewErrorf("reset_blobber_stats_failed",
 			"cannot fetch ongoing partition: %v", err)
 	}
 
 	var brn BlobberRewardNode
 	if _, err := parts.Get(balances, blobber.ID, &brn); err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
+		return "", common.NewErrorf("reset_blobber_stats_failed",
 			"cannot fetch blobber node item from partition: %v", err)
 	}
 
@@ -152,13 +152,13 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 
 	err = parts.UpdateItem(balances, &brn)
 	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
+		return "", common.NewErrorf("reset_blobber_stats_failed",
 			"error updating blobber reward item: %v", err)
 	}
 
 	err = parts.Save(balances)
 	if err != nil {
-		return "", common.NewErrorf("commit_blobber_read",
+		return "", common.NewErrorf("reset_blobber_stats_failed",
 			"error saving ongoing blobber reward partition: %v", err)
 	}
 
