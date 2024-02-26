@@ -11,6 +11,7 @@ type SharderAggregate struct {
 
 	SharderID       string           `json:"sharder_id" gorm:"index:idx_sharder_aggregate,unique"`
 	Round           int64            `json:"round" gorm:"index:idx_sharder_aggregate,unique"`
+	URL             string           `json:"url"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	Fees            currency.Coin    `json:"fees"`
 	TotalStake      currency.Coin    `json:"total_stake"`

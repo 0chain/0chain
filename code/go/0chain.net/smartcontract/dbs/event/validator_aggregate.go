@@ -11,6 +11,7 @@ type ValidatorAggregate struct {
 
 	ValidatorID     string           `json:"validator_id" gorm:"index:idx_validator_aggregate,unique"`
 	Round           int64            `json:"round" gorm:"index:idx_validator_aggregate,unique"`
+	URL             string           `json:"url"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
 	TotalStake    currency.Coin `json:"total_stake"`

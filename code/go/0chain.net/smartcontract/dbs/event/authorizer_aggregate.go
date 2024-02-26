@@ -12,6 +12,7 @@ type AuthorizerAggregate struct {
 	AuthorizerID    string           `json:"authorizer_id" gorm:"index:idx_authorizer_aggregate,unique"`
 	Round           int64            `json:"round" gorm:"index:idx_authorizer_aggregate,unique"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	URL             string           `json:"url"`
 
 	Fee           currency.Coin `json:"fee"`
 	TotalStake    currency.Coin `json:"total_stake"`
