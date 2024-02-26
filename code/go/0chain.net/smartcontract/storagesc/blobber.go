@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	CHUNK_SIZE = 64 * KB
+	CHUNK_SIZE       = 64 * KB
+	MAX_CHAIN_LENGTH = 32
 )
 
 func newBlobber(id string) *StorageNode {
@@ -771,6 +772,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if len(commitConnection.ChainData)%32 != 0 {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid chain data")
+	}
+
+	if len(commitConnection.ChainData) > (32 * MAX_CHAIN_LENGTH) {
+		return "", common.NewError("commit_connection_failed",
+			"Chain data length exceeds the maximum chainlength "+string(MAX_CHAIN_LENGTH))
 	}
 
 	if commitConnection.WriteMarker.ChainSize < 0 {
