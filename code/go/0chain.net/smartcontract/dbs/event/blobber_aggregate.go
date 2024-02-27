@@ -31,7 +31,6 @@ type BlobberAggregate struct {
 	InactiveRounds      int64            `json:"InactiveRounds"`
 	RankMetric          float64          `json:"rank_metric"`
 	Downtime            uint64           `json:"downtime"`
-	NotAvailable        bool             `json:"not_available"`
 	IsKilled            bool             `json:"is_killed"`
 	IsShutdown          bool             `json:"is_shutdown"`
 }
