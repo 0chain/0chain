@@ -58,7 +58,7 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
-    
+
     - name: Get changed files using defaults
       id: changed-files
       uses: tj-actions/changed-files@v18.4
@@ -71,7 +71,7 @@ jobs:
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
 
-    - name: Build Base & Run Base images 
+    - name: Build Base & Run Base images
       if: (contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.build_base') || contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.run_base'))
       run: |
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
@@ -88,15 +88,15 @@ jobs:
         docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG
         docker push $ZCHAIN_BUILD_RUN_REGISTRY:$TAG-$SHORT_SHA
 
-    - name: Build & Push
+    - name: Build
       run: |
-        make install-mockery
-        make build-mocks
-
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+      env:
+        DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
-
+    - name: Push
+      run: |
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
         docker tag miner:latest $MINER_REGISTRY:latest
         docker push ${MINER_REGISTRY}:$TAG
@@ -104,9 +104,6 @@ jobs:
         SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
         docker tag miner:latest ${MINER_REGISTRY}:$TAG-$SHORT_SHA
         docker push ${MINER_REGISTRY}:$TAG-$SHORT_SHA
-
-      env:
-        DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
     - name: Push latest
       if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
@@ -148,11 +145,11 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
-    
+
     - name: Get changed files using defaults
       id: changed-files
       uses: tj-actions/changed-files@v18.4
-    
+
     - name: Pull Build Base & Run Base
       run: |
         docker pull $ZCHAIN_BUILD_BASE_REGISTRY:staging
@@ -160,7 +157,7 @@ jobs:
 
         docker pull $ZCHAIN_BUILD_RUN_REGISTRY:staging
         docker tag $ZCHAIN_BUILD_RUN_REGISTRY:staging $ZCHAIN_BUILDRUN
-        
+
     - name: Build Base & Run Base images
       if: (contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.build_base') || contains(steps.changed-files.outputs.modified_files, 'docker.local/build.base/Dockerfile.run_base'))
       run: |
@@ -236,7 +233,7 @@ jobs:
 
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
-          
+
           if [[ "${{github.base_ref}}" == "staging" ]]; then
             echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO STAGING>" >> $GITHUB_ENV
           else
