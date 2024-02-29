@@ -1500,6 +1500,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 
 			blobber.SavedData += -d.Stats.UsedSize
 			blobber.Allocated += -d.Size
+			// Saving removed blobber to mpt here
 			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
@@ -1544,9 +1545,16 @@ func replaceBlobber(
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
 	}
 
-	if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-		return nil, fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
+	actErr := cstate.WithActivation(balances, "ares", func() error {
+		if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
+			return fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
+		}
+		return nil
+	}, func() error { return nil })
+	if actErr != nil {
+		return nil, actErr
 	}
+
 	return blobbers, nil
 }
 
