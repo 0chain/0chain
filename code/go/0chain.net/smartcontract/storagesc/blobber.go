@@ -183,6 +183,13 @@ func (sc *StorageSmartContract) updateBlobber(
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
 
+	b, err := getBlobber(existingBlobber.ID, balances)
+	if err != nil {
+		return fmt.Errorf("error fetching blobber: %v", err)
+	}
+
+	logging.Logger.Info("Jayash update blobber", zap.Any("blobber", b))
+
 	if err = existingSp.Save(spenum.Blobber, updateBlobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
