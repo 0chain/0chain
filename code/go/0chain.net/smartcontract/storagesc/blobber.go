@@ -203,8 +203,6 @@ func (sc *StorageSmartContract) updateBlobber(
 	existingSp *stakePool,
 	balances cstate.StateContextI,
 ) (err error) {
-	logging.Logger.Info("Jayash update blobber", zap.Any("blobber", updateBlobber))
-
 	// validate the new terms and update the existing blobber's terms
 	if err = validateAndSaveTerms(updateBlobber, existingBlobber, conf); err != nil {
 		return err
@@ -281,21 +279,19 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	existingBlobber.IsRestricted = *updateBlobber.IsRestricted
-
-	logging.Logger.Info("Jayash update blobber", zap.Any("blobber", existingBlobber))
+	actErr := cstate.WithActivation(balances, "ares", func() (e error) { return },
+		func() (e error) {
+			existingBlobber.IsRestricted = *updateBlobber.IsRestricted
+			return nil
+		})
+	if actErr != nil {
+		return fmt.Errorf("error with activation: %v", actErr)
+	}
 
 	_, err = balances.InsertTrieNode(existingBlobber.GetKey(), existingBlobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
-
-	b, err := getBlobber(existingBlobber.ID, balances)
-	if err != nil {
-		return fmt.Errorf("error fetching blobber: %v", err)
-	}
-
-	logging.Logger.Info("Jayash update blobber", zap.Any("blobber", b))
 
 	if err = existingSp.Save(spenum.Blobber, updateBlobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
@@ -466,7 +462,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: "+err.Error())
 	}
-	logging.Logger.Info("Jayash update blobber settings", zap.Any("blobber", updatedBlobber))
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {

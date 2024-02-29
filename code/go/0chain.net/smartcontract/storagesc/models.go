@@ -1713,9 +1713,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 			continue
 		}
 
-		logging.Logger.Info("blobber is active", zap.String("id", b.ID), zap.Any("blobber", b), zap.Any("sn", sn))
-
-		actErr := cstate.WithActivation(balances, "apollo", func() (e error) { return },
+		actErr := cstate.WithActivation(balances, "ares", func() (e error) { return },
 			func() (e error) {
 				if sn.IsRestricted {
 					success, err := verifyBlobberAuthTicket(balances, sa.Owner, b.ID, blobberAuthTickets[i], sn.PublicKey)
