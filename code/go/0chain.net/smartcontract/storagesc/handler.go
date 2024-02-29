@@ -2456,6 +2456,7 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		IsKilled:                sn.IsKilled(),
 		IsShutdown:              sn.IsShutDown(),
 		NotAvailable:            sn.NotAvailable,
+		IsRestricted:            sn.IsRestricted,
 	}
 }
 
@@ -2479,6 +2480,7 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 		StakePoolSettings:       snr.StakePoolSettings,
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            snr.IsRestricted,
 	}
 }
 
@@ -2514,6 +2516,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		SavedData:                blobber.SavedData,
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
+		IsRestricted:             blobber.IsRestricted,
 	}
 }
 
