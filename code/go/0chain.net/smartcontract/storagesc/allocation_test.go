@@ -1,8 +1,11 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0chain/gosdk/core/zcncrypto"
+	"github.com/0chain/gosdk/zcncore"
 	"math"
 	"strconv"
 	"testing"
@@ -610,7 +613,7 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, now, balances, sc, clientId)
+			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, "", removeID, now, balances, sc, clientId)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -944,39 +947,46 @@ func Test_sizeInGB(t *testing.T) {
 	}
 }
 
-func newTestAllBlobbers() (all *StorageNodes) {
+func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
+	numBlobbers := 2
+	notAvailable := false
+	isRestricted := false
+
+	if len(options) > 0 {
+		option := options[0]
+
+		if v, ok := option["num_blobbers"]; ok {
+			numBlobbers = v.(int)
+		}
+
+		if v, ok := option["not_available"]; ok {
+			notAvailable = v.(bool)
+		}
+
+		if v, ok := option["is_restricted"]; ok {
+			isRestricted = v.(bool)
+		}
+	}
+
 	all = new(StorageNodes)
-	all.Nodes = []*StorageNode{
-		{
+
+	for i := 0; i < numBlobbers; i++ {
+		all.Nodes = append(all.Nodes, &StorageNode{
 			Provider: provider.Provider{
-				ID:              "b1",
+				ID:              "b" + strconv.Itoa(i),
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: 0,
 			},
-			BaseURL: "http://blobber1.test.ru:9100/api",
+			BaseURL: "http://blobber" + strconv.Itoa(i) + ".test.ru:9100/api",
 			Terms: Terms{
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
 			Capacity:     25 * GB, // 20 GB
 			Allocated:    5 * GB,  //  5 GB
-			NotAvailable: false,
-		},
-		{
-			Provider: provider.Provider{
-				ID:              "b2",
-				ProviderType:    spenum.Blobber,
-				LastHealthCheck: 0,
-			},
-			BaseURL: "http://blobber2.test.ru:9100/api",
-			Terms: Terms{
-				ReadPrice:  25,
-				WritePrice: 250,
-			},
-			Capacity:     20 * GB, // 20 GB
-			Allocated:    10 * GB, // 10 GB
-			NotAvailable: false,
-		},
+			NotAvailable: notAvailable,
+			IsRestricted: isRestricted,
+		})
 	}
 	return
 }
@@ -1125,6 +1135,85 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg7)
 	})
+
+	t.Run("Blobbers provided are restricted blobbers", func(t *testing.T) {
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Blobbers = nil // not set
+		nar.Owner = clientID
+
+		var conditions map[string]interface{}
+		conditions = make(map[string]interface{})
+		conditions["is_restricted"] = true
+		var allBlobbers = newTestAllBlobbers(conditions)
+
+		b0OwnerWalletString, err := zcncore.CreateWalletOffline()
+		require.NoError(t, err)
+		var b0OwnerWallet zcncrypto.Wallet
+		err = json.Unmarshal([]byte(b0OwnerWalletString), &b0OwnerWallet)
+		require.NoError(t, err)
+		b0 := allBlobbers.Nodes[0]
+		b0.LastHealthCheck = tx.CreationDate
+		b0.ID = b0OwnerWallet.ClientID
+		b0.PublicKey = b0OwnerWallet.ClientKey
+
+		b1OwnerWalletString, err := zcncore.CreateWalletOffline()
+		require.NoError(t, err)
+		var b1OwnerWallet zcncrypto.Wallet
+		err = json.Unmarshal([]byte(b1OwnerWalletString), &b1OwnerWallet)
+		require.NoError(t, err)
+		b1 := allBlobbers.Nodes[1]
+		b1.LastHealthCheck = tx.CreationDate
+		b1.ID = b1OwnerWallet.ClientID
+		b1.PublicKey = b1OwnerWallet.ClientKey
+
+		nar.Blobbers = append(nar.Blobbers, b0.ID)
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
+		nar.Blobbers = append(nar.Blobbers, b1.ID)
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
+		require.NoError(t, err)
+
+		nar.BlobberAuthTickets = []string{"", ""}
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
+		requireErrMsg(t, err, errMsg7)
+
+		signByBlobberOwnerPK := func(hash string, blobberOwnerWallet zcncrypto.Wallet) (string, error) {
+			signScheme := zcncrypto.NewSignatureScheme("bls0chain")
+			if signScheme != nil {
+				err := signScheme.SetPrivateKey(blobberOwnerWallet.Keys[0].PrivateKey)
+				if err != nil {
+					return "", err
+				}
+				return signScheme.Sign(hash)
+			}
+			return "", common.NewError("invalid_signature_scheme", "Invalid signature scheme. Please check configuration")
+		}
+
+		walletString, err := zcncore.CreateWalletOffline()
+		require.NoError(t, err)
+		var wallet zcncrypto.Wallet
+		err = json.Unmarshal([]byte(walletString), &wallet)
+		require.NoError(t, err)
+		nar.Owner = wallet.ClientID
+		nar.OwnerPublicKey = wallet.ClientKey
+
+		blobber0AuthTicket, err := signByBlobberOwnerPK(wallet.ClientID, b0OwnerWallet)
+		require.NoError(t, err)
+
+		blobber1AuthTicket, err := signByBlobberOwnerPK(wallet.ClientID, b1OwnerWallet)
+		require.NoError(t, err)
+
+		nar.BlobberAuthTickets = []string{blobber0AuthTicket, blobber1AuthTicket}
+		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
+		require.NoError(t, err)
+	})
+
 	// 8. not enough tokens
 	t.Run("not enough tokens to honor the min lock demand (0 < 270)", func(t *testing.T) {
 		var nar newAllocationRequest
