@@ -895,7 +895,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize = -blobAlloc.LastWriteMarker.Size
-		prevWmSize = blobAlloc.LastWriteMarker.Size
+
+		_ = cstate.WithActivation(balances, "ares", func() error {
+			return nil
+		}, func() error {
+			prevWmSize = blobAlloc.LastWriteMarker.Size
+			return nil
+		})
+
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize + changeSize
