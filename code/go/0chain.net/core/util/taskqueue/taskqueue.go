@@ -14,6 +14,7 @@ type Task struct {
 	priority int
 	taskFunc func() error
 	errC     chan error
+	doneC    chan struct{}
 	name     string
 	age      time.Time
 }
@@ -40,6 +41,7 @@ func newTask(typ TaskType, f func() error, errC chan error) *Task {
 		name:     typ.String(),
 		taskFunc: f,
 		errC:     errC,
+		doneC:    make(chan struct{}),
 	}
 }
 
@@ -89,28 +91,62 @@ func (pq *PriorityQueue) Pop() interface{} {
 
 // TaskExecutor is a task executor
 type TaskExecutor struct {
-	tasks     PriorityQueue
-	mu        sync.Mutex
-	cond      *sync.Cond
-	scLock    chan chan struct{}
-	workerNum int
+	tasks       PriorityQueue
+	mu          sync.Mutex
+	cond        *sync.Cond
+	scLock      chan chan struct{}
+	workerNum   int
+	scTasksC    chan *Task
+	otherTasksC chan *Task
 }
 
 // NewTaskExecutor creates a new task executor
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
 	workerNum := 10
 	te := &TaskExecutor{
-		workerNum: workerNum,
-		scLock:    make(chan chan struct{}, workerNum),
+		workerNum:   workerNum,
+		scLock:      make(chan chan struct{}, workerNum),
+		scTasksC:    make(chan *Task),
+		otherTasksC: make(chan *Task, workerNum-1),
 	}
 
 	te.cond = sync.NewCond(&te.mu)
+	go te.worker(ctx)
+	go te.scWorker(ctx)
 
-	for i := 0; i < te.workerNum; i++ {
-		go te.worker(ctx)
+	for i := 0; i < workerNum-1; i++ {
+		go te.otherWorker(ctx)
 	}
 
 	return te
+}
+
+func (te *TaskExecutor) scWorker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case task := <-te.scTasksC:
+			logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+			task.errC <- task.taskFunc()
+			logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
+			close(task.doneC)
+		}
+	}
+}
+
+func (te *TaskExecutor) otherWorker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case task := <-te.otherTasksC:
+			logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+			task.errC <- task.taskFunc()
+			logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
+			close(task.doneC)
+		}
+	}
 }
 
 // Add adds a task to the executor
@@ -147,22 +183,25 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 
 			if task.priority == int(SCExec) {
 				// fmt.Println("Executing task start", task.name, "priority", task.priority)
-				ssc := make(chan struct{})
-				for i := 0; i < te.workerNum-1; i++ {
-					te.scLock <- ssc
-				}
-				logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
-				task.errC <- task.taskFunc()
-				close(ssc)
+				// ssc := make(chan struct{})
+				// for i := 0; i < te.workerNum-1; i++ {
+				// 	te.scLock <- ssc
+				// }
+				// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+				// task.errC <- task.taskFunc()
+				// close(ssc)
+				te.scTasksC <- task
+				<-task.doneC
 			} else {
 				// fmt.Println("Executing task start", task.name, "priority", task.priority)
-				logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
-				task.errC <- task.taskFunc()
+				// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+				// task.errC <- task.taskFunc()
+				te.otherTasksC <- task
 			}
 
 			// logging.Logger.Debug("Executing task", zap.String("name:", task.name), zap.Int("priority", task.priority))
 			// fmt.Println("Executing task end", task.name, "priority", task.priority)
-			logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
+			// logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
 		}
 	}
 }
