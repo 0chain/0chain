@@ -1872,8 +1872,11 @@ func (sn *StorageAllocation) Encode() []byte {
 }
 
 func (sn *StorageAllocation) MarshalMsg(o []byte) ([]byte, error) {
+	t := time.Now()
 	d := StorageAllocationDecode(*sn)
-	return d.MarshalMsg(o)
+	b, err := d.MarshalMsg(o)
+	logging.Logger.Debug("alloc save marshal", zap.Any("duration", time.Since(t)))
+	return b, err
 }
 
 func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
