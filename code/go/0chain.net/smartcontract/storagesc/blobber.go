@@ -890,10 +890,19 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	changeSize := commitConnection.WriteMarker.Size
+	var prevWmSize int64
 
 	blobberAllocSizeBefore := blobAlloc.Stats.UsedSize
 	if isRollback(commitConnection, blobAlloc.LastWriteMarker) {
 		changeSize = -blobAlloc.LastWriteMarker.Size
+
+		_ = cstate.WithActivation(balances, "ares", func() error {
+			return nil
+		}, func() error {
+			prevWmSize = blobAlloc.LastWriteMarker.Size
+			return nil
+		})
+
 		blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize + changeSize
@@ -925,7 +934,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		alloc.Stats.UsedSize += int64(float64(commitConnection.WriteMarker.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 
 		alloc.Stats.NumWrites++
-
 	}
 
 	// check time boundaries
@@ -1025,7 +1033,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		MovedToChallenge: alloc.MovedToChallenge,
 		MovedBack:        alloc.MovedBack,
 		WritePool:        alloc.WritePool,
-	}, movedTokens, balances)
+	}, movedTokens, prevWmSize, balances)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {
@@ -1127,10 +1135,17 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	return
 }
 
-func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
+func emitUpdateBlobberWriteStatEvent(w *WriteMarker, prevWmSize int64, balances cstate.StateContextI) {
+	var savedData int64
+	if w.Size != 0 {
+		savedData = w.Size
+	} else {
+		savedData = -prevWmSize
+	}
+
 	bb := event.Blobber{
 		Provider:  event.Provider{ID: w.BlobberID},
-		SavedData: w.Size,
+		SavedData: savedData,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
