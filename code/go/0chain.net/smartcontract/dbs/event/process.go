@@ -370,8 +370,24 @@ func (edb *EventDb) WorkEvents(
 		logging.Logger.Warn("work events - lost connection")
 	}
 
+	logging.Logger.Info("Jayash - WorkEvents - 1",
+		zap.Int64("round", blockEvents.round),
+		zap.Any("currentPartition", *currentPartition),
+		zap.Any("blockEvents.Round", blockEvents.round),
+		zap.Any("PartitionChangePeriod", edb.settings.PartitionChangePeriod))
+
 	if *currentPartition < blockEvents.round/edb.settings.PartitionChangePeriod {
+		logging.Logger.Info("Jayash - WorkEvents - 2",
+			zap.Int64("round", blockEvents.round),
+			zap.Any("currentPartition", *currentPartition),
+			zap.Any("blockEvents.Round", blockEvents.round),
+			zap.Any("PartitionChangePeriod", edb.settings.PartitionChangePeriod))
+
 		if err := edb.managePartitions(blockEvents.round); err != nil {
+			logging.Logger.Error("Jayash error managing partitions",
+				zap.Int64("round", blockEvents.round),
+				zap.Error(err))
+
 			return nil, err
 		}
 		*currentPartition = blockEvents.round / edb.settings.PartitionChangePeriod
@@ -459,7 +475,7 @@ func (edb *EventDb) AddPartitions(round int64) error {
 		"transactions", "blocks"}
 	for _, t := range tables {
 		if err := edb.addPartition(round, t); err != nil {
-			logging.Logger.Error("error creating partition", zap.Error(err))
+			logging.Logger.Error("Jayash error creating partition", zap.Error(err))
 			return err
 		}
 	}
@@ -471,7 +487,7 @@ func (edb *EventDb) dropPartitions(round int64) error {
 		"sharder_aggregates", "validator_aggregates", "authorizer_aggregates", "user_aggregates"}
 	for _, t := range tables {
 		if err := edb.dropPartition(round, t); err != nil {
-			logging.Logger.Error("error dropping partition", zap.Error(err))
+			logging.Logger.Error("Jayash error dropping partition", zap.Error(err))
 			return err
 		}
 	}
