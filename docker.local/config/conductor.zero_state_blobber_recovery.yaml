@@ -1,0 +1,41 @@
+enable:
+  - "Storage providers"
+
+# sets of test cases
+sets:
+  - name: "Storage providers"
+    tests:
+      - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
+
+tests:
+  - name: "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
+      - wait_round:
+          shift: 15 # Ensures blockchain is operational before proceeding
+      - start: ['blobber-1']
+      - wait_round:
+          shift: 15 # Allows time for Blobber to register and start functioning
+      - stop: ['blobber-1'] # Simulates Blobber failure
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./0chain/docker.local/blobber1"
+            recreate_script: docker.local/bin/init_blobber.sh
+            recreate_script_workdir: "blobber"
+          # Ensures complete data removal, simulating absolute data loss
+      - wait_round:
+          shift: 15 # Simulates downtime duration for the Blobber
+      - start: ['blobber-1']
+      - wait_round:
+          shift: 100 # Waits for Blobber to recover, re-sync, and resume operations
+      - check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
+          provider_type: blobber
+          provider_id: blobber-1
+          key: total_rewards
+          monotonicity: increase
+          timeout: "2m"

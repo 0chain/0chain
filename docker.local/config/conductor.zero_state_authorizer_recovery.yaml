@@ -1,0 +1,58 @@
+enable:
+  - "Authorizer Recovery"
+
+# sets of test cases
+sets:
+  - name: "Authorizer Recovery"
+    tests:
+      - "Authorizer Recovery - Authorizer should recover from zero state and continue to function"
+
+tests:
+  - name: "Authorizer Recovery - Authorizer should recover from zero state and continue to function"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      - sleep: "20s"
+      - start: ['0box']
+      - sleep: "20s"
+      - wait_round:
+          shift: 50
+      - command:
+          name: "register_authorizer"
+      - wait_add:
+          authorizers: ['authorizer-1']
+          start: true
+      - wait_round:
+          shift: 200
+      - stop: ['authorizer-1']
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./0chain/docker.local/authorizer1"
+            recreate_script: "docker.local/bin/init_authorizer.sh"
+            recreate_script_workdir: "authorizer"
+      - wait_round:
+          shift: 100
+      - start: ['authorizer-1']
+      - wait_round:
+          shift: 100
+      - sync_latest_aggregates:
+          authorizers:
+            - "authorizer-1"
+          required: true
+      - round_random_seed:
+          random_seed: 54
+      - command:
+          name: "mint_zcn"
+      - check_aggregate_value_change:
+          provider_type: authorizer
+          provider_id: "authorizer-1"
+          key: total_rewards
+          monotonicity: increase
+          timeout: "2m"

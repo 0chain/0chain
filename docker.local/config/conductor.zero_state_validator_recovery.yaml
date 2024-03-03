@@ -1,0 +1,74 @@
+enable:
+  - "Storage providers - Node Recovery"
+
+# sets of test cases
+sets:
+  - name: "Storage providers - Node Recovery"
+    tests:
+      - "Validator Recovery - Validator should recover from zero state and continue to function"
+
+tests:
+  - name: "Validator Recovery - Validator should recover from zero state and continue to function"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0box"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      - sleep: "20s"
+      - start: ['0box']
+      - sleep: "20s"
+      - wait_round:
+          shift: 50
+      - command:
+          name: "update_config"
+          params:
+            keys: "validator_reward,time_unit,validators_per_challenge"
+            values: "0.5,1h,3"
+      - command:
+          name: "update_faucet_config"
+          params:
+            keys: max_pour_amount,periodic_limit
+            values: "1000,10000"
+      - wait_add:
+          validators: ['validator-1']
+          start: true
+      - wait_round:
+          shift: 200
+      - sync_latest_aggregates:
+          validators:
+            - "validator-1"
+          required: true
+      - stop: ['validator-1']
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./0chain/docker.local/validator1"
+            recreate_script: "docker.local/bin/init_validator.sh"
+            recreate_script_workdir: "validator"
+      - wait_round:
+          shift: 100
+      - start: ['validator-1']
+      - wait_round:
+          shift: 100
+      - sync_latest_aggregates:
+          validators:
+            - "validator-1"
+          required: true
+      - round_random_seed:
+          random_seed: 54
+      - command:
+          name: "mint_zcn"
+      - check_aggregate_value_change:
+          provider_type: validator
+          provider_id: "validator-1"
+          key: total_rewards
+          monotonicity: increase
+          timeout: "2m"
