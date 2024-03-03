@@ -12,7 +12,6 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -271,7 +270,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		ToClientID: minerScId,
 	}
 
-	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
 	var ctx = &mockStateContext{
 		StateContext: *cstate.NewStateContext(
 			nil,
@@ -287,7 +285,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			nil,
 			nil,
 			nil,
-			statecache.NewTransactionCache(bc),
 		),
 		block: &block.Block{
 			UnverifiedBlockBody: block.UnverifiedBlockBody{

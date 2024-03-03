@@ -29,7 +29,6 @@ import (
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/currency"
-	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/smartcontract/benchmark"
 	"github.com/0chain/common/core/util"
@@ -451,8 +450,6 @@ func runEventDatabaseBenchmark(
 			log.Println("error deleting event database: " + deleteError.Error())
 		}
 	}()
-	blockStateCache := statecache.NewQueryBlockCache(statecache.NewStateCache(), "hash")
-	txnStateCache := statecache.NewTransactionCache(blockStateCache)
 	balances := cstate.NewStateContext(
 		nil,
 		nil,
@@ -463,7 +460,6 @@ func runEventDatabaseBenchmark(
 		nil,
 		nil,
 		cloneEdb,
-		txnStateCache,
 	)
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0
