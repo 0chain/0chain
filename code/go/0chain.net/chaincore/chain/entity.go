@@ -559,8 +559,8 @@ func (c *Chain) Initialize() {
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
 	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
 	// TODO: debug purpose, add the stateDB back
-	// c.stateDB = stateDB
-	c.stateDB = util.NewMemoryNodeDB()
+	c.stateDB = stateDB
+	// c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]uint64)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
