@@ -313,6 +313,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 				zap.Error(err))
 			return "", fmt.Errorf("ading offer: %v", err)
 		}
+		logging.Logger.Debug("new_allocation_request - update blobber", zap.String("blobber", b.ID))
 
 		if err = spMap[b.ID].Save(spenum.Blobber, b.ID, balances); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error saving blobber pool",
@@ -321,6 +322,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 				zap.Error(err))
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
+		logging.Logger.Debug("new_allocation_request - update blobber stake pool", zap.String("blobber", b.ID))
 
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
