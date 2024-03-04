@@ -892,7 +892,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid chain size")
 	}
 
-	var changeSize int64
+	var (
+		changeSize int64
+		prevWmSize int64
+	)
 	//branch logic according to ChainHash being present or not
 	if commitConnection.WriteMarker.ChainHash != "" {
 		if blobAlloc.AllocationRoot == commitConnection.AllocationRoot && blobAlloc.LastWriteMarker != nil &&
@@ -904,6 +907,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		hasher := sha256.New()
 		var prevHash string
 		if blobAlloc.LastWriteMarker != nil {
+			prevWmSize = blobAlloc.LastWriteMarker.Size
 			changeSize -= blobAlloc.LastWriteMarker.ChainSize
 			prevChainHash, _ := hex.DecodeString(blobAlloc.LastWriteMarker.ChainHash)
 			hasher.Write(prevChainHash) //nolint:errcheck
@@ -941,6 +945,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
 				return "", common.NewError("commit_connection_failed",
 					"Previous allocation root does not match the latest allocation root")
+			}
+			if blobAlloc.LastWriteMarker != nil {
+				prevWmSize = blobAlloc.LastWriteMarker.Size
 			}
 		}
 	}
