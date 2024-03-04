@@ -9,13 +9,16 @@ import (
 type ValidatorAggregate struct {
 	model.ImmutableModel
 
-	ValidatorID string `json:"validator_id" gorm:"index:idx_validator_aggregate,unique"`
-	Round       int64  `json:"round" gorm:"index:idx_validator_aggregate,unique"`
+	ValidatorID     string           `json:"validator_id" gorm:"index:idx_validator_aggregate,unique"`
+	Round           int64            `json:"round" gorm:"index:idx_validator_aggregate,unique"`
+	URL             string           `json:"url"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	
+
 	TotalStake    currency.Coin `json:"total_stake"`
 	TotalRewards  currency.Coin `json:"total_rewards"`
 	ServiceCharge float64       `json:"service_charge"`
+	IsKilled      bool          `json:"is_killed"`
+	IsShutdown    bool          `json:"is_shutdown"`
 }
 
 func (v *ValidatorAggregate) GetTotalStake() currency.Coin {
@@ -46,8 +49,8 @@ func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int
 	var aggregates []ValidatorAggregate
 	for _, v := range validators {
 		agg := ValidatorAggregate{
-			Round:       round,
-			ValidatorID: v.ID,
+			Round:           round,
+			ValidatorID:     v.ID,
 			LastHealthCheck: v.LastHealthCheck,
 		}
 		recalculateProviderFields(v, &agg)

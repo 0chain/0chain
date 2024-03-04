@@ -26,11 +26,11 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, t
 	}
 }
 
-func emitAddWriteMarker(t *transaction.Transaction, wm *WriteMarker, alloc *StorageAllocation, movedTokens currency.Coin,
+func emitAddWriteMarker(t *transaction.Transaction, wm *WriteMarker, alloc *StorageAllocation, movedTokens currency.Coin, prevWmSize int64,
 	balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddWriteMarker,
 		t.Hash, writeMarkerToWriteMarkerTable(wm, movedTokens, t.Hash))
 
 	emitUpdateAllocationStatEvent(alloc, balances)
-	emitUpdateBlobberWriteStatEvent(wm, movedTokens, balances)
+	emitUpdateBlobberWriteStatEvent(wm, prevWmSize, balances)
 }

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"0chain.net/chaincore/smartcontractinterface"
+
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dto"
 
@@ -61,6 +63,112 @@ func (_ *StorageSmartContract) getBlobber(
 	balances cstate.CommonStateContextI,
 ) (blobber *StorageNode, err error) {
 	return getBlobber(blobberID, balances)
+}
+
+func (ssc *StorageSmartContract) resetBlobberStats(
+	t *transaction.Transaction,
+	input []byte,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	// Authorize with owner
+
+	var conf *Config
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return "", common.NewError("update_settings",
+			"can't get config: "+err.Error())
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("reset_blobber_stats", func() bool {
+		return conf.OwnerId == t.ClientID
+	}); err != nil {
+		return "", err
+	}
+
+	// Update blobber details in mpt and eventsdb
+
+	var fixRequest = &dto.ResetBlobberStatsDto{}
+	if err = json.Unmarshal(input, fixRequest); err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"malformed request: "+err.Error())
+	}
+
+	blobber, err := ssc.getBlobber(fixRequest.BlobberID, balances)
+	if err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"can't get the blobber: "+err.Error())
+	}
+
+	if blobber.Allocated != fixRequest.PrevAllocated || blobber.SavedData != fixRequest.PrevSavedData {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"blobber's allocated or saved_data doesn't match with the provided values")
+	}
+
+	blobber.SavedData = fixRequest.NewSavedData
+	blobber.Allocated = fixRequest.NewAllocated
+
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"can't Save blobber: "+err.Error())
+	}
+	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+
+	// Update challenge ready blobber partition
+
+	sp, err := getStakePool(spenum.Blobber, blobber.ID, balances)
+	if err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"can't get related stake pool: "+err.Error())
+	}
+
+	sd, err := maths.ConvertToUint64(blobber.SavedData)
+	if err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"can't convert saved_data to uint64: "+err.Error())
+	}
+
+	spBalance, err := sp.stake()
+	if err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"can't get stake pool balance: "+err.Error())
+	}
+
+	if err := PartitionsChallengeReadyBlobberUpdate(balances, blobber.ID, spBalance, sd); err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"error updating challenge ready partitions: "+err.Error())
+	}
+
+	// Update blobber reward node
+
+	parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+	if err != nil {
+		return "", common.NewErrorf("reset_blobber_stats_failed",
+			"cannot fetch ongoing partition: %v", err)
+	}
+
+	var brn BlobberRewardNode
+	if _, err := parts.Get(balances, blobber.ID, &brn); err != nil {
+		return "", common.NewErrorf("reset_blobber_stats_failed",
+			"cannot fetch blobber node item from partition: %v", err)
+	}
+
+	brn.TotalData = float64(blobber.SavedData)
+
+	err = parts.UpdateItem(balances, &brn)
+	if err != nil {
+		return "", common.NewErrorf("reset_blobber_stats_failed",
+			"error updating blobber reward item: %v", err)
+	}
+
+	err = parts.Save(balances)
+	if err != nil {
+		return "", common.NewErrorf("reset_blobber_stats_failed",
+			"error saving ongoing blobber reward partition: %v", err)
+	}
+
+	// Return blobber struct in response
+
+	return string(blobber.Encode()), nil
 }
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
@@ -964,7 +1072,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		MovedToChallenge: alloc.MovedToChallenge,
 		MovedBack:        alloc.MovedBack,
 		WritePool:        alloc.WritePool,
-	}, movedTokens, balances)
+	}, movedTokens, prevWmSize, balances)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {
@@ -1066,10 +1174,17 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	return
 }
 
-func emitUpdateBlobberWriteStatEvent(w *WriteMarker, movedTokens currency.Coin, balances cstate.StateContextI) {
+func emitUpdateBlobberWriteStatEvent(w *WriteMarker, prevWmSize int64, balances cstate.StateContextI) {
+	var savedData int64
+	if w.Size != 0 {
+		savedData = w.Size
+	} else {
+		savedData = -prevWmSize
+	}
+
 	bb := event.Blobber{
 		Provider:  event.Provider{ID: w.BlobberID},
-		SavedData: w.Size,
+		SavedData: savedData,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
