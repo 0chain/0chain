@@ -29,24 +29,37 @@ type partition struct {
 }
 
 func (p *partition) clone() *partition {
-	newPartition := &partition{
-		Key:     p.Key,
-		Loc:     p.Loc,
-		Items:   make([]item, len(p.Items)),
-		Changed: p.Changed,
+	// DEBUG: msgp marshal/unmarshal to get clone of partition
+	v, err := p.MarshalMsg(nil)
+	if err != nil {
+		panic("partiton marshal failed")
 	}
 
-	for i, it := range p.Items {
-		nit := item{
-			ID:   it.ID,
-			Data: make([]byte, len(it.Data)),
-		}
-		copy(nit.Data, it.Data)
-
-		newPartition.Items[i] = nit
+	var np partition
+	_, err = np.UnmarshalMsg(v)
+	if err != nil {
+		panic("partition unmarshal failed")
 	}
+	return &np
 
-	return newPartition
+	// newPartition := &partition{
+	// 	Key:     p.Key,
+	// 	Loc:     p.Loc,
+	// 	Items:   make([]item, len(p.Items)),
+	// 	Changed: p.Changed,
+	// }
+
+	// for i, it := range p.Items {
+	// 	nit := item{
+	// 		ID:   it.ID,
+	// 		Data: make([]byte, len(it.Data)),
+	// 	}
+	// 	copy(nit.Data, it.Data)
+
+	// 	newPartition.Items[i] = nit
+	// }
+
+	// return newPartition
 }
 
 func (p *partition) Clone() statecache.Value {
@@ -55,22 +68,24 @@ func (p *partition) Clone() statecache.Value {
 
 func (p *partition) CopyFrom(v interface{}) bool {
 	if ps, ok := v.(*partition); ok {
-		p.Key = ps.Key
-		p.Loc = ps.Loc
-		p.Items = make([]item, len(ps.Items))
+		np := ps.clone()
+		*p = *np
+		// p.Key = ps.Key
+		// p.Loc = ps.Loc
+		// p.Items = make([]item, len(ps.Items))
 
-		for i, it := range ps.Items {
-			nit := item{
-				ID:   it.ID,
-				Data: make([]byte, len(it.Data)),
-			}
-			copy(nit.Data, it.Data)
+		// for i, it := range ps.Items {
+		// 	nit := item{
+		// 		ID:   it.ID,
+		// 		Data: make([]byte, len(it.Data)),
+		// 	}
+		// 	copy(nit.Data, it.Data)
 
-			p.Items[i] = nit
-		}
+		// 	p.Items[i] = nit
+		// }
 
-		p.Changed = ps.Changed
-		return true
+		// p.Changed = ps.Changed
+		// return true
 	}
 	return false
 }
