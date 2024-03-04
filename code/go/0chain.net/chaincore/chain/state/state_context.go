@@ -1,7 +1,6 @@
 package state
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"reflect"
@@ -386,10 +385,10 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	// get from MPT
-	if err := sc.getNodeValue(key, v); err != nil {
-		fmt.Println("get node value error", err)
-		return err
-	}
+	// if err := sc.getNodeValue(key, v); err != nil {
+	// 	fmt.Println("get node value error", err)
+	// 	return err
+	// }
 
 	cv, ok := sc.Cache().Get(key)
 	if ok {
@@ -410,23 +409,30 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 		// _, err = v.UnmarshalMsg(cmv)
 		// return err
 
-		d, err := v.MarshalMsg(nil)
-		if err != nil {
-			panic("get trie node marshal err")
+		// d, err := v.MarshalMsg(nil)
+		// if err != nil {
+		// 	panic("get trie node marshal err")
+		// }
+
+		ccv, ok := statecache.Copyable(v)
+		if ok {
+			ccv.CopyFrom(cv)
 		}
 
-		cachd, err := cv.(util.MPTSerializable).MarshalMsg(nil)
-		if err != nil {
-			panic("get trie node cache marshal err")
-		}
+		return nil
 
-		if !bytes.Equal(d, cachd) {
-			logging.Logger.Debug("state context - get trie node data mismatch",
-				zap.String("key", key),
-				zap.Any("mpt", v),
-				zap.Any("cache", cv))
-			panic("state context - get trie node data mismatch")
-		}
+		// cachd, err := cv.(util.MPTSerializable).MarshalMsg(nil)
+		// if err != nil {
+		// 	panic("get trie node cache marshal err")
+		// }
+
+		// if !bytes.Equal(d, cachd) {
+		// 	logging.Logger.Debug("state context - get trie node data mismatch",
+		// 		zap.String("key", key),
+		// 		zap.Any("mpt", v),
+		// 		zap.Any("cache", cv))
+		// 	panic("state context - get trie node data mismatch")
+		// }
 
 	}
 
