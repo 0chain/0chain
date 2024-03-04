@@ -727,7 +727,10 @@ func (p *Partitions) UnmarshalMsg(b []byte) ([]byte, error) {
 
 	*p = Partitions(*d)
 
-	p.Last.Key = partitionKey(p.Name, d.Last.Loc)
+	if d.Last != nil {
+		p.Last.Key = partitionKey(p.Name, d.Last.Loc)
+	}
+
 	p.Partitions = make(map[int]*partition)
 	return o, nil
 }
