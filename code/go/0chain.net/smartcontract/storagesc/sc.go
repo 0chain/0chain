@@ -282,7 +282,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 			}
 			return nil
 		})
-		if actErr != nil {
+		if actErr != nil || resp != "" {
 			return resp, actErr
 		}
 
