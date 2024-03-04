@@ -40,23 +40,34 @@ type Partitions struct {
 
 // Clone implements the statecache.Clone() interface to make it cachable
 func (p *Partitions) Clone() statecache.Value {
-	newPartitions := &Partitions{
-		Name:          p.Name,
-		PartitionSize: p.PartitionSize,
-		Last:          p.Last.clone(),
-		Partitions:    make(map[int]*partition),
-		locations:     make(map[string]int),
+	v, err := p.MarshalMsg(nil)
+	if err != nil {
+		panic("partitions marshal failed")
 	}
 
-	for key, value := range p.Partitions {
-		newPartitions.Partitions[key] = value.clone()
+	np := &Partitions{}
+	_, err = np.UnmarshalMsg(v)
+	if err != nil {
+		panic("partitions unmarshal failed")
 	}
+	return np
+	// newPartitions := &Partitions{
+	// 	Name:          p.Name,
+	// 	PartitionSize: p.PartitionSize,
+	// 	Last:          p.Last.clone(),
+	// 	Partitions:    make(map[int]*partition),
+	// 	locations:     make(map[string]int),
+	// }
 
-	for key, value := range p.locations {
-		newPartitions.locations[key] = value
-	}
+	// for key, value := range p.Partitions {
+	// 	newPartitions.Partitions[key] = value.clone()
+	// }
 
-	return newPartitions
+	// for key, value := range p.locations {
+	// 	newPartitions.locations[key] = value
+	// }
+
+	// return newPartitions
 }
 
 func (p *Partitions) CopyFrom(v interface{}) bool {
@@ -65,19 +76,22 @@ func (p *Partitions) CopyFrom(v interface{}) bool {
 		return false
 	}
 
-	p.Name = cp.Name
-	p.PartitionSize = cp.PartitionSize
-	p.Last = cp.Last.clone()
-	p.Partitions = make(map[int]*partition)
-	p.locations = make(map[string]int)
+	np := cp.Clone()
+	*p = *np.(*Partitions)
 
-	for key, value := range cp.Partitions {
-		p.Partitions[key] = value.clone()
-	}
+	// p.Name = cp.Name
+	// p.PartitionSize = cp.PartitionSize
+	// p.Last = cp.Last.clone()
+	// p.Partitions = make(map[int]*partition)
+	// p.locations = make(map[string]int)
 
-	for key, value := range cp.locations {
-		p.locations[key] = value
-	}
+	// for key, value := range cp.Partitions {
+	// 	p.Partitions[key] = value.clone()
+	// }
+
+	// for key, value := range cp.locations {
+	// 	p.locations[key] = value
+	// }
 
 	return true
 }
