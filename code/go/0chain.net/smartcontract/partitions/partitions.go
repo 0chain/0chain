@@ -45,7 +45,10 @@ func (p *Partitions) Clone() statecache.Value {
 		panic("partitions marshal failed")
 	}
 
-	np := &Partitions{}
+	np := &Partitions{
+		Partitions: make(map[int]*partition),
+		locations:  make(map[string]int),
+	}
 	_, err = np.UnmarshalMsg(v)
 	if err != nil {
 		panic("partitions unmarshal failed")
