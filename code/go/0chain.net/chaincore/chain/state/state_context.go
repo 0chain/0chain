@@ -415,10 +415,11 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 		// }
 
 		ccv, ok := statecache.Copyable(v)
-		if ok {
-			ccv.CopyFrom(cv)
+		if !ok {
+			panic("state context cache - get trie node not copyable")
 		}
 
+		ccv.CopyFrom(cv)
 		return nil
 
 		// cachd, err := cv.(util.MPTSerializable).MarshalMsg(nil)
