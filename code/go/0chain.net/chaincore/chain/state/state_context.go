@@ -401,6 +401,7 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 		if cv, ok := statecache.Cacheable(v); ok {
 			sc.Cache().Set(key, cv)
 		}
+		return nil
 	}
 
 	// call CopyFrom to copy values directly if it's copyable
