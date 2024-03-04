@@ -272,7 +272,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.commitSettingChanges(t, input, balances)
 
 	default:
-		logging.Logger.Info("Invalid storage function called", zap.String("function", funcName))
+		logging.Logger.Info("Storage function name", zap.String("function", funcName))
 		actErr := chainstate.WithActivation(balances, "ares", func() error {
 			return nil
 		}, func() error {
