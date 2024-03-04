@@ -79,8 +79,9 @@ func (p *Partitions) CopyFrom(v interface{}) bool {
 		return false
 	}
 
-	np := cp.Clone()
-	*p = *np.(*Partitions)
+	// np := cp.Clone()
+	// *p = *np.(*Partitions)
+	*p = *cp
 
 	// p.Name = cp.Name
 	// p.PartitionSize = cp.PartitionSize
