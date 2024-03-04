@@ -1,7 +1,6 @@
 package state
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"reflect"
@@ -386,54 +385,59 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
 	// get from MPT
-	if err := sc.getNodeValue(key, v); err != nil {
-		fmt.Println("get node value error", err)
-		return err
-	}
+	// if err := sc.getNodeValue(key, v); err != nil {
+	// 	fmt.Println("get node value error", err)
+	// 	return err
+	// }
 
 	cv, ok := sc.Cache().Get(key)
+	if !ok {
+		// get from MPT
+		if err := sc.getNodeValue(key, v); err != nil {
+			fmt.Println("get node value error", err)
+			return err
+		}
+		// cache it if it's cacheable
+		if cv, ok := statecache.Cacheable(v); ok {
+			sc.Cache().Set(key, cv)
+		}
+	}
+
+	// call CopyFrom to copy values directly if it's copyable
+	copyV, ok := statecache.Copyable(v)
 	if ok {
-		// call CopyFrom to copy values directly if it's copyable
-		// copyV, ok := statecache.Copyable(v)
-		// if ok {
-		// 	if copyV.CopyFrom(cv) {
-		// 		logging.Logger.Debug("state context - get trie node from cache", zap.String("key", key))
-		// 		return nil
-		// 	}
-		// }
-
-		// otherwise do marshal/unmarshal to get copy of the data
-		// cmv, err := cv.(util.MPTSerializable).MarshalMsg(nil)
-		// if err != nil {
-		// 	return err
-		// }
-		// _, err = v.UnmarshalMsg(cmv)
-		// return err
-
-		d, err := v.MarshalMsg(nil)
-		if err != nil {
-			panic("get trie node marshal err")
+		if !copyV.CopyFrom(cv) {
+			// logging.Logger.Debug("state context - get trie node from cache", zap.String("key", key))
+			panic("state context - cached value not copyable, should not happen")
 		}
-
-		cachd, err := cv.(util.MPTSerializable).MarshalMsg(nil)
-		if err != nil {
-			panic("get trie node cache marshal err")
-		}
-
-		if !bytes.Equal(d, cachd) {
-			logging.Logger.Debug("state context - get trie node data mismatch",
-				zap.String("key", key),
-				zap.Any("mpt", v),
-				zap.Any("cache", cv))
-			panic("state context - get trie node data mismatch")
-		}
-
 	}
 
-	// cache it if it's cacheable
-	if cv, ok := statecache.Cacheable(v); ok {
-		sc.Cache().Set(key, cv)
-	}
+	// otherwise do marshal/unmarshal to get copy of the data
+	// cmv, err := cv.(util.MPTSerializable).MarshalMsg(nil)
+	// if err != nil {
+	// 	return err
+	// }
+	// _, err = v.UnmarshalMsg(cmv)
+	// return err
+
+	// d, err := v.MarshalMsg(nil)
+	// if err != nil {
+	// 	panic("get trie node marshal err")
+	// }
+
+	// cachd, err := cv.(util.MPTSerializable).MarshalMsg(nil)
+	// if err != nil {
+	// 	panic("get trie node cache marshal err")
+	// }
+
+	// if !bytes.Equal(d, cachd) {
+	// 	logging.Logger.Debug("state context - get trie node data mismatch",
+	// 		zap.String("key", key),
+	// 		zap.Any("mpt", v),
+	// 		zap.Any("cache", cv))
+	// 	panic("state context - get trie node data mismatch")
+	// }
+
 	return nil
 }
 

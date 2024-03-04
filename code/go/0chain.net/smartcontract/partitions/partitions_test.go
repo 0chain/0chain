@@ -1266,7 +1266,7 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 		tc:   newTxnStateCache(),
 	}
 	s.StateContextI = &mocks.StateContextI{}
-	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"))
+	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"), statecache.NewEmpty())
 	s.StateContextI.On("GetState").Return(stx)
 	parts, err := newPartitions(name, size)
 	require.NoError(t, err)
