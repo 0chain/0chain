@@ -437,6 +437,12 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 
 	}
 
+	// get from MPT
+	if err := sc.getNodeValue(key, v); err != nil {
+		fmt.Println("get node value error", err)
+		return err
+	}
+
 	// cache it if it's cacheable
 	if cv, ok := statecache.Cacheable(v); ok {
 		sc.Cache().Set(key, cv)
