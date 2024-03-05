@@ -58,6 +58,13 @@ tests:
       - wait_round:
           shift: 15 # Simulates downtime duration for the Blobber
       - start: ['blobber-1']
+      - sleep : "30s"               ###
+      - command:
+          name: "check_registered"  ###
+          params:
+            provider_type: blobber
+            provider_ids:
+              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
       - wait_round:
           shift: 100 # Waits for Blobber to recover, re-sync, and resume operations
       - check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
