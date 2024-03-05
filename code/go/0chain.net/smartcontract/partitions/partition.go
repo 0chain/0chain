@@ -85,7 +85,7 @@ func (p *partition) CopyFrom(v interface{}) bool {
 		// }
 
 		// p.Changed = ps.Changed
-		// return true
+		return true
 	}
 	return false
 }
