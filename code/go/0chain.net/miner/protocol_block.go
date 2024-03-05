@@ -950,7 +950,7 @@ func txnIterHandlerFunc(
 			tii.invalidTxns = append(tii.invalidTxns, txn)
 			return false, errors.New("invalid transaction value, exceeds max token supply")
 		}
-
+		
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
 			logging.Logger.Debug("generate block - bad transaction cost fee",
@@ -963,6 +963,10 @@ func txnIterHandlerFunc(
 			}
 
 			// skipping and continue
+			return true, nil
+		}
+		if cost == math.MaxInt {
+			logging.Logger.Debug("generate block (no transaction cost , skipping)")
 			return true, nil
 		}
 
@@ -1177,8 +1181,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			break
 		}
 		if cost == math.MaxInt {
-			logging.Logger.Debug("No transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
-			return common.NewError(NoTransactionCost, fmt.Sprintf("No transaction cost for txn %v", txn.Hash))
+			logging.Logger.Debug("No transaction cost")
+			break
 		}
 		if iterInfo.cost+cost >= mc.ChainConfig.MaxBlockCost() {
 			logging.Logger.Debug("generate block (too big cost, skipping)")
