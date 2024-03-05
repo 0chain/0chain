@@ -171,37 +171,16 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			task := heap.Pop(&te.tasks).(*Task)
 			te.mu.Unlock()
 
-		l:
-			for {
-				select {
-				case ssc := <-te.scLock:
-					<-ssc
-				default:
-					break l
-				}
-			}
-
 			if task.priority == int(SCExec) {
-				// fmt.Println("Executing task start", task.name, "priority", task.priority)
-				// ssc := make(chan struct{})
-				// for i := 0; i < te.workerNum-1; i++ {
-				// 	te.scLock <- ssc
-				// }
-				// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
-				// task.errC <- task.taskFunc()
-				// close(ssc)
 				te.scTasksC <- task
-				<-task.doneC
+				// wait for SC task to be done before dispatch other tasks
+				select {
+				case <-task.doneC:
+				case <-time.After(10 * time.Millisecond):
+				}
 			} else {
-				// fmt.Println("Executing task start", task.name, "priority", task.priority)
-				// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
-				// task.errC <- task.taskFunc()
 				te.otherTasksC <- task
 			}
-
-			// logging.Logger.Debug("Executing task", zap.String("name:", task.name), zap.Int("priority", task.priority))
-			// fmt.Println("Executing task end", task.name, "priority", task.priority)
-			// logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
 		}
 	}
 }
