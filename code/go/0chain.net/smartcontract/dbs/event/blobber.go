@@ -340,14 +340,16 @@ func mergeUpdateBlobberTotalOffersEvents() *eventsMergerImpl[Blobber] {
 func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
 	var ids []string
 	var savedData []int64
+	var readData []int64
 	for _, m := range blobbers {
 		ids = append(ids, m.ID)
 		savedData = append(savedData, m.SavedData)
+		readData = append(readData, m.ReadData)
 	}
 
 	return CreateBuilder("blobbers", "id", ids).
 		AddUpdate("saved_data", savedData, "blobbers.saved_data + t.saved_data").
-		AddUpdate("read_data", savedData, "blobbers.read_data + t.read_data").Exec(edb).Error
+		AddUpdate("read_data", readData, "blobbers.read_data + t.read_data").Exec(edb).Error
 }
 
 func mergeUpdateBlobberStatsEvents() *eventsMergerImpl[Blobber] {

@@ -9,6 +9,7 @@ import (
 type BlobberAggregate struct {
 	model.ImmutableModel
 	BlobberID           string           `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
+	URL                 string           `json:"url"`
 	Round               int64            `json:"round" gorm:"index:idx_blobber_aggregate,priority:1,unique"`
 	LastHealthCheck     common.Timestamp `json:"last_health_check"`
 	WritePrice          currency.Coin    `json:"write_price"`
@@ -30,6 +31,8 @@ type BlobberAggregate struct {
 	InactiveRounds      int64            `json:"InactiveRounds"`
 	RankMetric          float64          `json:"rank_metric"`
 	Downtime            uint64           `json:"downtime"`
+	IsKilled            bool             `json:"is_killed"`
+	IsShutdown          bool             `json:"is_shutdown"`
 }
 
 func (edb *EventDb) CreateBlobberAggregates(blobbers []*Blobber, round int64) error {
@@ -39,6 +42,7 @@ func (edb *EventDb) CreateBlobberAggregates(blobbers []*Blobber, round int64) er
 			Round:           round,
 			BlobberID:       blobber.ID,
 			LastHealthCheck: blobber.LastHealthCheck,
+			URL:             blobber.BaseURL,
 		}
 		aggregate.WritePrice = blobber.WritePrice
 		aggregate.Capacity = blobber.Capacity

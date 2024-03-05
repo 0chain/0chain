@@ -166,6 +166,15 @@ func (msc *MinerSmartContract) DeleteSharder(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
+	actErr := cstate.WithActivation(balances, "ares", func() error {
+		return nil
+	}, func() error {
+		return errors.New("delete sharder is disabled")
+	})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	var err error
 	var deleteSharder = NewMinerNode()
 	if err = deleteSharder.Decode(inputData); err != nil {

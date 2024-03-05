@@ -33,3 +33,11 @@ type Terms struct {
 	ReadPrice  *currency.Coin `json:"read_price,omitempty"`
 	WritePrice *currency.Coin `json:"write_price,omitempty"`
 }
+
+type ResetBlobberStatsDto struct {
+	BlobberID     string `json:"blobber_id"`
+	PrevAllocated int64  `json:"prev_allocated"`
+	PrevSavedData int64  `json:"prev_saved_data"`
+	NewAllocated  int64  `json:"new_allocated"`
+	NewSavedData  int64  `json:"new_saved_data"`
+}
