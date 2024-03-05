@@ -63,7 +63,7 @@ tests:
           required: true
       - check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
           provider_type: blobber
-          provider_id: blobber-1
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           key: total_rewards
           monotonicity: decrease
           timeout: "2m"
@@ -83,7 +83,7 @@ tests:
           required: true
       - check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
           provider_type: blobber
-          provider_id: blobber-1
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           key: total_rewards
           monotonicity: increase
           timeout: "2m"
