@@ -2636,6 +2636,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 	blobber := newBlobber(blobberID)
 	err := balances.GetTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
+		logging.Logger.Info("get blobber failed with error: ", zap.Error(err))
 		common.Respond(w, r, "Couldn't get blobber", common.NewErrInternal(err.Error()))
 		return
 	}
