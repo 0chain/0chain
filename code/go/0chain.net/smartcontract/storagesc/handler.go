@@ -2631,32 +2631,20 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, err)
 		return
 	}
-
-	balances := srh.GetQueryStateContext()
-	blobber := newBlobber(blobberID)
-	err := balances.GetTrieNode(blobber.GetKey(), blobber)
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobber, err := edb.GetBlobber(blobberID)
 	if err != nil {
-		logging.Logger.Info("get blobber failed with error: ", zap.Error(err), zap.Any("round", balances.GetLatestFinalizedBlock().Round))
-		common.Respond(w, r, "Couldn't get blobber", common.NewErrInternal(err.Error()))
+		logging.Logger.Error("get blobber failed with error: ", zap.Error(err))
+		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
-	common.Respond(w, r, blobber, nil)
-
-	//edb := srh.GetQueryStateContext().GetEventDB()
-	//if edb == nil {
-	//	common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
-	//	return
-	//}
-	//blobber, err := edb.GetBlobber(blobberID)
-	//if err != nil {
-	//	logging.Logger.Error("get blobber failed with error: ", zap.Error(err))
-	//	common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-	//	return
-	//}
-	//
-	//sn := blobberTableToStorageNode(*blobber)
-	//common.Respond(w, r, sn, nil)
+	sn := blobberTableToStorageNode(*blobber)
+	common.Respond(w, r, sn, nil)
 }
 
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term alloc-blobber-term

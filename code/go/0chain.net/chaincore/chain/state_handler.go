@@ -116,7 +116,6 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
-	//scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
 	block := r.FormValue("block")
 	if len(block) > 0 {
