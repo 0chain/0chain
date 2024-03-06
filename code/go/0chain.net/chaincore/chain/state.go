@@ -451,7 +451,6 @@ func (c *Chain) updateState(ctx context.Context,
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
 		t := time.Now()
-		mptFindBefore, mptMissBefore := util.CacheStats()
 		output, err := c.ExecuteSmartContract(ctx, txn, sctx)
 		switch err {
 		//internal errors
@@ -516,7 +515,7 @@ func (c *Chain) updateState(ctx context.Context,
 			StartToFinalizeTxnTypeTimer[txn.FunctionName] = metrics.GetOrRegisterTimer(txn.FunctionName, nil)
 		}
 		StartToFinalizeTxnTypeTimer[txn.FunctionName].Update(time.Since(t))
-		mptFindAfter, mptMissedAfter := util.CacheStats()
+		mptCacheHits, mptCacheMiss := txnStateCache.Stats()
 		logging.Logger.Info("SC executed",
 			zap.String("client id", txn.ClientID),
 			zap.String("block", b.Hash),
@@ -529,8 +528,8 @@ func (c *Chain) updateState(ctx context.Context,
 			zap.Duration("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
 			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())),
-			zap.Int64("mpt_cache_hit", mptFindAfter-mptFindBefore),
-			zap.Int64("mpt_cache_miss", mptMissedAfter-mptMissBefore),
+			zap.Int64("mpt_cache_hit", mptCacheHits),
+			zap.Int64("mpt_cache_miss", mptCacheMiss),
 			zap.String("output", output))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
