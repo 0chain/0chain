@@ -1,9 +1,9 @@
 enable:
-  - "Storage providers"
+  - "Storage providers - Blobber"
 
 # sets of test cases
 sets:
-  - name: "Storage providers"
+  - name: "Storage providers - Blobber"
     tests:
       - "Blobber Recovery - Blobber should lose tokens when it's down and gain rewards when it recovers"
 
@@ -35,6 +35,7 @@ tests:
       #- start: ['blobber-1']
       - wait_add:
           blobbers: ['blobber-1']
+          validators: ['validator-1', 'validator-2', 'validator-3']
           start: true
           timeout: '15m'
       - command:
@@ -43,10 +44,52 @@ tests:
             provider_type: blobber
             provider_ids:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-      #- command:
-      #    name: "fill_blobber_validator_wallets"
       - wait_round:
           shift: 15 # Allows time for Blobber to register and start functioning
+      - command:
+          name: "fill_blobber_validator_wallets"
+      - command:
+          name: "stake_providers"
+          retry_count: 3
+          params:
+            provider_type: blobber
+            provider_ids:
+                - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+                - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
+                - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+      - command:
+          name: "stake_providers"
+          retry_count: 3
+          params:
+            provider_type: validator
+            provider_ids:
+                - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+                - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
+                - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+      - sync_latest_aggregates:
+          blobbers:
+            - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+          required: false
+      - command:
+          name: 'init_allocation_only'
+          retry_count: 3
+          timeout: '25m'
+      - generate_all_challenges: true    
+      - wait_round:
+          shift: 250
+      - command:
+          name: "upload"
+      - wait_round:
+          shift: 100
+      - check_aggregate_value_comparison:
+          provider_type: blobber
+          provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+          key: total_rewards
+          comparison: gt
+          rvalue: 0
+          timeout: "25m"
+      - command:
+          name: "fill_blobber_validator_wallets"      
       - stop: ['blobber-1'] # Simulates Blobber failure
       - command:
           name: "cleanup_provider"
@@ -56,7 +99,7 @@ tests:
             recreate_script_workdir: "blobber"
           # Ensures complete data removal, simulating absolute data loss
       - wait_round:
-          shift: 15 # Simulates downtime duration for the Blobber
+          shift: 500 # Simulates downtime duration for the Blobber
       - sync_latest_aggregates:
           blobbers:
             - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
@@ -68,19 +111,25 @@ tests:
           monotonicity: decrease
           timeout: "2m"
       - start: ['blobber-1']
-      - sleep : "30s"               ###
+      - wait_round:
+          shift: 100   # Waits for Blobber to recover, re-sync, and resume operations
       - command:
           name: "check_registered"  ###
           params:
             provider_type: blobber
             provider_ids:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-      - wait_round:
-          shift: 100 # Waits for Blobber to recover, re-sync, and resume operations
       - sync_latest_aggregates:
           blobbers:
             - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           required: true
+      - check_aggregate_value_comparison:
+          provider_type: blobber
+          provider_id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+          key: total_slashed_stake
+          comparison: gt
+          rvalue: 0
+          timeout: "25m"
       - check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
           provider_type: blobber
           provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
