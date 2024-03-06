@@ -50,6 +50,8 @@ github.com/0chain/common v0.0.7-0.20240302050421-04ea446e2ebf h1:NJ9wpJNjvP9bqLH
 github.com/0chain/common v0.0.7-0.20240302050421-04ea446e2ebf/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
 github.com/0chain/common v0.0.7-0.20240305060127-d0a18a3ed0e2 h1:tPln5J1/vMWzE+/Jq65VpSRn8TM+JDM+mLrDSPJkoUI=
 github.com/0chain/common v0.0.7-0.20240305060127-d0a18a3ed0e2/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
+github.com/0chain/common v0.0.7-0.20240306035417-76ebfcfeb0e2 h1:S4ebr/ejhx6onFrPlGVPsuXZnPsGfOjX16BNTdW7aFM=
+github.com/0chain/common v0.0.7-0.20240306035417-76ebfcfeb0e2/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
 github.com/0chain/gosdk v1.11.0 h1:PSD4ohQaaSOsH/sHvfnCbq35Bs5fCtL1g9S4vyvxQOY=
