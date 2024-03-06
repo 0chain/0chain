@@ -16,7 +16,6 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/rest"
@@ -116,7 +115,7 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
-	scAddress := r.FormValue("sc_address")
+	//scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
 	block := r.FormValue("block")
 	if len(block) > 0 {
@@ -129,7 +128,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 			return nil, errors.New("block client state is nil")
 		}
 
-		d, err := b.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
+		d, err := b.ClientState.GetNodeValueRaw(util.Path(key))
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +159,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(scAddress + key)))
+	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(key))
 	if err != nil {
 		return nil, err
 	}
