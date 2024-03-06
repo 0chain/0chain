@@ -1,9 +1,9 @@
 enable:
-  - "Storage providers - Node Recovery"
+  - "Storage providers - Validator Recovery"
 
 # sets of test cases
 sets:
-  - name: "Storage providers - Node Recovery"
+  - name: "Storage providers - Validator Recovery"
     tests:
       - "Validator Recovery - Validator should recover from zero state and continue to function"
 
@@ -25,8 +25,8 @@ tests:
       - sleep: "20s"
       - start: ['0box']
       - sleep: "20s"
-      - wait_round:
-          shift: 50
+      #- wait_round:
+      #   shift: 50
       - command:
           name: "update_config"
           params:
@@ -97,36 +97,48 @@ tests:
       - generate_all_challenges: false
       - check_aggregate_value_comparison:
           provider_type: validator
-          provider_id: 86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b
+          provider_id: 41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b
           key: total_rewards
           comparison: gt
           rvalue: 0
           timeout: "25m"
       - command:
           name: "fill_blobber_validator_wallets"
+      - stop: ['validator-1']
       - command:
           name: "cleanup_provider"
           params:
             path: "./0chain/docker.local/validator1"
             recreate_script: "docker.local/bin/init_validator.sh"
             recreate_script_workdir: "validator"
+      - sync_latest_aggregates:
+          validators:
+            - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+          required: true
       - wait_round:
           shift: 100
       - start: ['validator-1']
-      #- generate_all_challenges: true
+      - generate_all_challenges: true
+      - command:
+          name: "upload"
+          params:
+            remotepath: "/bin/upload2.bin"
+      - wait_validator_ticket:
+          validator_name: "validator-1"
+          timeout: "20m"     
       - wait_round:
           shift: 100
       - sync_latest_aggregates:
           validators:
-            - "validator-1"
+            - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
           required: true
-      - round_random_seed:
-          random_seed: 54
-      - command:
-          name: "mint_zcn"
+      #- round_random_seed:
+      #    random_seed: 54
+      #- command:
+      #    name: "mint_zcn"     
       - check_aggregate_value_change:
           provider_type: validator
-          provider_id: "validator-1"
+          provider_id: "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
           key: total_rewards
           monotonicity: increase
           timeout: "2m"

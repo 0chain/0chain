@@ -34,7 +34,7 @@ tests:
             values: "1000,10000"
       #- start: ['blobber-1']
       - wait_add:
-          blobbers: ['blobber-1']
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
           validators: ['validator-1', 'validator-2', 'validator-3']
           start: true
           timeout: '15m'
