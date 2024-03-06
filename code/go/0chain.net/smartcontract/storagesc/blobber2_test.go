@@ -228,7 +228,7 @@ func testCommitBlobberRead(
 	var ctx = &mockStateContext{
 		StateContext: *cstate.NewStateContext(
 			&block.Block{},
-			&util.MerklePatriciaTrie{},
+			util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty()),
 			txn,
 			nil,
 			nil,
@@ -236,7 +236,6 @@ func testCommitBlobberRead(
 			nil,
 			nil,
 			nil,
-			newTxnStateCache(),
 		),
 		store: make(map[datastore.Key]util.MPTSerializable),
 	}

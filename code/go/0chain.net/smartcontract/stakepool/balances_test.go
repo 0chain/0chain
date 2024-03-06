@@ -257,7 +257,7 @@ func (mpts *mptStore) merge(tb testing.TB) {
 	// for a worst case, no cached data, and we have to get everything from
 	// the persistent store, from rocksdb
 
-	mpts.mndb = util.NewMemoryNodeDB()                           //
-	mpts.lndb = util.NewLevelNodeDB(mpts.mndb, mpts.pndb, false) // transaction
-	mpts.mpt = util.NewMerklePatriciaTrie(mpts.lndb, 1, root)    //
+	mpts.mndb = util.NewMemoryNodeDB()                                               //
+	mpts.lndb = util.NewLevelNodeDB(mpts.mndb, mpts.pndb, false)                     // transaction
+	mpts.mpt = util.NewMerklePatriciaTrie(mpts.lndb, 1, root, statecache.NewEmpty()) //
 }

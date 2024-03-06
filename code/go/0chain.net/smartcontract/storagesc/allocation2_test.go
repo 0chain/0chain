@@ -134,13 +134,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	bk := &block.Block{}
 	bk.Round = 1100
-	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
-		Round: bk.Round,
-	})
-	tc := statecache.NewTransactionCache(bc)
+	mpt := util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty())
 	ctx.StateContext = *cstate.NewStateContext(
 		bk,
-		&util.MerklePatriciaTrie{},
+		mpt,
 		nil,
 		nil,
 		nil,
@@ -148,7 +145,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		tc,
 	)
 
 	setConfig(t, ctx)
@@ -279,13 +275,10 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	bk := &block.Block{}
 	bk.Round = 1100
-	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
-		Round: bk.Round,
-	})
-	tc := statecache.NewTransactionCache(bc)
+	mpt := util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty())
 	ctx.StateContext = *cstate.NewStateContext(
 		bk,
-		&util.MerklePatriciaTrie{},
+		mpt,
 		nil,
 		nil,
 		nil,
@@ -293,7 +286,6 @@ func TestFinalizeAllocation(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		tc,
 	)
 
 	setConfig(t, ctx)
@@ -710,14 +702,10 @@ func setupMocksFinishAllocation(
 
 	block := &block.Block{}
 	block.Round = 1100
-	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
-		Round: block.Round,
-	})
-	tc := statecache.NewTransactionCache(bc)
 
 	ctx.StateContext = *cstate.NewStateContext(
 		block,
-		&util.MerklePatriciaTrie{},
+		util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty()),
 		txn,
 		nil,
 		nil,
@@ -725,7 +713,6 @@ func setupMocksFinishAllocation(
 		nil,
 		nil,
 		nil,
-		tc,
 	)
 
 	var ssc = &StorageSmartContract{
@@ -990,12 +977,9 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 	}
 	defer eventDb.Close()
 
-	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
-	tc := statecache.NewTransactionCache(bc)
-
 	ctx.StateContext = *cstate.NewStateContext(
 		nil,
-		&util.MerklePatriciaTrie{},
+		util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty()),
 		txn,
 		nil,
 		nil,
@@ -1003,7 +987,6 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		nil,
 		nil,
 		eventDb,
-		tc,
 	)
 
 	var ssc = &StorageSmartContract{
