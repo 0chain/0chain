@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/core/encryption"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -128,7 +129,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 			return nil, errors.New("block client state is nil")
 		}
 
-		d, err := b.ClientState.GetNodeValueRaw(util.Path(key))
+		d, err := b.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(key)))
 		if err != nil {
 			return nil, err
 		}
@@ -159,7 +160,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(key))
+	d, err := lfb.ClientState.GetNodeValueRaw(util.Path(encryption.Hash(key)))
 	if err != nil {
 		return nil, err
 	}
