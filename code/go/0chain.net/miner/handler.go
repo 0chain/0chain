@@ -12,7 +12,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
-	"github.com/0chain/common/core/util"
 )
 
 /*SetupHandlers - setup miner handlers */
@@ -185,8 +184,9 @@ func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<br>")
 
-	find, missed := util.CacheStats()
-	fmt.Fprintf(w, "<h3>find/missed: %v/%v</h3>", find, missed)
+	// find, missed := util.CacheStats()
+	hits, miss := c.GetStateCache().Stats()
+	fmt.Fprintf(w, "<h3>MPT cache hits/missed: %v/%v</h3>", hits, miss)
 	fmt.Fprintf(w, "<br>")
 
 	fmt.Fprintf(w, "<table>")
