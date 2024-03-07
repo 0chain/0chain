@@ -1130,7 +1130,7 @@ func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI
 		ReadData: i,
 	}
 
-	logging.Logger.Info("emitUpdateBlobberReadStatEvent", zap.Any("blobber", bb))
+	logging.Logger.Info("emitUpdateBlobberReadStatEvent", zap.Any("blobber", bb), zap.Any("rm", r))
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
 }
