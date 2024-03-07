@@ -603,7 +603,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 		_ = os.RemoveAll(dir)
 	}
 
-	mpt := util.NewMerklePatriciaTrie(pdb, 0, statecache.NewEmpty())
+	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil, statecache.NewEmpty())
 	b := block.Block{}
 	return state.NewStateContext(&b,
 		mpt, nil, nil, nil,
