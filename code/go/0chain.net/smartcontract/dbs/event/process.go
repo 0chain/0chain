@@ -610,6 +610,18 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 
 func (edb *EventDb) addStat(event Event) (err error) {
 	switch event.Tag {
+	case TagAddOrOverwriteUser:
+		users, ok := fromEvent[[]User](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addOrUpdateUsers(*users)
+
+	default:
+		return ErrInvalidEventData
+	}
+
+	switch event.Tag {
 	// blobber
 	case TagAddBlobber:
 		blobbers, ok := fromEvent[[]Blobber](event.Data)
