@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/chain/state/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"github.com/0chain/common/core/statecache"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +53,6 @@ func TestUpdateGlobals(t *testing.T) {
 				return true
 			}),
 		).Return("", nil).Once()
-		balances.On("Cache").Return(statecache.NewEmpty())
 
 		return args{
 			msc:      msc,

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/util/taskqueue"
 	"github.com/alicebob/miniredis/v2"
 
 	"0chain.net/chaincore/state"
@@ -40,6 +41,7 @@ func init() {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 
 	logging.InitLogging("testing", "")
+	taskqueue.Init(context.Background())
 }
 
 func getContext() (context.Context, func()) {
@@ -122,6 +124,8 @@ func setupMinerChain() (*Chain, func()) {
 		mc.Chain = chain.Provider().(*chain.Chain)
 	}
 
+	mc.SetupStateCache()
+
 	mc.ChainConfig = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
@@ -138,6 +142,7 @@ func setupMinerChain() (*Chain, func()) {
 func TestBlockGeneration(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
+
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)

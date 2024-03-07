@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/util/taskqueue"
 	"github.com/0chain/common/core/logging"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -24,6 +25,7 @@ func init() {
 	Miners = NewPool(NodeTypeMiner)
 	createMiners(Miners)
 
+	taskqueue.Init(context.Background())
 }
 
 func createMiners(np *Pool) {
