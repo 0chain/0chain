@@ -50,12 +50,23 @@ func (m *MinerNode) clone() *MinerNode {
 }
 
 func (m *MinerNode) Clone() statecache.Value {
-	return m.clone()
+	v, err := m.MarshalMsg(nil)
+	if err != nil {
+		panic(fmt.Sprintf("could not marshal miner node: %v", err))
+	}
+
+	newMn := NewMinerNode()
+	_, err = newMn.UnmarshalMsg(v)
+	if err != nil {
+		panic(fmt.Sprintf("could not unmarshal miner node: %v", err))
+	}
+
+	return newMn
 }
 
 func (m *MinerNode) CopyFrom(v interface{}) bool {
 	if mn, ok := v.(*MinerNode); ok {
-		cmn := mn.clone()
+		cmn := mn.Clone().(*MinerNode)
 		*m = *cmn
 		return true
 	}
