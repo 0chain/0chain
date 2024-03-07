@@ -670,7 +670,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		return edb.addOrUpdateUsers(*users)
 
 	default:
-		return ErrInvalidEventData
+		return nil
 	}
 
 	switch event.Tag {
