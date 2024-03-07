@@ -176,7 +176,7 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 				// wait for SC task to be done before dispatch other tasks
 				select {
 				case <-task.doneC:
-				case <-time.After(10 * time.Millisecond):
+				case <-time.After(100 * time.Millisecond):
 				}
 			} else {
 				te.otherTasksC <- task
