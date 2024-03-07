@@ -52,7 +52,7 @@ func (mc *Chain) startMessageWorker(ctx context.Context) {
 				break
 			}
 
-			taskqueue.Execute(taskqueue.Common, func() error {
+			_ = taskqueue.Execute(taskqueue.Common, func() error {
 				func(bmsg *BlockMessage) {
 					ts := time.Now()
 					if bmsg.Sender != nil {

@@ -233,7 +233,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 
 	return func(entity datastore.Entity) SendHandler {
 		var sh SendHandler
-		taskqueue.Execute(taskqueue.N2NMsg, func() error {
+		_ = taskqueue.Execute(taskqueue.N2NMsg, func() error {
 			buf, err := getResponseData(options, entity)
 			if err != nil {
 				logging.N2n.Error("getResponseData failed", zap.Error(err))
@@ -504,7 +504,7 @@ func RejectDuplicateNotarizedBlockHandler(c Chainer, handler common.ReqRespHandl
 * into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
-		taskqueue.Execute(taskqueue.N2NMsg, func() error {
+		_ = taskqueue.Execute(taskqueue.N2NMsg, func() error {
 
 			defer r.Body.Close()
 
