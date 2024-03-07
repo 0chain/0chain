@@ -30,6 +30,20 @@ tests:
           start: true
       - wait_round:
           shift: 200
+       - sync_latest_aggregates:
+           authorizers:
+             - "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+           required: true
+       - round_random_seed:
+           random_seed: 54
+       - command:
+           name: "mint_zcn"
+       - check_aggregate_value_change:
+           provider_type: authorizer
+           provider_id: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+           key: total_rewards
+           monotonicity: increase
+           timeout: "2m"          
       - stop: ['authorizer-1']
       - command:
           name: "cleanup_provider"
@@ -42,9 +56,12 @@ tests:
       - start: ['authorizer-1']
       - wait_round:
           shift: 100
+       - wait_add:
+           authorizers: [ 'authorizer-1' ]
+           start: true          
       - sync_latest_aggregates:
           authorizers:
-            - "authorizer-1"
+            - "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
           required: true
       - round_random_seed:
           random_seed: 54
@@ -52,7 +69,7 @@ tests:
           name: "mint_zcn"
       - check_aggregate_value_change:
           provider_type: authorizer
-          provider_id: "authorizer-1"
+          provider_id: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
           key: total_rewards
           monotonicity: increase
           timeout: "2m"
