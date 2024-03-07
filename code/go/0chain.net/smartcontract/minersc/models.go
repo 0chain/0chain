@@ -611,14 +611,24 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 }
 
 func (gn *GlobalNode) Clone() statecache.Value {
-	cg := &GlobalNode{}
-	*cg = *gn
+	// cg := &GlobalNode{}
+	// *cg = *gn
 
-	if gn.PrevMagicBlock != nil {
-		cg.PrevMagicBlock = gn.PrevMagicBlock.Clone()
+	// if gn.PrevMagicBlock != nil {
+	// 	cg.PrevMagicBlock = gn.PrevMagicBlock.Clone()
+	// }
+	v, err := gn.MarshalMsg(nil)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal GlobalNode: %v", err))
 	}
 
-	return cg
+	ng := &GlobalNode{}
+	_, err = ng.UnmarshalMsg(v)
+	if err != nil {
+		panic(fmt.Sprintf("failed to unmarshal GlobalNode: %v", err))
+	}
+
+	return ng
 }
 
 func (gn *GlobalNode) CopyFrom(v interface{}) bool {

@@ -292,33 +292,44 @@ func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
 }
 
 func (conf *Config) Clone() statecache.Value {
-	cc := *conf
-	if conf.ReadPool != nil {
-		cc.ReadPool = &readPoolConfig{}
-		*cc.ReadPool = *conf.ReadPool
+	// cc := *conf
+	// if conf.ReadPool != nil {
+	// 	cc.ReadPool = &readPoolConfig{}
+	// 	*cc.ReadPool = *conf.ReadPool
+	// }
+
+	// if conf.WritePool != nil {
+	// 	cc.WritePool = &writePoolConfig{}
+	// 	*cc.WritePool = *conf.WritePool
+	// }
+
+	// if conf.StakePool != nil {
+	// 	cc.StakePool = &stakePoolConfig{}
+	// 	*cc.StakePool = *conf.StakePool
+	// }
+
+	// if conf.BlockReward != nil {
+	// 	cc.BlockReward = &blockReward{}
+	// 	*cc.BlockReward = *conf.BlockReward
+	// }
+
+	// cc.Cost = make(map[string]int, len(conf.Cost))
+	// for k, v := range conf.Cost {
+	// 	cc.Cost[k] = v
+	// }
+
+	v, err := conf.MarshalMsg(nil)
+	if err != nil {
+		panic(fmt.Sprintf("could not marshal config: %v", err))
 	}
 
-	if conf.WritePool != nil {
-		cc.WritePool = &writePoolConfig{}
-		*cc.WritePool = *conf.WritePool
+	cc := newConfig()
+	_, err = cc.UnmarshalMsg(v)
+	if err != nil {
+		panic(fmt.Sprintf("could not unmarshal config: %v", err))
 	}
 
-	if conf.StakePool != nil {
-		cc.StakePool = &stakePoolConfig{}
-		*cc.StakePool = *conf.StakePool
-	}
-
-	if conf.BlockReward != nil {
-		cc.BlockReward = &blockReward{}
-		*cc.BlockReward = *conf.BlockReward
-	}
-
-	cc.Cost = make(map[string]int, len(conf.Cost))
-	for k, v := range conf.Cost {
-		cc.Cost[k] = v
-	}
-
-	return &cc
+	return cc
 }
 
 func (conf *Config) CopyFrom(v interface{}) bool {

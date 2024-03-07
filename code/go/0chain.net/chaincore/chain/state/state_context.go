@@ -384,38 +384,38 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	// // get from MPT
+	// // // get from MPT
+	// if err := sc.getNodeValue(key, v); err != nil {
+	// 	// fmt.Println("get node value error", err)
+	// 	return err
+	// }
+
+	// return nil
+
+	cv, ok := sc.Cache().Get(key)
+	if ok {
+		ccv, ok := statecache.Copyable(v)
+		if !ok {
+			panic("state context cache - get trie node not copyable")
+		}
+
+		if !ccv.CopyFrom(cv) {
+			panic("state context cache - get trie node copy from failed")
+		}
+		return nil
+	}
+
+	// get from MPT
 	if err := sc.getNodeValue(key, v); err != nil {
 		// fmt.Println("get node value error", err)
 		return err
 	}
 
+	// cache it if it's cacheable
+	if cv, ok := statecache.Cacheable(v); ok {
+		sc.Cache().Set(key, cv)
+	}
 	return nil
-
-	// cv, ok := sc.Cache().Get(key)
-	// if ok {
-	// 	ccv, ok := statecache.Copyable(v)
-	// 	if !ok {
-	// 		panic("state context cache - get trie node not copyable")
-	// 	}
-
-	// 	if !ccv.CopyFrom(cv) {
-	// 		panic("state context cache - get trie node copy from failed")
-	// 	}
-	// 	return nil
-	// }
-
-	// // get from MPT
-	// if err := sc.getNodeValue(key, v); err != nil {
-	// 	fmt.Println("get node value error", err)
-	// 	return err
-	// }
-
-	// // cache it if it's cacheable
-	// if cv, ok := statecache.Cacheable(v); ok {
-	// 	sc.Cache().Set(key, cv)
-	// }
-	// return nil
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
@@ -424,24 +424,10 @@ func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializa
 		return "", err
 	}
 
-	// vn, ok := statecache.Cacheable(node)
-	// if ok {
-	// 	sc.Cache().Set(key, vn)
-	// 	// DEBUG:
-	// 	// v, err := vn.Clone().(util.MPTSerializable).MarshalMsg(nil)
-	// 	// if err != nil {
-	// 	// 	panic(err)
-	// 	// }
-
-	// 	// dc, err := node.MarshalMsg(nil)
-	// 	// if err != nil {
-	// 	// 	panic(err)
-	// 	// }
-
-	// 	// if !bytes.Equal(v, dc) {
-	// 	// 	panic("state context - saving cache data mismatch")
-	// 	// }
-	// }
+	vn, ok := statecache.Cacheable(node)
+	if ok {
+		sc.Cache().Set(key, vn)
+	}
 
 	return k, nil
 }
@@ -452,7 +438,7 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 		return "", err
 	}
 
-	// sc.Cache().Remove(key)
+	sc.Cache().Remove(key)
 	return k, nil
 }
 
