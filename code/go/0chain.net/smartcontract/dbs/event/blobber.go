@@ -348,6 +348,8 @@ func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
 		readData = append(readData, m.ReadData)
 	}
 
+	logging.Logger.Info("updateBlobbersStats", zap.Any("ids", ids), zap.Any("savedData", savedData), zap.Any("readData", readData))
+
 	return CreateBuilder("blobbers", "id", ids).
 		AddUpdate("saved_data", savedData, "blobbers.saved_data + t.saved_data").
 		AddUpdate("read_data", readData, "blobbers.read_data + t.read_data").Exec(edb).Error
