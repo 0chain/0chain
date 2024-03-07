@@ -395,7 +395,7 @@ jobs:
         
           # FLAKY
           BYZANTINE_STATUS=$([[ "${{ needs.byzantine-try-1.result }}" = "success" || "${{ needs.byzantine-try-2.result }}" = "success" || "${{ needs.byzantine-try-3.result }}" = "success" ]] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
-          BYZANTINE_COLOR=$([ "$BYZANTINE_STATUS" = "$PASSED_TEXT " ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
+          BYZANTINE_COLOR=$([ "$BYZANTINE_STATUS" = "$PASSED_TEXT" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-1.result }}" = "success" ] && echo "1" || echo "3")
           BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-2.result }}" = "success" ] && echo "2" || echo "$BYZANTINE_ATTEMPTS_COUNT")
           
