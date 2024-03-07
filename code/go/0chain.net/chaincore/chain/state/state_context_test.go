@@ -268,18 +268,9 @@ func (msc *mockStateContext) getNodeValue(key datastore.Key, v util.MPTSerializa
 }
 
 func TestGetTrieNode(t *testing.T) {
-
-	ssc := statecache.NewStateCache()
-	bc, tc := statecache.NewBlockTxnCaches(ssc, statecache.Block{
-		Round: 1,
-		Hash:  "hash1",
-	})
-
 	sc := &mockStateContext{
 		StateContext: &StateContext{
-			blockStateCache: bc,
-			txnStateCache:   tc,
-			state:           util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 0, nil),
+			state: util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 0, nil, statecache.NewEmpty()),
 		},
 	}
 
