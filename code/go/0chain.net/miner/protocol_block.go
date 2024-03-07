@@ -1332,6 +1332,7 @@ l:
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 
+	blockStateCache.SetBlockHash(b.Hash)
 	blockStateCache.Commit()
 	return nil
 }
