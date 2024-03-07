@@ -292,10 +292,9 @@ func TestGetTrieNode(t *testing.T) {
 		sc.Cache().Set(key, cacheValue)
 
 		var v testCacheValueNotCopyable
-		err := sc.GetTrieNode(key, &v)
-		require.NoError(t, err)
-		require.Equal(t, cacheValue.Value, v.Value)
-		require.True(t, v.isMarshalCalled)
+		require.Panics(t, func() {
+			sc.GetTrieNode(key, &v)
+		}, "should panic")
 	})
 
 	t.Run("cache miss", func(t *testing.T) {
