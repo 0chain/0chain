@@ -322,15 +322,15 @@ func Work(
 		return nil, err
 	}
 
-	gSnapshot, err = tx.WorkAggregates(gSnapshot, blockEvents)
-	if err != nil {
-		logging.Logger.Error("snapshot could not be processed",
-			zap.Int64("round", blockEvents.round),
-			zap.String("block", blockEvents.block),
-			zap.Int("block size", blockEvents.blockSize),
-			zap.Error(err),
-		)
-	}
+	//gSnapshot, err = tx.WorkAggregates(gSnapshot, blockEvents)
+	//if err != nil {
+	//	logging.Logger.Error("snapshot could not be processed",
+	//		zap.Int64("round", blockEvents.round),
+	//		zap.String("block", blockEvents.block),
+	//		zap.Int("block size", blockEvents.blockSize),
+	//		zap.Error(err),
+	//	)
+	//}
 
 	due := time.Since(tse)
 	if due.Milliseconds() > 200 {
@@ -610,6 +610,58 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 
 func (edb *EventDb) addStat(event Event) (err error) {
 	switch event.Tag {
+	case TagAddBlobber:
+		blobbers, ok := fromEvent[[]Blobber](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addBlobbers(*blobbers)
+	case TagAddTransactions:
+		txns, ok := fromEvent[[]Transaction](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addTransactions(*txns)
+	case TagFinalizeBlock:
+		block, ok := fromEvent[Block](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		if err := edb.addOrUpdateBlock(*block); err != nil {
+			return err
+		}
+		return edb.updateMinerBlocksFinalised(block.MinerID)
+	case TagAddMiner:
+		miners, ok := fromEvent[[]Miner](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addMiner(*miners)
+	case TagAddSharder:
+		sharders, ok := fromEvent[[]Sharder](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+
+		return edb.addSharders(*sharders)
+	case TagAddAllocation:
+		allocs, ok := fromEvent[[]Allocation](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addAllocations(*allocs)
+	case TagAddChallenge:
+		challenges, ok := fromEvent[[]Challenge](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.addChallenges(*challenges)
+	case TagUpdateChallenge:
+		chs, ok := fromEvent[[]Challenge](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateChallenges(*chs)
 	case TagAddOrOverwriteUser:
 		users, ok := fromEvent[[]User](event.Data)
 		if !ok {
