@@ -3,6 +3,8 @@ package storagesc
 import (
 	"context"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"net/url"
 
 	"0chain.net/chaincore/smartcontract"
@@ -235,7 +237,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "write_pool_lock":
 		resp, err = sc.writePoolLock(t, input, balances)
 
-		// stake pool
+	// stake pool
 
 	case "stake_pool_lock":
 		resp, err = sc.stakePoolLock(t, input, balances)
@@ -270,6 +272,20 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.commitSettingChanges(t, input, balances)
 
 	default:
+		logging.Logger.Info("Storage function name", zap.String("function", funcName))
+		actErr := chainstate.WithActivation(balances, "ares", func() error {
+			return nil
+		}, func() error {
+			if funcName == "reset_blobber_stats" {
+				resp, err = sc.resetBlobberStats(t, input, balances)
+				return err
+			}
+			return nil
+		})
+		if actErr != nil || resp != "" {
+			return resp, actErr
+		}
+
 		err = common.NewErrorf("invalid_storage_function_name",
 			"Invalid storage function '%s' called", funcName)
 	}

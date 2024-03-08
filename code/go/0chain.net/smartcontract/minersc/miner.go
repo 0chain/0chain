@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"0chain.net/smartcontract/dto"
@@ -136,6 +137,15 @@ func (msc *MinerSmartContract) DeleteMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
+	actErr := cstate.WithActivation(balances, "ares", func() error {
+		return nil
+	}, func() error {
+		return errors.New("delete miner is disabled")
+	})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	var err error
 	var deleteMiner = NewMinerNode()
 	if err = deleteMiner.Decode(inputData); err != nil {

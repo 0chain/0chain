@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -50,18 +51,27 @@ func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {
 // GetTransactionByHash finds the transaction record by hash
 // Used Index: idx_thash
 func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
-	tr := Transaction{}
-	res := edb.Store.
-		Get().
-		Model(&Transaction{}).
-		Where(Transaction{Hash: hash}).
-		First(&tr)
+	var tr Transaction
+	res := edb.Store.Get().
+		Where(&Transaction{Hash: hash}).
+		Find(&tr)
+	if res.RowsAffected == 0 {
+		return tr, errors.New("record not found")
+	}
 	return tr, res.Error
 }
 
 // GetTransactionByClientId searches for transaction by clientID
 // Used Index: idx_tclient_id
 func (edb *EventDb) GetTransactionByClientId(clientID string, limit common.Pagination) ([]Transaction, error) {
+	userExist := edb.Store.Get().Model(&User{}).Find(&User{
+		UserID: clientID,
+	})
+
+	if userExist.RowsAffected == 0 {
+		return nil, errors.New("user not found")
+	}
+
 	var tr []Transaction
 	res := edb.Store.
 		Get().

@@ -52,7 +52,7 @@ func GetRoundByName(c CommonStateContextI, name string) (int64, error) {
 
 func WithActivation(ctx StateContextI, name string, before func() error, after func() error) error {
 	round, err := GetRoundByName(ctx, name)
-	if err != nil {
+	if err != nil && !errors.Is(util.ErrValueNotPresent, err) {
 		logging.Logger.Error("with_activation", zap.Error(err))
 	}
 	if errors.Is(err, util.ErrNodeNotFound) {
