@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/core/maths"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+
+	"0chain.net/core/maths"
 
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -18,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -619,12 +621,17 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 }
 
 func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI) (err error) {
-	// Save allocation
-	// TODO: hardfork to remove this duplicate alloc saving
-	// _, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
-	// if err != nil {
-	// 	return
-	// }
+	err = cstate.WithActivation(balances, "ares", func() error {
+		// Save allocation
+		_, er := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+		return er
+	}, func() error {
+		return nil
+	})
+
+	if err != nil {
+		return
+	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStakes, sa.ID, sa.buildStakeUpdateEvent())
 	return
