@@ -23,11 +23,13 @@ tests:
       - sleep: "20s"
       - wait_round:
           shift: 50
+      - wait_add:
+          authorizers: ['authorizer-1','authorizer-2','authorizer-3','authorizer-4']
+          start: true
+      - wait_round:
+          shift: 200
       - command:
           name: "register_authorizer"
-      - wait_add:
-          authorizers: ['authorizer-1']
-          start: true
       - wait_round:
           shift: 200
       - sync_latest_aggregates:
