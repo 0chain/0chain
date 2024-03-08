@@ -141,7 +141,7 @@ type Chain struct {
 	roundDkg            round.RoundStorage
 	discoverClients     bool
 	started             uint32
-	blockTicketLock     sync.Mutex
+	// blockTicketLock     sync.Mutex
 	blockTickets        map[string][]*blockTicketTS
 	blockTicketsChannel chan *blockTicketTS
 

@@ -275,8 +275,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 
 type blockTicketTS struct {
 	*block.BlockVerificationTicket
-	Ts                time.Time
-	reachedThreashold bool
+	Ts time.Time
 }
 
 func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
@@ -352,13 +351,11 @@ func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 				go func(hash string) {
 					// remove from the ready to verify list after 1 second
 					// this is to prevent the blockReadyToVerify map increase indefinitely
-					select {
-					case <-time.After(1 * time.Second):
-						brtvLock.Lock()
-						delete(blockReadyToVerify, hash)
-						delete(uniqueTicketsMap, hash)
-						brtvLock.Unlock()
-					}
+					<-time.After(1 * time.Second)
+					brtvLock.Lock()
+					delete(blockReadyToVerify, hash)
+					delete(uniqueTicketsMap, hash)
+					brtvLock.Unlock()
 				}(ticket.BlockID)
 			}
 			// mc.blockTicketLock.Unlock()

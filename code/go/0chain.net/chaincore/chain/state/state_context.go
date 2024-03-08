@@ -131,8 +131,6 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
-	blockStateCache               statecache.BlockCacher
-	// txnStateCache                 *statecache.TransactionCache
 }
 
 type GetNow func() common.Timestamp
