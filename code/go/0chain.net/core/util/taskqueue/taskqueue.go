@@ -172,7 +172,9 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			te.mu.Unlock()
 
 			if task.priority == int(SCExec) {
-				te.scTasksC <- task
+				go func() {
+					te.scTasksC <- task
+				}()
 				// wait for SC task to be done before dispatch other tasks
 				// select {
 				// case <-task.doneC:
