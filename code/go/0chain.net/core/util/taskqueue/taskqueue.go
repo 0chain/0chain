@@ -102,11 +102,11 @@ type TaskExecutor struct {
 
 // NewTaskExecutor creates a new task executor
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
-	workerNum := 10
+	workerNum := 20
 	te := &TaskExecutor{
 		workerNum:   workerNum,
 		scLock:      make(chan chan struct{}, workerNum),
-		scTasksC:    make(chan *Task),
+		scTasksC:    make(chan *Task, 1),
 		otherTasksC: make(chan *Task, workerNum-1),
 	}
 
@@ -122,29 +122,43 @@ func NewTaskExecutor(ctx context.Context) *TaskExecutor {
 }
 
 func (te *TaskExecutor) scWorker(ctx context.Context) {
+	slowTM := 50 * time.Millisecond
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case task := <-te.scTasksC:
-			logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+			// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+			ts := time.Now()
 			task.errC <- task.taskFunc()
-			logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
-			close(task.doneC)
+			tm := time.Since(ts)
+			if tm > slowTM {
+				logging.Logger.Debug("Slow task", zap.String("name", task.name),
+					zap.Int("priority", task.priority), zap.Duration("duration", tm))
+			}
+			// logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
+			// close(task.doneC)
 		}
 	}
 }
 
 func (te *TaskExecutor) otherWorker(ctx context.Context) {
+	slowTM := 5 * time.Millisecond
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case task := <-te.otherTasksC:
-			logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+			ts := time.Now()
+			// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
 			task.errC <- task.taskFunc()
-			logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
-			close(task.doneC)
+			// logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
+			// close(task.doneC)
+			tm := time.Since(ts)
+			if tm > slowTM {
+				logging.Logger.Debug("Slow task", zap.String("name", task.name),
+					zap.Int("priority", task.priority), zap.Duration("duration", tm))
+			}
 		}
 	}
 }
