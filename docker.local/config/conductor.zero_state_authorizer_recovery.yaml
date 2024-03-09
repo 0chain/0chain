@@ -50,7 +50,7 @@ tests:
       - command:
           name: "cleanup_provider"
           params:
-            path: "./token_bridge_authserver/docker.local/authorizer1"
+            path: "./token_bridge_authserver/docker.local/auth1" #./token_bridge_authserver/docker.local/authorizer1
             recreate_script: "docker.local/bin/authorizer.init.setup.sh"
             recreate_script_workdir: "token_bridge_authserver"
       - wait_round:

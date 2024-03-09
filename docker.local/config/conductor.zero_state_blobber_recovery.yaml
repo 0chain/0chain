@@ -94,8 +94,8 @@ tests:
       - command:
           name: "cleanup_provider"
           params:
-            path: "./0chain/docker.local/blobber1"
-            recreate_script: docker.local/bin/init_blobber.sh
+            path: "./blobber/docker.local/blobber1" 
+            recreate_script: docker.local/bin/blobber.init.setup.sh
             recreate_script_workdir: "blobber"
           # Ensures complete data removal, simulating absolute data loss
       - wait_round:
