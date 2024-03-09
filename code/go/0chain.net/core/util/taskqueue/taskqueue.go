@@ -174,10 +174,10 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			if task.priority == int(SCExec) {
 				te.scTasksC <- task
 				// wait for SC task to be done before dispatch other tasks
-				select {
-				case <-task.doneC:
-				case <-time.After(100 * time.Millisecond):
-				}
+				// select {
+				// case <-task.doneC:
+				// case <-time.After(100 * time.Millisecond):
+				// }
 			} else {
 				te.otherTasksC <- task
 			}
