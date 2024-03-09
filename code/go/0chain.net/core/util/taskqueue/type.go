@@ -6,6 +6,7 @@ const (
 	N2NMsg TaskType = iota // the value of the type is also the priority
 	Common
 	SCExec
+	TypeNum
 )
 
 func (t TaskType) String() string {

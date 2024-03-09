@@ -91,31 +91,44 @@ func (pq *PriorityQueue) Pop() interface{} {
 
 // TaskExecutor is a task executor
 type TaskExecutor struct {
-	tasks       PriorityQueue
-	mu          sync.Mutex
-	cond        *sync.Cond
-	scLock      chan chan struct{}
-	workerNum   int
-	scTasksC    chan *Task
-	otherTasksC chan *Task
+	tasks PriorityQueue
+	mu    sync.Mutex
+	cond  *sync.Cond
+	// scLock      chan chan struct{}
+	// workerNum   int
+	workerCs []chan *Task
+	// scTasksC    chan *Task
+	// commonTaskC chan *Task
+	// otherTasksC chan *Task
 }
 
 // NewTaskExecutor creates a new task executor
 func NewTaskExecutor(ctx context.Context) *TaskExecutor {
-	workerNum := 20
+	commonTaskWorkerNum := 10
+	n2nTaskWorkerNum := 10
 	te := &TaskExecutor{
-		workerNum:   workerNum,
-		scLock:      make(chan chan struct{}, workerNum),
-		scTasksC:    make(chan *Task, 1),
-		otherTasksC: make(chan *Task, workerNum-1),
+		// workerNum: workerNum,
+		// scLock:      make(chan chan struct{}, workerNum),
+		// scTasksC:    make(chan *Task, 1),
+		// commonTaskC: make(chan *Task, commonTaskWorkerNum),
+		// otherTasksC: make(chan *Task, n2nTaskWorkerNum),
+		workerCs: make([]chan *Task, TypeNum),
 	}
 
+	te.workerCs[N2NMsg] = make(chan *Task, n2nTaskWorkerNum)
+	te.workerCs[Common] = make(chan *Task, commonTaskWorkerNum)
+	te.workerCs[SCExec] = make(chan *Task, 1)
+
 	te.cond = sync.NewCond(&te.mu)
-	go te.worker(ctx)
+	go te.taskDispatcher(ctx)
 	go te.scWorker(ctx)
 
-	for i := 0; i < workerNum-1; i++ {
+	for i := 0; i < n2nTaskWorkerNum; i++ {
 		go te.otherWorker(ctx)
+	}
+
+	for i := 0; i < commonTaskWorkerNum; i++ {
+		go te.commonWorker(ctx)
 	}
 
 	return te
@@ -127,7 +140,7 @@ func (te *TaskExecutor) scWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case task := <-te.scTasksC:
+		case task := <-te.workerCs[SCExec]:
 			// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
 			ts := time.Now()
 			task.errC <- task.taskFunc()
@@ -148,7 +161,28 @@ func (te *TaskExecutor) otherWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case task := <-te.otherTasksC:
+		case task := <-te.workerCs[N2NMsg]:
+			ts := time.Now()
+			// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
+			task.errC <- task.taskFunc()
+			// logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
+			// close(task.doneC)
+			tm := time.Since(ts)
+			if tm > slowTM {
+				logging.Logger.Debug("Slow task", zap.String("name", task.name),
+					zap.Int("priority", task.priority), zap.Duration("duration", tm))
+			}
+		}
+	}
+}
+
+func (te *TaskExecutor) commonWorker(ctx context.Context) {
+	slowTM := 50 * time.Millisecond
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case task := <-te.workerCs[Common]:
 			ts := time.Now()
 			// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
 			task.errC <- task.taskFunc()
@@ -172,7 +206,7 @@ func (te *TaskExecutor) Add(task *Task) {
 	te.cond.Signal()
 }
 
-func (te *TaskExecutor) worker(ctx context.Context) {
+func (te *TaskExecutor) taskDispatcher(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -185,18 +219,24 @@ func (te *TaskExecutor) worker(ctx context.Context) {
 			task := heap.Pop(&te.tasks).(*Task)
 			te.mu.Unlock()
 
-			if task.priority == int(SCExec) {
-				go func() {
-					te.scTasksC <- task
-				}()
-				// wait for SC task to be done before dispatch other tasks
-				// select {
-				// case <-task.doneC:
-				// case <-time.After(100 * time.Millisecond):
-				// }
-			} else {
-				te.otherTasksC <- task
-			}
+			go func() {
+				te.workerCs[task.priority] <- task
+			}()
+
+			// if task.priority == int(SCExec) {
+			// 	go func() {
+			// 		te.scTasksC <- task
+			// 	}()
+			// 	// wait for SC task to be done before dispatch other tasks
+			// 	// select {
+			// 	// case <-task.doneC:
+			// 	// case <-time.After(100 * time.Millisecond):
+			// 	// }
+			// } else {
+			// 	go func() {
+			// 		te.otherTasksC <- task
+			// 	}()
+			// }
 		}
 	}
 }
