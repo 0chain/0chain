@@ -914,6 +914,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 
 	beginStateRoot := bState.GetRoot()
 	b.Events = []event.Event{}
+	ts := time.Now()
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			if err := txn.ComputeClientID(); err != nil {
@@ -1018,11 +1019,15 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 	StateSanityCheck(ctx, b)
 	b.SetStateStatus(StateSuccessful)
 
+	// commit the block state cache to the global state cache
+	blockStateCache.Commit()
+
 	logging.Logger.Info("compute state successful",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("block ptr", fmt.Sprintf("%p", b)),
 		zap.Int("block_size", len(b.Txns)),
+		zap.Any("duration", time.Since(ts)),
 		zap.Int("changes", b.ClientState.GetChangeCount()),
 		zap.String("begin_client_state", util.ToHex(beginStateRoot)),
 		zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())),
@@ -1030,8 +1035,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 		zap.String("prev_block", b.PrevHash),
 		zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
 
-	// commit the block state cache to the global state cache
-	blockStateCache.Commit()
 	return nil
 }
 
