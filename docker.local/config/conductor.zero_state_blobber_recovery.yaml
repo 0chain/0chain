@@ -68,7 +68,7 @@ tests:
                 - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
       - sync_latest_aggregates:
           blobbers:
-            - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+            - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           required: false
       - command:
           name: 'init_allocation_only'
@@ -83,7 +83,7 @@ tests:
           shift: 100
       - check_aggregate_value_comparison:
           provider_type: blobber
-          provider_id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           key: total_rewards
           comparison: gt
           rvalue: 0
