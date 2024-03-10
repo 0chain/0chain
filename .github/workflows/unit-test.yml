@@ -25,9 +25,9 @@ jobs:
           sudo apt update
           sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           ./docker.local/bin/check.msgp.sh
-          sudo apt remove gcc-10
-          sudo apt remove gcc 
-          sudo apt update && sudo apt install gcc-11 g++-11
+          sudo apt remove gcc-10 -y
+          sudo apt remove gcc -y
+          sudo apt update && sudo apt install gcc-11 g++-11 -y
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
