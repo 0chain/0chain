@@ -27,14 +27,6 @@ import (
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
 	return taskqueue.Execute(taskqueue.Common, func() error {
-		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
-			len(bvts), len(bvts))
-		if aggScheme == nil {
-			// TODO: do ticket verification one by one when aggregate signature
-			// does not exist
-			panic(fmt.Sprintf("signature scheme not implemented: %v", c.ClientSignatureScheme()))
-		}
-
 		doneC := make(chan struct{})
 		errC := make(chan error)
 		go func() {
@@ -56,6 +48,14 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 				wg.Add(1)
 				go func(tks []*block.VerificationTicket) {
 					defer wg.Done()
+					aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
+						len(tks), len(tks))
+					if aggScheme == nil {
+						// TODO: do ticket verification one by one when aggregate signature
+						// does not exist
+						panic(fmt.Sprintf("signature scheme not implemented: %v", c.ClientSignatureScheme()))
+					}
+
 					for i, bvt := range tks {
 						verifier := pl.GetNode(bvt.VerifierID)
 						if verifier == nil {
@@ -81,7 +81,7 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 
 				}(bvts[s:e])
 			}
-			wg.Done()
+			wg.Wait()
 
 			close(doneC)
 		}()
