@@ -27,6 +27,13 @@ import (
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
 	return taskqueue.Execute(taskqueue.Common, func() error {
+		ts := time.Now()
+		defer func() {
+			tm := time.Since(ts)
+			if tm > 50*time.Millisecond {
+				logging.Logger.Debug("verify ticket slow", zap.Duration("duration", tm), zap.Int("num_tickets", len(bvts)))
+			}
+		}()
 		doneC := make(chan struct{})
 		errC := make(chan error)
 		go func() {
