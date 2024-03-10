@@ -99,12 +99,14 @@ func (fsa *freeStorageAssigner) validate(
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
+	before := "yes"
 	verified := false
 	var beforeHardfork = func() (e error) {
 		verified, e = verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
 		return e
 	}
 	var afterHardfork = func() (e error) {
+		before = "no"
 		verified, e = verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
 		return e
 	}
@@ -114,7 +116,7 @@ func (fsa *freeStorageAssigner) validate(
 		return actErr
 	}
 	if !verified {
-		return fmt.Errorf("failed to verify signature")
+		return fmt.Errorf("failed to verify signature " + before)
 	}
 
 	newTotal, err := currency.AddCoin(fsa.CurrentRedeemed, value)
