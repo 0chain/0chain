@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -37,28 +39,49 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 		errC := make(chan error)
 		go func() {
 			pl := c.GetMiners(round)
-			for i, bvt := range bvts {
-				verifier := pl.GetNode(bvt.VerifierID)
-				if verifier == nil {
-					errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
-					return
-				}
+			// divide the tickets into groups and verify them in parallel
+			groupSize := 7
+			n := len(bvts)
 
-				if verifier.SigScheme == nil {
-					errC <- common.NewErrorf("verify_tickets", "node has no signature scheme")
-					return
-				}
-
-				if err := aggScheme.Aggregate(verifier.SigScheme, i, bvt.Signature, blockHash); err != nil {
-					errC <- common.NewError("verify_tickets", err.Error())
-					return
-				}
+			groupNum := n / groupSize
+			if groupNum < 1 {
+				groupNum = 1
 			}
 
-			if _, err := aggScheme.Verify(); err != nil {
-				errC <- common.NewErrorf("verify_tickets", "failed to verify aggregate signatures: %v", err)
-				return
+			wg := sync.WaitGroup{}
+			for i := 0; i < groupNum; i++ {
+				s := i * groupSize
+				e := int(math.Min(float64((i+1)*groupSize), float64(n)))
+
+				wg.Add(1)
+				go func(tks []*block.VerificationTicket) {
+					defer wg.Done()
+					for i, bvt := range tks {
+						verifier := pl.GetNode(bvt.VerifierID)
+						if verifier == nil {
+							errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
+							return
+						}
+
+						if verifier.SigScheme == nil {
+							errC <- common.NewErrorf("verify_tickets", "node has no signature scheme")
+							return
+						}
+
+						if err := aggScheme.Aggregate(verifier.SigScheme, i, bvt.Signature, blockHash); err != nil {
+							errC <- common.NewError("verify_tickets", err.Error())
+							return
+						}
+					}
+
+					if _, err := aggScheme.Verify(); err != nil {
+						errC <- common.NewErrorf("verify_tickets", "failed to verify aggregate signatures: %v", err)
+						return
+					}
+
+				}(bvts[s:e])
 			}
+			wg.Done()
 
 			close(doneC)
 		}()
