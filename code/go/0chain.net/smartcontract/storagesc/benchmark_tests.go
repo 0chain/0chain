@@ -316,10 +316,14 @@ func BenchmarkTests(
 					panic(err)
 				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
+				ids := ""
+				for _, id := range freeBlobbers {
+					ids += id
+				}
 				marker := fmt.Sprintf("%s:%f:%d:%s",
 					request.Recipient,
 					request.FreeTokens,
-					request.Nonce, freeBlobbers)
+					request.Nonce, ids)
 				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				if err != nil {
 					panic(err)
@@ -786,63 +790,6 @@ func BenchmarkTests(
 			input: nil,
 		},
 		// todo "update_config" waiting for PR489
-	}
-
-	tests = []BenchTest{
-		{
-			name:     "storage.free_allocation_request",
-			endpoint: ssc.freeAllocationRequest,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-				ToClientID:   ADDRESS,
-				CreationDate: creationTime,
-				Value:        maxIndividualFreeAlloc,
-			},
-			input: func() []byte {
-				var request = struct {
-					Recipient  string  `json:"recipient"`
-					FreeTokens float64 `json:"free_tokens"`
-					Nonce      int64   `json:"nonce"`
-				}{
-					data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-					viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation),
-					1,
-				}
-				err = sigScheme.SetPublicKey(data.PublicKeys[0])
-				if err != nil {
-					panic(err)
-				}
-				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				ids := ""
-				for _, id := range freeBlobbers {
-					ids += id
-				}
-				marker := fmt.Sprintf("%s:%f:%d:%s",
-					request.Recipient,
-					request.FreeTokens,
-					request.Nonce, ids)
-				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
-				if err != nil {
-					panic(err)
-				}
-				fsmBytes, _ := json.Marshal(&freeStorageMarker{
-					Assigner:   data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-					Recipient:  request.Recipient,
-					FreeTokens: request.FreeTokens,
-					Nonce:      request.Nonce,
-					Signature:  signature,
-					Blobbers:   freeBlobbers,
-				})
-				bytes, _ := json.Marshal(&freeStorageAllocationInput{
-					RecipientPublicKey: data.PublicKeys[1],
-					Marker:             string(fsmBytes),
-				})
-				return bytes
-			}(),
-		},
 	}
 
 	var testsI []bk.BenchTestI

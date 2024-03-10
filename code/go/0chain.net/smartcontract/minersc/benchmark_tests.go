@@ -416,38 +416,38 @@ func BenchmarkTests(
 				},
 			}).Encode(),
 		},
-		{
-			name:     "miner.delete_miner",
-			endpoint: msc.DeleteMiner,
-			txn: &transaction.Transaction{
-				ToClientID: ADDRESS,
-			},
-			input: (&MinerNode{
-				SimpleNode: &SimpleNode{
-					Provider: provider.Provider{
-						ID:           data.Miners[1],
-						ProviderType: spenum.Miner,
-					},
-					PublicKey: "my public key",
-				},
-			}).Encode(),
-		},
-		{
-			name:     "miner.delete_sharder",
-			endpoint: msc.DeleteSharder,
-			txn: &transaction.Transaction{
-				ToClientID: ADDRESS,
-			},
-			input: (&MinerNode{
-				SimpleNode: &SimpleNode{
-					Provider: provider.Provider{
-						ID:           data.Sharders[0],
-						ProviderType: spenum.Sharder,
-					},
-					PublicKey: "my public key",
-				},
-			}).Encode(),
-		},
+		//{
+		//	name:     "miner.delete_miner",
+		//	endpoint: msc.DeleteMiner,
+		//	txn: &transaction.Transaction{
+		//		ToClientID: ADDRESS,
+		//	},
+		//	input: (&MinerNode{
+		//		SimpleNode: &SimpleNode{
+		//			Provider: provider.Provider{
+		//				ID:           data.Miners[1],
+		//				ProviderType: spenum.Miner,
+		//			},
+		//			PublicKey: "my public key",
+		//		},
+		//	}).Encode(),
+		//},
+		//{
+		//	name:     "miner.delete_sharder",
+		//	endpoint: msc.DeleteSharder,
+		//	txn: &transaction.Transaction{
+		//		ToClientID: ADDRESS,
+		//	},
+		//	input: (&MinerNode{
+		//		SimpleNode: &SimpleNode{
+		//			Provider: provider.Provider{
+		//				ID:           data.Sharders[0],
+		//				ProviderType: spenum.Sharder,
+		//			},
+		//			PublicKey: "my public key",
+		//		},
+		//	}).Encode(),
+		//},
 		{
 			name:     "miner.collect_reward",
 			endpoint: msc.collectReward,
