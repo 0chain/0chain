@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, arc-runner1]
+    runs-on: [self-hosted, arc-runner]
     steps:
       - uses: actions/checkout@v2
 
@@ -22,13 +22,6 @@ jobs:
           sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
           ./docker.local/bin/check.msgp.sh
           sudo apt update && sudo apt install gcc-11 g++-11
-
-      - name: Install bls
-        run: |
-          git clone --recursive https://github.com/herumi/bls
-          cd bls
-          sudo make -C mcl -j 4 lib/libmclbn256.dylib install
-          sudo make MCL_DIR=./mcl MCL_USE_GMP=0 BLS_ETH=1 -j 4 install
 
       - name: Build Base
         run: ./docker.local/bin/build.base.sh
