@@ -139,13 +139,13 @@ func (te *TaskExecutor) scWorker(ctx context.Context) {
 			// logging.Logger.Debug("Executing task start", zap.String("name", task.name), zap.Int("priority", task.priority))
 			ts := time.Now()
 			task.errC <- task.taskFunc()
+			close(task.doneC)
 			tm := time.Since(ts)
 			if tm > slowTM {
 				logging.Logger.Debug("Slow task", zap.String("name", task.name),
 					zap.Int("priority", task.priority), zap.Duration("duration", tm))
 			}
 			// logging.Logger.Debug("Executing task end", zap.String("name", task.name), zap.Int("priority", task.priority))
-			// close(task.doneC)
 		}
 	}
 }
@@ -217,6 +217,14 @@ func (te *TaskExecutor) taskDispatcher(ctx context.Context) {
 			go func() {
 				te.workerCs[task.priority] <- task
 			}()
+
+			if task.priority == int(SCExec) {
+				// wait for SC task to be done before dispatch other tasks
+				select {
+				case <-task.doneC:
+				case <-time.After(100 * time.Millisecond):
+				}
+			}
 
 			// if task.priority == int(SCExec) {
 			// 	go func() {
