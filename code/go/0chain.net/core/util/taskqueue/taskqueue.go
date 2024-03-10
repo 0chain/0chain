@@ -107,11 +107,6 @@ func NewTaskExecutor(ctx context.Context) *TaskExecutor {
 	commonTaskWorkerNum := 10
 	n2nTaskWorkerNum := 10
 	te := &TaskExecutor{
-		// workerNum: workerNum,
-		// scLock:      make(chan chan struct{}, workerNum),
-		// scTasksC:    make(chan *Task, 1),
-		// commonTaskC: make(chan *Task, commonTaskWorkerNum),
-		// otherTasksC: make(chan *Task, n2nTaskWorkerNum),
 		workerCs: make([]chan *Task, TypeNum),
 	}
 
