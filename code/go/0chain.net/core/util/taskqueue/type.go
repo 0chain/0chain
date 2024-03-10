@@ -11,12 +11,12 @@ const (
 
 func (t TaskType) String() string {
 	switch t {
+	case SCExec:
+		return "SCExec"
 	case N2NMsg:
 		return "N2NMsg"
 	case Common:
 		return "Common"
-	case SCExec:
-		return "SCExec"
 	default:
 		panic("unknown task type")
 	}
