@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -v|--verbose)
       echo "Processing 'verbose' option  Input argument is '$2'"
-      export VERBOSE="$2"
+      export VERBOSE=true
       shift # past argument
       shift # past value
       ;;
