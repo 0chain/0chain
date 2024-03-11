@@ -244,6 +244,7 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 
 	// fields match storagesc.emitUpdateBlobber
 	updateColumns := []string{
+		"base_url",
 		"read_price",
 		"write_price",
 		"max_offer_duration",
