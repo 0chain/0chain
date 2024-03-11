@@ -794,6 +794,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	t *transaction.Transaction, input []byte, balances cstate.StateContextI) (
 	string, error) {
 
+	logging.Logger.Info("Jayash commitBlobberConnection", zap.Any("input", string(input)))
+
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
@@ -907,6 +909,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 		alloc.Stats.NumWrites++
 	}
+
+	logging.Logger.Info("Jayash commitBlobberConnection", zap.Any("blobber", blobber), zap.Any("blobberAlloc", blobAlloc), zap.Any("alloc", alloc))
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
