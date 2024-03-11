@@ -590,9 +590,16 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if config.Development() {
+		ts := time.Now()
 		for _, txn := range fb.Txns {
-			ts := time.Now()
-			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
+			tt := ts.Sub(common.ToTime(txn.CreationDate))
+			StartToFinalizeTxnTimer.Update(tt)
+			if tt > 10*time.Second {
+				logging.Logger.Debug("start to finalize txn slow",
+					zap.String("txn", txn.Hash),
+					zap.Duration("duration", tt),
+					zap.String("block", fb.Hash))
+			}
 		}
 	}
 

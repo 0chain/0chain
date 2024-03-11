@@ -196,7 +196,7 @@ func (sc *StorageSmartContract) blobberReward(
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
 		return err
 	}
-	logging.Logger.Debug("challenge pass - save validator stake pools")
+	logging.Logger.Debug("challenge pass - save validator stake pools", zap.Int("pool size", len(sp.Pools)))
 
 	// Save the pools
 	if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
