@@ -94,8 +94,8 @@ tests:
       - command:
           name: "backup_blobber_data"
           params:
-            path_data: "./blobber/docker.local/blobber1/data"
-            path_files: "./blobber/docker.local/blobber1/files"
+            path_data: "../blobber/docker.local/blobber1/data" 
+            path_files: "../blobber/docker.local/blobber1/files" 
             provider_data: blobber-data-1.tar.gz
             provider_files: blobber-files-1.tar.gz           
       - sleep: "60s"  # Wait for some time before dropping the blobber
@@ -128,8 +128,8 @@ tests:
       - command:
           name: "restore_blobber_data"  
           params:
-            path_data: "./blobber/docker.local/blobber1/data"
-            path_files: "./blobber/docker.local/blobber1/files"
+            path_data: "../blobber/docker.local/blobber1/data"
+            path_files: "../blobber/docker.local/blobber1/files"
             provider_data: blobber-data-1.tar.gz
             provider_files: blobber-files-1.tar.gz            
       - command:
