@@ -53,7 +53,10 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block, waitC ...chan 
 		if b.IsStateComputed() {
 			return nil
 		}
-		return c.computeState(ctx, b, waitC...)
+		return taskqueue.Execute(taskqueue.SCExec, func() error {
+			return c.computeState(ctx, b, waitC...)
+		})
+
 	})
 }
 
@@ -191,13 +194,13 @@ func (c *Chain) UpdateState(ctx context.Context,
 	waitC ...chan struct{},
 ) (es []event.Event, err error) {
 
-	err = taskqueue.Execute(taskqueue.SCExec, func() error {
-		c.stateMutex.Lock()
-		defer c.stateMutex.Unlock()
-		var err error
-		es, err = c.updateState(ctx, b, bState, txn, blockStateCache, waitC...)
-		return err
-	})
+	// err = taskqueue.Execute(taskqueue.SCExec, func() error {
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
+	// var err error
+	es, err = c.updateState(ctx, b, bState, txn, blockStateCache, waitC...)
+	// return err
+	// })
 
 	return
 }

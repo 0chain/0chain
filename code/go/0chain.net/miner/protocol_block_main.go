@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/util/taskqueue"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -37,7 +38,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context,
 	waitOver bool,
 	waitC chan struct{}) error {
 	return mc.generateBlockWorker.Run(ctx, func() error {
-		return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
+		return taskqueue.Execute(taskqueue.SCExec, func() error {
+			return mc.generateBlock(ctx, b, minerChain, waitOver, waitC)
+		})
 	})
 }
 

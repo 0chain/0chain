@@ -1131,8 +1131,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		logging.Logger.Info("generate block (found txns very old)", zap.Int64("round", b.Round),
 			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
-			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
-				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
+			if er := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
+				logging.Logger.Warn("generate block - delete txns failed", zap.Error(er))
 			}
 		}()
 	}
