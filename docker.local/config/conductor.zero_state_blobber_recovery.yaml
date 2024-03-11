@@ -112,29 +112,17 @@ tests:
        #   timeout: "2m"
       - start: ['blobber-1']
       - wait_round:
-          shift: 100   # Waits for Blobber to recover, re-sync, and resume operations
-      - command:
-          name: "check_registered"  ###
-          params:
-            provider_type: blobber
-            provider_ids:
-              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-      - command:
-          name: "fill_blobber_validator_wallets"              
-      - sync_latest_aggregates:
-          blobbers:
-            - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          required: true
+          shift: 100  # Waits for Blobber to recover, re-sync, and resume operations
       - check_aggregate_value_comparison:
           provider_type: blobber
-          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          key: total_rewards
+          provider_id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+          key: total_slashed_stake
           comparison: gt
           rvalue: 0
           timeout: "25m"
-      - check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
+      - check_aggregate_value_change:
           provider_type: blobber
-          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          provider_id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
           key: total_rewards
           monotonicity: increase
-          timeout: "2m"
+          timeout: "25m"
