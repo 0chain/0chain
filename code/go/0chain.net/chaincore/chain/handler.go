@@ -1482,16 +1482,19 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	// broadcast to other miners
 	go func() {
 		// get miners
-		mns := sc.GetCurrentMagicBlock().Miners.Nodes
-		urls := make([]string, 0, len(mns))
-		for _, mn := range mns {
-			if mn.ID == node.Self.Underlying().ID {
-				continue
-			}
-			urls = append(urls, fmt.Sprintf("https://%s/%s", mn.Host, mn.Path))
-		}
+		mb := sc.GetCurrentMagicBlock()
+		// mns := sc.GetCurrentMagicBlock().Miners.Nodes
+		// urls := make([]string, 0, len(mns))
+		// for _, mn := range mns {
+		// 	if mn.ID == node.Self.Underlying().ID {
+		// 		continue
+		// 	}
+		// 	urls = append(urls, fmt.Sprintf("https://%s/%s", mn.Host, mn.Path))
+		// }
 
-		httpclientutil.SendTransaction(httpclientutil.TxnConvert(txn), urls, "", "")
+		var minerUrls = mb.Miners.N2NURLs()
+
+		httpclientutil.SendTransaction(httpclientutil.TxnConvert(txn), minerUrls, "", "")
 	}()
 
 	return txnRsp, nil
