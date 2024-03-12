@@ -86,6 +86,10 @@ func (ems *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 	return c.Conn.Delete([]byte(datastore.ToString(entity.GetKey())))
 }
 
+func (ems *Store) Exists(ctx context.Context, entity datastore.Entity, key string) (bool, error) {
+	return false, nil
+}
+
 func (ems *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
 	//TODO: even though rocksdb has MultiGet api, grocksdb doesn't seem to have one
 	for idx, key := range keys {
@@ -123,7 +127,7 @@ func (ems *Store) MultiDelete(ctx context.Context, entityMetadata datastore.Enti
 // func (ems *Store) WBWrite(ctx context.Context, emd datastore.EntityMetadata, batch *AtomicWriteBatch) error {
 // 	// Build []byte key and value
 // 	c := GetEntityCon(ctx, emd)
-// 	err := 
+// 	err :=
 // }
 
 func (ems *Store) Merge(ctx context.Context, entity datastore.Entity) error {

@@ -21,6 +21,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -154,6 +155,30 @@ func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 		}(txnURL)
 	}
 }
+
+func TxnConvert(txn *transaction.Transaction) *Transaction {
+	return &Transaction{
+		Hash:              txn.Hash,
+		Version:           txn.Version,
+		ClientID:          txn.ClientID,
+		PublicKey:         txn.PublicKey,
+		ToClientID:        txn.ToClientID,
+		ChainID:           txn.ChainID,
+		TransactionData:   txn.TransactionData,
+		Value:             int64(txn.Value),
+		Signature:         txn.Signature,
+		CreationDate:      txn.CreationDate,
+		Fee:               int64(txn.Fee),
+		Nonce:             txn.Nonce,
+		TransactionType:   txn.TransactionType,
+		TransactionOutput: txn.TransactionOutput,
+		OutputHash:        txn.OutputHash,
+	}
+}
+
+// func RelayTransaction(txn *Transaction, urls []string) {
+
+// }
 
 // GetTransactionStatus check the status of the transaction.
 func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, error) {

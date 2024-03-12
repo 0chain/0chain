@@ -20,6 +20,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -1361,7 +1362,18 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
-	err := txn.Validate(ctx)
+	exist, err := transaction.TransactionExists(ctx, txn.Hash)
+	if err != nil {
+		logging.Logger.Error("put transaction - existing checking failed", zap.Error(err), zap.String("txn", txn.Hash))
+		return nil, common.NewErrInternal("failed to check transaction existence")
+	}
+
+	if exist {
+		// return if already exist
+		return txn, nil
+	}
+
+	err = txn.Validate(ctx)
 	if err != nil {
 		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
@@ -1466,6 +1478,21 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			zap.Any("txn", txn))
 		return nil, common.NewErrInternal("failed to save transaction")
 	}
+
+	// broadcast to other miners
+	go func() {
+		// get miners
+		mns := sc.GetCurrentMagicBlock().Miners.Nodes
+		urls := make([]string, 0, len(mns))
+		for _, mn := range mns {
+			if mn.ID == node.Self.Underlying().ID {
+				continue
+			}
+			urls = append(urls, fmt.Sprintf("%s/%s", mn.Host, mn.Path))
+		}
+
+		httpclientutil.SendTransaction(httpclientutil.TxnConvert(txn), urls, "", "")
+	}()
 
 	return txnRsp, nil
 }

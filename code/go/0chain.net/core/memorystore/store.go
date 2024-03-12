@@ -9,6 +9,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
+	"github.com/gomodule/redigo/redis"
 	"go.uber.org/zap"
 )
 
@@ -51,6 +52,21 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	}
 	//datastore.FromJSON(data, entity)
 	return entity.ComputeProperties()
+}
+
+func (ms *Store) Exists(ctx context.Context, entity datastore.Entity, key string) (bool, error) {
+	// Check if the key exists
+	entity.SetKey(key)
+	redisKey := GetEntityKey(entity)
+	emd := entity.GetEntityMetadata()
+	c := GetEntityCon(ctx, emd)
+
+	exists, err := redis.Bool(c.Do("EXISTS", redisKey))
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
 
 /*Write an entity to the datastore */
