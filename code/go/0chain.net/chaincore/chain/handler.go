@@ -1505,7 +1505,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			k = num
 		}
 
-		httpclientutil.SendTransaction(httpclientutil.TxnConvert(txn), minerUrls[:k], "", "")
+		httpclientutil.SendTransactionWithTTL(httpclientutil.TxnConvert(txn), minerUrls[:k], int64(ttl))
 	}()
 
 	return txnRsp, nil
