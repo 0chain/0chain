@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"io"
 	"math"
+	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
@@ -1488,8 +1489,17 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		// }
 
 		var minerUrls = mb.Miners.N2NURLs()
+		num := len(minerUrls)
+		rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle(num, func(i, j int) {
+			minerUrls[i], minerUrls[j] = minerUrls[j], minerUrls[i]
+		})
 
-		httpclientutil.SendTransaction(httpclientutil.TxnConvert(txn), minerUrls, "", "")
+		k := 7
+		if num < 7 {
+			k = num
+		}
+
+		httpclientutil.SendTransaction(httpclientutil.TxnConvert(txn), minerUrls[:k], "", "")
 	}()
 
 	return txnRsp, nil
