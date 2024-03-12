@@ -1488,7 +1488,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			if mn.ID == node.Self.Underlying().ID {
 				continue
 			}
-			urls = append(urls, fmt.Sprintf("%s/%s", mn.Host, mn.Path))
+			urls = append(urls, fmt.Sprintf("https://%s/%s", mn.Host, mn.Path))
 		}
 
 		httpclientutil.SendTransaction(httpclientutil.TxnConvert(txn), urls, "", "")
