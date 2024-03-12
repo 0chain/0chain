@@ -221,6 +221,15 @@ func (np *Pool) N2NURLs() (n2n []string) {
 	return
 }
 
+func (np *Pool) HostURLs() (urls []string) {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+	for _, node := range np.NodesMap {
+		urls = append(urls, node.GetURLBase())
+	}
+	return
+}
+
 // CopyNodes list.
 func (np *Pool) CopyNodes() (list []*Node) {
 	np.mmx.RLock()
