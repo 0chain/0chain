@@ -293,6 +293,11 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				es.done <- commit
 			}()
 
+			logging.Logger.Info("Jayash processing events", zap.Any("es", es))
+
+			commit = false
+			return
+
 			s, err := Work(ctx, gs, es, &p)
 			if err != nil {
 				logging.Logger.Error("process events", zap.Error(err))
