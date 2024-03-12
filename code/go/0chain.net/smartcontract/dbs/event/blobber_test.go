@@ -38,6 +38,7 @@ func TestUpdateBlobber(t *testing.T) {
 	blobber1.TotalStake = 23
 	blobber1.NotAvailable = false
 	blobber1.LastHealthCheck = common.Timestamp(123)
+	blobber1.BaseURL = "http://random_blobber_1.com"
 
 	blobber2.ID = ids[1]
 	blobber2.WritePrice = 17
@@ -45,6 +46,7 @@ func TestUpdateBlobber(t *testing.T) {
 	blobber2.TotalStake = 14783
 	blobber2.NotAvailable = false
 	blobber2.LastHealthCheck = common.Timestamp(3333333331)
+	blobber2.BaseURL = "http://random_blobber_2.com"
 
 	require.NoError(t, edb.updateBlobber([]Blobber{blobber1, blobber2}))
 
