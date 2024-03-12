@@ -287,20 +287,26 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 	for {
 		es := <-edb.eventsChannel
+		func() {
+			var commit bool
+			defer func() {
+				es.done <- commit
+			}()
 
-		logging.Logger.Info("Jayash processing events", zap.Any("round", es.round), zap.Any("block", es.block), zap.Any("block size", es.blockSize))
+			commit = false
+			logging.Logger.Info("Jayash - addEventsWorker", zap.Any("round", es.round))
 
-		es.done <- false
-		return
-
-		s, err := Work(ctx, gs, es, &p)
-		if err != nil {
-			logging.Logger.Error("process events", zap.Error(err))
-			return
-		}
-		if s != nil {
-			gs = s
-		}
+			s, err := Work(ctx, gs, es, &p)
+			if err != nil {
+				logging.Logger.Error("process events", zap.Error(err))
+				commit = false
+				return
+			}
+			commit = true
+			if s != nil {
+				gs = s
+			}
+		}()
 	}
 }
 
