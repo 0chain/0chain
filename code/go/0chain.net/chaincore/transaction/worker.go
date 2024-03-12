@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
@@ -64,7 +65,9 @@ func CleanupWorker(ctx context.Context) {
 			if len(invalidTxns) > 0 {
 				invalidTxnHashes := make([]string, len(invalidTxns))
 				for i, t := range invalidTxns {
-					invalidTxnHashes[i] = t.(*Transaction).Hash
+					hash := t.(*Transaction).Hash
+					invalidTxnHashes[i] = hash
+					transaction.RemoveFromPool(hash)
 				}
 
 				logging.Logger.Info("transactions cleanup",
@@ -82,7 +85,9 @@ func CleanupWorker(ctx context.Context) {
 			if len(invalidHashes) > 0 {
 				txnHashes := make([]string, len(invalidHashes))
 				for i, t := range invalidHashes {
-					txnHashes[i] = t.(*Transaction).Hash
+					hash := t.(*Transaction).Hash
+					txnHashes[i] = hash
+					transaction.RemoveTransactionsFromCache(hash)
 				}
 				logging.Logger.Info("missing transactions cleanup",
 					zap.String("collection", collectionName),
@@ -143,7 +148,9 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	txns = append(past, txns...)
 	txnHashes := make([]string, len(txns))
 	for i, t := range txns {
-		txnHashes[i] = t.(*Transaction).Hash
+		hash := t.(*Transaction).Hash
+		txnHashes[i] = hash
+		RemoveTransactionsFromCache(hash)
 	}
 	logging.Logger.Info("cleaning transactions",
 		zap.String("collection", collectionName),

@@ -9,8 +9,32 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"github.com/0chain/common/core/logging"
+	lru "github.com/hashicorp/golang-lru"
 	"go.uber.org/zap"
 )
+
+var txnsCache *lru.Cache
+
+func init() {
+	var err error
+	txnsCache, err = lru.New(100000)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func cachePut(hash string) {
+	txnsCache.Add(hash, struct{}{})
+}
+
+func cacheGet(hash string) bool {
+	_, ok := txnsCache.Get(hash)
+	return ok
+}
+
+func cacheDelete(hash string) {
+	txnsCache.Remove(hash)
+}
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
@@ -22,8 +46,13 @@ func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
 }
 
-func TransactionExists(ctx context.Context, hash string) (bool, error) {
-	return transactionEntityMetadata.GetStore().Exists(ctx, &Transaction{}, hash)
+func TransactionExists(hash string) bool {
+	return cacheGet(hash)
+	// return transactionEntityMetadata.GetStore().Exists(ctx, &Transaction{}, hash)
+}
+
+func RemoveTransactionsFromCache(hash string) {
+	cacheDelete(hash)
 }
 
 /*PutTransaction - Given a transaction data, it stores it */
@@ -51,6 +80,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	IncTransactionCount()
+	cachePut(txn.Hash)
 	return txn, nil
 }
 

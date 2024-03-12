@@ -1362,18 +1362,13 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("put_transaction: invalid request %T", entity)
 	}
 
-	exist, err := transaction.TransactionExists(ctx, txn.Hash)
-	if err != nil {
-		logging.Logger.Error("put transaction - existing checking failed", zap.Error(err), zap.String("txn", txn.Hash))
-		return nil, common.NewErrInternal("failed to check transaction existence")
-	}
-
+	exist := transaction.TransactionExists(txn.Hash)
 	if exist {
 		// return if already exist
 		return txn, nil
 	}
 
-	err = txn.Validate(ctx)
+	err := txn.Validate(ctx)
 	if err != nil {
 		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
