@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"go.uber.org/zap"
@@ -21,6 +22,11 @@ type EntityProvider func() Entity
 * Useful for GET operation where the input is coming via url parameters
  */
 type JSONEntityReqResponderF func(ctx context.Context, entity Entity) (interface{}, error)
+
+const (
+	RelayClients = "Relay-Clients"
+	TxnRelayTTL  = "Txn-Relay-TTL"
+)
 
 /*ToJSONEntityReqResponse - Similar to ToJSONReqResponse except it takes an EntityProvider
 * that returns an interface into which the incoming request json is unmarshalled
@@ -50,6 +56,27 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 		}
 
 		ctx := r.Context()
+		// rcs := r.Header.Get(RelayClients)
+		// if len(rcs) > 0 {
+		// 	cs := strings.Split(rcs, ",")
+		// 	csm := make(map[string]struct{}, len(cs))
+		// 	for _, c := range cs {
+		// 		csm[c] = struct{}{}
+		// 	}
+		// 	ctx = context.WithValue(ctx, RelayClients, csm)
+		// }
+
+		ttl := r.Header.Get(TxnRelayTTL)
+		if len(ttl) > 0 {
+			tv, err := strconv.Atoi(ttl)
+			if err != nil {
+				logging.Logger.Error("invalid ttl", zap.Error(err))
+				http.Error(w, "Invalid TTL", 400)
+				return
+			}
+			ctx = context.WithValue(ctx, TxnRelayTTL, tv)
+		}
+
 		rsp, err := handler(ctx, entity)
 		common.Respond(w, r, rsp, err)
 	}

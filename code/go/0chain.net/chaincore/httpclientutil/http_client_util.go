@@ -139,12 +139,49 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	return body, err
 }
 
+func SendPostRequestTxn(url string, data []byte, ttl int64) ([]byte, error) {
+	req, err := NewHTTPRequest(http.MethodPost, url, data, "", "")
+	if err != nil {
+		logging.N2n.Info("SendPostRequest failure", zap.String("url", url))
+		return nil, err
+	}
+
+	req.Header.Set(datastore.TxnRelayTTL, strconv.FormatInt(ttl, 10))
+
+	resp, err := httpClient.Do(req)
+	if resp == nil || err != nil {
+		logging.N2n.Error("Failed after multiple retries",
+			zap.String("url", url),
+			zap.Error(err))
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	return body, err
+}
+
 // SendTransaction send a transaction
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, u := range urls {
 		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
 		go func(url string) {
 			if _, err := sendTransactionToURL(url, txn, ID, pkey, nil); err != nil {
+				logging.Logger.Error("send transaction failed",
+					zap.String("url", url),
+					zap.Error(err))
+				logging.N2n.Error("send transaction failed",
+					zap.String("url", url),
+					zap.Error(err))
+			}
+		}(txnURL)
+	}
+}
+
+func SendTransactionWithTTL(txn *Transaction, urls []string, ttl int64) {
+	for _, u := range urls {
+		txnURL := fmt.Sprintf("%v/%v", u, txnSubmitURL)
+		go func(url string) {
+			if _, err := sendTransactionToURLTTL(url, txn, ttl); err != nil {
 				logging.Logger.Error("send transaction failed",
 					zap.String("url", url),
 					zap.Error(err))
@@ -257,6 +294,16 @@ func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, 
 	}
 
 	return SendPostRequest(url, jsObj, ID, pkey, nil)
+}
+
+func sendTransactionToURLTTL(url string, txn *Transaction, ttl int64) ([]byte, error) {
+	jsObj, err := json.Marshal(txn)
+	if err != nil {
+		logging.Logger.Error("Error in serializing the transaction", zap.String("error", err.Error()), zap.Any("transaction", txn))
+		return nil, err
+	}
+
+	return SendPostRequestTxn(url, jsObj, ttl)
 }
 
 // MakeGetRequest make a generic get request. URL should have complete path.

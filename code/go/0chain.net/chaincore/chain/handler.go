@@ -1477,25 +1477,31 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	// broadcast to other miners
 	go func() {
-		// get miners
-		mb := sc.GetCurrentMagicBlock()
-		// mns := sc.GetCurrentMagicBlock().Miners.Nodes
-		// urls := make([]string, 0, len(mns))
-		// for _, mn := range mns {
-		// 	if mn.ID == node.Self.Underlying().ID {
-		// 		continue
-		// 	}
-		// 	urls = append(urls, fmt.Sprintf("https://%s/%s", mn.Host, mn.Path))
-		// }
+		var (
+			mb        = sc.GetCurrentMagicBlock()
+			minerUrls = mb.Miners.N2NURLs()
+			ttlv      = ctx.Value(datastore.TxnRelayTTL)
+		)
 
-		var minerUrls = mb.Miners.N2NURLs()
+		var ttl int
+		if ttlv != nil {
+			ttl = ttlv.(int)
+			if ttl == 0 {
+				// do not rebroadcast if ttl is 0
+				return
+			}
+		} else {
+			// txn is received from clients
+			ttl = 0
+		}
+
 		num := len(minerUrls)
 		rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle(num, func(i, j int) {
 			minerUrls[i], minerUrls[j] = minerUrls[j], minerUrls[i]
 		})
 
-		k := 7
-		if num < 7 {
+		k := 9
+		if num < 9 {
 			k = num
 		}
 

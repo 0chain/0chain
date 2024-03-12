@@ -68,10 +68,11 @@ type Transaction struct {
 	Fee             currency.Coin    `json:"transaction_fee" msgpack:"f"`
 	Nonce           int64            `json:"transaction_nonce" msgpack:"n"`
 
-	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
-	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
-	OutputHash        string `json:"txn_output_hash" msgpack:"oh"`
-	Status            int    `json:"transaction_status" msgpack:"sot"`
+	TransactionType   int      `json:"transaction_type" msgpack:"tt"`
+	TransactionOutput string   `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
+	OutputHash        string   `json:"txn_output_hash" msgpack:"oh"`
+	Status            int      `json:"transaction_status" msgpack:"sot"`
+	RelayClients      []string `json:"-" msgpack:"-"`
 }
 
 type FeeStats struct {
