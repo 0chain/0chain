@@ -211,6 +211,8 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	// set LFB and LFMB of the Chain, add the block to internal Chain's map
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb, bl.r)
 
+	logging.Logger.Info("Jayash - setupLatestBlocks", zap.Int64("round", bl.lfb.Round), zap.String("hash", bl.lfb.Hash))
+
 	// check is it notarized
 	err = sc.VerifyBlockNotarization(ctx, bl.lfb)
 	if err != nil {

@@ -285,6 +285,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		logging.Logger.Error("can't manage partitions")
 	}
 
+	logging.Logger.Info("Jayash add events worker started")
+
 	for {
 		es := <-edb.eventsChannel
 		func() {
