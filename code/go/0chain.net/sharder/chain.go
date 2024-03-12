@@ -503,7 +503,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 		return nil // the nil is 'use genesis'
 	}
 
-	logging.Logger.Debug("load_lfb, finish walk down looking")
+	logging.Logger.Debug("load_lfb, finish walk down looking", zap.Int64("round", bl.lfb.Round), zap.String("block", bl.lfb.Hash))
 	return bl
 }
 
