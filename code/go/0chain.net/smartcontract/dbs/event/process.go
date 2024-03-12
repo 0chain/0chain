@@ -278,38 +278,29 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 }
 
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
-	//var gs *Snapshot
-	//p := int64(-1)
-	//err := edb.managePartitions(0)
-	//if err != nil {
-	//	logging.Logger.Error("can't manage partitions")
-	//}
+	var gs *Snapshot
+	p := int64(-1)
+	err := edb.managePartitions(0)
+	if err != nil {
+		logging.Logger.Error("can't manage partitions")
+	}
 
 	for {
 		es := <-edb.eventsChannel
-		func() {
-			var commit bool
-			defer func() {
-				logging.Logger.Info("Jayash processing events", zap.Any("commit", commit), zap.Any("round", es.round), zap.Any("block", es.block), zap.Any("block size", es.blockSize))
-				es.done <- commit
-			}()
 
-			logging.Logger.Info("Jayash processing events", zap.Any("round", es.round), zap.Any("block", es.block), zap.Any("block size", es.blockSize))
+		logging.Logger.Info("Jayash processing events", zap.Any("round", es.round), zap.Any("block", es.block), zap.Any("block size", es.blockSize))
 
-			commit = false
+		es.done <- false
+		return
+
+		s, err := Work(ctx, gs, es, &p)
+		if err != nil {
+			logging.Logger.Error("process events", zap.Error(err))
 			return
-
-			//s, err := Work(ctx, gs, es, &p)
-			//if err != nil {
-			//	logging.Logger.Error("process events", zap.Error(err))
-			//	commit = false
-			//	return
-			//}
-			//commit = true
-			//if s != nil {
-			//	gs = s
-			//}
-		}()
+		}
+		if s != nil {
+			gs = s
+		}
 	}
 }
 
