@@ -294,8 +294,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			}()
 
 			logging.Logger.Info("Jayash - addEventsWorker", zap.Any("round", es.round))
-			commit = false
-			return
 
 			s, err := Work(ctx, gs, es, &p)
 			if err != nil {
@@ -375,6 +373,8 @@ func (edb *EventDb) WorkEvents(
 	}
 
 	if *currentPartition < blockEvents.round/edb.settings.PartitionChangePeriod {
+		logging.Logger.Info("work events - partition change period", zap.Int64("round", blockEvents.round))
+		return nil, errors.New("partition change period")
 		if err := edb.managePartitions(blockEvents.round); err != nil {
 			return nil, err
 		}
