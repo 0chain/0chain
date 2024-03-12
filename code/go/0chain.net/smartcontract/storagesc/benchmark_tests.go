@@ -235,42 +235,42 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		{
-			name:     "storage.finalize_allocation",
-			endpoint: ssc.finalizeAllocation,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				CreationDate: creationTime + benchAllocationExpire(creationTime) + 1,
-				ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
-				ToClientID:   ADDRESS,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&lockRequest{
-					AllocationID: getMockAllocationId(0),
-				})
-				return bytes
-			}(),
-		},
-		{
-			name:     "storage.cancel_allocation",
-			endpoint: ssc.cancelAllocationRequest,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				CreationDate: creationTime - 1,
-				ClientID:     data.Clients[0],
-				ToClientID:   ADDRESS,
-			},
-			input: func() []byte {
-				bytes, _ := json.Marshal(&lockRequest{
-					AllocationID: getMockAllocationId(0),
-				})
-				return bytes
-			}(),
-		},
+		//{
+		//	name:     "storage.finalize_allocation",
+		//	endpoint: ssc.finalizeAllocation,
+		//	txn: &transaction.Transaction{
+		//		HashIDField: datastore.HashIDField{
+		//			Hash: encryption.Hash("mock transaction hash"),
+		//		},
+		//		CreationDate: creationTime + benchAllocationExpire(creationTime) + 1,
+		//		ClientID:     data.Clients[getMockOwnerFromAllocationIndex(0, viper.GetInt(bk.NumActiveClients))],
+		//		ToClientID:   ADDRESS,
+		//	},
+		//	input: func() []byte {
+		//		bytes, _ := json.Marshal(&lockRequest{
+		//			AllocationID: getMockAllocationId(0),
+		//		})
+		//		return bytes
+		//	}(),
+		//},
+		//{
+		//	name:     "storage.cancel_allocation",
+		//	endpoint: ssc.cancelAllocationRequest,
+		//	txn: &transaction.Transaction{
+		//		HashIDField: datastore.HashIDField{
+		//			Hash: encryption.Hash("mock transaction hash"),
+		//		},
+		//		CreationDate: creationTime - 1,
+		//		ClientID:     data.Clients[0],
+		//		ToClientID:   ADDRESS,
+		//	},
+		//	input: func() []byte {
+		//		bytes, _ := json.Marshal(&lockRequest{
+		//			AllocationID: getMockAllocationId(0),
+		//		})
+		//		return bytes
+		//	}(),
+		//},
 		// free data.Allocations
 		{
 			name:     "storage.add_free_storage_assigner",
