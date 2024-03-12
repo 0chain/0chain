@@ -294,6 +294,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 			if err != nil {
 				logging.Logger.Error("process events", zap.Error(err))
 				commit = false
+				continue
 			}
 			commit = true
 			if s != nil {
