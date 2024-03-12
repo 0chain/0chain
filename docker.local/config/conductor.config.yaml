@@ -614,7 +614,7 @@ commands:
         required: true
   backup_blobber_data:
     work_dir: "../"
-    exec: "tar -czvf $provider_data $path_data && tar -czvf $provider_files $path_files"
+    exec: "tar -czvf - $provider_data $path_data && tar -czvf - $provider_files $path_files"
     args:
       path_data:
         required: true
@@ -626,7 +626,7 @@ commands:
         required: true          
   restore_blobber_data:
     work_dir: "../"
-    cmd: "tar -xzvf $provider_data -C $path_data && tar -xzvf $provider_files -C $path_files"
+    cmd: "tar -xzvf - $provider_data -C $path_data && tar -xzvf - $provider_files -C $path_files"
     args:
       path_data:
         required: true
