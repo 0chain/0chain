@@ -285,33 +285,23 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 		logging.Logger.Error("can't manage partitions")
 	}
 
-	// Channel to signal when an event is processed
-	processed := make(chan bool)
-
 	for {
 		es := <-edb.eventsChannel
-		func() {
-			var commit bool
-			defer func() {
-				es.done <- commit
-				// Signal that event processing is completed
-				processed <- true
-			}()
+		var commit bool
 
+		for !commit {
 			s, err := Work(ctx, gs, es, &p)
 			if err != nil {
 				logging.Logger.Error("process events", zap.Error(err))
 				commit = false
-				return
 			}
 			commit = true
 			if s != nil {
 				gs = s
 			}
-		}()
+		}
 
-		// Wait until the event is processed before moving to the next one
-		<-processed
+		es.done <- true
 	}
 }
 
