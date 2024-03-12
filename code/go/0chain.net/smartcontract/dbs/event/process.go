@@ -287,8 +287,8 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 
 	for {
 		es := <-edb.eventsChannel
-		var commit bool
 
+		commit := false
 		for !commit {
 			s, err := Work(ctx, gs, es, &p)
 			if err != nil {
