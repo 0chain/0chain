@@ -1479,7 +1479,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	go func() {
 		var (
 			mb        = sc.GetCurrentMagicBlock()
-			minerUrls = mb.Miners.HostURLs()
+			minerUrls = mb.Miners.N2NURLs()
 			ttlv      = ctx.Value(datastore.TxnRelayTTL)
 		)
 

@@ -321,7 +321,11 @@ func (n *Node) GetURLBase() string {
 
 /*GetN2NURLBase - get the end point base for n2n communication */
 func (n *Node) GetN2NURLBase() string {
-	return fmt.Sprintf("http://%v:%v", n.N2NHost, n.Port)
+	if n.Path != "" {
+		return fmt.Sprintf("https://%v/%v", n.N2NHost, n.Path)
+	} else {
+		return fmt.Sprintf("http://%v:%v", n.N2NHost, n.Port)
+	}
 }
 
 /*GetStatusURL - get the end point where to ping for the status */
