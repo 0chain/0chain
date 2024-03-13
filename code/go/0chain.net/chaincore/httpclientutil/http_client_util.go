@@ -127,6 +127,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		logging.N2n.Info("SendPostRequest failure", zap.String("url", url))
 		return nil, err
 	}
+	req.Header.Set(datastore.TxnRelayTTL, "0")
 	resp, err := httpClient.Do(req)
 	if resp == nil || err != nil {
 		logging.N2n.Error("Failed after multiple retries",
