@@ -1,12 +1,12 @@
 package event
 
 import (
-	"errors"
-
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
+	"errors"
 	"golang.org/x/net/context"
 	"gorm.io/gorm/clause"
+	"log"
 )
 
 type Event struct {
@@ -70,6 +70,14 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 }
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
+	// Log current instance deadline
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		log.Printf("Jayash Current instance has no deadline\n")
+	} else {
+		log.Printf("Jayash Current instance deadline: %v\n", deadline)
+	}
+
 	if edb.Store != nil && len(events.events) > 0 {
 		return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
 	}
