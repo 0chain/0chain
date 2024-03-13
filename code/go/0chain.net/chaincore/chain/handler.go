@@ -1483,12 +1483,16 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			ttlv      = ctx.Value(datastore.TxnRelayTTL)
 		)
 
+		sort.Slice(minerUrls, func(i, j int) bool {
+			return minerUrls[i] < minerUrls[j]
+		})
+
 		var ttl int
 		if ttlv != nil {
 			ttl = ttlv.(int)
 			if ttl == 0 {
 				// do not rebroadcast if ttl is 0
-				logging.Logger.Debug("transaction relay ttl is 0 - do not rebroadcast")
+				logging.Logger.Debug("transaction relay ttl is 0 - do not rebroadcast", zap.String("txn", txn.Hash))
 				return
 			} else {
 				logging.Logger.Debug("invalid transaction relay ttl")
@@ -1505,8 +1509,8 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			minerUrls[i], minerUrls[j] = minerUrls[j], minerUrls[i]
 		})
 
-		k := 5
-		if num < 5 {
+		k := 9
+		if num < 9 {
 			k = num
 		}
 
