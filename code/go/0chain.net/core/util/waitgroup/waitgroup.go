@@ -22,11 +22,11 @@ type WaitGroupSync struct {
 }
 
 // New creates a new WaitGroupSync instance
-func New() *WaitGroupSync {
+func New(taskNum int) *WaitGroupSync {
 	return &WaitGroupSync{
 		wg:     &sync.WaitGroup{},
 		panicC: make(chan interface{}, 1),
-		errC:   make(chan error, 1),
+		errC:   make(chan error, taskNum),
 	}
 }
 
@@ -40,12 +40,13 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 				wgs.panicC <- r
 			}
 		}()
-		if err := f(); err != nil {
-			select {
-			case wgs.errC <- err:
-			default:
-			}
-		}
+		// err := f()
+		wgs.errC <- f()
+		// 	select {
+		// 	case wgs.errC <- err:
+		// 	default:
+		// 	}
+		// }
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("Run slow on", zap.String("name", name),
@@ -60,17 +61,29 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 // we can check whether failure or panic happened before continue.
 func (wgs *WaitGroupSync) Wait() error {
 	wgs.wg.Wait()
+	close(wgs.errC)
 	// get error from panic channel first, and from err channel otherwise or nil
 	select {
 	case err := <-wgs.panicC:
 		return common.NewErrorf(errPanicCode, "%v", err)
 	default:
-		select {
-		case err := <-wgs.errC:
-			return err
-		default:
-			return nil
+		for {
+			err, ok := <-wgs.errC
+			if !ok {
+				return nil
+			}
+
+			if err != nil {
+				return err
+			}
 		}
+		// select {
+		// case err := <-wgs.errC:
+		// 	return err
+		// case <-time.After(10 * time.Second):
+		// 	logging.Logger.Debug("")
+		// 	return nil
+		// }
 	}
 }
 
