@@ -280,10 +280,10 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	var gs *Snapshot
 	p := int64(-1)
-	err := edb.managePartitions(0)
-	if err != nil {
-		logging.Logger.Error("can't manage partitions")
-	}
+	//err := edb.managePartitions(0)
+	//if err != nil {
+	//	logging.Logger.Error("can't manage partitions")
+	//}
 
 	for {
 		es := <-edb.eventsChannel
