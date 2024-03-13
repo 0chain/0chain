@@ -1488,10 +1488,15 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			ttl = ttlv.(int)
 			if ttl == 0 {
 				// do not rebroadcast if ttl is 0
+				logging.Logger.Debug("transaction relay ttl is 0 - do not rebroadcast")
 				return
+			} else {
+				logging.Logger.Debug("invalid transaction relay ttl")
+				panic("invalid transaction ttl")
 			}
 		} else {
 			// txn is received from clients
+			logging.Logger.Debug("transaction relay ttl is not set - set to default")
 			ttl = 0
 		}
 
@@ -1500,8 +1505,8 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			minerUrls[i], minerUrls[j] = minerUrls[j], minerUrls[i]
 		})
 
-		k := 9
-		if num < 9 {
+		k := 5
+		if num < 5 {
 			k = num
 		}
 
