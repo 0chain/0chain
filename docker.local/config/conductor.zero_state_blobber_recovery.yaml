@@ -113,6 +113,9 @@ tests:
       - start: ['blobber-1']
       - wait_round:
           shift: 100  # Waits for Blobber to recover, re-sync, and resume operations
+      - command:
+          name: 'repair_allocation'
+          timeout: '15m'          
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
