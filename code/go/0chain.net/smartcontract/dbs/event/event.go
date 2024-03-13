@@ -4,9 +4,11 @@ import (
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"errors"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"gorm.io/gorm/clause"
-	"log"
+	"time"
 )
 
 type Event struct {
@@ -70,12 +72,11 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 }
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
-	// Log current instance deadline
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		log.Printf("Jayash Current instance has no deadline\n")
+		logging.Logger.Info("Current instance has no deadline")
 	} else {
-		log.Printf("Jayash Current instance deadline: %v\n", deadline)
+		logging.Logger.Info("Jayash Current instance deadline: %v\n", zap.Any("deadline", deadline), zap.Any("time from now", deadline.Sub(time.Now())))
 	}
 
 	if edb.Store != nil && len(events.events) > 0 {
