@@ -388,7 +388,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	ssFTs = time.Now()
 
 	var (
-		wg          = waitgroup.New()
+		wg          = waitgroup.New(10)
 		deletedNode = fb.ClientState.GetDeletes()
 		sns         = gStateNodeStat.Inc(int64(changeCount))
 	)
@@ -531,6 +531,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
+	wg = waitgroup.New(1)
 	wg.Run("finalize block - delete dead blocks", fb.Round, func() error {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 		pfb := fb
