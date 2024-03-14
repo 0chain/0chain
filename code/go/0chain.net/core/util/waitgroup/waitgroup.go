@@ -1,7 +1,6 @@
 package waitgroup
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -43,21 +42,10 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 		}()
 		err := f()
 		if err != nil {
-			err = fmt.Errorf("%s error: %v", name, err)
 			logging.Logger.Error("Run error", zap.String("name", name), zap.Error(err))
 			wgs.errC <- err
-		} else {
-			logging.Logger.Debug("Run success:", zap.String("name", name))
 		}
-		//  else {
-		// logging.Logger.Error("Run success", zap.String("name", name))
-		// wgs.errC <- nil
-		// }
-		// 	select {
-		// 	case wgs.errC <- err:
-		// 	default:
-		// 	}
-		// }
+
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("Run slow on", zap.String("name", name),
@@ -72,35 +60,18 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 // we can check whether failure or panic happened before continue.
 func (wgs *WaitGroupSync) Wait() error {
 	wgs.wg.Wait()
-	// close(wgs.errC)
 	// get error from panic channel first, and from err channel otherwise or nil
 	select {
 	case err := <-wgs.panicC:
 		return common.NewErrorf(errPanicCode, "%v", err)
-	case err := <-wgs.errC:
-		logging.Logger.Error("wait group error", zap.Error(err))
-		return err
 	default:
-		// for {
-		// 	err, ok := <-wgs.errC
-		// 	if !ok {
-		// 		logging.Logger.Debug("wait group no error")
-		// 		return nil
-		// 	}
-
-		// 	if err != nil {
-		// 		logging.Logger.Error("wait group error", zap.Error(err))
-		// 		return err
-		// 	}
-		// }
-		// select {
-		// case err := <-wgs.errC:
-		// 	logging.Logger.Error("wait group error", zap.Error(err))
-		// 	return err
-		// default:
-		logging.Logger.Debug("wait group default")
-		return nil
-		// }
+		select {
+		case err := <-wgs.errC:
+			logging.Logger.Error("wait group error", zap.Error(err))
+			return err
+		default:
+			return nil
+		}
 	}
 }
 
