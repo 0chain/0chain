@@ -46,6 +46,8 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 			err = fmt.Errorf("%s error: %v", name, err)
 			logging.Logger.Error("Run error", zap.String("name", name), zap.Error(err))
 			wgs.errC <- err
+		} else {
+			logging.Logger.Debug("Run success:", zap.String("name", name))
 		}
 		//  else {
 		// logging.Logger.Error("Run success", zap.String("name", name))
