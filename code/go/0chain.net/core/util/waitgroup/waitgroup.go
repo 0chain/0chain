@@ -70,10 +70,12 @@ func (wgs *WaitGroupSync) Wait() error {
 		for {
 			err, ok := <-wgs.errC
 			if !ok {
+				logging.Logger.Debug("wait group no error")
 				return nil
 			}
 
 			if err != nil {
+				logging.Logger.Error("wait group error", zap.Error(err))
 				return err
 			}
 		}
