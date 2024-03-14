@@ -438,20 +438,16 @@ func (edb *EventDb) managePartitionsWorker(ctx context.Context) {
 				return
 			}
 		case current := <-edb.partitionChan:
-			logging.Logger.Info("managing partitions", zap.Int64("number", current))
-			for i := current; i < current+10; i++ { //create 10 ahead
-				go func(num int64) {
-					if err := edb.AddPartitions(num); err != nil {
-						logging.Logger.Error("creating partitions", zap.Int64("number", num), zap.Error(err))
-					}
-				}(i)
-			}
 			go func() {
+				logging.Logger.Info("managing partitions", zap.Int64("number", current))
+				for i := current; i < current+10; i++ { //create 10 ahead
+					if err := edb.AddPartitions(current); err != nil {
+						logging.Logger.Error("creating partitions", zap.Int64("number", current), zap.Error(err))
+					}
+				}
 				if err := edb.dropPartitions(current); err != nil {
 					logging.Logger.Error("dropping partitions", zap.Int64("number", current), zap.Error(err))
 				}
-			}()
-			go func() {
 				edb.movePartitions(current)
 			}()
 		}
