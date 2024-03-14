@@ -68,6 +68,7 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
+	partitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -112,7 +113,7 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
 		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
 		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
-		Slowtablespace: edb.dbConfig.Slowtablespace,
+		Slowtablespace:  edb.dbConfig.Slowtablespace,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
