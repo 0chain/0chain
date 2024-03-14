@@ -22,11 +22,11 @@ type WaitGroupSync struct {
 }
 
 // New creates a new WaitGroupSync instance
-func New() *WaitGroupSync {
+func New(taskNum int) *WaitGroupSync {
 	return &WaitGroupSync{
 		wg:     &sync.WaitGroup{},
 		panicC: make(chan interface{}, 1),
-		errC:   make(chan error, 1),
+		errC:   make(chan error, taskNum),
 	}
 }
 
@@ -35,17 +35,17 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 	ts := time.Now()
 	go func() {
 		defer func() {
-			wgs.wg.Done()
 			if r := recover(); r != nil {
 				wgs.panicC <- r
 			}
+			wgs.wg.Done()
 		}()
-		if err := f(); err != nil {
-			select {
-			case wgs.errC <- err:
-			default:
-			}
+		err := f()
+		if err != nil {
+			logging.Logger.Error("Run error", zap.String("name", name), zap.Error(err))
+			wgs.errC <- err
 		}
+
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("Run slow on", zap.String("name", name),
@@ -67,6 +67,7 @@ func (wgs *WaitGroupSync) Wait() error {
 	default:
 		select {
 		case err := <-wgs.errC:
+			logging.Logger.Error("wait group error", zap.Error(err))
 			return err
 		default:
 			return nil
