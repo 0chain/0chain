@@ -39,7 +39,7 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
-		partitionChan: make(chan int64, 1),
+		partitionChan: make(chan int64, 100),
 		settings:      settings,
 	}
 
@@ -55,7 +55,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
-		partitionChan: make(chan int64, 1),
+		partitionChan: make(chan int64, 100),
 		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
@@ -84,8 +84,10 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
-		dbConfig: edb.dbConfig,
-		settings: edb.settings,
+		dbConfig:      edb.dbConfig,
+		settings:      edb.settings,
+		eventsChannel: edb.eventsChannel,
+		partitionChan: edb.partitionChan,
 	}
 	return &edbTx, nil
 }

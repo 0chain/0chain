@@ -369,7 +369,9 @@ func (edb *EventDb) WorkEvents(
 	}
 
 	currentPartition := blockEvents.round / edb.settings.PartitionChangePeriod
-	edb.managePartitionsAsync(currentPartition)
+	if blockEvents.round%edb.settings.PartitionChangePeriod == 0 {
+		edb.managePartitionsAsync(currentPartition)
+	}
 
 	var err error
 	if err = edb.addEvents(ctx, blockEvents); err != nil {
@@ -427,7 +429,10 @@ func (edb *EventDb) ManagePartitions(round int64) error {
 }
 
 func (edb *EventDb) managePartitionsAsync(current int64) {
-	edb.partitionChan <- current
+	go func() {
+		edb.partitionChan <- current
+	}()
+
 }
 
 func (edb *EventDb) managePartitionsWorker(ctx context.Context) {
@@ -441,8 +446,8 @@ func (edb *EventDb) managePartitionsWorker(ctx context.Context) {
 			go func() {
 				logging.Logger.Info("managing partitions", zap.Int64("number", current))
 				for i := current; i < current+10; i++ { //create 10 ahead
-					if err := edb.AddPartitions(current); err != nil {
-						logging.Logger.Error("creating partitions", zap.Int64("number", current), zap.Error(err))
+					if err := edb.AddPartitions(i); err != nil {
+						logging.Logger.Error("creating partitions", zap.Int64("number", i), zap.Error(err))
 					}
 				}
 				if err := edb.dropPartitions(current); err != nil {
