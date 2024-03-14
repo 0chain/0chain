@@ -70,7 +70,7 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 // we can check whether failure or panic happened before continue.
 func (wgs *WaitGroupSync) Wait() error {
 	wgs.wg.Wait()
-	close(wgs.errC)
+	// close(wgs.errC)
 	// get error from panic channel first, and from err channel otherwise or nil
 	select {
 	case err := <-wgs.panicC:
