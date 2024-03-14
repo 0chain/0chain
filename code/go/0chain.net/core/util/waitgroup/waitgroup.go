@@ -1,6 +1,7 @@
 package waitgroup
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -42,12 +43,14 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 		}()
 		err := f()
 		if err != nil {
+			err = fmt.Errorf("%s error: %v", name, err)
 			logging.Logger.Error("Run error", zap.String("name", name), zap.Error(err))
 			wgs.errC <- err
-		} else {
-			// logging.Logger.Error("Run success", zap.String("name", name))
-			wgs.errC <- nil
 		}
+		//  else {
+		// logging.Logger.Error("Run success", zap.String("name", name))
+		// wgs.errC <- nil
+		// }
 		// 	select {
 		// 	case wgs.errC <- err:
 		// 	default:
@@ -72,25 +75,29 @@ func (wgs *WaitGroupSync) Wait() error {
 	select {
 	case err := <-wgs.panicC:
 		return common.NewErrorf(errPanicCode, "%v", err)
+	case err := <-wgs.errC:
+		logging.Logger.Error("wait group error", zap.Error(err))
+		return err
 	default:
-		for {
-			err, ok := <-wgs.errC
-			if !ok {
-				logging.Logger.Debug("wait group no error")
-				return nil
-			}
+		// for {
+		// 	err, ok := <-wgs.errC
+		// 	if !ok {
+		// 		logging.Logger.Debug("wait group no error")
+		// 		return nil
+		// 	}
 
-			if err != nil {
-				logging.Logger.Error("wait group error", zap.Error(err))
-				return err
-			}
-		}
+		// 	if err != nil {
+		// 		logging.Logger.Error("wait group error", zap.Error(err))
+		// 		return err
+		// 	}
+		// }
 		// select {
 		// case err := <-wgs.errC:
+		// 	logging.Logger.Error("wait group error", zap.Error(err))
 		// 	return err
-		// case <-time.After(10 * time.Second):
-		// 	logging.Logger.Debug("")
-		// 	return nil
+		// default:
+		logging.Logger.Debug("wait group default")
+		return nil
 		// }
 	}
 }
