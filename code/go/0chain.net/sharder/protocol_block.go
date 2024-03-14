@@ -48,7 +48,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 	b = b.Clone()
 	fr.Finalize(b)
-	wg := waitgroup.New()
+	wg := waitgroup.New(5)
 	Logger.Info("update finalized block",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
@@ -145,7 +145,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 
 	notifyConductor(b)
-	
+
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
 }
