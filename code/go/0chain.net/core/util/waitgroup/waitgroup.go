@@ -35,13 +35,19 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 	ts := time.Now()
 	go func() {
 		defer func() {
-			wgs.wg.Done()
 			if r := recover(); r != nil {
 				wgs.panicC <- r
 			}
+			wgs.wg.Done()
 		}()
-		// err := f()
-		wgs.errC <- f()
+		err := f()
+		if err != nil {
+			logging.Logger.Error("Run error", zap.String("name", name), zap.Error(err))
+			wgs.errC <- err
+		} else {
+			// logging.Logger.Error("Run success", zap.String("name", name))
+			wgs.errC <- nil
+		}
 		// 	select {
 		// 	case wgs.errC <- err:
 		// 	default:
