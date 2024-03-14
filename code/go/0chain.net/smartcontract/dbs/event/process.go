@@ -283,7 +283,6 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	if err != nil {
 		logging.Logger.Error("can't manage partitions")
 	}
-	edb.partitionChan = make(chan int64)
 	edb.managePartitionsWorker(ctx)
 
 	for {
