@@ -406,7 +406,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
 		// err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
-		err = c.stateDB.RecordDeadNodes(deletedNode, fb.Round)
+		er := c.stateDB.RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
 			logging.Logger.Error("finalize block - record dead nodes failed",
 				zap.Int64("round", fb.Round),
