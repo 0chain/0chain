@@ -447,13 +447,10 @@ func (edb *EventDb) managePartitions(round int64) error {
 func (edb *EventDb) movePartitions(round int64) {
 	if err := edb.movePartitionToSlowTableSpace(round, "transactions"); err != nil {
 		logging.Logger.Error("error moving partition", zap.Error(err))
-	} else {
-		logging.Logger.Debug("move transactions partitions success", zap.Int64("round", round))
 	}
+
 	if err := edb.movePartitionToSlowTableSpace(round, "blocks"); err != nil {
 		logging.Logger.Error("error moving partition", zap.Error(err))
-	} else {
-		logging.Logger.Debug("move blocks partitions success", zap.Int64("round", round))
 	}
 }
 
