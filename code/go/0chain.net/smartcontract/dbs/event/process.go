@@ -434,10 +434,6 @@ func (edb *EventDb) ManagePartitions(round int64) error {
 
 func (edb *EventDb) managePartitions(round int64) error {
 	logging.Logger.Info("managing partitions", zap.Int64("round", round))
-	if round > 200 {
-		return errors.New("failed to create even partition")
-	}
-
 	if err := edb.AddPartitions(round); err != nil {
 		return err
 	}
