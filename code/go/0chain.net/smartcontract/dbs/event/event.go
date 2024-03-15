@@ -142,10 +142,15 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
 	if edb.Store != nil && len(events.events) > 0 {
 		filteredEvents := filterEvents(events.events)
-		eventJson, err := json.Marshal(filteredEvents)
+		data := map[string]interface{}{
+			"events": filteredEvents,
+			"round":  events.round,
+		}
+		eventJson, err := json.Marshal(data)
 		if err != nil {
 			logging.Logger.Error("Failed to get unpublished events: ", zap.Error(err))
 		} else {
+
 			if len(filteredEvents) > 0 {
 				broker.PublishToKafka(edb.dbConfig.KafkaTopic, eventJson)
 				logging.Logger.Info("Published message to kafka.")
