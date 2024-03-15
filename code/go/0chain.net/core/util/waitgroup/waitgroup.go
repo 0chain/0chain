@@ -35,18 +35,17 @@ func (wgs *WaitGroupSync) Run(name string, round int64, f func() error) {
 	ts := time.Now()
 	go func() {
 		defer func() {
-			wgs.wg.Done()
 			if r := recover(); r != nil {
 				wgs.panicC <- r
 			}
+			wgs.wg.Done()
 		}()
-		// err := f()
-		wgs.errC <- f()
-		// 	select {
-		// 	case wgs.errC <- err:
-		// 	default:
-		// 	}
-		// }
+		err := f()
+		if err != nil {
+			logging.Logger.Error("Run error", zap.String("name", name), zap.Error(err))
+			wgs.errC <- err
+		}
+
 		du := time.Since(ts)
 		if du.Milliseconds() > 50 {
 			logging.Logger.Debug("Run slow on", zap.String("name", name),
@@ -67,15 +66,12 @@ func (wgs *WaitGroupSync) Wait() error {
 	case err := <-wgs.panicC:
 		return common.NewErrorf(errPanicCode, "%v", err)
 	default:
-		for {
-			err, ok := <-wgs.errC
-			if !ok {
-				return nil
-			}
-
-			if err != nil {
-				return err
-			}
+		select {
+		case err := <-wgs.errC:
+			logging.Logger.Error("wait group error", zap.Error(err))
+			return err
+		default:
+			return nil
 		}
 		// select {
 		// case err := <-wgs.errC:
