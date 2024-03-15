@@ -427,7 +427,22 @@ func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, hash string, round i
 	lfb, err := sc.GetBlockFromStore(r.BlockHash, r.Number)
 	if err != nil {
 		logging.Logger.Error("load_lfb, could not get block from store", zap.Error(err))
-		return nil, fmt.Errorf("load_lfb - could not load lfb block from store: %v", err)
+
+		// get from remote
+		var err error
+		lfb, err = func() (*block.Block, error) {
+			logging.Logger.Debug("load_lfb - get notarized block from sharders")
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			return sc.GetNotarizedBlockFromSharders(ctx, r.BlockHash, r.Number)
+		}()
+
+		if err != nil {
+			return nil, fmt.Errorf("load_lfb - could not load lfb block: %v", err)
+		}
+		// lfb = lfnb
+
+		// return nil, fmt.Errorf("load_lfb - could not load lfb block from store: %v", err)
 	}
 
 	logging.Logger.Debug("load_lfb, got block", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
