@@ -73,13 +73,6 @@ func (wgs *WaitGroupSync) Wait() error {
 		default:
 			return nil
 		}
-		// select {
-		// case err := <-wgs.errC:
-		// 	return err
-		// case <-time.After(10 * time.Second):
-		// 	logging.Logger.Debug("")
-		// 	return nil
-		// }
 	}
 }
 
