@@ -440,9 +440,6 @@ func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, hash string, round i
 		if err != nil {
 			return nil, fmt.Errorf("load_lfb - could not load lfb block: %v", err)
 		}
-		// lfb = lfnb
-
-		// return nil, fmt.Errorf("load_lfb - could not load lfb block from store: %v", err)
 	}
 
 	logging.Logger.Debug("load_lfb, got block", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
