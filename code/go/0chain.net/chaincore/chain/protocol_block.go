@@ -377,6 +377,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		if fb.NotarizedTime != nil {
 			StartToNotarizedTimer.Update(fb.NotarizedTime.Sub(fb.ToTime()))
 		}
+		lfb := c.GetLatestFinalizedBlock()
+		LFBToNotarizedHis.Update(fb.Round - lfb.Round)
 	}
 
 	if err := c.SaveChanges(ctx, fb); err != nil {
