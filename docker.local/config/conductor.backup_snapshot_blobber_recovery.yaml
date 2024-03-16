@@ -89,7 +89,8 @@ tests:
           key: total_rewards
           comparison: gt
           rvalue: 0
-          timeout: "25m"   
+          timeout: "25m"  
+      - sleep: "25m"           
       # Backup blobber data and files
       - command:
           name: "backup_blobber_data"
