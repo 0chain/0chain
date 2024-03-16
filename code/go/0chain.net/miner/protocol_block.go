@@ -1307,6 +1307,7 @@ l:
 		zap.Int("txns", len(b.Txns)),
 		zap.Duration("time", time.Since(start)))
 
+	b.InitializeCreationDate()
 	if err = mc.hashAndSignGeneratedBlock(ctx, b); err != nil {
 		return err
 	}
