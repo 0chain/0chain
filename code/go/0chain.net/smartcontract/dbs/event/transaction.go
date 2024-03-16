@@ -208,9 +208,7 @@ func (edb *EventDb) UpdateTransactionErrors(lastPartition int64) error {
 
 	db := edb.Get()
 
-	// created_at for last day from now
 	lastDay := time.Now().AddDate(0, 0, -1)
-	// convert to string
 	lastDayString := lastDay.Format("2006-01-02 15:04:05")
 
 	// clean up the transaction error table
