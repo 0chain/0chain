@@ -3,6 +3,7 @@ package queueProvider
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/0chain/common/core/logging"
@@ -17,13 +18,14 @@ type KafkaProviderI interface {
 	CloseAllWriters() error
 }
 
+type KafkaProvider struct {
+	Host         string
+	WriteTimeout time.Duration
+	mutex        sync.RWMutex // Mutex for synchronizing access to writers map
+}
+
 // map of kafka writers for each topic
 var writers map[string]*kafka.Writer
-
-type KafkaProvider struct {
-	Host 	   string
-	WriteTimeout time.Duration
-}
 
 func init() {
 	writers = make(map[string]*kafka.Writer)
@@ -36,18 +38,24 @@ func NewKafkaProvider(host string, writeTimeout time.Duration) *KafkaProvider {
 	}
 }
 
-// Publish publishes data to a Kafka topic
-// topic: topic name - not used for now, will be used if we decided to have multiple topics
 func (k *KafkaProvider) PublishToKafka(topic string, message []byte) error {
 	toutCtx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
 	defer cancel()
 
+	k.mutex.RLock()
 	writer := writers[topic]
+	k.mutex.RUnlock()
+
 	if writer == nil {
-		writer = k.createKafkaWriter(topic)
-		writers[topic] = writer
+		k.mutex.Lock()
+		// Check again inside the critical section
+		writer = writers[topic]
+		if writer == nil {
+			writer = k.createKafkaWriter(topic)
+			writers[topic] = writer
+		}
+		k.mutex.Unlock()
 	}
-	
 	err := writer.WriteMessages(toutCtx,
 		kafka.Message{
 			Value: message,
@@ -66,7 +74,10 @@ func (k *KafkaProvider) PublishToKafka(topic string, message []byte) error {
 }
 
 func (k *KafkaProvider) ReconnectWriter(topic string) error {
+	k.mutex.Lock()
 	writer := writers[topic]
+	k.mutex.Unlock()
+
 	if writer == nil {
 		return fmt.Errorf("no kafka writer found for the topic %v", topic)
 	}
@@ -76,12 +87,18 @@ func (k *KafkaProvider) ReconnectWriter(topic string) error {
 		return fmt.Errorf("error closing kafka connection for topic %v: %v", topic, err)
 	}
 
+	k.mutex.Lock()
 	writers[topic] = k.createKafkaWriter(topic)
+	k.mutex.Unlock()
+
 	return nil
 }
 
 func (k *KafkaProvider) CloseWriter(topic string) error {
+	k.mutex.Lock()
 	writer := writers[topic]
+	k.mutex.Unlock()
+
 	if writer == nil {
 		return fmt.Errorf("no kafka writer found for the topic %v", topic)
 	}
@@ -94,6 +111,9 @@ func (k *KafkaProvider) CloseWriter(topic string) error {
 }
 
 func (k *KafkaProvider) CloseAllWriters() error {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
 	for topic, writer := range writers {
 		if err := writer.Close(); err != nil {
 			logging.Logger.Error("error closing kafka connection", zap.String("topic", topic), zap.Error(err))
@@ -104,10 +124,10 @@ func (k *KafkaProvider) CloseAllWriters() error {
 
 func (k *KafkaProvider) createKafkaWriter(topic string) *kafka.Writer {
 	return &kafka.Writer{
-		Addr:         kafka.TCP(k.Host),
-		Topic:        topic,
+		Addr:                   kafka.TCP(k.Host),
+		Topic:                  topic,
 		AllowAutoTopicCreation: true,
-		WriteTimeout: k.WriteTimeout,
-		Async: 	  true,
+		WriteTimeout:           k.WriteTimeout,
+		Async:                  true,
 	}
 }
