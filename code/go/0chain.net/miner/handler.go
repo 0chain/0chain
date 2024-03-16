@@ -71,6 +71,9 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Block Finalization Statistics (Start to Finish)</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Block Finalization Statistics (Start to Notarized)</h3>")
+	diagnostics.WriteTimerStatistics(w, c, chain.StartToNotarizedTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td colspan='2'>")
