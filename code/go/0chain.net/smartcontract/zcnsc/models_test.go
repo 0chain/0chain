@@ -1,12 +1,14 @@
 package zcnsc_test
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 
@@ -24,6 +26,7 @@ import (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	logging.Logger = zap.NewNop()
+	common.SetupRootContext(context.Background())
 }
 
 func Test_ShouldSign(t *testing.T) {
