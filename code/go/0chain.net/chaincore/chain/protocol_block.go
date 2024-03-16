@@ -374,6 +374,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 	if time.Since(fb.ToTime()) < 100*time.Second {
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
+		if fb.NotarizedTime != nil {
+			StartToNotarizedTimer.Update(fb.NotarizedTime.Sub(fb.ToTime()))
+		}
 	}
 
 	if err := c.SaveChanges(ctx, fb); err != nil {

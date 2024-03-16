@@ -170,7 +170,8 @@ type Block struct {
 	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 	// StateChangesCount represents the state changes number in client state of current block.
 	// this will be used to verify the state changes acquire from remote
-	StateChangesCount int `json:"state_changes_count"`
+	StateChangesCount int        `json:"state_changes_count"`
+	NotarizedTime     *time.Time `json:"-" msgpack:"-"`
 }
 
 // NewBlock - create a new empty block

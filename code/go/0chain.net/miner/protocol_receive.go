@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -650,7 +649,9 @@ func (mc *Chain) ProgressOnNotarization(notRound *Round) {
 		//TODO implement round centric context, that is cancelled when transition to the next happens
 		nb := notRound.GetHeaviestNotarizedBlock()
 		if nb != nil {
-			chain.StartToNotarizedTimer.UpdateSince(nb.ToTime())
+			tm := time.Now()
+			nb.NotarizedTime = &tm
+			// chain.StartToNotarizedTimer.UpdateSince(nb.ToTime())
 		}
 		curRound := mc.GetMinerRound(curNumber)
 		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
