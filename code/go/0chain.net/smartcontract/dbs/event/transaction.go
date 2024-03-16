@@ -214,14 +214,14 @@ func (edb *EventDb) UpdateTransactionErrors(lastPartition int64) error {
 	lastDayString := lastDay.Format("2006-01-02 15:04:05")
 
 	// clean up the transaction error table
-	err := db.Exec("DELETE FROM transaction_errors WHERE created_at < NOW() - INTERVAL '1 day'").Error
+	err := db.Exec("DELETE FROM transaction_errors WHERE created_at < ?", lastDayString).Error
 	if err != nil {
 		return err
 	}
 
 	if dbTxn := db.Exec(fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = ? and created_at > ?"+
-		"GROUP BY transaction_output", lastPartition), 2, lastDayString); dbTxn.Error != nil {
+		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = 2"+
+		"GROUP BY transaction_output", lastPartition)); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
 		return dbTxn.Error
