@@ -52,6 +52,11 @@ func (mc *Chain) startMessageWorker(ctx context.Context) {
 				break
 			}
 
+			if msg.Type == MessageVerificationTicket {
+				protocol.HandleVerificationTicketMessage(ctx, msg)
+				continue
+			}
+
 			_ = taskqueue.Execute(taskqueue.Common, func() error {
 				func(bmsg *BlockMessage) {
 					ts := time.Now()
