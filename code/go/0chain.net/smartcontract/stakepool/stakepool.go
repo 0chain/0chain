@@ -454,6 +454,9 @@ func (sp *StakePool) DistributeRewardsRandN(
 
 	valueLeft := value - serviceCharge
 	if valueLeft == 0 {
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -464,6 +467,9 @@ func (sp *StakePool) DistributeRewardsRandN(
 	}
 
 	if stake == 0 {
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -625,6 +631,9 @@ func (sp *StakePool) DistributeRewards(
 
 	valueLeft := value - serviceCharge
 	if valueLeft == 0 {
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -634,6 +643,9 @@ func (sp *StakePool) DistributeRewards(
 		return err
 	}
 	if stake == 0 {
+		if err := spUpdate.Emit(event.TagStakePoolReward, balances); err != nil {
+			return err
+		}
 		return fmt.Errorf("no stake")
 	}
 
