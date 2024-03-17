@@ -37,7 +37,6 @@ func NewKafkaProvider(host string, writeTimeout time.Duration) *KafkaProvider {
 		WriteTimeout: writeTimeout,
 	}
 }
-
 func (k *KafkaProvider) PublishToKafka(topic string, message []byte) error {
 	toutCtx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
 	defer cancel()
@@ -47,14 +46,13 @@ func (k *KafkaProvider) PublishToKafka(topic string, message []byte) error {
 	k.mutex.RUnlock()
 
 	if writer == nil {
-		k.mutex.Lock()
-		// Check again inside the critical section
+		k.mutex.Lock() // Upgrade to write lock
+		defer k.mutex.Unlock()
 		writer = writers[topic]
 		if writer == nil {
 			writer = k.createKafkaWriter(topic)
 			writers[topic] = writer
 		}
-		k.mutex.Unlock()
 	}
 	err := writer.WriteMessages(toutCtx,
 		kafka.Message{
@@ -75,9 +73,8 @@ func (k *KafkaProvider) PublishToKafka(topic string, message []byte) error {
 
 func (k *KafkaProvider) ReconnectWriter(topic string) error {
 	k.mutex.Lock()
+	defer k.mutex.Unlock()
 	writer := writers[topic]
-	k.mutex.Unlock()
-
 	if writer == nil {
 		return fmt.Errorf("no kafka writer found for the topic %v", topic)
 	}
@@ -87,10 +84,7 @@ func (k *KafkaProvider) ReconnectWriter(topic string) error {
 		return fmt.Errorf("error closing kafka connection for topic %v: %v", topic, err)
 	}
 
-	k.mutex.Lock()
 	writers[topic] = k.createKafkaWriter(topic)
-	k.mutex.Unlock()
-
 	return nil
 }
 
