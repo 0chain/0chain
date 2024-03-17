@@ -85,14 +85,18 @@ func (mc *Chain) sendVerificationTicket(ctx context.Context, b *block.Block,
 		m2m = mb.Miners
 	)
 
-	if mc.VerificationTicketsTo() == chain.Generator &&
-		b.MinerID != node.Self.Underlying().GetKey() {
-
+	// if mc.VerificationTicketsTo() == chain.Generator &&
+	// b.MinerID != node.Self.Underlying().GetKey() {
+	if b.MinerID != node.Self.Underlying().GetKey() {
 		if _, err := m2m.SendTo(ctx, VerificationTicketSender(bvt), b.MinerID); err != nil {
 			logging.Logger.Error("send verification ticket failed", zap.Error(err))
 		}
 		return
 	}
 
-	m2m.SendAll(ctx, VerificationTicketSender(bvt))
+	// ts := time.Now()
+	// m2m.SendAll(ctx, VerificationTicketSender(bvt))
+	// logging.Logger.Debug("send verification tickets to all miners success",
+	// 	zap.String("block", b.Hash),
+	// 	zap.Any("duration", time.Since(ts)))
 }
