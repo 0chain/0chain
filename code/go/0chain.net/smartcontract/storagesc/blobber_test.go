@@ -275,6 +275,8 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+		savedDataBeforeUpdate := blobBeforeWrite.SavedData
 		// write
 		tp += 100
 		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
@@ -288,6 +290,9 @@ func Test_flow_reward(t *testing.T) {
 		// check out
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
+
+		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+		require.Greater(t, blobAfterWrite.SavedData, savedDataBeforeUpdate)
 
 		size := (int64(math.Ceil(float64(cc.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
 		rdtu, err := alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit)
@@ -325,6 +330,8 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+		savedDataBeforeUpdate := blobBeforeWrite.SavedData
 		// write
 		tp += 100
 		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
@@ -338,6 +345,9 @@ func Test_flow_reward(t *testing.T) {
 		// check out
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
+
+		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+		require.Less(t, blobAfterWrite.SavedData, savedDataBeforeUpdate)
 
 		require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
 
