@@ -401,6 +401,11 @@ func (sp *StakePool) DistributeRewardsRandN(
 	rewardType spenum.Reward,
 	balances cstate.StateContextI,
 ) (err error) {
+	logging.Logger.Info("DistributeRewardsRandN",
+		zap.Any("value", value), zap.Any("providerId", providerId),
+		zap.Any("providerType", providerType), zap.Any("seed", seed),
+		zap.Any("randN", randN), zap.Any("rewardType", rewardType))
+
 	total, err := sp.stake()
 	if err != nil {
 		return err
@@ -442,6 +447,10 @@ func (sp *StakePool) DistributeRewardsRandN(
 		sp.Reward = sr
 		spUpdate.Reward = reward
 	}
+
+	logging.Logger.Info("DistributeRewardsRandN",
+		zap.Any("serviceCharge", serviceCharge), zap.Any("sp.Reward", sp.Reward),
+	)
 
 	valueLeft := value - serviceCharge
 	if valueLeft == 0 {
