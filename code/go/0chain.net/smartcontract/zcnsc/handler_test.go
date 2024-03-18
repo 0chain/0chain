@@ -1,6 +1,7 @@
 package zcnsc_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
@@ -24,6 +26,7 @@ const (
 )
 
 func init() {
+	common.SetupRootContext(context.Background())
 	block.SetupEntity(memorystore.GetStorageProvider())
 }
 
