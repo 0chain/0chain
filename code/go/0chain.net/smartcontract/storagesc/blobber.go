@@ -942,7 +942,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				zap.Error(err))
 			return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
 		}
-	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size <= 0 {
+	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
 		if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
 			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
 				zap.String("blobber", blobber.ID),
