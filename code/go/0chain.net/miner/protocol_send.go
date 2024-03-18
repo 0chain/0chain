@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -14,9 +15,11 @@ import (
 
 // SendBlock - send the block proposal to the network.
 func (mc *Chain) sendBlock(ctx context.Context, b *block.Block) {
+	ts := time.Now()
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(ctx, VerifyBlockSender(b))
+	logging.Logger.Debug("send block to all miners success", zap.String("block", b.Hash), zap.Any("duration", time.Since(ts)))
 }
 
 // SendNotarization - send the block notarization (collection of verification
