@@ -11,7 +11,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 const (
@@ -224,6 +226,7 @@ func verifyFreeAllocationRequestNew(
 		ids += b
 	}
 	marker := fmt.Sprintf("%s:%f:%d:%s", frm.Recipient, frm.FreeTokens, frm.Nonce, ids)
+	logging.Logger.Debug("free_storage_marker verify", zap.String("marker", marker), zap.String("pub_key", publicKey))
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err

@@ -316,10 +316,10 @@ func BenchmarkTests(
 					panic(err)
 				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				marker := fmt.Sprintf("%s:%f:%d",
+				marker := fmt.Sprintf("%s:%f:%d:%s",
 					request.Recipient,
 					request.FreeTokens,
-					request.Nonce)
+					request.Nonce, freeBlobbers)
 				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				if err != nil {
 					panic(err)
