@@ -128,7 +128,9 @@ func (mc *Chain) BlockVerifyWorkers(ctx context.Context) {
 					}
 					logging.Logger.Debug("verify block processed",
 						zap.Int64("round", b.Round),
-						zap.String("block", b.Hash))
+						zap.String("block", b.Hash),
+						zap.Duration("duration", time.Since(ts)),
+					)
 				case <-ctx.Done():
 					return
 				}
