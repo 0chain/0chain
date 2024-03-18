@@ -1113,6 +1113,12 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 			zap.String("block hash", b.Hash))
 		return false
 	}
+
+	if b.NotarizedTime == nil {
+		tm := time.Now()
+		b.NotarizedTime = &tm
+	}
+
 	if !mc.AddNotarizedBlock(r, b) {
 		logging.Logger.Warn("checkBlockNotarization -- block already notarized before",
 			zap.Int64("round", b.Round),
@@ -1131,7 +1137,9 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	}
 
 	logging.Logger.Debug("check block notarization - block notarized",
-		zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.Duration("duration", b.NotarizedTime.Sub(b.ToTime())))
 
 	// start next round if not ahead of sharders
 	//TODO implement round centric context, that is cancelled when transition to the next happens
