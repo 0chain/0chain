@@ -551,7 +551,31 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	mc.addToRoundVerification(r, b)
 	r.AddProposedBlock(b)
 
-	go mc.SendBlock(ctx, b)
+	go func() {
+		mc.SendBlock(ctx, b)
+		bvt, err := mc.SignBlock(ctx, b)
+		if err != nil {
+			logging.Logger.Error("sign block failed", zap.Error(err))
+			return
+		}
+
+		b.SetBlockState(block.StateVerificationSuccessful)
+
+		bnb := r.GetBestRankedNotarizedBlock()
+		// if bnb == nil || bnb.Hash == b.Hash {
+		// 	logging.Logger.Info("generate block - sending verification ticket",
+		// 		zap.Int64("round", r.Number),
+		// 		zap.String("block", b.Hash),
+		// 		zap.Int("block_rank", b.RoundRank),
+		// 		zap.Int64("RRS", b.RoundRandomSeed))
+		// 	go mc.SendVerificationTicket(ctx, b, bvt)
+		// 	r.SetOwnVerificationTicket(bvt)
+		// }
+		if bnb == nil {
+			r.Block = b
+			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
+		}
+	}()
 	return b, nil
 }
 
