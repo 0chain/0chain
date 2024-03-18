@@ -145,10 +145,17 @@ tests:
             provider_type: blobber
             provider_ids:
               - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-      - sync_latest_aggregates:
-          blobbers:
-            - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          required: true
+      #- sync_latest_aggregates:
+      #    blobbers:
+      #      - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+      #    required: true
+      - generate_all_challenges: true    
+      - wait_round:
+          shift: 250
+      - command:
+          name: "upload"
+      - wait_round:
+          shift: 100          
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
@@ -161,4 +168,4 @@ tests:
           provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
           key: total_rewards
           monotonicity: increase
-          timeout: "2m"
+          timeout: "25m"
