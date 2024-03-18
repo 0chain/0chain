@@ -125,6 +125,47 @@ func (edb *EventDb) GetActiveValidators(pg common2.Pagination, healthcheckPeriod
 	return validators, result.Error
 }
 
+func (edb *EventDb) GetActiveAndStakableValidators(pagination common2.Pagination, healthCheckTimeLimit time.Duration) ([]Validator, error) {
+	now := common.Now()
+	var validators []Validator
+	result := edb.Store.Get().
+		Select("validators.*").
+		Table("validators").
+		Joins("left join delegate_pools ON delegate_pools.provider_type = 4 AND delegate_pools.provider_id = validators.id AND delegate_pools.status = 0").
+		Where("last_health_check > ? AND validators.is_killed = false AND validators.is_shutdown = false", common.ToTime(now).Add(-healthCheckTimeLimit).Unix()).
+		Group("validators.id").
+		Having("count(delegate_pools.id) < validators.num_delegates").
+		Limit(pagination.Limit).
+		Offset(pagination.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pagination.IsDescending,
+		}).
+		Find(&validators)
+
+	return validators, result.Error
+}
+
+func (edb *EventDb) GetStakableValidators(pagination common2.Pagination) ([]Validator, error) {
+	var validators []Validator
+	result := edb.Store.Get().
+		Select("validators.*").
+		Table("validators").
+		Joins("left join delegate_pools ON delegate_pools.provider_type = 4 AND delegate_pools.provider_id = validators.id AND delegate_pools.status = 0").
+		Where("validators.is_killed = false AND validators.is_shutdown = false").
+		Group("validators.id").
+		Having("count(delegate_pools.id) < validators.num_delegates").
+		Limit(pagination.Limit).
+		Offset(pagination.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pagination.IsDescending,
+		}).
+		Find(&validators)
+
+	return validators, result.Error
+}
+
 func (edb *EventDb) updateValidators(validators []Validator) error {
 	updateFields := []string{
 		"base_url", "public_key", "total_stake",

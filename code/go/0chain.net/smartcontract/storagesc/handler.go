@@ -1402,6 +1402,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 
 	values := r.URL.Query()
 	active := values.Get("active")
+	stakable := values.Get("stakable") == "true"
 
 	var validators []event.Validator
 
@@ -1417,7 +1418,13 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 			healthCheckPeriod = conf.HealthCheckPeriod
 		}
 
-		validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
+		if stakable {
+			validators, err = edb.GetActiveAndStakableValidators(pagination, healthCheckPeriod)
+		} else {
+			validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
+		}
+	} else if stakable {
+		validators, err = edb.GetStakableValidators(pagination)
 	} else {
 		validators, err = edb.GetValidators(pagination)
 	}

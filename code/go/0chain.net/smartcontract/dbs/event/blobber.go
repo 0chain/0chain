@@ -84,7 +84,7 @@ func (edb *EventDb) GetActiveAndStakableBlobbers(pagination common2.Pagination, 
 		Select("blobbers.*").
 		Table("blobbers").
 		Joins("left join delegate_pools ON delegate_pools.provider_type = 3 AND delegate_pools.provider_id = blobbers.id AND delegate_pools.status = 0").
-		Where("last_health_check > ? AND blobbers.is_killed = false AND blobbers.is_shutdown = false", common.ToTime(now).Add(-healthCheckTimeLimit).Unix()).
+		Where("blobbers.last_health_check > ? AND blobbers.is_killed = false AND blobbers.is_shutdown = false", common.ToTime(now).Add(-healthCheckTimeLimit).Unix()).
 		Group("blobbers.id").
 		Having("count(delegate_pools.id) < blobbers.num_delegates").
 		Limit(pagination.Limit).
