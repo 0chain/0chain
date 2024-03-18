@@ -372,9 +372,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
-	if time.Since(fb.ToTime()) < 100*time.Second {
+
+	if time.Since(fb.ToTime()) < 100*time.Second && fb.MinerID == node.Self.ID {
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
-		if fb.NotarizedTime != nil && fb.MinerID == node.Self.ID {
+		if fb.NotarizedTime != nil {
 			StartToNotarizedTimer.Update(fb.NotarizedTime.Sub(fb.ToTime()))
 		}
 		lfb := c.GetLatestFinalizedBlock()
