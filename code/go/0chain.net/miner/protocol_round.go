@@ -547,12 +547,13 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			zap.Int("notarized", len(r.GetNotarizedBlocks())))
 		return nil, nil
 	}
+	go mc.SendBlock(ctx, b)
 
 	mc.addToRoundVerification(r, b)
 	r.AddProposedBlock(b)
 
 	go func() {
-		mc.SendBlock(ctx, b)
+		// mc.SendBlock(ctx, b)
 		bvt, err := mc.SignBlock(ctx, b)
 		if err != nil {
 			logging.Logger.Error("sign block failed", zap.Error(err))
