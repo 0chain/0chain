@@ -1,6 +1,7 @@
 package zcnsc_test
 
 import (
+	"context"
 	"math/rand"
 	"sort"
 	"testing"
@@ -25,6 +26,7 @@ import (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	logging.Logger = zap.NewNop()
+	common.SetupRootContext(context.Background())
 
 	config.SetupDefaultConfig()
 
