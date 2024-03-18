@@ -549,7 +549,7 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 	go mc.SendBlock(ctx, b)
 
-	mc.addToRoundVerification(r, b)
+	// mc.addToRoundVerification(r, b)
 	r.AddProposedBlock(b)
 
 	go func() {
