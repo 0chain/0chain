@@ -1022,6 +1022,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	if !foundAllocation {
 		logging.Logger.Error("populate_generate_challenge: couldn't find appropriate allocation for a blobber",
+			zap.Any("unique_logging_id", uniqueLoggingID),
 			zap.String("blobberId", blobberID))
 		return nil, nil
 	}
