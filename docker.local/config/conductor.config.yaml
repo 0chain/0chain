@@ -643,4 +643,10 @@ commands:
       path_files:
         required: true
       provider_files:
-        required: true                
+        required: true
+  cleanup_auth1_provider:
+    work_dir: "../token_bridge_authserver"
+    exec: "mkdir -p docker.local/auth1/data/" #path: "./token_bridge_authserver/docker.local/auth1/data"
+    args:
+      path:
+        required: true                     

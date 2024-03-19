@@ -23,13 +23,11 @@ tests:
       - sleep: "20s"
       - wait_round:
           shift: 50
+      - command:
+          name: "register_authorizer"          
       - wait_add:
           authorizers: ['authorizer-1','authorizer-2','authorizer-3','authorizer-4']
           start: true
-      - wait_round:
-          shift: 200
-      - command:
-          name: "register_authorizer"
       - wait_round:
           shift: 200
       - sync_latest_aggregates:
@@ -47,12 +45,12 @@ tests:
           monotonicity: increase
           timeout: "2m"          
       - stop: ['authorizer-1']
+      - wait_round:
+          shift: 100      
       - command:
-          name: "cleanup_provider"
+          name: "cleanup_auth1_provider"
           params:
-            path: "./token_bridge_authserver/docker.local/auth1" #./token_bridge_authserver/docker.local/authorizer1
-            recreate_script: "docker.local/bin/authorizer.init.setup.sh"
-            recreate_script_workdir: "token_bridge_authserver"
+            path: "./token_bridge_authserver/docker.local/auth1/data" #./token_bridge_authserver/docker.local/authorizer1
       - wait_round:
           shift: 100
       - start: ['authorizer-1']
