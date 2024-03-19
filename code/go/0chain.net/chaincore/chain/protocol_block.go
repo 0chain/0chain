@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/core/datastore"
@@ -375,9 +376,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	ssFTs = time.Now()
 
 	if time.Since(fb.ToTime()) < 100*time.Second && fb.MinerID == node.Self.ID {
-		StartToFinalizeTimer.UpdateSince(fb.ToTime())
+		rst := c.GetRound(fb.Round).(*round.Round).GetVrfStartTime()
+		StartToFinalizeTimer.UpdateSince(rst)
 		if fb.NotarizedTime != nil {
-			StartToNotarizedTimer.Update(fb.NotarizedTime.Sub(fb.ToTime()))
+			StartToNotarizedTimer.Update(fb.NotarizedTime.Sub(rst))
 		}
 	}
 
