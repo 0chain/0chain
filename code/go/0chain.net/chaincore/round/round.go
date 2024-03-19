@@ -44,6 +44,6 @@ type RoundI interface {
 	SetPhase(state Phase)
 	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
-	GetVrfStartTime() time.Time
+	GetCreationTime() time.Time
 	Clone() RoundI
 }

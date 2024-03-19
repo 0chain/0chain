@@ -216,6 +216,7 @@ type Round struct {
 	vrfStartTime     atomic.Value
 
 	timeoutCounter
+	createTime time.Time
 }
 
 // RoundFactory - a factory to create a new round object specific to miner/sharder
@@ -227,7 +228,12 @@ type RoundFactory interface {
 func NewRound(round int64) *Round {
 	r := datastore.GetEntityMetadata("round").Instance().(*Round)
 	r.Number = round
+	r.createTime = time.Now()
 	return r
+}
+
+func (r *Round) GetCreationTime() time.Time {
+	return r.createTime
 }
 
 var roundEntityMetadata *datastore.EntityMetadataImpl
