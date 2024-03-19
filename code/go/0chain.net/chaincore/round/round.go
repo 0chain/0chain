@@ -1,6 +1,8 @@
 package round
 
 import (
+	"time"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 )
@@ -42,5 +44,6 @@ type RoundI interface {
 	SetPhase(state Phase)
 	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
+	GetVrfStartTime() time.Time
 	Clone() RoundI
 }

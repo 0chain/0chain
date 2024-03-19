@@ -25,7 +25,6 @@ type Round struct {
 	vrfShare              *round.VRFShare
 	vrfSharesCache        *vrfSharesCache
 	ownVerificationTicket *block.BlockVerificationTicket
-	createTime            time.Time
 }
 
 func (r *Round) SetGenerationCancelf(generationCancelf context.CancelFunc) {
