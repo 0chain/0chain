@@ -514,26 +514,32 @@ func (p *Partitions) removeItem(
 	return p.loadLastFromPrev(state)
 }
 
-func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}) error {
+func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}, prev int) (int, error) {
 	if p.Last.length() == 0 {
-		return errors.New("empty list, no items to return")
+		return -1, errors.New("empty list, no items to return")
 	}
 
 	var index int
 	if p.Last.Loc > 0 {
-		index = r.Intn(p.Last.Loc + 1)
+		for {
+			index = r.Intn(p.Last.Loc + 1)
+			if index != prev {
+				break
+			}
+		}
 	}
+
 	part, err := p.getPartition(state, index)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	its, err := part.itemRange(0, part.length())
 	if err != nil {
-		return err
+		return -1, err
 	}
 
-	return setPartitionItems(its, vs)
+	return index, setPartitionItems(its, vs)
 }
 
 func (p *Partitions) Size(state state.StateContextI) (int, error) {

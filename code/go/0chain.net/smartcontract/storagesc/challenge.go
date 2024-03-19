@@ -843,7 +843,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 	r *rand.Rand, balances cstate.StateContextI, conf *Config) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
-	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
+	_, err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers, -1)
 	if err != nil {
 		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
@@ -952,7 +952,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	// get random allocations from the partitions
 	var randBlobberAllocs []BlobberAllocationNode
-	if err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs); err != nil {
+	if _, err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs, -1); err != nil {
 		return nil, common.NewErrorf("generate_challenge",
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
@@ -1026,14 +1026,36 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("invalid blobber for allocation")
 	}
 
-	var randValidators []ValidationPartitionNode
-	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
+	var randValidators, partitionRandValidators []ValidationPartitionNode
+
+	index, err := validators.GetRandomItems(balances, r, &partitionRandValidators, -1)
+	if err != nil {
 		return nil, common.NewError("add_challenge",
 			"error getting validators random slice: "+err.Error())
 	}
 
+	randValidators = append(randValidators, partitionRandValidators...)
+
 	if len(randValidators) < needValidNum {
-		return nil, errors.New("validators number does not meet minimum challenge requirement")
+		actErr := cstate.WithActivation(balances, "artemis", func() error {
+			return nil
+		}, func() error {
+			index, err = validators.GetRandomItems(balances, r, &partitionRandValidators, index)
+			if err != nil {
+				return common.NewError("add_challenge",
+					"error getting validators random slice: "+err.Error())
+			}
+
+			randValidators = append(randValidators, partitionRandValidators...)
+			return nil
+		})
+		if actErr != nil {
+			return nil, actErr
+		}
+
+		if len(randValidators) < needValidNum {
+			return nil, errors.New("validators number does not meet minimum challenge requirement")
+		}
 	}
 
 	var (
