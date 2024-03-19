@@ -372,13 +372,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
+	ssFTs = time.Now()
 
 	if time.Since(fb.ToTime()) < 100*time.Second && fb.MinerID == node.Self.ID {
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 		if fb.NotarizedTime != nil {
 			StartToNotarizedTimer.Update(fb.NotarizedTime.Sub(fb.ToTime()))
-			lfb := c.GetLatestFinalizedBlock()
-			LFBToNotarizedHis.Update(fb.Round - lfb.Round)
 		}
 	}
 
@@ -391,7 +390,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	changeCount := fb.ClientState.GetChangeCount()
-	ssFTs = time.Now()
 
 	var (
 		wg          = waitgroup.New(10)

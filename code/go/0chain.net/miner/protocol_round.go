@@ -28,6 +28,7 @@ import (
 )
 
 var rbgTimer metrics.Timer // round block generation timer
+var ssNT time.Time
 
 func init() {
 	rbgTimer = metrics.GetOrRegisterTimer("rbg_time", nil)
@@ -178,7 +179,10 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 // Creates the next round, if next round exists and has RRS returns existent.
 // If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
-
+	if time.Since(ssNT) < 10*time.Second {
+		chain.SteadyStateNotarizationTimer.UpdateSince(ssNT)
+	}
+	ssNT = time.Now()
 	var (
 		rn = r.GetRoundNumber()
 		pr = mc.GetMinerRound(rn - 1)

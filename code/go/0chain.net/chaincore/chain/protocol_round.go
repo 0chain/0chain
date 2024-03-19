@@ -32,10 +32,12 @@ func SetNetworkRelayTime(delta time.Duration) {
 // SteadyStateFinalizationTimer - a metric that tracks the steady state finality time (time between two successive finalized blocks in steady state)
 var SteadyStateFinalizationTimer metrics.Timer
 var ssFTs time.Time
+var ssNTs time.Time
 
 // StartToFinalizeTimer - a metric that tracks the time a block is created to finalized
 var StartToFinalizeTimer metrics.Timer
 var StartToNotarizedTimer metrics.Timer
+var SteadyStateNotarizationTimer metrics.Timer
 var LFBToNotarizedHis metrics.Histogram
 
 // StartToFinalizeTxnTimer - a metric that trakcs the time a txn is created to finalized
@@ -47,6 +49,7 @@ var FinalizationLagMetric metrics.Histogram
 
 func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
+	SteadyStateNotarizationTimer = metrics.GetOrRegisterTimer("ss_notarization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToNotarizedTimer = metrics.GetOrRegisterTimer("s2n_time", nil)
 	LFBToNotarizedHis = metrics.GetOrRegisterHistogram("lfb2nb_c", nil, metrics.NewUniformSample(1024))
