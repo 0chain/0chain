@@ -973,7 +973,12 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		logging.Logger.Debug("empty blobber")
 	}
 
+	uniqueLoggingID := fmt.Sprintf("challenge_id:%s", challengeID)
+
 	for i := 0; i < findValidAllocRetries; i++ {
+		logging.Logger.Info("Jayash - generate challenge", zap.String("unique_logging_id", uniqueLoggingID), zap.Any("blobber_id", blobberID), zap.Any("randBlobberAllocs", randBlobberAllocs),
+			zap.Any("randPerm", randPerm), zap.Any("i", i), zap.Any("blobberAllocPartitionLength", blobberAllocPartitionLength))
+
 		// get a random allocation
 		allocID := randBlobberAllocs[randPerm[i%blobberAllocPartitionLength]].ID
 
@@ -1033,8 +1038,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	if len(randValidators) < needValidNum {
-		logging.Logger.Info("Jayash populateGenerateChallenge", zap.Int("randValidators", len(randValidators)), zap.Int("needValidNum", needValidNum), zap.Any("randValidators", randValidators))
-
 		return nil, errors.New("validators number does not meet minimum challenge requirement")
 	}
 
@@ -1178,10 +1181,9 @@ func (sc *StorageSmartContract) genChal(
 
 	if currentValidatorsCount < needValidNum {
 		err := errors.New("validators number does not meet minimum challenge requirement")
-		logging.Logger.Error("Jayash generate_challenge", zap.Error(err),
+		logging.Logger.Error("generate_challenge", zap.Error(err),
 			zap.Int("validator num", currentValidatorsCount),
-			zap.Int("minimum required", needValidNum),
-			zap.Any("validators", validators))
+			zap.Int("minimum required", needValidNum))
 		return common.NewError("generate_challenge",
 			"validators number does not meet minimum challenge requirement")
 	}
