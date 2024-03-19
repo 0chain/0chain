@@ -957,6 +957,10 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
 
+	uniqueLoggingID := fmt.Sprintf("challenge_id:%s", challengeID)
+
+	logging.Logger.Info("Jayash - generate challenge 1", zap.String("unique_logging_id", uniqueLoggingID), zap.Any("blobber_id", blobberID), zap.Any("randBlobberAllocs", randBlobberAllocs))
+
 	var findValidAllocRetries = 5 // avoid retry for debugging
 	var (
 		alloc                       *StorageAllocation
@@ -973,10 +977,8 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		logging.Logger.Debug("empty blobber")
 	}
 
-	uniqueLoggingID := fmt.Sprintf("challenge_id:%s", challengeID)
-
 	for i := 0; i < findValidAllocRetries; i++ {
-		logging.Logger.Info("Jayash - generate challenge", zap.String("unique_logging_id", uniqueLoggingID), zap.Any("blobber_id", blobberID), zap.Any("randBlobberAllocs", randBlobberAllocs),
+		logging.Logger.Info("Jayash - generate challenge 2 ", zap.String("unique_logging_id", uniqueLoggingID), zap.Any("blobber_id", blobberID), zap.Any("randBlobberAllocs", randBlobberAllocs),
 			zap.Any("randPerm", randPerm), zap.Any("i", i), zap.Any("blobberAllocPartitionLength", blobberAllocPartitionLength))
 
 		// get a random allocation
@@ -1021,7 +1023,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	}
 
 	if !foundAllocation {
-		logging.Logger.Error("populate_generate_challenge: couldn't find appropriate allocation for a blobber",
+		logging.Logger.Error("Jayash populate_generate_challenge: couldn't find appropriate allocation for a blobber",
 			zap.Any("unique_logging_id", uniqueLoggingID),
 			zap.String("blobberId", blobberID))
 		return nil, nil
