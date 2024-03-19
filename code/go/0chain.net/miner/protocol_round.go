@@ -1117,6 +1117,8 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	if b.NotarizedTime == nil {
 		tm := time.Now()
 		b.NotarizedTime = &tm
+		lfb := mc.GetLatestFinalizedBlock()
+		chain.LFBToNotarizedHis.Update(b.Round - lfb.Round)
 	}
 
 	if !mc.AddNotarizedBlock(r, b) {
