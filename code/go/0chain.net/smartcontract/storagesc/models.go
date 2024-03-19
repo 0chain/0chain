@@ -313,7 +313,7 @@ type StorageNode struct {
 	RewardRound       RewardRound        `json:"reward_round"`
 	NotAvailable      bool               `json:"not_available"`
 
-	IsRestricted bool `json:"is_restricted"`
+	IsRestricted *bool `json:"is_restricted"`
 }
 
 func GetUrlKey(baseUrl, globalKey string) datastore.Key {
@@ -1599,7 +1599,7 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	actErr := cstate.WithActivation(balances, "apollo", func() (e error) { return },
 		func() (e error) {
-			if addedBlobber.IsRestricted {
+			if *addedBlobber.IsRestricted {
 				if success, err := verifyBlobberAuthTicket(balances, sa.Owner, addedBlobber.ID, authTicket, addedBlobber.PublicKey); err != nil || !success {
 					return fmt.Errorf("blobber %s auth ticket verification failed: %v", addedBlobber.ID, err.Error())
 				}
@@ -1715,7 +1715,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 
 		actErr := cstate.WithActivation(balances, "ares", func() (e error) { return },
 			func() (e error) {
-				if sn.IsRestricted {
+				if *sn.IsRestricted {
 					success, err := verifyBlobberAuthTicket(balances, sa.Owner, b.ID, blobberAuthTickets[i], sn.PublicKey)
 					if !success || err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err)
