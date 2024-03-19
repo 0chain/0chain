@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/core/config"
@@ -29,6 +30,7 @@ import (
 
 var rbgTimer metrics.Timer // round block generation timer
 var ssNT time.Time
+var statRound int64
 
 func init() {
 	rbgTimer = metrics.GetOrRegisterTimer("rbg_time", nil)
@@ -180,9 +182,15 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 // If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 	if time.Since(ssNT) < 10*time.Second {
-		chain.SteadyStateNotarizationTimer.UpdateSince(ssNT)
+		if atomic.LoadInt64(&statRound)+1 == r.GetRoundNumber() {
+			chain.SteadyStateNotarizationTimer.UpdateSince(ssNT)
+			ssNT = time.Now()
+			atomic.StoreInt64(&statRound, r.GetRoundNumber())
+		}
+	} else {
+		ssNT = time.Now()
+		atomic.StoreInt64(&statRound, r.GetRoundNumber())
 	}
-	ssNT = time.Now()
 	var (
 		rn = r.GetRoundNumber()
 		pr = mc.GetMinerRound(rn - 1)
