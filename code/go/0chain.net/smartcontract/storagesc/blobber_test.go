@@ -401,6 +401,8 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+		savedDataBeforeUpdate := blobBeforeWrite.SavedData
 		// write
 		tp += 100
 		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
@@ -426,6 +428,8 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
+		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+		require.GreaterOrEqual(t, blobAfterWrite.SavedData, savedDataBeforeUpdate)
 		require.EqualValues(t, currency.Coin(10000000000000), apb2i)
 		require.EqualValues(t, currency.Coin(2443798559), cpb2i)
 
@@ -474,6 +478,8 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+		savedDataBeforeUpdate := blobBeforeWrite.SavedData
 		// write
 		tp += 100
 		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
@@ -499,6 +505,8 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
+		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+		require.GreaterOrEqual(t, blobAfterWrite.SavedData, savedDataBeforeUpdate)
 		require.EqualValues(t, 9997556201441, apb2i)
 		require.EqualValues(t, 2440747155, cpb2i)
 		require.EqualValues(t, 40*x10, blobb2)
