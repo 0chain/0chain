@@ -1308,6 +1308,7 @@ l:
 		zap.Duration("time", time.Since(start)))
 
 	b.InitializeCreationDate()
+	b.CreateTime = time.Now()
 	if err = mc.hashAndSignGeneratedBlock(ctx, b); err != nil {
 		return err
 	}

@@ -172,6 +172,7 @@ type Block struct {
 	// this will be used to verify the state changes acquire from remote
 	StateChangesCount int        `json:"state_changes_count"`
 	NotarizedTime     *time.Time `json:"-" msgpack:"-"`
+	CreateTime        time.Time  `json:"-" msgpack:"-"`
 }
 
 // NewBlock - create a new empty block
