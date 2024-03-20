@@ -142,7 +142,7 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
 	if edb.Store != nil && len(events.events) > 0 {
 		filteredEvents := filterEvents(events.events)
-		for filteredEvent := range filteredEvents {
+		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
 				"event": filteredEvent,
 				"round": events.round,
