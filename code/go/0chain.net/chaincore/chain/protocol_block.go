@@ -374,8 +374,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 	ssFTs = time.Now()
 
-	if time.Since(fb.ToTime()) < 100*time.Second && fb.MinerID == node.Self.ID {
-		// if time.Since(fb.ToTime()) < 100*time.Second {
+	// if time.Since(fb.ToTime()) < 100*time.Second && fb.MinerID == node.Self.ID {
+	if time.Since(fb.ToTime()) < 100*time.Second {
 		// rst := c.GetRound(fb.Round).GetCreationTime()
 		StartToFinalizeTimer.UpdateSince(fb.CreateTime)
 		if fb.NotarizedTime != nil {
