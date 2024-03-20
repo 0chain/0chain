@@ -61,7 +61,7 @@ jobs:
     
     - name: Get changed files using defaults
       id: changed-files
-      uses: tj-actions/changed-files@v18.4
+      uses: tj-actions/changed-files@v41
 
     - name: Pull Build Base & Run Base
       run: |
@@ -151,7 +151,7 @@ jobs:
     
     - name: Get changed files using defaults
       id: changed-files
-      uses: tj-actions/changed-files@v18.4
+      uses: tj-actions/changed-files@v41
     
     - name: Pull Build Base & Run Base
       run: |
