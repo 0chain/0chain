@@ -2462,7 +2462,7 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		IsKilled:                sn.IsKilled(),
 		IsShutdown:              sn.IsShutDown(),
 		NotAvailable:            sn.NotAvailable,
-		IsRestricted:            *sn.IsRestricted,
+		IsRestricted:            sn.IsRestricted,
 	}
 }
 
@@ -2486,7 +2486,7 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 		StakePoolSettings:       snr.StakePoolSettings,
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
-		IsRestricted:            &snr.IsRestricted,
+		IsRestricted:            snr.IsRestricted,
 	}
 }
 
