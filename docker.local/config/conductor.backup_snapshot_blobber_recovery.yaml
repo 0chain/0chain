@@ -91,7 +91,13 @@ tests:
           key: total_rewards
           comparison: gt
           rvalue: 0
-          timeout: "25m"  
+          timeout: "25m"
+      - check_aggregate_value_change:   
+          provider_type: blobber
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          key: total_rewards
+          monotonicity: increase
+          timeout: "25m"            
       - sleep: "25m"           
       # Backup blobber data and files
       - command:
@@ -116,10 +122,22 @@ tests:
           # Ensures complete data removal, simulating absolute data loss
       - wait_round:
           shift: 500 # Simulates downtime duration for the Blobber
-      - sync_latest_aggregates:
-          blobbers:
-            - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          required: true
+      #- sync_latest_aggregates:
+      #   blobbers:
+      #     - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+      #   required: true
+      #- wait_round:
+      #    shift: 100        
+      - command:
+          name: "restore_blobber_data"  
+          params:
+            path_data: "../blobber/docker.local/blobber1/data"
+            provider_data: blobber-data-1.tar.gz
+      - command:
+          name: "restore_blobber_files"  
+          params:
+            path_files: "../blobber/docker.local/blobber1/files"
+            provider_files: blobber-files-1.tar.gz          
       #- check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
       #    provider_type: blobber
       #    provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
@@ -130,32 +148,23 @@ tests:
       - sleep: "60s"  # Wait for some time before starting the blobber                  
       - start: ['blobber-1']
       - wait_round:
-          shift: 100   # Waits for Blobber to recover, re-sync, and resume operations         
-      - command:
-          name: "restore_blobber_data"  
-          params:
-            path_data: "../blobber/docker.local/blobber1/data"
-            provider_data: blobber-data-1.tar.gz
-      - command:
-          name: "restore_blobber_files"  
-          params:
-            path_files: "../blobber/docker.local/blobber1/files"
-            provider_files: blobber-files-1.tar.gz
-      - wait_round:
           shift: 100   # Waits for Blobber to recover, re-sync, and resume operations
       - command:
-          name: 'repair_allocation'
-          timeout: '15m'                                        
-      - command:
-          name: "check_registered"  ###
+          name: "check_registered"
           params:
             provider_type: blobber
             provider_ids:
-              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-      - sync_latest_aggregates:
-          blobbers:
-            - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-          required: true
+              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"          
+      - command:
+          name: 'repair_allocation'
+          timeout: '15m'
+      - generate_all_challenges: true    
+      - wait_round:
+          shift: 250
+      - command:
+          name: "upload_b"
+      - wait_round:
+          shift: 100                                                  
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
