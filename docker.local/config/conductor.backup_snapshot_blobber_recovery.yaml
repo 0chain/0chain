@@ -162,7 +162,7 @@ tests:
       - wait_round:
           shift: 250
       - command:
-          name: "upload_b"
+          name: "upload_b_random"
       - wait_round:
           shift: 100                                                  
       - check_aggregate_value_comparison:
