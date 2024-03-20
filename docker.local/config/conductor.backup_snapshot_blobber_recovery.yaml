@@ -127,17 +127,7 @@ tests:
       #     - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
       #   required: true
       #- wait_round:
-      #    shift: 100        
-      - command:
-          name: "restore_blobber_data"  
-          params:
-            path_data: "../blobber/docker.local/blobber1/data"
-            provider_data: blobber-data-1.tar.gz
-      - command:
-          name: "restore_blobber_files"  
-          params:
-            path_files: "../blobber/docker.local/blobber1/files"
-            provider_files: blobber-files-1.tar.gz          
+      #    shift: 100                
       #- check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
       #    provider_type: blobber
       #    provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
@@ -149,6 +139,16 @@ tests:
       - start: ['blobber-1']
       - wait_round:
           shift: 100   # Waits for Blobber to recover, re-sync, and resume operations
+      - command:
+          name: "restore_blobber_data"  
+          params:
+            path_data: "../blobber/docker.local/blobber1/data"
+            provider_data: blobber-data-1.tar.gz
+      - command:
+          name: "restore_blobber_files"  
+          params:
+            path_files: "../blobber/docker.local/blobber1/files"
+            provider_files: blobber-files-1.tar.gz            
       - command:
           name: "check_registered"
           params:
