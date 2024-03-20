@@ -3,7 +3,7 @@ module 0chain.net
 go 1.20
 
 require (
-	github.com/alicebob/miniredis/v2 v2.30.5
+	github.com/alicebob/miniredis/v2 v2.31.1
 	github.com/aws/aws-sdk-go-v2 v1.22.2
 	github.com/aws/aws-sdk-go-v2/config v1.24.0
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.23.1
