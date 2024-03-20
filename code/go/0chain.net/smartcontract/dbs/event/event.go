@@ -74,55 +74,6 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-// PublishEvents publishes the unpublished events to kafka, recklessly ignoring errors but logging them.
-func (edb *EventDb) PublishUnpublishedEvents() {
-	if edb.Store == nil {
-		logging.Logger.Error("PublishEvents: event database is nil")
-		return
-	}
-
-	broker := edb.GetKafkaProv()
-	if broker == nil {
-		logging.Logger.Error("PublishEvents: kafka provider is nil")
-		return
-	}
-
-	var unpublishedEvents []Event
-	err := edb.Store.Get().Model(&Event{}).Where("is_published = false").Scan(&unpublishedEvents).Error
-	if err != nil {
-		logging.Logger.Error("PublishEvents: failed to get unpublished events", zap.Error(err))
-		return
-	}
-
-	logging.Logger.Debug("PublishEvents: publishing events", zap.Any("events", unpublishedEvents))
-
-	var publishedEventsIds []uint
-	for _, event := range unpublishedEvents {
-		rawEvent, err := json.Marshal(event)
-		if err != nil {
-			logging.Logger.Error("PublishEvents: failed to encode event", zap.Error(err))
-			continue
-		}
-
-		err = broker.PublishToKafka(edb.dbConfig.KafkaTopic, rawEvent)
-		if err != nil {
-			logging.Logger.Error("PublishEvents: failed to publish event", zap.Error(err))
-			continue
-		}
-
-		publishedEventsIds = append(publishedEventsIds, event.ID)
-
-		logging.Logger.Debug("PublishEvents: published event", zap.Any("message", rawEvent))
-	}
-
-	if len(publishedEventsIds) > 0 {
-		logging.Logger.Debug("PublishEvents: updating published events", zap.Any("ids", publishedEventsIds))
-		err = edb.Store.Get().Model(&Event{}).Where("id IN ?", publishedEventsIds).Update("is_published", true).Error
-		if err != nil {
-			logging.Logger.Error("PublishEvents: failed to update published events", zap.Error(err))
-		}
-	}
-}
 func filterEvents(events []Event) []Event {
 	var filteredEvents []Event
 	for _, event := range events {

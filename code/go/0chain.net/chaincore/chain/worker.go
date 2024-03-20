@@ -267,10 +267,6 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 						zap.Duration("duration", time.Since(ts)))
 				}()
 
-				if c.GetEventDb() != nil && c.GetEventDb().Store != nil {
-					go c.GetEventDb().PublishUnpublishedEvents()
-				}
-
 				select {
 				case err := <-errC:
 					fbr.resultC <- err
