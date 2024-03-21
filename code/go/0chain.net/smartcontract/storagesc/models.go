@@ -1600,7 +1600,7 @@ func (sa *StorageAllocation) changeBlobbers(
 	actErr := cstate.WithActivation(balances, "apollo", func() (e error) { return },
 		func() (e error) {
 			if addedBlobber.IsRestricted {
-				if success, err := verifyBlobberAuthTicket(balances, sa.Owner, addedBlobber.ID, authTicket, addedBlobber.PublicKey); err != nil || !success {
+				if success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, addedBlobber.PublicKey); err != nil || !success {
 					return fmt.Errorf("blobber %s auth ticket verification failed: %v", addedBlobber.ID, err.Error())
 				}
 			}
@@ -1716,7 +1716,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 		actErr := cstate.WithActivation(balances, "ares", func() (e error) { return },
 			func() (e error) {
 				if sn.IsRestricted {
-					success, err := verifyBlobberAuthTicket(balances, sa.Owner, b.ID, blobberAuthTickets[i], sn.PublicKey)
+					success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], sn.PublicKey)
 					if !success || err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err)
 					}
@@ -1735,17 +1735,16 @@ func (sa *StorageAllocation) validateEachBlobber(
 	return filtered, errs
 }
 
-func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, blobberID, authTicket, publicKey string) (bool, error) {
+func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, authTicket, publicKey string) (bool, error) {
 	if authTicket == "" {
 		return false, common.NewError("invalid_auth_ticket", "empty auth ticket")
 	}
 
-	ticket := fmt.Sprintf("%s:%s", blobberID, clientID)
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(authTicket, hex.EncodeToString([]byte(ticket)))
+	return signatureScheme.Verify(authTicket, hex.EncodeToString([]byte(clientID)))
 }
 
 // Until returns allocation expiration.
