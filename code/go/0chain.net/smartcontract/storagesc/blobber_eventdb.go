@@ -20,7 +20,7 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		Allocated:    sn.Allocated,
 		SavedData:    sn.SavedData,
 		NotAvailable: sn.NotAvailable,
-		IsRestricted: sn.IsRestricted,
+		IsRestricted: *sn.IsRestricted,
 		Provider: event.Provider{
 			ID:              sn.ID,
 			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,

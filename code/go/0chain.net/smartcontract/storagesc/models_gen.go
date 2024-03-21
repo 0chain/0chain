@@ -1899,7 +1899,11 @@ func (z *StorageNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.AppendBool(o, z.NotAvailable)
 	// string "IsRestricted"
 	o = append(o, 0xac, 0x49, 0x73, 0x52, 0x65, 0x73, 0x74, 0x72, 0x69, 0x63, 0x74, 0x65, 0x64)
-	o = msgp.AppendBool(o, z.IsRestricted)
+	if z.IsRestricted == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o = msgp.AppendBool(o, *z.IsRestricted)
+	}
 	return
 }
 
@@ -2052,10 +2056,21 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				return
 			}
 		case "IsRestricted":
-			z.IsRestricted, bts, err = msgp.ReadBoolBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "IsRestricted")
-				return
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.IsRestricted = nil
+			} else {
+				if z.IsRestricted == nil {
+					z.IsRestricted = new(bool)
+				}
+				*z.IsRestricted, bts, err = msgp.ReadBoolBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "IsRestricted")
+					return
+				}
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -2071,7 +2086,12 @@ func (z *StorageNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StorageNode) Msgsize() (s int) {
-	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 13 + msgp.BoolSize + 13 + msgp.BoolSize
+	s = 1 + 9 + z.Provider.Msgsize() + 8 + msgp.StringPrefixSize + len(z.BaseURL) + 6 + 1 + 10 + z.Terms.ReadPrice.Msgsize() + 11 + z.Terms.WritePrice.Msgsize() + 9 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.PublicKey) + 10 + msgp.Int64Size + 24 + msgp.Float64Size + 24 + msgp.Int64Size + 18 + z.StakePoolSettings.Msgsize() + 12 + 1 + 11 + msgp.Int64Size + 10 + z.RewardRound.Timestamp.Msgsize() + 13 + msgp.BoolSize + 13
+	if z.IsRestricted == nil {
+		s += msgp.NilSize
+	} else {
+		s += msgp.BoolSize
+	}
 	return
 }
 
