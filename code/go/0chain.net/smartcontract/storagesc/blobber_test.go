@@ -294,8 +294,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
-		writeMarkerSavedData := 104857600
-		require.EqualValues(t, writeMarkerSavedData, blobAfterWrite.SavedData)
+		require.EqualValues(t, cc.WriteMarker.Size, blobAfterWrite.SavedData)
 
 		size := (int64(math.Ceil(float64(cc.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
 		rdtu, err := alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit)
@@ -352,8 +351,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
-		writeMarkerSavedData = 52428800
-		require.EqualValues(t, 52428800, blobAfterWrite.SavedData)
+		require.EqualValues(t, cc.WriteMarker.Size, blobAfterWrite.SavedData)
 
 		require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
 
