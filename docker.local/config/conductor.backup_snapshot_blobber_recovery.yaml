@@ -80,11 +80,11 @@ tests:
           timeout: '25m'
       - generate_all_challenges: true    
       - wait_round:
-          shift: 250
+          shift: 50
       - command:
           name: "upload"
       - wait_round:
-          shift: 100
+          shift: 50
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
@@ -121,7 +121,7 @@ tests:
             recreate_script_workdir: "blobber"
           # Ensures complete data removal, simulating absolute data loss
       - wait_round:
-          shift: 500 # Simulates downtime duration for the Blobber
+          shift: 300 # Simulates downtime duration for the Blobber
       #- sync_latest_aggregates:
       #   blobbers:
       #     - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
@@ -160,11 +160,11 @@ tests:
           timeout: '15m'
       - generate_all_challenges: true    
       - wait_round:
-          shift: 250
+          shift: 50
       - command:
           name: "upload_b_random"
       - wait_round:
-          shift: 100                                                  
+          shift: 50                                                  
       - check_aggregate_value_comparison:
           provider_type: blobber
           provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
