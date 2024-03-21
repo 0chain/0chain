@@ -1740,6 +1740,8 @@ func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, authTicket
 		return false, common.NewError("invalid_auth_ticket", "empty auth ticket")
 	}
 
+	logging.Logger.Info("verifyBlobberAuthTicket", zap.String("clientID", clientID), zap.String("authTicket", authTicket), zap.String("publicKey", publicKey))
+
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
