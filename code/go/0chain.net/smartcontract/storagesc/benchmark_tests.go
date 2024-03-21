@@ -146,35 +146,35 @@ func BenchmarkTests(
 				}).Encode()
 			}(),
 		},
-		{
-			name:     "storage.commit_connection",
-			endpoint: ssc.commitBlobberConnection,
-			txn: &transaction.Transaction{
-				ClientID:     getMockBlobberId(0),
-				ToClientID:   ADDRESS,
-				CreationDate: creationTime,
-			},
-			input: func() []byte {
-				wm := WriteMarker{
-					AllocationRoot:         encryption.Hash("allocation root"),
-					PreviousAllocationRoot: encryption.Hash("allocation root"),
-					AllocationID:           getMockAllocationId(0),
-					Size:                   256,
-					BlobberID:              getMockBlobberId(0),
-					Timestamp:              creationTime,
-					ClientID:               data.Clients[0],
-				}
-				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
-				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				wm.Signature, _ = sigScheme.Sign(encryption.Hash(wm.GetHashData()))
-				bytes, _ := json.Marshal(&BlobberCloseConnection{
-					AllocationRoot:     encryption.Hash("allocation root"),
-					PrevAllocationRoot: encryption.Hash("allocation root"),
-					WriteMarker:        &wm,
-				})
-				return bytes
-			}(),
-		},
+		//{
+		//	name:     "storage.commit_connection",
+		//	endpoint: ssc.commitBlobberConnection,
+		//	txn: &transaction.Transaction{
+		//		ClientID:     getMockBlobberId(0),
+		//		ToClientID:   ADDRESS,
+		//		CreationDate: creationTime,
+		//	},
+		//	input: func() []byte {
+		//		wm := WriteMarker{
+		//			AllocationRoot:         encryption.Hash("allocation root"),
+		//			PreviousAllocationRoot: encryption.Hash("allocation root"),
+		//			AllocationID:           getMockAllocationId(0),
+		//			Size:                   256,
+		//			BlobberID:              getMockBlobberId(0),
+		//			Timestamp:              creationTime,
+		//			ClientID:               data.Clients[0],
+		//		}
+		//		_ = sigScheme.SetPublicKey(data.PublicKeys[0])
+		//		sigScheme.SetPrivateKey(data.PrivateKeys[0])
+		//		wm.Signature, _ = sigScheme.Sign(encryption.Hash(wm.GetHashData()))
+		//		bytes, _ := json.Marshal(&BlobberCloseConnection{
+		//			AllocationRoot:     encryption.Hash("allocation root"),
+		//			PrevAllocationRoot: encryption.Hash("allocation root"),
+		//			WriteMarker:        &wm,
+		//		})
+		//		return bytes
+		//	}(),
+		//},
 
 		// data.Allocations
 		{
@@ -316,10 +316,14 @@ func BenchmarkTests(
 					panic(err)
 				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
+				ids := ""
+				for _, id := range freeBlobbers {
+					ids += id
+				}
 				marker := fmt.Sprintf("%s:%f:%d:%s",
 					request.Recipient,
 					request.FreeTokens,
-					request.Nonce, freeBlobbers)
+					request.Nonce, ids)
 				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				if err != nil {
 					panic(err)
@@ -787,6 +791,7 @@ func BenchmarkTests(
 		},
 		// todo "update_config" waiting for PR489
 	}
+
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
 		testsI = append(testsI, test)

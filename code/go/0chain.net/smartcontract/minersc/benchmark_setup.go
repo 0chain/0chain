@@ -441,6 +441,18 @@ func AddMagicBlock(
 	_, _ = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
 }
 
+func AddHardFork(
+	_, _ []string,
+	balances cstate.StateContextI,
+) {
+
+	h := cstate.NewHardFork("apollo", 1)
+	_, _ = balances.InsertTrieNode(h.GetKey(), h)
+
+	h = cstate.NewHardFork("ares", 2)
+	_, _ = balances.InsertTrieNode(h.GetKey(), h)
+}
+
 func AddMockProviderRewards(
 	miners, sharders []string,
 	eventDb *event.EventDb,

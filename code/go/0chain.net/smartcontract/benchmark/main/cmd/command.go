@@ -26,7 +26,7 @@ const (
 )
 
 func init() {
-	logging.InitLogging("testing", "")
+	logging.InitLogging("development", "")
 	node.Self = &node.SelfNode{
 		Node: node.Provider(),
 	}
