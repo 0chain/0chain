@@ -114,7 +114,7 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 	r := rand.New(rand.NewSource(randomSeed))
 
 	var blobberRewards []BlobberRewardNode
-	if _, err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards, -1); err != nil {
+	if _, err := activePassedBlobberRewardPart.GetRandomItems(balances, r, &blobberRewards, -1, blobberRewardsPartitionSize); err != nil {
 		logging.Logger.Info("blobber_block_rewards_failed",
 			zap.String("getting random partition", err.Error()))
 		if err != util.ErrValueNotPresent {

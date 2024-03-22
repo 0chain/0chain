@@ -514,24 +514,57 @@ func (p *Partitions) removeItem(
 	return p.loadLastFromPrev(state)
 }
 
-func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}, prev int) (int, error) {
+func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, vs interface{}, prev, partitionSize int) (int, error) {
 	if p.Last.length() == 0 {
 		return -1, errors.New("empty list, no items to return")
 	}
 
-	var index int
-	if p.Last.Loc > 0 {
-		for {
-			index = r.Intn(p.Last.Loc + 1)
-			if index != prev {
-				break
-			}
-		}
-	}
+	var (
+		part      *partition
+		err       error
+		index     int
+		lastCount int
+	)
 
-	part, err := p.getPartition(state, index)
-	if err != nil {
-		return -1, err
+	if p.Last.Loc > 0 {
+		actErr := state.WithActivation(balances, "artemis", func() error {
+			index = r.Intn(p.Last.Loc + 1)
+			part, err = p.getPartition(balances, index)
+			if err != nil {
+				return err
+			}
+			return nil
+		}, func() error {
+			for {
+				index = r.Intn(p.Last.Loc + 1)
+
+				// If last partition's size is less than half of partitionSize, select a random number again to reduce probability of last partition selection
+				if index == p.Last.Loc && lastCount == 0 {
+					lastCount = 1
+					part, err = p.getPartition(balances, index)
+					if err != nil {
+						return err
+					}
+
+					if part.length() < partitionSize/2 {
+						continue
+					}
+				}
+
+				if index != prev {
+					part, err = p.getPartition(balances, index)
+					if err != nil {
+						return err
+					}
+					break
+				}
+			}
+			return nil
+		})
+
+		if actErr != nil {
+			return -1, actErr
+		}
 	}
 
 	its, err := part.itemRange(0, part.length())
