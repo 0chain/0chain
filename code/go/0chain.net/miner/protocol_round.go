@@ -1002,7 +1002,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			r.AddProposedBlock(b)
 			mc.AddRoundBlock(r, b)
 
-			if sendVerification || b.RoundRank == 0 {
+			// if sendVerification || b.RoundRank == 0 {
+			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
 					b.SetBlockState(block.StateVerificationPending)
