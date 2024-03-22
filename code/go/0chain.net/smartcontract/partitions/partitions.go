@@ -538,20 +538,20 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 			for {
 				index = r.Intn(p.Last.Loc + 1)
 
-				// If last partition's size is less than half of partitionSize, select a random number again to reduce probability of last partition selection
-				if index == p.Last.Loc && lastCount == 0 {
-					lastCount = 1
-					part, err = p.getPartition(balances, index)
-					if err != nil {
-						return err
-					}
-
-					if part.length() < partitionSize/2 {
-						continue
-					}
-				}
-
 				if index != prev {
+					// If last partition's size is less than half of partitionSize, select a random number again to reduce probability of last partition selection
+					if index == p.Last.Loc && lastCount == 0 {
+						lastCount = 1
+						part, err = p.getPartition(balances, index)
+						if err != nil {
+							return err
+						}
+
+						if part.length() < partitionSize/2 {
+							continue
+						}
+					}
+
 					part, err = p.getPartition(balances, index)
 					if err != nil {
 						return err
