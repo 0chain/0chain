@@ -1,0 +1,180 @@
+enable:
+  - "Storage providers - Blobber Recovery Post Snapshot Backup"
+
+# sets of test cases
+sets:
+  - name: "Storage providers - Blobber Recovery Post Snapshot Backup"
+    tests:
+      - "Blobber Recovery - Blobber should regain ability to gain rewards after restoring from a backup"
+
+tests:
+  - name: "Blobber Recovery - Blobber should regain ability to gain rewards after restoring from a backup"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"      
+      - command:
+          name: "cleanup_0box"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3', 'miner-4']
+      - wait_round:
+          shift: 15 # Ensures blockchain is operational before proceeding
+      - start: ['0dns']
+      - sleep : "20s"
+      - start : ['0box']
+      - command:
+          name: "update_config"
+          params:
+            keys: "validator_reward,time_unit,validators_per_challenge"
+            values: "0.5,1h,3"
+      - command:
+          name: "update_faucet_config"
+          params:
+            keys: max_pour_amount,periodic_limit
+            values: "1000,10000"
+      #- start: ['blobber-1']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3', 'blobber-4']
+          validators: ['validator-1', 'validator-2', 'validator-3', 'validator-4']
+          start: true
+          timeout: '15m'
+      - command:
+          name: "check_registered"
+          params:
+            provider_type: blobber
+            provider_ids:
+              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+      - wait_round:
+          shift: 15 # Allows time for Blobber to register and start functioning
+      - command:
+          name: "fill_blobber_validator_wallets"
+      - command:
+          name: "stake_providers"
+          retry_count: 3
+          params:
+            provider_type: blobber
+            provider_ids:
+                - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+                - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
+                - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+                - "2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e"
+      - command:
+          name: "stake_providers"
+          retry_count: 3
+          params:
+            provider_type: validator
+            provider_ids:
+                - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+                - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
+                - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+                - "823cb45de27dfe739b320dcf6449e5fdea35c60804fd81d6f22c005042cfb337"
+      - sync_latest_aggregates:
+          blobbers:
+            - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          required: false
+      - command:
+          name: 'init_allocation_only'
+          retry_count: 3
+          timeout: '25m'
+      - generate_all_challenges: true    
+      - wait_round:
+          shift: 50
+      - command:
+          name: "upload"
+      - wait_round:
+          shift: 50
+      - check_aggregate_value_comparison:
+          provider_type: blobber
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          key: total_rewards
+          comparison: gt
+          rvalue: 0
+          timeout: "25m"
+      - check_aggregate_value_change:   
+          provider_type: blobber
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          key: total_rewards
+          monotonicity: increase
+          timeout: "25m"            
+      - sleep: "25m"           
+      # Backup blobber data and files
+      - command:
+          name: "backup_blobber_data"
+          params:
+            path_data: "../blobber/docker.local/blobber1/data" 
+            provider_data: blobber-data-1.tar.gz
+      - command:
+          name: "backup_blobber_files"
+          params:
+            path_files: "../blobber/docker.local/blobber1/files"
+            provider_files: blobber-files-1.tar.gz                       
+      - sleep: "60s"  # Wait for some time before dropping the blobber
+      - stop: ['blobber-1'] # Simulates Blobber failure
+      # Clean all data/files of the blobber    
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./blobber/docker.local/blobber1"
+            recreate_script: docker.local/bin/blobber.init.setup.sh
+            recreate_script_workdir: "blobber"
+          # Ensures complete data removal, simulating absolute data loss
+      - wait_round:
+          shift: 300 # Simulates downtime duration for the Blobber
+      #- sync_latest_aggregates:
+      #   blobbers:
+      #     - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+      #   required: true
+      #- wait_round:
+      #    shift: 100                
+      #- check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
+      #    provider_type: blobber
+      #    provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+      #    key: total_rewards
+      #    monotonicity: decrease
+      #    timeout: "2m"
+      # Restore blobber data and files           
+      - sleep: "60s"  # Wait for some time before starting the blobber                  
+      - start: ['blobber-1']
+      - wait_round:
+          shift: 100   # Waits for Blobber to recover, re-sync, and resume operations
+      - command:
+          name: "restore_blobber_data"  
+          params:
+            path_data: "../blobber/docker.local/blobber1/data"
+            provider_data: blobber-data-1.tar.gz
+      - command:
+          name: "restore_blobber_files"  
+          params:
+            path_files: "../blobber/docker.local/blobber1/files"
+            provider_files: blobber-files-1.tar.gz            
+      - command:
+          name: "check_registered"
+          params:
+            provider_type: blobber
+            provider_ids:
+              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"          
+      - command:
+          name: 'repair_allocation'
+          timeout: '15m'
+      - generate_all_challenges: true    
+      - wait_round:
+          shift: 50
+      - command:
+          name: "upload_b_random"
+      - wait_round:
+          shift: 50                                                  
+      - check_aggregate_value_comparison:
+          provider_type: blobber
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          key: total_rewards
+          comparison: gt
+          rvalue: 0
+          timeout: "25m"   
+      - check_aggregate_value_change:   # Verifies the Blobber begins accruing rewards again, indicating successful recovery and participation in the network
+          provider_type: blobber
+          provider_id: "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+          key: total_rewards
+          monotonicity: increase
+          timeout: "25m"
