@@ -351,7 +351,7 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
-		require.EqualValues(t, cc.WriteMarker.Size, blobAfterWrite.SavedData)
+		require.EqualValues(t, math.Abs(float64(cc.WriteMarker.Size)), blobAfterWrite.SavedData)
 
 		require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
 
