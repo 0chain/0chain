@@ -45,6 +45,11 @@ func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContex
 	return
 }
 
+func (sp *StakePool) Save(providerType spenum.Provider, providerID string, balances cstate.StateContextI) (err error) {
+	_, err = balances.InsertTrieNode(stakepool.StakePoolKey(providerType, providerID), sp)
+	return
+}
+
 // empty a delegate pool if possible, call update before the empty
 func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI) (bool, error) {
 	var dp, ok = sp.Pools[clientID]
