@@ -11,7 +11,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 //msgp:ignore unlockResponse stakePoolRequest
@@ -82,7 +84,9 @@ func (zcn *ZCNSmartContract) getStakePool(authorizerID datastore.Key, balances c
 
 func (zcn *ZCNSmartContract) getStakePoolForAdapter(_ spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (sp *StakePool, err error) {
 	sp = NewStakePool()
-	err = balances.GetTrieNode(stakepool.StakePoolKey(spenum.Authorizer, providerID), sp)
+	key := stakepool.StakePoolKey(spenum.Authorizer, providerID)
+	logging.Logger.Debug("getStakePoolForAdapter", zap.Any("key", key))
+	err = balances.GetTrieNode(key, sp)
 	if err != nil {
 		return nil, err
 	}
