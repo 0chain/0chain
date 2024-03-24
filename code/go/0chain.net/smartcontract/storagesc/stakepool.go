@@ -9,9 +9,7 @@ import (
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/currency"
-	"go.uber.org/zap"
 
 	"0chain.net/smartcontract/stakepool"
 
@@ -305,9 +303,7 @@ func (_ *StorageSmartContract) getStakePoolAdapter(
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances chainstate.CommonStateContextI) (
 	sp *stakePool, err error) {
 	sp = newStakePool()
-	key := stakePoolKey(providerType, providerID)
-	logging.Logger.Debug("getStakePool", zap.String("key", key))
-	err = balances.GetTrieNode(key, sp)
+	err = balances.GetTrieNode(stakePoolKey(providerType, providerID), sp)
 	if err != nil {
 		return nil, err
 	}

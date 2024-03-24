@@ -764,16 +764,9 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
-	if spr.ProviderType == spenum.Authorizer {
-		logging.Logger.Debug("getStakePoolForAdapter MPT response",
-			zap.Any("spr", spr),
-			zap.Any("sp", sp))
-	}
-
 	if s, err2 := validateLockRequest(t, sp, vs, balances); err2 != nil {
 		return s, err2
 	}
-
 
 	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
 
@@ -881,13 +874,7 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
-
-	if spr.ProviderType == spenum.Authorizer {
-		logging.Logger.Debug("getStakePoolForAdapter MPT response",
-			zap.Any("spr", spr),
-			zap.Any("sp", sp))
-	}
-
+	
 	dp, ok := sp.GetPools()[t.ClientID]
 	if !ok {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
