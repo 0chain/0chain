@@ -4,9 +4,7 @@ package zcnsc
 
 import (
 	"0chain.net/smartcontract/stakepool"
-	"github.com/0chain/common/core/logging"
 	"github.com/tinylib/msgp/msgp"
-	"go.uber.org/zap"
 )
 
 // MarshalMsg implements msgp.Marshaler
@@ -29,7 +27,6 @@ func (z *StakePool) MarshalMsg(b []byte) (o []byte, err error) {
 
 // UnmarshalMsg implements msgp.Unmarshaler
 func (z *StakePool) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	logging.Logger.Debug("zcnsc.StakePool.UnmarshalMsg", zap.ByteString("bts", bts))
 	var field []byte
 	_ = field
 	var zb0001 uint32
