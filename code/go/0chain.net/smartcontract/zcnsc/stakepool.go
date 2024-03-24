@@ -25,13 +25,13 @@ import (
 //type stakePool stakepool.Provider
 
 type StakePool struct {
-	*stakepool.StakePool
+	stakepool.StakePool
 }
 
 func NewStakePool() *StakePool {
 	pool := stakepool.NewStakePool()
 	return &StakePool{
-		StakePool: pool,
+		StakePool: *pool,
 	}
 }
 
