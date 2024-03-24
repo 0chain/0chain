@@ -46,7 +46,17 @@ func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContex
 }
 
 func (sp *StakePool) Save(providerType spenum.Provider, providerID string, balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(stakepool.StakePoolKey(providerType, providerID), sp)
+	beforeFunc := func() (e error) {
+		e = sp.StakePool.Save(providerType, providerID, balances)
+		return
+	}
+
+	afterFunc := func() (e error) {
+		_, e = balances.InsertTrieNode(stakepool.StakePoolKey(providerType, providerID), sp)
+		return
+	}
+	
+	err = cstate.WithActivation(balances, "ares", beforeFunc, afterFunc)
 	return
 }
 
