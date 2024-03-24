@@ -764,15 +764,16 @@ func StakePoolLock(t *transaction.Transaction, input []byte, balances cstate.Sta
 			"can't get stake pool: %v", err)
 	}
 
-	if s, err2 := validateLockRequest(t, sp, vs, balances); err2 != nil {
-		return s, err2
-	}
-
 	if spr.ProviderType == spenum.Authorizer {
 		logging.Logger.Debug("getStakePoolForAdapter MPT response",
 			zap.Any("spr", spr),
 			zap.Any("sp", sp))
 	}
+
+	if s, err2 := validateLockRequest(t, sp, vs, balances); err2 != nil {
+		return s, err2
+	}
+
 
 	logging.Logger.Info("stake_pool_lock", zap.Int("pools", len(sp.GetPools())), zap.Int("delegates", sp.GetSettings().MaxNumDelegates))
 
