@@ -9,7 +9,7 @@ import (
 	"0chain.net/core/maths"
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"0dns.io/core/logging"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/currency"
 	"go.uber.org/zap"
 
