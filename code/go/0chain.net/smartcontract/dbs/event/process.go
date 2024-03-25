@@ -498,7 +498,8 @@ func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, erro
 
 	g, err := tx.GetGlobal()
 	if err != nil {
-		logging.Logger.Panic(fmt.Sprintf("can't load snapshot for round: %d, err: %v", es.round, err))
+		logging.Logger.Warn(fmt.Sprintf("can't load snapshot for round: %d, err: %v", es.round, err))
+		return tx.updateHistoricData(es, &Snapshot{Round: es.round})
 	}
 	gs = &g
 
