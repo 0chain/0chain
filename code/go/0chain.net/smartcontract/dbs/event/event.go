@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -111,10 +112,15 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 				logging.Logger.Panic(fmt.Sprintf("Failed to get marshal event: %v", err))
 			}
 
+			ts := time.Now()
 			err = broker.PublishToKafka(topic, eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
+			}
+			tm := time.Since(ts)
+			if tm > 100*time.Millisecond {
+				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
 			}
 		}
 	}
