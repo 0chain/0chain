@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -219,7 +220,10 @@ func (edb *EventDb) UpdateTransactionErrors(lastPartition int64) error {
 		return err
 	}
 
-	if dbTxn := db.Exec(fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+
+	if dbTxn := db.WithContext(timeout).Exec(fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
 		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = 2"+
 		"GROUP BY transaction_output", lastPartition)); dbTxn.Error != nil {
 
