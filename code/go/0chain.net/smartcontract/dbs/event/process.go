@@ -1,12 +1,13 @@
 package event
 
 import (
-	"0chain.net/smartcontract/dbs/queueProvider"
 	"errors"
 	"fmt"
 	"reflect"
 	"sync"
 	"time"
+
+	"0chain.net/smartcontract/dbs/queueProvider"
 
 	"0chain.net/chaincore/state"
 	"golang.org/x/net/context"
@@ -497,7 +498,7 @@ func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, erro
 
 	g, err := tx.GetGlobal()
 	if err != nil {
-		logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
+		logging.Logger.Panic(fmt.Sprintf("can't load snapshot for round: %d, err: %v", es.round, err))
 	}
 	gs = &g
 
