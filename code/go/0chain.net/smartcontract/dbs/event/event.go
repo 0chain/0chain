@@ -3,6 +3,7 @@ package event
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -85,14 +86,21 @@ func filterEvents(events []Event) []Event {
 }
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
-	broker := edb.GetKafkaProv()
-	if broker == nil {
-		logging.Logger.Error("Failed to get kafka instance")
+	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
+	if len(events.events) == 0 {
+		return nil
 	}
 
-	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
-	if edb.Store != nil && len(events.events) > 0 {
-		filteredEvents := filterEvents(events.events)
+	if edb.Store == nil {
+		logging.Logger.Panic("event database is nil")
+	}
+
+	if edb.dbConfig.KafkaEnabled {
+		var (
+			filteredEvents = filterEvents(events.events)
+			broker         = edb.GetKafkaProv()
+			topic          = edb.dbConfig.KafkaTopic
+		)
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
 				"event": filteredEvent,
@@ -100,19 +108,18 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 			}
 			eventJson, err := json.Marshal(data)
 			if err != nil {
-				logging.Logger.Error("Failed to get unpublished event: ", zap.Error(err))
-			} else {
-				err = broker.PublishToKafka(edb.dbConfig.KafkaTopic, eventJson)
-				if err != nil {
-					logging.Logger.Error("Unable to publish event to kafka: ", zap.Error(err))
-				}
+				logging.Logger.Panic(fmt.Sprintf("Failed to get marshal event: %v", err))
 			}
 
+			err = broker.PublishToKafka(topic, eventJson)
+			if err != nil {
+				// Panic to break early for debugging, change back to error later
+				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
+			}
 		}
-		return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
 	}
 
-	return nil
+	return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
 }
 
 func (edb *EventDb) Drop() error {

@@ -42,7 +42,10 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		eventsChannel: make(chan BlockEvents, 1),
 		eventsCounter: *atomic.NewUint64(0),
 		settings:      settings,
-		kafka:         queueProvider.NewKafkaProvider(config.KafkaHost, config.KafkaWriteTimeout),
+	}
+
+	if config.KafkaEnabled {
+		eventDb.kafka = queueProvider.NewKafkaProvider(config.KafkaHost, config.KafkaWriteTimeout)
 	}
 
 	// Load last sequence number. Useful when the sharder is restarted.
@@ -66,7 +69,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
-	
+
 	go eventDb.addEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
@@ -120,18 +123,19 @@ func (edb *EventDb) Rollback() error {
 
 func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, error) {
 	cloneConfig := config.DbAccess{
-		Enabled:         true,
-		Name:            dbName,
-		User:            edb.dbConfig.User,
-		Password:        edb.dbConfig.Password,
-		Host:            edb.dbConfig.Host,
-		Port:            edb.dbConfig.Port,
-		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
-		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
-		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
-		Slowtablespace: edb.dbConfig.Slowtablespace,
-		KafkaHost: 	 edb.dbConfig.KafkaHost,
-		KafkaTopic: 	 edb.dbConfig.KafkaTopic,
+		Enabled:           true,
+		Name:              dbName,
+		User:              edb.dbConfig.User,
+		Password:          edb.dbConfig.Password,
+		Host:              edb.dbConfig.Host,
+		Port:              edb.dbConfig.Port,
+		MaxIdleConns:      edb.dbConfig.MaxIdleConns,
+		MaxOpenConns:      edb.dbConfig.MaxOpenConns,
+		ConnMaxLifetime:   edb.dbConfig.ConnMaxLifetime,
+		Slowtablespace:    edb.dbConfig.Slowtablespace,
+		KafkaEnabled:      edb.dbConfig.KafkaEnabled,
+		KafkaHost:         edb.dbConfig.KafkaHost,
+		KafkaTopic:        edb.dbConfig.KafkaTopic,
 		KafkaWriteTimeout: edb.dbConfig.KafkaWriteTimeout,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
@@ -147,7 +151,7 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		settings:      edb.settings,
 		kafka:         queueProvider.NewKafkaProvider(cloneConfig.KafkaHost, cloneConfig.KafkaWriteTimeout),
 	}
-	
+
 	return newEdb, nil
 }
 

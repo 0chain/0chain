@@ -94,7 +94,7 @@ func SetupDefaultConfig() {
 
 	viper.SetDefault("kafka.host", "localhost:9092")
 	viper.SetDefault("kafka.topic", "events")
-	viper.SetDefault("kafka.write_timeout", 10 * time.Second) // seconds
+	viper.SetDefault("kafka.write_timeout", 10*time.Second) // seconds
 }
 
 // SetupConfig setups the main configuration system.
@@ -202,12 +202,13 @@ type DbAccess struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
 
-	MaxIdleConns    int           `json:"max_idle_conns"`
-	MaxOpenConns    int           `json:"max_open_conns"`
-	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
-	Slowtablespace  string        `json:"slowtablespace"`
-	KafkaHost       string
-	KafkaTopic      string
+	MaxIdleConns      int           `json:"max_idle_conns"`
+	MaxOpenConns      int           `json:"max_open_conns"`
+	ConnMaxLifetime   time.Duration `json:"conn_max_lifetime"`
+	Slowtablespace    string        `json:"slowtablespace"`
+	KafkaEnabled      bool
+	KafkaHost         string
+	KafkaTopic        string
 	KafkaWriteTimeout time.Duration
 }
 

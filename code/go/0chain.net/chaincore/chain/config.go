@@ -586,6 +586,7 @@ func (c *ConfigImpl) FromViper() error {
 	if conf.DbsEvents.Slowtablespace == "" {
 		conf.DbsEvents.Slowtablespace = "hddtablespace"
 	}
+	conf.DbsEvents.KafkaEnabled = viper.GetBool("kafka.enabled")
 	conf.DbsEvents.KafkaHost = viper.GetString("kafka.host")
 	conf.DbsEvents.KafkaTopic = viper.GetString("kafka.topic")
 	conf.DbsEvents.KafkaWriteTimeout = viper.GetDuration("kafka.write_timeout")
