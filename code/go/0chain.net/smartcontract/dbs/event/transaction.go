@@ -204,7 +204,9 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 }
 
 func (edb *EventDb) UpdateTransactionErrors(lastPartition int64) error {
-	logging.Logger.Info("UpdateTransactionErrors", zap.Any("lastPartition", lastPartition))
+	logging.Logger.Info("UpdateTransactionErrors", zap.Any("lastPartition", lastPartition), zap.Any("query", fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
+		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = 2"+
+		"GROUP BY transaction_output", lastPartition)))
 
 	db := edb.Get()
 
