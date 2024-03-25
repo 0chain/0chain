@@ -122,6 +122,6 @@ func (k *KafkaProvider) createKafkaWriter(topic string) *kafka.Writer {
 		Topic:                  topic,
 		AllowAutoTopicCreation: true,
 		WriteTimeout:           k.WriteTimeout,
-		Async:                  true,
+		// Async:                  true,
 	}
 }
