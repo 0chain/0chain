@@ -1,7 +1,9 @@
 package event
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -202,23 +204,28 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 	return tr, res.Error
 }
 
-func (edb *EventDb) UpdateTransactionErrors() error {
+func (edb *EventDb) UpdateTransactionErrors(lastPartition int64) error {
+	logging.Logger.Info("UpdateTransactionErrors", zap.Any("lastPartition", lastPartition), zap.Any("query", fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
+		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = 2"+
+		"GROUP BY transaction_output", lastPartition)))
+
 	db := edb.Get()
 
-	// created_at for last day from now
 	lastDay := time.Now().AddDate(0, 0, -1)
-	// convert to string
 	lastDayString := lastDay.Format("2006-01-02 15:04:05")
 
 	// clean up the transaction error table
-	err := db.Exec("TRUNCATE TABLE transaction_errors").Error
+	err := db.Exec("DELETE FROM transaction_errors WHERE created_at < ?", lastDayString).Error
 	if err != nil {
 		return err
 	}
 
-	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT transaction_output, count(*) as count FROM transactions WHERE status = ? and created_at > ?"+
-		"GROUP BY transaction_output", 2, lastDayString); dbTxn.Error != nil {
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+
+	if dbTxn := db.WithContext(timeout).Exec(fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
+		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = 2"+
+		"GROUP BY transaction_output", lastPartition)); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
 		return dbTxn.Error
