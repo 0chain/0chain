@@ -43,11 +43,11 @@ func TestPartitionCreate(t *testing.T) {
 
 	var partitions []string
 	db.Store.Get().Raw(req).Scan(&partitions)
-	require.Equal(t, 3, len(partitions))
+	require.Equal(t, 4, len(partitions))
 
 	err = db.dropPartition(201, "blobber_aggregates")
 	require.NoError(t, err)
 
 	db.Store.Get().Raw(req).Scan(&partitions)
-	require.Equal(t, 3, len(partitions))
+	require.Equal(t, 4, len(partitions))
 }

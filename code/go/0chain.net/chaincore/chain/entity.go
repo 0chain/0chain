@@ -23,7 +23,7 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"

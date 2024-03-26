@@ -14,8 +14,6 @@ require (
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/herumi/bls v1.37.0
-	github.com/herumi/mcl v1.86.0
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
@@ -45,6 +43,7 @@ require (
 	github.com/0chain/common v0.0.7-0.20231108122201-3e2bad6b9d20
 	github.com/0chain/gosdk v1.11.0
 	github.com/go-faker/faker/v4 v4.2.0
+	github.com/herumi/bls-go-binary v1.33.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.0
@@ -79,7 +78,6 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/h2non/filetype v1.1.3 // indirect
-	github.com/herumi/bls-go-binary v1.31.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/klauspost/reedsolomon v1.11.8 // indirect
 	github.com/machinebox/graphql v0.2.2 // indirect
