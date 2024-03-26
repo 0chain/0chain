@@ -20,7 +20,6 @@ services:
     restart: unless-stopped
     networks:
       default:
-
   sharder:
     container_name: sharder-${SHARDER}
     image: "sharder"
