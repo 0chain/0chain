@@ -12,7 +12,7 @@ import (
 )
 
 type KafkaProviderI interface {
-	PublishToKafka(topic string, message []byte) error
+	PublishToKafka(topic string, key, message []byte) error
 	ReconnectWriter(topic string) error
 	CloseWriter(topic string) error
 	CloseAllWriters() error
@@ -37,7 +37,41 @@ func NewKafkaProvider(host string, writeTimeout time.Duration) *KafkaProvider {
 		WriteTimeout: writeTimeout,
 	}
 }
-func (k *KafkaProvider) PublishToKafka(topic string, message []byte) error {
+
+type hashBalancer struct {
+	hashRing   map[string]int
+	partitions []int
+}
+
+func newHashBalancer(partitions []int) kafka.Balancer {
+	b := &hashBalancer{
+		hashRing:   make(map[string]int),
+		partitions: partitions,
+	}
+	return b
+}
+
+func (b *hashBalancer) Balance(msg kafka.Message, partitions ...int) (partition int) {
+	// hash := fmt.Sprintf("%s-%s", string(key), string(value))
+	// partitionIndex, ok := b.hashRing[hash]
+	// if !ok {
+	// 	partitionIndex = len(b.hashRing) % len(b.partitions)
+	// 	b.hashRing[hash] = partitionIndex
+	// }
+	// return b.partitions[partitionIndex]
+	partition = 0
+	return
+}
+
+// func partitionerFunc(topic string, key []byte, value []byte, metadata *kafka.WriterMetadata) ([]kafka.Partition, []int32, error) {
+// 	// Determine the partition based on the key
+// 	partition := int32(len(key)) % metadata.NumberPartitions
+
+// 	// Return the single partition and no error
+// 	return []kafka.Partition{kafka.Partition(partition)}, []int32{}, nil
+// }
+
+func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error {
 	toutCtx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
 	defer cancel()
 
@@ -56,6 +90,7 @@ func (k *KafkaProvider) PublishToKafka(topic string, message []byte) error {
 	}
 	err := writer.WriteMessages(toutCtx,
 		kafka.Message{
+			Key:   key,
 			Value: message,
 		},
 	)
@@ -122,6 +157,7 @@ func (k *KafkaProvider) createKafkaWriter(topic string) *kafka.Writer {
 		Topic:                  topic,
 		AllowAutoTopicCreation: true,
 		WriteTimeout:           k.WriteTimeout,
-		// Async:                  true,
+		Async:                  true,
+		Balancer:               newHashBalancer([]int{0}),
 	}
 }

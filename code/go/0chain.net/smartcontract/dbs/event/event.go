@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"0chain.net/smartcontract/common"
@@ -113,7 +114,8 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 			}
 
 			ts := time.Now()
-			err = broker.PublishToKafka(topic, eventJson)
+			key := strconv.Itoa(int(events.round))
+			err = broker.PublishToKafka(topic, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
