@@ -1,12 +1,14 @@
 package zcnsc_test
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
 	"testing"
 	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"0chain.net/smartcontract/storagesc"
@@ -28,6 +30,7 @@ var (
 )
 
 func init() {
+	common.SetupRootContext(context.Background())
 	rand.Seed(time.Now().UnixNano())
 	logging.Logger = zap.NewNop()
 }
