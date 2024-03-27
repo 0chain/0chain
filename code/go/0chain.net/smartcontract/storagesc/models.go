@@ -1713,7 +1713,7 @@ func (sa *StorageAllocation) validateEachBlobber(
 			continue
 		}
 
-		actErr := cstate.WithActivation(balances, "ares", func() (e error) { return },
+		actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
 			func() (e error) {
 				if *sn.IsRestricted {
 					success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], sn.PublicKey)

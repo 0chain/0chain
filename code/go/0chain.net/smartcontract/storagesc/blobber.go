@@ -251,7 +251,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	actErr := cstate.WithActivation(balances, "ares", func() (e error) { return },
+	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
 		func() (e error) {
 			existingBlobber.IsRestricted = updateBlobber.IsRestricted
 			return nil
