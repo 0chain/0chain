@@ -1026,36 +1026,14 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, errors.New("invalid blobber for allocation")
 	}
 
-	var randValidators, partitionRandValidators []ValidationPartitionNode
-
-	err = validators.GetRandomItems(balances, r, &partitionRandValidators)
-	if err != nil {
+	var randValidators []ValidationPartitionNode
+	if err := validators.GetRandomItems(balances, r, &randValidators); err != nil {
 		return nil, common.NewError("add_challenge",
 			"error getting validators random slice: "+err.Error())
 	}
 
-	randValidators = append(randValidators, partitionRandValidators...)
-
 	if len(randValidators) < needValidNum {
-		actErr := cstate.WithActivation(balances, "artemis", func() error {
-			return nil
-		}, func() error {
-			err = validators.GetRandomItems(balances, r, &partitionRandValidators)
-			if err != nil {
-				return common.NewError("add_challenge",
-					"error getting validators random slice: "+err.Error())
-			}
-
-			randValidators = append(randValidators, partitionRandValidators...)
-			return nil
-		})
-		if actErr != nil {
-			return nil, actErr
-		}
-
-		if len(randValidators) < needValidNum {
-			return nil, errors.New("validators number does not meet minimum challenge requirement")
-		}
+		return nil, errors.New("validators number does not meet minimum challenge requirement")
 	}
 
 	var (
