@@ -536,7 +536,7 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 				}
 
 				if part.length() < p.PartitionSize/2 {
-					index = r.Intn(p.Last.Loc)
+					index--
 					return nil
 				}
 			}
