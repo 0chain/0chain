@@ -524,12 +524,11 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 	)
 
 	if p.Last.Loc > 0 {
+		index = r.Intn(p.Last.Loc + 1)
+
 		actErr := state.WithActivation(balances, "artemis", func() error {
-			index = r.Intn(p.Last.Loc + 1)
 			return nil
 		}, func() error {
-			index = r.Intn(p.Last.Loc + 1)
-
 			if index == p.Last.Loc {
 				part, err := p.getPartition(balances, index)
 				if err != nil {
