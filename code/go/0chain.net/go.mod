@@ -1,6 +1,8 @@
 module 0chain.net
 
-go 1.20
+go 1.21
+
+toolchain go1.22.1
 
 require (
 	github.com/alicebob/miniredis/v2 v2.30.5
