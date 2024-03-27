@@ -521,6 +521,8 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 
 	var (
 		index int
+		its   []item
+		its2  []item
 	)
 
 	if p.Last.Loc > 0 {
@@ -535,11 +537,7 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 					return err
 				}
 
-				its, err := part.itemRange(0, part.length())
-				if err != nil {
-					return err
-				}
-				err = setPartitionItems(its, vs)
+				its2, err = part.itemRange(0, part.length())
 				if err != nil {
 					return err
 				}
@@ -563,10 +561,12 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 		return err
 	}
 
-	its, err := part.itemRange(0, part.length())
+	its, err = part.itemRange(0, part.length())
 	if err != nil {
 		return err
 	}
+
+	its = append(its, its2...)
 
 	return setPartitionItems(its, vs)
 }
