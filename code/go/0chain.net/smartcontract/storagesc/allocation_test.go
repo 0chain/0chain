@@ -970,7 +970,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 
 	all = new(StorageNodes)
 
-	for i := 0; i < numBlobbers; i++ {
+	for i := 1; i <= numBlobbers; i++ {
 		all.Nodes = append(all.Nodes, &StorageNode{
 			Provider: provider.Provider{
 				ID:              "b" + strconv.Itoa(i),
@@ -1152,6 +1152,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		conditions = make(map[string]interface{})
 		conditions["is_restricted"] = true
 		var allBlobbers = newTestAllBlobbers(conditions)
+
+		zcncore.InitSignatureScheme("bls0chain")
 
 		b0OwnerWalletString, err := zcncore.CreateWalletOffline()
 		require.NoError(t, err)
