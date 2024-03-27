@@ -438,9 +438,9 @@ func (z *BlobberAllocation) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *BlobberCloseConnection) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
 	// string "AllocationRoot"
-	o = append(o, 0x83, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
+	o = append(o, 0x84, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
 	o = msgp.AppendString(o, z.AllocationRoot)
 	// string "PrevAllocationRoot"
 	o = append(o, 0xb2, 0x50, 0x72, 0x65, 0x76, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
@@ -456,6 +456,9 @@ func (z *BlobberCloseConnection) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
+	// string "ChainData"
+	o = append(o, 0xa9, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x44, 0x61, 0x74, 0x61)
+	o = msgp.AppendBytes(o, z.ChainData)
 	return
 }
 
@@ -506,6 +509,12 @@ func (z *BlobberCloseConnection) UnmarshalMsg(bts []byte) (o []byte, err error) 
 					return
 				}
 			}
+		case "ChainData":
+			z.ChainData, bts, err = msgp.ReadBytesBytes(bts, z.ChainData)
+			if err != nil {
+				err = msgp.WrapError(err, "ChainData")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -526,6 +535,7 @@ func (z *BlobberCloseConnection) Msgsize() (s int) {
 	} else {
 		s += z.WriteMarker.Msgsize()
 	}
+	s += 10 + msgp.BytesPrefixSize + len(z.ChainData)
 	return
 }
 
@@ -2590,9 +2600,9 @@ func (z *ValidatorNodes) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *WriteMarker) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 9
+	// map header, size 11
 	// string "AllocationRoot"
-	o = append(o, 0x89, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
+	o = append(o, 0x8b, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
 	o = msgp.AppendString(o, z.AllocationRoot)
 	// string "PreviousAllocationRoot"
 	o = append(o, 0xb6, 0x50, 0x72, 0x65, 0x76, 0x69, 0x6f, 0x75, 0x73, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
@@ -2606,6 +2616,12 @@ func (z *WriteMarker) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Size"
 	o = append(o, 0xa4, 0x53, 0x69, 0x7a, 0x65)
 	o = msgp.AppendInt64(o, z.Size)
+	// string "ChainSize"
+	o = append(o, 0xa9, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x53, 0x69, 0x7a, 0x65)
+	o = msgp.AppendInt64(o, z.ChainSize)
+	// string "ChainHash"
+	o = append(o, 0xa9, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x48, 0x61, 0x73, 0x68)
+	o = msgp.AppendString(o, z.ChainHash)
 	// string "BlobberID"
 	o = append(o, 0xa9, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.BlobberID)
@@ -2673,6 +2689,18 @@ func (z *WriteMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Size")
 				return
 			}
+		case "ChainSize":
+			z.ChainSize, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ChainSize")
+				return
+			}
+		case "ChainHash":
+			z.ChainHash, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ChainHash")
+				return
+			}
 		case "BlobberID":
 			z.BlobberID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
@@ -2711,7 +2739,7 @@ func (z *WriteMarker) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *WriteMarker) Msgsize() (s int) {
-	s = 1 + 15 + msgp.StringPrefixSize + len(z.AllocationRoot) + 23 + msgp.StringPrefixSize + len(z.PreviousAllocationRoot) + 13 + msgp.StringPrefixSize + len(z.FileMetaRoot) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 5 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + z.Timestamp.Msgsize() + 9 + msgp.StringPrefixSize + len(z.ClientID) + 10 + msgp.StringPrefixSize + len(z.Signature)
+	s = 1 + 15 + msgp.StringPrefixSize + len(z.AllocationRoot) + 23 + msgp.StringPrefixSize + len(z.PreviousAllocationRoot) + 13 + msgp.StringPrefixSize + len(z.FileMetaRoot) + 13 + msgp.StringPrefixSize + len(z.AllocationID) + 5 + msgp.Int64Size + 10 + msgp.Int64Size + 10 + msgp.StringPrefixSize + len(z.ChainHash) + 10 + msgp.StringPrefixSize + len(z.BlobberID) + 10 + z.Timestamp.Msgsize() + 9 + msgp.StringPrefixSize + len(z.ClientID) + 10 + msgp.StringPrefixSize + len(z.Signature)
 	return
 }
 

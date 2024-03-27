@@ -2008,6 +2008,7 @@ type BlobberCloseConnection struct {
 	AllocationRoot     string       `json:"allocation_root"`
 	PrevAllocationRoot string       `json:"prev_allocation_root"`
 	WriteMarker        *WriteMarker `json:"write_marker"`
+	ChainData          []byte       `json:"chain_data"`
 }
 
 func (bc *BlobberCloseConnection) Decode(input []byte) error {
@@ -2046,6 +2047,8 @@ type WriteMarker struct {
 	FileMetaRoot           string           `json:"file_meta_root"`
 	AllocationID           string           `json:"allocation_id"`
 	Size                   int64            `json:"size"`
+	ChainSize              int64            `json:"chain_size"`
+	ChainHash              string           `json:"chain_hash"`
 	BlobberID              string           `json:"blobber_id"`
 	Timestamp              common.Timestamp `json:"timestamp"`
 	ClientID               string           `json:"client_id"`
@@ -2073,11 +2076,18 @@ func (wm *WriteMarker) VerifySignature(
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf(
-		"%s:%s:%s:%s:%s:%s:%d:%d",
-		wm.AllocationRoot, wm.PreviousAllocationRoot,
-		wm.FileMetaRoot, wm.AllocationID,
-		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
+	var hashData string
+	if wm.ChainHash != "" {
+		hashData = fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%d:%d:%d",
+			wm.AllocationRoot, wm.PreviousAllocationRoot,
+			wm.FileMetaRoot, wm.ChainHash, wm.AllocationID, wm.BlobberID,
+			wm.ClientID, wm.Size, wm.ChainSize, wm.Timestamp)
+	} else {
+		hashData = fmt.Sprintf("%s:%s:%s:%s:%s:%s:%d:%d",
+			wm.AllocationRoot, wm.PreviousAllocationRoot,
+			wm.FileMetaRoot, wm.AllocationID, wm.BlobberID,
+			wm.ClientID, wm.Size, wm.Timestamp)
+	}
 	return hashData
 }
 

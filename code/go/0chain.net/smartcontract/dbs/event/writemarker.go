@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// swagger:model WriteMarker 
+// swagger:model WriteMarker
 type WriteMarker struct {
 	model.UpdatableModel
 	ClientID      string `json:"client_id"`
@@ -24,6 +24,8 @@ type WriteMarker struct {
 	PreviousAllocationRoot string `json:"previous_allocation_root"`
 	FileMetaRoot           string `json:"file_meta_root"`
 	Size                   int64  `json:"size"`
+	ChainSize              int64  `json:"chain_size"`
+	ChainHash              string `json:"chain_hash"`
 	Timestamp              int64  `json:"timestamp"`
 	Signature              string `json:"signature"`
 	BlockNumber            int64  `json:"block_number" gorm:"index:idx_wblocknum;idx_walloc_block,priority:2"` //used in alloc_written_size
