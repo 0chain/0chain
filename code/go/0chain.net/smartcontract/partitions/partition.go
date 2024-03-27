@@ -41,25 +41,6 @@ func (p *partition) clone() *partition {
 		panic("partition unmarshal failed")
 	}
 	return &np
-
-	// newPartition := &partition{
-	// 	Key:     p.Key,
-	// 	Loc:     p.Loc,
-	// 	Items:   make([]item, len(p.Items)),
-	// 	Changed: p.Changed,
-	// }
-
-	// for i, it := range p.Items {
-	// 	nit := item{
-	// 		ID:   it.ID,
-	// 		Data: make([]byte, len(it.Data)),
-	// 	}
-	// 	copy(nit.Data, it.Data)
-
-	// 	newPartition.Items[i] = nit
-	// }
-
-	// return newPartition
 }
 
 func (p *partition) Clone() statecache.Value {
@@ -70,21 +51,6 @@ func (p *partition) CopyFrom(v interface{}) bool {
 	if ps, ok := v.(*partition); ok {
 		np := ps.clone()
 		*p = *np
-		// p.Key = ps.Key
-		// p.Loc = ps.Loc
-		// p.Items = make([]item, len(ps.Items))
-
-		// for i, it := range ps.Items {
-		// 	nit := item{
-		// 		ID:   it.ID,
-		// 		Data: make([]byte, len(it.Data)),
-		// 	}
-		// 	copy(nit.Data, it.Data)
-
-		// 	p.Items[i] = nit
-		// }
-
-		// p.Changed = ps.Changed
 		return true
 	}
 	return false

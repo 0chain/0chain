@@ -64,7 +64,6 @@ func (mc *Chain) startMessageWorker(ctx context.Context) {
 						logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
 					}
 
-					// taskqueue.Execute(taskqueue.Common, func() error {
 					switch bmsg.Type {
 					case MessageVRFShare:
 						protocol.HandleVRFShare(ctx, bmsg)
@@ -77,8 +76,6 @@ func (mc *Chain) startMessageWorker(ctx context.Context) {
 					case MessageNotarizedBlock:
 						protocol.HandleNotarizedBlockMessage(ctx, bmsg)
 					}
-					// return nil
-					// })
 
 					if bmsg.Sender != nil {
 						logging.Logger.Debug("message (done)",

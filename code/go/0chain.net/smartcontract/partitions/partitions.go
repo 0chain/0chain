@@ -54,23 +54,6 @@ func (p *Partitions) Clone() statecache.Value {
 		panic("partitions unmarshal failed")
 	}
 	return np
-	// newPartitions := &Partitions{
-	// 	Name:          p.Name,
-	// 	PartitionSize: p.PartitionSize,
-	// 	Last:          p.Last.clone(),
-	// 	Partitions:    make(map[int]*partition),
-	// 	locations:     make(map[string]int),
-	// }
-
-	// for key, value := range p.Partitions {
-	// 	newPartitions.Partitions[key] = value.clone()
-	// }
-
-	// for key, value := range p.locations {
-	// 	newPartitions.locations[key] = value
-	// }
-
-	// return newPartitions
 }
 
 func (p *Partitions) CopyFrom(v interface{}) bool {
@@ -78,25 +61,7 @@ func (p *Partitions) CopyFrom(v interface{}) bool {
 	if !ok {
 		return false
 	}
-
-	// np := cp.Clone()
-	// *p = *np.(*Partitions)
 	*p = *cp
-
-	// p.Name = cp.Name
-	// p.PartitionSize = cp.PartitionSize
-	// p.Last = cp.Last.clone()
-	// p.Partitions = make(map[int]*partition)
-	// p.locations = make(map[string]int)
-
-	// for key, value := range cp.Partitions {
-	// 	p.Partitions[key] = value.clone()
-	// }
-
-	// for key, value := range cp.locations {
-	// 	p.locations[key] = value
-	// }
-
 	return true
 }
 

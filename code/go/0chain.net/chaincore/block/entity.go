@@ -281,13 +281,6 @@ func (b *Block) Validate(_ context.Context) error {
 			fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v",
 				b.Hash, hash, b.getHashData()))
 	}
-	// var ok bool
-	// if err := taskqueue.Execute(taskqueue.Common, func() error {
-	// 	ok, err = miner.Verify(b.Signature, b.Hash)
-	// 	return err
-	// }); err != nil {
-	// 	return err
-	// }
 	ok, err := miner.Verify(b.Signature, b.Hash)
 	if err != nil {
 		return err

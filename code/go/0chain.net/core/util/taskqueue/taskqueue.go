@@ -222,21 +222,6 @@ func (te *TaskExecutor) taskDispatcher(ctx context.Context) {
 			go func() {
 				te.workerCs[task.priority] <- task
 			}()
-
-			// if task.priority == int(SCExec) {
-			// 	go func() {
-			// 		te.scTasksC <- task
-			// 	}()
-			// 	// wait for SC task to be done before dispatch other tasks
-			// 	// select {
-			// 	// case <-task.doneC:
-			// 	// case <-time.After(100 * time.Millisecond):
-			// 	// }
-			// } else {
-			// 	go func() {
-			// 		te.otherTasksC <- task
-			// 	}()
-			// }
 		}
 	}
 }

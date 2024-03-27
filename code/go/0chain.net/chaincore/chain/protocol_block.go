@@ -375,7 +375,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int("delete num", len(deleteMap)))
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
-		// err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
 		err = c.stateDB.RecordDeadNodes(deletedNode, fb.Round)
 		if err != nil {
 			logging.Logger.Error("finalize block - record dead nodes failed",
@@ -523,13 +522,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.DeleteBlocks(deadBlocks)
 		return nil
 	})
-
-	// wg.Run("finalize block - prune state cache", fb.Round, func() error {
-	// 	if fb.Round > 100 {
-	// 		c.GetStateCache().PruneRoundBelow(fb.Round - 100)
-	// 	}
-	// 	return nil
-	// })
 
 	if err = wg.Wait(); err != nil {
 		if !waitgroup.ErrIsPanic(err) {

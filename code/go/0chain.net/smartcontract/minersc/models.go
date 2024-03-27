@@ -611,12 +611,6 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 }
 
 func (gn *GlobalNode) Clone() statecache.Value {
-	// cg := &GlobalNode{}
-	// *cg = *gn
-
-	// if gn.PrevMagicBlock != nil {
-	// 	cg.PrevMagicBlock = gn.PrevMagicBlock.Clone()
-	// }
 	v, err := gn.MarshalMsg(nil)
 	if err != nil {
 		panic(fmt.Sprintf("failed to marshal GlobalNode: %v", err))

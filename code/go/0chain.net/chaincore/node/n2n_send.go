@@ -205,12 +205,6 @@ func prepareSenderSign(entity datastore.Entity) (*senderSignInfo, error) {
 		// err      error
 	)
 
-	// if err := taskqueue.Execute(taskqueue.N2NMsg, func() error {
-	// 	sig, err = Self.Sign(hash)
-	// 	return err
-	// }); err != nil {
-	// 	return nil, err
-	// }
 	sig, err := Self.Sign(hash)
 	if err != nil {
 		return nil, err
@@ -446,11 +440,7 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 	}
 	reqSignature := r.Header.Get(HeaderNodeRequestSignature)
 
-	// var ok bool
-	// taskqueue.Execute(taskqueue.N2NMsg, func() error {
 	ok, _ := sender.Verify(reqSignature, reqHash)
-	// return nil
-	// })
 
 	if !ok {
 		logging.N2n.Error("message received - invalid signature", zap.String("from", sender.GetPseudoName()),

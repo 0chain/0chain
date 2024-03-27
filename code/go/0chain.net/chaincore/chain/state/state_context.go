@@ -382,14 +382,6 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	// // // get from MPT
-	// if err := sc.getNodeValue(key, v); err != nil {
-	// 	// fmt.Println("get node value error", err)
-	// 	return err
-	// }
-
-	// return nil
-
 	cv, ok := sc.Cache().Get(key)
 	if ok {
 		ccv, ok := statecache.Copyable(v)
@@ -405,7 +397,6 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 
 	// get from MPT
 	if err := sc.getNodeValue(key, v); err != nil {
-		// fmt.Println("get node value error", err)
 		return err
 	}
 
