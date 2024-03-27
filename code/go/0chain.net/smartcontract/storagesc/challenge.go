@@ -843,7 +843,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 	r *rand.Rand, balances cstate.StateContextI, conf *Config) (string, error) {
 
 	var challengeBlobbers []ChallengeReadyBlobber
-	_, err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers, -1, allChallengeReadyBlobbersPartitionSize)
+	err := challengeBlobbersPartition.GetRandomItems(balances, r, &challengeBlobbers)
 	if err != nil {
 		return "", fmt.Errorf("error getting random slice from blobber challenge partition: %v", err)
 	}
@@ -952,7 +952,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	// get random allocations from the partitions
 	var randBlobberAllocs []BlobberAllocationNode
-	if _, err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs, -1, blobberAllocationPartitionSize); err != nil {
+	if err := blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs); err != nil {
 		return nil, common.NewErrorf("generate_challenge",
 			"error getting random slice from blobber challenge allocation partition: %v", err)
 	}
@@ -1028,7 +1028,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 	var randValidators, partitionRandValidators []ValidationPartitionNode
 
-	index, err := validators.GetRandomItems(balances, r, &partitionRandValidators, -1, allValidatorsPartitionSize)
+	err = validators.GetRandomItems(balances, r, &partitionRandValidators)
 	if err != nil {
 		return nil, common.NewError("add_challenge",
 			"error getting validators random slice: "+err.Error())
@@ -1040,7 +1040,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		actErr := cstate.WithActivation(balances, "artemis", func() error {
 			return nil
 		}, func() error {
-			index, err = validators.GetRandomItems(balances, r, &partitionRandValidators, index, allValidatorsPartitionSize)
+			err = validators.GetRandomItems(balances, r, &partitionRandValidators)
 			if err != nil {
 				return common.NewError("add_challenge",
 					"error getting validators random slice: "+err.Error())

@@ -514,65 +514,53 @@ func (p *Partitions) removeItem(
 	return p.loadLastFromPrev(state)
 }
 
-func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, vs interface{}, prev, partitionSize int) (int, error) {
+func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, vs interface{}) error {
 	if p.Last.length() == 0 {
-		return -1, errors.New("empty list, no items to return")
+		return errors.New("empty list, no items to return")
 	}
 
 	var (
-		part      *partition
-		err       error
-		index     int
-		lastCount int
+		index int
 	)
 
 	if p.Last.Loc > 0 {
 		actErr := state.WithActivation(balances, "artemis", func() error {
 			index = r.Intn(p.Last.Loc + 1)
-			part, err = p.getPartition(balances, index)
-			if err != nil {
-				return err
-			}
 			return nil
 		}, func() error {
-			for {
-				index = r.Intn(p.Last.Loc + 1)
+			index = r.Intn(p.Last.Loc + 1)
 
-				if index != prev {
-					// If last partition's size is less than half of partitionSize, select a random number again to reduce probability of last partition selection
-					if index == p.Last.Loc && lastCount == 0 {
-						lastCount = 1
-						part, err = p.getPartition(balances, index)
-						if err != nil {
-							return err
-						}
+			if index == p.Last.Loc {
+				part, err := p.getPartition(balances, index)
+				if err != nil {
+					return err
+				}
 
-						if part.length() < partitionSize/2 {
-							continue
-						}
-					}
-
-					part, err = p.getPartition(balances, index)
-					if err != nil {
-						return err
-					}
-					break
+				if part.length() < p.PartitionSize/2 {
+					index = r.Intn(p.Last.Loc)
+					return nil
 				}
 			}
+
 			return nil
 		})
 
 		if actErr != nil {
-			return -1, actErr
+			return actErr
 		}
+	}
+
+	part, err := p.getPartition(balances, index)
+	if err != nil {
+		return err
 	}
 
 	its, err := part.itemRange(0, part.length())
 	if err != nil {
-		return -1, err
+		return err
 	}
 
-	return index, setPartitionItems(its, vs)
+	return setPartitionItems(its, vs)
 }
 
 func (p *Partitions) Size(state state.StateContextI) (int, error) {
