@@ -868,7 +868,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		changeSize int64
 		prevWmSize int64
 	)
-	//branch logic according to ChainHash being present or not
+	// branch logic according to ChainHash being present or not
+	// Chain hash is the hash of all previous roots of WM's and ChainSize will be the size of all previous WM's
 	if commitConnection.WriteMarker.ChainHash != "" {
 		if blobAlloc.AllocationRoot == commitConnection.AllocationRoot && blobAlloc.LastWriteMarker != nil &&
 			blobAlloc.LastWriteMarker.ChainHash == commitConnection.WriteMarker.ChainHash {
@@ -886,6 +887,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			prevHash = blobAlloc.LastWriteMarker.ChainHash
 		}
 
+		// Calculate the chain hash by hashing all the previous chain data and previous chain hash present on blockchain
 		for i := 0; i < len(commitConnection.ChainData); i += 32 {
 			hasher.Write(commitConnection.ChainData[i : i+32]) //nolint:errcheck
 			sum := hasher.Sum(nil)
@@ -893,6 +895,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			hasher.Write(sum) //nolint:errcheck
 		}
 
+		// Write allocationRoot to chain hash to calculate the final chain hash which should include all the previous WM allocation roots, resulting chain hash should be same as the chain hash in WM signed by the client
 		allocRootBytes, err := hex.DecodeString(commitConnection.AllocationRoot)
 		if err != nil {
 			return "", common.NewError("commit_connection_failed",
