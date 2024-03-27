@@ -39,6 +39,7 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
+		partitionChan: make(chan int64, 100),
 		settings:      settings,
 	}
 
@@ -54,6 +55,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
+		partitionChan: make(chan int64, 100),
 		settings:      settings,
 	}
 	go eventDb.addEventsWorker(common.GetRootContext())
@@ -68,6 +70,7 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
+	partitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -81,8 +84,10 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
-		dbConfig: edb.dbConfig,
-		settings: edb.settings,
+		dbConfig:      edb.dbConfig,
+		settings:      edb.settings,
+		eventsChannel: edb.eventsChannel,
+		partitionChan: edb.partitionChan,
 	}
 	return &edbTx, nil
 }
@@ -112,7 +117,7 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
 		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
 		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
-		Slowtablespace: edb.dbConfig.Slowtablespace,
+		Slowtablespace:  edb.dbConfig.Slowtablespace,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
