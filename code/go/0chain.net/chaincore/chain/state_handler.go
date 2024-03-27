@@ -119,6 +119,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
 	block := r.FormValue("block")
+	format := r.FormValue("format")
 	if len(block) > 0 {
 		b, err := c.GetBlock(ctx, block)
 		if err != nil {
@@ -135,6 +136,12 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 		}
 		if len(d) == 0 {
 			return nil, common.NewError("key_not_found", "key was not found")
+		}
+
+		if format == "raw" {
+			return map[string]string{
+				"value": string(d),
+			}, nil
 		}
 
 		buf := &bytes.Buffer{}
