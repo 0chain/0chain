@@ -356,3 +356,118 @@ func TestChain_deletingTxns(t *testing.T) {
 	}
 
 }
+
+func TestChain_generateBlock(t *testing.T) {
+	transaction.SetTxnTimeout(int64(3 * time.Minute))
+	txs := []*transaction.Transaction{
+		{ClientID: "1", Nonce: 0},
+		{ClientID: "1", Nonce: 1},
+		{ClientID: "1", Nonce: 2},
+		{ClientID: "1", Nonce: 3},
+		{ClientID: "1", Nonce: 4},
+		{ClientID: "2", Fee: 1, Nonce: 5},
+		{ClientID: "2", Fee: 10, Nonce: 6},
+		{ClientID: "2", Fee: 12, Nonce: 7},
+		{ClientID: "2", Fee: 34, Nonce: 8},
+	}
+
+	tests := []struct {
+		name string
+		txns []*transaction.Transaction
+	}{
+		{
+			name: "test_sample",
+			txns: txs,
+		},
+	}
+
+	require.NoError(t, initDefaultPool())
+
+	logging.InitLogging("testing", "")
+
+	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
+	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
+	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
+	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
+	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
+	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
+
+	node.Self = &node.SelfNode{}
+	node.Self.Node = n1
+
+	setupSelfNodeKeys()
+
+	np := node.NewPool(node.NodeTypeMiner)
+	np.AddNode(n1)
+	np.AddNode(n2)
+	np.AddNode(n3)
+
+	mb := block.NewMagicBlock()
+	mb.Miners = np
+
+	c := chain.Provider().(*chain.Chain)
+	c.ID = datastore.ToKey(config.GetServerChainID())
+	c.SetMagicBlock(mb)
+	chain.SetServerChain(c)
+	SetupMinerChain(c)
+	mc := GetMinerChain()
+	mc.SetMagicBlock(mb)
+	SetupM2MSenders()
+
+	setupTempRocksDBDir()
+	common.SetupRootContext(node.GetNodeContext())
+	config.SetServerChainID(config.GetMainChainID())
+	transaction.SetupEntity(memorystore.GetStorageProvider())
+	client.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider(), "")
+
+	memorystore.AddPool("txndb", memorystore.DefaultPool)
+	memorystore.AddPool("clientdb", memorystore.DefaultPool)
+
+	sigScheme := encryption.GetSignatureScheme("bls0chain")
+	require.NoError(t, sigScheme.GenerateKeys())
+
+	var cl *client.Client
+	cl = client.NewClient(client.SignatureScheme(encryption.SignatureSchemeBls0chain))
+	cl.EntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
+	require.NoError(t, cl.SetPublicKey(sigScheme.GetPublicKey()))
+	ctx := context.Background()
+	b := block.NewBlock("", 1)
+	var waitC chan struct{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// storing txns
+			for _, txn := range tt.txns {
+				txn.CreationDate = common.Now()
+				txn.PublicKey = cl.PublicKey
+				txn.ClientID = cl.ID
+				txn.Hash = txn.ComputeHash()
+
+				txnData, err := json.Marshal(struct {
+					name string
+				}{
+					name: "test",
+				})
+				require.NoError(t, err)
+				txn.TransactionData = string(txnData)
+
+				sig, err := txn.Sign(sigScheme)
+				require.NoError(t, err)
+
+				txn.Signature = sig
+
+				_, err = transaction.PutTransaction(ctx, txn)
+				require.NoError(t, err)
+
+			}
+
+			// generating block
+			err := mc.GenerateBlock(ctx, b, false, waitC)
+			require.NoError(t, err)
+
+		})
+	}
+
+}
