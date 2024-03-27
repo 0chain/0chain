@@ -15,6 +15,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
@@ -486,7 +487,7 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 		_ = os.RemoveAll(dir)
 	}
 
-	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
+	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil, statecache.NewEmpty())
 	sctx := state.NewStateContext(nil,
 		mpt, nil, nil, nil,
 		nil, nil, nil, nil)
@@ -602,7 +603,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 		_ = os.RemoveAll(dir)
 	}
 
-	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
+	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil, statecache.NewEmpty())
 	b := block.Block{}
 	return state.NewStateContext(&b,
 		mpt, nil, nil, nil,

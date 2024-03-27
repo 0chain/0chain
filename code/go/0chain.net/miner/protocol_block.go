@@ -27,6 +27,7 @@ import (
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 
@@ -55,9 +56,15 @@ func init() {
 	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
 }
 
-func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
+func (mc *Chain) processTxn(ctx context.Context,
+	txn *transaction.Transaction,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	clients map[string]*client.Client,
+	blockStateCache *statecache.BlockCache,
+) error {
 	clients[txn.ClientID] = nil
-	events, err := mc.UpdateState(ctx, b, bState, txn)
+	events, err := mc.UpdateState(ctx, b, bState, txn, blockStateCache)
 	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
@@ -706,13 +713,16 @@ func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 type txnProcessorHandler func(context.Context,
 	util.MerklePatriciaTrieI,
 	*transaction.Transaction,
-	*TxnIterInfo, chan struct{}) (bool, error)
+	*TxnIterInfo,
+	*statecache.BlockCache,
+	chan struct{}) (bool, error)
 
 func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 	return func(ctx context.Context,
 		bState util.MerklePatriciaTrieI,
 		txn *transaction.Transaction,
 		tii *TxnIterInfo,
+		blockStateCache *statecache.BlockCache,
 		waitC chan struct{}) (bool, error) {
 
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
@@ -777,7 +787,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
 
-		events, err := mc.UpdateState(ctx, b, bState, txn, waitC)
+		events, err := mc.UpdateState(ctx, b, bState, txn, blockStateCache, waitC)
 		if err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state",
@@ -909,6 +919,7 @@ func txnIterHandlerFunc(
 	bState util.MerklePatriciaTrieI,
 	txnProcessor txnProcessorHandler,
 	tii *TxnIterInfo,
+	blockStateCache *statecache.BlockCache,
 	waitC chan struct{}) func(context.Context, datastore.CollectionEntity) (bool, error) {
 	return func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 		tii.count++
@@ -982,7 +993,7 @@ func txnIterHandlerFunc(
 			return true, nil
 		}
 
-		success, err := txnProcessor(ctx, bState, txn, tii, waitC)
+		success, err := txnProcessor(ctx, bState, txn, tii, blockStateCache, waitC)
 		if err != nil {
 			logging.Logger.Debug("generate block txn processor failed",
 				zap.Error(err),
@@ -1038,11 +1049,12 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	b.Txns = make([]*transaction.Transaction, 0, 100)
 
 	var (
-		iterInfo       = newTxnIterInfo(int32(cap(b.Txns)))
-		txnProcessor   = txnProcessorHandlerFunc(mc, b)
-		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
-		beginState     = blockState.GetRoot()
-		txnIterHandler = txnIterHandlerFunc(mc, b, lfb, blockState, txnProcessor, iterInfo, waitC)
+		iterInfo        = newTxnIterInfo(int32(cap(b.Txns)))
+		txnProcessor    = txnProcessorHandlerFunc(mc, b)
+		blockState      = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
+		blockStateCache = statecache.NewBlockCache(mc.GetStateCache(), statecache.Block{Round: b.Round, Hash: b.Hash, PrevHash: b.PrevHash})
+		beginState      = blockState.GetRoot()
+		txnIterHandler  = txnIterHandlerFunc(mc, b, lfb, blockState, txnProcessor, iterInfo, blockStateCache, waitC)
 	)
 
 	iterInfo.roundTimeoutCount = mc.GetRoundTimeoutCount()
@@ -1176,7 +1188,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			break
 		}
 
-		success, err := txnProcessor(ctx, blockState, txn, iterInfo, waitC)
+		success, err := txnProcessor(ctx, blockState, txn, iterInfo, blockStateCache, waitC)
 		if err != nil {
 			// optimistic block generation. Same as EstimateTransactionCost above
 			logging.Logger.Debug("generate block - process failed and ignored", zap.Error(err))
@@ -1217,7 +1229,7 @@ l:
 			panic(err)
 		}
 
-		err = mc.processTxn(ctx, biTxn, b, blockState, iterInfo.clients)
+		err = mc.processTxn(ctx, biTxn, b, blockState, iterInfo.clients, blockStateCache)
 		if err != nil {
 			logging.Logger.Warn("generate block - process build-in txn failed",
 				zap.String("txn", txn.Hash),
@@ -1319,6 +1331,9 @@ l:
 	b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
+
+	blockStateCache.SetBlockHash(b.Hash)
+	blockStateCache.Commit()
 	return nil
 }
 

@@ -15,6 +15,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -1257,7 +1258,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 
 func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
-	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot(), statecache.NewEmpty())
 	return tmpt
 }
 

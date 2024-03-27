@@ -12,6 +12,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
+	"0chain.net/core/sortedmap"
+	"github.com/rcrowley/go-metrics"
 )
 
 /*SetupHandlers - setup miner handlers */
@@ -184,11 +186,20 @@ func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<br>")
 
+	// find, missed := util.CacheStats()
+	hits, miss := c.GetStateCache().Stats()
+	fmt.Fprintf(w, "<h3>MPT cache hits/missed: %v/%v</h3>", hits, miss)
+	fmt.Fprintf(w, "<br>")
+
 	fmt.Fprintf(w, "<table>")
 
 	count := 0
 
-	for txnFunc, txnTimer := range chain.StartToFinalizeTxnTypeTimer {
+	// show consistent UI for txn stats
+	sm := sortedmap.NewFromMap[string, metrics.Timer](chain.StartToFinalizeTxnTypeTimer)
+	keys := sm.GetKeys()
+	for _, txnFunc := range keys {
+		txnTimer, _ := sm.Get(txnFunc)
 		if count%3 == 0 {
 			fmt.Fprintf(w, "<tr><td>")
 		} else {

@@ -10,6 +10,7 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
@@ -34,6 +35,7 @@ type testBalances struct {
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
 	block     *block.Block
+	tc        *statecache.TransactionCache
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
@@ -46,6 +48,9 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		txn:      new(transaction.Transaction),
 		block:    new(block.Block),
 	}
+
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
+	tb.tc = statecache.NewTransactionCache(bc)
 
 	if mpts {
 		tb.mpts = newMptStore(t)
@@ -193,6 +198,10 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 
 func (tb *testBalances) GetInvalidStateErrors() []error { return nil }
 
+func (tb *testBalances) Cache() *statecache.TransactionCache {
+	return tb.tc
+}
+
 type mptStore struct {
 	mpt  util.MerklePatriciaTrieI
 	mndb *util.MemoryNodeDB
@@ -248,7 +257,7 @@ func (mpts *mptStore) merge(tb testing.TB) {
 	// for a worst case, no cached data, and we have to get everything from
 	// the persistent store, from rocksdb
 
-	mpts.mndb = util.NewMemoryNodeDB()                           //
-	mpts.lndb = util.NewLevelNodeDB(mpts.mndb, mpts.pndb, false) // transaction
-	mpts.mpt = util.NewMerklePatriciaTrie(mpts.lndb, 1, root)    //
+	mpts.mndb = util.NewMemoryNodeDB()                                               //
+	mpts.lndb = util.NewLevelNodeDB(mpts.mndb, mpts.pndb, false)                     // transaction
+	mpts.mpt = util.NewMerklePatriciaTrie(mpts.lndb, 1, root, statecache.NewEmpty()) //
 }

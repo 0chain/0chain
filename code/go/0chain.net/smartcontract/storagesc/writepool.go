@@ -106,5 +106,6 @@ func (ssc *StorageSmartContract) writePoolLock(
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
-	return "", nil
+	err = allocation.save(balances, ADDRESS)
+	return "", err
 }

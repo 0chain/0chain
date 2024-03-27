@@ -7,6 +7,7 @@ import (
 	"0chain.net/smartcontract/provider"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -79,6 +80,8 @@ func TestDeleteSharder(t *testing.T) {
 				return 0 == len(mn.Pools) && mn.ID == mockDeletedSharderId
 			}),
 		).Return("", nil).Once()
+
+		balances.On("Cache").Return(statecache.NewEmpty())
 
 		pn := &PhaseNode{}
 		balances.On("GetTrieNode", pn.GetKey(), mock.AnythingOfType("*minersc.PhaseNode")).Return(util.ErrValueNotPresent).Once()

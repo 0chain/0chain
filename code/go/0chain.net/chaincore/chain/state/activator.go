@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
@@ -13,6 +14,21 @@ import (
 type HardFork struct {
 	name  string
 	round int64
+}
+
+func (hf *HardFork) Clone() statecache.Value {
+	return &HardFork{name: hf.name, round: hf.round}
+}
+
+func (hf *HardFork) CopyFrom(v interface{}) bool {
+	hf1, ok := v.(*HardFork)
+	if !ok {
+		return false
+	}
+
+	hf.name = hf1.name
+	hf.round = hf1.round
+	return true
 }
 
 func NewHardFork(name string, round int64) *HardFork {

@@ -3,9 +3,14 @@ package state
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
@@ -186,4 +191,132 @@ func TestWrongGetItemFunc(t *testing.T) {
 	//	return testItem{}, nil
 	//}, nil)
 	//require.NoError(t, err)
+}
+
+type testCacheValue struct {
+	Value           string
+	isMarshalCalled bool
+}
+
+// MarshalMsg implements util.MPTSerializable.
+func (v *testCacheValue) MarshalMsg([]byte) ([]byte, error) {
+	v.isMarshalCalled = true
+	return []byte(v.Value), nil
+}
+
+// UnmarshalMsg implements util.MPTSerializable.
+func (v *testCacheValue) UnmarshalMsg(d []byte) ([]byte, error) {
+	v.isMarshalCalled = true
+	v.Value = string(d)
+	return d, nil
+}
+
+func (v *testCacheValue) Clone() statecache.Value {
+	return &testCacheValue{
+		Value: v.Value,
+	}
+}
+
+func (v *testCacheValue) CopyFrom(src interface{}) bool {
+	if reflect.TypeOf(src) != reflect.TypeOf(v) {
+		return false
+	}
+
+	v.Value = src.(*testCacheValue).Value
+	return true
+}
+
+type testCacheValueNotCopyable struct {
+	Value           string
+	isMarshalCalled bool
+}
+
+// MarshalMsg implements util.MPTSerializable.
+func (v *testCacheValueNotCopyable) MarshalMsg([]byte) ([]byte, error) {
+	v.isMarshalCalled = true
+	return []byte(v.Value), nil
+}
+
+// UnmarshalMsg implements util.MPTSerializable.
+func (v *testCacheValueNotCopyable) UnmarshalMsg(d []byte) ([]byte, error) {
+	v.isMarshalCalled = true
+	v.Value = string(d)
+	return d, nil
+}
+
+func (v *testCacheValueNotCopyable) Clone() statecache.Value {
+	return &testCacheValueNotCopyable{
+		Value: v.Value,
+	}
+}
+
+func (v *testCacheValueNotCopyable) CopyFrom(src interface{}) bool {
+	return false
+}
+
+type mockStateContext struct {
+	*StateContext
+}
+
+func (msc *mockStateContext) getNodeValue(key datastore.Key, v util.MPTSerializable) error {
+	tv, ok := v.(*testCacheValue)
+	if !ok {
+		return errors.New("unexpected type")
+	}
+	tv.Value = "mptValue3"
+	return nil
+}
+
+func TestGetTrieNode(t *testing.T) {
+	sc := &mockStateContext{
+		StateContext: &StateContext{
+			state: util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 0, nil, statecache.NewEmpty()),
+		},
+	}
+
+	t.Run("cache hit - copyable", func(t *testing.T) {
+		key := "key1"
+		cacheValue := &testCacheValue{Value: "cacheValue1"}
+		sc.Cache().Set(key, cacheValue)
+
+		var vv testCacheValue
+		err := sc.GetTrieNode(key, &vv)
+		require.NoError(t, err)
+		require.Equal(t, cacheValue.Value, vv.Value)
+		require.False(t, vv.isMarshalCalled)
+	})
+
+	t.Run("cache hit - not copyable", func(t *testing.T) {
+		key := "key2"
+		cacheValue := &testCacheValueNotCopyable{Value: "cacheValue2"}
+		sc.Cache().Set(key, cacheValue)
+
+		var v testCacheValueNotCopyable
+		require.Panics(t, func() {
+			sc.GetTrieNode(key, &v)
+		}, "should panic")
+	})
+
+	t.Run("cache miss", func(t *testing.T) {
+		key := "key3"
+		mptValue := &testCacheValue{Value: "mptValue3"}
+		// insert the value to MPT
+		_, err := sc.state.Insert(util.Path(encryption.Hash(key)), &testCacheValue{Value: "mptValue3"})
+		require.NoError(t, err)
+
+		// verify that the value is not cached
+		_, ok := sc.Cache().Get(key)
+		require.False(t, ok)
+
+		var v testCacheValue
+		err = sc.GetTrieNode(key, &v)
+		require.NoError(t, err)
+		require.Equal(t, mptValue.Value, v.Value)
+		require.True(t, v.isMarshalCalled)
+
+		// Verify that the value is cached
+		cachedValue, ok := sc.Cache().Get(key)
+		require.True(t, ok)
+		require.Equal(t, mptValue, cachedValue)
+	})
 }

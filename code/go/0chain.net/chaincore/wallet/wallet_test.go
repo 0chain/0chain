@@ -12,6 +12,7 @@ import (
 
 	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"github.com/0chain/common/core/logging"
 
@@ -129,18 +130,18 @@ func GetMPT(dbType int, version util.Sequence, root util.Key) util.MerklePatrici
 	switch dbType {
 	case MEMORY:
 		mndb := util.NewMemoryNodeDB()
-		mpt = util.NewMerklePatriciaTrie(mndb, version, root)
+		mpt = util.NewMerklePatriciaTrie(mndb, version, root, statecache.NewEmpty())
 	case PERSIST:
 		pndb, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 		if err != nil {
 			panic(err)
 		}
-		mpt = util.NewMerklePatriciaTrie(pndb, version, root)
+		mpt = util.NewMerklePatriciaTrie(pndb, version, root, statecache.NewEmpty())
 	case LEVEL:
 		mndb := util.NewMemoryNodeDB()
 		pndb := util.NewMemoryNodeDB()
 		lndb := util.NewLevelNodeDB(mndb, pndb, false)
-		mpt = util.NewMerklePatriciaTrie(lndb, version, root)
+		mpt = util.NewMerklePatriciaTrie(lndb, version, root, statecache.NewEmpty())
 	}
 	return mpt
 }

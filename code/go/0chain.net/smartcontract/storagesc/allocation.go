@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/core/maths"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+
+	"0chain.net/core/maths"
 
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -18,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	chainstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -314,6 +316,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 				zap.Error(err))
 			return "", fmt.Errorf("ading offer: %v", err)
 		}
+		logging.Logger.Debug("new_allocation_request - update blobber", zap.String("blobber", b.ID))
 
 		if err = spMap[b.ID].Save(spenum.Blobber, b.ID, balances); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error saving blobber pool",
@@ -322,6 +325,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 				zap.Error(err))
 			return "", fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
+		logging.Logger.Debug("new_allocation_request - update blobber stake pool", zap.String("blobber", b.ID))
 
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
@@ -617,8 +621,14 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 }
 
 func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI) (err error) {
-	// Save allocation
-	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+	err = cstate.WithActivation(balances, "ares", func() error {
+		// Save allocation
+		_, er := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+		return er
+	}, func() error {
+		return nil
+	})
+
 	if err != nil {
 		return
 	}

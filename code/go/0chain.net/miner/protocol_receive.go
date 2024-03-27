@@ -273,43 +273,154 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-// handleVerificationTicketMessage - handles the verification ticket message.
-func (mc *Chain) handleVerificationTicketMessage(ctx context.Context,
-	msg *BlockMessage) {
+type blockTicketTS struct {
+	*block.BlockVerificationTicket
+	Ts time.Time
+}
 
+func (mc *Chain) ticketVerifyWorker(ctx context.Context) {
 	var (
-		bvt = msg.BlockVerificationTicket
-		rn  = bvt.Round
-		mr  = mc.GetMinerRound(rn)
+		mb                 = mc.GetCurrentMagicBlock()
+		num                = mb.Miners.Size()
+		threshold          = mc.GetNotarizationThresholdCount(num)
+		blockReadyToVerify = make(map[string]struct{})
+		uniqueTicketsMap   = make(map[string]map[string]struct{})
+		brtvLock           = sync.Mutex{}
 	)
 
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ticket := <-mc.blockTicketsChannel:
+			var btks []*blockTicketTS
+			b, err := mc.GetBlock(ctx, ticket.BlockID)
+			if err != nil {
+				logging.Logger.Error("verify ticket worker - block does not exist", zap.String("block", ticket.BlockID))
+				continue
+			}
+
+			if b.IsBlockNotarized() {
+				continue
+			}
+
+			brtvLock.Lock()
+			_, ok := blockReadyToVerify[ticket.BlockID]
+			if ok {
+				brtvLock.Unlock()
+				continue
+			}
+
+			tks, ok := uniqueTicketsMap[ticket.BlockID]
+			if !ok {
+				tks = make(map[string]struct{})
+				uniqueTicketsMap[ticket.BlockID] = tks
+			}
+
+			_, ok = tks[ticket.VerifierID]
+			if ok {
+				// ignore duplicate tickets
+				brtvLock.Unlock()
+				continue
+			}
+
+			tks[ticket.VerifierID] = struct{}{}
+
+			brtvLock.Unlock()
+
+			mc.blockTickets[ticket.BlockID] = append(mc.blockTickets[ticket.BlockID], ticket)
+			btks = mc.blockTickets[ticket.BlockID]
+			var ptks []*blockTicketTS
+			st := btks[0]
+			et := btks[len(btks)-1]
+			td := et.Ts.UnixMilli() - st.Ts.UnixMilli()
+			if len(btks) >= threshold {
+				ptks = btks
+				mc.blockTickets[ticket.BlockID] = nil
+
+				brtvLock.Lock()
+				blockReadyToVerify[ticket.BlockID] = struct{}{}
+				brtvLock.Unlock()
+				go func(hash string) {
+					// remove from the ready to verify list after 1 second
+					// this is to prevent the blockReadyToVerify map increase indefinitely
+					<-time.After(1 * time.Second)
+					brtvLock.Lock()
+					delete(blockReadyToVerify, hash)
+					delete(uniqueTicketsMap, hash)
+					brtvLock.Unlock()
+				}(ticket.BlockID)
+			}
+			// mc.blockTicketLock.Unlock()
+			logging.Logger.Debug("verify ticket worker",
+				zap.Int64("duration", td),
+				zap.Int("num", len(btks)),
+				zap.Int("threshold", threshold),
+				zap.String("block", ticket.BlockID))
+
+			var tickets []*block.BlockVerificationTicket
+			for _, tk := range ptks {
+				tickets = append(tickets, tk.BlockVerificationTicket)
+			}
+
+			if len(tickets) > 0 {
+				go mc.verifyTickets(ctx, ticket.Round, ticket.BlockID, tickets)
+			}
+		}
+	}
+}
+
+func (mc *Chain) verifyTickets(ctx context.Context, round int64, hash string,
+	tickets []*block.BlockVerificationTicket) {
+	logging.Logger.Debug("verify tickets",
+		zap.Int64("round", round),
+		zap.String("hash", hash),
+		zap.Int("tickets", len(tickets)))
 	cctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
-	if err := mc.VerifyTickets(cctx, bvt.BlockID, []*block.VerificationTicket{&bvt.VerificationTicket}, rn); err != nil {
+	vts := make([]*block.VerificationTicket, 0, len(tickets))
+	// bvts := make([]*block.BlockVerificationTicket, 0, len(tickets))
+	for _, ticket := range tickets {
+		vts = append(vts, &ticket.VerificationTicket)
+		// bvts = append(bvts, ticket)
+	}
+
+	if err := mc.VerifyTickets(cctx, hash, vts, round); err != nil {
 		logging.Logger.Error("handle vt. msg - verification ticket failed",
 			zap.Error(err),
-			zap.Int64("round", bvt.Round),
-			zap.String("block", bvt.BlockID))
+			zap.Int64("round", round),
+			zap.String("block", hash))
 		return
 	}
 
-	sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
+	// sender := mc.GetMiners(bvt.Round).GetNode(bvt.VerifierID)
 	logging.Logger.Debug("handle vt. msg - verify ticket successfully",
-		zap.Int64("round", bvt.Round),
-		zap.String("block", bvt.BlockID),
-		zap.Int("verifier", sender.SetIndex))
+		zap.Int64("round", round),
+		zap.String("block", hash),
+		zap.Int("tickets num", len(tickets)))
 
-	b, err := mc.GetBlock(ctx, bvt.BlockID)
+	mr := mc.GetMinerRound(round)
+	b, err := mc.GetBlock(ctx, hash)
 	if err != nil {
 		logging.Logger.Debug("handle vt. msg - block does not exist, collect tickets though",
-			zap.Int64("round", bvt.Round),
-			zap.String("block", bvt.BlockID))
+			zap.Int64("round", round),
+			zap.String("block", hash))
 
-		mr.AddVerificationTickets([]*block.BlockVerificationTicket{bvt})
+		mr.AddVerificationTickets(tickets)
 		return
 	}
 
-	mc.ProcessVerifiedTicket(ctx, mr, b, &bvt.VerificationTicket)
+	for _, ticket := range tickets {
+		go mc.ProcessVerifiedTicket(ctx, mr, b, &ticket.VerificationTicket)
+	}
+}
+
+// handleVerificationTicketMessage - handles the verification ticket message.
+func (mc *Chain) handleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
+	mc.blockTicketsChannel <- &blockTicketTS{
+		BlockVerificationTicket: msg.BlockVerificationTicket,
+		Ts:                      time.Now(),
+	}
 }
 
 func (mc *Chain) isNotarizing(hash string) (notarizing bool) {

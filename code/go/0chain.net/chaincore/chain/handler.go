@@ -1402,7 +1402,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		nonce = s.Nonce
 	}
 	if txn.Nonce <= nonce {
-		logging.Logger.Error("invalid transaction nonce", zap.Int64("txn_nonce", txn.Nonce), zap.Int64("nonce", nonce))
+		logging.Logger.Error("invalid transaction nonce",
+			zap.Int64("txn_nonce", txn.Nonce),
+			zap.Int64("nonce", nonce),
+			zap.Any("txn", txn))
 		return nil, errors.New("invalid transaction nonce")
 	}
 

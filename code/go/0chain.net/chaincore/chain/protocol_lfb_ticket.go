@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/util/taskqueue"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -119,7 +120,14 @@ func (c *Chain) verifyLFBTicket(lfbt *LFBTicket) bool {
 	if sharder == nil {
 		return false // unknown or missing node
 	}
-	var ok, err = sharder.Verify(lfbt.Sign, lfbt.Hash())
+
+	var ok bool
+	err := taskqueue.Execute(taskqueue.Common, func() error {
+		var err error
+		ok, err = sharder.Verify(lfbt.Sign, lfbt.Hash())
+		return err
+	})
+
 	return err == nil && ok
 }
 

@@ -75,6 +75,8 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.subRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.restartRoundEventChannel = make(chan struct{})
+	minerChain.blockTicketsChannel = make(chan *blockTicketTS, 10)
+	minerChain.blockTickets = make(map[string][]*blockTicketTS)
 	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
 	minerChain.nbpMutex = &sync.Mutex{}
 	minerChain.notarizationBlockProcessMap = make(map[string]struct{})
@@ -139,6 +141,9 @@ type Chain struct {
 	roundDkg            round.RoundStorage
 	discoverClients     bool
 	started             uint32
+	// blockTicketLock     sync.Mutex
+	blockTickets        map[string][]*blockTicketTS
+	blockTicketsChannel chan *blockTicketTS
 
 	// view change process control
 	viewChangeProcess

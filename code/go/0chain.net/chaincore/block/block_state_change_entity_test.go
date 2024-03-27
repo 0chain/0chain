@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/mocks"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 	"github.com/vmihailenco/msgpack/v5"
@@ -47,7 +48,7 @@ func TestStateChangeComputeRoot(t *testing.T) {
 		{"1235", "1235A"},
 	}
 
-	clientState := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	clientState := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil, statecache.NewEmpty())
 	for _, pv := range initPathValues {
 		_, err := clientState.Insert(util.Path(pv[0]), &util.SecureSerializableValue{Buffer: []byte(pv[1])})
 		require.NoError(t, err)
@@ -57,7 +58,7 @@ func TestStateChangeComputeRoot(t *testing.T) {
 	require.Equal(t, bsc.GetRoot().GetHash(), util.ToHex(clientState.GetRoot()))
 
 	// apply new updates
-	newClientState := util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot())
+	newClientState := util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot(), statecache.NewEmpty())
 	for _, pv := range newPathValues {
 		_, err := newClientState.Insert(util.Path(pv[0]), &util.SecureSerializableValue{Buffer: []byte(pv[1])})
 		require.NoError(t, err)
@@ -71,7 +72,7 @@ func TestStateChangeComputeRoot(t *testing.T) {
 func TestNewBlockStateChange(t *testing.T) {
 	b := NewBlock("", 1)
 	b.HashBlock()
-	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil, statecache.NewEmpty())
 	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)
@@ -235,7 +236,7 @@ func TestStateChange_Delete(t *testing.T) {
 
 func TestStateChange_MarshalJSON(t *testing.T) {
 	b := NewBlock("", 1)
-	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil, statecache.NewEmpty())
 	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)
@@ -290,7 +291,7 @@ func TestStateChange_MarshalJSON(t *testing.T) {
 
 func TestStateChange_UnmarshalJSON(t *testing.T) {
 	b := NewBlock("", 1)
-	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil, statecache.NewEmpty())
 	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)
@@ -382,7 +383,7 @@ func TestStateChange_UnmarshalJSON(t *testing.T) {
 
 func TestStateChange_UnmarshalMsgpack(t *testing.T) {
 	b := NewBlock("", 1)
-	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil, statecache.NewEmpty())
 	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)

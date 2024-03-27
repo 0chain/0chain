@@ -13,18 +13,18 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
+	"0chain.net/core/util/taskqueue"
 	"0chain.net/core/util/waitgroup"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
 // VerifyTickets verifies tickets aggregately
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
-	return c.verifyTicketsWithContext.Run(ctx, func() error {
+	return taskqueue.Execute(taskqueue.Common, func() error {
 		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
 			len(bvts), len(bvts))
 		if aggScheme == nil {
@@ -36,8 +36,8 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 		doneC := make(chan struct{})
 		errC := make(chan error)
 		go func() {
+			pl := c.GetMiners(round)
 			for i, bvt := range bvts {
-				pl := c.GetMiners(round)
 				verifier := pl.GetNode(bvt.VerifierID)
 				if verifier == nil {
 					errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
@@ -375,12 +375,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int("delete num", len(deleteMap)))
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
-		er := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
-		if er != nil {
+		err = c.stateDB.RecordDeadNodes(deletedNode, fb.Round)
+		if err != nil {
 			logging.Logger.Error("finalize block - record dead nodes failed",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
-				zap.Error(er))
+				zap.Error(err))
 		}
 		// do not return err, we don't want to see the dead nodes removing failure stop the finalizing process
 		return nil

@@ -18,6 +18,7 @@ import (
 
 	"0chain.net/core/config"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util/taskqueue"
 	"0chain.net/rest"
 	"go.uber.org/zap"
 
@@ -82,6 +83,7 @@ func main() {
 
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
+	taskqueue.Init(ctx)
 	initEntities(workdir, redisHost, redisPort, redisTxnsHost, redisTxnsPort)
 	serverChain := chain.NewChainFromConfig()
 
@@ -114,6 +116,7 @@ func main() {
 	mc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
 	mc.SetupConfigInfoDB(workdir)
+	mc.SetupStateCache()
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
