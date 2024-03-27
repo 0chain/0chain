@@ -131,6 +131,11 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 	if fb.Round == r.GetRoundNumber() {
 		return nil
 	}
+
+	if fb.Round <= lfbr {
+		return nil
+	}
+
 	return fb
 }
 
