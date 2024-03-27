@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 	"github.com/stretchr/testify/require"
 )
 

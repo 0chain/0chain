@@ -22,6 +22,7 @@ type StorageDtoNode struct {
 	StakePoolSettings       *Settings    `json:"stake_pool_settings,omitempty"`
 	RewardRound             *RewardRound `json:"reward_round,omitempty"`
 	NotAvailable            *bool        `json:"not_available,omitempty"`
+	IsRestricted            *bool        `json:"is_restricted,omitempty"`
 }
 
 type RewardRound struct {

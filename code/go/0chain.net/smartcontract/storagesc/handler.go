@@ -262,7 +262,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		return
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, common2.Pagination{Limit: 50}, conf.HealthCheckPeriod, false)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, common2.Pagination{Limit: 50}, conf.HealthCheckPeriod, false, false)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -347,6 +347,11 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		force = true
 	}
 
+	isRestricted := false
+	if q.Get("is_restricted") == "true" {
+		isRestricted = true
+	}
+
 	conf, err2 := getConfig(srh.GetQueryStateContext())
 	if err2 != nil && err2 != util.ErrValueNotPresent {
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err2, true, cantGetConfigErrMsg))
@@ -358,7 +363,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		healthCheckPeriod = conf.HealthCheckPeriod
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod, force)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod, isRestricted, force)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
@@ -367,7 +372,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 	common.Respond(w, r, blobberIDs, nil)
 }
 
-func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration, isForce bool) ([]string, error) {
+func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb, balances cstate.TimedQueryStateContextI, limit common2.Pagination, healthCheckPeriod time.Duration, isRestricted, isForce bool) ([]string, error) {
 	var conf *Config
 	var err error
 	if conf, err = getConfig(balances); err != nil {
@@ -405,13 +410,14 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		AllocationSize:     allocationSize,
 		AllocationSizeInGB: sizeInGB(allocationSize),
 		NumberOfDataShards: request.DataShards,
+		IsRestricted:       isRestricted,
 	}
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
 		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max),
 		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Float64("AllocationSizeInGB", allocation.AllocationSizeInGB),
-		zap.Int64("last_health_check", int64(balances.Now())),
+		zap.Int64("last_health_check", int64(balances.Now())), zap.Any("isRestricted", isRestricted),
 	)
 
 	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now(), healthCheckPeriod)
@@ -2435,6 +2441,8 @@ type storageNodeResponse struct {
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
+
+	IsRestricted bool `json:"is_restricted"`
 }
 
 func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
@@ -2454,6 +2462,7 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		IsKilled:                sn.IsKilled(),
 		IsShutdown:              sn.IsShutDown(),
 		NotAvailable:            sn.NotAvailable,
+		IsRestricted:            *sn.IsRestricted,
 	}
 }
 
@@ -2477,6 +2486,7 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 		StakePoolSettings:       snr.StakePoolSettings,
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            &snr.IsRestricted,
 	}
 }
 
@@ -2512,6 +2522,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		SavedData:                blobber.SavedData,
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
+		IsRestricted:             blobber.IsRestricted,
 	}
 }
 

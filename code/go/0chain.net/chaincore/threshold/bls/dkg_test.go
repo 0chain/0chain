@@ -9,7 +9,7 @@ import (
 
 	"0chain.net/chaincore/wallet"
 	"github.com/0chain/common/core/logging"
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 )
 
 type DKGID = bls.ID

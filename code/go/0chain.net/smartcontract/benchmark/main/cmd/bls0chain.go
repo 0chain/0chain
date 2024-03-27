@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/core/encryption"
 
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 )
 
 var GenG2 *bls.G2

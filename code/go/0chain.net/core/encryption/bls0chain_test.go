@@ -7,8 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/herumi/bls/ffi/go/bls"
-	"github.com/herumi/mcl/ffi/go/mcl"
+	"github.com/herumi/bls-go-binary/bls"
 	"github.com/stretchr/testify/require"
 )
 
@@ -134,7 +133,7 @@ func BenchmarkBLS0ChainPairMessageHash(b *testing.B) {
 }
 
 func BenchmarkBLS0ChainG1HashToPoint(b *testing.B) {
-	var g1 mcl.G1
+	var g1 bls.G1
 	rawHash := RawHash("bls-0chain-signature-scheme")
 	for i := 0; i < b.N; i++ {
 		err := g1.HashAndMapTo(rawHash)

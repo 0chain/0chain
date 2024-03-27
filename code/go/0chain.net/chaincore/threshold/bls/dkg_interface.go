@@ -1,6 +1,6 @@
 package bls
 
-import "github.com/herumi/bls/ffi/go/bls"
+import "github.com/herumi/bls-go-binary/bls"
 
 /*Key - Is of type mcl.SecretKey*/
 type Key = bls.SecretKey

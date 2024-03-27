@@ -15,7 +15,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 )
 
 var defaultClientSignatureScheme = encryption.SignatureSchemeBls0chain

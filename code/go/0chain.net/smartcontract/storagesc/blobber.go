@@ -251,6 +251,15 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
+	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
+		func() (e error) {
+			existingBlobber.IsRestricted = updateBlobber.IsRestricted
+			return nil
+		})
+	if actErr != nil {
+		return fmt.Errorf("error with activation: %v", actErr)
+	}
+
 	_, err = balances.InsertTrieNode(existingBlobber.GetKey(), existingBlobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())

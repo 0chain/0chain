@@ -3,7 +3,7 @@ package encryption
 import (
 	"fmt"
 
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 )
 
 //BLS0ChainThresholdScheme - a scheme that can create threshold signature shares for BLS0Chain signature scheme
