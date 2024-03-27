@@ -155,6 +155,30 @@ func (edb *EventDb) GetMinersWithFiltersAndPagination(filter MinerQuery, p commo
 	return miners, query.Scan(&miners).Error
 }
 
+func (edb *EventDb) GetStakableMinersWithFiltersAndPagination(filter MinerQuery, pagination common2.Pagination) ([]Miner, error) {
+	var miners []Miner
+	result := edb.Store.Get().
+		Select("miners.*").
+		Table("miners").
+		Joins("left join delegate_pools ON delegate_pools.provider_type = 1 AND delegate_pools.provider_id = miners.id AND delegate_pools.status = 0").
+		Where(&filter).
+		Group("miners.id").
+		Having("count(delegate_pools.id) < miners.num_delegates").
+		Limit(pagination.Limit).
+		Offset(pagination.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   pagination.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pagination.IsDescending,
+		}).
+		Find(&miners)
+
+	return miners, result.Error
+}
+
 func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
 	var miners []Miner
 

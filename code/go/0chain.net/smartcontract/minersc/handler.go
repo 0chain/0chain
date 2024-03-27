@@ -646,6 +646,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	var (
 		activeString   = r.URL.Query().Get("active")
 		isKilledString = r.URL.Query().Get("killed")
+		stakableString = r.URL.Query().Get("stakable")
 	)
 
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -679,7 +680,12 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	sharders, err := edb.GetShardersWithFilterAndPagination(filter, pagination)
+	var sharders []event.Sharder
+	if stakableString == "true" {
+		sharders, err = edb.GetStakableShardersWithFilterAndPagination(filter, pagination)
+	} else {
+		sharders, err = edb.GetShardersWithFilterAndPagination(filter, pagination)
+	}
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get sharders list", err.Error()))
 		return
@@ -759,6 +765,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	var (
 		activeString   = r.URL.Query().Get("active")
 		isKilledString = r.URL.Query().Get("killed")
+		stakableString = r.URL.Query().Get("stakable")
 	)
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
@@ -792,7 +799,12 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	miners, err := edb.GetMinersWithFiltersAndPagination(filter, pagination)
+	var miners []event.Miner
+	if stakableString == "true" {
+		miners, err = edb.GetStakableMinersWithFiltersAndPagination(filter, pagination)
+	} else {
+		miners, err = edb.GetMinersWithFiltersAndPagination(filter, pagination)
+	}
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("can't get miners list", err.Error()))
 		return

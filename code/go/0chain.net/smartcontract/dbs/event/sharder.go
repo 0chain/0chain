@@ -211,6 +211,30 @@ func (edb *EventDb) GetShardersWithFilterAndPagination(filter SharderQuery, p co
 	return sharders, query.Scan(&sharders).Error
 }
 
+func (edb *EventDb) GetStakableShardersWithFilterAndPagination(filter SharderQuery, pagination common2.Pagination) ([]Sharder, error) {
+	var sharders []Sharder
+	result := edb.Store.Get().
+		Select("sharders.*").
+		Table("sharders").
+		Joins("left join delegate_pools ON delegate_pools.provider_type = 2 AND delegate_pools.provider_id = sharders.id AND delegate_pools.status = 0").
+		Where(&filter).
+		Group("sharders.id").
+		Having("count(delegate_pools.id) < sharders.num_delegates").
+		Limit(pagination.Limit).
+		Offset(pagination.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "creation_round"},
+			Desc:   pagination.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pagination.IsDescending,
+		}).
+		Find(&sharders)
+
+	return sharders, result.Error
+}
+
 func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
 	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
 	result := edb.Store.Get().
