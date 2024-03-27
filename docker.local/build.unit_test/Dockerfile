@@ -1,4 +1,4 @@
-FROM zchain_build_base_go20
+FROM zchain_build_base
 ENV SRC_DIR=/0chain
 
 RUN apk add --update --no-cache curl docker
