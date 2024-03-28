@@ -514,7 +514,7 @@ func (p *Partitions) removeItem(
 	return p.loadLastFromPrev(state)
 }
 
-func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, vs interface{}, requiredCount int) error {
+func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, vs interface{}) error {
 	if p.Last.length() == 0 {
 		return errors.New("empty list, no items to return")
 	}
@@ -542,6 +542,8 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 	}
 
 	afterHardForkArtemis := func() error {
+		requiredCount := p.PartitionSize
+
 		totalElements := p.Last.Loc*p.PartitionSize + p.Last.length()
 		elementIdx := r.Intn(totalElements)
 
