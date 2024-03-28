@@ -536,15 +536,14 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 					return err
 				}
 
-				res, err := part.itemRange(0, part.length())
-				if err != nil {
-					return err
-				}
-
-				its = append(its, res...)
-
 				if part.length() < p.PartitionSize/2 {
 					index--
+					res, err := part.itemRange(0, part.length())
+					if err != nil {
+						return err
+					}
+
+					its = append(its, res...)
 					return nil
 				}
 			}
