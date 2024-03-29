@@ -16,9 +16,12 @@ func (edb *EventDb) CreateNewProviderAggregates(providers ProvidersMap, round in
 		}
 		blobbers = append(blobbers, b)
 	}
-	err := edb.CreateBlobberAggregates(blobbers, round)
-	if err != nil {
-		return common.NewError("failed to create blobber aggregates", err.Error())
+
+	if len(blobbers) != 0 {
+		err := edb.CreateBlobberAggregates(blobbers, round)
+		if err != nil {
+			return common.NewError("failed to create blobber aggregates", err.Error())
+		}
 	}
 
 	miners := make([]*Miner, 0, len(providers[spenum.Miner]))
@@ -29,9 +32,12 @@ func (edb *EventDb) CreateNewProviderAggregates(providers ProvidersMap, round in
 		}
 		miners = append(miners, m)
 	}
-	err = edb.CreateMinerAggregates(miners, round)
-	if err != nil {
-		return common.NewError("failed to create miner aggregates", err.Error())
+
+	if len(miners) != 0 {
+		err := edb.CreateMinerAggregates(miners, round)
+		if err != nil {
+			return common.NewError("failed to create miner aggregates", err.Error())
+		}
 	}
 
 	sharders := make([]*Sharder, 0, len(providers[spenum.Sharder]))
@@ -42,9 +48,12 @@ func (edb *EventDb) CreateNewProviderAggregates(providers ProvidersMap, round in
 		}
 		sharders = append(sharders, s)
 	}
-	err = edb.CreateSharderAggregates(sharders, round)
-	if err != nil {
-		return common.NewError("failed to create sharder aggregates", err.Error())
+
+	if len(sharders) != 0 {
+		err := edb.CreateSharderAggregates(sharders, round)
+		if err != nil {
+			return common.NewError("failed to create sharder aggregates", err.Error())
+		}
 	}
 
 	authorizers := make([]*Authorizer, 0, len(providers[spenum.Authorizer]))
@@ -55,9 +64,12 @@ func (edb *EventDb) CreateNewProviderAggregates(providers ProvidersMap, round in
 		}
 		authorizers = append(authorizers, a)
 	}
-	err = edb.CreateAuthorizerAggregates(authorizers, round)
-	if err != nil {
-		return common.NewError("failed to create authorizer aggregates", err.Error())
+
+	if len(authorizers) != 0 {
+		err := edb.CreateAuthorizerAggregates(authorizers, round)
+		if err != nil {
+			return common.NewError("failed to create authorizer aggregates", err.Error())
+		}
 	}
 
 	validators := make([]*Validator, 0, len(providers[spenum.Validator]))
@@ -68,9 +80,13 @@ func (edb *EventDb) CreateNewProviderAggregates(providers ProvidersMap, round in
 		}
 		validators = append(validators, v)
 	}
-	err = edb.CreateValidatorAggregates(validators, round)
-	if err != nil {
-		return common.NewError("failed to create validator aggregates", err.Error())
+
+	if len(validators) != 0 {
+		err := edb.CreateValidatorAggregates(validators, round)
+		if err != nil {
+			return common.NewError("failed to create validator aggregates", err.Error())
+		}
+
 	}
 
 	return nil
