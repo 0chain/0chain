@@ -1133,7 +1133,7 @@ func emitUpdateBlobberWriteStatEvent(w *WriteMarker, prevWmSize int64, balances 
 }
 
 func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI) {
-	i, _ := big.NewFloat(r.ReadSize).Int64()
+	i, _ := big.NewFloat(r.ReadSize * GB).Int64()
 	bb := event.Blobber{
 		Provider: event.Provider{ID: r.BlobberID},
 		ReadData: i,
