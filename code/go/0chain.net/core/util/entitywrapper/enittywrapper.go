@@ -3,43 +3,60 @@ package entitywrapper
 import (
 	"errors"
 	"fmt"
+	"reflect"
 )
 
 //msgp:ignore Foo stateInMemory Wrapper
 //go:generate msgp -v -tests=false -io=false -unexported
 
+// DefaultOriginVersion is the default version for entity, used for old entity that not changed structs yet.
+const DefaultOriginVersion = "v1"
+
+// ErrEntityNotRegistered is returned when entity is not registered in wrapper.
+var ErrEntityNotRegistered = errors.New("entity not registered in wrapper")
+
+// gWrapperFuncs is global registered entity with wrappers,
+// key as the entity type name, value as the version and related entity create functions
+var gWrapperFuncs = make(map[string]entityCreateFuncs)
+
+type entityCreateFuncs map[string]func() EntityI
+
+// EntityI is the interface for entity.
 type EntityI interface {
 	MarshalMsg([]byte) ([]byte, error)
 	UnmarshalMsg([]byte) ([]byte, error)
 }
 
+// Wrapper is a wrapper for entity.
 type Wrapper struct {
-	version        string
-	key            string
-	v              EntityI
-	newWntityFuncs map[string]func() EntityI
+	v EntityI
 }
 
-func NewWrapper(key string) *Wrapper {
-	return &Wrapper{
-		key:            key,
-		newWntityFuncs: make(map[string]func() EntityI),
-	}
+// GetEntityVersionFuncs returns the entity version creators for the given entity name.
+func GetEntityVersionFuncs(typeName string) (map[string]func() EntityI, bool) {
+	fs, ok := gWrapperFuncs[typeName]
+	return fs, ok
 }
 
-func (w *Wrapper) Register(version string, f func() EntityI) {
-	if _, ok := w.newWntityFuncs[version]; ok {
-		panic(fmt.Sprintf("entity version already registered: %v", version))
-	}
-	w.newWntityFuncs[version] = f
+type EntityWithName interface {
+	TypeName() string
+	EntityI
 }
 
-func (w *Wrapper) NewEntity(version string) (EntityI, bool) {
-	f, ok := w.newWntityFuncs[version]
-	if ok {
-		return f(), true
+// RegisterWrapper registers a wrapper with the entity name and entity version creators.
+func RegisterWrapper(entity EntityWithName, entityVersionCreators map[string]EntityI) {
+	fs := make(map[string]func() EntityI, len(entityVersionCreators))
+	for k, v := range entityVersionCreators {
+		func(key string, e EntityI) {
+			fs[key] = func() EntityI {
+				entityType := reflect.TypeOf(e).Elem()
+				newEntity := reflect.New(entityType).Interface().(EntityI)
+				return newEntity
+			}
+		}(k, v)
 	}
-	return nil, false
+
+	gWrapperFuncs[entity.TypeName()] = fs
 }
 
 func (w *Wrapper) MarshalMsg(b []byte) ([]byte, error) {
@@ -49,10 +66,29 @@ func (w *Wrapper) MarshalMsg(b []byte) ([]byte, error) {
 	return w.v.MarshalMsg(nil)
 }
 
-func (w *Wrapper) UnmarshalMsg(b []byte) ([]byte, error) {
-	newEntity, ok := w.newWntityFuncs[w.version]
+func (w *Wrapper) UnmarshalMsgType(b []byte, typeName string) ([]byte, error) {
+	// load version field from data []byte
+	ev := &entityVersion{}
+	_, err := ev.UnmarshalMsg(b)
+	if err != nil {
+		return nil, err
+	}
+
+	if ev.Version == "" {
+		ev.Version = DefaultOriginVersion
+	}
+	if typeName == "" {
+		return nil, errors.New("wrapper name not set")
+	}
+
+	fs, ok := gWrapperFuncs[typeName]
 	if !ok {
-		return nil, fmt.Errorf("unknown version: %s", w.version)
+		return nil, fmt.Errorf("entity %v not registered in wrapper", typeName)
+	}
+
+	newEntity, ok := fs[ev.Version]
+	if !ok {
+		return nil, fmt.Errorf("unknown version: %s", ev.Version)
 	}
 
 	e := newEntity()
@@ -63,6 +99,14 @@ func (w *Wrapper) UnmarshalMsg(b []byte) ([]byte, error) {
 
 	w.v = e
 	return v, err
+}
+
+func (w *Wrapper) Entity() EntityI {
+	return w.v
+}
+
+func (w *Wrapper) SetEntity(v EntityI) {
+	w.v = v
 }
 
 // type fooActivatorMap map[string]func() EntityI
@@ -101,37 +145,22 @@ func (w *Wrapper) UnmarshalMsg(b []byte) ([]byte, error) {
 // 	V    EntityI
 // }
 
-// type foo struct {
-// 	ID string `msg:"id"`
-// }
+// foo fooV2 and fooV3 are for testing purpose, we need them to generate msgp code.
+type foo struct {
+	ID string `msg:"id"`
+}
 
-// type fooV2 struct {
-// 	ID   string `msg:"id"`
-// 	Name string `msg:"name"`
-// }
+type fooV2 struct {
+	Version string `msg:"version"`
+	ID      string `msg:"id"`
+	Name    string `msg:"name"`
+}
 
-// type fooV3 struct {
-// 	Name string `msg:"name"`
-// }
-
-// func (f *Foo) MarshalMsg(b []byte) ([]byte, error) {
-// 	return f.V.MarshalMsg(nil)
-// }
-
-// func (f *Foo) UnmarshalMsg(b []byte) ([]byte, error) {
-// 	e, ok := fooActivator.NewEntity(f.Fork)
-// 	if !ok {
-// 		return nil, fmt.Errorf("unknown hardfork name: %s", f.Fork)
-// 	}
-
-// 	v, err := e.UnmarshalMsg(b)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	f.V = e
-// 	return v, err
-// }
+type fooV3 struct {
+	Version string `msg:"version"`
+	Name    string `msg:"name"`
+	Age     int    `msg:"age"`
+}
 
 // type stateInMemory struct {
 // 	VS map[string][]byte
