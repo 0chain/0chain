@@ -11,8 +11,8 @@ func (edb *EventDb) addPartition(current int64, table string) error {
 	from := current * edb.settings.PartitionChangePeriod
 	to := (current + 1) * edb.settings.PartitionChangePeriod
 
-	log.Printf("addPartition (number, from, to) = (%v, %v)\n", from, to)
-	
+	log.Printf("addPartition (current, from, to), change_period = (%v, %v, %v) %v\n", current, from, to, edb.settings.PartitionChangePeriod)
+
 	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelFunc()
 	raw := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v_%v PARTITION OF %v FOR VALUES FROM (%v) TO (%v)", table, current, table, from, to)
