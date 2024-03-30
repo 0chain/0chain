@@ -2,7 +2,7 @@ version: '3'
 services:
   postgres:
     image: postgres:14
-    command: postgres -c stats_temp_directory=/tmp
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     environment:
       POSTGRES_PORT: 5432
       POSTGRES_HOST: postgres
@@ -15,6 +15,7 @@ services:
     volumes:
       - ../benchmarks/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/
+      - ../config/postgresql.conf:/etc/postgresql/postgresql.conf
     networks:
       default:
 
