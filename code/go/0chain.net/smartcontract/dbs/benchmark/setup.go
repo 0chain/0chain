@@ -199,6 +199,7 @@ func AddAggregatePartitions(edb *event.EventDb) {
 			break
 		}
 
+		log.Println("Adding partitions for round", round)
 		if err := edb.AddPartitions(round); err != nil {
 			log.Println(err)
 		}

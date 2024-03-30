@@ -545,6 +545,14 @@ func AddMockSnapshots(edb *event.EventDb) {
 		}
 		snapshots = append(snapshots, snapshot)
 	}
+
+	rounds := make([]int64, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		rounds = append(rounds, snapshot.Round)
+	}
+
+	log.Printf("addMockSnapshots rounds: %v\n", rounds)
+
 	res := edb.Store.Get().Create(&snapshots)
 	if res.Error != nil {
 		log.Fatal("mock snapshot failed on create edb row", res.Error)
