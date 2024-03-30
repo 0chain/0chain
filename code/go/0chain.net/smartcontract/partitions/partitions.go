@@ -542,9 +542,12 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 	}
 
 	afterHardForkArtemis := func() error {
-		requiredCount := p.PartitionSize
-
 		totalElements := p.Last.Loc*p.PartitionSize + p.Last.length()
+		requiredCount := p.PartitionSize
+		if totalElements < requiredCount {
+			requiredCount = totalElements
+		}
+
 		elementIdx := r.Intn(totalElements)
 
 		partIndex := elementIdx / p.PartitionSize
@@ -571,7 +574,7 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 				} else {
 					partIndex++
 				}
-
+				elementIdxInPart = 0
 			} else {
 				res, err = part.itemRange(elementIdxInPart, elementIdxInPart+requiredCount)
 				if err != nil {

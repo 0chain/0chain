@@ -1238,6 +1238,12 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 	s.StateContextI = &mocks.StateContextI{}
 	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"))
 	s.StateContextI.On("GetState").Return(stx)
+
+	addPartition(t, s, name, size, num)
+	return s
+}
+
+func addPartition(t *testing.T, s state.StateContextI, name string, size, num int) {
 	parts, err := newPartitions(name, size)
 	require.NoError(t, err)
 
@@ -1251,7 +1257,6 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 
 	err = parts.Save(s)
 	require.NoError(t, err)
-	return s
 }
 
 func TestPartitionsForEachPart(t *testing.T) {
