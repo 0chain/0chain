@@ -11,27 +11,33 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 	if err != nil {
 		return err
 	}
+	b := sn.common()
 	data := &event.Blobber{
-		BaseURL:    sn.BaseURL,
-		ReadPrice:  sn.Terms.ReadPrice,
-		WritePrice: sn.Terms.WritePrice,
+		BaseURL:    b.BaseURL,
+		ReadPrice:  b.Terms.ReadPrice,
+		WritePrice: b.Terms.WritePrice,
 
-		Capacity:     sn.Capacity,
-		Allocated:    sn.Allocated,
-		SavedData:    sn.SavedData,
-		NotAvailable: sn.NotAvailable,
-		IsRestricted: *sn.IsRestricted,
+		Capacity:     b.Capacity,
+		Allocated:    b.Allocated,
+		SavedData:    b.SavedData,
+		NotAvailable: b.NotAvailable,
+		// IsRestricted: *sn.IsRestricted,
 		Provider: event.Provider{
-			ID:              sn.ID,
-			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
-			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
-			LastHealthCheck: sn.LastHealthCheck,
+			ID:              b.ID,
+			DelegateWallet:  b.StakePoolSettings.DelegateWallet,
+			NumDelegates:    b.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:   b.StakePoolSettings.ServiceChargeRatio,
+			LastHealthCheck: b.LastHealthCheck,
 			TotalStake:      staked,
 		},
 		OffersTotal: sp.TotalOffers,
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, sn.ID, data)
+
+	if v2, ok := sn.Entity().(*storageNodeV2); ok {
+		data.IsRestricted = *v2.IsRestricted
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, b.ID, data)
 	return nil
 }
 
@@ -40,25 +46,26 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	if err != nil {
 		return err
 	}
+	b := sn.common()
 
 	data := &event.Blobber{
-		BaseURL:    sn.BaseURL,
-		ReadPrice:  sn.Terms.ReadPrice,
-		WritePrice: sn.Terms.WritePrice,
+		BaseURL:    b.BaseURL,
+		ReadPrice:  b.Terms.ReadPrice,
+		WritePrice: b.Terms.WritePrice,
 
-		Capacity:     sn.Capacity,
-		Allocated:    sn.Allocated,
-		SavedData:    sn.SavedData,
+		Capacity:     b.Capacity,
+		Allocated:    b.Allocated,
+		SavedData:    b.SavedData,
 		NotAvailable: false,
 		Provider: event.Provider{
-			ID:              sn.ID,
-			DelegateWallet:  sn.StakePoolSettings.DelegateWallet,
-			NumDelegates:    sn.StakePoolSettings.MaxNumDelegates,
-			ServiceCharge:   sn.StakePoolSettings.ServiceChargeRatio,
-			LastHealthCheck: sn.LastHealthCheck,
+			ID:              b.ID,
+			DelegateWallet:  b.StakePoolSettings.DelegateWallet,
+			NumDelegates:    b.StakePoolSettings.MaxNumDelegates,
+			ServiceCharge:   b.StakePoolSettings.ServiceChargeRatio,
+			LastHealthCheck: b.LastHealthCheck,
 			TotalStake:      staked,
 			Rewards: event.ProviderRewards{
-				ProviderID:   sn.ID,
+				ProviderID:   b.ID,
 				Rewards:      sp.Reward,
 				TotalRewards: sp.Reward,
 			},
@@ -69,27 +76,33 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		CreationRound: balances.GetBlock().Round,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, data)
+	if v2, ok := sn.Entity().(*storageNodeV2); ok {
+		data.IsRestricted = *v2.IsRestricted
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, b.ID, data)
 	return nil
 }
 
 func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, sn.ID, event.Blobber{
+	b := sn.common()
+	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, b.ID, event.Blobber{
 		Provider: event.Provider{
-			ID:              sn.ID,
-			LastHealthCheck: sn.LastHealthCheck,
+			ID:              b.ID,
+			LastHealthCheck: b.LastHealthCheck,
 		},
-		Allocated: sn.Allocated,
-		SavedData: sn.SavedData,
+		Allocated: b.Allocated,
+		SavedData: b.SavedData,
 	})
 }
 
 func emitBlobberHealthCheck(sn *StorageNode, downtime uint64, balances cstate.StateContextI) {
+	b := sn.common()
 	data := dbs.DbHealthCheck{
-		ID:              sn.ID,
-		LastHealthCheck: sn.LastHealthCheck,
+		ID:              b.ID,
+		LastHealthCheck: b.LastHealthCheck,
 		Downtime:        downtime,
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagBlobberHealthCheck, sn.ID, data)
+	balances.EmitEvent(event.TypeStats, event.TagBlobberHealthCheck, b.ID, data)
 }

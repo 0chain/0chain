@@ -34,7 +34,7 @@ import (
 	"0chain.net/core/encryption"
 )
 
-//msgp:ignore StorageAllocation AllocationChallenges
+//msgp:ignore StorageNode StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
@@ -297,64 +297,8 @@ type Info struct {
 	Description string `json:"description"`
 }
 
-// StorageNode represents Blobber configurations.
-type StorageNode struct {
-	provider.Provider
-	BaseURL                 string  `json:"url"`
-	Terms                   Terms   `json:"terms"`     // terms
-	Capacity                int64   `json:"capacity"`  // total blobber capacity
-	Allocated               int64   `json:"allocated"` // allocated capacity
-	PublicKey               string  `json:"-"`
-	SavedData               int64   `json:"saved_data"`
-	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
-	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
-	RewardRound       RewardRound        `json:"reward_round"`
-	NotAvailable      bool               `json:"not_available"`
-
-	IsRestricted *bool `json:"is_restricted,omitempty"`
-}
-
 func GetUrlKey(baseUrl, globalKey string) datastore.Key {
 	return datastore.Key(globalKey + baseUrl)
-}
-
-// validate the blobber configurations
-func (sn *StorageNode) validate(conf *Config) (err error) {
-	if err = sn.Terms.validate(conf); err != nil {
-		return
-	}
-	if sn.Capacity <= conf.MinBlobberCapacity {
-		return errors.New("insufficient blobber capacity")
-	}
-
-	if err := validateBaseUrl(&sn.BaseURL); err != nil {
-		return err
-	}
-
-	return
-}
-
-func (sn *StorageNode) GetKey() datastore.Key {
-	return provider.GetKey(sn.ID)
-}
-
-func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
-	return GetUrlKey(sn.BaseURL, globalKey)
-}
-
-func (sn *StorageNode) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
-}
-
-func (sn *StorageNode) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 type StorageNodes struct {
@@ -506,7 +450,7 @@ func newBlobberAllocation(
 	return ba
 }
 
-func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) {
+func setCappedPrices(ba *BlobberAllocation, blobber *storageNodeCommon, conf *Config) {
 	//TODO check the maximum price of the network and choose minimum
 	ba.Terms = blobber.Terms
 	if blobber.Terms.WritePrice > conf.MaxWritePrice {
