@@ -1,6 +1,7 @@
 package entitywrapper
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -23,6 +24,8 @@ type entityCreateFuncs map[string]func() EntityI
 
 // EntityI is the interface for entity.
 type EntityI interface {
+	GetVersion() string
+	// TypeName() string
 	MarshalMsg([]byte) ([]byte, error)
 	UnmarshalMsg([]byte) ([]byte, error)
 }
@@ -38,13 +41,14 @@ func GetEntityVersionFuncs(typeName string) (map[string]func() EntityI, bool) {
 	return fs, ok
 }
 
-type EntityWithName interface {
+type WrapperEntity interface {
 	TypeName() string
-	EntityI
+	MarshalMsg([]byte) ([]byte, error)
+	UnmarshalMsg([]byte) ([]byte, error)
 }
 
 // RegisterWrapper registers a wrapper with the entity name and entity version creators.
-func RegisterWrapper(entity EntityWithName, entityVersionCreators map[string]EntityI) {
+func RegisterWrapper(entity WrapperEntity, entityVersionCreators map[string]EntityI) {
 	fs := make(map[string]func() EntityI, len(entityVersionCreators))
 	for k, v := range entityVersionCreators {
 		func(key string, e EntityI) {
@@ -57,6 +61,17 @@ func RegisterWrapper(entity EntityWithName, entityVersionCreators map[string]Ent
 	}
 
 	gWrapperFuncs[entity.TypeName()] = fs
+}
+
+// TODO:
+func (w *Wrapper) LazyNew(hardFork string) EntityI {
+	// new entity base on hardfork name,
+}
+
+func (w *Wrapper) Update(f func(v EntityI)) {
+	v := w.Entity()
+	f(v)
+	w.SetEntity(v)
 }
 
 func (w *Wrapper) MarshalMsg(b []byte) ([]byte, error) {
@@ -77,13 +92,14 @@ func (w *Wrapper) UnmarshalMsgType(b []byte, typeName string) ([]byte, error) {
 	if ev.Version == "" {
 		ev.Version = DefaultOriginVersion
 	}
+
 	if typeName == "" {
 		return nil, errors.New("wrapper name not set")
 	}
 
 	fs, ok := gWrapperFuncs[typeName]
 	if !ok {
-		return nil, fmt.Errorf("entity %v not registered in wrapper", typeName)
+		return nil, ErrEntityNotRegistered
 	}
 
 	newEntity, ok := fs[ev.Version]
@@ -101,13 +117,58 @@ func (w *Wrapper) UnmarshalMsgType(b []byte, typeName string) ([]byte, error) {
 	return v, err
 }
 
+// MarshalJSON implements the json.Marshaler interface.
+func (w *Wrapper) MarshalJSON() ([]byte, error) {
+	return json.Marshal(w.Entity())
+}
+
+func (w *Wrapper) UnmarshalJSONType(data []byte, typeName string) error {
+	var ev entityVersion
+	if err := json.Unmarshal(data, &ev); err != nil {
+		return err
+	}
+
+	if ev.Version == "" {
+		ev.Version = DefaultOriginVersion
+	}
+
+	fs, ok := gWrapperFuncs[typeName]
+	if !ok {
+		return ErrEntityNotRegistered
+	}
+
+	newEntity, ok := fs[ev.Version]
+	if !ok {
+		return fmt.Errorf("unknown version: %s", ev.Version)
+	}
+
+	e := newEntity()
+	if err := json.Unmarshal(data, e); err != nil {
+		return err
+	}
+
+	w.v = e
+	return nil
+}
+
 func (w *Wrapper) Entity() EntityI {
 	return w.v
 }
 
+// func (w *Wrapper) EntityConvert(v EntityI, f func(v EntityI) error) error {
+// 	if reflect.TypeOf(v).Name() == reflect.TypeOf(w.v).Name() {
+// 		return f(w.v)
+// 	}
+// 	// convert the entity
+// 	return w.v
+// }
+
 func (w *Wrapper) SetEntity(v EntityI) {
 	w.v = v
 }
+
+// func (w *Wrapper) SetEntityType(typeName string) {
+// }
 
 // type fooActivatorMap map[string]func() EntityI
 
@@ -150,16 +211,40 @@ type foo struct {
 	ID string `msg:"id"`
 }
 
+func (f *foo) GetVersion() string {
+	return DefaultOriginVersion
+}
+
+func (f *foo) TypeName() string {
+	return "Foo"
+}
+
 type fooV2 struct {
 	Version string `msg:"version"`
 	ID      string `msg:"id"`
 	Name    string `msg:"name"`
 }
 
+func (f *fooV2) GetVersion() string {
+	return f.Version
+}
+
+func (f *fooV2) TypeName() string {
+	return "Foo"
+}
+
 type fooV3 struct {
 	Version string `msg:"version"`
 	Name    string `msg:"name"`
 	Age     int    `msg:"age"`
+}
+
+func (f *fooV3) GetVersion() string {
+	return f.Version
+}
+
+func (f *fooV3) TypeName() string {
+	return "Foo"
 }
 
 // type stateInMemory struct {
