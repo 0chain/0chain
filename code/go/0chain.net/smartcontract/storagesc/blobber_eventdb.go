@@ -11,7 +11,7 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 	if err != nil {
 		return err
 	}
-	b := sn.common()
+	b := sn.mustBase()
 	data := &event.Blobber{
 		BaseURL:    b.BaseURL,
 		ReadPrice:  b.Terms.ReadPrice,
@@ -46,7 +46,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	if err != nil {
 		return err
 	}
-	b := sn.common()
+	b := sn.mustBase()
 
 	data := &event.Blobber{
 		BaseURL:    b.BaseURL,
@@ -85,7 +85,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 }
 
 func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.StateContextI) {
-	b := sn.common()
+	b := sn.mustBase()
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberAllocatedSavedHealth, b.ID, event.Blobber{
 		Provider: event.Provider{
 			ID:              b.ID,
@@ -97,7 +97,7 @@ func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.Stat
 }
 
 func emitBlobberHealthCheck(sn *StorageNode, downtime uint64, balances cstate.StateContextI) {
-	b := sn.common()
+	b := sn.mustBase()
 	data := dbs.DbHealthCheck{
 		ID:              b.ID,
 		LastHealthCheck: b.LastHealthCheck,

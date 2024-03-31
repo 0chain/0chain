@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/maths"
+	"0chain.net/core/util/entitywrapper"
 	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/partitions"
@@ -31,26 +32,37 @@ const (
 	CHUNK_SIZE = 64 * KB
 )
 
-func newBlobber(id string) *StorageNode {
-	return &StorageNode{
-		Provider: provider.Provider{
-			ID:           id,
-			ProviderType: spenum.Blobber,
-		},
-	}
+// func newBlobber() *StorageNode {
+// 	return &StorageNode{
+// 		// Provider: provider.Provider{
+// 		// 	ID:           id,
+// 		// 	ProviderType: spenum.Blobber,
+// 		// },
+// 	}
+// }
+
+func blobberKey(id string) datastore.Key {
+	return provider.GetKey(id)
+}
+
+func blobberUrlKey(url, scAddress string) datastore.Key {
+	return GetUrlKey(url, scAddress)
 }
 
 func getBlobber(
 	blobberID string,
 	balances cstate.CommonStateContextI,
 ) (*StorageNode, error) {
-	blobber := newBlobber(blobberID)
-	err := balances.GetTrieNode(blobber.GetKey(), blobber)
+	blobber := &StorageNode{}
+	err := balances.GetTrieNode(blobberKey(blobberID), blobber)
 	if err != nil {
 		return nil, err
 	}
-	if blobber.ProviderType != spenum.Blobber {
-		return nil, fmt.Errorf("provider is %s should be %s", blobber.ProviderType, spenum.Blobber)
+
+	b := blobber.mustBase()
+
+	if b.ProviderType != spenum.Blobber {
+		return nil, fmt.Errorf("provider is %s should be %s", b.ProviderType, spenum.Blobber)
 	}
 	return blobber, nil
 }
@@ -95,13 +107,18 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 			"can't get the blobber: "+err.Error())
 	}
 
-	if blobber.Allocated != fixRequest.PrevAllocated || blobber.SavedData != fixRequest.PrevSavedData {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"blobber's allocated or saved_data doesn't match with the provided values")
-	}
+	if err := blobber.mustUpdateBase(func(snb *storageNodeBase) error {
+		if snb.Allocated != fixRequest.PrevAllocated || snb.SavedData != fixRequest.PrevSavedData {
+			return common.NewError("reset_blobber_stats_failed",
+				"blobber's allocated or saved_data doesn't match with the provided values")
+		}
 
-	blobber.SavedData = fixRequest.NewSavedData
-	blobber.Allocated = fixRequest.NewAllocated
+		snb.SavedData = fixRequest.NewSavedData
+		snb.Allocated = fixRequest.NewAllocated
+		return nil
+	}); err != nil {
+		return "", err
+	}
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 	if err != nil {
@@ -112,13 +129,14 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 
 	// Update challenge ready blobber partition
 
-	sp, err := getStakePool(spenum.Blobber, blobber.ID, balances)
+	bb := blobber.mustBase()
+	sp, err := getStakePool(spenum.Blobber, bb.ID, balances)
 	if err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"can't get related stake pool: "+err.Error())
 	}
 
-	sd, err := maths.ConvertToUint64(blobber.SavedData)
+	sd, err := maths.ConvertToUint64(bb.SavedData)
 	if err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"can't convert saved_data to uint64: "+err.Error())
@@ -130,7 +148,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 			"can't get stake pool balance: "+err.Error())
 	}
 
-	if err := PartitionsChallengeReadyBlobberUpdate(balances, blobber.ID, spBalance, sd); err != nil {
+	if err := PartitionsChallengeReadyBlobberUpdate(balances, bb.ID, spBalance, sd); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"error updating challenge ready partitions: "+err.Error())
 	}
@@ -142,9 +160,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
 	balances cstate.StateContextI) (bool, error) {
-	blobber := newBlobber("")
-	blobber.BaseURL = blobberURL
-	err := balances.GetTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+	err := balances.GetTrieNode(blobberUrlKey(blobberURL, sc.ID), &datastore.NOIDField{})
 	switch err {
 	case nil:
 		return true, nil
@@ -181,81 +197,90 @@ func (sc *StorageSmartContract) updateBlobber(
 		return err
 	}
 
-	if updateBlobber.NotAvailable != nil {
-		existingBlobber.NotAvailable = *updateBlobber.NotAvailable
-	}
-
-	// storing the current capacity because existing blobber's capacity is updated.
-	currentCapacity := existingBlobber.Capacity
-	if updateBlobber.Capacity != nil {
-		if *updateBlobber.Capacity <= 0 {
-			return sc.removeBlobber(txn, updateBlobber, balances)
+	var currentCapacity int64
+	if err := existingBlobber.mustUpdateBase(func(snb *storageNodeBase) error {
+		if updateBlobber.NotAvailable != nil {
+			snb.NotAvailable = *updateBlobber.NotAvailable
 		}
 
-		existingBlobber.Capacity = *updateBlobber.Capacity
-	}
+		// storing the current capacity because existing blobber's capacity is updated.
+		currentCapacity = snb.Capacity
+		if updateBlobber.Capacity != nil {
+			if *updateBlobber.Capacity <= 0 {
+				return sc.removeBlobber(txn, updateBlobber, balances)
+			}
 
-	// validate other params like capacity and baseUrl
-	if err = validateBlobberUpdateSettings(updateBlobber, conf); err != nil {
-		return fmt.Errorf("invalid blobber params: %v", err)
-	}
-
-	if updateBlobber.BaseURL != nil && *updateBlobber.BaseURL != existingBlobber.BaseURL {
-		has, err := sc.hasBlobberUrl(*updateBlobber.BaseURL, balances)
-		if err != nil {
-			return fmt.Errorf("could not check blobber url: %v", err)
+			snb.Capacity = *updateBlobber.Capacity
 		}
 
-		if has {
-			return fmt.Errorf("blobber url update failed, %s already used", *updateBlobber.BaseURL)
+		// validate other params like capacity and baseUrl
+		if err = validateBlobberUpdateSettings(updateBlobber, conf); err != nil {
+			return fmt.Errorf("invalid blobber params: %v", err)
 		}
 
-		if existingBlobber.BaseURL != "" {
-			_, err = balances.DeleteTrieNode(existingBlobber.GetUrlKey(sc.ID))
+		if updateBlobber.BaseURL != nil && *updateBlobber.BaseURL != snb.BaseURL {
+			has, err := sc.hasBlobberUrl(*updateBlobber.BaseURL, balances)
 			if err != nil {
-				return fmt.Errorf("deleting blobber old url: " + err.Error())
+				return fmt.Errorf("could not check blobber url: %v", err)
+			}
+
+			if has {
+				return fmt.Errorf("blobber url update failed, %s already used", *updateBlobber.BaseURL)
+			}
+
+			if snb.BaseURL != "" {
+				_, err = balances.DeleteTrieNode(existingBlobber.GetUrlKey(sc.ID))
+				if err != nil {
+					return fmt.Errorf("deleting blobber old url: " + err.Error())
+				}
+			}
+
+			if *updateBlobber.BaseURL != "" {
+				snb.BaseURL = *updateBlobber.BaseURL
+				_, err = balances.InsertTrieNode(existingBlobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+				if err != nil {
+					return fmt.Errorf("saving blobber url: " + err.Error())
+				}
 			}
 		}
 
-		if *updateBlobber.BaseURL != "" {
-			existingBlobber.BaseURL = *updateBlobber.BaseURL
-			_, err = balances.InsertTrieNode(existingBlobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+		snb.LastHealthCheck = txn.CreationDate
+
+		sc.statIncr(statUpdateBlobber)
+
+		if currentCapacity == 0 {
+			sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
+		}
+
+		if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf, balances); err != nil {
+			return err
+		}
+
+		// update stake pool settings if write price has changed.
+		if updateBlobber.Terms != nil && updateBlobber.Terms.WritePrice != nil {
+			updatedStakedCapacity, err := existingSp.stakedCapacity(*updateBlobber.Terms.WritePrice)
 			if err != nil {
-				return fmt.Errorf("saving blobber url: " + err.Error())
+				return fmt.Errorf("error calculating staked capacity: %v", err)
+			}
+
+			if snb.Allocated > updatedStakedCapacity {
+				return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than allocated capacity (%d)",
+					updatedStakedCapacity, snb.Allocated)
 			}
 		}
-	}
 
-	existingBlobber.LastHealthCheck = txn.CreationDate
-
-	// update statistics
-	sc.statIncr(statUpdateBlobber)
-
-	if currentCapacity == 0 {
-		sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
-	}
-
-	if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf, balances); err != nil {
+		return nil
+	}); err != nil {
 		return err
 	}
 
-	// update stake pool settings if write price has changed.
-	if updateBlobber.Terms != nil && updateBlobber.Terms.WritePrice != nil {
-		updatedStakedCapacity, err := existingSp.stakedCapacity(*updateBlobber.Terms.WritePrice)
-		if err != nil {
-			return fmt.Errorf("error calculating staked capacity: %v", err)
-		}
-
-		if existingBlobber.Allocated > updatedStakedCapacity {
-			return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than allocated capacity (%d)",
-				updatedStakedCapacity, existingBlobber.Allocated)
-		}
-	}
-
 	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
-		func() (e error) {
-			existingBlobber.IsRestricted = updateBlobber.IsRestricted
-			return nil
+		func() error {
+			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
+				b := e.(*storageNodeV2)
+				b.IsRestricted = updateBlobber.IsRestricted
+				return nil
+			})
 		})
 	if actErr != nil {
 		return fmt.Errorf("error with activation: %v", actErr)
@@ -283,23 +308,26 @@ func validateAndSaveTerms(
 	existingBlobber *StorageNode,
 	conf *Config,
 ) error {
-	if updatedBlobber.Terms != nil {
+	if updatedBlobber.Terms == nil {
+		return nil
+	}
+
+	return existingBlobber.mustUpdateBase(func(b *storageNodeBase) error {
 		if updatedBlobber.Terms.ReadPrice != nil {
 			if err := validateReadPrice(*updatedBlobber.Terms.ReadPrice, conf); err != nil {
 				return fmt.Errorf("invalid blobber terms: %v", err)
 			}
-			existingBlobber.Terms.ReadPrice = *updatedBlobber.Terms.ReadPrice
+			b.Terms.ReadPrice = *updatedBlobber.Terms.ReadPrice
 		}
 
 		if updatedBlobber.Terms.WritePrice != nil {
 			if err := validateWritePrice(*updatedBlobber.Terms.WritePrice, conf); err != nil {
 				return fmt.Errorf("invalid blobber terms: %v", err)
 			}
-			existingBlobber.Terms.WritePrice = *updatedBlobber.Terms.WritePrice
+			b.Terms.WritePrice = *updatedBlobber.Terms.WritePrice
 		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func validateAndSaveSp(
@@ -309,28 +337,31 @@ func validateAndSaveSp(
 	conf *Config,
 	balances cstate.StateContextI,
 ) error {
-	if updateBlobber.StakePoolSettings != nil {
+	if updateBlobber.StakePoolSettings == nil {
+		return nil
+	}
+
+	return existingBlobber.mustUpdateBase(func(b *storageNodeBase) error {
 		if updateBlobber.StakePoolSettings.DelegateWallet != nil {
 			existingSp.Settings.DelegateWallet = *updateBlobber.StakePoolSettings.DelegateWallet
-			existingBlobber.StakePoolSettings.DelegateWallet = *updateBlobber.StakePoolSettings.DelegateWallet
+			b.StakePoolSettings.DelegateWallet = *updateBlobber.StakePoolSettings.DelegateWallet
 		}
 
 		if updateBlobber.StakePoolSettings.ServiceChargeRatio != nil {
 			existingSp.Settings.ServiceChargeRatio = *updateBlobber.StakePoolSettings.ServiceChargeRatio
-			existingBlobber.StakePoolSettings.ServiceChargeRatio = *updateBlobber.StakePoolSettings.ServiceChargeRatio
+			b.StakePoolSettings.ServiceChargeRatio = *updateBlobber.StakePoolSettings.ServiceChargeRatio
 		}
 
 		if updateBlobber.StakePoolSettings.MaxNumDelegates != nil {
 			existingSp.Settings.MaxNumDelegates = *updateBlobber.StakePoolSettings.MaxNumDelegates
-			existingBlobber.StakePoolSettings.MaxNumDelegates = *updateBlobber.StakePoolSettings.MaxNumDelegates
+			b.StakePoolSettings.MaxNumDelegates = *updateBlobber.StakePoolSettings.MaxNumDelegates
 		}
 
-		if err := validateStakePoolSettings(existingBlobber.StakePoolSettings, conf, balances); err != nil {
+		if err := validateStakePoolSettings(b.StakePoolSettings, conf, balances); err != nil {
 			return fmt.Errorf("invalid new stake pool settings:  %v", err)
 		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 // remove blobber (when a blobber provides capacity = 0)
@@ -348,7 +379,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	blobber.Capacity = &zeroCapacity
 
 	// remove from the all list, since the blobber can't accept new allocations
-	if savedBlobber.Capacity > 0 {
+	if savedBlobber.mustBase().Capacity > 0 {
 		sc.statIncr(statRemoveBlobber)
 		sc.statDecr(statNumberOfBlobbers)
 	}
@@ -378,20 +409,24 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var blobber = newBlobber(t.ClientID)
+	blobber := &StorageNode{}
+
+	// var blobber = newBlobber(t.ClientID)
 	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"malformed request: "+err.Error())
 	}
 
 	// set transaction information
-	blobber.ID = t.ClientID
-	blobber.PublicKey = t.PublicKey
-	blobber.ProviderType = spenum.Blobber
-	blobber.NotAvailable = false
+	if err := blobber.mustUpdateBase(func(b *storageNodeBase) error {
+		b.ID = t.ClientID
+		b.PublicKey = t.PublicKey
+		b.ProviderType = spenum.Blobber
+		b.NotAvailable = false
 
-	// Check delegate wallet and operational wallet are not the same
-	if err := commonsc.ValidateDelegateWallet(blobber.PublicKey, blobber.StakePoolSettings.DelegateWallet); err != nil {
+		// Check delegate wallet and operational wallet are not the same
+		return commonsc.ValidateDelegateWallet(b.PublicKey, b.StakePoolSettings.DelegateWallet)
+	}); err != nil {
 		return "", err
 	}
 
@@ -408,7 +443,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	// Save url
-	if blobber.BaseURL != "" {
+	if blobber.mustBase().BaseURL != "" {
 		_, err = balances.InsertTrieNode(blobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 		if err != nil {
 			return "", common.NewError("add_or_update_blobber_failed",
@@ -484,8 +519,12 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 		return "", common.NewErrorf("blobber_health_check_failed",
 			"cannot get config: %v", err)
 	}
-	downtime = common.Downtime(blobber.LastHealthCheck, t.CreationDate, conf.HealthCheckPeriod)
-	blobber.LastHealthCheck = t.CreationDate
+
+	blobber.mustUpdateBase(func(b *storageNodeBase) error {
+		downtime = common.Downtime(b.LastHealthCheck, t.CreationDate, conf.HealthCheckPeriod)
+		b.LastHealthCheck = t.CreationDate
+		return nil
+	})
 
 	emitBlobberHealthCheck(blobber, downtime, balances)
 
@@ -625,39 +664,45 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
-	if blobber.LastRewardDataReadRound >= rewardRound {
-		blobber.DataReadLastRewardRound += sizeRead
-	} else {
-		blobber.DataReadLastRewardRound = sizeRead
-	}
-	blobber.LastRewardDataReadRound = balances.GetBlock().Round
-
-	if blobber.RewardRound.StartRound >= rewardRound && blobber.RewardRound.Timestamp > 0 {
-		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
-		if err != nil {
-			return "", common.NewErrorf("commit_blobber_read",
-				"cannot fetch ongoing partition: %v", err)
+	if err := blobber.mustUpdateBase(func(b *storageNodeBase) error {
+		if b.LastRewardDataReadRound >= rewardRound {
+			b.DataReadLastRewardRound += sizeRead
+		} else {
+			b.DataReadLastRewardRound = sizeRead
 		}
+		b.LastRewardDataReadRound = balances.GetBlock().Round
 
-		var brn BlobberRewardNode
-		if _, err := parts.Get(balances, blobber.ID, &brn); err != nil {
-			return "", common.NewErrorf("commit_blobber_read",
-				"cannot fetch blobber node item from partition: %v", err)
+		if b.RewardRound.StartRound >= rewardRound && b.RewardRound.Timestamp > 0 {
+			parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
+			if err != nil {
+				return common.NewErrorf("commit_blobber_read",
+					"cannot fetch ongoing partition: %v", err)
+			}
+
+			var brn BlobberRewardNode
+			if _, err := parts.Get(balances, b.ID, &brn); err != nil {
+				return common.NewErrorf("commit_blobber_read",
+					"cannot fetch blobber node item from partition: %v", err)
+			}
+
+			brn.DataRead = b.DataReadLastRewardRound
+
+			err = parts.UpdateItem(balances, &brn)
+			if err != nil {
+				return common.NewErrorf("commit_blobber_read",
+					"error updating blobber reward item: %v", err)
+			}
+
+			err = parts.Save(balances)
+			if err != nil {
+				return common.NewErrorf("commit_blobber_read",
+					"error saving ongoing blobber reward partition: %v", err)
+			}
+
 		}
-
-		brn.DataRead = blobber.DataReadLastRewardRound
-
-		err = parts.UpdateItem(balances, &brn)
-		if err != nil {
-			return "", common.NewErrorf("commit_blobber_read",
-				"error updating blobber reward item: %v", err)
-		}
-
-		err = parts.Save(balances)
-		if err != nil {
-			return "", common.NewErrorf("commit_blobber_read",
-				"error saving ongoing blobber reward partition: %v", err)
-		}
+		return nil
+	}); err != nil {
+		return "", err
 	}
 
 	// Save pools
@@ -889,7 +934,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 		blobAlloc.Stats.UsedSize = blobAlloc.Stats.UsedSize + changeSize
 		blobAlloc.Stats.NumWrites++
-		blobber.SavedData += changeSize
+		blobber.mustUpdateBase(func(b *storageNodeBase) error {
+			b.SavedData += changeSize
+			return nil
+		})
 		alloc.Stats.UsedSize += int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 
 		alloc.Stats.NumWrites++
@@ -912,7 +960,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		blobAlloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 		blobAlloc.Stats.NumWrites++
 
-		blobber.SavedData += commitConnection.WriteMarker.Size
+		blobber.mustUpdateBase(func(b *storageNodeBase) error {
+			b.SavedData += commitConnection.WriteMarker.Size
+			return nil
+		})
 		alloc.Stats.UsedSize += int64(float64(commitConnection.WriteMarker.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 
 		alloc.Stats.NumWrites++
@@ -936,7 +987,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"moving tokens: %v", err)
 	}
 
-	sd, err := maths.ConvertToUint64(blobber.SavedData)
+	bb := blobber.mustBase()
+	sd, err := maths.ConvertToUint64(bb.SavedData)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed", "savedData is negative: %v", err)
 	}
@@ -953,9 +1005,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			return "", fmt.Errorf("could not add blobber allocation to partitions: %v", err)
 		}
 	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size < 0 {
-		if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
+		if err := removeAllocationFromBlobberPartitions(balances, bb.ID, alloc.ID); err != nil {
 			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
-				zap.String("blobber", blobber.ID),
+				zap.String("blobber", bb.ID),
 				zap.String("allocation", alloc.ID),
 				zap.Error(err))
 			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
@@ -964,7 +1016,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
 
-	if blobber.RewardRound.StartRound >= startRound && blobber.RewardRound.Timestamp > 0 {
+	if bb.RewardRound.StartRound >= startRound && bb.RewardRound.Timestamp > 0 {
 		parts, err := getOngoingPassedBlobberRewardsPartitions(balances, conf.BlockReward.TriggerPeriod)
 		if err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
@@ -972,12 +1024,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 
 		var brn BlobberRewardNode
-		if _, err := parts.Get(balances, blobber.ID, &brn); err != nil {
+		if _, err := parts.Get(balances, bb.ID, &brn); err != nil {
 			return "", common.NewErrorf("commit_connection_failed",
 				"cannot fetch blobber node item from partition: %v", err)
 		}
 
-		brn.TotalData = sizeInGB(blobber.SavedData)
+		brn.TotalData = sizeInGB(bb.SavedData)
 
 		err = parts.UpdateItem(balances, &brn)
 		if err != nil {
@@ -1059,23 +1111,24 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *Config, blobber *StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
-	_, err = sc.getBlobber(blobber.ID, balances)
+	bb := blobber.mustBase()
+	_, err = sc.getBlobber(bb.ID, balances)
 	if err == nil {
 		// already exists with same id
-		return fmt.Errorf("blobber already exists,with id: %s ", blobber.ID)
+		return fmt.Errorf("blobber already exists,with id: %s ", bb.ID)
 	}
 
 	if err != util.ErrValueNotPresent {
 		return err
 	}
 
-	has, err := sc.hasBlobberUrl(blobber.BaseURL, balances)
+	has, err := sc.hasBlobberUrl(bb.BaseURL, balances)
 	if err != nil {
 		return fmt.Errorf("could not check blobber url: %v", err)
 	}
 
 	if has {
-		return fmt.Errorf("invalid blobber, url: %s already used", blobber.BaseURL)
+		return fmt.Errorf("invalid blobber, url: %s already used", bb.BaseURL)
 	}
 
 	// check params
@@ -1083,16 +1136,20 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("invalid blobber params: %v", err)
 	}
 
-	blobber.LastHealthCheck = t.CreationDate // set to now
+	blobber.mustUpdateBase(func(b *storageNodeBase) error {
+		b.LastHealthCheck = t.CreationDate // set to now
+		return nil
+	})
 
+	bb = blobber.mustBase()
 	// create stake pool
 	var sp *stakePool
-	sp, err = sc.createStakePool(conf, blobber.StakePoolSettings, balances)
+	sp, err = sc.createStakePool(conf, bb.StakePoolSettings, balances)
 	if err != nil {
 		return fmt.Errorf("creating stake pool: %v", err)
 	}
 
-	if err = sp.Save(spenum.Blobber, blobber.ID, balances); err != nil {
+	if err = sp.Save(spenum.Blobber, bb.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
@@ -1113,7 +1170,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	sc.statIncr(statAddBlobber)
 	sc.statIncr(statNumberOfBlobbers)
 
-	afterInsertBlobber(blobber.ID)
+	afterInsertBlobber(bb.ID)
 	return
 }
 

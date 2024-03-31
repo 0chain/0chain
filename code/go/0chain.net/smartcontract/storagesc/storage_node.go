@@ -38,70 +38,29 @@ func (sn *StorageNode) UnmarshalJSON(data []byte) error {
 	return sn.UnmarshalJSONType(data, sn.TypeName())
 }
 
-type storageNodeCommon struct {
-	*storageNodeV1
-	origin entitywrapper.EntityI
+func (sn *StorageNode) mustBase() *storageNodeBase {
+	b, ok := sn.Base().(*storageNodeBase)
+	if !ok {
+		logging.Logger.Panic("invalid storage node base type")
+	}
+	return b
 }
 
-func (snc *storageNodeCommon) commitChanges() {
-	if snc.storageNodeV1 == snc.origin {
-		// the origin struct, no need to move the changes
-		return
-	}
+func (sn *StorageNode) mustUpdateBase(f func(*storageNodeBase) error) error {
+	return sn.UpdateBase(func(eb entitywrapper.EntityBaseI) error {
+		b, ok := eb.(*storageNodeBase)
+		if !ok {
+			logging.Logger.Panic("invalid storage node base type")
+		}
 
-	if snc.origin.GetVersion() == "v2" {
-		sn := snc.origin.(*storageNodeV2)
-		sn.ApplyCommonChanges(snc)
-	}
-}
-
-// common returns the common fields of storage node for read only actions
-func (sn *StorageNode) common() *storageNodeCommon {
-	switch snv := sn.Entity().(type) {
-	case *storageNodeV1:
-		return &storageNodeCommon{
-			storageNodeV1: snv,
-			origin:        snv,
-		}
-	case *storageNodeV2:
-		v1 := &storageNodeV1{
-			Provider:                snv.Provider,
-			BaseURL:                 snv.BaseURL,
-			Terms:                   snv.Terms,
-			Capacity:                snv.Capacity,
-			Allocated:               snv.Allocated,
-			PublicKey:               snv.PublicKey,
-			SavedData:               snv.SavedData,
-			DataReadLastRewardRound: snv.DataReadLastRewardRound,
-			LastRewardDataReadRound: snv.LastRewardDataReadRound,
-			StakePoolSettings:       snv.StakePoolSettings,
-			RewardRound:             snv.RewardRound,
-			NotAvailable:            snv.NotAvailable,
-		}
-		return &storageNodeCommon{
-			storageNodeV1: v1,
-			origin:        snv,
-		}
-	default:
-		logging.Logger.Panic("unknown storage node wrapper entity")
+		f(b)
 		return nil
-	}
-}
-
-func (sn *StorageNode) commonUpdate(f func(*storageNodeCommon) error) error {
-	csn := sn.common()
-	if err := f(csn); err != nil {
-		return err
-	}
-	csn.commitChanges()
-
-	sn.SetEntity(csn.origin)
-	return nil
+	})
 }
 
 // validate the blobber configurations
 func (sn *StorageNode) validate(conf *Config) error {
-	csn := sn.common()
+	csn := sn.mustBase()
 	if err := csn.Terms.validate(conf); err != nil {
 		return err
 	}
@@ -114,11 +73,11 @@ func (sn *StorageNode) validate(conf *Config) error {
 }
 
 func (sn *StorageNode) GetKey() datastore.Key {
-	return provider.GetKey(sn.common().ID)
+	return provider.GetKey(sn.mustBase().ID)
 }
 
 func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
-	return GetUrlKey(sn.common().BaseURL, globalKey)
+	return GetUrlKey(sn.mustBase().BaseURL, globalKey)
 }
 
 func (sn *StorageNode) Encode() []byte {
@@ -154,6 +113,28 @@ func (sn1 *storageNodeV1) GetVersion() string {
 	return entitywrapper.DefaultOriginVersion
 }
 
+func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
+	b := storageNodeBase(*sn1)
+	return &b
+}
+
+func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI) error {
+	// nothing to migrate as this is original version of the storage node
+	return nil
+}
+
+// use storageNodeV1 as the base
+type storageNodeBase storageNodeV1
+
+func (sb *storageNodeBase) CommitChangesTo(e entitywrapper.EntityI) {
+	switch v := e.(type) {
+	case *storageNodeV1:
+		*v = storageNodeV1(*sb)
+	case *storageNodeV2:
+		v.ApplyBaseChanges(storageNodeBase(*sb))
+	}
+}
+
 // StorageNode represents Blobber configurations.
 type storageNodeV2 struct {
 	provider.Provider
@@ -177,7 +158,34 @@ func (sn2 *storageNodeV2) GetVersion() string {
 	return "v2"
 }
 
-func (sn2 *storageNodeV2) ApplyCommonChanges(snc *storageNodeCommon) {
+func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
+	return &storageNodeBase{
+		Provider:                sn2.Provider,
+		BaseURL:                 sn2.BaseURL,
+		Terms:                   sn2.Terms,
+		Capacity:                sn2.Capacity,
+		Allocated:               sn2.Allocated,
+		PublicKey:               sn2.PublicKey,
+		SavedData:               sn2.SavedData,
+		DataReadLastRewardRound: sn2.DataReadLastRewardRound,
+		LastRewardDataReadRound: sn2.LastRewardDataReadRound,
+		StakePoolSettings:       sn2.StakePoolSettings,
+		RewardRound:             sn2.RewardRound,
+		NotAvailable:            sn2.NotAvailable,
+	}
+}
+
+func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI) error {
+	v1, ok := e.(*storageNodeV1)
+	if ok {
+		return errors.New("wrong storageNode type")
+	}
+	sn2.ApplyBaseChanges(storageNodeBase(*v1))
+	sn2.Version = "v2"
+	return nil
+}
+
+func (sn2 *storageNodeV2) ApplyBaseChanges(snc storageNodeBase) {
 	sn2.Provider = snc.Provider
 	sn2.BaseURL = snc.BaseURL
 	sn2.Terms = snc.Terms
