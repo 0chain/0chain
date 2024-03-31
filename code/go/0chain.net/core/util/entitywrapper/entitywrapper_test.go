@@ -145,7 +145,7 @@ func TestEntityWrapperJSON(t *testing.T) {
 	require.Equal(t, fv2, ff2.Entity().(*fooV2))
 }
 
-func TestWrapperUpdate(t *testing.T) {
+func TestWrapperUpdateBase(t *testing.T) {
 	RegisterWrapper(&Foo{}, map[string]EntityI{
 		DefaultOriginVersion: &foo{},
 		"v2":                 &fooV2{},
@@ -160,7 +160,7 @@ func TestWrapperUpdate(t *testing.T) {
 	fooWp.SetEntity(&fv1)
 
 	err := fooWp.UpdateBase(func(be EntityBaseI) error {
-		be.(*foo).ID = "foo_id_v2"
+		be.(*fooBase).ID = "foo_id_v2"
 		return nil
 	})
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestWrapperUpdate(t *testing.T) {
 	fooWp2 := &Foo{}
 	fooWp2.SetEntity(&fv2)
 	err = fooWp2.UpdateBase(func(be EntityBaseI) error {
-		e, ok := be.(*foo)
+		e, ok := be.(*fooBase)
 		require.True(t, ok)
 		e.ID = "foo_id_v2"
 		return nil

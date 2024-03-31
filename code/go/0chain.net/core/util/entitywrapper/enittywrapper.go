@@ -235,13 +235,14 @@ func (f *foo) TypeName() string {
 }
 
 func (f *foo) GetBase() EntityBaseI {
-	return f
+	b := fooBase(*f)
+	return &b
 }
 
-func (f *foo) CommitChangesTo(e EntityI) {
+func (f *fooBase) CommitChangesTo(e EntityI) {
 	switch v := e.(type) {
 	case *foo:
-		*v = *f
+		*v = foo(*f)
 	case *fooV2:
 		v.ID = f.ID
 	case *fooV3:
@@ -266,7 +267,7 @@ func (f *fooV2) TypeName() string {
 }
 
 func (f *fooV2) GetBase() EntityBaseI {
-	return &foo{ID: f.ID}
+	return &fooBase{ID: f.ID}
 }
 
 type fooV3 struct {
@@ -284,7 +285,7 @@ func (f *fooV3) TypeName() string {
 }
 
 func (f *fooV3) GetBase() EntityBaseI {
-	return &foo{ID: f.ID}
+	return &fooBase{ID: f.ID}
 }
 
 // type stateInMemory struct {
