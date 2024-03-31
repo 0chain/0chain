@@ -74,7 +74,7 @@ func TestEntityWrapper(t *testing.T) {
 
 	vfooV3 := &fooV3{
 		Version: "v3",
-		Name:    "foo_name",
+		ID:      "foo_id",
 		Age:     100,
 	}
 
@@ -159,33 +159,34 @@ func TestWrapperUpdate(t *testing.T) {
 	fooWp := &Foo{}
 	fooWp.SetEntity(&fv1)
 
-	fooWp.Update(func(e EntityI) {
-		// if e.GetVersion() == DefaultOriginVersion {
-		// 	v := e.(*foo)
-		// 	v.ID = "foo_id_updated"
-		// } else if e.GetVersion() == "v2" {
-		// 	v := e.(*fooV2)
-		// }
+	err := fooWp.UpdateBase(func(be EntityBaseI) error {
+		be.(*foo).ID = "foo_id_v2"
+		return nil
 	})
+	require.NoError(t, err)
 
-	// fv2 := fooV2{
-	// 	Version: "v2",
-	// 	ID:      "foo_id",
-	// 	Name:    "foo_name",
-	// }
+	v, ok := fooWp.Entity().(*foo)
+	require.True(t, ok)
+	require.Equal(t, "foo_id_v2", v.ID)
 
-	// fooWp.SetEntity(&fv2)
+	fv2 := fooV2{
+		Version: "v2",
+		ID:      "foo_id",
+		Name:    "foo_name",
+	}
 
-	// vfv2, ok := fooWp.Entity().(*fooV2)
-	// require.True(t, ok)
-	// require.Equal(t, "v2", vfv2.Version)
-	// require.Equal(t, "foo_id", vfv2.ID)
-	// require.Equal(t, "foo_name", vfv2.Name)
-
-	// vfv2.Name = "foo_name_v2"
-	// fooWp.SetEntity(vfv2)
-
-	// vfv2, ok = fooWp.Entity().(*fooV2)
-	// require.True(t, ok)
-	// require.Equal(t, "foo_name_v2", vfv2.Name)
+	fooWp2 := &Foo{}
+	fooWp2.SetEntity(&fv2)
+	err = fooWp2.UpdateBase(func(be EntityBaseI) error {
+		e, ok := be.(*foo)
+		require.True(t, ok)
+		e.ID = "foo_id_v2"
+		return nil
+	})
+	require.NoError(t, err)
+	v2, ok := fooWp2.Entity().(*fooV2)
+	require.True(t, ok)
+	require.Equal(t, "foo_id_v2", v2.ID)
+	require.Equal(t, "foo_name", v2.Name)
+	require.Equal(t, "v2", v2.Version)
 }

@@ -59,6 +59,58 @@ func (z foo) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z fooBase) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "id"
+	o = append(o, 0x81, 0xa2, 0x69, 0x64)
+	o = msgp.AppendString(o, z.ID)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *fooBase) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "id":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z fooBase) Msgsize() (s int) {
+	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID)
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z fooV2) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 3
@@ -135,9 +187,9 @@ func (z fooV3) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "version"
 	o = append(o, 0x83, 0xa7, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendString(o, z.Version)
-	// string "name"
-	o = append(o, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
-	o = msgp.AppendString(o, z.Name)
+	// string "id"
+	o = append(o, 0xa2, 0x69, 0x64)
+	o = msgp.AppendString(o, z.ID)
 	// string "age"
 	o = append(o, 0xa3, 0x61, 0x67, 0x65)
 	o = msgp.AppendInt(o, z.Age)
@@ -168,10 +220,10 @@ func (z *fooV3) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Version")
 				return
 			}
-		case "name":
-			z.Name, bts, err = msgp.ReadStringBytes(bts)
+		case "id":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Name")
+				err = msgp.WrapError(err, "ID")
 				return
 			}
 		case "age":
@@ -194,6 +246,6 @@ func (z *fooV3) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z fooV3) Msgsize() (s int) {
-	s = 1 + 8 + msgp.StringPrefixSize + len(z.Version) + 5 + msgp.StringPrefixSize + len(z.Name) + 4 + msgp.IntSize
+	s = 1 + 8 + msgp.StringPrefixSize + len(z.Version) + 3 + msgp.StringPrefixSize + len(z.ID) + 4 + msgp.IntSize
 	return
 }

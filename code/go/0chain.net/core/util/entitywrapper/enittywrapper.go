@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-//msgp:ignore Foo stateInMemory Wrapper
+//msgp:ignore Foo stateInMemory Wrapper EntityI EntityBaseI WrapperEntity
 //go:generate msgp -v -tests=false -io=false -unexported
 
 // DefaultOriginVersion is the default version for entity, used for old entity that not changed structs yet.
@@ -26,6 +26,7 @@ type entityCreateFuncs map[string]func() EntityI
 type EntityI interface {
 	GetVersion() string
 	// TypeName() string
+	GetBase() EntityBaseI
 	MarshalMsg([]byte) ([]byte, error)
 	UnmarshalMsg([]byte) ([]byte, error)
 }
@@ -63,9 +64,23 @@ func RegisterWrapper(entity WrapperEntity, entityVersionCreators map[string]Enti
 	gWrapperFuncs[entity.TypeName()] = fs
 }
 
-// TODO:
-func (w *Wrapper) LazyNew(hardFork string) EntityI {
-	// new entity base on hardfork name,
+type EntityBaseI interface {
+	CommitChangesTo(e EntityI)
+}
+
+func (w *Wrapper) Base() EntityBaseI {
+	return w.v.GetBase()
+}
+
+func (w *Wrapper) UpdateBase(f func(EntityBaseI) error) error {
+	b := w.Base()
+	if err := f(b); err != nil {
+		return err
+	}
+	b.CommitChangesTo(w.v)
+
+	// sn.SetEntity(csn.origin)
+	return nil
 }
 
 func (w *Wrapper) Update(f func(v EntityI)) {
@@ -219,6 +234,23 @@ func (f *foo) TypeName() string {
 	return "Foo"
 }
 
+func (f *foo) GetBase() EntityBaseI {
+	return f
+}
+
+func (f *foo) CommitChangesTo(e EntityI) {
+	switch v := e.(type) {
+	case *foo:
+		*v = *f
+	case *fooV2:
+		v.ID = f.ID
+	case *fooV3:
+		v.ID = f.ID
+	}
+}
+
+type fooBase foo
+
 type fooV2 struct {
 	Version string `msg:"version"`
 	ID      string `msg:"id"`
@@ -233,9 +265,13 @@ func (f *fooV2) TypeName() string {
 	return "Foo"
 }
 
+func (f *fooV2) GetBase() EntityBaseI {
+	return &foo{ID: f.ID}
+}
+
 type fooV3 struct {
 	Version string `msg:"version"`
-	Name    string `msg:"name"`
+	ID      string `msg:"id"`
 	Age     int    `msg:"age"`
 }
 
@@ -245,6 +281,10 @@ func (f *fooV3) GetVersion() string {
 
 func (f *fooV3) TypeName() string {
 	return "Foo"
+}
+
+func (f *fooV3) GetBase() EntityBaseI {
+	return &foo{ID: f.ID}
 }
 
 // type stateInMemory struct {
