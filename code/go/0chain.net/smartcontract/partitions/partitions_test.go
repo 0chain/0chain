@@ -824,10 +824,10 @@ func TestGetRandomItems(t *testing.T) {
 				return
 			}
 
-			if tc.num > tc.size {
-				require.Len(t, its, len(p.Last.Items))
-			} else {
+			if tc.num < tc.size {
 				require.Len(t, its, tc.num)
+			} else {
+				require.Len(t, its, tc.size)
 			}
 
 			for _, it := range its {
@@ -1234,12 +1234,16 @@ func TestErrItemExist(t *testing.T) {
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
-	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
+	b := &block.Block{}
+	b.Round = 200
+	s := &mockStateContextI{data: make(map[string][]byte), b: b, txn: &transaction.Transaction{}}
 	s.StateContextI = &mocks.StateContextI{}
 	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"))
 	s.StateContextI.On("GetState").Return(stx)
+	enableHardForks(t, s)
 
 	addPartition(t, s, name, size, num)
+
 	return s
 }
 
@@ -1257,6 +1261,23 @@ func addPartition(t *testing.T, s state.StateContextI, name string, size, num in
 
 	err = parts.Save(s)
 	require.NoError(t, err)
+}
+
+func enableHardForks(t *testing.T, tb state.StateContextI) {
+	h := state.NewHardFork("apollo", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = state.NewHardFork("ares", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = state.NewHardFork("artemis", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestPartitionsForEachPart(t *testing.T) {
