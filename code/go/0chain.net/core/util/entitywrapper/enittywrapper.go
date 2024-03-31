@@ -29,6 +29,7 @@ type EntityI interface {
 	GetBase() EntityBaseI
 	MarshalMsg([]byte) ([]byte, error)
 	UnmarshalMsg([]byte) ([]byte, error)
+	MigrateFrom(prior EntityI) error
 }
 
 // Wrapper is a wrapper for entity.
@@ -83,10 +84,26 @@ func (w *Wrapper) UpdateBase(f func(EntityBaseI) error) error {
 	return nil
 }
 
-func (w *Wrapper) Update(f func(v EntityI)) {
+// Update will migrate the wrapper.v entity to the given entity type of `e` if it is
+// one version prior to `e`. Otherwise use the wrapper.v entity direct and pass it to the callback function.
+// The wrapper.v will be updated after the callback function is executed.
+func (w *Wrapper) Update(e EntityI, f func(EntityI) error) error {
 	v := w.Entity()
-	f(v)
+	if v.GetVersion() != e.GetVersion() {
+		// migrate the entity when see version not match
+		// TODO: do version check, and migrate only if the v.GetVersion() is one version behind e.GetVersion()
+		if err := e.MigrateFrom(v); err != nil {
+			return err
+		}
+
+		v = e
+	}
+
+	if err := f(v); err != nil {
+		return err
+	}
 	w.SetEntity(v)
+	return nil
 }
 
 func (w *Wrapper) MarshalMsg(b []byte) ([]byte, error) {
@@ -239,6 +256,10 @@ func (f *foo) GetBase() EntityBaseI {
 	return &b
 }
 
+func (f *foo) MigrateFrom(e EntityI) error {
+	return nil
+}
+
 func (f *fooBase) CommitChangesTo(e EntityI) {
 	switch v := e.(type) {
 	case *foo:
@@ -259,7 +280,7 @@ type fooV2 struct {
 }
 
 func (f *fooV2) GetVersion() string {
-	return f.Version
+	return "v2"
 }
 
 func (f *fooV2) TypeName() string {
@@ -270,6 +291,17 @@ func (f *fooV2) GetBase() EntityBaseI {
 	return &fooBase{ID: f.ID}
 }
 
+func (f *fooV2) MigrateFrom(e EntityI) error {
+	v1, ok := e.(*foo)
+	if !ok {
+		return errors.New("must migrate from prior version")
+	}
+
+	f.Version = "v2"
+	f.ID = v1.ID
+	return nil
+}
+
 type fooV3 struct {
 	Version string `msg:"version"`
 	ID      string `msg:"id"`
@@ -277,7 +309,7 @@ type fooV3 struct {
 }
 
 func (f *fooV3) GetVersion() string {
-	return f.Version
+	return "v3"
 }
 
 func (f *fooV3) TypeName() string {
@@ -286,6 +318,17 @@ func (f *fooV3) TypeName() string {
 
 func (f *fooV3) GetBase() EntityBaseI {
 	return &fooBase{ID: f.ID}
+}
+
+func (f *fooV3) MigrateFrom(e EntityI) error {
+	v2, ok := e.(*fooV2)
+	if !ok {
+		return errors.New("must migrate from prior version")
+	}
+
+	f.Version = "v3"
+	f.ID = v2.ID
+	return nil
 }
 
 // type stateInMemory struct {

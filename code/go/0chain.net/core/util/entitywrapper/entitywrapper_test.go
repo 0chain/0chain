@@ -190,3 +190,32 @@ func TestWrapperUpdateBase(t *testing.T) {
 	require.Equal(t, "foo_name", v2.Name)
 	require.Equal(t, "v2", v2.Version)
 }
+
+func TestWrapperUpdateMigrate(t *testing.T) {
+	RegisterWrapper(&Foo{}, map[string]EntityI{
+		DefaultOriginVersion: &foo{},
+		"v2":                 &fooV2{},
+		"v3":                 &fooV3{},
+	})
+
+	fv1 := foo{
+		ID: "foo_id",
+	}
+
+	fooWp := &Foo{}
+	fooWp.SetEntity(&fv1)
+
+	err := fooWp.Update(&fooV2{}, func(e EntityI) error {
+		fv2 := e.(*fooV2)
+		fv2.ID = "foo_id_v2"
+		fv2.Name = "foo_new_name"
+		return nil
+	})
+	require.NoError(t, err)
+
+	fv2, ok := fooWp.Entity().(*fooV2)
+	require.True(t, ok)
+	require.Equal(t, "v2", fv2.Version)
+	require.Equal(t, "foo_id_v2", fv2.ID)
+	require.Equal(t, "foo_new_name", fv2.Name)
+}
