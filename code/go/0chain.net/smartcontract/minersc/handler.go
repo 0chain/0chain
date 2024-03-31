@@ -378,24 +378,22 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
 		return
 	}
-	var err error
-	var miner event.Miner
-	miner, err = edb.GetMiner(id)
+	miner, dps, err := edb.GetMinerWithDelegatePools(id)
 	if err == nil {
 		common.Respond(w, r, nodeStat{
-			NodeResponse: minerTableToMinerNode(miner, nil),
+			NodeResponse: minerTableToMinerNode(miner, dps),
 			TotalReward:  int64(miner.Rewards.TotalRewards),
 		}, nil)
 		return
 	}
 	var sharder event.Sharder
-	sharder, err = edb.GetSharder(id)
+	sharder, dps, err = edb.GetSharderWithDelegatePools(id)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrBadRequest("miner/sharder not found"))
 		return
 	}
 	common.Respond(w, r, nodeStat{
-		NodeResponse: sharderTableToSharderNode(sharder, nil),
+		NodeResponse: sharderTableToSharderNode(sharder, dps),
 		TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
