@@ -950,6 +950,21 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				zap.Error(err))
 			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
 		}
+	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size == 0 {
+		actErr := cstate.WithActivation(balances, "artemis", func() error { return nil }, func() error {
+			if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
+				logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
+					zap.String("blobber", blobber.ID),
+					zap.String("allocation", alloc.ID),
+					zap.Error(err))
+				return fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
+			}
+			return nil
+		})
+
+		if actErr != nil {
+			return "", actErr
+		}
 	}
 
 	startRound := GetCurrentRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)
@@ -1124,7 +1139,7 @@ func emitUpdateBlobberWriteStatEvent(w *WriteMarker, prevWmSize int64, balances 
 }
 
 func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI) {
-	i, _ := big.NewFloat(r.ReadSize).Int64()
+	i, _ := big.NewFloat(r.ReadSize * GB).Int64()
 	bb := event.Blobber{
 		Provider: event.Provider{ID: r.BlobberID},
 		ReadData: i,
