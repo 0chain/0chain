@@ -1863,7 +1863,7 @@ func changeBlobbersEventDB(
 		return fmt.Errorf("could not load blobber from event db: %v", err)
 	}
 
-	addBlobber := &StorageNode{
+	addBlobber := &storageNodeBase{
 		Provider: provider.Provider{
 			ID:           addID,
 			ProviderType: spenum.Blobber,
@@ -2446,28 +2446,58 @@ type storageNodeResponse struct {
 }
 
 func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
-	return storageNodeResponse{
-		ID:                      sn.ID,
-		BaseURL:                 sn.BaseURL,
-		Terms:                   sn.Terms,
-		Capacity:                sn.Capacity,
-		Allocated:               sn.Allocated,
-		LastHealthCheck:         sn.LastHealthCheck,
-		PublicKey:               sn.PublicKey,
-		SavedData:               sn.SavedData,
-		DataReadLastRewardRound: sn.DataReadLastRewardRound,
-		LastRewardDataReadRound: sn.LastRewardDataReadRound,
-		StakePoolSettings:       sn.StakePoolSettings,
-		RewardRound:             sn.RewardRound,
-		IsKilled:                sn.IsKilled(),
-		IsShutdown:              sn.IsShutDown(),
-		NotAvailable:            sn.NotAvailable,
-		IsRestricted:            *sn.IsRestricted,
+	b := sn.mustBase()
+	sr := storageNodeResponse{
+		ID:                      b.ID,
+		BaseURL:                 b.BaseURL,
+		Terms:                   b.Terms,
+		Capacity:                b.Capacity,
+		Allocated:               b.Allocated,
+		LastHealthCheck:         b.LastHealthCheck,
+		PublicKey:               b.PublicKey,
+		SavedData:               b.SavedData,
+		DataReadLastRewardRound: b.DataReadLastRewardRound,
+		LastRewardDataReadRound: b.LastRewardDataReadRound,
+		StakePoolSettings:       b.StakePoolSettings,
+		RewardRound:             b.RewardRound,
+		IsKilled:                b.IsKilled(),
+		IsShutdown:              b.IsShutDown(),
+		NotAvailable:            b.NotAvailable,
+	}
+
+	sv2, ok := sn.Entity().(*storageNodeV2)
+	if ok {
+		sr.IsRestricted = *sv2.IsRestricted
+	}
+
+	return sr
+}
+
+func storageNodeResponseToStorageNodeV1(snr storageNodeResponse) *storageNodeV1 {
+	return &storageNodeV1{
+		Provider: provider.Provider{
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
+		},
+		BaseURL:                 snr.BaseURL,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+		NotAvailable:            snr.NotAvailable,
 	}
 }
 
-func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
-	return StorageNode{
+func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {
+	return &storageNodeV2{
 		Provider: provider.Provider{
 			ID:              snr.ID,
 			ProviderType:    spenum.Blobber,

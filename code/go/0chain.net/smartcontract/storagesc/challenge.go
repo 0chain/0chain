@@ -617,21 +617,22 @@ func (sc *StorageSmartContract) processChallengePassed(
 	rewardRound := GetCurrentRewardRound(balances.GetBlock().Round, triggerPeriod)
 	// this expiry of blobber needs to be corrected once logic is finalized
 
-	if blobber.RewardRound.StartRound != rewardRound {
+	bb := blobber.mustBase()
+	if bb.RewardRound.StartRound != rewardRound {
 
 		var dataRead float64 = 0
-		if blobber.LastRewardDataReadRound >= rewardRound {
-			dataRead = blobber.DataReadLastRewardRound
+		if bb.LastRewardDataReadRound >= rewardRound {
+			dataRead = bb.DataReadLastRewardRound
 		}
 
 		err := ongoingParts.Add(
 			balances,
 			&BlobberRewardNode{
-				ID:                blobber.ID,
+				ID:                bb.ID,
 				SuccessChallenges: 0,
-				WritePrice:        blobber.Terms.WritePrice,
-				ReadPrice:         blobber.Terms.ReadPrice,
-				TotalData:         sizeInGB(blobber.SavedData),
+				WritePrice:        bb.Terms.WritePrice,
+				ReadPrice:         bb.Terms.ReadPrice,
+				TotalData:         sizeInGB(bb.SavedData),
 				DataRead:          dataRead,
 			})
 		if err != nil {
@@ -639,10 +640,13 @@ func (sc *StorageSmartContract) processChallengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
-		blobber.RewardRound = RewardRound{
-			StartRound: rewardRound,
-			Timestamp:  t.CreationDate,
-		}
+		blobber.mustUpdateBase(func(b *storageNodeBase) error {
+			b.RewardRound = RewardRound{
+				StartRound: rewardRound,
+				Timestamp:  t.CreationDate,
+			}
+			return nil
+		})
 
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		if err != nil {
@@ -652,7 +656,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 	}
 
 	var brStats BlobberRewardNode
-	if _, err := ongoingParts.Get(balances, blobber.ID, &brStats); err != nil {
+	if _, err := ongoingParts.Get(balances, bb.ID, &brStats); err != nil {
 		return "", common.NewError("verify_challenge",
 			"can't get blobber reward from partition list: "+err.Error())
 	}

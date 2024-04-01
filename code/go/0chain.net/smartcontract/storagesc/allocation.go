@@ -251,7 +251,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	actErr := chainstate.WithActivation(balances, "artemis", func() error { return nil }, func() error {
 		if len(request.BlobberAuthTickets) < len(request.Blobbers) {
 			return common.NewErrorf("allocation_creation_failed", "blobber_auth_tickets are less than blobbers")
-		} else if len(request.BlobberAuthTickets) > len(request.Blobbers) {
+		}
+
+		if len(request.BlobberAuthTickets) > len(request.Blobbers) {
 			request.BlobberAuthTickets = request.BlobberAuthTickets[:len(request.Blobbers)]
 		}
 		return nil
@@ -431,7 +433,7 @@ func setupNewAllocation(
 
 	sa.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(blobberNodes))
 	for _, b := range blobberNodes {
-		bAlloc := newBlobberAllocation(bSize, sa, b, conf, now)
+		bAlloc := newBlobberAllocation(bSize, sa, b.mustBase(), conf, now)
 		sa.BlobberAllocs = append(sa.BlobberAllocs, bAlloc)
 		b.mustUpdateBase(func(snb *storageNodeBase) error {
 			sa.BlobberAllocsMap[snb.ID] = bAlloc

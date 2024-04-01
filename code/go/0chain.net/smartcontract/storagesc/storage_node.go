@@ -3,11 +3,14 @@ package storagesc
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util/entitywrapper"
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -54,6 +57,46 @@ func (sn *StorageNode) mustUpdateBase(f func(*storageNodeBase) error) error {
 		}
 
 		f(b)
+		return nil
+	})
+}
+
+// implement provider.AbstractProvider interface
+func (sn *StorageNode) IsActive(now common.Timestamp, healthCheckPeriod time.Duration) (bool, string) {
+	return sn.mustBase().IsActive(now, healthCheckPeriod)
+}
+
+// implement provider.AbstractProvider interface
+func (sn *StorageNode) Kill() {
+	sn.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Kill()
+		return nil
+	})
+}
+
+func (sn *StorageNode) IsShutDown() bool {
+	return sn.mustBase().IsShutDown()
+}
+
+// implement provider.AbstractProvider interface
+func (sn *StorageNode) IsKilled() bool {
+	return sn.mustBase().IsKilled()
+}
+
+// implement provider.AbstractProvider interface
+func (sn *StorageNode) Id() string {
+	return sn.mustBase().ID
+}
+
+// implement provider.AbstractProvider interface
+func (sn *StorageNode) Type() spenum.Provider {
+	return sn.mustBase().Type()
+}
+
+// implement provider.AbstractProvider interface
+func (sn *StorageNode) ShutDown() {
+	sn.mustUpdateBase(func(b *storageNodeBase) error {
+		b.ShutDown()
 		return nil
 	})
 }
