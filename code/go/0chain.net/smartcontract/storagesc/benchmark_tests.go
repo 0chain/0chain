@@ -354,7 +354,8 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&StorageNode{
+				b := &StorageNode{}
+				bv2 := &storageNodeV2{
 					Provider: provider.Provider{
 						ProviderType: spenum.Blobber,
 					},
@@ -362,7 +363,9 @@ func BenchmarkTests(
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_blobber")),
-				})
+				}
+				b.SetEntity(bv2)
+				bytes, _ := json.Marshal(b)
 				return bytes
 			}(),
 		},
@@ -430,7 +433,8 @@ func BenchmarkTests(
 			input: func() []byte {
 				stake := currency.Coin(viper.GetInt64(bk.StorageMaxStake) * 1e10)
 				totalStake := stake * currency.Coin(viper.GetInt(bk.NumBlobberDelegates))
-				bytes, _ := json.Marshal(&StorageNode{
+				b := &StorageNode{}
+				b.SetEntity(&storageNodeV2{
 					Provider: provider.Provider{
 						ID:           getMockBlobberId(0),
 						ProviderType: spenum.Blobber,
@@ -439,6 +443,7 @@ func BenchmarkTests(
 					Capacity:          int64(totalStake * GB),
 					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
 				})
+				bytes, _ := json.Marshal(b)
 				return bytes
 			}(),
 		},
