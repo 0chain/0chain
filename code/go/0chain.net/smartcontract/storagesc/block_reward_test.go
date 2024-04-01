@@ -459,6 +459,10 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			balances := newTestBalances(t, true)
+			bk := &block.Block{}
+			bk.Round = 210
+			balances.setBlock(t, bk)
+
 			in := BlobberBlockRewardsInput{Round: balances.block.Round}
 			marshal, err2 := json.Marshal(in)
 			if err2 != nil {
@@ -467,13 +471,14 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			ssc := newTestStorageSC()
 			setupRewards(t, tt.params, balances, ssc)
 			err := ssc.blobberBlockRewards(&transaction.Transaction{}, marshal, balances)
+			fmt.Println(err)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
 		})
 	}
 }
 
-func prepareState(n, partSize int) (state.StateContextI, func()) {
+func prepareState(n, partSize int, sctx state.StateContextI) func() {
 	dir, err := os.MkdirTemp("", "part_state")
 	if err != nil {
 		panic(err)
@@ -516,49 +521,50 @@ func prepareState(n, partSize int) (state.StateContextI, func()) {
 		panic(err)
 	}
 
-	return sctx, clean
+	return clean
 }
 
-func BenchmarkPartitionsGetItem(b *testing.B) {
-	ps, clean := prepareState(100, 100)
+func BenchmarkPartitionsGetItem(t *testing.B) {
+	balances := newTestBalances(t, false)
+	clean := prepareState(100, 100, balances)
 	defer clean()
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
-	require.NoError(b, err)
+	part, err := partitions.GetPartitions(balances, "brn_test")
+	require.NoError(t, err)
 
 	id := strconv.Itoa(10)
-	for i := 0; i < b.N; i++ {
+	for i := 0; i < t.N; i++ {
 		var br BlobberRewardNode
-		_, _ = part.Get(ps, id, &br)
+		_, _ = part.Get(balances, id, &br)
 	}
 }
 
-func BenchmarkGetRandomItems(b *testing.B) {
+func BenchmarkGetRandomItems(t *testing.B) {
 	seed := rand.NewSource(time.Now().Unix())
 	r := rand.New(seed)
-	ps, clean := prepareState(100, 100)
-	defer clean()
+	balances := newTestBalances(t, false)
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
-	require.NoError(b, err)
+	part, err := partitions.GetPartitions(balances, "brn_test")
+	require.NoError(t, err)
 	//ids := make([]string, 100)
 	//for i := 0; i < 100; i++ {
 	//	ids[i] = strconv.Itoa(i)
 	//}
 
-	for i := 0; i < b.N; i++ {
+	for i := 0; i < t.N; i++ {
 		var bs []BlobberRewardNode
-		_ = part.GetRandomItems(ps, r, &bs)
+		_ = part.GetRandomItems(balances, r, &bs)
 	}
 }
 
 func TestPartitionRandomItems(t *testing.T) {
 	seed := rand.NewSource(time.Now().Unix())
 	r := rand.New(seed)
-	ps, clean := prepareState(6, 10)
+	balances := newTestBalances(t, false)
+	clean := prepareState(6, 10, balances)
 	defer clean()
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
+	part, err := partitions.GetPartitions(balances, "brn_test")
 	require.NoError(t, err)
 	ids := make([]string, 100)
 	for i := 0; i < 100; i++ {
@@ -567,7 +573,7 @@ func TestPartitionRandomItems(t *testing.T) {
 
 	//for i := 0; i < b.N; i++ {
 	var bs []BlobberRewardNode
-	_ = part.GetRandomItems(ps, r, &bs)
+	_ = part.GetRandomItems(balances, r, &bs)
 	//}
 
 	for i := 0; i < 6; i++ {
@@ -576,17 +582,18 @@ func TestPartitionRandomItems(t *testing.T) {
 }
 
 func BenchmarkGetUpdateItem(b *testing.B) {
-	ps, clean := prepareState(100, 100)
+	balances := newTestBalances(b, false)
+	clean := prepareState(100, 100, balances)
 	defer clean()
 
-	part, err := partitions.GetPartitions(ps, "brn_test")
+	part, err := partitions.GetPartitions(balances, "brn_test")
 	require.NoError(b, err)
 
 	for i := 0; i < b.N; i++ {
-		_ = part.UpdateItem(ps, &BlobberRewardNode{ID: "100"})
+		_ = part.UpdateItem(balances, &BlobberRewardNode{ID: "100"})
 	}
 
-	_ = part.Save(ps)
+	_ = part.Save(balances)
 }
 
 func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
