@@ -178,7 +178,7 @@ jobs:
     with:
       test_name: "blobber-1"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -231,7 +231,7 @@ jobs:
     with:
       test_name: "blobber-3"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -248,7 +248,7 @@ jobs:
     with:
       test_name: "blobber-4"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -265,7 +265,7 @@ jobs:
     with:
       test_name: "blobber-5"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
@@ -282,13 +282,15 @@ jobs:
     with:
       test_name: "blobber-6"
       number_of_times: 5
-      continue_on_error: true
+      when_to_stop: 'on_success'
       chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
       blobber_branch: ${{ needs.compute-branches.outputs.blobber_branch }}
       auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
       zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
       zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
       zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
+    secrets:
+      inherit
   
   authorizers-standard:
     needs: compute-branches
@@ -393,7 +395,7 @@ jobs:
         
           # FLAKY
           BYZANTINE_STATUS=$([[ "${{ needs.byzantine-try-1.result }}" = "success" || "${{ needs.byzantine-try-2.result }}" = "success" || "${{ needs.byzantine-try-3.result }}" = "success" ]] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
-          BYZANTINE_COLOR=$([ "$BYZANTINE_STATUS" = "$PASSED_TEXT " ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
+          BYZANTINE_COLOR=$([ "$BYZANTINE_STATUS" = "$PASSED_TEXT" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-1.result }}" = "success" ] && echo "1" || echo "3")
           BYZANTINE_ATTEMPTS_COUNT=$([ "${{ needs.byzantine-try-2.result }}" = "success" ] && echo "2" || echo "$BYZANTINE_ATTEMPTS_COUNT")
           

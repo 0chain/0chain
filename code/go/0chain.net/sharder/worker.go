@@ -138,12 +138,21 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("start round", cr+1),
 				zap.Int64("end round", cr+reqNum+1))
 			go sc.requestBlocks(ctx, cr, reqNum)
-		case b := <-sc.blockChannel:
+		default:
+			cr := sc.GetCurrentRound()
+			lfb := sc.GetLatestFinalizedBlock()
+			bItem, ok := sc.blockBuffer.First()
+			if !ok {
+				// no block in buffer to process
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
+			b := bItem.Data.(*block.Block)
+
 			logging.Logger.Debug("process block, received block",
 				zap.Int64("block round", b.Round))
 			stuckCheckTimer.Reset(stuckDuration)
-			cr := sc.GetCurrentRound()
-			lfb := sc.GetLatestFinalizedBlock()
 			if b.Round > lfb.Round+aheadN {
 				// trigger sync process to pull the latest blocks when
 				// current round is > lfb.Round + aheadN to break the stuck if any.
@@ -163,6 +172,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
+			sc.blockBuffer.Pop()
 			if err := sc.processBlock(ctx, b); err != nil {
 				logging.Logger.Error("process block failed",
 					zap.Error(err),
@@ -428,23 +438,31 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 
 	var (
-		timer = time.NewTimer(10 * time.Minute)
+		timerDuration = 10 * time.Minute
+		timer         = time.NewTimer(timerDuration)
 	)
 
 	edb := sc.GetQueryStateContext().GetEventDB()
+	lastPartition := sc.GetCurrentRound() / edb.Settings().PartitionChangePeriod
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
+			timer.Reset(timerDuration)
 
-			err := edb.UpdateTransactionErrors()
+			currentPartition := sc.GetCurrentRound() / edb.Settings().PartitionChangePeriod
+			if currentPartition == lastPartition {
+				continue
+			}
+
+			err := edb.UpdateTransactionErrors(currentPartition - 1)
 			if err != nil {
 				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
 			}
 
-			timer = time.NewTimer(10 * time.Minute)
+			lastPartition = currentPartition
 		}
 	}
 }

@@ -9,9 +9,9 @@ on:
         number_of_times:
           description: 'How many times should the test run'
           default: '10'
-        continue_on_error:
-          description: 'Set to true if you want the test to continue if a try was unsuccessful'
-          default: 'false'
+        when_to_stop:
+          description: 'Choose one of the following options to stop the test: (on_failure) if you want it to stop on the first failure, (on_success) if you want it to stop on the first success or (never) if you want it to run all the times. Default is on_failure'
+          default: 'on_failure'
         chain_branch:
           description: 'Input branch for 0chain repo'
           default: ''
@@ -46,10 +46,10 @@ on:
           description: 'How many times should the test run'
           type: number
           default: 10
-        continue_on_error:
-          description: 'Set to true if you want the test to continue if a try was unsuccessful'
-          type: boolean
-          default: false
+        when_to_stop:
+          description: 'Choose one of the following options to stop the test: (on_failure) if you want it to stop on the first failure, (on_success) if you want it to stop on the first success or (never) if you want it to run all the times. Default is on_failure'
+          type: string
+          default: 'on_failure'
         chain_branch:
           description: 'Input branch for 0chain repo'
           type: string
@@ -498,15 +498,19 @@ jobs:
           
           if ./docker.local/bin/start.conductor.sh ${{ inputs.test_name }}; then
             echo "[CT-FLAKY-LOG] ✅ Conductor test attempt $i succeeded"
-            zip -r -q "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs 
-            success=$((success + 1))
+            zip -r -q "./conductor-flakiness-logs/attempt-$i-success.zip" ./conductor-full-logs
+            success=$((success + 1)) 
+            if [ ${{inputs.when_to_stop}} == 'on_success' ]; then
+              echo "👋🏻 Exiting flakiness test"
+              break
+            fi
           else
             echo "[CT-FLAKY-LOG] ❌ Conductor test attempt $i failed"
             zip -r -q "./conductor-flakiness-logs/attempt-$i-failure.zip" ./conductor-full-logs
             failure=$((failure + 1))
-            if [ ${{ inputs.continue_on_error }} ]; then
+            if [ ${{inputs.when_to_stop}} == 'on_failure' ]; then
               echo "👋🏻 Exiting flakiness test"
-              exit 1
+              break
             fi
           fi
         done
@@ -519,17 +523,45 @@ jobs:
         echo "✅ SUCCESSFUL_ATTEMPTS = $SUCCESSFUL_ATTEMPTS / ${{ inputs.number_of_times }}"
         echo "❌ FAILED_ATTEMPTS = $FAILED_ATTEMPTS / ${{ inputs.number_of_times }}"
 
-        success_rate=80
+        case ${{ inputs.when_to_stop }} in
+          on_success)
+            if [ $SUCCESSFUL_ATTEMPTS -ge 1 ]; then
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              echo "🎉 Conductor test succeeded"
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              exit 0
+            else
+              echo "👋🏻 Conductor test failed"
+              exit 1
+            fi
+            ;;
 
-        if [ $SUCCESSFUL_ATTEMPTS -ge $((${{ inputs.number_of_times }} * success_rate / 100)) ]; then
-          echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
-          echo "🎉 Conductor test succeeded"
-          echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
-          exit 0
-        else
-          echo "👋🏻 Conductor test failed"
-          exit 1
-        fi
+          never)
+            success_rate=80
+
+            if [ $SUCCESSFUL_ATTEMPTS -ge $((${{ inputs.number_of_times }} * success_rate / 100)) ]; then
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              echo "🎉 Conductor test succeeded"
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              exit 0
+            else
+              echo "👋🏻 Conductor test failed"
+              exit 1
+            fi
+            ;;
+
+          *)
+            if [ $FAILED_ATTEMPTS -ge 1 ]; then
+              echo "👋🏻 Conductor test failed"
+              exit 1
+            else
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              echo "🎉 Conductor test succeeded"
+              echo "🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+              exit 0
+            fi
+            ;;
+        esac
       
     - name: "Remove Tenderly fork"
       if: always()
