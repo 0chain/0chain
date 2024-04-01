@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-//msgp:ignore Foo stateInMemory Wrapper EntityI EntityBaseI WrapperEntity
+//msgp:ignore Foo stateInMemory Wrapper EntityI EntityBaseI WrapperEntity MsgEncodeDecoder MsgEncodeDecoderSize
 //go:generate msgp -v -tests=false -io=false -unexported
 
 // DefaultOriginVersion is the default version for entity, used for old entity that not changed structs yet.
@@ -22,13 +22,21 @@ var gWrapperFuncs = make(map[string]entityCreateFuncs)
 
 type entityCreateFuncs map[string]func() EntityI
 
-// EntityI is the interface for entity.
-type EntityI interface {
-	GetVersion() string
-	// TypeName() string
-	GetBase() EntityBaseI
+type MsgEncodeDecoder interface {
 	MarshalMsg([]byte) ([]byte, error)
 	UnmarshalMsg([]byte) ([]byte, error)
+}
+
+type MsgEncodeDecoderSize interface {
+	MsgEncodeDecoder
+	Msgsize() int
+}
+
+// EntityI is the interface for entity.
+type EntityI interface {
+	MsgEncodeDecoderSize
+	GetVersion() string
+	GetBase() EntityBaseI
 	MigrateFrom(prior EntityI) error
 }
 
@@ -44,9 +52,8 @@ func GetEntityVersionFuncs(typeName string) (map[string]func() EntityI, bool) {
 }
 
 type WrapperEntity interface {
+	MsgEncodeDecoder
 	TypeName() string
-	MarshalMsg([]byte) ([]byte, error)
-	UnmarshalMsg([]byte) ([]byte, error)
 }
 
 // RegisterWrapper registers a wrapper with the entity name and entity version creators.
@@ -181,6 +188,10 @@ func (w *Wrapper) UnmarshalJSONType(data []byte, typeName string) error {
 
 	w.v = e
 	return nil
+}
+
+func (w *Wrapper) Msgsize() int {
+	return w.v.Msgsize()
 }
 
 func (w *Wrapper) Entity() EntityI {
