@@ -1,10 +1,12 @@
 package zcnsc_test
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/event"
 	. "0chain.net/smartcontract/zcnsc"
@@ -15,6 +17,7 @@ import (
 )
 
 func init() {
+	common.SetupRootContext(context.Background())
 	rand.Seed(time.Now().UnixNano())
 	logging.Logger = zap.NewNop()
 }
