@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/core/util/taskqueue"
 	"github.com/alicebob/miniredis/v2"
 
 	"0chain.net/chaincore/state"
@@ -41,7 +40,6 @@ func init() {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 
 	logging.InitLogging("testing", "")
-	taskqueue.Init(context.Background())
 }
 
 func getContext() (context.Context, func()) {
