@@ -14,7 +14,7 @@ import (
 	"github.com/0chain/common/core/logging"
 )
 
-//msgp:ignore StorageNode StorageAllocation AllocationChallenges storageNodeCommon
+//msgp:ignore StorageNode StorageAllocation AllocationChallenges storageNodeBase
 //go:generate msgp -io=false -tests=false -unexported -v
 
 func init() {
@@ -39,6 +39,10 @@ func (sn *StorageNode) UnmarshalMsg(data []byte) ([]byte, error) {
 
 func (sn *StorageNode) UnmarshalJSON(data []byte) error {
 	return sn.UnmarshalJSONType(data, sn.TypeName())
+}
+
+func (sn *StorageNode) Msgsize() (s int) {
+	return sn.Entity().Msgsize()
 }
 
 func (sn *StorageNode) mustBase() *storageNodeBase {
