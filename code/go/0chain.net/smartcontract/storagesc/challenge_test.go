@@ -435,10 +435,11 @@ func TestPopulateGenerateChallenge(t *testing.T) {
 
 	var challenged map[string]map[string]int64
 
-	var challengedAllocations, challengedBlobbers map[string]int64
+	var challengedAllocations, challengedBlobbers, challengedValidators map[string]int64
 	challenged = make(map[string]map[string]int64)
 	challengedAllocations = make(map[string]int64)
 	challengedBlobbers = make(map[string]int64)
+	challengedValidators = make(map[string]int64)
 
 	numChallenges := 200000
 	for i := 0; i < numChallenges; i++ {
@@ -483,6 +484,14 @@ func TestPopulateGenerateChallenge(t *testing.T) {
 
 		challengedAllocations[result.storageChallenge.AllocationID]++
 		challengedBlobbers[result.storageChallenge.BlobberID]++
+
+		for _, v := range result.storageChallenge.ValidatorIDs {
+			challengedValidators[v]++
+		}
+	}
+
+	for _, count := range challengedValidators {
+		require.InEpsilon(t, float64(numChallenges*3)/float64(len(challengedValidators)), float64(count), 0.05)
 	}
 
 	_, partsWeight, err := partitionsChallengeReadyBlobbers(balances)

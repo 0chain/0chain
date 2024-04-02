@@ -54,6 +54,7 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		MaxWritePrice:                1e12,
 		MaxCharge:                    1,
 		MaxDelegates:                 200,
+		ValidatorsPerChallenge:       3,
 		BlockReward: &blockReward{
 			BlockReward:             zcnToBalance(0.06),
 			BlockRewardChangePeriod: 125000000,
