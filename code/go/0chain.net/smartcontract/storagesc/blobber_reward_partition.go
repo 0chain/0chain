@@ -13,7 +13,7 @@ import (
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-const blobberRewardsPartitionSize = 5
+const blobberRewardsPartitionSize = 3
 
 type BlobberRewardNode struct {
 	ID                string        `json:"id"`

@@ -45,7 +45,7 @@ const (
 	ChallengeOldRemoved
 )
 
-const blobberAllocationPartitionSize = 10
+const blobberAllocationPartitionSize = 3
 
 // completeChallenge complete the challenge
 func (sc *StorageSmartContract) completeChallenge(cab *challengeAllocBlobberPassResult, success bool) bool {
