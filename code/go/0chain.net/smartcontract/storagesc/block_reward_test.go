@@ -492,10 +492,10 @@ func prepareState(n, partSize int, sctx state.StateContextI) func() {
 		_ = os.RemoveAll(dir)
 	}
 
-	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil, statecache.NewEmpty())
-	sctx := state.NewStateContext(nil,
-		mpt, nil, nil, nil,
-		nil, nil, nil, nil)
+	// mpt := util.NewMerklePatriciaTrie(pdb, 0, nil, statecache.NewEmpty())
+	// sctx = state.NewStateContext(nil,
+	// mpt, nil, nil, nil,
+	// nil, nil, nil, nil)
 
 	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize)
 	if err != nil {
