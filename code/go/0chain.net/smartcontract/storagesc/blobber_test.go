@@ -37,37 +37,55 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	require.NoError(t, err)
 
 	// remove
-	b.Capacity = 0
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 0
+		return nil
+	})
 	tp += 100
 	_, err = updateBlobber(t, b, 0, tp, ssc, balances)
 	require.NoError(t, err)
 
 	// reborn
-	b.Capacity = 3 * GB
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 3 * GB
+		return nil
+	})
 	tp += 100
 	_, err = updateBlobber(t, b, 10*x10, tp, ssc, balances)
 	require.NoError(t, err)
 
 	var ab *StorageNode
-	ab, err = ssc.getBlobber(b.ID, balances)
+	ab, err = ssc.getBlobber(b.Id(), balances)
 	require.NoError(t, err)
 	require.NotNil(t, ab)
-	require.Equal(t, int64(3*GB), ab.Capacity)
+	require.Equal(t, int64(3*GB), ab.mustBase().Capacity)
 
 	const NewBaseUrl = "https://new-base-url.com"
-	b.BaseURL = NewBaseUrl
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.BaseURL = NewBaseUrl
+		return nil
+	})
 	tp += 100
 	// update URL but not the capacity
 	_, err = updateBlobber(t, b, 0, tp, ssc, balances)
 	require.NoError(t, err)
 
-	ab, err = ssc.getBlobber(b.ID, balances)
+	bb := b.mustBase()
+	ab, err = ssc.getBlobber(bb.ID, balances)
 	require.NoError(t, err)
-	require.Equal(t, NewBaseUrl, ab.BaseURL)
-	require.Equal(t, int64(3*GB), ab.Capacity)
+	abb := ab.mustBase()
+	require.Equal(t, NewBaseUrl, abb.BaseURL)
+	require.Equal(t, int64(3*GB), abb.Capacity)
 
-	b2.BaseURL = NewBaseUrl
-	b.Capacity = b2.Capacity * 2
+	b2.mustUpdateBase(func(b *storageNodeBase) error {
+		b.BaseURL = NewBaseUrl
+		return nil
+	})
+
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = b2.mustBase().Capacity * 2
+		return nil
+	})
 	tp += 100
 	_, err = updateBlobber(t, b2, 0, tp, ssc, balances)
 	require.Error(t, err)
@@ -1160,7 +1178,11 @@ func TestOnlyAdd(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	b.BaseURL = "https://newabcurl.com"
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.BaseURL = "https://newabcurl.com"
+		return nil
+	})
+
 	//should fail as only add is allowed
 	_, err = updateBlobberUsingAddBlobber(t, b, 0, tp, ssc, balances)
 	require.Error(t, err)

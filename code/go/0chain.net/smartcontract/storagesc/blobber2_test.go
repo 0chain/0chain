@@ -1,6 +1,11 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -12,13 +17,9 @@ import (
 	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
-	"encoding/json"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"strings"
-	"testing"
 )
 
 const (
@@ -287,7 +288,8 @@ func testCommitBlobberRead(
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 	require.NoError(t, err)
 
-	blobber := &StorageNode{
+	blobber := &StorageNode{}
+	blobber.SetEntity(&storageNodeV2{
 		Provider: provider.Provider{
 			ID:           blobberId,
 			ProviderType: spenum.Blobber,
@@ -296,7 +298,7 @@ func testCommitBlobberRead(
 			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
-	}
+	})
 
 	_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 

@@ -475,7 +475,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 				blobberClient := blobberClients[idx]
 				blobber := blobbers[idx]
 
-				blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+				blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.Id(), balances)
 				require.NoError(t, err)
 				require.NotNil(t, blobberSP)
 
@@ -504,7 +504,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 					challengeGenerationTime := initialTime + (step*(i+1))/tc.numChallenges
 
-					challID := fmt.Sprintf("%s-chall-%d", blobber.ID, i)
+					challID := fmt.Sprintf("%s-chall-%d", blobber.Id(), i)
 
 					challengeRoundCreatedAt := currentRound - 200
 
@@ -652,7 +652,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 					vsp, err := ssc.validatorsStakePools(validatorString, balances)
 					require.NoError(t, err)
 
-					blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+					blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.Id(), balances)
 					require.NoError(t, err)
 
 					if lastChallengeIgnored {
@@ -695,7 +695,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 			beforeBlobberSPs := make(map[string]*stakePool)
 			for _, blobber := range blobbers {
-				beforeBlobberSPs[blobber.ID], err = ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+				beforeBlobberSPs[blobber.Id()], err = ssc.getStakePool(spenum.Blobber, blobber.Id(), balances)
 				require.NoError(t, err)
 			}
 

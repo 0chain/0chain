@@ -245,7 +245,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 	blob := make([]string, mockNumBlobbers)
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
-		mockBlobber := &StorageNode{
+		mockBlobber := &StorageNode{}
+		mockBlobber.SetEntity(&storageNodeV2{
 			Provider: provider.Provider{
 				ID:              blob[i],
 				ProviderType:    spenum.Blobber,
@@ -256,7 +257,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Terms: Terms{
 				ReadPrice: mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
-		}
+		})
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}
 
