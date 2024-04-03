@@ -94,6 +94,10 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		t.Fatal(err)
 	}
 
+	bk := &block.Block{}
+	bk.Round = 2
+	tb.setBlock(t, bk)
+
 	return
 }
 

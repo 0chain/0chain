@@ -1873,6 +1873,14 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 		ba.LatestFinalizedChallCreatedAt = alloc.Expiration / 2
 		ba.ChallengePoolIntegralValue = 0
+
+		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
+		require.NoError(t, err)
+
+		blobber.SavedData = int64(mockBlobberCapacity) / 2
+
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		require.NoError(t, err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
@@ -2263,6 +2271,14 @@ func Test_finalize_allocation(t *testing.T) {
 
 		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
+
+		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
+		require.NoError(t, err)
+
+		blobber.SavedData = int64(mockBlobberCapacity) / 2
+
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		require.NoError(t, err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
@@ -2437,6 +2453,14 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
+
+		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
+		require.NoError(t, err)
+
+		blobber.SavedData = int64(mockBlobberCapacity) / 2
+
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		require.NoError(t, err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)

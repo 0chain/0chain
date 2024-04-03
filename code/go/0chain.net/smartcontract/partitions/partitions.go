@@ -514,23 +514,84 @@ func (p *Partitions) removeItem(
 	return p.loadLastFromPrev(state)
 }
 
-func (p *Partitions) GetRandomItems(state state.StateContextI, r *rand.Rand, vs interface{}) error {
+func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, vs interface{}) error {
 	if p.Last.length() == 0 {
 		return errors.New("empty list, no items to return")
 	}
 
-	var index int
-	if p.Last.Loc > 0 {
-		index = r.Intn(p.Last.Loc + 1)
-	}
-	part, err := p.getPartition(state, index)
-	if err != nil {
-		return err
+	var (
+		its []item
+	)
+
+	beforeHardForkArtemis := func() error {
+		var index int
+		if p.Last.Loc > 0 {
+			index = r.Intn(p.Last.Loc + 1)
+		}
+		part, err := p.getPartition(balances, index)
+		if err != nil {
+			return err
+		}
+
+		its, err = part.itemRange(0, part.length())
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	its, err := part.itemRange(0, part.length())
-	if err != nil {
-		return err
+	afterHardForkArtemis := func() error {
+		totalElements := p.Last.Loc*p.PartitionSize + p.Last.length()
+		requiredCount := p.PartitionSize
+		if totalElements < requiredCount {
+			requiredCount = totalElements
+		}
+
+		elementIdx := r.Intn(totalElements)
+
+		partIndex := elementIdx / p.PartitionSize
+		elementIdxInPart := elementIdx % p.PartitionSize
+
+		for requiredCount != 0 {
+			part, err := p.getPartition(balances, partIndex)
+			if err != nil {
+				return err
+			}
+
+			var res []item
+
+			if elementIdxInPart+requiredCount > part.length() {
+				res, err = part.itemRange(elementIdxInPart, part.length())
+				if err != nil {
+					return err
+				}
+
+				requiredCount -= part.length() - elementIdxInPart
+
+				if partIndex == p.Last.Loc {
+					partIndex = 0
+				} else {
+					partIndex++
+				}
+				elementIdxInPart = 0
+			} else {
+				res, err = part.itemRange(elementIdxInPart, elementIdxInPart+requiredCount)
+				if err != nil {
+					return err
+				}
+				requiredCount = 0
+			}
+
+			its = append(its, res...)
+		}
+
+		return nil
+	}
+
+	actErr := state.WithActivation(balances, "artemis", beforeHardForkArtemis, afterHardForkArtemis)
+	if actErr != nil {
+		return actErr
 	}
 
 	return setPartitionItems(its, vs)
