@@ -1014,9 +1014,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 	} else if blobAlloc.Stats.UsedSize == 0 && commitConnection.WriteMarker.Size == 0 {
 		actErr := cstate.WithActivation(balances, "artemis", func() error { return nil }, func() error {
-			if err := removeAllocationFromBlobberPartitions(balances, blobber.ID, alloc.ID); err != nil {
+			if err := removeAllocationFromBlobberPartitions(balances, bb.ID, alloc.ID); err != nil {
 				logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
-					zap.String("blobber", blobber.ID),
+					zap.String("blobber", bb.ID),
 					zap.String("allocation", alloc.ID),
 					zap.Error(err))
 				return fmt.Errorf("could not remove blobber allocation from partitions: %v", err)

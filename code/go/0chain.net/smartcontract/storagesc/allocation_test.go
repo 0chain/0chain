@@ -1877,7 +1877,9 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
 		require.NoError(t, err)
 
-		blobber.SavedData = int64(mockBlobberCapacity) / 2
+		bb := blobber.mustBase()
+
+		bb.SavedData = int64(mockBlobberCapacity) / 2
 
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		require.NoError(t, err)
@@ -2275,7 +2277,9 @@ func Test_finalize_allocation(t *testing.T) {
 		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
 		require.NoError(t, err)
 
-		blobber.SavedData = int64(mockBlobberCapacity) / 2
+		bb := blobber.mustBase()
+
+		bb.SavedData = int64(mockBlobberCapacity) / 2
 
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		require.NoError(t, err)
@@ -2457,7 +2461,9 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
 		require.NoError(t, err)
 
-		blobber.SavedData = int64(mockBlobberCapacity) / 2
+		bb := blobber.mustBase()
+
+		bb.SavedData = int64(mockBlobberCapacity) / 2
 
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 		require.NoError(t, err)
