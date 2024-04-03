@@ -644,12 +644,6 @@ commands:
         required: true
       provider_files:
         required: true
-  cleanup_auth1_provider:
-    work_dir: "../token_bridge_authserver"
-    exec: "mkdir -p docker.local/auth1/data/" #path: "./token_bridge_authserver/docker.local/auth1/data"
-    args:
-      path:
-        required: true
   upload_b_random:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/proxied/upload_b.sh $remotepath"
