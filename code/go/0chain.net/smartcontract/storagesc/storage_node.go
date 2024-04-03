@@ -224,8 +224,8 @@ func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 
 func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI) error {
 	v1, ok := e.(*storageNodeV1)
-	if ok {
-		return errors.New("wrong storageNode type")
+	if !ok {
+		return errors.New("struct migrate fail, wrong storageNode type")
 	}
 	sn2.ApplyBaseChanges(storageNodeBase(*v1))
 	sn2.Version = "v2"
