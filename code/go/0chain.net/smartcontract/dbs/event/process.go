@@ -481,15 +481,23 @@ func (edb *EventDb) movePartitions(current int64) {
 }
 
 func (edb *EventDb) AddPartitions(current int64) error {
-	tables := []string{"events", "snapshots", "blobber_aggregates", "miner_aggregates",
-		"sharder_aggregates", "validator_aggregates", "authorizer_aggregates", "user_aggregates",
-		"transactions", "blocks"}
+	rollingTables := []string{"events", "snapshots", "blobber_aggregates", "miner_aggregates",
+		"sharder_aggregates", "validator_aggregates", "authorizer_aggregates", "user_aggregates"}
+	for _, t := range rollingTables {
+		if err := edb.addRollingPartition(current, t); err != nil {
+			logging.Logger.Error("error creating partition", zap.Error(err))
+			return err
+		}
+	}
+
+	tables := []string{"transactions", "blocks"}
 	for _, t := range tables {
 		if err := edb.addPartition(current, t); err != nil {
 			logging.Logger.Error("error creating partition", zap.Error(err))
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -497,7 +505,7 @@ func (edb *EventDb) dropPartitions(current int64) error {
 	tables := []string{"events", "snapshots", "blobber_aggregates", "miner_aggregates",
 		"sharder_aggregates", "validator_aggregates", "authorizer_aggregates", "user_aggregates"}
 	for _, t := range tables {
-		if err := edb.dropPartition(current, t); err != nil {
+		if err := edb.dropRollingPartition(current, t); err != nil {
 			logging.Logger.Error("error dropping partition", zap.Error(err))
 			return err
 		}

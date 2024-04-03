@@ -34,18 +34,18 @@ func TestPartitionCreate(t *testing.T) {
 
 	db, f := GetTestEventDB(t)
 	defer f()
-	err := db.addPartition(1, "blobber_aggregates")
+	err := db.addRollingPartition(1, "blobber_aggregates")
 	require.NoError(t, err)
-	err = db.addPartition(101, "blobber_aggregates")
+	err = db.addRollingPartition(101, "blobber_aggregates")
 	require.NoError(t, err)
-	err = db.addPartition(201, "blobber_aggregates")
+	err = db.addRollingPartition(201, "blobber_aggregates")
 	require.NoError(t, err)
 
 	var partitions []string
 	db.Store.Get().Raw(req).Scan(&partitions)
 	require.Equal(t, 4, len(partitions))
 
-	err = db.dropPartition(201, "blobber_aggregates")
+	err = db.dropRollingPartition(201, "blobber_aggregates")
 	require.NoError(t, err)
 
 	db.Store.Get().Raw(req).Scan(&partitions)
