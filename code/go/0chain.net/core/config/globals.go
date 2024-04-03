@@ -84,6 +84,8 @@ const (
 	DbsAggregatePeriod
 	DbsPartitionChangePeriod
 	DbsPartitionKeepCount
+	DbsRollingPartitionChangePeriod
+	DbsRollingPartitionKeepCount
 	DbsAggregatePageLimit
 
 	HealthCheckDeepScanEnabled          // todo restart worker
@@ -220,6 +222,8 @@ func initGlobalSettingNames() {
 	GlobalSettingName[DbsAggregatePeriod] = "server_chain.dbs.settings.aggregate_period"
 	GlobalSettingName[DbsPartitionChangePeriod] = "server_chain.dbs.settings.partition_change_period"
 	GlobalSettingName[DbsPartitionKeepCount] = "server_chain.dbs.settings.partition_keep_count"
+	GlobalSettingName[DbsRollingPartitionChangePeriod] = "server_chain.dbs.settings.rolling_partition_change_period"
+	GlobalSettingName[DbsRollingPartitionKeepCount] = "server_chain.dbs.settings.rolling_partition_keep_count"
 	GlobalSettingName[DbsAggregatePageLimit] = "server_chain.dbs.settings.page_limit" +
 		""
 	GlobalSettingName[HealthCheckDeepScanEnabled] = "server_chain.health_check.deep_scan.enabled"
