@@ -297,7 +297,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
-		savedDataBeforeUpdate := blobBeforeWrite.SavedData
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		savedDataBeforeUpdate := blobBeforeWriteBase.SavedData
 		require.EqualValues(t, initialWriteMarkerSavedData, savedDataBeforeUpdate)
 		// write
 		tp += 100
@@ -314,8 +315,9 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
-		endWriteMarkerSavedData = cc.WriteMarker.Size-initialWriteMarkerSavedData
-		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWrite.SavedData)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
+		endWriteMarkerSavedData = cc.WriteMarker.Size - initialWriteMarkerSavedData
+		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
 
 		size := (int64(math.Ceil(float64(cc.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
 		rdtu, err := alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit)
@@ -354,7 +356,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
-		require.EqualValues(t, endWriteMarkerSavedData, blobBeforeWrite.SavedData)
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		require.EqualValues(t, endWriteMarkerSavedData, blobBeforeWriteBase.SavedData)
 		// write
 		tp += 100
 		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
@@ -370,8 +373,9 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
 		// asserting by dividing `endWriteMarkerSavedData` since write marker value would half after delete
-		require.EqualValues(t, endWriteMarkerSavedData/2, blobAfterWrite.SavedData)
+		require.EqualValues(t, endWriteMarkerSavedData/2, blobAfterWriteBase.SavedData)
 
 		require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
 
@@ -426,7 +430,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobBeforeWrite, err := ssc.getBlobber(b3.id, balances)
-		require.EqualValues(t, initialWriteMarkerSavedData, blobBeforeWrite.SavedData)
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		require.EqualValues(t, initialWriteMarkerSavedData, blobBeforeWriteBase.SavedData)
 		// write
 		tp += 100
 		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
@@ -453,8 +458,9 @@ func Test_flow_reward(t *testing.T) {
 			t.Error(err2)
 		}
 		blobAfterWrite, err := ssc.getBlobber(b3.id, balances)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
 		endWriteMarkerSavedData = cc.WriteMarker.Size - initialWriteMarkerSavedData
-		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWrite.SavedData)
+		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
 
 		require.EqualValues(t, currency.Coin(10000000000000), apb2i)
 		require.EqualValues(t, currency.Coin(2443798559), cpb2i)
@@ -505,7 +511,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		blobBeforeWrite, err := ssc.getBlobber(b3.id, balances)
-		require.EqualValues(t, endWriteMarkerSavedData, blobBeforeWrite.SavedData)
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		require.EqualValues(t, endWriteMarkerSavedData, blobBeforeWriteBase.SavedData)
 		// write
 		tp += 100
 		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
@@ -532,7 +539,8 @@ func Test_flow_reward(t *testing.T) {
 			t.Error(err2)
 		}
 		blobAfterWrite, err := ssc.getBlobber(b3.id, balances)
-		require.EqualValues(t, initialWriteMarkerSavedData, blobAfterWrite.SavedData)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
+		require.EqualValues(t, initialWriteMarkerSavedData, blobAfterWriteBase.SavedData)
 		require.EqualValues(t, 9997556201441, apb2i)
 		require.EqualValues(t, 2440747155, cpb2i)
 		require.EqualValues(t, 40*x10, blobb2)
