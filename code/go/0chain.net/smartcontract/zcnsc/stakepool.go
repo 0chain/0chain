@@ -54,7 +54,7 @@ func (sp *StakePool) Save(providerType spenum.Provider, providerID string, balan
 		return
 	}
 	
-	err = cstate.WithActivation(balances, "ares", beforeFunc, afterFunc)
+	err = cstate.WithActivation(balances, "artemis", beforeFunc, afterFunc)
 	return
 }
 
