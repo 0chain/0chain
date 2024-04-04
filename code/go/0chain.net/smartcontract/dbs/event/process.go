@@ -283,6 +283,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	if err != nil {
 		logging.Logger.Error("can't manage partitions")
 	}
+	go edb.manageRollingPartitionsWorker(ctx)
 	go edb.managePartitionsWorker(ctx)
 
 	for {
@@ -368,6 +369,11 @@ func (edb *EventDb) WorkEvents(
 		logging.Logger.Warn("work events - lost connection")
 	}
 
+	currentRollingPartition := blockEvents.round / edb.settings.RollingPartitionChangePeriod
+	if blockEvents.round%edb.settings.RollingPartitionChangePeriod == 0 {
+		edb.manageRollingPartitionsAsync(currentRollingPartition)
+	}
+
 	currentPartition := blockEvents.round / edb.settings.PartitionChangePeriod
 	if blockEvents.round%edb.settings.PartitionChangePeriod == 0 {
 		edb.managePartitionsAsync(currentPartition)
@@ -435,6 +441,36 @@ func (edb *EventDb) managePartitionsAsync(current int64) {
 
 }
 
+func (edb *EventDb) manageRollingPartitionsAsync(current int64) {
+	go func() {
+		edb.rollingPartitionChan <- current
+	}()
+
+}
+
+func (edb *EventDb) manageRollingPartitionsWorker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			{
+				return
+			}
+		case current := <-edb.rollingPartitionChan:
+			go func() {
+				logging.Logger.Info("managing partitions", zap.Int64("number", current))
+				for i := current; i < current+10; i++ { //create 10 ahead
+					if err := edb.AddRollingPartitions(i); err != nil {
+						logging.Logger.Error("creating partitions", zap.Int64("number", i), zap.Error(err))
+					}
+				}
+				if err := edb.dropRollingPartitions(current); err != nil {
+					logging.Logger.Error("dropping partitions", zap.Int64("number", current), zap.Error(err))
+				}
+			}()
+		}
+	}
+}
+
 func (edb *EventDb) managePartitionsWorker(ctx context.Context) {
 	for {
 		select {
@@ -450,9 +486,6 @@ func (edb *EventDb) managePartitionsWorker(ctx context.Context) {
 						logging.Logger.Error("creating partitions", zap.Int64("number", i), zap.Error(err))
 					}
 				}
-				if err := edb.dropPartitions(current); err != nil {
-					logging.Logger.Error("dropping partitions", zap.Int64("number", current), zap.Error(err))
-				}
 				edb.movePartitions(current)
 			}()
 		}
@@ -461,10 +494,13 @@ func (edb *EventDb) managePartitionsWorker(ctx context.Context) {
 
 func (edb *EventDb) managePartitions(current int64) error {
 	logging.Logger.Info("managing partitions", zap.Int64("number", current))
+	if err := edb.AddRollingPartitions(current); err != nil {
+		return err
+	}
 	if err := edb.AddPartitions(current); err != nil {
 		return err
 	}
-	if err := edb.dropPartitions(current); err != nil {
+	if err := edb.dropRollingPartitions(current); err != nil {
 		return err
 	}
 	edb.movePartitions(current)
@@ -480,7 +516,7 @@ func (edb *EventDb) movePartitions(current int64) {
 	}
 }
 
-func (edb *EventDb) AddPartitions(current int64) error {
+func (edb *EventDb) AddRollingPartitions(current int64) error {
 	rollingTables := []string{"events", "snapshots", "blobber_aggregates", "miner_aggregates",
 		"sharder_aggregates", "validator_aggregates", "authorizer_aggregates", "user_aggregates"}
 	for _, t := range rollingTables {
@@ -490,6 +526,10 @@ func (edb *EventDb) AddPartitions(current int64) error {
 		}
 	}
 
+	return nil
+}
+
+func (edb *EventDb) AddPartitions(current int64) error {
 	tables := []string{"transactions", "blocks"}
 	for _, t := range tables {
 		if err := edb.addPartition(current, t); err != nil {
@@ -501,7 +541,7 @@ func (edb *EventDb) AddPartitions(current int64) error {
 	return nil
 }
 
-func (edb *EventDb) dropPartitions(current int64) error {
+func (edb *EventDb) dropRollingPartitions(current int64) error {
 	tables := []string{"events", "snapshots", "blobber_aggregates", "miner_aggregates",
 		"sharder_aggregates", "validator_aggregates", "authorizer_aggregates", "user_aggregates"}
 	for _, t := range tables {

@@ -199,7 +199,7 @@ func AddAggregatePartitions(edb *event.EventDb) {
 			break
 		}
 
-		if err := edb.AddPartitions(round); err != nil {
+		if err := edb.AddRollingPartitions(round); err != nil {
 			log.Println(err)
 		}
 	}
