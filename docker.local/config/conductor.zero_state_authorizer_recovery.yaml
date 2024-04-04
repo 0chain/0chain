@@ -49,13 +49,12 @@ tests:
       - stop: ['authorizer-1']
       - wait_round:
           shift: 100      
-     - command:
-            name: "cleanup_provider"
-            params:
-              path: "./token_bridge_authserver/docker.local/auth1"
-              recreate_script: docker.local/bin/authorizer.init.setup.sh
-              recreate_script_workdir: ./token_bridge_authserver
-
+      - command:
+          name: "cleanup_provider"
+          params:
+            path: "./token_bridge_authserver/docker.local/auth1"
+            recreate_script: docker.local/bin/authorizer.init.setup.sh
+            recreate_script_workdir: ./token_bridge_authserver
       - wait_round:
           shift: 100
       - start: ['authorizer-1']
