@@ -1511,6 +1511,16 @@ func replaceBlobber(
 
 	return blobbers, nil
 }
+func printEntities(entities ...interface{}) {
+	for _, entity := range entities {
+		jsonEntity, err := json.Marshal(entity)
+		if err != nil {
+			fmt.Printf("Error marshaling entity: %v\n", err)
+			continue
+		}
+		fmt.Println(string(jsonEntity))
+	}
+}
 
 func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
@@ -1557,7 +1567,8 @@ func (sa *StorageAllocation) changeBlobbers(
 		func() error {
 			return addedBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
-				if *b.IsRestricted {
+
+				if b.IsRestricted != nil && *b.IsRestricted {
 					success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
 					if err != nil || !success {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())

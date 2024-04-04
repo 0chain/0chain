@@ -1640,6 +1640,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
 	nar.Blobbers = []string{"b1", "b2"}
+	nar.BlobberAuthTickets = []string{"", ""}
 
 	var (
 		sp1, sp2 = newStakePool(), newStakePool()

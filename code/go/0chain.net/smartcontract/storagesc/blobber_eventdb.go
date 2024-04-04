@@ -33,7 +33,7 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		OffersTotal: sp.TotalOffers,
 	}
 
-	if v2, ok := sn.Entity().(*storageNodeV2); ok {
+	if v2, ok := sn.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
 		data.IsRestricted = *v2.IsRestricted
 	}
 

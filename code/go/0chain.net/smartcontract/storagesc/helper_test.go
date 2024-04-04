@@ -365,6 +365,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
 		nar.Blobbers = append(nar.Blobbers, b.id)
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		blobs = append(blobs, b)
 	}
 
