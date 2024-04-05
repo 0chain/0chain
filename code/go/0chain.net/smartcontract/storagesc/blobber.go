@@ -15,6 +15,7 @@ import (
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
+	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -410,11 +411,27 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	blobber := &StorageNode{}
+	beforeArtemis := func() error {
+		if err := blobber.Decode(input); err != nil {
+			return common.NewError("add_or_update_blobber_failed",
+				"malformed request: "+err.Error())
+		}
+		return nil
+	}
 
-	// var blobber = newBlobber(t.ClientID)
-	if err = blobber.Decode(input); err != nil {
-		return "", common.NewError("add_or_update_blobber_failed",
-			"malformed request: "+err.Error())
+	afterArtemis := func() error {
+		b := storageNodeV2{}
+		if err := json.Unmarshal(input, &b); err != nil {
+			return common.NewError("add_or_update_blobber_failed",
+				"malformed request: "+err.Error())
+		}
+
+		return nil
+	}
+
+	err = state.WithActivation(balances, "artemis", beforeArtemis, afterArtemis)
+	if err != nil {
+		return "", err
 	}
 
 	// set transaction information
