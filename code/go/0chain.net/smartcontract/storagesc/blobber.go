@@ -411,11 +411,14 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	}
 
 	blobber := &StorageNode{}
+
 	beforeArtemis := func() error {
-		if err := blobber.Decode(input); err != nil {
+		b := storageNodeV1{}
+		if err := json.Unmarshal(input, &b); err != nil {
 			return common.NewError("add_or_update_blobber_failed",
 				"malformed request: "+err.Error())
 		}
+		blobber.SetEntity(&b)
 		return nil
 	}
 
@@ -425,7 +428,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			return common.NewError("add_or_update_blobber_failed",
 				"malformed request: "+err.Error())
 		}
-
+		blobber.SetEntity(&b)
 		return nil
 	}
 
