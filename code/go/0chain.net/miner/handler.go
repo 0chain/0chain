@@ -184,6 +184,11 @@ func TxnStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<br>")
 
+	// find, missed := util.CacheStats()
+	hits, miss := c.GetStateCache().Stats()
+	fmt.Fprintf(w, "<h3>MPT cache hits/missed: %v/%v</h3>", hits, miss)
+	fmt.Fprintf(w, "<br>")
+
 	fmt.Fprintf(w, "<table>")
 
 	count := 0

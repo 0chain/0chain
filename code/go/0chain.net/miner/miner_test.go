@@ -122,6 +122,8 @@ func setupMinerChain() (*Chain, func()) {
 		mc.Chain = chain.Provider().(*chain.Chain)
 	}
 
+	mc.SetupStateCache()
+
 	mc.ChainConfig = chain.NewConfigImpl(&chain.ConfigData{GeneratorsPercent: 33, MinGenerators: 1})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
@@ -138,6 +140,7 @@ func setupMinerChain() (*Chain, func()) {
 func TestBlockGeneration(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
+
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
