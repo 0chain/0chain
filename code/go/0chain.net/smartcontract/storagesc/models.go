@@ -1507,6 +1507,14 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			// Update saved data on events_db
 			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
+			// Updating AllocationStats
+			_ = cstate.WithActivation(balances, "artemis", func() error {
+				return nil
+			}, func() error {
+				sa.Stats.UsedSize += -d.Stats.UsedSize
+				return nil
+			})
+
 			sa.BlobberAllocs[i] = addedBlobberAllocation
 			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
