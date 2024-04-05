@@ -1092,7 +1092,11 @@ func setEventData[T any](e *Event, data interface{}) error {
 }
 
 func (edb *EventDb) kafkaProv() *queueProvider.KafkaProvider {
-	kafka := queueProvider.NewKafkaProvider(edb.dbConfig.KafkaHost, edb.dbConfig.KafkaWriteTimeout)
+	kafka := queueProvider.NewKafkaProvider(
+		edb.dbConfig.KafkaHost,
+		edb.dbConfig.KafkaUsername,
+		edb.dbConfig.KafkaPassword,
+		edb.dbConfig.KafkaWriteTimeout)
 	return kafka
 }
 
