@@ -612,3 +612,43 @@ commands:
         required: true
       provider_ids:
         required: true
+  backup_blobber_data:
+    work_dir: "../blobber"
+    exec: "tar -czvf $provider_data $path_data"
+    args:
+      path_data:
+        required: true
+      provider_data:
+        required: true
+  backup_blobber_files:
+    work_dir: "../blobber"
+    exec: "tar -czvf $provider_files $path_files"
+    args:
+      path_files:
+        required: true  
+      provider_files:
+        required: true                   
+  restore_blobber_data:
+    work_dir: "../blobber"
+    exec: "tar -xzvf $provider_data -C $path_data"
+    args:
+      path_data:
+        required: true 
+      provider_data:
+        required: true
+  restore_blobber_files:
+    work_dir: "../blobber"
+    exec: "tar -xzvf $provider_files -C $path_files"
+    args:
+      path_files:
+        required: true
+      provider_files:
+        required: true
+  upload_b_random:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/proxied/upload_b.sh $remotepath"
+    should_fail: false
+    args:
+      remotepath:
+        required: false
+        default: /remote/b1.bin                            
