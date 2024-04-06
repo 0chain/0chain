@@ -10,7 +10,7 @@ import (
 // TransactionID and BlockNumber is added at the time of emitting event
 func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, txnHash string) *event.WriteMarker {
 	wmb := wm.mustBase()
-	return &event.WriteMarker{
+	evm := &event.WriteMarker{
 		ClientID:               wmb.ClientID,
 		BlobberID:              wmb.BlobberID,
 		AllocationID:           wmb.AllocationID,
@@ -23,6 +23,12 @@ func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, t
 		MovedTokens:            movedTokens,
 		TransactionID:          txnHash,
 	}
+	if wm.GetVersion() == "v2" {
+		wm2 := wm.Entity().(*writeMarkerV2)
+		evm.ChainHash = wm2.ChainHash
+		evm.ChainSize = wm2.ChainSize
+	}
+	return evm
 }
 
 func emitAddWriteMarker(t *transaction.Transaction, wm *WriteMarker, alloc *StorageAllocation, movedTokens currency.Coin, prevWmSize int64,

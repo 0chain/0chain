@@ -438,9 +438,9 @@ func (z *BlobberAllocation) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *BlobberCloseConnection) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
 	// string "AllocationRoot"
-	o = append(o, 0x83, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
+	o = append(o, 0x84, 0xae, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
 	o = msgp.AppendString(o, z.AllocationRoot)
 	// string "PrevAllocationRoot"
 	o = append(o, 0xb2, 0x50, 0x72, 0x65, 0x76, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x6f, 0x6f, 0x74)
@@ -456,6 +456,9 @@ func (z *BlobberCloseConnection) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
+	// string "ChainData"
+	o = append(o, 0xa9, 0x43, 0x68, 0x61, 0x69, 0x6e, 0x44, 0x61, 0x74, 0x61)
+	o = msgp.AppendBytes(o, z.ChainData)
 	return
 }
 
@@ -506,6 +509,12 @@ func (z *BlobberCloseConnection) UnmarshalMsg(bts []byte) (o []byte, err error) 
 					return
 				}
 			}
+		case "ChainData":
+			z.ChainData, bts, err = msgp.ReadBytesBytes(bts, z.ChainData)
+			if err != nil {
+				err = msgp.WrapError(err, "ChainData")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -526,6 +535,7 @@ func (z *BlobberCloseConnection) Msgsize() (s int) {
 	} else {
 		s += z.WriteMarker.Msgsize()
 	}
+	s += 10 + msgp.BytesPrefixSize + len(z.ChainData)
 	return
 }
 

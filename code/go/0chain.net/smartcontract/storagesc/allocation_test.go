@@ -2093,19 +2093,21 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	var cc = &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: "",
-		WriteMarker: &WriteMarker{
-			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: "",
-			AllocationID:           allocID,
-			Size:                   10 * 1024 * 1024, // 100 MB
-			BlobberID:              nb2.id,
-			Timestamp:              common.Timestamp(tp),
-			ClientID:               client.id,
-		},
+		WriteMarker:        &WriteMarker{},
 	}
-	cc.WriteMarker.Signature, err = client.scheme.Sign(
-		encryption.Hash(cc.WriteMarker.GetHashData()))
+	wm1 := &writeMarkerV1{
+		AllocationRoot:         allocRoot,
+		PreviousAllocationRoot: "",
+		AllocationID:           allocID,
+		Size:                   10 * 1024 * 1024, // 100 MB
+		BlobberID:              nb2.id,
+		Timestamp:              common.Timestamp(tp),
+		ClientID:               client.id,
+	}
+	wm1.Signature, err = client.scheme.Sign(
+		encryption.Hash(wm1.GetHashData()))
 	require.NoError(t, err)
+	cc.WriteMarker.SetEntity(wm1)
 	var tx = newTransaction(nb2.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
@@ -2316,19 +2318,21 @@ func Test_finalize_allocation(t *testing.T) {
 	var cc = &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: "",
-		WriteMarker: &WriteMarker{
-			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: "",
-			AllocationID:           allocID,
-			Size:                   10 * 1024 * 1024, // 100 MB
-			BlobberID:              b1.id,
-			Timestamp:              common.Timestamp(tp),
-			ClientID:               client.id,
-		},
+		WriteMarker:        &WriteMarker{},
 	}
-	cc.WriteMarker.Signature, err = client.scheme.Sign(
-		encryption.Hash(cc.WriteMarker.GetHashData()))
+	wm1 := &writeMarkerV1{
+		AllocationRoot:         allocRoot,
+		PreviousAllocationRoot: "",
+		AllocationID:           allocID,
+		Size:                   10 * 1024 * 1024, // 100 MB
+		BlobberID:              b1.id,
+		Timestamp:              common.Timestamp(tp),
+		ClientID:               client.id,
+	}
+	wm1.Signature, err = client.scheme.Sign(
+		encryption.Hash(wm1.GetHashData()))
 	require.NoError(t, err)
+	cc.WriteMarker.SetEntity(wm1)
 
 	// write
 	tp += 1000
@@ -2504,19 +2508,21 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	var cc = &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: "",
-		WriteMarker: &WriteMarker{
-			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: "",
-			AllocationID:           allocID,
-			Size:                   10 * 1024 * 1024, // 100 MB
-			BlobberID:              b1.id,
-			Timestamp:              common.Timestamp(tp),
-			ClientID:               client.id,
-		},
+		WriteMarker:        &WriteMarker{},
 	}
-	cc.WriteMarker.Signature, err = client.scheme.Sign(
-		encryption.Hash(cc.WriteMarker.GetHashData()))
+	wm1 := &writeMarkerV1{
+		AllocationRoot:         allocRoot,
+		PreviousAllocationRoot: "",
+		AllocationID:           allocID,
+		Size:                   10 * 1024 * 1024, // 100 MB
+		BlobberID:              b1.id,
+		Timestamp:              common.Timestamp(tp),
+		ClientID:               client.id,
+	}
+	wm1.Signature, err = client.scheme.Sign(
+		encryption.Hash(wm1.GetHashData()))
 	require.NoError(t, err)
+	cc.WriteMarker.SetEntity(wm1)
 
 	// write
 	tp += 1000
