@@ -9,16 +9,17 @@ import (
 
 // TransactionID and BlockNumber is added at the time of emitting event
 func writeMarkerToWriteMarkerTable(wm *WriteMarker, movedTokens currency.Coin, txnHash string) *event.WriteMarker {
+	wmb := wm.mustBase()
 	return &event.WriteMarker{
-		ClientID:               wm.ClientID,
-		BlobberID:              wm.BlobberID,
-		AllocationID:           wm.AllocationID,
-		AllocationRoot:         wm.AllocationRoot,
-		PreviousAllocationRoot: wm.PreviousAllocationRoot,
-		FileMetaRoot:           wm.FileMetaRoot,
-		Size:                   wm.Size,
-		Timestamp:              int64(wm.Timestamp),
-		Signature:              wm.Signature,
+		ClientID:               wmb.ClientID,
+		BlobberID:              wmb.BlobberID,
+		AllocationID:           wmb.AllocationID,
+		AllocationRoot:         wmb.AllocationRoot,
+		PreviousAllocationRoot: wmb.PreviousAllocationRoot,
+		FileMetaRoot:           wmb.FileMetaRoot,
+		Size:                   wmb.Size,
+		Timestamp:              int64(wmb.Timestamp),
+		Signature:              wmb.Signature,
 		MovedTokens:            movedTokens,
 		TransactionID:          txnHash,
 	}
