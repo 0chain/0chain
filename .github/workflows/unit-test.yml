@@ -1,5 +1,9 @@
 name: Unit test & Lint
 
+concurrency:
+  group: "unit-lint-${{ github.ref }}"
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ master, staging ]
@@ -23,7 +27,9 @@ jobs:
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
-        run: ./docker.local/bin/build.base.sh
+        run: |
+          chmod +x ./docker.local/bin/build.base_go20.sh
+          ./docker.local/bin/build.base_go20.sh
 
       - name: Run unit tests
         run: |

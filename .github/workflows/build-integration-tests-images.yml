@@ -1,5 +1,9 @@
 name: Build integration images
 
+concurrency:
+  group: "build-integration-${{ github.ref }}"
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ master,staging ]
