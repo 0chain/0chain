@@ -141,7 +141,7 @@ func (wm1 *writeMarkerV1) GetHashData() string {
 }
 
 type writeMarkerV2 struct {
-	Version                string           `json:"version"`
+	Version                string           `json:"version" msg:"version"`
 	AllocationRoot         string           `json:"allocation_root"`
 	PreviousAllocationRoot string           `json:"prev_allocation_root"`
 	FileMetaRoot           string           `json:"file_meta_root"`
