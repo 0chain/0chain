@@ -127,6 +127,10 @@ func (wm1 *writeMarkerV1) MigrateFrom(e entitywrapper.EntityI) error {
 	return nil
 }
 
+func (wm1 *writeMarkerV1) InitVersion() {
+	// do nothing cause it's original version of write marker
+}
+
 func (wm1 *writeMarkerV1) GetHashData() string {
 	hashData := fmt.Sprintf(
 		"%s:%s:%s:%s:%s:%s:%d:%d",
@@ -151,8 +155,14 @@ type writeMarkerV2 struct {
 	Signature              string           `json:"signature"`
 }
 
+const writeMarkerV2Version = "v2"
+
 func (wm2 *writeMarkerV2) GetVersion() string {
-	return "v2"
+	return writeMarkerV2Version
+}
+
+func (wm2 *writeMarkerV2) InitVersion() {
+	wm2.Version = writeMarkerV2Version
 }
 
 func (wm2 *writeMarkerV2) GetBase() entitywrapper.EntityBaseI {
