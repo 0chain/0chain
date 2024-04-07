@@ -37,40 +37,84 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	require.NoError(t, err)
 
 	// remove
-	b.Capacity = 0
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 0
+		return nil
+	})
 	tp += 100
 	_, err = updateBlobber(t, b, 0, tp, ssc, balances)
 	require.NoError(t, err)
 
 	// reborn
-	b.Capacity = 3 * GB
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 3 * GB
+		return nil
+	})
 	tp += 100
 	_, err = updateBlobber(t, b, 10*x10, tp, ssc, balances)
 	require.NoError(t, err)
 
 	var ab *StorageNode
-	ab, err = ssc.getBlobber(b.ID, balances)
+	ab, err = ssc.getBlobber(b.Id(), balances)
 	require.NoError(t, err)
 	require.NotNil(t, ab)
-	require.Equal(t, int64(3*GB), ab.Capacity)
+	require.Equal(t, int64(3*GB), ab.mustBase().Capacity)
 
 	const NewBaseUrl = "https://new-base-url.com"
-	b.BaseURL = NewBaseUrl
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.BaseURL = NewBaseUrl
+		return nil
+	})
 	tp += 100
 	// update URL but not the capacity
 	_, err = updateBlobber(t, b, 0, tp, ssc, balances)
 	require.NoError(t, err)
 
-	ab, err = ssc.getBlobber(b.ID, balances)
+	bb := b.mustBase()
+	ab, err = ssc.getBlobber(bb.ID, balances)
 	require.NoError(t, err)
-	require.Equal(t, NewBaseUrl, ab.BaseURL)
-	require.Equal(t, int64(3*GB), ab.Capacity)
+	abb := ab.mustBase()
+	require.Equal(t, NewBaseUrl, abb.BaseURL)
+	require.Equal(t, int64(3*GB), abb.Capacity)
 
-	b2.BaseURL = NewBaseUrl
-	b.Capacity = b2.Capacity * 2
+	b2.mustUpdateBase(func(b *storageNodeBase) error {
+		b.BaseURL = NewBaseUrl
+		return nil
+	})
+
+	b2.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = b2.mustBase().Capacity * 2
+		return nil
+	})
 	tp += 100
 	_, err = updateBlobber(t, b2, 0, tp, ssc, balances)
-	require.Error(t, err)
+	require.NoError(t, err)
+}
+
+func TestAddBlobber(t *testing.T) {
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances(t, false)
+		tp       int64 = 100
+		err      error
+	)
+
+	setConfig(t, balances)
+
+	var blob = newClient(0, balances)
+	blob.terms = avgTerms
+	blob.cap = 2 * GB
+
+	_, err = blob.callAddBlobber(t, ssc, tp, balances)
+	require.NoError(t, err)
+
+	b, err := ssc.getBlobber(blob.id, balances)
+	require.NoError(t, err)
+
+	bb := b.Entity().(*storageNodeV2)
+	printEntities(bb)
+
+	fmt.Println("IsRestricted2", *bb.IsRestricted)
 }
 
 func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
@@ -247,6 +291,9 @@ func Test_flow_reward(t *testing.T) {
 	}
 	require.NotNil(t, b2)
 
+	initialWriteMarkerSavedData := int64(0)
+	endWriteMarkerSavedData := int64(0)
+
 	t.Run("write", func(t *testing.T) {
 
 		var cp *challengePool
@@ -275,6 +322,10 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		savedDataBeforeUpdate := blobBeforeWriteBase.SavedData
+		require.EqualValues(t, initialWriteMarkerSavedData, savedDataBeforeUpdate)
 		// write
 		tp += 100
 		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
@@ -288,6 +339,11 @@ func Test_flow_reward(t *testing.T) {
 		// check out
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
+
+		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
+		endWriteMarkerSavedData = cc.WriteMarker.Size - initialWriteMarkerSavedData
+		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
 
 		size := (int64(math.Ceil(float64(cc.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
 		rdtu, err := alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit)
@@ -325,6 +381,9 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		require.EqualValues(t, endWriteMarkerSavedData, blobBeforeWriteBase.SavedData)
 		// write
 		tp += 100
 		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
@@ -338,6 +397,11 @@ func Test_flow_reward(t *testing.T) {
 		// check out
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
+
+		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
+		// asserting by dividing `endWriteMarkerSavedData` since write marker value would half after delete
+		require.EqualValues(t, endWriteMarkerSavedData/2, blobAfterWriteBase.SavedData)
 
 		require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
 
@@ -391,6 +455,9 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b3.id, balances)
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		require.EqualValues(t, initialWriteMarkerSavedData, blobBeforeWriteBase.SavedData)
 		// write
 		tp += 100
 		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
@@ -416,6 +483,11 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
+		blobAfterWrite, err := ssc.getBlobber(b3.id, balances)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
+		endWriteMarkerSavedData = cc.WriteMarker.Size - initialWriteMarkerSavedData
+		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
+
 		require.EqualValues(t, currency.Coin(10000000000000), apb2i)
 		require.EqualValues(t, currency.Coin(2443798559), cpb2i)
 
@@ -464,6 +536,9 @@ func Test_flow_reward(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		blobBeforeWrite, err := ssc.getBlobber(b3.id, balances)
+		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+		require.EqualValues(t, endWriteMarkerSavedData, blobBeforeWriteBase.SavedData)
 		// write
 		tp += 100
 		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
@@ -489,6 +564,9 @@ func Test_flow_reward(t *testing.T) {
 		if err2 != nil {
 			t.Error(err2)
 		}
+		blobAfterWrite, err := ssc.getBlobber(b3.id, balances)
+		blobAfterWriteBase := blobAfterWrite.mustBase()
+		require.EqualValues(t, initialWriteMarkerSavedData, blobAfterWriteBase.SavedData)
 		require.EqualValues(t, 9997556201441, apb2i)
 		require.EqualValues(t, 2440747155, cpb2i)
 		require.EqualValues(t, 40*x10, blobb2)
@@ -1160,7 +1238,11 @@ func TestOnlyAdd(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	b.BaseURL = "https://newabcurl.com"
+	b.mustUpdateBase(func(b *storageNodeBase) error {
+		b.BaseURL = "https://newabcurl.com"
+		return nil
+	})
+
 	//should fail as only add is allowed
 	_, err = updateBlobberUsingAddBlobber(t, b, 0, tp, ssc, balances)
 	require.Error(t, err)

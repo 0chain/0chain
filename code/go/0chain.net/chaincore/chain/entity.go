@@ -16,6 +16,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -23,7 +24,7 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -216,6 +217,8 @@ type Chain struct {
 	computeBlockStateC chan struct{}
 
 	OnBlockAdded func(b *block.Block)
+
+	stateCache *statecache.StateCache
 }
 
 type stateNodeStat struct {
@@ -280,6 +283,14 @@ func (c *Chain) SetupEventDatabase() error {
 	return nil
 }
 
+func (c *Chain) SetupStateCache() {
+	c.stateCache = statecache.NewStateCache()
+}
+
+func (c *Chain) GetStateCache() *statecache.StateCache {
+	return c.stateCache
+}
+
 // GetLatestFinalizedBlockFromDB gets the latest finalized block hash and round number from event db
 func (c *Chain) GetLatestFinalizedBlockFromDB() (string, int64, error) {
 	if c.EventDb == nil {
@@ -339,7 +350,7 @@ func (c *Chain) GetBlockStateNode(block *block.Block, path string, v util.MPTSer
 			"client state is nil, round %d", block.Round)
 	}
 
-	s := CreateTxnMPT(block.ClientState)
+	s := CreateTxnMPT(block.ClientState, statecache.NewEmpty())
 	return s.GetNodeValue(getNodePath(path), v)
 }
 
@@ -549,7 +560,7 @@ func (c *Chain) Initialize() {
 	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
 	// TODO: debug purpose, add the stateDB back
 	c.stateDB = stateDB
-	//c.stateDB = util.NewMemoryNodeDB()
+	// c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]uint64)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
@@ -635,8 +646,13 @@ func mustInitialState(tokens currency.Coin) *state.State {
 /*setupInitialState - set up the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block) util.MerklePatriciaTrieI {
 	memMPT := util.NewLevelNodeDB(util.NewMemoryNodeDB(), c.stateDB, false)
-	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil)
 
+	blockStateCache := statecache.NewBlockCache(c.GetStateCache(), statecache.Block{
+		Round: gb.Round,
+		Hash:  gb.Hash,
+	})
+	txnStateCache := statecache.NewTransactionCache(blockStateCache)
+	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil, txnStateCache)
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
 	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
@@ -705,6 +721,9 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	default:
 		logging.Logger.Panic("initialize genesis block state failed", zap.Error(err))
 	}
+
+	txnStateCache.Commit()
+	blockStateCache.Commit()
 
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
@@ -1518,6 +1537,7 @@ func (c *Chain) HasClientStateStored(clientStateHash util.Key) bool {
 
 // InitBlockState - initialize the block's state with the database state.
 func (c *Chain) InitBlockState(b *block.Block) (err error) {
+	c.GetStateCache()
 	if err = b.InitStateDB(c.stateDB); err != nil {
 		logging.Logger.Error("init block state", zap.Int64("round", b.Round),
 			zap.String("state", util.ToHex(b.ClientStateHash)),

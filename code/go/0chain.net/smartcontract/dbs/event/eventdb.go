@@ -41,6 +41,7 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
 		eventsCounter: *atomic.NewUint64(0),
+		partitionChan: make(chan int64, 100),
 		settings:      settings,
 	}
 
@@ -71,6 +72,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
+		partitionChan: make(chan int64, 100),
 		settings:      settings,
 	}
 
@@ -88,6 +90,7 @@ type EventDb struct {
 	eventsChannel chan BlockEvents
 	eventsCounter atomic.Uint64
 	kafka         queueProvider.KafkaProviderI
+	partitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -101,7 +104,7 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
-		dbConfig: edb.dbConfig,
+    dbConfig: edb.dbConfig,
 		settings: edb.settings,
 		kafka: queueProvider.NewKafkaProvider(
 			edb.dbConfig.KafkaHost,
@@ -109,6 +112,10 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			edb.dbConfig.KafkaPassword,
 			edb.dbConfig.KafkaWriteTimeout,
 		),
+		dbConfig:      edb.dbConfig,
+		settings:      edb.settings,
+		eventsChannel: edb.eventsChannel,
+		partitionChan: edb.partitionChan,
 	}
 	return &edbTx, nil
 }

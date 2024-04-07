@@ -17,7 +17,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -358,7 +357,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	ssFTs = time.Now()
 
 	var (
-		wg          = waitgroup.New()
+		wg          = waitgroup.New(10)
 		deletedNode = fb.ClientState.GetDeletes()
 		sns         = gStateNodeStat.Inc(int64(changeCount))
 	)
@@ -375,12 +374,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int("delete num", len(deleteMap)))
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
-		err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
-		if err != nil {
+		// err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
+		er := c.stateDB.RecordDeadNodes(deletedNode, fb.Round)
+		if er != nil {
 			logging.Logger.Error("finalize block - record dead nodes failed",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
-				zap.Error(err))
+				zap.Error(er))
 		}
 		// do not return err, we don't want to see the dead nodes removing failure stop the finalizing process
 		return nil
@@ -396,14 +396,15 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
 			}
 			ts := time.Now()
-			eventTx, eventsCount, err = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
-			if err != nil {
+      var er error
+			eventTx, eventsCount, er = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
+			if er != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
 				EventsComputationTimer.Update(time.Since(ts).Microseconds())
-				return err //do not remove events in case of error
+				return er //do not remove events in case of error
 			}
 
 			if eventTx == nil {
@@ -415,7 +416,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			fb.Events = nil
 
 			// failing of events process should stop the finalizing progress
-			return err
+			return er
 		})
 	}
 
@@ -510,6 +511,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 
+	wg = waitgroup.New(1)
 	wg.Run("finalize block - delete dead blocks", fb.Round, func() error {
 		// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 		pfb := fb
@@ -530,6 +532,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.DeleteBlocks(deadBlocks)
 		return nil
 	})
+
+	// wg.Run("finalize block - prune state cache", fb.Round, func() error {
+	// 	if fb.Round > 100 {
+	// 		c.GetStateCache().PruneRoundBelow(fb.Round - 100)
+	// 	}
+	// 	return nil
+	// })
 
 	if err = wg.Wait(); err != nil {
 		if !waitgroup.ErrIsPanic(err) {

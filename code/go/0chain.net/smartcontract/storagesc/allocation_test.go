@@ -74,7 +74,8 @@ func TestSelectBlobbers(t *testing.T) {
 	}
 
 	makeMockBlobber := func(index int) *StorageNode {
-		return &StorageNode{
+		sn := &StorageNode{}
+		sn.SetEntity(&storageNodeV2{
 			Provider: provider.Provider{
 				ID:              mockBlobberId + strconv.Itoa(index),
 				ProviderType:    spenum.Blobber,
@@ -86,7 +87,8 @@ func TestSelectBlobbers(t *testing.T) {
 				ReadPrice:  mockReadPrice,
 				WritePrice: mockWritePrice,
 			},
-		}
+		})
+		return sn
 	}
 
 	setup := func(t *testing.T, args args) (
@@ -210,10 +212,11 @@ func TestSelectBlobbers(t *testing.T) {
 			require.EqualValues(t, int64(sa.Size+size-1)/size, outSize)
 
 			for _, blobber := range outBlobbers {
-				t.Log(blobber)
+				bb := blobber.mustBase()
+				t.Log(bb)
 				found := false
 				for _, index := range tt.want.blobberIds {
-					if mockBlobberId+strconv.Itoa(index) == blobber.ID {
+					if mockBlobberId+strconv.Itoa(index) == bb.ID {
 						require.EqualValues(t, makeMockBlobber(index), blobber)
 						found = true
 						break
@@ -278,7 +281,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 
 func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 	return filterBlobberFunc(func(b *StorageNode) (kick bool, err error) {
-		return b.LastHealthCheck <= (now - blobberHealthTime), nil
+		return b.mustBase().LastHealthCheck <= (now - blobberHealthTime), nil
 	})
 }
 
@@ -398,7 +401,8 @@ func TestChangeBlobbers(t *testing.T) {
 				blobberMap[ba.BlobberID] = ba
 			}
 
-			blobber := &StorageNode{
+			blobber := &StorageNode{}
+			blobber.SetEntity(&storageNodeV2{
 				Provider: provider.Provider{
 					ID:              ba.BlobberID,
 					ProviderType:    spenum.Blobber,
@@ -412,7 +416,7 @@ func TestChangeBlobbers(t *testing.T) {
 				NotAvailable: false,
 				Allocated:    49268107,
 				SavedData:    298934,
-			}
+			})
 
 			var id = strconv.Itoa(i)
 			var sp = newStakePool()
@@ -425,7 +429,7 @@ func TestChangeBlobbers(t *testing.T) {
 			sp.Pools["paula "+id] = delegatePool
 			sp.Pools["paula "+id] = delegatePool
 			sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
-			require.NoError(t, sp.Save(spenum.Blobber, blobber.ID, balances))
+			require.NoError(t, sp.Save(spenum.Blobber, blobber.Id(), balances))
 
 			_, err := balances.InsertTrieNode(blobber.GetKey(), blobber)
 			require.NoError(t, err)
@@ -610,7 +614,7 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, removeID, now, balances, sc, clientId)
+			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, "", removeID, now, balances, sc, clientId)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -659,7 +663,8 @@ func TestExtendAllocation(t *testing.T) {
 	}
 
 	makeMockBlobber := func(index int) *StorageNode {
-		return &StorageNode{
+		sn := &StorageNode{}
+		sn.SetEntity(&storageNodeV2{
 			Provider: provider.Provider{
 				ID:              mockBlobberId + strconv.Itoa(index),
 				ProviderType:    spenum.Blobber,
@@ -671,7 +676,8 @@ func TestExtendAllocation(t *testing.T) {
 				ReadPrice:  mockReadPrice,
 				WritePrice: mockWritePrice,
 			},
-		}
+		})
+		return sn
 	}
 
 	setup := func(
@@ -725,7 +731,7 @@ func TestExtendAllocation(t *testing.T) {
 			if i < sa.DataShards+sa.ParityShards {
 				blobbers = append(blobbers, mockBlobber)
 				sa.BlobberAllocs = append(sa.BlobberAllocs, &BlobberAllocation{
-					BlobberID: mockBlobber.ID,
+					BlobberID: mockBlobber.Id(),
 					Terms: Terms{
 						WritePrice: mockWritePrice,
 					},
@@ -744,12 +750,12 @@ func TestExtendAllocation(t *testing.T) {
 					},
 				}
 				sp.Pools[mockPoolId].Balance = zcnToBalance(mockStake)
-				balances.On("GetTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
+				balances.On("GetTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.Id()),
 					mock.MatchedBy(func(s *stakePool) bool {
 						*s = sp
 						return true
 					})).Return(nil).Once()
-				balances.On("InsertTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.ID),
+				balances.On("InsertTrieNode", stakePoolKey(spenum.Blobber, mockBlobber.Id()),
 					mock.Anything).Return("", nil).Once()
 				balances.On("EmitEvent", event.TypeStats,
 					event.TagToChallengePool, mock.Anything, mock.Anything).Return().Maybe()
@@ -944,39 +950,61 @@ func Test_sizeInGB(t *testing.T) {
 	}
 }
 
-func newTestAllBlobbers() (all *StorageNodes) {
+func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
+	numBlobbers := 2
+	notAvailable := false
+	isRestricted := false
+	publicKeys := []string{}
+
+	if len(options) > 0 {
+		option := options[0]
+
+		if v, ok := option["num_blobbers"]; ok {
+			numBlobbers = v.(int)
+		}
+
+		if v, ok := option["not_available"]; ok {
+			notAvailable = v.(bool)
+		}
+
+		if v, ok := option["is_restricted"]; ok {
+			isRestricted = v.(bool)
+		}
+
+		if v, ok := option["public_keys"]; ok {
+			publicKeys = v.([]string)
+		}
+	}
+
+	if len(publicKeys) == 0 {
+		for i := 1; i <= numBlobbers; i++ {
+			publicKeys = append(publicKeys, "pk"+strconv.Itoa(i))
+		}
+	}
+
 	all = new(StorageNodes)
-	all.Nodes = []*StorageNode{
-		{
+
+	for i := 1; i <= numBlobbers; i++ {
+		sn := &StorageNode{}
+		sn.SetEntity(&storageNodeV2{
 			Provider: provider.Provider{
-				ID:              "b1",
+				ID:              "b" + strconv.Itoa(i),
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: 0,
 			},
-			BaseURL: "http://blobber1.test.ru:9100/api",
+			Version:   "v2",
+			PublicKey: publicKeys[i-1],
+			BaseURL:   "http://blobber" + strconv.Itoa(i) + ".test.ru:9100/api",
 			Terms: Terms{
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
 			Capacity:     25 * GB, // 20 GB
 			Allocated:    5 * GB,  //  5 GB
-			NotAvailable: false,
-		},
-		{
-			Provider: provider.Provider{
-				ID:              "b2",
-				ProviderType:    spenum.Blobber,
-				LastHealthCheck: 0,
-			},
-			BaseURL: "http://blobber2.test.ru:9100/api",
-			Terms: Terms{
-				ReadPrice:  25,
-				WritePrice: 250,
-			},
-			Capacity:     20 * GB, // 20 GB
-			Allocated:    10 * GB, // 10 GB
-			NotAvailable: false,
-		},
+			NotAvailable: notAvailable,
+			IsRestricted: &isRestricted,
+		})
+		all.Nodes = append(all.Nodes, sn)
 	}
 	return
 }
@@ -994,8 +1022,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg6 = "allocation_creation_failed: " +
 			"invalid request: blobbers provided are not enough to honour the allocation"
 		errMsg7 = "allocation_creation_failed: " + "getting stake pools: could not get item \"b1\": value not present"
-		errMsg8 = "allocation_creation_failed: " +
-			"not enough tokens to honor the allocation cost 0 < 4500"
+		errMsg8 = "allocation_creation_failed: " + "not enough tokens to honor the allocation cost 0 < 4000"
 		errMsg9 = "allocation_creation_failed: " +
 			"no tokens to lock"
 	)
@@ -1113,18 +1140,107 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var allBlobbers = newTestAllBlobbers()
 		// make the blobbers health
 		b0 := allBlobbers.Nodes[0]
-		b0.LastHealthCheck = tx.CreationDate
+		b0.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			return nil
+		})
+
 		b1 := allBlobbers.Nodes[1]
-		b1.LastHealthCheck = tx.CreationDate
-		nar.Blobbers = append(nar.Blobbers, b0.ID)
+		b1.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			return nil
+		})
+
+		nar.Blobbers = append(nar.Blobbers, b0.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		nar.Blobbers = append(nar.Blobbers, b1.ID)
+		nar.Blobbers = append(nar.Blobbers, b1.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
 		_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, errMsg7)
 	})
+
+	t.Run("Blobbers provided are restricted blobbers", func(t *testing.T) {
+		wallet := newClient(1000*x10, balances)
+		b0Wallet := newClient(1000*x10, balances)
+		b1Wallet := newClient(1000*x10, balances)
+
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Blobbers = nil // not set
+		nar.Owner = wallet.id
+		nar.OwnerPublicKey = wallet.pk
+
+		var tempTxn transaction.Transaction
+		tempTxn.Hash = txHash
+		tempTxn.Value = 10000
+		tempTxn.ClientID = wallet.id
+		tempTxn.CreationDate = toSeconds(2 * time.Hour)
+
+		balances.setTransaction(t, &tempTxn)
+
+		var conditions map[string]interface{}
+		conditions = make(map[string]interface{})
+		conditions["is_restricted"] = true
+		conditions["public_keys"] = []string{b0Wallet.pk, b1Wallet.pk}
+		var allBlobbers = newTestAllBlobbers(conditions)
+
+		b0 := allBlobbers.Nodes[0]
+		b0.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 5 * GB
+			return nil
+		})
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
+		require.NoError(t, err)
+
+		b1 := allBlobbers.Nodes[1]
+		b1.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 10 * GB
+			return nil
+		})
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
+		require.NoError(t, err)
+
+		var (
+			sp1, sp2 = newStakePool(), newStakePool()
+			dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
+		)
+		dp1.Balance, dp2.Balance = 20e10, 20e10
+		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
+		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
+
+		nar.Blobbers = append(nar.Blobbers, b0.Id())
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
+		nar.Blobbers = append(nar.Blobbers, b1.Id())
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
+		require.NoError(t, err)
+
+		nar.BlobberAuthTickets = []string{"", ""}
+		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
+		requireErrMsg(t, err, "allocation_creation_failed: Not enough blobbers to honor the allocation: blobber b1 auth ticket verification failed: invalid_auth_ticket: empty auth ticket, blobber b2 auth ticket verification failed: invalid_auth_ticket: empty auth ticket")
+
+		blobber0AuthTicket, err := b0Wallet.scheme.Sign(wallet.id)
+		require.NoError(t, err)
+		blobber1AuthTicket, err := b1Wallet.scheme.Sign(wallet.id)
+		require.NoError(t, err)
+
+		nar.BlobberAuthTickets = []string{blobber0AuthTicket, blobber1AuthTicket}
+		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
+		require.NoError(t, err)
+	})
+
 	// 8. not enough tokens
 	t.Run("not enough tokens to honor the min lock demand (0 < 270)", func(t *testing.T) {
 		var nar newAllocationRequest
@@ -1142,12 +1258,22 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var allBlobbers = newTestAllBlobbers()
 		// make the blobbers health
 		b0 := allBlobbers.Nodes[0]
-		b0.LastHealthCheck = tx.CreationDate
+		b0.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			return nil
+		})
+
 		b1 := allBlobbers.Nodes[1]
-		b1.LastHealthCheck = tx.CreationDate
-		nar.Blobbers = append(nar.Blobbers, b0.ID)
+		b1.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			return nil
+		})
+
+		nar.Blobbers = append(nar.Blobbers, b0.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		nar.Blobbers = append(nar.Blobbers, b1.ID)
+		nar.Blobbers = append(nar.Blobbers, b1.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
@@ -1181,15 +1307,23 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		var allBlobbers = newTestAllBlobbers()
 		// make the blobbers health
 		b0 := allBlobbers.Nodes[0]
-		b0.LastHealthCheck = tx.CreationDate
+		b0.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 5 * GB
+			return nil
+		})
 		b1 := allBlobbers.Nodes[1]
-		b1.LastHealthCheck = tx.CreationDate
-		b0.Allocated = 5 * GB
-		b1.Allocated = 10 * GB
+		b1.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 10 * GB
+			return nil
+		})
 
-		nar.Blobbers = append(nar.Blobbers, b0.ID)
+		nar.Blobbers = append(nar.Blobbers, b0.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		nar.Blobbers = append(nar.Blobbers, b1.ID)
+		nar.Blobbers = append(nar.Blobbers, b1.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
@@ -1210,6 +1344,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 	// 10. ok
 	t.Run("ok", func(t *testing.T) {
+		wallet := newClient(1000*x10, balances)
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 		nar.Owner = clientID
@@ -1222,20 +1357,30 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.OwnerPublicKey = pubKey
 		nar.Blobbers = nil // not set
 		nar.Owner = clientID
+
 		var allBlobbers = newTestAllBlobbers()
 		// make the blobbers health
 		b0 := allBlobbers.Nodes[0]
-		b0.LastHealthCheck = tx.CreationDate
-		b1 := allBlobbers.Nodes[1]
-		b1.LastHealthCheck = tx.CreationDate
-		b0.Allocated = 5 * GB
-		b1.Allocated = 10 * GB
-
-		nar.Blobbers = append(nar.Blobbers, b0.ID)
+		b0.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 5 * GB
+			return nil
+		})
 		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		nar.Blobbers = append(nar.Blobbers, b1.ID)
+		require.NoError(t, err)
+		b1 := allBlobbers.Nodes[1]
+		b1.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 10 * GB
+			return nil
+		})
 		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
+
+		nar.Blobbers = append(nar.Blobbers, b0.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
+		nar.Blobbers = append(nar.Blobbers, b1.Id())
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 
 		var (
 			sp1, sp2 = newStakePool(), newStakePool()
@@ -1246,46 +1391,56 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
 		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
 
-		balances.balances[clientID] = 1100 + 4500
+		var tempTxn transaction.Transaction
+		tempTxn.Hash = encryption.Hash("ok")
+		tempTxn.Value = 10000
+		tempTxn.ClientID = wallet.id
+		tempTxn.CreationDate = toSeconds(2 * time.Hour)
 
-		tx.Hash = encryption.Hash("ok")
-		tx.Value = 5000
-		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
+		balances.setTransaction(t, &tempTxn)
+
+		resp, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 
 		// check response
 		var aresp NewAllocationTxnOutput
 		require.NoError(t, aresp.Decode([]byte(resp)))
 
-		assert.Equal(t, tx.Hash, aresp.ID)
+		assert.Equal(t, tempTxn.Hash, aresp.ID)
 		assert.Equal(t, len(aresp.Blobber_ids), 2)
 
-		// expected blobbers after the allocation
-		var sb = newTestAllBlobbers()
-		sb.Nodes[0].LastHealthCheck = tx.CreationDate
-		sb.Nodes[1].LastHealthCheck = tx.CreationDate
-		sb.Nodes[0].Allocated += 10 * GB
-		sb.Nodes[1].Allocated += 10 * GB
+		allBlobbers.Nodes[0].mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tempTxn.CreationDate
+			b.Allocated += 10 * GB
+			return nil
+		})
+		allBlobbers.Nodes[1].mustUpdateBase(func(b *storageNodeBase) error {
+			b.Allocated += 10 * GB
+			return nil
+		})
 
 		// blobbers saved in all blobbers list
 		var ab []*StorageNode
-		loaded0, err := ssc.getBlobber(b0.ID, balances)
-		loaded1, err := ssc.getBlobber(b1.ID, balances)
+		loaded0, err := ssc.getBlobber(b0.Id(), balances)
+		loaded1, err := ssc.getBlobber(b1.Id(), balances)
 		ab = append(ab, loaded0)
 		ab = append(ab, loaded1)
 		require.NoError(t, err)
-		for i, sbn := range sb.Nodes {
-			assert.EqualValues(t, *sbn, *ab[i])
+		for i, sbn := range allBlobbers.Nodes {
+			sbnEntity := sbn.Entity().(*storageNodeV2)
+			abEntitity := ab[i].Entity().(*storageNodeV2)
+
+			assert.Equal(t, *sbnEntity, *abEntitity)
 		}
-		assert.EqualValues(t, sb.Nodes, ab)
+		assert.EqualValues(t, allBlobbers.Nodes, ab)
 		// independent saved blobbers
 		var blob1, blob2 *StorageNode
 		blob1, err = ssc.getBlobber("b1", balances)
 		require.NoError(t, err)
-		assert.EqualValues(t, sb.Nodes[0], blob1)
+		assert.EqualValues(t, allBlobbers.Nodes[0], blob1)
 		blob2, err = ssc.getBlobber("b2", balances)
 		require.NoError(t, err)
-		assert.EqualValues(t, sb.Nodes[1], blob2)
+		assert.EqualValues(t, allBlobbers.Nodes[1], blob2)
 
 		_, err = ssc.getStakePool(spenum.Blobber, "b1", balances)
 		require.NoError(t, err)
@@ -1474,15 +1629,21 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	allBlobbers = newTestAllBlobbers()
 	// make the blobbers health
 	b0 := allBlobbers.Nodes[0]
-	b0.LastHealthCheck = tx.CreationDate
+	b0.mustUpdateBase(func(b *storageNodeBase) error {
+		b.LastHealthCheck = tx.CreationDate
+		b.Allocated = 5 * GB
+		return nil
+	})
 	b1 := allBlobbers.Nodes[1]
-	b1.LastHealthCheck = tx.CreationDate
-	b0.Allocated = 5 * GB
-	b1.Allocated = 10 * GB
+	b1.mustUpdateBase(func(b *storageNodeBase) error {
+		b.LastHealthCheck = tx.CreationDate
+		b.Allocated = 10 * GB
+		return nil
+	})
 
-	nar.Blobbers = append(nar.Blobbers, b0.ID)
+	nar.Blobbers = append(nar.Blobbers, b0.Id())
 	_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-	nar.Blobbers = append(nar.Blobbers, b1.ID)
+	nar.Blobbers = append(nar.Blobbers, b1.Id())
 	_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 	require.NoError(t, err)
 
@@ -1494,6 +1655,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
 	nar.Blobbers = []string{"b1", "b2"}
+	nar.BlobberAuthTickets = []string{"", ""}
 
 	var (
 		sp1, sp2 = newStakePool(), newStakePool()
@@ -1727,6 +1889,16 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 		ba.LatestFinalizedChallCreatedAt = alloc.Expiration / 2
 		ba.ChallengePoolIntegralValue = 0
+
+		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
+		require.NoError(t, err)
+
+		bb := blobber.mustBase()
+
+		bb.SavedData = int64(mockBlobberCapacity) / 2
+
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		require.NoError(t, err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
@@ -1744,8 +1916,11 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		var blob *StorageNode
 		blob, err = ssc.getBlobber(b.id, balances)
 		require.NoError(t, err)
-		blob.Terms.WritePrice = currency.Coin(5 * x10)
-		blob.Terms.ReadPrice = currency.Coin(0.8 * x10)
+		blob.mustUpdateBase(func(b *storageNodeBase) error {
+			b.Terms.WritePrice = currency.Coin(5 * x10)
+			b.Terms.ReadPrice = currency.Coin(0.8 * x10)
+			return nil
+		})
 		_, err = updateBlobber(t, blob, 0, tp, ssc, balances)
 		require.NoError(t, err)
 	}
@@ -2114,6 +2289,16 @@ func Test_finalize_allocation(t *testing.T) {
 
 		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
+
+		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
+		require.NoError(t, err)
+
+		blobber.mustUpdateBase(func(b *storageNodeBase) error {
+			b.SavedData = int64(mockBlobberCapacity) / 2
+			return nil
+		})
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		require.NoError(t, err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
@@ -2288,6 +2473,16 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
+
+		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
+		require.NoError(t, err)
+
+		blobber.mustUpdateBase(func(b *storageNodeBase) error {
+			b.SavedData = int64(mockBlobberCapacity) / 2
+			return nil
+		})
+		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+		require.NoError(t, err)
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), alloc)
@@ -2416,4 +2611,16 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 	_, err = ssc.getAllocation(allocID, balances)
 	require.Error(t, util.ErrValueNotPresent, err)
+}
+
+func TestBlobberVerifyAuthTicket(t *testing.T) {
+	balances := newTestBalances(t, false)
+	wallet := newClient(1000*x10, balances)
+	b0Wallet := newClient(1000*x10, balances)
+	blobber0AuthTicket, err := b0Wallet.scheme.Sign(wallet.id)
+	require.NoError(t, err)
+
+	ok, err := verifyBlobberAuthTicket(balances, wallet.id, blobber0AuthTicket, b0Wallet.pk)
+	require.NoError(t, err)
+	require.True(t, ok)
 }
