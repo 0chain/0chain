@@ -84,15 +84,6 @@ func (wm *WriteMarker) VerifySignature(
 	return true
 }
 
-// func (wm *WriteMarker) GetHashData() string {
-// 	hashData := fmt.Sprintf(
-// 		"%s:%s:%s:%s:%s:%s:%d:%d",
-// 		wm.AllocationRoot, wm.PreviousAllocationRoot,
-// 		wm.FileMetaRoot, wm.AllocationID,
-// 		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
-// 	return hashData
-// }
-
 func (wm *WriteMarker) Verify(allocRoot, prevRoot string) bool {
 	wmb := wm.mustBase()
 	if wmb.AllocationRoot != allocRoot || wmb.PreviousAllocationRoot != prevRoot {
@@ -201,9 +192,18 @@ func (wm2 *writeMarkerV2) ApplyBaseChanges(wmb writeMarkerBase) {
 }
 
 func (wm2 *writeMarkerV2) GetHashData() string {
-	hashData := fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%d:%d:%d",
-		wm2.AllocationRoot, wm2.PreviousAllocationRoot,
-		wm2.FileMetaRoot, wm2.ChainHash, wm2.AllocationID, wm2.BlobberID,
-		wm2.ClientID, wm2.Size, wm2.ChainSize, wm2.Timestamp)
+	var hashData string
+	if wm2.ChainHash != "" {
+		hashData = fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s:%d:%d:%d",
+			wm2.AllocationRoot, wm2.PreviousAllocationRoot,
+			wm2.FileMetaRoot, wm2.ChainHash, wm2.AllocationID, wm2.BlobberID,
+			wm2.ClientID, wm2.Size, wm2.ChainSize, wm2.Timestamp)
+	} else {
+		hashData = fmt.Sprintf(
+			"%s:%s:%s:%s:%s:%s:%d:%d",
+			wm2.AllocationRoot, wm2.PreviousAllocationRoot,
+			wm2.FileMetaRoot, wm2.AllocationID,
+			wm2.BlobberID, wm2.ClientID, wm2.Size, wm2.Timestamp)
+	}
 	return hashData
 }
