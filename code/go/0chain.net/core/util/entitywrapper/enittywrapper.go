@@ -35,6 +35,7 @@ type MsgEncodeDecoderSize interface {
 // EntityI is the interface for entity.
 type EntityI interface {
 	MsgEncodeDecoderSize
+	InitVersion()
 	GetVersion() string
 	GetBase() EntityBaseI
 	MigrateFrom(prior EntityI) error
@@ -117,6 +118,7 @@ func (w *Wrapper) MarshalMsg(b []byte) ([]byte, error) {
 	if w.v == nil {
 		return nil, errors.New("entity not set")
 	}
+	w.v.InitVersion()
 	return w.v.MarshalMsg(nil)
 }
 
@@ -128,6 +130,7 @@ func (w *Wrapper) UnmarshalMsgType(b []byte, typeName string) ([]byte, error) {
 		return nil, err
 	}
 
+	fmt.Println("unmarshal version:", ev.Version)
 	if ev.Version == "" {
 		ev.Version = DefaultOriginVersion
 	}
@@ -258,6 +261,10 @@ func (f *foo) GetVersion() string {
 	return DefaultOriginVersion
 }
 
+func (f *foo) InitVersion() {
+
+}
+
 func (f *foo) TypeName() string {
 	return "Foo"
 }
@@ -294,6 +301,10 @@ func (f *fooV2) GetVersion() string {
 	return "v2"
 }
 
+func (f *fooV2) InitVersion() {
+	f.Version = "v2"
+}
+
 func (f *fooV2) TypeName() string {
 	return "Foo"
 }
@@ -321,6 +332,10 @@ type fooV3 struct {
 
 func (f *fooV3) GetVersion() string {
 	return "v3"
+}
+
+func (f *fooV3) InitVersion() {
+	f.Version = "v3"
 }
 
 func (f *fooV3) TypeName() string {

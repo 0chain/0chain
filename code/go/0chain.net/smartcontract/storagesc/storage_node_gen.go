@@ -184,8 +184,8 @@ func (z *storageNodeV2) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Provider")
 		return
 	}
-	// string "Version"
-	o = append(o, 0xa7, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e)
+	// string "version"
+	o = append(o, 0xa7, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendString(o, z.Version)
 	// string "BaseURL"
 	o = append(o, 0xa7, 0x42, 0x61, 0x73, 0x65, 0x55, 0x52, 0x4c)
@@ -266,7 +266,7 @@ func (z *storageNodeV2) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Provider")
 				return
 			}
-		case "Version":
+		case "version":
 			z.Version, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "Version")
