@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/dbs/queueProvider"
+
 	"0chain.net/chaincore/state"
 	"golang.org/x/net/context"
 
@@ -46,17 +48,24 @@ func (edb *EventDb) ProcessEvents(
 	block string,
 	blockSize int,
 	opts ...ProcessEventsOptionsFunc,
-) (*EventDb, error) {
+) (*EventDb, uint32, error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	latestGlobalCounter := edb.GetEventsCounter()
+	localCounter := uint32(0)
+	for i := range es {
+		localCounter++
+		es[i].SequenceNumber = int64(latestGlobalCounter) + int64(localCounter)
 	}
 
 	pdu := time.Since(ts)
 	tx, err := edb.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var doOnce sync.Once
@@ -89,9 +98,9 @@ func (edb *EventDb) ProcessEvents(
 		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
-		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+		return nil, 0, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
 	select {
@@ -109,10 +118,10 @@ func (edb *EventDb) ProcessEvents(
 		if !commit {
 			err := txRollback()
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
-			return nil, errors.New("process events failed")
+			return nil, 0, err
 		}
 
 		var opt ProcessEventsOptions
@@ -121,10 +130,10 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if opt.CommitNow {
-			return nil, tx.Commit()
+			return nil, localCounter, tx.Commit()
 		}
 
-		return tx, nil
+		return tx, localCounter, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -136,9 +145,9 @@ func (edb *EventDb) ProcessEvents(
 		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
-		return nil, ctx.Err()
+		return nil, 0, ctx.Err()
 	}
 }
 
@@ -489,7 +498,8 @@ func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, erro
 
 	g, err := tx.GetGlobal()
 	if err != nil {
-		logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
+		logging.Logger.Warn(fmt.Sprintf("can't load snapshot for round: %d, err: %v", es.round, err))
+		return tx.updateHistoricData(es, &Snapshot{Round: es.round})
 	}
 	gs = &g
 
@@ -577,6 +587,7 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 	}
 
 	s.Round = round
+
 	err = edb.UpdateSnapshotFromEvents(s, events)
 	if err != nil {
 		logging.Logger.Error("error updating snapshot", zap.Error(err))
@@ -1078,4 +1089,21 @@ func setEventData[T any](e *Event, data interface{}) error {
 	}
 
 	return ErrInvalidEventData
+}
+
+func (edb *EventDb) kafkaProv() *queueProvider.KafkaProvider {
+	kafka := queueProvider.NewKafkaProvider(
+		edb.dbConfig.KafkaHost,
+		edb.dbConfig.KafkaUsername,
+		edb.dbConfig.KafkaPassword,
+		edb.dbConfig.KafkaWriteTimeout)
+	return kafka
+}
+
+func (edb *EventDb) GetKafkaProv() queueProvider.KafkaProviderI {
+	if edb.kafka == nil {
+		kafka := edb.kafkaProv()
+		edb.kafka = kafka
+	}
+	return edb.kafka
 }

@@ -10,7 +10,9 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"0chain.net/smartcontract/dbs/queueProvider"
 	"0chain.net/smartcontract/dbs/sqlite"
+	"go.uber.org/atomic"
 )
 
 func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
@@ -34,12 +36,27 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 	if err != nil {
 		return nil, err
 	}
-
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
 		eventsChannel: make(chan BlockEvents, 1),
+		eventsCounter: *atomic.NewUint64(0),
 		settings:      settings,
+	}
+
+	if config.KafkaEnabled {
+		eventDb.kafka = queueProvider.NewKafkaProvider(
+			config.KafkaHost,
+			config.KafkaUsername,
+			config.KafkaPassword,
+			config.KafkaWriteTimeout)
+	}
+
+	// Load last sequence number. Useful when the sharder is restarted.
+	var maxSequenceNumber uint64
+	err = eventDb.Get().Model(&Event{}).Select("max(sequence_number)").Scan(&maxSequenceNumber).Error
+	if err == nil && maxSequenceNumber > 0 {
+		eventDb.eventsCounter.Store(maxSequenceNumber)
 	}
 
 	return eventDb, nil
@@ -56,6 +73,7 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      settings,
 	}
+
 	go eventDb.addEventsWorker(common.GetRootContext())
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
@@ -68,6 +86,8 @@ type EventDb struct {
 	dbConfig      config.DbAccess   // depends on the sharder, change on restart
 	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
 	eventsChannel chan BlockEvents
+	eventsCounter atomic.Uint64
+	kafka         queueProvider.KafkaProviderI
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -83,6 +103,12 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 		},
 		dbConfig: edb.dbConfig,
 		settings: edb.settings,
+		kafka: queueProvider.NewKafkaProvider(
+			edb.dbConfig.KafkaHost,
+			edb.dbConfig.KafkaUsername,
+			edb.dbConfig.KafkaPassword,
+			edb.dbConfig.KafkaWriteTimeout,
+		),
 	}
 	return &edbTx, nil
 }
@@ -103,16 +129,22 @@ func (edb *EventDb) Rollback() error {
 
 func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, error) {
 	cloneConfig := config.DbAccess{
-		Enabled:         true,
-		Name:            dbName,
-		User:            edb.dbConfig.User,
-		Password:        edb.dbConfig.Password,
-		Host:            edb.dbConfig.Host,
-		Port:            edb.dbConfig.Port,
-		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
-		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
-		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
-		Slowtablespace: edb.dbConfig.Slowtablespace,
+		Enabled:           true,
+		Name:              dbName,
+		User:              edb.dbConfig.User,
+		Password:          edb.dbConfig.Password,
+		Host:              edb.dbConfig.Host,
+		Port:              edb.dbConfig.Port,
+		MaxIdleConns:      edb.dbConfig.MaxIdleConns,
+		MaxOpenConns:      edb.dbConfig.MaxOpenConns,
+		ConnMaxLifetime:   edb.dbConfig.ConnMaxLifetime,
+		Slowtablespace:    edb.dbConfig.Slowtablespace,
+		KafkaEnabled:      edb.dbConfig.KafkaEnabled,
+		KafkaHost:         edb.dbConfig.KafkaHost,
+		KafkaUsername:     edb.dbConfig.KafkaUsername,
+		KafkaPassword:     edb.dbConfig.KafkaPassword,
+		KafkaTopic:        edb.dbConfig.KafkaTopic,
+		KafkaWriteTimeout: edb.dbConfig.KafkaWriteTimeout,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
@@ -120,12 +152,19 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		return nil, err
 	}
 
-	return &EventDb{
+	newEdb := &EventDb{
 		Store:         clone,
 		dbConfig:      cloneConfig,
 		eventsChannel: nil,
 		settings:      edb.settings,
-	}, nil
+		kafka: queueProvider.NewKafkaProvider(
+			cloneConfig.KafkaHost,
+			cloneConfig.KafkaUsername,
+			cloneConfig.KafkaPassword,
+			cloneConfig.KafkaWriteTimeout),
+	}
+
+	return newEdb, nil
 }
 
 func (edb *EventDb) UpdateSettings(updates map[string]string) error {
@@ -205,4 +244,16 @@ func (edb *EventDb) AutoMigrate() error {
 
 func (edb *EventDb) Config() config.DbAccess {
 	return edb.dbConfig
+}
+
+func (edb *EventDb) GetEventsCounter() uint64 {
+	return edb.eventsCounter.Load()
+}
+
+func (edb *EventDb) SetEventsCounter(value uint64) {
+	edb.eventsCounter.Store(value)
+}
+
+func (edb *EventDb) AddToEventsCounter(value uint64) uint64 {
+	return edb.eventsCounter.Add(value)
 }

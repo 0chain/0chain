@@ -20,6 +20,7 @@ import (
 	"0chain.net/core/config"
 	"0chain.net/rest"
 	"0chain.net/sharder/blockstore"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -261,6 +262,7 @@ func main() {
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
+
 }
 
 func initScheme(signatureScheme encryption.SignatureScheme, reader io.Reader) {
