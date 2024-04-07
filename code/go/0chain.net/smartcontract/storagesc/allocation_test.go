@@ -1344,6 +1344,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 	// 10. ok
 	t.Run("ok", func(t *testing.T) {
+		wallet := newClient(1000*x10, balances)
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 		nar.Owner = clientID
@@ -1356,6 +1357,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.OwnerPublicKey = pubKey
 		nar.Blobbers = nil // not set
 		nar.Owner = clientID
+
 		var allBlobbers = newTestAllBlobbers()
 		// make the blobbers health
 		b0 := allBlobbers.Nodes[0]
@@ -1389,22 +1391,26 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
 		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
 
-		balances.balances[clientID] = 1100 + 4500
+		var tempTxn transaction.Transaction
+		tempTxn.Hash = encryption.Hash("ok")
+		tempTxn.Value = 10000
+		tempTxn.ClientID = wallet.id
+		tempTxn.CreationDate = toSeconds(2 * time.Hour)
 
-		tx.Hash = encryption.Hash("ok")
-		tx.Value = 5000
-		resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances, nil)
+		balances.setTransaction(t, &tempTxn)
+
+		resp, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
 
 		// check response
 		var aresp NewAllocationTxnOutput
 		require.NoError(t, aresp.Decode([]byte(resp)))
 
-		assert.Equal(t, tx.Hash, aresp.ID)
+		assert.Equal(t, tempTxn.Hash, aresp.ID)
 		assert.Equal(t, len(aresp.Blobber_ids), 2)
 
 		allBlobbers.Nodes[0].mustUpdateBase(func(b *storageNodeBase) error {
-			b.LastHealthCheck = tx.CreationDate
+			b.LastHealthCheck = tempTxn.CreationDate
 			b.Allocated += 10 * GB
 			return nil
 		})
