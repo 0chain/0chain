@@ -11,6 +11,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"go.uber.org/zap"
 
 	"0chain.net/core/config"
@@ -134,9 +135,10 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	bk := &block.Block{}
 	bk.Round = 1100
+	mpt := util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty())
 	ctx.StateContext = *cstate.NewStateContext(
 		bk,
-		&util.MerklePatriciaTrie{},
+		mpt,
 		nil,
 		nil,
 		nil,
@@ -275,9 +277,10 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	bk := &block.Block{}
 	bk.Round = 1100
+	mpt := util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty())
 	ctx.StateContext = *cstate.NewStateContext(
 		bk,
-		&util.MerklePatriciaTrie{},
+		mpt,
 		nil,
 		nil,
 		nil,
@@ -705,7 +708,7 @@ func setupMocksFinishAllocation(
 
 	ctx.StateContext = *cstate.NewStateContext(
 		block,
-		&util.MerklePatriciaTrie{},
+		util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty()),
 		txn,
 		nil,
 		nil,
@@ -979,7 +982,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	ctx.StateContext = *cstate.NewStateContext(
 		nil,
-		&util.MerklePatriciaTrie{},
+		util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty()),
 		txn,
 		nil,
 		nil,
