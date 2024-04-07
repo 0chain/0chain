@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1512,6 +1511,7 @@ func replaceBlobber(
 	return blobbers, nil
 }
 func printEntities(entities ...interface{}) {
+	fmt.Println("Printing entities:")
 	for _, entity := range entities {
 		jsonEntity, err := json.Marshal(entity)
 		if err != nil {
@@ -1570,8 +1570,10 @@ func (sa *StorageAllocation) changeBlobbers(
 
 				if b.IsRestricted != nil && *b.IsRestricted {
 					success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
-					if err != nil || !success {
+					if err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+					} else if !success {
+						return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
 					}
 				}
 
@@ -1697,8 +1699,10 @@ func (sa *StorageAllocation) validateEachBlobber(
 			sn.SetEntity(snr)
 			if *snr.IsRestricted {
 				success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
-				if !success || err != nil {
-					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err)
+				if err != nil {
+					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+				} else if !success {
+					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
 				}
 
 				logging.Logger.Info("blobber auth ticket verified",
@@ -1736,7 +1740,7 @@ func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, authTicket
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(authTicket, hex.EncodeToString([]byte(clientID)))
+	return signatureScheme.Verify(authTicket, clientID)
 }
 
 // Until returns allocation expiration.
