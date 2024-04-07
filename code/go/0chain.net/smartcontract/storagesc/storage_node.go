@@ -160,6 +160,10 @@ func (sn1 *storageNodeV1) GetVersion() string {
 	return entitywrapper.DefaultOriginVersion
 }
 
+func (sn1 *storageNodeV1) InitVersion() {
+	// do nothing cause it's original version of storage node
+}
+
 func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
 	b := storageNodeBase(*sn1)
 	return &b
@@ -185,7 +189,7 @@ func (sb *storageNodeBase) CommitChangesTo(e entitywrapper.EntityI) {
 // StorageNode represents Blobber configurations.
 type storageNodeV2 struct {
 	provider.Provider
-	Version                 string  `json:"version"`
+	Version                 string  `json:"version" msg:"version"`
 	BaseURL                 string  `json:"url"`
 	Terms                   Terms   `json:"terms"`     // terms
 	Capacity                int64   `json:"capacity"`  // total blobber capacity
@@ -201,8 +205,14 @@ type storageNodeV2 struct {
 	IsRestricted      *bool              `json:"is_restricted,omitempty"`
 }
 
+const storageNodeV2Version = "v2"
+
 func (sn2 *storageNodeV2) GetVersion() string {
-	return "v2"
+	return storageNodeV2Version
+}
+
+func (sn2 *storageNodeV2) InitVersion() {
+	sn2.Version = storageNodeV2Version
 }
 
 func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {

@@ -96,7 +96,9 @@ func getValidatorURL(id string) string {
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn := &StorageNode{}
-	sne := &storageNodeV2{}
+	sne := &storageNodeV2{
+		IsRestricted: new(bool),
+	}
 	sne.ID = c.id
 	sne.BaseURL = getBlobberURL(c.id)
 	sne.Terms = c.terms

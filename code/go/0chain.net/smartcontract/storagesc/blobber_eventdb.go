@@ -77,7 +77,9 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	if v2, ok := sn.Entity().(*storageNodeV2); ok {
-		data.IsRestricted = *v2.IsRestricted
+		if v2.IsRestricted != nil {
+			data.IsRestricted = *v2.IsRestricted
+		}
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, b.ID, data)
