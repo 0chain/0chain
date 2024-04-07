@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/statecache"
 	"math"
 	"strings"
 	"time"
@@ -2047,6 +2048,62 @@ func (sa *StorageAllocation) removeOldChallenges(
 	}
 
 	return nil
+}
+
+// Clone implements statecache.Value interface
+func (sa *StorageAllocation) Clone() statecache.Value {
+	// clone := *sa
+	// clone.Stats = &StorageAllocationStats{}
+	// *clone.Stats = *sa.Stats
+
+	// clone.PreferredBlobbers = make([]string, len(sa.PreferredBlobbers))
+	// copy(clone.PreferredBlobbers, sa.PreferredBlobbers)
+
+	// clone.BlobberAllocs = make([]*BlobberAllocation, len(sa.BlobberAllocs))
+	// clone.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(sa.BlobberAllocsMap))
+	// for i, sba := range sa.BlobberAllocs {
+	// 	ba := &BlobberAllocation{}
+	// 	*ba = *sba
+	// 	if sba.LastWriteMarker != nil {
+	// 		ba.LastWriteMarker = &WriteMarker{}
+	// 		*ba.LastWriteMarker = *sba.LastWriteMarker
+	// 	}
+
+	// 	if sba.Stats != nil {
+	// 		ba.Stats = &StorageAllocationStats{}
+	// 		*ba.Stats = *sba.Stats
+	// 	}
+
+	// 	clone.BlobberAllocs[i] = ba
+	// 	clone.BlobberAllocsMap[ba.BlobberID] = ba
+	// }
+
+	// return &clone
+	v, err := sa.MarshalMsg(nil)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal StorageAllocation: %v", err))
+	}
+
+	na := &StorageAllocation{}
+	_, err = na.UnmarshalMsg(v)
+	if err != nil {
+		panic(fmt.Sprintf("failed to unmarshal StorageAllocation: %v", err))
+	}
+
+	return na
+}
+
+// CopyFrom implements statecache.Value interface
+func (sa *StorageAllocation) CopyFrom(v interface{}) bool {
+	sav, ok := v.(*StorageAllocation)
+	if !ok {
+		return false
+	}
+
+	clone := sav.Clone().(*StorageAllocation)
+
+	*sa = *clone
+	return true
 }
 
 type BlobberCloseConnection struct {

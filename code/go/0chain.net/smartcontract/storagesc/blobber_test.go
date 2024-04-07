@@ -82,13 +82,13 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 		return nil
 	})
 
-	b.mustUpdateBase(func(b *storageNodeBase) error {
+	b2.mustUpdateBase(func(b *storageNodeBase) error {
 		b.Capacity = b2.mustBase().Capacity * 2
 		return nil
 	})
 	tp += 100
 	_, err = updateBlobber(t, b2, 0, tp, ssc, balances)
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestAddBlobber(t *testing.T) {
