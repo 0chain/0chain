@@ -104,7 +104,7 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
-    dbConfig: edb.dbConfig,
+		dbConfig: edb.dbConfig,
 		settings: edb.settings,
 		kafka: queueProvider.NewKafkaProvider(
 			edb.dbConfig.KafkaHost,
@@ -112,8 +112,6 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			edb.dbConfig.KafkaPassword,
 			edb.dbConfig.KafkaWriteTimeout,
 		),
-		dbConfig:      edb.dbConfig,
-		settings:      edb.settings,
 		eventsChannel: edb.eventsChannel,
 		partitionChan: edb.partitionChan,
 	}
