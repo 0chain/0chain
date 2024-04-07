@@ -13,6 +13,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/state"
@@ -352,6 +353,26 @@ func (sn *StorageNode) Decode(input []byte) error {
 		return err
 	}
 	return nil
+}
+
+// Clone implements the statecache.Value interface to make it cacheable
+func (sn *StorageNode) Clone() statecache.Value {
+	clone := &StorageNode{}
+	*clone = *sn
+
+	return clone
+}
+
+// CopyFrom implements the statecache.Value interface to make it cacheable
+func (sn *StorageNode) CopyFrom(v interface{}) bool {
+	vs, ok := v.(*StorageNode)
+	if !ok {
+		return false
+	}
+
+	clone := vs.Clone().(*StorageNode)
+	*sn = *clone
+	return true
 }
 
 type StorageNodes struct {
@@ -2002,6 +2023,62 @@ func (sa *StorageAllocation) removeOldChallenges(
 	}
 
 	return nil
+}
+
+// Clone implements statecache.Value interface
+func (sa *StorageAllocation) Clone() statecache.Value {
+	// clone := *sa
+	// clone.Stats = &StorageAllocationStats{}
+	// *clone.Stats = *sa.Stats
+
+	// clone.PreferredBlobbers = make([]string, len(sa.PreferredBlobbers))
+	// copy(clone.PreferredBlobbers, sa.PreferredBlobbers)
+
+	// clone.BlobberAllocs = make([]*BlobberAllocation, len(sa.BlobberAllocs))
+	// clone.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(sa.BlobberAllocsMap))
+	// for i, sba := range sa.BlobberAllocs {
+	// 	ba := &BlobberAllocation{}
+	// 	*ba = *sba
+	// 	if sba.LastWriteMarker != nil {
+	// 		ba.LastWriteMarker = &WriteMarker{}
+	// 		*ba.LastWriteMarker = *sba.LastWriteMarker
+	// 	}
+
+	// 	if sba.Stats != nil {
+	// 		ba.Stats = &StorageAllocationStats{}
+	// 		*ba.Stats = *sba.Stats
+	// 	}
+
+	// 	clone.BlobberAllocs[i] = ba
+	// 	clone.BlobberAllocsMap[ba.BlobberID] = ba
+	// }
+
+	// return &clone
+	v, err := sa.MarshalMsg(nil)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal StorageAllocation: %v", err))
+	}
+
+	na := &StorageAllocation{}
+	_, err = na.UnmarshalMsg(v)
+	if err != nil {
+		panic(fmt.Sprintf("failed to unmarshal StorageAllocation: %v", err))
+	}
+
+	return na
+}
+
+// CopyFrom implements statecache.Value interface
+func (sa *StorageAllocation) CopyFrom(v interface{}) bool {
+	sav, ok := v.(*StorageAllocation)
+	if !ok {
+		return false
+	}
+
+	clone := sav.Clone().(*StorageAllocation)
+
+	*sa = *clone
+	return true
 }
 
 type BlobberCloseConnection struct {

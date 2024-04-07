@@ -16,6 +16,8 @@ import (
 
 	"github.com/0chain/common/core/currency"
 
+	"github.com/0chain/common/core/statecache"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -109,6 +111,7 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetMissingNodeKeys() []util.Key
+	Cache() *statecache.TransactionCache
 }
 
 // StateContext - a context object used to manipulate global state
@@ -162,6 +165,7 @@ func NewStateContext(
 ) (
 	balances *StateContext,
 ) {
+
 	return &StateContext{
 		block:                         b,
 		state:                         s,
@@ -378,15 +382,62 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	return sc.getNodeValue(key, v)
+	// // // get from MPT
+	// if err := sc.getNodeValue(key, v); err != nil {
+	// 	// fmt.Println("get node value error", err)
+	// 	return err
+	// }
+
+	// return nil
+
+	cv, ok := sc.Cache().Get(key)
+	if ok {
+		ccv, ok := statecache.Copyable(v)
+		if !ok {
+			panic("state context cache - get trie node not copyable")
+		}
+
+		if !ccv.CopyFrom(cv) {
+			panic("state context cache - get trie node copy from failed")
+		}
+		return nil
+	}
+
+	// get from MPT
+	if err := sc.getNodeValue(key, v); err != nil {
+		// fmt.Println("get node value error", err)
+		return err
+	}
+
+	// cache it if it's cacheable
+	if cv, ok := statecache.Cacheable(v); ok {
+		sc.Cache().Set(key, cv)
+	}
+	return nil
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
-	return sc.setNodeValue(key, node)
+	k, err := sc.setNodeValue(key, node)
+	if err != nil {
+		return "", err
+	}
+
+	vn, ok := statecache.Cacheable(node)
+	if ok {
+		sc.Cache().Set(key, vn)
+	}
+
+	return k, nil
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
-	return sc.deleteNode(key)
+	k, err := sc.deleteNode(key)
+	if err != nil {
+		return "", err
+	}
+
+	sc.Cache().Remove(key)
+	return k, nil
 }
 
 // SetStateContext - set the state context
@@ -424,6 +475,10 @@ func (sc *StateContext) deleteNode(key datastore.Key) (datastore.Key, error) {
 // GetMissingNodeKeys returns missing node keys
 func (sc *StateContext) GetMissingNodeKeys() []util.Key {
 	return sc.state.GetMissingNodeKeys()
+}
+
+func (sc *StateContext) Cache() *statecache.TransactionCache {
+	return sc.state.Cache()
 }
 
 // ErrInvalidState checks if the error is an invalid state error
