@@ -294,7 +294,8 @@ func testCommitBlobberRead(
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 	require.NoError(t, err)
 
-	blobber := &StorageNode{
+	blobber := &StorageNode{}
+	blobber.SetEntity(&storageNodeV2{
 		Provider: provider.Provider{
 			ID:           blobberId,
 			ProviderType: spenum.Blobber,
@@ -303,7 +304,7 @@ func testCommitBlobberRead(
 			ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 			WritePrice: zcnToBalance(blobberYaml.writePrice),
 		},
-	}
+	})
 
 	_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 

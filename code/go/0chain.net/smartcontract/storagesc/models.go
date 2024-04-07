@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/statecache"
 	"math"
 	"strings"
 	"time"
@@ -13,7 +14,6 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/state"
@@ -32,9 +32,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util/entitywrapper"
 )
 
-//msgp:ignore StorageAllocation AllocationChallenges
+//msgp:ignore StorageNode StorageAllocation AllocationChallenges
 //go:generate msgp -io=false -tests=false -unexported -v
 
 var (
@@ -297,82 +298,8 @@ type Info struct {
 	Description string `json:"description"`
 }
 
-// StorageNode represents Blobber configurations.
-type StorageNode struct {
-	provider.Provider
-	BaseURL                 string  `json:"url"`
-	Terms                   Terms   `json:"terms"`     // terms
-	Capacity                int64   `json:"capacity"`  // total blobber capacity
-	Allocated               int64   `json:"allocated"` // allocated capacity
-	PublicKey               string  `json:"-"`
-	SavedData               int64   `json:"saved_data"`
-	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
-	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
-	RewardRound       RewardRound        `json:"reward_round"`
-	NotAvailable      bool               `json:"not_available"`
-}
-
 func GetUrlKey(baseUrl, globalKey string) datastore.Key {
 	return datastore.Key(globalKey + baseUrl)
-}
-
-// validate the blobber configurations
-func (sn *StorageNode) validate(conf *Config) (err error) {
-	if err = sn.Terms.validate(conf); err != nil {
-		return
-	}
-	if sn.Capacity <= conf.MinBlobberCapacity {
-		return errors.New("insufficient blobber capacity")
-	}
-
-	if err := validateBaseUrl(&sn.BaseURL); err != nil {
-		return err
-	}
-
-	return
-}
-
-func (sn *StorageNode) GetKey() datastore.Key {
-	return provider.GetKey(sn.ID)
-}
-
-func (sn *StorageNode) GetUrlKey(globalKey string) datastore.Key {
-	return GetUrlKey(sn.BaseURL, globalKey)
-}
-
-func (sn *StorageNode) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
-}
-
-func (sn *StorageNode) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Clone implements the statecache.Value interface to make it cacheable
-func (sn *StorageNode) Clone() statecache.Value {
-	clone := &StorageNode{}
-	*clone = *sn
-
-	return clone
-}
-
-// CopyFrom implements the statecache.Value interface to make it cacheable
-func (sn *StorageNode) CopyFrom(v interface{}) bool {
-	vs, ok := v.(*StorageNode)
-	if !ok {
-		return false
-	}
-
-	clone := vs.Clone().(*StorageNode)
-	*sn = *clone
-	return true
 }
 
 type StorageNodes struct {
@@ -507,7 +434,7 @@ type BlobberAllocation struct {
 func newBlobberAllocation(
 	size int64,
 	allocation *StorageAllocation,
-	blobber *StorageNode,
+	blobber *storageNodeBase,
 	conf *Config,
 	date common.Timestamp,
 ) *BlobberAllocation {
@@ -524,7 +451,7 @@ func newBlobberAllocation(
 	return ba
 }
 
-func setCappedPrices(ba *BlobberAllocation, blobber *StorageNode, conf *Config) {
+func setCappedPrices(ba *BlobberAllocation, blobber *storageNodeBase, conf *Config) {
 	//TODO check the maximum price of the network and choose minimum
 	ba.Terms = blobber.Terms
 	if blobber.Terms.WritePrice > conf.MaxWritePrice {
@@ -1265,44 +1192,45 @@ func (sa *StorageAllocation) isActive(
 	conf *Config,
 	now common.Timestamp,
 ) error {
-	active, reason := blobber.Provider.IsActive(now, conf.HealthCheckPeriod)
+	bb := blobber.mustBase()
+	active, reason := bb.Provider.IsActive(now, conf.HealthCheckPeriod)
 	if !active {
-		return fmt.Errorf("blobber %s is not active, %s", blobber.ID, reason)
+		return fmt.Errorf("blobber %s is not active, %s", bb.ID, reason)
 	}
 
-	if blobber.NotAvailable {
-		return fmt.Errorf("blobber %s is not currently available for new allocations", blobber.ID)
+	if bb.NotAvailable {
+		return fmt.Errorf("blobber %s is not currently available for new allocations", bb.ID)
 	}
 
 	// filter by read price
-	if !sa.ReadPriceRange.isMatch(blobber.Terms.ReadPrice) {
+	if !sa.ReadPriceRange.isMatch(bb.Terms.ReadPrice) {
 		return fmt.Errorf("read price range %v does not match blobber %s read price %v",
-			sa.ReadPriceRange, blobber.ID, blobber.Terms.ReadPrice)
+			sa.ReadPriceRange, bb.ID, bb.Terms.ReadPrice)
 	}
 	// filter by write price
-	if !sa.WritePriceRange.isMatch(blobber.Terms.WritePrice) {
+	if !sa.WritePriceRange.isMatch(bb.Terms.WritePrice) {
 		return fmt.Errorf("write price range %v does not match blobber %s write price %v",
-			sa.WritePriceRange, blobber.ID, blobber.Terms.WritePrice)
+			sa.WritePriceRange, bb.ID, bb.Terms.WritePrice)
 	}
 
 	blobberSize := sa.bSize()
 	// filter by blobber's capacity left
-	if blobber.Capacity-blobber.Allocated < blobberSize {
+	if bb.Capacity-bb.Allocated < blobberSize {
 		return fmt.Errorf("blobber %s free capacity %v insufficient, wanted %v",
-			blobber.ID, blobber.Capacity-blobber.Allocated, blobberSize)
-	} else if stakedCapacity-blobber.Allocated < blobberSize {
+			bb.ID, bb.Capacity-bb.Allocated, blobberSize)
+	} else if stakedCapacity-bb.Allocated < blobberSize {
 		return fmt.Errorf("blobber %s free staked capacity %v insufficient, wanted %v",
-			blobber.ID, stakedCapacity-blobber.Allocated, blobberSize)
+			bb.ID, stakedCapacity-bb.Allocated, blobberSize)
 	}
 
-	unallocCapacity, err := unallocatedCapacity(blobber.Terms.WritePrice, totalStakePoolBalance, spOffersTotal)
+	unallocCapacity, err := unallocatedCapacity(bb.Terms.WritePrice, totalStakePoolBalance, spOffersTotal)
 	if err != nil {
 		return fmt.Errorf("failed to get unallocated capacity: %v", err)
 	}
 
-	if blobber.Terms.WritePrice > 0 && unallocCapacity < blobberSize {
+	if bb.Terms.WritePrice > 0 && unallocCapacity < blobberSize {
 		return fmt.Errorf("blobber %v staked capacity %v is insufficient, wanted %v",
-			blobber.ID, unallocCapacity, blobberSize)
+			bb.ID, unallocCapacity, blobberSize)
 	}
 
 	return nil
@@ -1442,7 +1370,9 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 						return
 					}
 
-					if blobber.IsKilled() || blobber.IsShutDown() {
+					bb := blobber.mustBase()
+
+					if bb.IsKilled() || bb.IsShutDown() {
 						blobberIsKilled = true
 
 						var cp *challengePool
@@ -1516,8 +1446,12 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"can't get blobber "+d.BlobberID+": "+err.Error())
 			}
 
-			blobber.SavedData += -d.Stats.UsedSize
-			blobber.Allocated += -d.Size
+			blobber.mustUpdateBase(func(b *storageNodeBase) error {
+				b.SavedData += -d.Stats.UsedSize
+				b.Allocated += -d.Size
+				return nil
+			})
+
 			// Saving removed blobber to mpt here
 			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
 			if err != nil {
@@ -1560,7 +1494,8 @@ func replaceBlobber(
 	var removedBlobber *StorageNode
 	var found bool
 	for i, d := range blobbers {
-		if d.ID == blobberID {
+		dd := d.mustBase()
+		if dd.ID == blobberID {
 			removedBlobber = blobbers[i]
 			blobbers[i] = addedBlobber
 			found = true
@@ -1572,8 +1507,9 @@ func replaceBlobber(
 	}
 
 	actErr := cstate.WithActivation(balances, "ares", func() error {
+		rbb := removedBlobber.mustBase()
 		if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-			return fmt.Errorf("saving blobber %v, error: %v", removedBlobber.ID, err)
+			return fmt.Errorf("saving blobber %v, error: %v", rbb.ID, err)
 		}
 		return nil
 	}, func() error { return nil })
@@ -1583,11 +1519,22 @@ func replaceBlobber(
 
 	return blobbers, nil
 }
+func printEntities(entities ...interface{}) {
+	fmt.Println("Printing entities:")
+	for _, entity := range entities {
+		jsonEntity, err := json.Marshal(entity)
+		if err != nil {
+			fmt.Printf("Error marshaling entity: %v\n", err)
+			continue
+		}
+		fmt.Println(string(jsonEntity))
+	}
+}
 
 func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
 	blobbers []*StorageNode,
-	addId, removeId string,
+	addId, authTicket, removeId string,
 	now common.Timestamp,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
@@ -1605,8 +1552,10 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, fmt.Errorf("can't get blobber %s to add : %v", addId, err)
 	}
 
+	bb := addedBlobber.mustBase()
+
 	var sp *stakePool
-	if sp, err = getStakePool(spenum.Blobber, addedBlobber.ID, balances); err != nil {
+	if sp, err = getStakePool(spenum.Blobber, bb.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get blobber's stake pool: %v", err)
 	}
 	staked, err := sp.stake()
@@ -1614,7 +1563,7 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	stakedCapacity, err := sp.stakedCapacity(addedBlobber.Terms.WritePrice)
+	stakedCapacity, err := sp.stakedCapacity(bb.Terms.WritePrice)
 	if err != nil {
 		return nil, err
 	}
@@ -1623,10 +1572,34 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	addedBlobber.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
+	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
+		func() error {
+			return addedBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
+				b := e.(*storageNodeV2)
+
+				if b.IsRestricted != nil && *b.IsRestricted {
+					success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
+					if err != nil {
+						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+					} else if !success {
+						return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+					}
+				}
+
+				return nil
+			})
+		})
+	if actErr != nil {
+		return nil, actErr
+	}
+
+	addedBlobber.mustUpdateBase(func(b *storageNodeBase) error {
+		b.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
+		return nil
+	})
 	afterSize := sa.bSize()
 
-	ba := newBlobberAllocation(afterSize, sa, addedBlobber, conf, now)
+	ba := newBlobberAllocation(afterSize, sa, addedBlobber.mustBase(), conf, now)
 
 	if len(removeId) > 0 {
 		if blobbers, err = replaceBlobber(sa, blobbers, removeId, balances, sc, clientID, addedBlobber, ba, now); err != nil {
@@ -1675,15 +1648,16 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 List:
 	for _, b := range list {
 		// filter by read price
-		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
+		bb := b.mustBase()
+		if !sa.ReadPriceRange.isMatch(bb.Terms.ReadPrice) {
 			continue
 		}
 		// filter by write price
-		if !sa.WritePriceRange.isMatch(b.Terms.WritePrice) {
+		if !sa.WritePriceRange.isMatch(bb.Terms.WritePrice) {
 			continue
 		}
 		// filter by blobber's capacity left
-		if b.Capacity-b.Allocated < bsize {
+		if bb.Capacity-bb.Allocated < bsize {
 			continue
 		}
 
@@ -1706,7 +1680,9 @@ List:
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sa *StorageAllocation) validateEachBlobber(
+	balances cstate.StateContextI,
 	blobbers []*storageNodeResponse,
+	blobberAuthTickets []string,
 	creationDate common.Timestamp,
 	conf *Config,
 ) ([]*StorageNode, []string) {
@@ -1714,17 +1690,66 @@ func (sa *StorageAllocation) validateEachBlobber(
 		errs     = make([]string, 0, len(blobbers))
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
-	for _, b := range blobbers {
-		sn := StoragNodeResponseToStorageNode(*b)
-		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
-		if err != nil {
-			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
-			errs = append(errs, err.Error())
+	for i, b := range blobbers {
+		sn := StorageNode{}
+		beforeArtemisFork := func() error {
+			sn1 := storageNodeResponseToStorageNodeV1(*b)
+			sn.SetEntity(sn1)
+			err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
+			if err != nil {
+				logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
+				return err
+			}
+			return nil
+		}
+
+		artemisFork := func() error {
+			snr := storageNodeResponseToStorageNodeV2(*b)
+			sn.SetEntity(snr)
+			if *snr.IsRestricted {
+				success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
+				if err != nil {
+					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+				} else if !success {
+					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+				}
+
+				logging.Logger.Info("blobber auth ticket verified",
+					zap.String("id", b.ID),
+					zap.Any("success", success),
+					zap.String("auth_ticket", blobberAuthTickets[i]),
+					zap.String("public_key", snr.PublicKey))
+			}
+
+			return nil
+		}
+
+		actErr := cstate.WithActivation(balances, "artemis",
+			beforeArtemisFork,
+			artemisFork,
+		)
+		if actErr != nil {
+			errs = append(errs, actErr.Error())
 			continue
 		}
+
 		filtered = append(filtered, &sn)
 	}
 	return filtered, errs
+}
+
+func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, authTicket, publicKey string) (bool, error) {
+	if authTicket == "" {
+		return false, common.NewError("invalid_auth_ticket", "empty auth ticket")
+	}
+
+	logging.Logger.Info("verifyBlobberAuthTicket", zap.String("clientID", clientID), zap.String("authTicket", authTicket), zap.String("publicKey", publicKey))
+
+	signatureScheme := balances.GetSignatureScheme()
+	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
+		return false, err
+	}
+	return signatureScheme.Verify(authTicket, clientID)
 }
 
 // Until returns allocation expiration.

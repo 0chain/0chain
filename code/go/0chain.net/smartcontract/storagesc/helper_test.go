@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/smartcontract/provider"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"0chain.net/chaincore/threshold/bls"
@@ -94,15 +95,20 @@ func getValidatorURL(id string) string {
 }
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
-	var sn = newBlobber(c.id)
-	sn.BaseURL = getBlobberURL(c.id)
-	sn.Terms = c.terms
-	sn.Capacity = c.cap
-	sn.Allocated = 0
-	sn.LastHealthCheck = 0
-	sn.StakePoolSettings.MaxNumDelegates = 100
-	sn.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
-	sn.StakePoolSettings.DelegateWallet = c.id
+	sn := &StorageNode{}
+	sne := &storageNodeV2{
+		IsRestricted: new(bool),
+	}
+	sne.ID = c.id
+	sne.BaseURL = getBlobberURL(c.id)
+	sne.Terms = c.terms
+	sne.Capacity = c.cap
+	sne.Allocated = 0
+	sne.LastHealthCheck = 0
+	sne.StakePoolSettings.MaxNumDelegates = 100
+	sne.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
+	sne.StakePoolSettings.DelegateWallet = c.id
+	sn.SetEntity(sne)
 	return mustEncode(t, &sn)
 }
 
@@ -149,8 +155,15 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
-	blobber := newBlobber(c.id)
-	blobber.ProviderType = spenum.Blobber
+	blobber := &StorageNode{}
+	b := &storageNodeV2{
+		Provider: provider.Provider{
+			ID:           c.id,
+			ProviderType: spenum.Blobber,
+		},
+	}
+	blobber.SetEntity(b)
+
 	//_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
 	//require.NoError(t, err)
 	var input = c.addValidatorRequest(t)
@@ -163,7 +176,7 @@ func updateBlobberUsingAddBlobber(t testing.TB, blob *StorageNode, value currenc
 
 	var (
 		input = blob.Encode()
-		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+		tx    = newTransaction(blob.Id(), ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	return ssc.addBlobber(tx, input, balances)
@@ -175,7 +188,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int
 
 	var (
 		input = blob.Encode()
-		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+		tx    = newTransaction(blob.Id(), ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	return ssc.updateBlobberSettings(tx, input, balances)
@@ -186,14 +199,14 @@ func healthCheckBlobber(t testing.TB, blob *StorageNode, value currency.Coin, no
 
 	var (
 		input = blob.Encode()
-		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+		tx    = newTransaction(blob.Id(), ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	resp, err = ssc.blobberHealthCheck(tx, input, balances)
 	require.NoError(t, err)
-	b, err := ssc.getBlobber(blob.ID, balances)
+	b, err := ssc.getBlobber(blob.Id(), balances)
 	require.NoError(t, err)
-	require.Equal(t, b.LastHealthCheck, tx.CreationDate)
+	require.Equal(t, b.mustBase().LastHealthCheck, tx.CreationDate)
 	return resp, err
 }
 
@@ -354,6 +367,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
 		nar.Blobbers = append(nar.Blobbers, b.id)
+		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		blobs = append(blobs, b)
 	}
 
@@ -479,7 +493,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	storChall.ValidatorIDs = valIDs
 
 	storChall.AllocationID = allocID
-	storChall.BlobberID = blobber.ID
+	storChall.BlobberID = blobber.Id()
 
 	require.True(t, allocChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(allocChall.GetKey(ssc.ID), allocChall)
@@ -491,9 +505,9 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	conf := setConfig(t, balances)
 	conf.TimeUnit = 2 * time.Minute
 
-	ba, ok := alloc.BlobberAllocsMap[blobber.ID]
+	ba, ok := alloc.BlobberAllocsMap[blobber.Id()]
 	if !ok {
-		ba = newBlobberAllocation(alloc.bSize(), alloc, blobber, conf, common.Timestamp(now))
+		ba = newBlobberAllocation(alloc.bSize(), alloc, blobber.mustBase(), conf, common.Timestamp(now))
 	}
 
 	ba.Stats.OpenChallenges++

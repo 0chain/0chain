@@ -85,22 +85,23 @@ func TestNewAllocation(t *testing.T) {
 	var stake = int64(scYaml.MaxStake)
 	var writePrice = blobberYaml.writePrice
 	for i := 0; i < request.DataShards+request.ParityShards+4; i++ {
-		var nextBlobber = StorageNode{
+		sn := StorageNode{}
+		sn.SetEntity(&storageNodeV2{
 			Provider: provider.Provider{
+				ID:              strconv.Itoa(i),
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: now - blobberHealthTime,
 			},
 			Capacity:  536870912,
 			Allocated: 73,
 			Terms: Terms{
-				ReadPrice: zcnToBalance(blobberYaml.readPrice),
+				ReadPrice:  zcnToBalance(blobberYaml.readPrice),
+				WritePrice: zcnToBalance(writePrice),
 			},
-		}
-		nextBlobber.ID = strconv.Itoa(i)
-		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
-		nextBlobber.BaseURL = "mockBaseUrl" + strconv.Itoa(i)
+			BaseURL: "mockBaseUrl" + strconv.Itoa(i),
+		})
 		writePrice *= 0.9
-		blobbers.add(&nextBlobber)
+		blobbers.add(&sn)
 		stakes = append(stakes, stake)
 		stake = stake / 10
 	}
@@ -181,19 +182,20 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var blobberUsedSize = allocation.Stats.UsedSize / int64(allocation.DataShards)
 	allocation.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
-		var nextBlobber = StorageNode{
+		nextBlobber := StorageNode{}
+		nextBlobber.SetEntity(&storageNodeV2{
 			Provider: provider.Provider{
+				ID:              strconv.Itoa(i),
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: now - blobberHealthTime,
 			},
 			Capacity: 536870912,
 			Terms: Terms{
-				ReadPrice: zcnToBalance(blobberYaml.readPrice),
+				ReadPrice:  zcnToBalance(blobberYaml.readPrice),
+				WritePrice: zcnToBalance(writePrice),
 			},
-		}
-		nextBlobber.ID = strconv.Itoa(i)
-		nextBlobber.ProviderType = spenum.Blobber
-		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
+		})
+
 		writePrice *= 0.9
 		blobbers.add(&nextBlobber)
 		blobberStakePools = append(blobberStakePools, []mockStakePool{})
@@ -207,7 +209,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			ba := &BlobberAllocation{
 				AllocationID: allocation.ID,
-				BlobberID:    nextBlobber.ID,
+				BlobberID:    nextBlobber.Id(),
 				Terms: Terms{
 					WritePrice: zcnToBalance(blobberYaml.writePrice),
 				},
@@ -222,7 +224,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
-			allocation.BlobberAllocsMap[nextBlobber.ID] = ba
+			allocation.BlobberAllocsMap[nextBlobber.Id()] = ba
 			allocation.Stats.OpenChallenges += ba.Stats.OpenChallenges
 			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
 
@@ -321,19 +323,20 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	allocation.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 	for i := 0; i < allocation.DataShards+allocation.ParityShards+extraBlobbers; i++ {
-		var nextBlobber = StorageNode{
+		nextBlobber := StorageNode{}
+		nextBlobber.SetEntity(&storageNodeV2{
 			Capacity: 536870912,
 			Provider: provider.Provider{
+				ID:              strconv.Itoa(i),
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: now - blobberHealthTime,
 			},
 			Terms: Terms{
-				ReadPrice: zcnToBalance(blobberYaml.readPrice),
+				ReadPrice:  zcnToBalance(blobberYaml.readPrice),
+				WritePrice: zcnToBalance(writePrice),
 			},
-		}
-		nextBlobber.ID = strconv.Itoa(i)
-		nextBlobber.ProviderType = spenum.Blobber
-		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
+		})
+
 		writePrice *= 0.9
 		blobbers.add(&nextBlobber)
 		blobberStakePools = append(blobberStakePools, []mockStakePool{})
@@ -347,7 +350,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		if i < allocation.DataShards+allocation.ParityShards {
 			ba := &BlobberAllocation{
 				AllocationID: allocation.ID,
-				BlobberID:    nextBlobber.ID,
+				BlobberID:    nextBlobber.Id(),
 				Terms: Terms{
 					WritePrice: 1e9,
 					ReadPrice:  0,
@@ -364,7 +367,7 @@ func TestFinalizeAllocation(t *testing.T) {
 			}
 
 			allocation.BlobberAllocs = append(allocation.BlobberAllocs, ba)
-			allocation.BlobberAllocsMap[nextBlobber.ID] = ba
+			allocation.BlobberAllocsMap[nextBlobber.Id()] = ba
 			allocation.Stats.OpenChallenges += ba.Stats.OpenChallenges
 			allocation.Stats.TotalChallenges += ba.Stats.TotalChallenges
 
@@ -459,7 +462,7 @@ func testCancelAllocation(
 	require.Error(t, util.ErrValueNotPresent, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
+		sp, err := ssc.getStakePool(spenum.Blobber, blobber.Id(), ctx)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
@@ -596,7 +599,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 	require.Error(t, util.ErrValueNotPresent, err)
 	var sps []*stakePool
 	for _, blobber := range blobbers {
-		sp, err := ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
+		sp, err := ssc.getStakePool(spenum.Blobber, blobber.Id(), ctx)
 		require.NoError(t, err)
 		sps = append(sps, sp)
 	}
@@ -750,7 +753,7 @@ func setupMocksFinishAllocation(
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 		}
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
-		require.NoError(t, sp.Save(spenum.Blobber, blobber.ID, ctx))
+		require.NoError(t, sp.Save(spenum.Blobber, blobber.Id(), ctx))
 
 		_, err = ctx.InsertTrieNode(blobber.GetKey(), blobber)
 		require.NoError(t, err)
@@ -1002,7 +1005,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		var stakePool = newStakePool()
 		stakePool.Pools["paula"] = &stakepool.DelegatePool{}
 		stakePool.Pools["paula"].Balance = currency.Coin(stakes[i])
-		require.NoError(t, stakePool.Save(spenum.Blobber, blobber.ID, ctx))
+		require.NoError(t, stakePool.Save(spenum.Blobber, blobber.Id(), ctx))
 	}
 
 	for _, blobber := range blobbers {
@@ -1032,7 +1035,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 
 	var newStakePools = []*stakePool{}
 	for _, blobber := range individualBlobbers {
-		var sp, err = ssc.getStakePool(spenum.Blobber, blobber.ID, ctx)
+		var sp, err = ssc.getStakePool(spenum.Blobber, blobber.Id(), ctx)
 		require.NoError(t, err)
 		newStakePools = append(newStakePools, sp)
 	}
@@ -1063,13 +1066,13 @@ func (f formulaeCommitNewAllocation) blobberEarnt(t *testing.T, id string, used 
 		}
 		b, ok := f.blobbers.get(bId)
 		require.True(t, ok)
-		totalWritePrice += float64(b.Terms.WritePrice)
+		totalWritePrice += float64(b.mustBase().Terms.WritePrice)
 	}
 	require.True(t, found)
 
 	thisBlobber, ok := f.blobbers.get(id)
 	require.True(t, ok)
-	var ratio = float64(thisBlobber.Terms.WritePrice) / totalWritePrice
+	var ratio = float64(thisBlobber.mustBase().Terms.WritePrice) / totalWritePrice
 	var sizeOfWrite = float64(f.request.Size)
 
 	return int64(sizeOfWrite * ratio)
@@ -1085,7 +1088,7 @@ func (f formulaeCommitNewAllocation) sizePerUsedBlobber() int64 {
 func (f formulaeCommitNewAllocation) capacityUsedBlobber(t *testing.T, id string) int64 {
 	var thisBlobber, ok = f.blobbers.get(id)
 	require.True(t, ok)
-	var usedAlready = thisBlobber.Allocated
+	var usedAlready = thisBlobber.mustBase().Allocated
 	var newAllocament = f.sizePerUsedBlobber()
 
 	return usedAlready + newAllocament
@@ -1102,10 +1105,10 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 
 	var countUsedBlobbers = 0
 	for _, blobber := range blobbers {
-		b, ok := f.blobbers.get(blobber.ID)
+		b, ok := f.blobbers.get(blobber.Id())
 		require.True(t, ok)
-		if blobber.Allocated > b.Allocated {
-			require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Allocated)
+		if blobber.mustBase().Allocated > b.mustBase().Allocated {
+			require.EqualValues(t, f.capacityUsedBlobber(t, blobber.Id()), blobber.mustBase().Allocated)
 			countUsedBlobbers++
 		}
 	}
@@ -1113,6 +1116,6 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 
 	require.EqualValues(t, f.blobbersUsed(), len(blobbers))
 	for _, blobber := range blobbers {
-		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Allocated)
+		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.Id()), blobber.mustBase().Allocated)
 	}
 }

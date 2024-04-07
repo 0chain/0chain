@@ -27,7 +27,7 @@ import (
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/util"
 
-	hbls "github.com/herumi/bls/ffi/go/bls"
+	hbls "github.com/herumi/bls-go-binary/bls"
 
 	"go.uber.org/zap"
 )

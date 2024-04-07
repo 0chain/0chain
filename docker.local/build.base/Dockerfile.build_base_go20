@@ -1,6 +1,6 @@
 # Build Base
 # docker.local
-FROM golang:1.22.1-alpine3.18
+FROM golang:1.22-alpine3.18
 
 RUN apk add --update --no-cache  bash build-base grep git
 # For RocksDB
@@ -19,17 +19,16 @@ RUN cd /tmp/rocksdb* && \
     apk del coreutils linux-headers perl
 
 # Install Herumi's cryptography
+#RUN cd /tmp && \
+#    wget -O - https://github.com/herumi/mcl/archive/refs/tags/v1.81.tar.gz  | tar xz && \
+#    wget -O - https://github.com/herumi/bls/archive/refs/tags/v1.35.tar.gz | tar xz && \
+#    mv mcl* mcl && \
 RUN cd /tmp && \
-    wget -O - https://github.com/herumi/mcl/archive/refs/tags/v1.81.tar.gz  | tar xz && \
-    wget -O - https://github.com/herumi/bls/archive/refs/tags/v1.35.tar.gz | tar xz && \
-    mv mcl* mcl && \
-    mv bls* bls
-
-RUN cd /tmp && \
+    git clone --recursive https://github.com/herumi/bls
+RUN cd /tmp/bls && \
     make -C mcl -j $(nproc) lib/libmclbn256.so install && \
     cp mcl/lib/libmclbn256.so /usr/local/lib && \
-    make MCL_DIR=$(pwd)/mcl -C bls -j $(nproc) install && \
-    rm -R /tmp/mcl && \
+    make MCL_DIR=$(pwd)/mcl -C . -j $(nproc) install && \
     rm -R /tmp/bls
 
 # Build libzstd:
