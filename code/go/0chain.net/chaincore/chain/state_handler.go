@@ -24,6 +24,7 @@ import (
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/tinylib/msgp/msgp"
@@ -93,7 +94,9 @@ func (c *Chain) GetStateContextI() state.StateContextI {
 		logging.Logger.Error("empty latest finalized block or state")
 		return nil
 	}
-	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
+	qbc := statecache.NewQueryBlockCache(c.GetStateCache(), lfb.Hash)
+	tbc := statecache.NewTransactionCache(qbc)
+	clientState := CreateTxnMPT(lfb.ClientState, tbc) // begin transaction
 	return c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 }
 

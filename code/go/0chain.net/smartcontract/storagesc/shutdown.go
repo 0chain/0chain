@@ -23,7 +23,7 @@ func (_ *StorageSmartContract) shutdownBlobber(
 	balances cstate.StateContextI,
 ) (string, error) {
 	var (
-		blobber = newBlobber("")
+		blobber = &StorageNode{}
 		sp      stakepool.AbstractStakePool
 	)
 
@@ -80,13 +80,13 @@ func (_ *StorageSmartContract) shutdownBlobber(
 		return "", common.NewError("shutdown_blobber_failed", err.Error())
 	}
 
-	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
+	if blobber.mustBase().SavedData <= 0 && len(sp.GetPools()) == 0 {
 		_, err = balances.DeleteTrieNode(blobber.GetKey())
 		if err != nil {
 			return "", common.NewErrorf("shutdown_blobber_failed", "deleting blobber: %v", err)
 		}
 
-		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+		if err = deleteStakepool(balances, blobber.Type(), blobber.Id()); err != nil {
 			return "", common.NewErrorf("shutdown_blobber_failed", "deleting stakepool: %v", err)
 		}
 

@@ -402,7 +402,7 @@ func (_ *StorageSmartContract) refreshProvider(
 		if err != nil {
 			return nil, err
 		}
-		sd, err := maths.ConvertToUint64(blobber.SavedData)
+		sd, err := maths.ConvertToUint64(blobber.mustBase().SavedData)
 		if err != nil {
 			return nil, err
 		}
