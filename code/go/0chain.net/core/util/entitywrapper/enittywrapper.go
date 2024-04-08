@@ -130,7 +130,6 @@ func (w *Wrapper) UnmarshalMsgType(b []byte, typeName string) ([]byte, error) {
 		return nil, err
 	}
 
-	fmt.Println("unmarshal version:", ev.Version)
 	if ev.Version == "" {
 		ev.Version = DefaultOriginVersion
 	}

@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/chaincore/state"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
@@ -24,7 +25,7 @@ func SetupStateLogger(file string) {
 	fmt.Fprintf(StateOut, "starting state log ...\n")
 }
 
-//StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
+// StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
 func StateSanityCheck(ctx context.Context, b *Block) {
 	if !state.DebugBlock() {
 		return
@@ -103,14 +104,14 @@ func ValidateState(ctx context.Context, b *Block, priorRoot util.Key) error {
 		err = changes.Validate(ctx)
 		if err != nil {
 			logging.Logger.Error("validate state - changes validate failure", zap.Error(err))
-			pstate := util.NewMerklePatriciaTrie(b.ClientState.GetNodeDB(), b.ClientState.GetVersion(), priorRoot)
+			pstate := util.NewMerklePatriciaTrie(b.ClientState.GetNodeDB(), b.ClientState.GetVersion(), priorRoot, statecache.NewEmpty())
 			PrintStates(b.ClientState, pstate)
 			return err
 		}
 		err = b.ClientState.Validate()
 		if err != nil {
 			logging.Logger.Error("validate state - client state validate failure", zap.Error(err))
-			pstate := util.NewMerklePatriciaTrie(b.ClientState.GetNodeDB(), b.ClientState.GetVersion(), priorRoot)
+			pstate := util.NewMerklePatriciaTrie(b.ClientState.GetNodeDB(), b.ClientState.GetVersion(), priorRoot, statecache.NewEmpty())
 			PrintStates(b.ClientState, pstate)
 			/*
 				if state.Debug() && stateOut != nil {

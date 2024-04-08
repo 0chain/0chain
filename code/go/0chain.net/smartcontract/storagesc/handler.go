@@ -2466,7 +2466,7 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 	}
 
 	sv2, ok := sn.Entity().(*storageNodeV2)
-	if ok {
+	if ok && sv2.IsRestricted != nil {
 		sr.IsRestricted = *sv2.IsRestricted
 	}
 

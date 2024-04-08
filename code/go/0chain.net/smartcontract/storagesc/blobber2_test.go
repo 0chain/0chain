@@ -18,6 +18,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
@@ -183,6 +184,11 @@ func TestCommitBlobberRead(t *testing.T) {
 
 }
 
+func newTxnStateCache() *statecache.TransactionCache {
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
+	return statecache.NewTransactionCache(bc)
+}
+
 func testCommitBlobberRead(
 	t *testing.T,
 	blobberYaml mockBlobberYaml,
@@ -222,7 +228,7 @@ func testCommitBlobberRead(
 	var ctx = &mockStateContext{
 		StateContext: *cstate.NewStateContext(
 			&block.Block{},
-			&util.MerklePatriciaTrie{},
+			util.NewMerklePatriciaTrie(nil, 0, nil, statecache.NewEmpty()),
 			txn,
 			nil,
 			nil,

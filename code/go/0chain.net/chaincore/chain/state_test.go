@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 
@@ -21,8 +22,8 @@ func Test_EstimateTransactionCost(t *testing.T) {
 
 	ch := NewChainFromConfig()
 
-	clientState := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
-	bState := util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot())
+	clientState := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil, statecache.NewEmpty())
+	bState := util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot(), statecache.NewEmpty())
 
 	tests := []struct {
 		name string
@@ -36,22 +37,22 @@ func Test_EstimateTransactionCost(t *testing.T) {
 		},
 		{
 			name: "Test_EstimateTransferCost_TxnTypeData",
-			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeData}},
+			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot(), statecache.NewEmpty()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeData}},
 			want: 0,
 		},
 		{
 			name: "Test_EstimateTransferCost_TxnTypeLockIn",
-			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeLockIn}},
+			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot(), statecache.NewEmpty()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeLockIn}},
 			want: 0,
 		},
 		{
 			name: "Test_EstimateTransferCost_TxnTypeStorageWrite",
-			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeStorageWrite}},
+			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot(), statecache.NewEmpty()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeStorageWrite}},
 			want: 0,
 		},
 		{
 			name: "Test_EstimateTransferCost_TxnTypeStorageRead",
-			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeStorageRead}},
+			args: args{ctx: nil, b: block.NewBlock("", 1), bState: util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot(), statecache.NewEmpty()), txn: &transaction.Transaction{TransactionType: transaction.TxnTypeStorageRead}},
 			want: 0,
 		},
 	}

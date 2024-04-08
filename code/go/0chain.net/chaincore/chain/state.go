@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -185,11 +186,12 @@ func (c *Chain) UpdateState(ctx context.Context,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
 	txn *transaction.Transaction,
+	blockStateCache *statecache.BlockCache,
 	waitC ...chan struct{},
 ) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, bState, txn, waitC...)
+	return c.updateState(ctx, b, bState, txn, blockStateCache, waitC...)
 }
 
 type SyncReplyC struct {
@@ -217,7 +219,9 @@ func WithNotifyC(replyC ...chan struct{}) SyncNodesOption {
 func (c *Chain) EstimateTransactionCost(ctx context.Context,
 	b *block.Block, txn *transaction.Transaction, opts ...SyncNodesOption) (int, error) {
 	var (
-		clientState = CreateTxnMPT(b.ClientState) // begin transaction
+		qbc         = statecache.NewQueryBlockCache(c.GetStateCache(), b.Hash)
+		tbc         = statecache.NewTransactionCache(qbc)
+		clientState = CreateTxnMPT(b.ClientState, tbc) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
 
@@ -331,7 +335,9 @@ func (c *Chain) GetTransactionCostFeeTable(ctx context.Context,
 	opts ...SyncNodesOption) map[string]map[string]int64 {
 
 	var (
-		clientState = CreateTxnMPT(b.ClientState) // begin transaction
+		qbc         = statecache.NewQueryBlockCache(c.GetStateCache(), b.Hash)
+		tbc         = statecache.NewTransactionCache(qbc)
+		clientState = CreateTxnMPT(b.ClientState, tbc) // begin transaction
 		sctx        = c.NewStateContext(b, clientState, &transaction.Transaction{}, nil)
 	)
 
@@ -389,8 +395,12 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI,
-	txn *transaction.Transaction, waitC ...chan struct{}) (es []event.Event, err error) {
+func (c *Chain) updateState(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	blockStateCache *statecache.BlockCache,
+	waitC ...chan struct{}) (es []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
@@ -404,12 +414,18 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	}
 
 	var (
-		clientState = CreateTxnMPT(bState) // begin transaction
-		sctx        = c.NewStateContext(b, clientState, txn, nil)
-		startRoot   = sctx.GetState().GetRoot()
+		txnStateCache = statecache.NewTransactionCache(blockStateCache)
+		clientState   = CreateTxnMPT(bState, txnStateCache) // begin transaction
+		sctx          = c.NewStateContext(b, clientState, txn, nil)
+		startRoot     = sctx.GetState().GetRoot()
 	)
 
 	defer func() {
+		if err == nil {
+			// commit transaction state cache
+			txnStateCache.Commit()
+		}
+
 		if bcstate.ErrInvalidState(err) {
 			c.SyncMissingNodes(b.Round, sctx.GetMissingNodeKeys(), waitC...)
 		}
@@ -476,7 +492,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 					zap.Any("txn", txn))
 
 				//refresh client state context, so all changes made by broken smart contract are rejected, it will be used to add fee
-				clientState = CreateTxnMPT(bState) // begin transaction
+				txnStateCache = statecache.NewTransactionCache(blockStateCache)
+				clientState = CreateTxnMPT(bState, txnStateCache) // begin transaction
 				sctx = c.NewStateContext(b, clientState, txn, nil)
 				// records chargeable error event
 				sctx.EmitError(err)
@@ -490,6 +507,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			StartToFinalizeTxnTypeTimer[txn.FunctionName] = metrics.GetOrRegisterTimer(txn.FunctionName, nil)
 		}
 		StartToFinalizeTxnTypeTimer[txn.FunctionName].Update(time.Since(t))
+		mptCacheHits, mptCacheMiss := txnStateCache.Stats()
 		logging.Logger.Info("SC executed",
 			zap.String("client id", txn.ClientID),
 			zap.String("block", b.Hash),
@@ -502,6 +520,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			zap.Duration("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
 			zap.String("current_root", util.ToHex(sctx.GetState().GetRoot())),
+			zap.Int64("mpt_cache_hit", mptCacheHits),
+			zap.Int64("mpt_cache_miss", mptCacheMiss),
 			zap.String("output", output))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
@@ -870,9 +890,9 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	return stateToUser(fromClient, s), nil
 }
 
-func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+func CreateTxnMPT(mpt util.MerklePatriciaTrieI, cache *statecache.TransactionCache) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
-	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot(), cache)
 	return tmpt
 }
 

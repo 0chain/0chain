@@ -1,10 +1,10 @@
 package storagesc
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/statecache"
 	"math"
 	"strings"
 	"time"
@@ -1462,6 +1462,14 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			// Update saved data on events_db
 			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
+			// Updating AllocationStats
+			_ = cstate.WithActivation(balances, "artemis", func() error {
+				return nil
+			}, func() error {
+				sa.Stats.UsedSize += -d.Stats.UsedSize
+				return nil
+			})
+
 			sa.BlobberAllocs[i] = addedBlobberAllocation
 			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
@@ -1512,6 +1520,7 @@ func replaceBlobber(
 	return blobbers, nil
 }
 func printEntities(entities ...interface{}) {
+	fmt.Println("Printing entities:")
 	for _, entity := range entities {
 		jsonEntity, err := json.Marshal(entity)
 		if err != nil {
@@ -1570,8 +1579,10 @@ func (sa *StorageAllocation) changeBlobbers(
 
 				if b.IsRestricted != nil && *b.IsRestricted {
 					success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
-					if err != nil || !success {
+					if err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+					} else if !success {
+						return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
 					}
 				}
 
@@ -1697,8 +1708,10 @@ func (sa *StorageAllocation) validateEachBlobber(
 			sn.SetEntity(snr)
 			if *snr.IsRestricted {
 				success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
-				if !success || err != nil {
-					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err)
+				if err != nil {
+					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+				} else if !success {
+					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
 				}
 
 				logging.Logger.Info("blobber auth ticket verified",
@@ -1736,7 +1749,7 @@ func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, authTicket
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(authTicket, hex.EncodeToString([]byte(clientID)))
+	return signatureScheme.Verify(authTicket, clientID)
 }
 
 // Until returns allocation expiration.
@@ -2043,6 +2056,62 @@ func (sa *StorageAllocation) removeOldChallenges(
 	}
 
 	return nil
+}
+
+// Clone implements statecache.Value interface
+func (sa *StorageAllocation) Clone() statecache.Value {
+	// clone := *sa
+	// clone.Stats = &StorageAllocationStats{}
+	// *clone.Stats = *sa.Stats
+
+	// clone.PreferredBlobbers = make([]string, len(sa.PreferredBlobbers))
+	// copy(clone.PreferredBlobbers, sa.PreferredBlobbers)
+
+	// clone.BlobberAllocs = make([]*BlobberAllocation, len(sa.BlobberAllocs))
+	// clone.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(sa.BlobberAllocsMap))
+	// for i, sba := range sa.BlobberAllocs {
+	// 	ba := &BlobberAllocation{}
+	// 	*ba = *sba
+	// 	if sba.LastWriteMarker != nil {
+	// 		ba.LastWriteMarker = &WriteMarker{}
+	// 		*ba.LastWriteMarker = *sba.LastWriteMarker
+	// 	}
+
+	// 	if sba.Stats != nil {
+	// 		ba.Stats = &StorageAllocationStats{}
+	// 		*ba.Stats = *sba.Stats
+	// 	}
+
+	// 	clone.BlobberAllocs[i] = ba
+	// 	clone.BlobberAllocsMap[ba.BlobberID] = ba
+	// }
+
+	// return &clone
+	v, err := sa.MarshalMsg(nil)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal StorageAllocation: %v", err))
+	}
+
+	na := &StorageAllocation{}
+	_, err = na.UnmarshalMsg(v)
+	if err != nil {
+		panic(fmt.Sprintf("failed to unmarshal StorageAllocation: %v", err))
+	}
+
+	return na
+}
+
+// CopyFrom implements statecache.Value interface
+func (sa *StorageAllocation) CopyFrom(v interface{}) bool {
+	sav, ok := v.(*StorageAllocation)
+	if !ok {
+		return false
+	}
+
+	clone := sav.Clone().(*StorageAllocation)
+
+	*sa = *clone
+	return true
 }
 
 type BlobberCloseConnection struct {
