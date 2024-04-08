@@ -57,9 +57,15 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 		size  int64            = 230
 	)
 
+	newEmptyStorageNode := func() *StorageNode {
+		b := &StorageNode{}
+		b.SetEntity(&storageNodeV2{})
+		return b
+	}
+
 	list = []*StorageNode{
-		{Terms: Terms{}},
-		{Terms: Terms{}},
+		newEmptyStorageNode(),
+		newEmptyStorageNode(),
 	}
 
 	// 1. filter all by max offer duration
@@ -73,8 +79,15 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	alloc.Expiration = now + 5
 	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 40}
 
-	list[0].Terms.ReadPrice = 100
-	list[1].Terms.ReadPrice = 150
+	list[0].mustUpdateBase(func(b *storageNodeBase) error {
+		b.Terms.ReadPrice = 100
+		return nil
+	})
+
+	list[1].mustUpdateBase(func(b *storageNodeBase) error {
+		b.Terms.ReadPrice = 150
+		return nil
+	})
 	bs, err = alloc.filterBlobbers(list, now, size)
 	require.NoError(t, err)
 	assert.Len(t, bs, 0)
@@ -83,27 +96,50 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 200}
 
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 40}
-	list[0].Terms.WritePrice = 100
-	list[1].Terms.WritePrice = 150
+	list[0].mustUpdateBase(func(b *storageNodeBase) error {
+		b.Terms.WritePrice = 100
+		return nil
+	})
+	list[1].mustUpdateBase(func(snb *storageNodeBase) error {
+		snb.Terms.WritePrice = 150
+		return nil
+	})
 	bs, err = alloc.filterBlobbers(list, now, size)
 	require.NoError(t, err)
 	assert.Len(t, bs, 0)
 
 	// 4. filter all by size
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
-	list[0].Capacity, list[0].Allocated = 100, 90
-	list[1].Capacity, list[1].Allocated = 100, 50
+	list[0].mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 100
+		b.Allocated = 90
+		return nil
+	})
+
+	list[1].mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 100
+		b.Allocated = 50
+		return nil
+	})
 	bs, err = alloc.filterBlobbers(list, now, size)
 	require.NoError(t, err)
 	assert.Len(t, bs, 0)
 
 	// accept one
-	list[0].Capacity, list[0].Allocated = 330, 100
+	list[0].mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 330
+		b.Allocated = 100
+		return nil
+	})
 	bs, err = alloc.filterBlobbers(list, now, size)
 	assert.Len(t, bs, 1)
 
 	// accept all
-	list[1].Capacity, list[1].Allocated = 330, 100
+	list[1].mustUpdateBase(func(b *storageNodeBase) error {
+		b.Capacity = 330
+		b.Allocated = 100
+		return nil
+	})
 	bs, err = alloc.filterBlobbers(list, now, size)
 	assert.Len(t, bs, 2)
 }
