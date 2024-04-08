@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/util/entitywrapper"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -56,8 +57,9 @@ type Client struct {
 	scheme encryption.SignatureScheme // pk/sk
 
 	// blobber
-	terms Terms
-	cap   int64
+	terms        Terms
+	cap          int64
+	isRestricted *bool
 
 	// user or blobber
 	balance currency.Coin
@@ -109,6 +111,12 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sne.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
 	sne.StakePoolSettings.DelegateWallet = c.id
 	sn.SetEntity(sne)
+	sn.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
+		b := e.(*storageNodeV2)
+		b.IsRestricted = c.isRestricted
+		return nil
+	})
+
 	return mustEncode(t, &sn)
 }
 
