@@ -41,9 +41,8 @@ require (
 
 require (
 	github.com/0chain/common v1.13.0
-	github.com/0chain/gosdk v1.13.6
+	github.com/0chain/gosdk v1.12.7
 	github.com/go-faker/faker/v4 v4.2.0
-	github.com/herumi/bls v1.37.0
 	github.com/herumi/bls-go-binary v1.33.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
@@ -112,7 +111,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.0 // indirect
+	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -139,10 +138,10 @@ require (
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.uber.org/multierr v1.9.0 // indirect; indirect //do not update
-	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.10.0 // indirect
+	golang.org/x/tools v0.16.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
