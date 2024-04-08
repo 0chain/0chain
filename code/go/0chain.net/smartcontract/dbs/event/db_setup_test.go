@@ -96,10 +96,12 @@ func TestMain(m *testing.M) {
 	}
 
 	dbSetting := config.DbSettings{
-		AggregatePeriod:       10,
-		PartitionKeepCount:    10,
-		PartitionChangePeriod: 100,
-		PageLimit:             10,
+		AggregatePeriod:              10,
+		PartitionKeepCount:           10,
+		PartitionChangePeriod:        100,
+		RollingPartitionChangePeriod: 20,
+		RollingPartitionKeepCount:    1,
+		PageLimit:                    10,
 	}
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: dbSetting}}
