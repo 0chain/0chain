@@ -33,15 +33,6 @@ const (
 	CHUNK_SIZE = 64 * KB
 )
 
-// func newBlobber() *StorageNode {
-// 	return &StorageNode{
-// 		// Provider: provider.Provider{
-// 		// 	ID:           id,
-// 		// 	ProviderType: spenum.Blobber,
-// 		// },
-// 	}
-// }
-
 func blobberKey(id string) datastore.Key {
 	return provider.GetKey(id)
 }
@@ -253,26 +244,26 @@ func (sc *StorageSmartContract) updateBlobber(
 			sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
 		}
 
-		if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf, balances); err != nil {
-			return err
-		}
-
-		// update stake pool settings if write price has changed.
-		if updateBlobber.Terms != nil && updateBlobber.Terms.WritePrice != nil {
-			updatedStakedCapacity, err := existingSp.stakedCapacity(*updateBlobber.Terms.WritePrice)
-			if err != nil {
-				return fmt.Errorf("error calculating staked capacity: %v", err)
-			}
-
-			if snb.Allocated > updatedStakedCapacity {
-				return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than allocated capacity (%d)",
-					updatedStakedCapacity, snb.Allocated)
-			}
-		}
-
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf, balances); err != nil {
+		return err
+	}
+
+	// update stake pool settings if write price has changed.
+	if updateBlobber.Terms != nil && updateBlobber.Terms.WritePrice != nil {
+		updatedStakedCapacity, err := existingSp.stakedCapacity(*updateBlobber.Terms.WritePrice)
+		if err != nil {
+			return fmt.Errorf("error calculating staked capacity: %v", err)
+		}
+
+		if existingBlobber.mustBase().Allocated > updatedStakedCapacity {
+			return fmt.Errorf("write_price_change: staked capacity (%d) can't go less than allocated capacity (%d)",
+				updatedStakedCapacity, existingBlobber.mustBase().Allocated)
+		}
 	}
 
 	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
