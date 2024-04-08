@@ -39,19 +39,18 @@ jobs:
   lint:
     runs-on: [self-hosted, arc-runner]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - name: Actions Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
+          go-version: 1.21.5
 
-      - name: Check msgp changes
-        run: |
-          sudo apt update -y
-          sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
-          ./docker.local/bin/check.msgp.sh
 
-      - name: Build Base
-        run: ./docker.local/bin/build.base.sh
-
-      - name: Run Linter
-        run: ./docker.local/bin/linter.sh
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.57.1
+          skip-build-cache: true
+          skip-pkg-cache: true
+          only-new-issues: true
