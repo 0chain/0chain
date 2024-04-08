@@ -13,13 +13,13 @@ import (
 
 func TestEventDb_updateUserAggregates(t *testing.T) {
 	var (
-		edb *EventDb
+		edb   *EventDb
 		clean func()
 	)
-	
+
 	type args struct {
 		clientWithSnapshot string
-		e *BlockEvents
+		e                  *BlockEvents
 	}
 
 	tests := []struct {
@@ -72,7 +72,6 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 						}},
 					}},
 				},
-
 			},
 			wantErr: assert.NoError,
 		}, {
@@ -110,7 +109,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 				aggregates, err := edb.GetLatestUserAggregates(a)
 				return assert.Equal(t, int64(76), aggregates["client31"].ReadPoolTotal)
 			},
-		}, 
+		},
 		{
 			name: "user claimable rewards",
 			args: args{
@@ -167,11 +166,11 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 				},
 			},
 			wantErr: func(tt assert.TestingT, err error, i ...interface{}) bool {
-				if ! assert.NoError(tt, err) {
+				if !assert.NoError(tt, err) {
 					tt.Errorf("updateUserAggregates() error = %v", err, i)
 					return false
 				}
-				
+
 				a := map[string]interface{}{
 					"client41": struct {
 					}{},
@@ -210,7 +209,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 			edb, clean = GetTestEventDB(t)
 			defer clean()
 
-			if err := edb.addPartition(0, "user_aggregates"); err != nil {
+			if err := edb.addRollingPartition(0, "user_aggregates"); err != nil {
 				t.Error()
 			}
 
@@ -239,7 +238,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
-	if err := edb.addPartition(0, "user_aggregates"); err != nil {
+	if err := edb.addRollingPartition(0, "user_aggregates"); err != nil {
 		t.Error()
 	}
 

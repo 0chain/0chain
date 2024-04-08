@@ -36,11 +36,12 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 	}
 
 	eventDb := &EventDb{
-		Store:         db,
-		dbConfig:      config,
-		eventsChannel: make(chan BlockEvents, 1),
-		partitionChan: make(chan int64, 100),
-		settings:      settings,
+		Store:                db,
+		dbConfig:             config,
+		eventsChannel:        make(chan BlockEvents, 1),
+		partitionChan:        make(chan int64, 100),
+		rollingPartitionChan: make(chan int64, 100),
+		settings:             settings,
 	}
 
 	return eventDb, nil
@@ -67,10 +68,11 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 
 type EventDb struct {
 	dbs.Store
-	dbConfig      config.DbAccess   // depends on the sharder, change on restart
-	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
-	eventsChannel chan BlockEvents
-	partitionChan chan int64
+	dbConfig             config.DbAccess   // depends on the sharder, change on restart
+	settings             config.DbSettings // the same across all sharders, needs to mirror blockchain
+	eventsChannel        chan BlockEvents
+	partitionChan        chan int64
+	rollingPartitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -84,10 +86,11 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
-		dbConfig:      edb.dbConfig,
-		settings:      edb.settings,
-		eventsChannel: edb.eventsChannel,
-		partitionChan: edb.partitionChan,
+		dbConfig:             edb.dbConfig,
+		settings:             edb.settings,
+		eventsChannel:        edb.eventsChannel,
+		partitionChan:        edb.partitionChan,
+		rollingPartitionChan: edb.rollingPartitionChan,
 	}
 	return &edbTx, nil
 }

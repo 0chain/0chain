@@ -22,7 +22,7 @@ func AddMockEvents(eventDb *event.EventDb) {
 
 	var events []event.Event
 	for round := benchmark.GetOldestAggregateRound(); round < viper.GetInt64(benchmark.NumBlocks); round++ {
-		_ = eventDb.ManagePartitions(round)
+		_ = eventDb.ManageRollingPartitions(round)
 		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			events = append(events, event.Event{
 				BlockNumber: round,
@@ -66,7 +66,7 @@ func AddMockTransactions(
 	}
 
 	fmt.Printf("From AddMockTransactions, edb config = %+v\n", eventDb.Config())
-	
+
 	const txnTxnSmartContract = 1000
 	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
 		_ = eventDb.ManagePartitions(blockNumber)
@@ -189,22 +189,37 @@ func GetMockTransactionHash(blockNumber int64, index int) string {
 
 func AddAggregatePartitions(edb *event.EventDb) {
 	var (
-		period      = viper.GetInt(benchmark.EventDbPartitionChangePeriod)
-		keep        = viper.GetInt(benchmark.EventDbPartitionKeepCount)
-		blocks      = viper.GetInt64(benchmark.NumBlocks)
-		firstPeriod = benchmark.GetOldestAggregateRound()
+		period             = viper.GetInt(benchmark.EventDbPartitionChangePeriod)
+		keep               = viper.GetInt(benchmark.EventDbPartitionKeepCount)
+		rollingPeriod      = viper.GetInt(benchmark.EventDbRollingPartitionChangePeriod)
+		rollingKeep        = viper.GetInt(benchmark.EventDbRollingPartitionKeepCount)
+		blocks             = viper.GetInt64(benchmark.NumBlocks)
+		firstRollingPeriod = benchmark.GetOldestRollingAggregateRound()
+		firstPeriod        = benchmark.GetOldestAggregateRound()
 	)
 
 	for i := 0; i < keep; i++ {
-		round := firstPeriod + int64(i*period)
+		round := firstRollingPeriod + int64(i*period)
 		if round < 0 {
 			continue
 		} else if round > blocks {
 			break
 		}
 
-		log.Println("Adding partitions for round", round)
-		if err := edb.AddPartitions(int64(i)); err != nil {
+		if err := edb.AddPartitions(round); err != nil {
+			log.Println(err)
+		}
+	}
+
+	for i := 0; i < rollingKeep; i++ {
+		round := firstPeriod + int64(i*rollingPeriod)
+		if round < 0 {
+			continue
+		} else if round > blocks {
+			break
+		}
+
+		if err := edb.AddRollingPartitions(round); err != nil {
 			log.Println(err)
 		}
 	}

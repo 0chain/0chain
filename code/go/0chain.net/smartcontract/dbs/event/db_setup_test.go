@@ -29,6 +29,7 @@ func GetTestEventDB(t *testing.T) (*EventDb, func()) {
 	require.NoError(t, err)
 
 	db.managePartitions(0)
+	db.manageRollingPartitions(0)
 
 	return db, func() {
 		db.Rollback()

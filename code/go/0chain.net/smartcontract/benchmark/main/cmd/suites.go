@@ -390,7 +390,7 @@ func runEventDatabaseSuite(
 	}
 
 	// Add edb partitions
-	_ = edb.AddPartitions(0)
+	_ = edb.AddRollingPartitions(0)
 
 	for _, bm := range suite.Benchmarks {
 		//wg.Add(1)
