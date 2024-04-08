@@ -346,11 +346,13 @@ func initGlobalSettings() {
 		GlobalSettingName[DbsEventsMaxOpenConns]:    {Int, false},
 		GlobalSettingName[DbsEventsConnMaxLifetime]: {Duration, false},
 
-		GlobalSettingName[DbsAggregateDebug]:        {Boolean, true},
-		GlobalSettingName[DbsAggregatePeriod]:       {Int64, true},
-		GlobalSettingName[DbsPartitionChangePeriod]: {Int64, true},
-		GlobalSettingName[DbsPartitionKeepCount]:    {Int64, true},
-		GlobalSettingName[DbsAggregatePageLimit]:    {Int64, true},
+		GlobalSettingName[DbsAggregateDebug]:               {Boolean, true},
+		GlobalSettingName[DbsAggregatePeriod]:              {Int64, true},
+		GlobalSettingName[DbsPartitionChangePeriod]:        {Int64, true},
+		GlobalSettingName[DbsPartitionKeepCount]:           {Int64, true},
+		GlobalSettingName[DbsRollingPartitionChangePeriod]: {Int64, true},
+		GlobalSettingName[DbsRollingPartitionKeepCount]:    {Int64, true},
+		GlobalSettingName[DbsAggregatePageLimit]:           {Int64, true},
 
 		GlobalSettingName[HealthCheckDeepScanEnabled]:          {Boolean, false},
 		GlobalSettingName[HealthCheckDeepScanBatchSize]:        {Int64, false},
