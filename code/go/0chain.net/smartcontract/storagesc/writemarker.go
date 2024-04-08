@@ -15,10 +15,10 @@ import (
 //go:generate msgp -io=false -tests=false -unexported -v
 
 func init() {
-	entitywrapper.RegisterWrapper(&StorageNode{},
+	entitywrapper.RegisterWrapper(&WriteMarker{},
 		map[string]entitywrapper.EntityI{
 			entitywrapper.DefaultOriginVersion: &writeMarkerV1{},
-			"v2":                               &storageNodeV2{},
+			"v2":                               &writeMarkerV2{},
 		})
 }
 
