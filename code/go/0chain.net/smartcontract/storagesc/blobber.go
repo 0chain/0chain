@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	"0chain.net/chaincore/smartcontractinterface"
 
@@ -923,7 +924,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	if len(commitConnection.ChainData) > (32 * MAX_CHAIN_LENGTH) {
 		return "", common.NewError("commit_connection_failed",
-			"Chain data length exceeds the maximum chainlength "+string(MAX_CHAIN_LENGTH))
+			"Chain data length exceeds the maximum chainlength "+strconv.Itoa(MAX_CHAIN_LENGTH))
 	}
 
 	var (
