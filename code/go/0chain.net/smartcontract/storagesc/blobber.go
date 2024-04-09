@@ -1137,12 +1137,17 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 	}
 
+	logging.Logger.Info("Jayash commit connection", zap.Any("blobber", blobber), zap.Any("blobberAlloc", blobAlloc), zap.Any("alloc", alloc))
+
 	// Save allocation object
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving allocation object: %v", err)
 	}
+
+	afterAlloc, err := sc.getAllocation(alloc.ID, balances)
+	logging.Logger.Info("Jayash commit connection after alloc", zap.Any("afterAlloc", afterAlloc))
 
 	// Save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
@@ -1168,6 +1173,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	return string(blobAllocBytes), nil
+}
+
+func printEntities(entities ...interface{}) {
+	fmt.Println("Printing entities:")
+	for _, entity := range entities {
+		jsonEntity, err := json.Marshal(entity)
+		if err != nil {
+			fmt.Printf("Error marshaling entity: %v\n", err)
+			continue
+		}
+		fmt.Println(string(jsonEntity))
+	}
 }
 
 // updateBlobberChallengeReady add or update blobber challenge weight or
