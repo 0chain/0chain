@@ -364,6 +364,11 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			}
 
 			rd := c.GetRound(fb.Round)
+			if rd == nil {
+				logging.Logger.Debug("finalize round - fb with round not exist",
+					zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
+				return
+			}
 			select {
 			case <-ctx.Done():
 				logging.Logger.Info("finalize round - context done",
