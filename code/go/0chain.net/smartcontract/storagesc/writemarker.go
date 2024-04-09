@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -52,6 +53,31 @@ func (wm *WriteMarker) mustBase() *writeMarkerBase {
 		logging.Logger.Panic("invalid write marker base type")
 	}
 	return b
+}
+
+func (wm *WriteMarker) mustUpdateBase(f func(base *writeMarkerBase) error) error {
+	return wm.UpdateBase(func(eb entitywrapper.EntityBaseI) error {
+		b, ok := eb.(*writeMarkerBase)
+		if !ok {
+			logging.Logger.Panic("invalid write marker base type")
+		}
+
+		f(b)
+		return nil
+	})
+}
+
+func (wm *WriteMarker) Encode() []byte {
+	buff, _ := json.Marshal(wm)
+	return buff
+}
+
+func (wm *WriteMarker) Decode(input []byte) error {
+	err := json.Unmarshal(input, wm)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (wm *WriteMarker) VerifySignature(

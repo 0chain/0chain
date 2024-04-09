@@ -1036,6 +1036,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	blobAlloc.AllocationRoot = commitConnection.AllocationRoot
 	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
+
+	// Save allocation object
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"saving allocation object: %v", err)
+	}
+
+	afterAlloc, err := sc.getAllocation(alloc.ID, balances)
+	logging.Logger.Info("Jayash commit connection after alloc", zap.Any("afterAlloc", afterAlloc))
+	//printEntities(2, afterAlloc)
+
 	blobAlloc.Stats.UsedSize += changeSize
 	blobAlloc.Stats.NumWrites++
 
@@ -1136,18 +1148,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				"error saving ongoing blobber reward partition: %v", err)
 		}
 	}
-
-	logging.Logger.Info("Jayash commit connection", zap.Any("blobber", blobber), zap.Any("blobberAlloc", blobAlloc), zap.Any("alloc", alloc))
-
-	// Save allocation object
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"saving allocation object: %v", err)
-	}
-
-	afterAlloc, err := sc.getAllocation(alloc.ID, balances)
-	logging.Logger.Info("Jayash commit connection after alloc", zap.Any("afterAlloc", afterAlloc))
 
 	// Save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
