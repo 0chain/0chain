@@ -210,15 +210,22 @@ func (sc *StorageSmartContract) updateBlobber(
 			return fmt.Errorf("invalid blobber params: %v", err)
 		}
 
+		logging.Logger.Info("Jayash updateBlobber url : ")
+
 		if updateBlobber.BaseURL != nil && *updateBlobber.BaseURL != snb.BaseURL {
+			logging.Logger.Info("Jayash updateBlobber", zap.Any("updateBlobber.BaseURL", *updateBlobber.BaseURL))
 			has, err := sc.hasBlobberUrl(*updateBlobber.BaseURL, balances)
 			if err != nil {
 				return fmt.Errorf("could not check blobber url: %v", err)
 			}
 
+			logging.Logger.Info("Jayash hasBlobberUrl", zap.Any("has", has))
+
 			if has {
 				return fmt.Errorf("blobber url update failed, %s already used", *updateBlobber.BaseURL)
 			}
+
+			logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL", snb.BaseURL))
 
 			if snb.BaseURL != "" {
 				_, err = balances.DeleteTrieNode(existingBlobber.GetUrlKey(sc.ID))
@@ -227,14 +234,20 @@ func (sc *StorageSmartContract) updateBlobber(
 				}
 			}
 
+			logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL", snb.BaseURL))
+
 			if *updateBlobber.BaseURL != "" {
+				logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("updateBlobber.BaseURL", *updateBlobber.BaseURL))
 				snb.BaseURL = *updateBlobber.BaseURL
 				_, err = balances.InsertTrieNode(existingBlobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
 				if err != nil {
 					return fmt.Errorf("saving blobber url: " + err.Error())
 				}
 			}
+			logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL1", snb.BaseURL))
 		}
+
+		logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL2", snb.BaseURL))
 
 		snb.LastHealthCheck = txn.CreationDate
 
@@ -249,9 +262,13 @@ func (sc *StorageSmartContract) updateBlobber(
 		return err
 	}
 
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL3", existingBlobber.mustBase().BaseURL))
+
 	if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf, balances); err != nil {
 		return err
 	}
+
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL4", existingBlobber.mustBase().BaseURL))
 
 	// update stake pool settings if write price has changed.
 	if updateBlobber.Terms != nil && updateBlobber.Terms.WritePrice != nil {
@@ -266,6 +283,8 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL5", existingBlobber.mustBase().BaseURL))
+
 	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
 		func() error {
 			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
@@ -278,19 +297,27 @@ func (sc *StorageSmartContract) updateBlobber(
 		return fmt.Errorf("error with activation: %v", actErr)
 	}
 
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL6", existingBlobber.mustBase().BaseURL))
+
 	_, err = balances.InsertTrieNode(existingBlobber.GetKey(), existingBlobber)
 	if err != nil {
 		return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
 	}
 
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL7", existingBlobber.mustBase().BaseURL))
+
 	if err = existingSp.Save(spenum.Blobber, updateBlobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
+
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL8", existingBlobber.mustBase().BaseURL))
 
 	// existing blobber also contain the updated fields from the update blobber request
 	if err := emitUpdateBlobber(existingBlobber, existingSp, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", updateBlobber, err)
 	}
+
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL9", existingBlobber.mustBase().BaseURL))
 
 	return
 }
@@ -509,6 +536,8 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 	if err = sc.updateBlobber(txn, conf, updatedBlobber, blobber, existingSp, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
+
+	logging.Logger.Info("Jayash updateBlobber url : ", zap.Any("snb.BaseURL10", blobber.mustBase().BaseURL))
 
 	return string(blobber.Encode()), nil
 }
