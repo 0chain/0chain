@@ -999,13 +999,16 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		changeSize = commitMarkerBase.Size
 		if isRollback(commitConnection, commitMarkerBase, blobLWMBase) {
 			changeSize -= blobLWMBase.Size
+			_ = cstate.WithActivation(balances, "ares", func() error {
+				return nil
+			}, func() error {
+				prevWmSize = blobLWMBase.Size
+				return nil
+			})
 		} else {
 			if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
 				return "", common.NewError("commit_connection_failed",
 					"Previous allocation root does not match the latest allocation root")
-			}
-			if blobAlloc.LastWriteMarker != nil {
-				prevWmSize = blobLWMBase.Size
 			}
 		}
 	}
