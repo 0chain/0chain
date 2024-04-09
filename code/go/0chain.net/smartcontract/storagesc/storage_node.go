@@ -60,7 +60,10 @@ func (sn *StorageNode) mustUpdateBase(f func(*storageNodeBase) error) error {
 			logging.Logger.Panic("invalid storage node base type")
 		}
 
-		f(b)
+		err := f(b)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 }
