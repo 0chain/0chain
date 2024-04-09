@@ -904,8 +904,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	if alloc.Owner != commitMarkerBase.ClientID {
-		return "", common.NewError("commit_connection_failed", "write marker has"+
-			" to be by the same client as owner of the allocation")
+		return "", common.NewError("commit_connection_failed", fmt.Sprintf("write marker has"+
+			" to be by the same client as owner of the allocation %s != %s", alloc.Owner, commitMarkerBase.ClientID))
 	}
 
 	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
