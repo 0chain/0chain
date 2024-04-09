@@ -1519,17 +1519,6 @@ func replaceBlobber(
 
 	return blobbers, nil
 }
-func printEntities(entities ...interface{}) {
-	fmt.Println("Printing entities:")
-	for _, entity := range entities {
-		jsonEntity, err := json.Marshal(entity)
-		if err != nil {
-			fmt.Printf("Error marshaling entity: %v\n", err)
-			continue
-		}
-		fmt.Println(string(jsonEntity))
-	}
-}
 
 func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
