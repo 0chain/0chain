@@ -895,11 +895,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"can't get allocation: "+err.Error())
 	}
 
-	logging.Logger.Debug("commitBlobberConnection",
-		zap.String("alloc ID", commitMarkerBase.AllocationID),
-		zap.Any("commit marker base", commitMarkerBase),
-		zap.Any("alloc before commit", alloc))
-
 	if alloc.Owner != commitMarkerBase.ClientID {
 		return "", common.NewError("commit_connection_failed", fmt.Sprintf("write marker has"+
 			" to be by the same client as owner of the allocation %s != %s", alloc.Owner, commitMarkerBase.ClientID))
