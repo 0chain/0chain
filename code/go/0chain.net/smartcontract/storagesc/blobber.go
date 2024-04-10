@@ -895,6 +895,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"can't get allocation: "+err.Error())
 	}
 
+	logging.Logger.Debug("commitBlobberConnection",
+		zap.String("alloc ID", commitMarkerBase.AllocationID),
+		zap.Any("commit marker base", commitMarkerBase),
+		zap.Any("alloc before commit", alloc))
+
 	if alloc.Owner != commitMarkerBase.ClientID {
 		return "", common.NewError("commit_connection_failed", fmt.Sprintf("write marker has"+
 			" to be by the same client as owner of the allocation %s != %s", alloc.Owner, commitMarkerBase.ClientID))
@@ -1045,7 +1050,8 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	afterAlloc, err := sc.getAllocation(alloc.ID, balances)
-	logging.Logger.Info("Jayash commit connection after alloc", zap.Any("afterAlloc", afterAlloc))
+	logging.Logger.Info("Jayash commit connection after alloc",
+		zap.Any("afterAlloc", afterAlloc), zap.String("alloc.ID", alloc.ID), zap.Error(err))
 	//printEntities(2, afterAlloc)
 
 	blobAlloc.Stats.UsedSize += changeSize
