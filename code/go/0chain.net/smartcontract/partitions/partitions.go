@@ -12,6 +12,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/sortedmap"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 
@@ -35,6 +36,68 @@ type Partitions struct {
 
 	Partitions map[int]*partition `json:"-" msg:"-"`
 	locations  map[string]int     `msg:"-"`
+}
+
+// Clone implements the statecache.Clone() interface to make it cachable
+func (p *Partitions) Clone() statecache.Value {
+	v, err := p.MarshalMsg(nil)
+	if err != nil {
+		panic("partitions marshal failed")
+	}
+
+	np := &Partitions{
+		Partitions: make(map[int]*partition),
+		locations:  make(map[string]int),
+	}
+	_, err = np.UnmarshalMsg(v)
+	if err != nil {
+		panic("partitions unmarshal failed")
+	}
+	return np
+	// newPartitions := &Partitions{
+	// 	Name:          p.Name,
+	// 	PartitionSize: p.PartitionSize,
+	// 	Last:          p.Last.clone(),
+	// 	Partitions:    make(map[int]*partition),
+	// 	locations:     make(map[string]int),
+	// }
+
+	// for key, value := range p.Partitions {
+	// 	newPartitions.Partitions[key] = value.clone()
+	// }
+
+	// for key, value := range p.locations {
+	// 	newPartitions.locations[key] = value
+	// }
+
+	// return newPartitions
+}
+
+func (p *Partitions) CopyFrom(v interface{}) bool {
+	cp, ok := v.(*Partitions)
+	if !ok {
+		return false
+	}
+
+	// np := cp.Clone()
+	// *p = *np.(*Partitions)
+	*p = *cp
+
+	// p.Name = cp.Name
+	// p.PartitionSize = cp.PartitionSize
+	// p.Last = cp.Last.clone()
+	// p.Partitions = make(map[int]*partition)
+	// p.locations = make(map[string]int)
+
+	// for key, value := range cp.Partitions {
+	// 	p.Partitions[key] = value.clone()
+	// }
+
+	// for key, value := range cp.locations {
+	// 	p.locations[key] = value
+	// }
+
+	return true
 }
 
 type PartitionItem interface {
@@ -635,10 +698,12 @@ func (p *Partitions) Save(state state.StateContextI) error {
 	if err != nil {
 		return err
 	}
+
 	logging.Logger.Debug("save partitions",
 		zap.String("name", p.Name),
 		zap.Int("loc", p.Last.Loc),
 		zap.Int("items", len(p.Last.Items)))
+
 	return nil
 }
 
@@ -724,7 +789,10 @@ func (p *Partitions) UnmarshalMsg(b []byte) ([]byte, error) {
 
 	*p = Partitions(*d)
 
-	p.Last.Key = partitionKey(p.Name, d.Last.Loc)
+	if d.Last != nil {
+		p.Last.Key = partitionKey(p.Name, d.Last.Loc)
+	}
+
 	p.Partitions = make(map[int]*partition)
 	return o, nil
 }

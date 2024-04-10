@@ -45,14 +45,15 @@ func (_ *StorageSmartContract) killBlobber(
 					"can't get the blobber "+req.ID+": "+err.Error())
 			}
 
-			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
+			bb := blobber.mustBase()
+			if err := partitionsChallengeReadyBlobbersRemove(balances, bb.Id()); err != nil {
 				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
 					return nil, nil, common.NewError("kill_blobber_failed",
 						"remove blobber form challenge partition, "+err.Error())
 				}
 			}
 
-			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
+			sp, err = getStakePoolAdapter(bb.Type(), bb.Id(), balances)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -80,16 +81,17 @@ func (_ *StorageSmartContract) killBlobber(
 	if err != nil {
 		return "", common.NewError("kill_blobber_failed", err.Error())
 	}
+	bb := blobber.mustBase()
 
 	// delete the blobber from MPT if it's empty and has no stake pools
-	if blobber.SavedData <= 0 && len(sp.GetPools()) == 0 {
+	if bb.SavedData <= 0 && len(sp.GetPools()) == 0 {
 		// remove the blobber from MPT
 		_, err := balances.DeleteTrieNode(blobber.GetKey())
 		if err != nil {
 			return "", common.NewErrorf("kill_blobber_failed", "deleting blobber: %v", err)
 		}
 
-		if err = deleteStakepool(balances, blobber.ProviderType, blobber.Id()); err != nil {
+		if err = deleteStakepool(balances, blobber.Type(), blobber.Id()); err != nil {
 			return "", common.NewErrorf("kill_blobber_failed", "deleting stakepool: %v", err)
 		}
 
