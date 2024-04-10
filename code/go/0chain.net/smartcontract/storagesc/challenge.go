@@ -1117,13 +1117,13 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.Created = txn.CreationDate
 	storageChallenge.RoundCreatedAt = balances.GetBlock().Round
-
+	lwm := allocBlobber.LastWriteMarker.mustBase()
 	challInfo := &StorageChallengeResponse{
 		StorageChallenge: storageChallenge,
 		Validators:       selectedValidators,
 		Seed:             seed,
 		AllocationRoot:   allocBlobber.AllocationRoot,
-		Timestamp:        allocBlobber.LastWriteMarker.Timestamp,
+		Timestamp:        lwm.Timestamp,
 	}
 
 	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)

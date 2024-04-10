@@ -356,19 +356,21 @@ func Test_flow_reward(t *testing.T) {
 		var cc = &BlobberCloseConnection{
 			AllocationRoot:     "root-1",
 			PrevAllocationRoot: "",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         "root-1",
-				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   100 * 1024 * 1024, // 100 MB
-				BlobberID:              b2.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
+			WriteMarker:        &WriteMarker{},
 		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
+		wm1 := &writeMarkerV1{
+			AllocationRoot:         "root-1",
+			PreviousAllocationRoot: "",
+			AllocationID:           allocID,
+			Size:                   100 * 1024 * 1024, // 100 MB
+			BlobberID:              b2.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		}
+		wm1.Signature, err = client.scheme.Sign(
+			encryption.Hash(wm1.GetHashData()))
 		require.NoError(t, err)
+		cc.WriteMarker.SetEntity(wm1)
 
 		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
 		blobBeforeWriteBase := blobBeforeWrite.mustBase()
@@ -390,11 +392,11 @@ func Test_flow_reward(t *testing.T) {
 
 		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
 		blobAfterWriteBase := blobAfterWrite.mustBase()
-		endWriteMarkerSavedData = cc.WriteMarker.Size - initialWriteMarkerSavedData
+		endWriteMarkerSavedData = wm1.Size - initialWriteMarkerSavedData
 		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
 
-		size := (int64(math.Ceil(float64(cc.WriteMarker.Size) / CHUNK_SIZE))) * CHUNK_SIZE
-		rdtu, err := alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp, conf.TimeUnit)
+		size := (int64(math.Ceil(float64(wm1.Size) / CHUNK_SIZE))) * CHUNK_SIZE
+		rdtu, err := alloc.restDurationInTimeUnits(wm1.Timestamp, conf.TimeUnit)
 		require.NoError(t, err)
 
 		var moved = int64(sizeInGB(size) * float64(avgTerms.WritePrice) * rdtu)
@@ -415,19 +417,21 @@ func Test_flow_reward(t *testing.T) {
 		var cc = &BlobberCloseConnection{
 			AllocationRoot:     "root-2",
 			PrevAllocationRoot: "root-1",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         "root-2",
-				PreviousAllocationRoot: "root-1",
-				AllocationID:           allocID,
-				Size:                   -50 * 1024 * 1024, // 50 MB
-				BlobberID:              b2.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
+			WriteMarker:        &WriteMarker{},
 		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
+		wm1 := &writeMarkerV1{
+			AllocationRoot:         "root-2",
+			PreviousAllocationRoot: "root-1",
+			AllocationID:           allocID,
+			Size:                   -50 * 1024 * 1024, // 50 MB
+			BlobberID:              b2.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		}
+		wm1.Signature, err = client.scheme.Sign(
+			encryption.Hash(wm1.GetHashData()))
 		require.NoError(t, err)
+		cc.WriteMarker.SetEntity(wm1)
 
 		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
 		blobBeforeWriteBase := blobBeforeWrite.mustBase()
@@ -489,19 +493,21 @@ func Test_flow_reward(t *testing.T) {
 		var cc = &BlobberCloseConnection{
 			AllocationRoot:     "alloc-root-1",
 			PrevAllocationRoot: "",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         "alloc-root-1",
-				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   10 * KB,
-				BlobberID:              b3.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
+			WriteMarker:        &WriteMarker{},
 		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
+		wm1 := &writeMarkerV1{
+			AllocationRoot:         "alloc-root-1",
+			PreviousAllocationRoot: "",
+			AllocationID:           allocID,
+			Size:                   10 * KB,
+			BlobberID:              b3.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		}
+		wm1.Signature, err = client.scheme.Sign(
+			encryption.Hash(wm1.GetHashData()))
 		require.NoError(t, err)
+		cc.WriteMarker.SetEntity(wm1)
 
 		blobBeforeWrite, err := ssc.getBlobber(b3.id, balances)
 		blobBeforeWriteBase := blobBeforeWrite.mustBase()
@@ -533,7 +539,8 @@ func Test_flow_reward(t *testing.T) {
 		}
 		blobAfterWrite, err := ssc.getBlobber(b3.id, balances)
 		blobAfterWriteBase := blobAfterWrite.mustBase()
-		endWriteMarkerSavedData = cc.WriteMarker.Size - initialWriteMarkerSavedData
+		ccWMBase := cc.WriteMarker.mustBase()
+		endWriteMarkerSavedData = ccWMBase.Size - initialWriteMarkerSavedData
 		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
 
 		require.EqualValues(t, currency.Coin(10000000000000), apb2i)
@@ -570,19 +577,21 @@ func Test_flow_reward(t *testing.T) {
 		var cc = &BlobberCloseConnection{
 			AllocationRoot:     "alloc-root-2",
 			PrevAllocationRoot: "alloc-root-1",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         "alloc-root-2",
-				PreviousAllocationRoot: "alloc-root-1",
-				AllocationID:           allocID,
-				Size:                   -10 * KB,
-				BlobberID:              b3.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
+			WriteMarker:        &WriteMarker{},
 		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
+		wm1 := &writeMarkerV1{
+			AllocationRoot:         "alloc-root-2",
+			PreviousAllocationRoot: "alloc-root-1",
+			AllocationID:           allocID,
+			Size:                   -10 * KB,
+			BlobberID:              b3.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		}
+		wm1.Signature, err = client.scheme.Sign(
+			encryption.Hash(wm1.GetHashData()))
 		require.NoError(t, err)
+		cc.WriteMarker.SetEntity(wm1)
 
 		blobBeforeWrite, err := ssc.getBlobber(b3.id, balances)
 		blobBeforeWriteBase := blobBeforeWrite.mustBase()
@@ -689,19 +698,21 @@ func Test_flow_penalty(t *testing.T) {
 		var cc = &BlobberCloseConnection{
 			AllocationRoot:     allocRoot,
 			PrevAllocationRoot: "",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         allocRoot,
-				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   100 * 1024 * 1024, // 100 MB
-				BlobberID:              b4.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
+			WriteMarker:        &WriteMarker{},
 		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
+		wm1 := &writeMarkerV1{
+			AllocationRoot:         allocRoot,
+			PreviousAllocationRoot: "",
+			AllocationID:           allocID,
+			Size:                   100 * 1024 * 1024, // 100 MB
+			BlobberID:              b4.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		}
+		wm1.Signature, err = client.scheme.Sign(
+			encryption.Hash(wm1.GetHashData()))
 		require.NoError(t, err)
+		cc.WriteMarker.SetEntity(wm1)
 
 		inspectCPIV(t, ssc, allocID, balances)
 
@@ -889,19 +900,21 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			var cc = &BlobberCloseConnection{
 				AllocationRoot:     allocRoot,
 				PrevAllocationRoot: "",
-				WriteMarker: &WriteMarker{
-					AllocationRoot:         allocRoot,
-					PreviousAllocationRoot: "",
-					AllocationID:           allocID,
-					Size:                   100 * 1024 * 1024, // 100 MB
-					BlobberID:              b.id,
-					Timestamp:              common.Timestamp(tp),
-					ClientID:               client.id,
-				},
+				WriteMarker:        &WriteMarker{},
 			}
-			cc.WriteMarker.Signature, err = client.scheme.Sign(
-				encryption.Hash(cc.WriteMarker.GetHashData()))
+			wm1 := &writeMarkerV1{
+				AllocationRoot:         allocRoot,
+				PreviousAllocationRoot: "",
+				AllocationID:           allocID,
+				Size:                   100 * 1024 * 1024, // 100 MB
+				BlobberID:              b.id,
+				Timestamp:              common.Timestamp(tp),
+				ClientID:               client.id,
+			}
+			wm1.Signature, err = client.scheme.Sign(
+				encryption.Hash(wm1.GetHashData()))
 			require.NoError(t, err)
+			cc.WriteMarker.SetEntity(wm1)
 			// write
 			var tx = newTransaction(b.id, ssc.ID, 0, tp)
 			balances.setTransaction(t, tx)
@@ -1115,19 +1128,21 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var cc = &BlobberCloseConnection{
 				AllocationRoot:     allocRoot,
 				PrevAllocationRoot: "",
-				WriteMarker: &WriteMarker{
-					AllocationRoot:         allocRoot,
-					PreviousAllocationRoot: "",
-					AllocationID:           allocID,
-					Size:                   100 * 1024 * 1024, // 100 MB
-					BlobberID:              b.id,
-					Timestamp:              alloc.StartTime,
-					ClientID:               client.id,
-				},
+				WriteMarker:        &WriteMarker{},
 			}
-			cc.WriteMarker.Signature, err = client.scheme.Sign(
-				encryption.Hash(cc.WriteMarker.GetHashData()))
+			wm1 := &writeMarkerV1{
+				AllocationRoot:         allocRoot,
+				PreviousAllocationRoot: "",
+				AllocationID:           allocID,
+				Size:                   100 * 1024 * 1024, // 100 MB
+				BlobberID:              b.id,
+				Timestamp:              alloc.StartTime,
+				ClientID:               client.id,
+			}
+			wm1.Signature, err = client.scheme.Sign(
+				encryption.Hash(wm1.GetHashData()))
 			require.NoError(t, err)
+			cc.WriteMarker.SetEntity(wm1)
 			// write
 			var tx = newTransaction(b.id, ssc.ID, 0, tp)
 			balances.setTransaction(t, tx)

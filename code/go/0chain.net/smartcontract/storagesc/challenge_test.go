@@ -1543,21 +1543,23 @@ func testCommitWrite(t *testing.T, balances *testBalances, client *Client, alloc
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: prevAllocRoot,
-		WriteMarker: &WriteMarker{
-			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: prevAllocRoot,
-			AllocationID:           allocID,
-			//Size:                   100 * 1024 * 1024, // 100 MB
-			Size:      size,
-			BlobberID: blobberID,
-			Timestamp: common.Timestamp(tp),
-			ClientID:  client.id,
-		},
+		WriteMarker:        &WriteMarker{},
 	}
+	wm1 := &writeMarkerV1{
+		AllocationRoot:         allocRoot,
+		PreviousAllocationRoot: prevAllocRoot,
+		AllocationID:           allocID,
+		Size:                   size,
+		BlobberID:              blobberID,
+		Timestamp:              common.Timestamp(tp),
+		ClientID:               client.id,
+	}
+
 	var err error
-	cc.WriteMarker.Signature, err = client.scheme.Sign(
-		encryption.Hash(cc.WriteMarker.GetHashData()))
+	wm1.Signature, err = client.scheme.Sign(
+		encryption.Hash(wm1.GetHashData()))
 	require.NoError(t, err)
+	cc.WriteMarker.SetEntity(wm1)
 
 	// write
 	//tp += 1000
