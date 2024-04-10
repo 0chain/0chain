@@ -125,6 +125,12 @@ func (wm *WriteMarker) Verify(allocRoot, prevRoot string) bool {
 type writeMarkerBase writeMarkerV1
 
 func (wm *writeMarkerBase) CommitChangesTo(e entitywrapper.EntityI) {
+	switch v := e.(type) {
+	case *writeMarkerV1:
+		*v = writeMarkerV1(*wm)
+	case *writeMarkerV2:
+		v.ApplyBaseChanges(*wm)
+	}
 }
 
 type writeMarkerV1 struct {
