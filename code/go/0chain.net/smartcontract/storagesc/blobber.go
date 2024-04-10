@@ -214,43 +214,50 @@ func (sc *StorageSmartContract) updateBlobber(
 			return fmt.Errorf("invalid blobber params: %v", err)
 		}
 
-		if updateBlobber.BaseURL != nil && *updateBlobber.BaseURL != snb.BaseURL {
-			has, err := sc.hasBlobberUrl(*updateBlobber.BaseURL, balances)
-			if err != nil {
-				return fmt.Errorf("could not check blobber url: %v", err)
-			}
-
-			if has {
-				return fmt.Errorf("blobber url update failed, %s already used", *updateBlobber.BaseURL)
-			}
-
-			if snb.BaseURL != "" {
-				_, err = balances.DeleteTrieNode(existingBlobber.GetUrlKey(sc.ID))
-				if err != nil {
-					return fmt.Errorf("deleting blobber old url: " + err.Error())
-				}
-			}
-
-			if *updateBlobber.BaseURL != "" {
-				snb.BaseURL = *updateBlobber.BaseURL
-				_, err = balances.InsertTrieNode(existingBlobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
-				if err != nil {
-					return fmt.Errorf("saving blobber url: " + err.Error())
-				}
-			}
-		}
-
-		snb.LastHealthCheck = txn.CreationDate
-
-		sc.statIncr(statUpdateBlobber)
-
-		if currentCapacity == 0 {
-			sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
-		}
-
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	if updateBlobber.BaseURL != nil && *updateBlobber.BaseURL != existingBlobber.mustBase().BaseURL {
+		has, err := sc.hasBlobberUrl(*updateBlobber.BaseURL, balances)
+		if err != nil {
+			return fmt.Errorf("could not check blobber url: %v", err)
+		}
+
+		if has {
+			return fmt.Errorf("blobber url update failed, %s already used", *updateBlobber.BaseURL)
+		}
+
+		if existingBlobber.mustBase().BaseURL != "" {
+			_, err = balances.DeleteTrieNode(existingBlobber.GetUrlKey(sc.ID))
+			if err != nil {
+				return fmt.Errorf("deleting blobber old url: " + err.Error())
+			}
+		}
+
+		if *updateBlobber.BaseURL != "" {
+			existingBlobber.mustUpdateBase(func(snb *storageNodeBase) error {
+				snb.BaseURL = *updateBlobber.BaseURL
+				return nil
+			})
+			_, err = balances.InsertTrieNode(existingBlobber.GetUrlKey(sc.ID), &datastore.NOIDField{})
+			if err != nil {
+				return fmt.Errorf("saving blobber url: " + err.Error())
+			}
+		}
+	}
+
+	if err := existingBlobber.mustUpdateBase(func(snb *storageNodeBase) error {
+		snb.LastHealthCheck = txn.CreationDate
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	sc.statIncr(statUpdateBlobber)
+	if currentCapacity == 0 {
+		sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
 	}
 
 	if err = validateAndSaveSp(updateBlobber, existingBlobber, existingSp, conf, balances); err != nil {
