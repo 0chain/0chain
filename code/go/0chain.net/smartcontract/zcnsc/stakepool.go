@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -12,6 +13,8 @@ import (
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/util"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 //msgp:ignore unlockResponse stakePoolRequest
@@ -215,4 +218,58 @@ func (zcn *ZCNSmartContract) DeleteFromDelegatePool(
 	balances cstate.StateContextI) (resp string, err error) {
 
 	return stakepool.StakePoolUnlock(t, inputData, balances, zcn.getStakePoolAdapter)
+}
+
+type FixAuthorizersRequest struct {
+	Authorizers []string `json:"authorizers"`
+}
+
+func (zcn *ZCNSmartContract) FixExistingAuthorizerStakePoolsBeforeArtemis(
+	t *transaction.Transaction, input []byte, balances cstate.StateContextI) (resp string, err error) {
+	
+	noop := func() error { return nil }
+
+	cstate.WithActivation(balances, "artemis", noop, func() error {
+		var data FixAuthorizersRequest
+		err := json.Unmarshal(input, &data)
+		if err != nil {
+			logging.Logger.Error("failed to unmarshal input", zap.Error(err))
+			return err
+		}
+		
+		for _, aid := range data.Authorizers {			
+			var (
+				commonSp stakepool.StakePool
+				zcnscSp StakePool
+				err error
+				k = stakepool.StakePoolKey(spenum.Authorizer, aid)
+			) 
+
+			// First check if it's already fixed
+			err = balances.GetState().GetNodeValue(util.Path(k), &commonSp)
+			if err == nil && zcnscSp.StakePool.Pools != nil && len(zcnscSp.StakePool.Pools) > 0 {
+				logging.Logger.Info("authorizer SP already fixed", zap.String("sp_key", k))
+				continue
+			}
+
+			err = balances.GetState().GetNodeValue(util.Path(k), &commonSp)
+			if err != nil {
+				logging.Logger.Error("failed to deserialize old value of the authorizer SP to common SP", zap.String("sp_key", k), zap.Error(err))
+				continue
+			}
+
+			zcnscSp.StakePool = commonSp
+			nodeHash, err := balances.InsertTrieNode(k, &zcnscSp)
+			if err != nil {
+				logging.Logger.Error("failed to save new SP", zap.String("sp_key", k), zap.Error(err))
+				continue
+			}
+
+			logging.Logger.Info("fixed authorizer SP", zap.String("sp_key", k), zap.String("node_hash", nodeHash))
+		}
+
+		return nil
+	})
+
+	return "authorizers fixed successfully", nil
 }

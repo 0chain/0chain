@@ -28,6 +28,7 @@ const (
 	DeleteFromDelegatePoolFunc    = "delete-from-delegate-pool"
 	UpdateAuthorizerStakePoolFunc = "update-authorizer-stake-pool"
 	CollectRewardsFunc            = "collect-rewards"
+	FixExistingAuthorizerStakePoolsBeforeArtemisFunc = "fix-existing-authorizer-stake-pools-before-artemis"
 )
 
 // ZCNSmartContract ...
@@ -66,6 +67,8 @@ func (zcn *ZCNSmartContract) InitSC() {
 	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
 	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool           // stakepool lock
 	zcn.smartContractFunctions[DeleteFromDelegatePoolFunc] = zcn.DeleteFromDelegatePool // stakepool unlock
+
+	zcn.smartContractFunctions[FixExistingAuthorizerStakePoolsBeforeArtemisFunc] = zcn.FixExistingAuthorizerStakePoolsBeforeArtemis
 }
 
 // SetSC ...
