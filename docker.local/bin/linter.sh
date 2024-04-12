@@ -13,6 +13,7 @@ cmd="build"
 
 
 
+
 for arg in "$@"
 do
     case $arg in
