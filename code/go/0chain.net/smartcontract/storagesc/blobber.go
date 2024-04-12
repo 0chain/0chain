@@ -971,7 +971,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		hasher := sha256.New()
 		var prevHash string
 		if blobAlloc.LastWriteMarker != nil {
-			prevWmSize = wm2.Size
 			changeSize -= lastWMChainSize
 			prevChainHash, _ := hex.DecodeString(lastWMChainHash)
 			hasher.Write(prevChainHash) //nolint:errcheck
