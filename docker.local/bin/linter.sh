@@ -1,10 +1,6 @@
 #!/bin/sh
 set -e
 
-# generate mocks
-make install-mockery
-make build-mocks
-
 cmd="build"
 
 for arg in "$@"
