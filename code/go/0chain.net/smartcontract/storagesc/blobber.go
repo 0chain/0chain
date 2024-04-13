@@ -936,7 +936,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	var (
 		changeSize  int64
-		prevWmSize  int64
 		blobLWMBase *writeMarkerBase
 	)
 	if blobAlloc.LastWriteMarker != nil {
@@ -944,7 +943,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 	// branch logic according to ChainHash being present or not
 	// Chain hash is the hash of all previous roots of WM's and ChainSize will be the size of all previous WM's
-	if commitConnection.WriteMarker.GetVersion() == "v2" {
+	if commitConnection.WriteMarker.GetVersion() == writeMarkerV2Version {
 		wm2 := commitConnection.WriteMarker.Entity().(*writeMarkerV2)
 		if wm2.ChainSize < 0 {
 			return "", common.NewError("commit_connection_failed",
@@ -1006,12 +1005,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		changeSize = commitMarkerBase.Size
 		if isRollback(commitConnection, commitMarkerBase, blobLWMBase) {
 			changeSize -= blobLWMBase.Size
-			_ = cstate.WithActivation(balances, "ares", func() error {
-				return nil
-			}, func() error {
-				prevWmSize = blobLWMBase.Size
-				return nil
-			})
 		} else {
 			if blobAlloc.AllocationRoot != commitConnection.PrevAllocationRoot {
 				return "", common.NewError("commit_connection_failed",
@@ -1171,7 +1164,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		MovedToChallenge: alloc.MovedToChallenge,
 		MovedBack:        alloc.MovedBack,
 		WritePool:        alloc.WritePool,
-	}, movedTokens, prevWmSize, balances)
+	}, movedTokens, changeSize, balances)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)
 	if err != nil {
@@ -1278,18 +1271,11 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	return
 }
 
-func emitUpdateBlobberWriteStatEvent(w *WriteMarker, prevWmSize int64, balances cstate.StateContextI) {
-	var savedData int64
+func emitUpdateBlobberWriteStatEvent(w *WriteMarker, changeSize int64, balances cstate.StateContextI) {
 	wmb := w.mustBase()
-	if wmb.Size != 0 {
-		savedData = wmb.Size
-	} else {
-		savedData = -prevWmSize
-	}
-
 	bb := event.Blobber{
 		Provider:  event.Provider{ID: wmb.BlobberID},
-		SavedData: savedData,
+		SavedData: changeSize,
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobberStat, bb.ID, bb)
