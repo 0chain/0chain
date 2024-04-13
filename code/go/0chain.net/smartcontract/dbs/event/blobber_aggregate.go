@@ -31,6 +31,8 @@ type BlobberAggregate struct {
 	InactiveRounds      int64            `json:"InactiveRounds"`
 	RankMetric          float64          `json:"rank_metric"`
 	Downtime            uint64           `json:"downtime"`
+	NotAvailable        bool             `json:"not_available"`
+	IsRestricted        bool             `json:"is_restricted"`
 	IsKilled            bool             `json:"is_killed"`
 	IsShutdown          bool             `json:"is_shutdown"`
 }
@@ -61,6 +63,7 @@ func (edb *EventDb) CreateBlobberAggregates(blobbers []*Blobber, round int64) er
 		aggregate.Downtime = blobber.Downtime
 		aggregate.ChallengesPassed = blobber.ChallengesPassed
 		aggregate.ChallengesCompleted = blobber.ChallengesCompleted
+		aggregate.IsRestricted = blobber.IsRestricted
 		if blobber.ChallengesCompleted == 0 {
 			aggregate.RankMetric = 0
 		} else {
