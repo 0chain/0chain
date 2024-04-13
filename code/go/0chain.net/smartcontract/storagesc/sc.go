@@ -290,7 +290,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 			return nil
 		}, func() error {
 			if funcName == "reset_allocation_stats" {
-				resp, err = sc.resetBlobberStats(t, input, balances)
+				resp, err = sc.resetAllocationStats(t, input, balances)
 				return err
 			}
 			return nil
