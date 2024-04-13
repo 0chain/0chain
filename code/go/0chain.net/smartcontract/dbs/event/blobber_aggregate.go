@@ -64,6 +64,7 @@ func (edb *EventDb) CreateBlobberAggregates(blobbers []*Blobber, round int64) er
 		aggregate.ChallengesPassed = blobber.ChallengesPassed
 		aggregate.ChallengesCompleted = blobber.ChallengesCompleted
 		aggregate.IsRestricted = blobber.IsRestricted
+		aggregate.NotAvailable = blobber.NotAvailable
 		if blobber.ChallengesCompleted == 0 {
 			aggregate.RankMetric = 0
 		} else {
