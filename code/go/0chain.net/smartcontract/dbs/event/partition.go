@@ -3,12 +3,15 @@ package event
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 )
 
 func (edb *EventDb) addPartition(current int64, table string) error {
 	from := current * edb.settings.PartitionChangePeriod
 	to := (current + 1) * edb.settings.PartitionChangePeriod
+
+	log.Printf("addPartition (current, from, to), change_period = (%v, %v, %v) %v\n", current, from, to, edb.settings.PartitionChangePeriod)
 
 	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelFunc()
