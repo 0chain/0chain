@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/0chain/common/core/statecache"
 	"math"
 	"strings"
 	"time"
+
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/provider"
@@ -1519,17 +1520,6 @@ func replaceBlobber(
 
 	return blobbers, nil
 }
-func printEntities(entities ...interface{}) {
-	fmt.Println("Printing entities:")
-	for _, entity := range entities {
-		jsonEntity, err := json.Marshal(entity)
-		if err != nil {
-			fmt.Printf("Error marshaling entity: %v\n", err)
-			continue
-		}
-		fmt.Println(string(jsonEntity))
-	}
-}
 
 func (sa *StorageAllocation) changeBlobbers(
 	conf *Config,
@@ -2118,6 +2108,7 @@ type BlobberCloseConnection struct {
 	AllocationRoot     string       `json:"allocation_root"`
 	PrevAllocationRoot string       `json:"prev_allocation_root"`
 	WriteMarker        *WriteMarker `json:"write_marker"`
+	ChainData          []byte       `json:"chain_data"`
 }
 
 func (bc *BlobberCloseConnection) Decode(input []byte) error {
@@ -2133,70 +2124,7 @@ func (bc *BlobberCloseConnection) Verify() bool {
 		return false
 	}
 
-	if bc.WriteMarker.AllocationRoot != bc.AllocationRoot {
-		// return "", common.NewError("invalid_parameters",
-		//     "Invalid Allocation root. Allocation root in write marker " +
-		//     "does not match the commit")
-		return false
-	}
-
-	if bc.WriteMarker.PreviousAllocationRoot != bc.PrevAllocationRoot {
-		// return "", common.NewError("invalid_parameters",
-		//     "Invalid Previous Allocation root. Previous Allocation root " +
-		//     "in write marker does not match the commit")
-		return false
-	}
-	return bc.WriteMarker.Verify()
-
-}
-
-type WriteMarker struct {
-	AllocationRoot         string           `json:"allocation_root"`
-	PreviousAllocationRoot string           `json:"prev_allocation_root"`
-	FileMetaRoot           string           `json:"file_meta_root"`
-	AllocationID           string           `json:"allocation_id"`
-	Size                   int64            `json:"size"`
-	BlobberID              string           `json:"blobber_id"`
-	Timestamp              common.Timestamp `json:"timestamp"`
-	ClientID               string           `json:"client_id"`
-	Signature              string           `json:"signature"`
-}
-
-func (wm *WriteMarker) VerifySignature(
-	clientPublicKey string,
-	balances cstate.StateContextI,
-) bool {
-	hashData := wm.GetHashData()
-	signatureHash := encryption.Hash(hashData)
-	signatureScheme := balances.GetSignatureScheme()
-	if err := signatureScheme.SetPublicKey(clientPublicKey); err != nil {
-		return false
-	}
-	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
-	if err != nil {
-		return false
-	}
-	if !sigOK {
-		return false
-	}
-	return true
-}
-
-func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf(
-		"%s:%s:%s:%s:%s:%s:%d:%d",
-		wm.AllocationRoot, wm.PreviousAllocationRoot,
-		wm.FileMetaRoot, wm.AllocationID,
-		wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
-	return hashData
-}
-
-func (wm *WriteMarker) Verify() bool {
-	if len(wm.AllocationID) == 0 || len(wm.BlobberID) == 0 ||
-		len(wm.ClientID) == 0 || wm.Timestamp == 0 {
-		return false
-	}
-	return true
+	return bc.WriteMarker.Verify(bc.AllocationRoot, bc.PrevAllocationRoot)
 }
 
 type ReadConnection struct {

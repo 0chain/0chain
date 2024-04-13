@@ -1408,6 +1408,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 
 	values := r.URL.Query()
 	active := values.Get("active")
+	stakable := values.Get("stakable") == "true"
 
 	var validators []event.Validator
 
@@ -1423,7 +1424,13 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 			healthCheckPeriod = conf.HealthCheckPeriod
 		}
 
-		validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
+		if stakable {
+			validators, err = edb.GetActiveAndStakableValidators(pagination, healthCheckPeriod)
+		} else {
+			validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
+		}
+	} else if stakable {
+		validators, err = edb.GetStakableValidators(pagination)
 	} else {
 		validators, err = edb.GetValidators(pagination)
 	}
@@ -2588,6 +2595,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	values := r.URL.Query()
 	active := values.Get("active")
 	idsStr := values.Get("blobber_ids")
+	stakable := values.Get("stakable") == "true"
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -2607,7 +2615,11 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 			healthCheckPeriod = conf.HealthCheckPeriod
 		}
 
-		blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
+		if stakable {
+			blobbers, err = edb.GetActiveAndStakableBlobbers(limit, healthCheckPeriod)
+		} else {
+			blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
+		}
 	} else if idsStr != "" {
 		var blobber_ids []string
 		err = json.Unmarshal([]byte(idsStr), &blobber_ids)
@@ -2627,6 +2639,8 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		}
 
 		blobbers, err = edb.GetBlobbersFromIDs(blobber_ids)
+	} else if stakable {
+		blobbers, err = edb.GetStakableBlobbers(limit)
 	} else {
 		blobbers, err = edb.GetBlobbers(limit)
 	}
