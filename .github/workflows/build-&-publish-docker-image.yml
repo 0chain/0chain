@@ -41,6 +41,11 @@ jobs:
         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
+    - name: Setup go 1.21.5
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21.5' # The Go version to download (if necessary) and use.
+
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
@@ -123,6 +128,11 @@ jobs:
         fi
         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
+
+    - name: Setup go 1.21.5
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21.5' # The Go version to download (if necessary) and use.
 
     - uses: actions/checkout@v4
 
