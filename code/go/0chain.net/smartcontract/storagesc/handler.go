@@ -286,7 +286,7 @@ type allocationBlobbersRequest struct {
 	ReadPriceRange  PriceRange `json:"read_price_range"`
 	WritePriceRange PriceRange `json:"write_price_range"`
 	Size            int64      `json:"size"`
-	IsRestricted    bool       `json:"is_restricted"`
+	IsRestricted    int        `json:"is_restricted"`
 }
 
 func (nar *allocationBlobbersRequest) decode(b []byte) error {
