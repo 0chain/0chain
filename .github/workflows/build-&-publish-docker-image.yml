@@ -45,6 +45,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        sudo apt update -y 
         sudo apt -y install build-essential
 
     - name: Login to Docker Hub
@@ -127,6 +128,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        sudo apt update -y 
         sudo apt -y install build-essential
 
     - name: Login to Docker Hub
