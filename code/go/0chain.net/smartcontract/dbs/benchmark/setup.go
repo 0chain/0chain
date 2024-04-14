@@ -20,9 +20,12 @@ func AddMockEvents(eventDb *event.EventDb) {
 		return
 	}
 
-	var events []event.Event
+	events := make([]event.Event, 0, viper.GetInt(benchmark.NumTransactionPerBlock))
 	for round := benchmark.GetOldestAggregateRound(); round < viper.GetInt64(benchmark.NumBlocks); round++ {
-		_ = eventDb.ManagePartitions(round)
+		if round % viper.GetInt64(benchmark.EventDbPartitionChangePeriod) == 0 {
+			_ = eventDb.ManagePartitions(round / viper.GetInt64(benchmark.EventDbPartitionChangePeriod))
+		}
+		
 		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			events = append(events, event.Event{
 				BlockNumber: round,
@@ -34,9 +37,12 @@ func AddMockEvents(eventDb *event.EventDb) {
 			})
 
 		}
-	}
-	if res := eventDb.Store.Get().Create(&events); res.Error != nil {
-		log.Fatal("adding mock events", res.Error)
+
+		if res := eventDb.Store.Get().Create(&events); res.Error != nil {
+			log.Fatal("adding mock events", res.Error)
+		}
+
+		events = events[:0]
 	}
 }
 
