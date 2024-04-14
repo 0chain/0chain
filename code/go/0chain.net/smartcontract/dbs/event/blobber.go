@@ -254,7 +254,9 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-healthCheckPeriod).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
-	dbStore = dbStore.Where("is_restricted = ?", allocation.IsRestricted)
+	if !allocation.IsRestricted {
+		dbStore = dbStore.Where("is_restricted = false")
+	}
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
 	dbStore = dbStore.Where("not_available = false")
