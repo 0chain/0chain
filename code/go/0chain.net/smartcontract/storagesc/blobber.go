@@ -1042,7 +1042,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		b.SavedData += changeSize
 		return nil
 	})
-	alloc.Stats.UsedSize += int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+	allocationWmSize := int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+	if alloc.Stats.UsedSize+allocationWmSize <= 0 {
+		alloc.Stats.UsedSize = 0
+	} else {
+		alloc.Stats.UsedSize += allocationWmSize
+	}
 
 	alloc.Stats.NumWrites++
 
