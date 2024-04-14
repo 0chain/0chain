@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -63,6 +64,9 @@ func AddMockTransactions(
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
+
+	fmt.Printf("From AddMockTransactions, edb config = %+v\n", eventDb.Config())
+	
 	const txnTxnSmartContract = 1000
 	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
 		_ = eventDb.ManagePartitions(blockNumber)
@@ -199,7 +203,8 @@ func AddAggregatePartitions(edb *event.EventDb) {
 			break
 		}
 
-		if err := edb.AddPartitions(round); err != nil {
+		log.Println("Adding partitions for round", round)
+		if err := edb.AddPartitions(int64(i)); err != nil {
 			log.Println(err)
 		}
 	}
