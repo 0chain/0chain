@@ -10,7 +10,7 @@ import (
 type UserSnapshot struct {
 	UserID          string `json:"user_id" gorm:"uniqueIndex"`
 	Round           int64  `json:"round"`
-	ClaimableReward int64  `json:"claimable_reward"`
+	TotalReward     int64  `json:"total_reward"`
 	CollectedReward int64  `json:"collected_reward"`
 	TotalStake      int64  `json:"total_stake"`
 	ReadPoolTotal   int64  `json:"read_pool_total"`
