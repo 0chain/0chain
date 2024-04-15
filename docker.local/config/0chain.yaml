@@ -191,7 +191,5 @@ integration_tests:
 kafka:
   enabled: false
   host: "198.19.0.99:9092"
-  username: "admin"
-  password: "password"
   topic: "events"
   write_timeout: 10s

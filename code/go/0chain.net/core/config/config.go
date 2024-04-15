@@ -208,8 +208,6 @@ type DbAccess struct {
 	Slowtablespace    string        `json:"slowtablespace"`
 	KafkaEnabled      bool
 	KafkaHost         string
-	KafkaUsername     string
-	KafkaPassword     string
 	KafkaTopic        string
 	KafkaWriteTimeout time.Duration
 }
