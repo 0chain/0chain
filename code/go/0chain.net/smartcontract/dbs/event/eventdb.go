@@ -46,11 +46,7 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 	}
 
 	if config.KafkaEnabled {
-		eventDb.kafka = queueProvider.NewKafkaProvider(
-			config.KafkaHost,
-			config.KafkaUsername,
-			config.KafkaPassword,
-			config.KafkaWriteTimeout)
+		eventDb.kafka = queueProvider.NewKafkaProvider(config.KafkaHost, config.KafkaWriteTimeout)
 	}
 
 	// Load last sequence number. Useful when the sharder is restarted.
@@ -108,8 +104,6 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 		settings: edb.settings,
 		kafka: queueProvider.NewKafkaProvider(
 			edb.dbConfig.KafkaHost,
-			edb.dbConfig.KafkaUsername,
-			edb.dbConfig.KafkaPassword,
 			edb.dbConfig.KafkaWriteTimeout,
 		),
 		eventsChannel: edb.eventsChannel,
@@ -146,8 +140,6 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		Slowtablespace:    edb.dbConfig.Slowtablespace,
 		KafkaEnabled:      edb.dbConfig.KafkaEnabled,
 		KafkaHost:         edb.dbConfig.KafkaHost,
-		KafkaUsername:     edb.dbConfig.KafkaUsername,
-		KafkaPassword:     edb.dbConfig.KafkaPassword,
 		KafkaTopic:        edb.dbConfig.KafkaTopic,
 		KafkaWriteTimeout: edb.dbConfig.KafkaWriteTimeout,
 	}
@@ -162,11 +154,7 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		dbConfig:      cloneConfig,
 		eventsChannel: nil,
 		settings:      edb.settings,
-		kafka: queueProvider.NewKafkaProvider(
-			cloneConfig.KafkaHost,
-			cloneConfig.KafkaUsername,
-			cloneConfig.KafkaPassword,
-			cloneConfig.KafkaWriteTimeout),
+		kafka:         queueProvider.NewKafkaProvider(cloneConfig.KafkaHost, cloneConfig.KafkaWriteTimeout),
 	}
 
 	return newEdb, nil
