@@ -43,14 +43,14 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	return &KafkaProvider{
 		Host:         host,
 		WriteTimeout: writeTimeout,
-		Dialer: &kafka.Dialer{
-			Timeout:   10 * time.Second,
-			DualStack: true,
-			SASLMechanism: &plain.Mechanism{
-				Username: username,
-				Password: password,
-			},
+		// Dialer: &kafka.Dialer{
+		// 	Timeout:   10 * time.Second,
+		// 	DualStack: true,
+		SASLMechanism: &plain.Mechanism{
+			Username: username,
+			Password: password,
 		},
+		// },
 	}
 }
 
