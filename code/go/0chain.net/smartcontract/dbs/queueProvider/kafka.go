@@ -34,6 +34,10 @@ func init() {
 }
 
 func NewKafkaProvider(host, username, password string, writeTimeout time.Duration) *KafkaProvider {
+	logging.Logger.Debug("New kafka provider",
+		zap.String("host", host),
+		zap.String("username", username),
+		zap.String("password", password))
 	return &KafkaProvider{
 		Host:         host,
 		WriteTimeout: writeTimeout,
@@ -171,5 +175,7 @@ func (k *KafkaProvider) createKafkaWriter(topic string) *kafka.Writer {
 		WriteTimeout: k.WriteTimeout,
 	})
 	kw.AllowAutoTopicCreation = true
+
+	logging.Logger.Debug("kafka dialer", zap.Any("SASLMechainism", k.Dialer.SASLMechanism))
 	return kw
 }
