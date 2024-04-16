@@ -8,6 +8,7 @@ import (
 
 	"github.com/0chain/common/core/logging"
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl"
 	"github.com/segmentio/kafka-go/sasl/plain"
 	"go.uber.org/zap"
 )
@@ -22,8 +23,9 @@ type KafkaProviderI interface {
 type KafkaProvider struct {
 	Host         string
 	WriteTimeout time.Duration
-	Dialer       *kafka.Dialer
-	mutex        sync.RWMutex // Mutex for synchronizing access to writers map
+	// Dialer       *kafka.Dialer
+	SASLMechanism sasl.Mechanism
+	mutex         sync.RWMutex // Mutex for synchronizing access to writers map
 }
 
 // map of kafka writers for each topic
@@ -166,16 +168,26 @@ func (k *KafkaProvider) CloseAllWriters() error {
 }
 
 func (k *KafkaProvider) createKafkaWriter(topic string) *kafka.Writer {
-	kw := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:      []string{k.Host},
-		Topic:        topic,
-		Dialer:       k.Dialer,
-		Balancer:     newHashBalancer([]int{0}),
-		Async:        true,
-		WriteTimeout: k.WriteTimeout,
-	})
-	kw.AllowAutoTopicCreation = true
+	// kw := kafka.NewWriter(kafka.WriterConfig{
+	// 	Brokers: []string{k.Host},
+	// 	Topic:   topic,
+	// 	// Dialer:       k.Dialer,
+	// 	Balancer:     newHashBalancer([]int{0}),
+	// 	Async:        true,
+	// 	WriteTimeout: k.WriteTimeout,
+	// })
+	kw := &kafka.Writer{
+		Addr:     kafka.TCP(k.Host),
+		Topic:    topic,
+		Balancer: newHashBalancer([]int{0}),
+		Async:    true,
+		Transport: &kafka.Transport{
+			SASL: k.SASLMechanism,
+		},
+		AllowAutoTopicCreation: true,
+		WriteTimeout:           k.WriteTimeout,
+	}
 
-	logging.Logger.Debug("kafka dialer", zap.Any("SASLMechainism", k.Dialer.SASLMechanism))
+	logging.Logger.Debug("kafka dialer", zap.Any("SASLMechainism", k.SASLMechanism))
 	return kw
 }
