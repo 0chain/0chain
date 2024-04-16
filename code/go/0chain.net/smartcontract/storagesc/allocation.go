@@ -435,7 +435,7 @@ func setupNewAllocation(
 	for _, b := range blobberNodes {
 		bAlloc := newBlobberAllocation(bSize, sa, b.mustBase(), conf, now)
 		sa.BlobberAllocs = append(sa.BlobberAllocs, bAlloc)
-		b.mustUpdateBase(func(snb *storageNodeBase) error {
+		_ = b.mustUpdateBase(func(snb *storageNodeBase) error {
 			sa.BlobberAllocsMap[snb.ID] = bAlloc
 			snb.Allocated += bSize
 			return nil
@@ -1480,7 +1480,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				"can't get blobber "+d.BlobberID+": "+err.Error())
 		}
 
-		blobber.mustUpdateBase(func(b *storageNodeBase) error {
+		_ = blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.SavedData += -d.Stats.UsedSize
 			b.Allocated += -d.Size
 			return nil

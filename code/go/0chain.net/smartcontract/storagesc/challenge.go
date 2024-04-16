@@ -640,7 +640,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
-		blobber.mustUpdateBase(func(b *storageNodeBase) error {
+		_ = blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.RewardRound = RewardRound{
 				StartRound: rewardRound,
 				Timestamp:  t.CreationDate,

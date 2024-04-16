@@ -1447,7 +1447,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"can't get blobber "+d.BlobberID+": "+err.Error())
 			}
 
-			blobber.mustUpdateBase(func(b *storageNodeBase) error {
+			_ = blobber.mustUpdateBase(func(b *storageNodeBase) error {
 				b.SavedData += -d.Stats.UsedSize
 				b.Allocated += -d.Size
 				return nil
@@ -1583,7 +1583,7 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, actErr
 	}
 
-	addedBlobber.mustUpdateBase(func(b *storageNodeBase) error {
+	_ = addedBlobber.mustUpdateBase(func(b *storageNodeBase) error {
 		b.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 		return nil
 	})

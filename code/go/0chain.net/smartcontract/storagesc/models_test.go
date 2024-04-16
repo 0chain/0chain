@@ -84,7 +84,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 		return nil
 	})
 
-	list[1].mustUpdateBase(func(b *storageNodeBase) error {
+	_ = list[1].mustUpdateBase(func(b *storageNodeBase) error {
 		b.Terms.ReadPrice = 150
 		return nil
 	})
@@ -100,7 +100,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 		b.Terms.WritePrice = 100
 		return nil
 	})
-	list[1].mustUpdateBase(func(snb *storageNodeBase) error {
+	_ = list[1].mustUpdateBase(func(snb *storageNodeBase) error {
 		snb.Terms.WritePrice = 150
 		return nil
 	})
@@ -116,7 +116,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 		return nil
 	})
 
-	list[1].mustUpdateBase(func(b *storageNodeBase) error {
+	_ = list[1].mustUpdateBase(func(b *storageNodeBase) error {
 		b.Capacity = 100
 		b.Allocated = 50
 		return nil
@@ -135,7 +135,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	assert.Len(t, bs, 1)
 
 	// accept all
-	list[1].mustUpdateBase(func(b *storageNodeBase) error {
+	_ = list[1].mustUpdateBase(func(b *storageNodeBase) error {
 		b.Capacity = 330
 		b.Allocated = 100
 		return nil

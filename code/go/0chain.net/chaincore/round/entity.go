@@ -386,7 +386,6 @@ func (r *Round) addProposedBlock(b *block.Block) {
 	sort.SliceStable(r.proposedBlocks, func(i, j int) bool {
 		return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank
 	})
-	return
 }
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */

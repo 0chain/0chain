@@ -237,7 +237,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 
 		if *updateBlobber.BaseURL != "" {
-			existingBlobber.mustUpdateBase(func(snb *storageNodeBase) error {
+			_ = existingBlobber.mustUpdateBase(func(snb *storageNodeBase) error {
 				snb.BaseURL = *updateBlobber.BaseURL
 				return nil
 			})
@@ -542,7 +542,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 			"cannot get config: %v", err)
 	}
 
-	blobber.mustUpdateBase(func(b *storageNodeBase) error {
+	_ = blobber.mustUpdateBase(func(b *storageNodeBase) error {
 		downtime = common.Downtime(b.LastHealthCheck, t.CreationDate, conf.HealthCheckPeriod)
 		b.LastHealthCheck = t.CreationDate
 		return nil
@@ -1038,7 +1038,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	blobAlloc.Stats.UsedSize += changeSize
 	blobAlloc.Stats.NumWrites++
 
-	blobber.mustUpdateBase(func(b *storageNodeBase) error {
+	_ = blobber.mustUpdateBase(func(b *storageNodeBase) error {
 		b.SavedData += changeSize
 		return nil
 	})
@@ -1233,7 +1233,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("invalid blobber params: %v", err)
 	}
 
-	blobber.mustUpdateBase(func(b *storageNodeBase) error {
+	_ = blobber.mustUpdateBase(func(b *storageNodeBase) error {
 		b.LastHealthCheck = t.CreationDate // set to now
 		return nil
 	})
