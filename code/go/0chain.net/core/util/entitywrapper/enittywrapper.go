@@ -119,7 +119,7 @@ func (w *Wrapper) MarshalMsg(b []byte) ([]byte, error) {
 		return nil, errors.New("entity not set")
 	}
 	w.v.InitVersion()
-	return w.v.MarshalMsg(nil)
+	return w.v.MarshalMsg(b)
 }
 
 func (w *Wrapper) UnmarshalMsgType(b []byte, typeName string) ([]byte, error) {
