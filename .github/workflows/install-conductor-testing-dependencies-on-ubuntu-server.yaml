@@ -35,8 +35,11 @@ jobs:
       
       - name: Install g++-11/gcc-11
         run: |
+          gcc -v || true
+          g++ -v || true
           export FOUND=$(dpkg -l | grep -c gcc-11)
           [ $FOUND -gt 0 ] && exit 0 || true
+
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get update -y
           sudo apt-get install -y gcc-11 g++-11
