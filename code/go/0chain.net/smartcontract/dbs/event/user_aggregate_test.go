@@ -209,7 +209,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 			edb, clean = GetTestEventDB(t)
 			defer clean()
 
-			if err := edb.addRollingPartition(0, "user_aggregates"); err != nil {
+			if err := edb.addPartition(0, "user_aggregates"); err != nil {
 				t.Error()
 			}
 
@@ -238,7 +238,7 @@ func TestEventDb_updateUserSnapshots(t *testing.T) {
 	edb, clean := GetTestEventDB(t)
 	defer clean()
 
-	if err := edb.addRollingPartition(0, "user_aggregates"); err != nil {
+	if err := edb.addPartition(0, "user_aggregates"); err != nil {
 		t.Error()
 	}
 
