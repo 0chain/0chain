@@ -31,8 +31,8 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.17.0
-	golang.org/x/net v0.19.0
+	golang.org/x/crypto v0.21.0
+	golang.org/x/net v0.22.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.5.2
@@ -42,11 +42,13 @@ require (
 require (
 	github.com/0chain/common v1.13.0
 	github.com/0chain/gosdk v1.12.7
+	github.com/IBM/sarama v1.42.2
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/herumi/bls-go-binary v1.33.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.1
+	github.com/minio/sha256-simd v1.0.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
 	github.com/segmentio/kafka-go v0.4.47
@@ -57,7 +59,6 @@ require (
 )
 
 require (
-	github.com/IBM/sarama v1.43.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.15.2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.2 // indirect
@@ -68,10 +69,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.19.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.25.1 // indirect
 	github.com/aws/smithy-go v1.16.0 // indirect
-	github.com/ethereum/go-ethereum v1.10.26 // indirect
 	github.com/eapache/go-resiliency v1.6.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/ethereum/go-ethereum v1.10.26 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -81,7 +82,6 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/minio/sha256-simd v1.0.1 // indirect
 )
 
 require (
@@ -123,7 +123,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.7 // indirect
+	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
