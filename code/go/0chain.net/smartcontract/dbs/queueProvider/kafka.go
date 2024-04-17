@@ -3,11 +3,14 @@ package queueProvider
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/0chain/common/core/logging"
+	"github.com/IBM/sarama"
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl"
 	"go.uber.org/zap"
 )
 
@@ -21,20 +24,42 @@ type KafkaProviderI interface {
 type KafkaProvider struct {
 	Host         string
 	WriteTimeout time.Duration
-	mutex        sync.RWMutex // Mutex for synchronizing access to writers map
+	// Dialer       *kafka.Dialer
+	SASLMechanism sasl.Mechanism
+	Config        *sarama.Config
+	mutex         sync.RWMutex // Mutex for synchronizing access to writers map
 }
 
 // map of kafka writers for each topic
-var writers map[string]*kafka.Writer
+var writers map[string]sarama.AsyncProducer
 
 func init() {
-	writers = make(map[string]*kafka.Writer)
+	writers = make(map[string]sarama.AsyncProducer)
 }
 
-func NewKafkaProvider(host string, writeTimeout time.Duration) *KafkaProvider {
+func NewKafkaProvider(host, username, password string, writeTimeout time.Duration) *KafkaProvider {
+	logging.Logger.Debug("New kafka provider",
+		zap.String("host", host),
+		zap.String("username", username),
+		zap.String("password", password))
+
+	config := sarama.NewConfig()
+	// config.Net.SASL.Enable = true
+	config.Net.SASL.User = username
+	config.Net.SASL.Password = password
+	config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+
 	return &KafkaProvider{
 		Host:         host,
 		WriteTimeout: writeTimeout,
+		// 	Timeout:   10 * time.Second,
+		// 	DualStack: true,
+		Config: config,
+		// SASLMechanism: &plain.Mechanism{
+		// 	Username: username,
+		// 	Password: password,
+		// },
+		// },
 	}
 }
 
@@ -72,9 +97,6 @@ func (b *hashBalancer) Balance(msg kafka.Message, partitions ...int) (partition 
 // }
 
 func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error {
-	toutCtx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
-	defer cancel()
-
 	k.mutex.RLock()
 	writer := writers[topic]
 	k.mutex.RUnlock()
@@ -88,20 +110,41 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 			writers[topic] = writer
 		}
 	}
-	err := writer.WriteMessages(toutCtx,
-		kafka.Message{
-			Key:   key,
-			Value: message,
-		},
-	)
-	if err != nil {
-		logging.Logger.Error("Publish: failed to write message on kafka", zap.String("topic", topic), zap.Any("message", message), zap.Error(err))
-		err := k.ReconnectWriter(topic)
-		if err != nil {
-			logging.Logger.Error("Publish: failed to reconnect writer", zap.String("topic", topic), zap.Error(err))
-		}
-		return fmt.Errorf("failed to write message on kafka on topic %v: %v", topic, err)
+
+	msg := &sarama.ProducerMessage{
+		Topic: topic,
+		Key:   sarama.ByteEncoder(key),
+		Value: sarama.ByteEncoder(message),
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
+	defer cancel()
+
+	select {
+	case writer.Input() <- msg:
+	case <-ctx.Done():
+		logging.Logger.Error("kafka publish message timeout:", zap.Error(ctx.Err()))
+	}
+	// if err != nil {
+	// 	log.Printf("Failed to send message: %v", err)
+	// } else {
+	// 	fmt.Printf("Message sent successfully, partition: %d, offset: %d\n", partition, offset)
+	// }
+
+	// err := writer.WriteMessages(toutCtx,
+	// 	kafka.Message{
+	// 		Key:   key,
+	// 		Value: message,
+	// 	},
+	// )
+	// if err != nil {
+	// 	logging.Logger.Error("Publish: failed to write message on kafka", zap.String("topic", topic), zap.Any("message", message), zap.Error(err))
+	// 	err := k.ReconnectWriter(topic)
+	// 	if err != nil {
+	// 		logging.Logger.Error("Publish: failed to reconnect writer", zap.String("topic", topic), zap.Error(err))
+	// 	}
+	// 	return fmt.Errorf("failed to write message on kafka on topic %v: %v", topic, err)
+	// }
 
 	return nil
 }
@@ -151,13 +194,41 @@ func (k *KafkaProvider) CloseAllWriters() error {
 	return nil
 }
 
-func (k *KafkaProvider) createKafkaWriter(topic string) *kafka.Writer {
-	return &kafka.Writer{
-		Addr:                   kafka.TCP(k.Host),
-		Topic:                  topic,
-		AllowAutoTopicCreation: true,
-		WriteTimeout:           k.WriteTimeout,
-		Async:                  true,
-		Balancer:               newHashBalancer([]int{0}),
+func (k *KafkaProvider) createKafkaWriter(topic string) sarama.AsyncProducer {
+	// kw := kafka.NewWriter(kafka.WriterConfig{
+	// 	Brokers: []string{k.Host},
+	// 	Topic:   topic,
+	// 	// Dialer:       k.Dialer,
+	// 	Balancer:     newHashBalancer([]int{0}),
+	// 	Async:        true,
+	// 	WriteTimeout: k.WriteTimeout,
+	// })
+
+	fmt.Println("kafka host", k.Host)
+	fmt.Println("kafka config", k.Config)
+	producer, err := sarama.NewAsyncProducer([]string{k.Host}, k.Config)
+	if err != nil {
+		log.Fatalln("Failed to start Sarama producer:", err)
 	}
+
+	go func() {
+		for err := range producer.Errors() {
+			logging.Logger.Error("kafka - failed to write access log entry:", zap.Error(err))
+		}
+	}()
+
+	// kw := &kafka.Writer{
+	// 	Addr:     kafka.TCP(k.Host),
+	// 	Topic:    topic,
+	// 	Balancer: newHashBalancer([]int{0}),
+	// 	Async:    true,
+	// 	Transport: &kafka.Transport{
+	// 		SASL: k.SASLMechanism,
+	// 	},
+	// 	AllowAutoTopicCreation: true,
+	// 	WriteTimeout:           k.WriteTimeout,
+	// }
+
+	// logging.Logger.Debug("kafka dialer", zap.Any("SASLMechainism", k.SASLMechanism))
+	return producer
 }

@@ -95,6 +95,18 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 		return nil, fmt.Errorf("begin transcation: %v", tx.Error)
 	}
 
+	var kafka queueProvider.KafkaProviderI
+	if edb.kafka != nil {
+		kafka = edb.kafka
+	} else {
+		kafka = queueProvider.NewKafkaProvider(
+			edb.dbConfig.KafkaHost,
+			edb.dbConfig.KafkaUsername,
+			edb.dbConfig.KafkaPassword,
+			edb.dbConfig.KafkaWriteTimeout,
+		)
+	}
+
 	edbTx := EventDb{
 		Store: edbTx{
 			Store: edb,
@@ -102,12 +114,7 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 		},
 		dbConfig: edb.dbConfig,
 		settings: edb.settings,
-		kafka: queueProvider.NewKafkaProvider(
-			edb.dbConfig.KafkaHost,
-			edb.dbConfig.KafkaWriteTimeout,
-		),
-		eventsChannel: edb.eventsChannel,
-		partitionChan: edb.partitionChan,
+		kafka:    kafka,
 	}
 	return &edbTx, nil
 }
