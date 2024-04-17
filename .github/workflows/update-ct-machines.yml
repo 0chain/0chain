@@ -7,16 +7,16 @@ jobs:
   update-ct-machines:
     strategy:
       matrix:
-        machine: [conductor-test01, conductor-test02, conductor-test03, conductor-test04, conductor-test05, conductor-test06, conductor-test07, conductor-test08, conductor-test09, conductor-test10, conductor-test11, conductor-test12]
-    # uses: 0chain/0chain/.github/workflows/install-conductor-testing-dependencies-on-ubuntu-server.yaml@staging
-    # with:
-    #   runner-label: ${{ matrix.machine }}
-    runs-on: [self-hosted, arc-runner]
+        machine: ["conductor-test01", "conductor-test02", "conductor-test03", "conductor-test04", "conductor-test05", "conductor-test06", "conductor-test07", "conductor-test08", "conductor-test09", "conductor-test10", "conductor-test11", "conductor-test12"]
+    uses: 0chain/0chain/.github/workflows/install-conductor-testing-dependencies-on-ubuntu-server.yaml@staging
+    with:
+      runner-label: ${{ matrix.machine }}
+    # runs-on: [self-hosted, arc-runner]
 
-    steps:
-      - name: Print matrix value
-        run: |
-          echo ${{ matrix.machine }}
+    # steps:
+    #   - name: Print matrix value
+    #     run: |
+    #       echo ${{ matrix.machine }}
 # jobs:
 #   conductor-test01:
 #     name: conductor-test01
