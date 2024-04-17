@@ -105,8 +105,8 @@ jobs:
           wget https://github.com/herumi/bls/archive/refs/tags/v1.89.zip -O herumi-bls.zip
           wget https://github.com/herumi/mcl/archive/refs/tags/v1.89.zip -O herumi-mcl.zip
 
-          unzip bls.zip
-          unzip mcl.zip
+          unzip herumi-bls.zip
+          unzip herumi-mcl.zip
 
           rm herumi-bls.zip herumi-mcl.zip
 
