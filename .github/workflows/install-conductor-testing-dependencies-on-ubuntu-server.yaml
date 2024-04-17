@@ -106,6 +106,7 @@ jobs:
           wget https://github.com/herumi/mcl/archive/refs/tags/v1.89.zip -O mcl.zip
           unzip bls.zip
           unzip mcl.zip
+          rm bls.zip mcl.zip
           mv bls* bls
           mv mcl* mcl
 
