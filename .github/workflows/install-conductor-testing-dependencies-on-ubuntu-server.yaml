@@ -20,6 +20,11 @@ jobs:
     runs-on: ${{ inputs.runner-label }}
   
     steps:
+      - name: Check the OS is Ubuntu 20.04
+        run: |
+          cat /etc/os-release
+          grep -q "Ubuntu 20.04" /etc/os-release || exit 1
+
       - name: Install APT dependencies
         run: |
           sudo apt-get update -y
@@ -31,7 +36,9 @@ jobs:
             wget \
             build-essential \
             manpages-dev \
-            software-properties-common
+            software-properties-common \
+            zip \
+            unzip
       
       - name: Install g++-11/gcc-11
         run: |
@@ -64,7 +71,7 @@ jobs:
           go version
           ln -fs /usr/local/go/bin/go /usr/bin/go
 
-      - name: Install Docker (latest)
+      - name: Install Docker (5:26.0.1-1~ubuntu.20.04~focal)
         run: |
           for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg || true; done
           sudo apt-get update
@@ -79,8 +86,8 @@ jobs:
             sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
           sudo apt-get update
           
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-          
+          VERSION_STRING=5:26.0.1-1~ubuntu.20.04~focal
+          sudo apt-get install docker-ce=$VERSION_STRING docker-ce-cli=$VERSION_STRING containerd.io docker-buildx-plugin docker-compose-plugin          
           docker version
           docker run --rm hello-world
       
@@ -91,16 +98,23 @@ jobs:
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
       
-      - name: Install Herumi BLS/MCL (latest)
+      - name: Install Herumi BLS/MCL (v1.89)
         run: |
           rm -rf bls || true
-          git clone --recursive https://github.com/herumi/bls
-          cd bls
+          cd /tmp
+          wget https://github.com/herumi/bls/archive/refs/tags/v1.89.zip -O bls.zip
+          wget https://github.com/herumi/mcl/archive/refs/tags/v1.89.zip -O mcl.zip
+          unzip bls.zip
+          unzip mcl.zip
+          mv bls* bls
+          mv mcl* mcl
+
           make -C mcl -j 4 lib/libmclbn256.a install
-          make MCL_USE_GMP=0 MCL_DIR=./mcl -C . -j 4 install
+          make MCL_USE_GMP=0 MCL_DIR=./mcl -C bls -j 4 install
           ls -la /usr/local/lib
+
       
-      - name: Install mockery (latest)
+      - name: Install mockery (v2.42.1)
         run: |
           export HOME=/root
           go env -w GO111MODULE=auto
