@@ -7,7 +7,13 @@ on:
         description: 'Label of the runner to install the dependencies on'
         required: true
         default: 'conductor-test'
-
+  workflow_call:
+    inputs:
+      runner-label:
+        type: string
+        description: 'Label of the runner to install the dependencies on'
+        required: true
+        default: 'conductor-test'
 jobs:
   INSTALL_DEPS:
     name: INSTALL_DEPS
