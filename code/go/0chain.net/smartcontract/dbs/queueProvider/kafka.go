@@ -44,7 +44,7 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 		zap.String("password", password))
 
 	config := sarama.NewConfig()
-	config.Net.SASL.Enable = true
+	// config.Net.SASL.Enable = true
 	config.Net.SASL.User = username
 	config.Net.SASL.Password = password
 	config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
@@ -204,6 +204,8 @@ func (k *KafkaProvider) createKafkaWriter(topic string) sarama.AsyncProducer {
 	// 	WriteTimeout: k.WriteTimeout,
 	// })
 
+	fmt.Println("kafka host", k.Host)
+	fmt.Println("kafka config", k.Config)
 	producer, err := sarama.NewAsyncProducer([]string{k.Host}, k.Config)
 	if err != nil {
 		log.Fatalln("Failed to start Sarama producer:", err)
