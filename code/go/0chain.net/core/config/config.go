@@ -209,6 +209,8 @@ type DbAccess struct {
 	KafkaEnabled      bool
 	KafkaHost         string
 	KafkaTopic        string
+	KafkaUsername     string
+	KafkaPassword     string
 	KafkaWriteTimeout time.Duration
 }
 

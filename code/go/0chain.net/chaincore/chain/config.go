@@ -589,6 +589,8 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.KafkaEnabled = viper.GetBool("kafka.enabled")
 	conf.DbsEvents.KafkaHost = viper.GetString("kafka.host")
 	conf.DbsEvents.KafkaTopic = viper.GetString("kafka.topic")
+	conf.DbsEvents.KafkaUsername = viper.GetString("kafka.username")
+	conf.DbsEvents.KafkaPassword = viper.GetString("kafka.password")
 	conf.DbsEvents.KafkaWriteTimeout = viper.GetDuration("kafka.write_timeout")
 	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
 	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
