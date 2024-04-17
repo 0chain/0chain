@@ -114,7 +114,7 @@ jobs:
           mv mcl* mcl
 
           make -C mcl -j 4 lib/libmclbn256.a install
-          make MCL_USE_GMP=0 MCL_DIR=./mcl -C bls -j 4 install
+          make MCL_USE_GMP=0 MCL_DIR=../mcl -C bls -j 4 install
           ls -la /usr/local/lib
 
       
