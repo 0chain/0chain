@@ -248,13 +248,13 @@ const (
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
 	EventDbSlowTableSpace  = DbsEvents + "slowtablespace"
 
-	EventDbDebug                        = DbSettings + "debug"
-	EventDbAggregatePeriod              = DbSettings + "aggregate_period"
-	EventDbPartitionChangePeriod        = DbSettings + "partition_change_period"
-	EventDbPartitionKeepCount           = DbSettings + "partition_keep_count"
-	EventDbRollingPartitionChangePeriod = DbSettings + "rolling_partition_change_period"
-	EventDbRollingPartitionKeepCount    = DbSettings + "rolling_partition_keep_count"
-	EventDbPageLimit                    = DbSettings + "page_limit"
+	EventDbDebug                          = DbSettings + "debug"
+	EventDbAggregatePeriod                = DbSettings + "aggregate_period"
+	EventDbPartitionChangePeriod          = DbSettings + "partition_change_period"
+	EventDbPartitionKeepCount             = DbSettings + "partition_keep_count"
+	EventDbPermanentPartitionChangePeriod = DbSettings + "permanent_partition_change_period"
+	EventDbPermanentPartitionKeepCount    = DbSettings + "permanent_partition_keep_count"
+	EventDbPageLimit                      = DbSettings + "page_limit"
 )
 
 func (s Source) String() string {
@@ -458,8 +458,8 @@ var MockBenchData = BenchData{
 
 func GetOldestRollingAggregateRound() int64 {
 	var (
-		rollingPeriod   = viper.GetInt(EventDbRollingPartitionChangePeriod)
-		rollingKeep     = viper.GetInt(EventDbRollingPartitionKeepCount)
+		rollingPeriod   = viper.GetInt(EventDbPermanentPartitionChangePeriod)
+		rollingKeep     = viper.GetInt(EventDbPermanentPartitionKeepCount)
 		blocks          = viper.GetInt(NumBlocks)
 		oldestRoundKept = int64((blocks/rollingPeriod - rollingKeep + 1) * rollingPeriod)
 	)

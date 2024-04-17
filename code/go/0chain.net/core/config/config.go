@@ -205,13 +205,13 @@ type DbAccess struct {
 }
 
 type DbSettings struct {
-	Debug                        bool  `json:"debug"`
-	AggregatePeriod              int64 `json:"aggregate_period"`
-	PartitionChangePeriod        int64 `json:"partition_change_period"`
-	PartitionKeepCount           int64 `json:"partition_keep_count"`
-	RollingPartitionChangePeriod int64 `json:"rolling_partition_change_period"`
-	RollingPartitionKeepCount    int64 `json:"rolling_partition_keep_count"`
-	PageLimit                    int64 `json:"page_limit"`
+	Debug                          bool  `json:"debug"`
+	AggregatePeriod                int64 `json:"aggregate_period"`
+	PartitionChangePeriod          int64 `json:"partition_change_period"`
+	PartitionKeepCount             int64 `json:"partition_keep_count"`
+	PermanentPartitionChangePeriod int64 `json:"permanent_partition_change_period"`
+	PermanentPartitionKeepCount    int64 `json:"permanent_partition_keep_count"`
+	PageLimit                      int64 `json:"page_limit"`
 }
 
 func (s *DbSettings) Update(updates map[string]string) error {

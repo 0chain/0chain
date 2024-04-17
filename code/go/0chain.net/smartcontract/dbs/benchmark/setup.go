@@ -22,7 +22,7 @@ func AddMockEvents(eventDb *event.EventDb) {
 
 	var events []event.Event
 	for round := benchmark.GetOldestAggregateRound(); round < viper.GetInt64(benchmark.NumBlocks); round++ {
-		_ = eventDb.ManageRollingPartitions(round)
+		_ = eventDb.ManagePartitions(round)
 		for i := 0; i <= viper.GetInt(benchmark.NumTransactionPerBlock); i++ {
 			events = append(events, event.Event{
 				BlockNumber: round,
@@ -191,8 +191,8 @@ func AddAggregatePartitions(edb *event.EventDb) {
 	var (
 		period             = viper.GetInt(benchmark.EventDbPartitionChangePeriod)
 		keep               = viper.GetInt(benchmark.EventDbPartitionKeepCount)
-		rollingPeriod      = viper.GetInt(benchmark.EventDbRollingPartitionChangePeriod)
-		rollingKeep        = viper.GetInt(benchmark.EventDbRollingPartitionKeepCount)
+		rollingPeriod      = viper.GetInt(benchmark.EventDbPermanentPartitionChangePeriod)
+		rollingKeep        = viper.GetInt(benchmark.EventDbPermanentPartitionKeepCount)
 		blocks             = viper.GetInt64(benchmark.NumBlocks)
 		firstRollingPeriod = benchmark.GetOldestRollingAggregateRound()
 		firstPeriod        = benchmark.GetOldestAggregateRound()
@@ -206,7 +206,7 @@ func AddAggregatePartitions(edb *event.EventDb) {
 			break
 		}
 
-		if err := edb.AddPartitions(round); err != nil {
+		if err := edb.AddPermanentPartitions(round); err != nil {
 			log.Println(err)
 		}
 	}
@@ -219,7 +219,7 @@ func AddAggregatePartitions(edb *event.EventDb) {
 			break
 		}
 
-		if err := edb.AddRollingPartitions(round); err != nil {
+		if err := edb.AddPartitions(round); err != nil {
 			log.Println(err)
 		}
 	}

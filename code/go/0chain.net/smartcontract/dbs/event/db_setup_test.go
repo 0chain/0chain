@@ -28,8 +28,8 @@ func GetTestEventDB(t *testing.T) (*EventDb, func()) {
 	db, err := gEventDB.Begin(context.Background())
 	require.NoError(t, err)
 
+	db.managePermanentPartitions(0)
 	db.managePartitions(0)
-	db.manageRollingPartitions(0)
 
 	return db, func() {
 		db.Rollback()
@@ -96,12 +96,12 @@ func TestMain(m *testing.M) {
 	}
 
 	dbSetting := config.DbSettings{
-		AggregatePeriod:              10,
-		PartitionKeepCount:           10,
-		PartitionChangePeriod:        100,
-		RollingPartitionChangePeriod: 20,
-		RollingPartitionKeepCount:    1,
-		PageLimit:                    10,
+		AggregatePeriod:                10,
+		PartitionKeepCount:             10,
+		PartitionChangePeriod:          100,
+		PermanentPartitionChangePeriod: 20,
+		PermanentPartitionKeepCount:    1,
+		PageLimit:                      10,
 	}
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: dbSetting}}

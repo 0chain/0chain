@@ -27,27 +27,27 @@ func TestPartitionCreate(t *testing.T) {
 	logging.InitLogging("development", "")
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
-		AggregatePeriod:              10,
-		PartitionKeepCount:           10,
-		PartitionChangePeriod:        100,
-		RollingPartitionChangePeriod: 10,
-		RollingPartitionKeepCount:    1,
+		AggregatePeriod:                10,
+		PartitionKeepCount:             10,
+		PartitionChangePeriod:          100,
+		PermanentPartitionChangePeriod: 10,
+		PermanentPartitionKeepCount:    1,
 	}}}
 
 	db, f := GetTestEventDB(t)
 	defer f()
-	err := db.addRollingPartition(11, "blobber_aggregates")
+	err := db.addPartition(11, "blobber_aggregates")
 	require.NoError(t, err)
-	err = db.addRollingPartition(101, "blobber_aggregates")
+	err = db.addPartition(101, "blobber_aggregates")
 	require.NoError(t, err)
-	err = db.addRollingPartition(201, "blobber_aggregates")
+	err = db.addPartition(201, "blobber_aggregates")
 	require.NoError(t, err)
 
 	var partitions []string
 	db.Store.Get().Raw(req).Scan(&partitions)
 	require.Equal(t, 13, len(partitions))
 
-	err = db.dropRollingPartition(201, "blobber_aggregates")
+	err = db.dropPartition(201, "blobber_aggregates")
 	require.NoError(t, err)
 
 	db.Store.Get().Raw(req).Scan(&partitions)

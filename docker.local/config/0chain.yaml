@@ -139,10 +139,10 @@ server_chain:
       # event database settings blockchain
       debug: false
       aggregate_period: 10
-      partition_change_period: 2000000
-      partition_keep_count: 1
-      rolling_partition_change_period: 100000
-      rolling_partition_keep_count: 20
+      permanent_partition_change_period: 2000000
+      permanent_partition_keep_count: 1
+      partition_change_period: 100000
+      partition_keep_count: 20
       page_limit: 50
 
 network:
