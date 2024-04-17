@@ -17,7 +17,7 @@ on:
 jobs:
   INSTALL_DEPS:
     name: INSTALL_DEPS
-    runs-on: ${{ github.event.inputs.runner-label }}
+    runs-on: ${{ inputs.runner-label }}
   
     steps:
       - name: Install APT dependencies
