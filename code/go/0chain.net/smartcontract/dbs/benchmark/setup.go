@@ -189,17 +189,17 @@ func GetMockTransactionHash(blockNumber int64, index int) string {
 
 func AddAggregatePartitions(edb *event.EventDb) {
 	var (
-		period             = viper.GetInt(benchmark.EventDbPartitionChangePeriod)
-		keep               = viper.GetInt(benchmark.EventDbPartitionKeepCount)
-		rollingPeriod      = viper.GetInt(benchmark.EventDbPermanentPartitionChangePeriod)
-		rollingKeep        = viper.GetInt(benchmark.EventDbPermanentPartitionKeepCount)
-		blocks             = viper.GetInt64(benchmark.NumBlocks)
-		firstRollingPeriod = benchmark.GetOldestRollingAggregateRound()
-		firstPeriod        = benchmark.GetOldestAggregateRound()
+		period               = viper.GetInt(benchmark.EventDbPartitionChangePeriod)
+		keep                 = viper.GetInt(benchmark.EventDbPartitionKeepCount)
+		permanentPeriod      = viper.GetInt(benchmark.EventDbPermanentPartitionChangePeriod)
+		permanentKeep        = viper.GetInt(benchmark.EventDbPermanentPartitionKeepCount)
+		blocks               = viper.GetInt64(benchmark.NumBlocks)
+		firstPeriod          = benchmark.GetOldestAggregateRound()
+		firstPermanentPeriod = benchmark.GetOldestPermanentAggregateRound()
 	)
 
 	for i := 0; i < keep; i++ {
-		round := firstRollingPeriod + int64(i*period)
+		round := firstPermanentPeriod + int64(i*permanentPeriod)
 		if round < 0 {
 			continue
 		} else if round > blocks {
@@ -211,8 +211,8 @@ func AddAggregatePartitions(edb *event.EventDb) {
 		}
 	}
 
-	for i := 0; i < rollingKeep; i++ {
-		round := firstPeriod + int64(i*rollingPeriod)
+	for i := 0; i < permanentKeep; i++ {
+		round := firstPeriod + int64(i*period)
 		if round < 0 {
 			continue
 		} else if round > blocks {
