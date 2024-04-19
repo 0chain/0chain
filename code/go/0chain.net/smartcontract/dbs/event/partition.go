@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 func (edb *EventDb) addPartition(current int64, table string) error {
@@ -35,6 +38,11 @@ func (edb *EventDb) addPermanentPartition(current int64, table string) error {
 	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelFunc()
 	raw := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v_%v PARTITION OF %v FOR VALUES FROM (%v) TO (%v)", table, current, table, from, to)
+	logging.Logger.Debug("adding partition for",
+		zap.String("table", table),
+		zap.Int64("current", current),
+		zap.Int64("from", from),
+		zap.Int64("to", to))
 	return edb.Store.Get().WithContext(timeout).Exec(raw).Error
 }
 
