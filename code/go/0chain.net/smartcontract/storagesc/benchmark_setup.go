@@ -473,7 +473,7 @@ func addMockBlobberSnapshots(blobbers []event.Blobber, edb *event.EventDb) {
 	const mockInactiveRounds = 17
 	var aggregates []event.BlobberAggregate
 	for _, blobber := range blobbers {
-		for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
+		for i := sc.GetOldestRollingAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 			aggregate := event.BlobberAggregate{
 				Round:               int64(i),
 				BlobberID:           blobber.ID,
@@ -504,7 +504,7 @@ func addMockValidatorSnapshots(validators []event.Validator, edb *event.EventDb)
 	}
 	var aggregates []event.ValidatorAggregate
 	for _, validator := range validators {
-		for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
+		for i := sc.GetOldestRollingAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 			aggregate := event.ValidatorAggregate{
 				Round:         i,
 				ValidatorID:   validator.ID,
@@ -527,7 +527,7 @@ func AddMockSnapshots(edb *event.EventDb) {
 		return
 	}
 	var snapshots []event.Snapshot
-	for i := sc.GetOldestAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
+	for i := sc.GetOldestRollingAggregateRound(); i < viper.GetInt64(sc.NumBlocks); i++ {
 		snapshot := event.Snapshot{
 			Round:                i,
 			TotalMint:            i + 10,
