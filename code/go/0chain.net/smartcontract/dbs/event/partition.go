@@ -3,8 +3,6 @@ package event
 import (
 	"context"
 	"fmt"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 	"regexp"
 	"strconv"
 	"time"
@@ -80,8 +78,6 @@ func (edb *EventDb) addPermanentPartition(current int64, table string) error {
 			// Generate SQL query for creating the partition
 			raw := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v_%v PARTITION OF %v FOR VALUES FROM (%v) TO (%v)", table, partitionStart, table, partitionStart, partitionEnd)
 
-			logging.Logger.Info("Partition Creation Query", zap.Any("query", raw))
-
 			// Execute the SQL query
 			if err := edb.Store.Get().Exec(raw).Error; err != nil {
 				return err
@@ -92,9 +88,6 @@ func (edb *EventDb) addPermanentPartition(current int64, table string) error {
 		if newCurrentPartitionEnd := currentPartitionEnd + (numPartitions * edb.settings.PermanentPartitionChangePeriod); newCurrentPartitionEnd < from {
 			// Create the partition for the remaining range
 			raw := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v_%v PARTITION OF %v FOR VALUES FROM (%v) TO (%v)", table, from, table, newCurrentPartitionEnd, from)
-
-			logging.Logger.Info("Partition Creation Query last", zap.Any("query", raw))
-
 			return edb.Store.Get().Exec(raw).Error
 		}
 	}
@@ -102,9 +95,6 @@ func (edb *EventDb) addPermanentPartition(current int64, table string) error {
 	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelFunc()
 	raw := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v_%v PARTITION OF %v FOR VALUES FROM (%v) TO (%v)", table, current, table, from, to)
-
-	logging.Logger.Info("Partition Creation Query final", zap.Any("query", raw))
-
 	return edb.Store.Get().WithContext(timeout).Exec(raw).Error
 }
 
