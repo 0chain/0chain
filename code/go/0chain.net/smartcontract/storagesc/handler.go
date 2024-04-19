@@ -254,6 +254,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		Size:            conf.FreeAllocationSettings.Size,
 		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
+		IsRestricted:    2,
 	}
 
 	edb := balances.GetEventDB()
