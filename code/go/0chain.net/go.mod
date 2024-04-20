@@ -51,7 +51,6 @@ require (
 	github.com/minio/sha256-simd v1.0.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
-	github.com/segmentio/kafka-go v0.4.47
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 	golang.org/x/sys v0.18.0
 	gorm.io/driver/sqlite v1.5.3
