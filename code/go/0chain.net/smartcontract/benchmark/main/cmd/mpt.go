@@ -646,11 +646,13 @@ func newEventsDb() *event.EventDb {
 			Slowtablespace:  viper.GetString(benchmark.EventDbSlowTableSpace),
 		}
 		dbSettingsConfig := config.DbSettings{
-			Debug:                 viper.GetBool(benchmark.EventDbDebug),
-			AggregatePeriod:       viper.GetInt64(benchmark.EventDbAggregatePeriod),
-			PartitionChangePeriod: viper.GetInt64(benchmark.EventDbPartitionChangePeriod),
-			PartitionKeepCount:    viper.GetInt64(benchmark.EventDbPartitionKeepCount),
-			PageLimit:             viper.GetInt64(benchmark.EventDbPageLimit),
+			Debug:                          viper.GetBool(benchmark.EventDbDebug),
+			AggregatePeriod:                viper.GetInt64(benchmark.EventDbAggregatePeriod),
+			PartitionChangePeriod:          viper.GetInt64(benchmark.EventDbPartitionChangePeriod),
+			PartitionKeepCount:             viper.GetInt64(benchmark.EventDbPartitionKeepCount),
+			PermanentPartitionChangePeriod: viper.GetInt64(benchmark.EventDbPermanentPartitionChangePeriod),
+			PermanentPartitionKeepCount:    viper.GetInt64(benchmark.EventDbPermanentPartitionKeepCount),
+			PageLimit:                      viper.GetInt64(benchmark.EventDbPageLimit),
 		}
 		return event.NewEventDbWithoutWorker(dbAccessConfig, dbSettingsConfig)
 	}

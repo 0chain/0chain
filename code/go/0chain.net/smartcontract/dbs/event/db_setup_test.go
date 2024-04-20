@@ -28,6 +28,7 @@ func GetTestEventDB(t *testing.T) (*EventDb, func()) {
 	db, err := gEventDB.Begin(context.Background())
 	require.NoError(t, err)
 
+	db.managePermanentPartitions(0)
 	db.managePartitions(0)
 
 	return db, func() {
@@ -73,7 +74,7 @@ func TestMain(m *testing.M) {
 
 	log.Println("Connecting to database on url:", databaseUrl)
 
-	resource.Expire(120) // Tell docker to hard kill the container in 120 seconds
+	resource.Expire(600) // Tell docker to hard kill the container in 600 seconds (10 Mins)
 
 	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
 	pool.MaxWait = 120 * time.Second
@@ -95,10 +96,12 @@ func TestMain(m *testing.M) {
 	}
 
 	dbSetting := config.DbSettings{
-		AggregatePeriod:       10,
-		PartitionKeepCount:    10,
-		PartitionChangePeriod: 100,
-		PageLimit:             10,
+		AggregatePeriod:                10,
+		PartitionKeepCount:             10,
+		PartitionChangePeriod:          100,
+		PermanentPartitionChangePeriod: 20,
+		PermanentPartitionKeepCount:    1,
+		PageLimit:                      10,
 	}
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: dbSetting}}

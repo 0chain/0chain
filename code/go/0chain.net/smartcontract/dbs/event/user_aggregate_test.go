@@ -13,13 +13,13 @@ import (
 
 func TestEventDb_updateUserAggregates(t *testing.T) {
 	var (
-		edb *EventDb
+		edb   *EventDb
 		clean func()
 	)
-	
+
 	type args struct {
 		clientWithSnapshot string
-		e *BlockEvents
+		e                  *BlockEvents
 	}
 
 	tests := []struct {
@@ -72,7 +72,6 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 						}},
 					}},
 				},
-
 			},
 			wantErr: assert.NoError,
 		}, {
@@ -110,7 +109,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 				aggregates, err := edb.GetLatestUserAggregates(a)
 				return assert.Equal(t, int64(76), aggregates["client31"].ReadPoolTotal)
 			},
-		}, 
+		},
 		{
 			name: "user claimable rewards",
 			args: args{
@@ -167,11 +166,11 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 				},
 			},
 			wantErr: func(tt assert.TestingT, err error, i ...interface{}) bool {
-				if ! assert.NoError(tt, err) {
+				if !assert.NoError(tt, err) {
 					tt.Errorf("updateUserAggregates() error = %v", err, i)
 					return false
 				}
-				
+
 				a := map[string]interface{}{
 					"client41": struct {
 					}{},
