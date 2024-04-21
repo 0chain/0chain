@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/smartcontract/common"
@@ -87,18 +88,20 @@ func filterEvents(events []Event) []Event {
 	return filteredEvents
 }
 
+var doOnce sync.Once
+
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
 	if len(events.events) == 0 {
 		return nil
 	}
 
-	edb.mustPushEventsToKafka(ctx, events)
+	edb.mustPushEventsToKafka(&events)
 
 	return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
 }
 
-func (edb *EventDb) mustPushEventsToKafka(ctx context.Context, events BlockEvents) {
+func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
 	if edb.Store == nil {
 		logging.Logger.Panic("event database is nil")
 	}
@@ -150,12 +153,12 @@ func (edb *EventDb) getLastPublishedRound() (int64, error) {
 	return event.BlockNumber, nil
 }
 
-func (edb *EventDb) getLatestFinalizedBlock() (int64, string, error) {
+func (edb *EventDb) getLatestFinalizedBlock() (int64, error) {
 	var block Block
 	if err := edb.Store.Get().Model(&Block{}).Order("round desc").First(&block).Error; err != nil {
-		return 0, "", err
+		return 0, err
 	}
-	return block.Round, block.Hash, nil
+	return block.Round, nil
 }
 
 func (edb *EventDb) Drop() error {

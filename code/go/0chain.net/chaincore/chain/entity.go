@@ -278,11 +278,38 @@ func (c *Chain) SetupEventDatabase() error {
 	time.Sleep(time.Second * 2)
 
 	var err error
-	c.EventDb, err = event.NewEventDbWithWorker(c.ChainConfig.DbsEvents(), c.ChainConfig.DbSettings())
+	c.EventDb, err = event.NewEventDbWithWorker(
+		c.ChainConfig.DbsEvents(),
+		c.ChainConfig.DbSettings(),
+		c.getBlockEvents,
+	)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *Chain) getBlockEvents(round int64) (int64, []event.Event, error) {
+	meta := datastore.GetEntityMetadata("last_block_events")
+	blockEvents := meta.Instance().(*block.BlockEvents)
+	// TODO: config the lastN
+	const lastN = 100
+	key := strconv.FormatInt(round%lastN, 10)
+	err := meta.GetStore().Read(common.GetRootContext(), datastore.ToKey(key), blockEvents)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	if blockEvents.Round != round {
+		return 0, nil, fmt.Errorf("could not find events in round %d", round)
+	}
+
+	var events []event.Event
+	if err := json.Unmarshal(blockEvents.Events, &events); err != nil {
+		return 0, nil, fmt.Errorf("failed to unmarshal events: %v", err)
+	}
+
+	return blockEvents.Round, events, nil
 }
 
 func (c *Chain) SetupStateCache() {

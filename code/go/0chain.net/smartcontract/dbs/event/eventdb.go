@@ -15,7 +15,8 @@ import (
 	"go.uber.org/atomic"
 )
 
-func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings,
+	getBlockEventsFunc func(round int64) (int64, []Event, error)) (*EventDb, error) {
 	eventDb, err := NewEventDbWithoutWorker(config, settings)
 	if err != nil {
 		return nil, err
@@ -25,7 +26,7 @@ func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*
 		return nil, err
 	}
 	goose.Migrate(sqldb)
-	go eventDb.addEventsWorker(common.GetRootContext())
+	go eventDb.addEventsWorker(common.GetRootContext(), getBlockEventsFunc)
 
 	return eventDb, nil
 }

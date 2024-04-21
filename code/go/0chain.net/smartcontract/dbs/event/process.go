@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/queueProvider"
+	"gorm.io/gorm"
 
 	"0chain.net/chaincore/state"
 	"golang.org/x/net/context"
@@ -39,6 +40,8 @@ func CommitNow() ProcessEventsOptionsFunc {
 // or rollback.
 type CommitOrRollbackFunc func(rollback bool) error
 
+type storeEvents func(event BlockEvents) error
+
 // ProcessEvents - process events and return commit function or error if any
 // The commit function can be called to commit the events changes when needed
 func (edb *EventDb) ProcessEvents(
@@ -47,6 +50,7 @@ func (edb *EventDb) ProcessEvents(
 	round int64,
 	block string,
 	blockSize int,
+	storeEvents func(BlockEvents) error,
 	opts ...ProcessEventsOptionsFunc,
 ) (*EventDb, uint32, error) {
 	ts := time.Now()
@@ -85,6 +89,13 @@ func (edb *EventDb) ProcessEvents(
 		blockSize: blockSize,
 		tx:        tx,
 		done:      make(chan bool, 1),
+	}
+
+	if err := storeEvents(event); err != nil {
+		logging.Logger.Error("process events - save state last events failed",
+			zap.Int64("round", event.round),
+			zap.Error(err))
+		return nil, 0, err
 	}
 
 	select {
@@ -286,7 +297,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	return append(mergedEvents, others...), nil
 }
 
-func (edb *EventDb) addEventsWorker(ctx context.Context) {
+func (edb *EventDb) addEventsWorker(ctx context.Context,
+	getBlockEvents func(round int64) (int64, []Event, error)) {
 	var gs *Snapshot
 	err := edb.managePartitions(0)
 	if err != nil {
@@ -302,7 +314,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				es.done <- commit
 			}()
 
-			s, err := Work(ctx, gs, es)
+			s, err := Work(ctx, gs, es, getBlockEvents)
 			if err != nil {
 				logging.Logger.Error("process events", zap.Error(err))
 				commit = false
@@ -316,12 +328,72 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
+func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (int64, []Event, error)) error {
+	if !edb.dbConfig.KafkaEnabled {
+		return nil
+	}
+
+	// get last published round, it's not guaranteed that all events in that block is published.
+	// so we still need to re-publish all events in that block.
+	round, err := edb.getLastPublishedRound()
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			logging.Logger.Panic("could not get unpublished events", zap.Error(err))
+		}
+		return nil
+	}
+
+	lfbRound, err := edb.getLatestFinalizedBlock()
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			logging.Logger.Panic("could not get latest finalized block", zap.Error(err))
+		}
+		return nil
+	}
+
+	if round > lfbRound {
+		return nil
+	}
+
+	// since we are not sure if the lfb events are all published, so we will publish all events in
+	// lfb anyway
+	if round <= lfbRound {
+		if round < lfbRound {
+			// see missed events
+			logging.Logger.Debug("see unpublished events", zap.Int64("from", round), zap.Int64("to", lfbRound))
+		}
+
+		// get all events from round to lfbRound
+		for r := round; r <= lfbRound; r++ {
+			rd, events, err := getBlockEvents(r)
+			if err != nil {
+				return err
+			}
+			es := &BlockEvents{
+				round:  rd,
+				events: events,
+			}
+
+			edb.mustPushEventsToKafka(es)
+		}
+	}
+
+	return nil
+}
+
 func Work(
 	ctx context.Context,
 	gSnapshot *Snapshot,
 	blockEvents BlockEvents,
+	getBlockEvents func(round int64) (int64, []Event, error),
 ) (*Snapshot, error) {
 	tx := blockEvents.tx
+
+	doOnce.Do(func() {
+		if err := tx.publishUnPublishedEvents(getBlockEvents); err != nil {
+			logging.Logger.Panic("push unpublished events", zap.Error(err))
+		}
+	})
 
 	tse := time.Now()
 
