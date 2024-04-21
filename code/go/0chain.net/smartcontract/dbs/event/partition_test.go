@@ -27,14 +27,16 @@ func TestPartitionCreate(t *testing.T) {
 	logging.InitLogging("development", "")
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
-		AggregatePeriod:       10,
-		PartitionKeepCount:    10,
-		PartitionChangePeriod: 100,
+		AggregatePeriod:                10,
+		PartitionKeepCount:             10,
+		PartitionChangePeriod:          100,
+		PermanentPartitionChangePeriod: 10,
+		PermanentPartitionKeepCount:    1,
 	}}}
 
 	db, f := GetTestEventDB(t)
 	defer f()
-	err := db.addPartition(1, "blobber_aggregates")
+	err := db.addPartition(11, "blobber_aggregates")
 	require.NoError(t, err)
 	err = db.addPartition(101, "blobber_aggregates")
 	require.NoError(t, err)
@@ -43,11 +45,11 @@ func TestPartitionCreate(t *testing.T) {
 
 	var partitions []string
 	db.Store.Get().Raw(req).Scan(&partitions)
-	require.Equal(t, 4, len(partitions))
+	require.Equal(t, 13, len(partitions))
 
 	err = db.dropPartition(201, "blobber_aggregates")
 	require.NoError(t, err)
 
 	db.Store.Get().Raw(req).Scan(&partitions)
-	require.Equal(t, 4, len(partitions))
+	require.Equal(t, 13, len(partitions))
 }

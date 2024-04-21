@@ -13,13 +13,13 @@ import (
 
 func TestEventDb_updateUserAggregates(t *testing.T) {
 	var (
-		edb *EventDb
+		edb   *EventDb
 		clean func()
 	)
-	
+
 	type args struct {
 		clientWithSnapshot string
-		e *BlockEvents
+		e                  *BlockEvents
 	}
 
 	tests := []struct {

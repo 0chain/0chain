@@ -591,6 +591,8 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
 	conf.DbsSettings.PartitionChangePeriod = viper.GetInt64("server_chain.dbs.settings.partition_change_period")
 	conf.DbsSettings.PartitionKeepCount = viper.GetInt64("server_chain.dbs.settings.partition_keep_count")
+	conf.DbsSettings.PermanentPartitionChangePeriod = viper.GetInt64("server_chain.dbs.settings.permanent_partition_change_period")
+	conf.DbsSettings.PermanentPartitionKeepCount = viper.GetInt64("server_chain.dbs.settings.permanent_partition_keep_count")
 	conf.DbsSettings.PageLimit = viper.GetInt64("server_chain.dbs.settings.page_limit")
 	return nil
 }
