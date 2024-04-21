@@ -214,6 +214,14 @@ type BlockEvents struct {
 	done      chan bool
 }
 
+func (be *BlockEvents) Events() []Event {
+	return be.events
+}
+
+func (be *BlockEvents) Round() int64 {
+	return be.round
+}
+
 func (edb *EventDb) AutoMigrate() error {
 	if err := edb.Store.Get().AutoMigrate(
 		&Event{},

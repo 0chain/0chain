@@ -3,11 +3,13 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -708,7 +710,14 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		if eventDB != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			tx, eventsCount, err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1, event.CommitNow())
+			tx, eventsCount, err := eventDB.ProcessEvents(
+				ctx,
+				stateCtx.GetEvents(),
+				0,
+				gb.Hash,
+				1,
+				c.storeEventsFunc(stateCtx),
+				event.CommitNow())
 			if err != nil {
 				panic(err)
 			}
@@ -727,6 +736,58 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func (c *Chain) storeEventsFunc(ssc cstate.StateContextI) func(e event.BlockEvents) error {
+	return func(e event.BlockEvents) error {
+		if !node.Self.IsSharder() {
+			return nil
+		}
+
+		return cstate.WithActivation(ssc, "artemis",
+			func() error { return nil },
+			func() error {
+				return c.storeLastNEvents(e)
+			})
+	}
+}
+
+func (c *Chain) storeLastNEvents(es event.BlockEvents) error {
+	var (
+		round  = es.Round()
+		events = es.Events()
+		lastN  = int64(100)
+		ebs    = make([]datastore.Entity, len(events))
+	)
+
+	for i, e := range events {
+		ed, err := json.Marshal(e)
+		if err != nil {
+			return fmt.Errorf("encode event failed when store events: %v", err)
+		}
+
+		ebs[i] = &block.LastBlockEvent{
+			Key:      strconv.FormatInt(e.SequenceNumber%lastN, 10),
+			Sequence: e.SequenceNumber,
+			Round:    round,
+			Event:    ed,
+		}
+	}
+
+	return c.storeBlockEvents(ebs)
+}
+
+func (c *Chain) storeBlockEvents(bs []datastore.Entity) error {
+	meta := block.BlockEventProvider().GetEntityMetadata()
+	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
+	defer ememorystore.Close(bctx)
+
+	if err := meta.GetStore().MultiWrite(bctx, meta, bs); err != nil {
+		return err
+	}
+
+	con := ememorystore.GetEntityCon(bctx, meta)
+	return con.Commit()
 }
 
 func (c *Chain) mustInitGBState(initStates *state.InitStates, stateCtx *cstate.StateContext) {
