@@ -12,12 +12,11 @@ import (
 	"0chain.net/core/ememorystore"
 )
 
-type LastBlockEvent struct {
+type BlockEvents struct {
 	datastore.NOIDField
-	Key      string `json:"key"`
-	Sequence int64  `json:"sequence"`
-	Round    int64  `json:"round"`
-	Event    []byte `json:"event"`
+	Key    string `json:"key"`
+	Round  int64  `json:"round"`
+	Events []byte `json:"events"`
 }
 
 var blockEventEntityMetadata *datastore.EntityMetadataImpl
@@ -44,48 +43,48 @@ func SetupBlockEventDB(workdir string) {
 }
 
 func BlockEventProvider() datastore.Entity {
-	return &LastBlockEvent{}
+	return &BlockEvents{}
 }
 
 /*GetEntityMetadata - implement interface */
-func (b *LastBlockEvent) GetEntityMetadata() datastore.EntityMetadata {
+func (b *BlockEvents) GetEntityMetadata() datastore.EntityMetadata {
 	return blockEventEntityMetadata
 }
 
 /*GetKey - implement interface */
-func (b *LastBlockEvent) GetKey() datastore.Key {
+func (b *BlockEvents) GetKey() datastore.Key {
 	return datastore.ToKey(b.Key)
 }
 
 /*SetKey - implement interface */
-func (b *LastBlockEvent) SetKey(key datastore.Key) {
+func (b *BlockEvents) SetKey(key datastore.Key) {
 	b.Key = datastore.ToString(key)
 }
 
 /*Read - store read */
-func (b *LastBlockEvent) Read(ctx context.Context, key datastore.Key) error {
+func (b *BlockEvents) Read(ctx context.Context, key datastore.Key) error {
 	return b.GetEntityMetadata().GetStore().Read(ctx, key, b)
 }
 
 /*Write - store read */
-func (b *LastBlockEvent) Write(ctx context.Context) error {
+func (b *BlockEvents) Write(ctx context.Context) error {
 	return b.GetEntityMetadata().GetStore().Write(ctx, b)
 }
 
-func (b *LastBlockEvent) MultiWrite(ctx context.Context, entities []datastore.Entity) error {
+func (b *BlockEvents) MultiWrite(ctx context.Context, entities []datastore.Entity) error {
 	return b.GetEntityMetadata().GetStore().MultiWrite(ctx, blockEventEntityMetadata, entities)
 }
 
 /*Delete - store read */
-func (b *LastBlockEvent) Delete(ctx context.Context) error {
+func (b *BlockEvents) Delete(ctx context.Context) error {
 	return b.GetEntityMetadata().GetStore().Delete(ctx, b)
 }
 
-func (b *LastBlockEvent) Encode() []byte {
+func (b *BlockEvents) Encode() []byte {
 	buff, _ := json.Marshal(b)
 	return buff
 }
 
-func (b *LastBlockEvent) Decode(input []byte) error {
+func (b *BlockEvents) Decode(input []byte) error {
 	return json.Unmarshal(input, b)
 }

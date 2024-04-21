@@ -757,32 +757,28 @@ func (c *Chain) storeLastNEvents(es event.BlockEvents) error {
 		round  = es.Round()
 		events = es.Events()
 		lastN  = int64(100)
-		ebs    = make([]datastore.Entity, len(events))
 	)
 
-	for i, e := range events {
-		ed, err := json.Marshal(e)
-		if err != nil {
-			return fmt.Errorf("encode event failed when store events: %v", err)
-		}
+	ed, err := json.Marshal(events)
+	if err != nil {
+		return err
+	}
 
-		ebs[i] = &block.LastBlockEvent{
-			Key:      strconv.FormatInt(e.SequenceNumber%lastN, 10),
-			Sequence: e.SequenceNumber,
-			Round:    round,
-			Event:    ed,
-		}
+	ebs := &block.BlockEvents{
+		Key:    strconv.FormatInt(round%lastN, 10),
+		Round:  round,
+		Events: ed,
 	}
 
 	return c.storeBlockEvents(ebs)
 }
 
-func (c *Chain) storeBlockEvents(bs []datastore.Entity) error {
-	meta := block.BlockEventProvider().GetEntityMetadata()
+func (c *Chain) storeBlockEvents(b datastore.Entity) error {
+	meta := b.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
 	defer ememorystore.Close(bctx)
 
-	if err := meta.GetStore().MultiWrite(bctx, meta, bs); err != nil {
+	if err := b.Write(bctx); err != nil {
 		return err
 	}
 
