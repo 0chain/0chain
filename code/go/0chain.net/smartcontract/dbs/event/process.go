@@ -340,6 +340,8 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 		if err != gorm.ErrRecordNotFound {
 			logging.Logger.Panic("could not get unpublished events", zap.Error(err))
 		}
+		// when see gorm.ErrRecordNotFound, it means there is no unpublished events, which could
+		// happen when kafka is just introduced and run the first time.
 		return nil
 	}
 

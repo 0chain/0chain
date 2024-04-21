@@ -74,7 +74,9 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		settings:      settings,
 	}
 
-	go eventDb.addEventsWorker(common.GetRootContext())
+	go eventDb.addEventsWorker(common.GetRootContext(), func(round int64) (int64, []Event, error) {
+		return round, []Event{}, nil
+	})
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
