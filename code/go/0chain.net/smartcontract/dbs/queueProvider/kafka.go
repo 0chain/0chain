@@ -40,6 +40,11 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	config.Net.SASL.User = username
 	config.Net.SASL.Password = password
 	config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+	// config idempotent producer
+	config.Producer.Idempotent = true
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Retry.Max = 5
+	config.Producer.Return.Successes = true
 
 	return &KafkaProvider{
 		Host:         host,

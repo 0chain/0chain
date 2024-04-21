@@ -123,7 +123,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
 			}
 
 			ts := time.Now()
-			key := strconv.Itoa(int(events.round))
+			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
 			err = broker.PublishToKafka(topic, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
