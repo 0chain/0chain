@@ -56,6 +56,8 @@ dbs:
     slowtablespace: hdd_tablespace
   settings:
     debug: false
+    permanent_partition_change_period: 2000000
+    permanent_partition_keep_count: 1
     aggregate_period: 10
     partition_change_period: 100
     partition_keep_count: 10
