@@ -96,9 +96,12 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 		return nil
 	}
 
-	edb.mustPushEventsToKafka(&events)
+	if err := edb.Store.Get().WithContext(ctx).Create(&events.events).Error; err != nil {
+		return err
+	}
 
-	return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
+	edb.mustPushEventsToKafka(&events)
+	return nil
 }
 
 func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
@@ -111,7 +114,13 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
 			filteredEvents = filterEvents(events.events)
 			broker         = edb.GetKafkaProv()
 			topic          = edb.dbConfig.KafkaTopic
+			eventsMap      = make(map[int64]*Event)
 		)
+
+		for i, e := range events.events {
+			eventsMap[e.SequenceNumber] = &events.events[i]
+		}
+
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
 				"event": filteredEvent,
@@ -130,25 +139,29 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
 			}
 
+			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
+
 			logging.Logger.Debug("Pushed event to kafka",
 				zap.String("event", filteredEvent.Tag.String()),
 				zap.Int64("seq", filteredEvent.SequenceNumber),
 				zap.Int64("round", events.round))
-
-			// updates the events as published
-			edb.setEventPublished(filteredEvent)
 
 			tm := time.Since(ts)
 			if tm > 100*time.Millisecond {
 				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
 			}
 		}
+
+		// // updates the events as published
+		// if err := edb.setEventPublished(events.round); err != nil {
+		// 	logging.Logger.Panic(fmt.Sprintf("Failed to update event as published: %v", err))
+		// }
 	}
 }
 
-func (edb *EventDb) setEventPublished(event Event) error {
-	return edb.Store.Get().Model(&Event{}).Where("sequence_number = ?", event.SequenceNumber).Update("is_published", true).Error
-}
+// func (edb *EventDb) setEventPublished(round int64) error {
+// 	return edb.Store.Get().Model(&Event{}).Where("block_number = ?", round).Update("is_published", true).Error
+// }
 
 func (edb *EventDb) getLastPublishedRound() (int64, error) {
 	var event Event
