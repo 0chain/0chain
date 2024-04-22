@@ -456,12 +456,12 @@ var MockBenchData = BenchData{
 	},
 }
 
-func GetOldestRollingAggregateRound() int64 {
+func GetOldestPermanentAggregateRound() int64 {
 	var (
-		rollingPeriod   = viper.GetInt(EventDbPermanentPartitionChangePeriod)
-		rollingKeep     = viper.GetInt(EventDbPermanentPartitionKeepCount)
+		permanentPeriod = viper.GetInt(EventDbPermanentPartitionChangePeriod)
+		permanentKeep   = viper.GetInt(EventDbPermanentPartitionKeepCount)
 		blocks          = viper.GetInt(NumBlocks)
-		oldestRoundKept = int64((blocks/rollingPeriod - rollingKeep + 1) * rollingPeriod)
+		oldestRoundKept = int64((blocks/permanentPeriod - permanentKeep + 1) * permanentPeriod)
 	)
 	if oldestRoundKept < 0 {
 		return 0
