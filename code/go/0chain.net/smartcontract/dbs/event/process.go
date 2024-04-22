@@ -329,10 +329,12 @@ func (edb *EventDb) addEventsWorker(ctx context.Context,
 }
 
 func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (int64, []Event, error)) error {
+	logging.Logger.Debug("kafka - publish unpublished events")
 	if !edb.dbConfig.KafkaEnabled {
 		return nil
 	}
 
+	logging.Logger.Debug("kafka - publish unpublished events enabled")
 	// get last published round, it's not guaranteed that all events in that block is published.
 	// so we still need to re-publish all events in that block.
 	round, err := edb.getLastPublishedRound()
@@ -340,6 +342,7 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 		if err != gorm.ErrRecordNotFound {
 			logging.Logger.Panic("could not get unpublished events", zap.Error(err))
 		}
+		logging.Logger.Debug("kafka - see no published round events")
 		// when see gorm.ErrRecordNotFound, it means there is no unpublished events, which could
 		// happen when kafka is just introduced and run the first time.
 		return nil
@@ -348,8 +351,9 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	lfbRound, err := edb.getLatestFinalizedBlock()
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
-			logging.Logger.Panic("could not get latest finalized block", zap.Error(err))
+			logging.Logger.Panic("kafka - could not get latest finalized block", zap.Error(err))
 		}
+		logging.Logger.Debug("kafka - see no lfb")
 		return nil
 	}
 
