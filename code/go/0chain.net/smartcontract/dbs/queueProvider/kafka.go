@@ -40,12 +40,14 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	config.Net.SASL.User = username
 	config.Net.SASL.Password = password
 	config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+	config.Net.MaxOpenRequests = 1
+
 	// config idempotent producer
 	config.Producer.Idempotent = true
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Retry.Max = 5
-	config.Net.MaxOpenRequests = 1
 	config.Producer.Return.Successes = true
+	config.Metadata.AllowAutoTopicCreation = true
 
 	return &KafkaProvider{
 		Host:         host,
@@ -75,13 +77,15 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 		Value: sarama.ByteEncoder(message),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
+	// ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
+	writer.Input() <- msg
 	select {
 	case writer.Input() <- msg:
 	case <-ctx.Done():
-		logging.Logger.Panic("kafka publish message timeout", zap.Error(ctx.Err()))
+		logging.Logger.Panic(fmt.Sprintf("kafka publish message timeout: %v", ctx.Err()))
 	}
 
 	return nil
