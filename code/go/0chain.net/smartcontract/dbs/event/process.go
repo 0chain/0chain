@@ -362,7 +362,7 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	if round <= lfbRound {
 		if round < lfbRound {
 			// see missed events
-			logging.Logger.Debug("see unpublished events", zap.Int64("from", round), zap.Int64("to", lfbRound))
+			logging.Logger.Debug("kafka - see unpublished events", zap.Int64("from", round), zap.Int64("to", lfbRound))
 		}
 
 		// get all events from round to lfbRound
