@@ -42,9 +42,9 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 	// config idempotent producer
 	config.Producer.Idempotent = true
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Retry.Max = 5
-	config.Producer.Return.Successes = true
+	// config.Producer.RequiredAcks = sarama.WaitForAll
+	// config.Producer.Retry.Max = 5
+	// config.Producer.Return.Successes = true
 
 	return &KafkaProvider{
 		Host:         host,
@@ -134,7 +134,7 @@ func (k *KafkaProvider) CloseAllWriters() error {
 func (k *KafkaProvider) createKafkaWriter(topic string) sarama.AsyncProducer {
 	producer, err := sarama.NewAsyncProducer([]string{k.Host}, k.Config)
 	if err != nil {
-		logging.Logger.Panic("Failed to start Sarama producer:", zap.Error(err))
+		logging.Logger.Panic(fmt.Sprintf("Failed to start Sarama producer: %v", err))
 	}
 
 	go func() {
