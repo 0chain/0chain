@@ -358,9 +358,9 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	}
 
 	// TODO: remove testing
-	if lfbRound > 5 {
-		round = lfbRound - 5
-	}
+	// if lfbRound > 5 {
+	// 	round = lfbRound - 5
+	// }
 
 	if round > lfbRound {
 		return nil
@@ -368,7 +368,7 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 
 	// since we are not sure if the lfb events are all published, so we will publish all events in
 	// lfb anyway
-	if round <= lfbRound {
+	if round < lfbRound {
 		if round < lfbRound {
 			// see missed events
 			logging.Logger.Debug("kafka - see unpublished events", zap.Int64("from", round), zap.Int64("to", lfbRound))

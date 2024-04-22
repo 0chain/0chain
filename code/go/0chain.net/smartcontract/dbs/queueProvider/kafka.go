@@ -39,7 +39,8 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	config.Net.SASL.User = username
 	config.Net.SASL.Password = password
 	config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
-	// config.Producer.Return.Successes = true
+	config.Producer.Return.Successes = true
+	config.Producer.Return.Errors = true
 	config.Net.MaxOpenRequests = 1
 
 	// config idempotent producer
@@ -80,7 +81,7 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 	// defer cancel()
 
 	writer.Input() <- msg
-	writer.Successes()
+	<-writer.Successes()
 	// select {
 	// case writer.Input() <- msg:
 	// fmt.Println("push message success:")
