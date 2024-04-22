@@ -295,7 +295,11 @@ func (c *Chain) getBlockEvents(round int64) (int64, []event.Event, error) {
 	// TODO: config the lastN
 	const lastN = 100
 	key := strconv.FormatInt(round%lastN, 10)
-	err := meta.GetStore().Read(common.GetRootContext(), datastore.ToKey(key), blockEvents)
+
+	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
+	defer ememorystore.Close(bctx)
+
+	err := meta.GetStore().Read(bctx, datastore.ToKey(key), blockEvents)
 	if err != nil {
 		return 0, nil, err
 	}
