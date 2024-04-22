@@ -1,7 +1,6 @@
 package queueProvider
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -77,15 +76,16 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 		Value: sarama.ByteEncoder(message),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
+	// defer cancel()
 
-	select {
-	case writer.Input() <- msg:
-		fmt.Println("push message success:")
-	case <-ctx.Done():
-		logging.Logger.Panic(fmt.Sprintf("kafka publish message timeout: %v", ctx.Err()))
-	}
+	writer.Input() <- msg
+	// select {
+	// case writer.Input() <- msg:
+	// fmt.Println("push message success:")
+	// case <-ctx.Done():
+	// 	logging.Logger.Panic(fmt.Sprintf("kafka publish message timeout: %v", ctx.Err()))
+	// }
 
 	return nil
 }
