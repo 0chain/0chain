@@ -132,6 +132,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
 
 			logging.Logger.Debug("Pushed event to kafka",
 				zap.String("event", filteredEvent.Tag.String()),
+				zap.Int64("seq", filteredEvent.SequenceNumber),
 				zap.Int64("round", events.round))
 
 			// updates the events as published
