@@ -43,11 +43,11 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	config.Net.MaxOpenRequests = 1
 
 	// config idempotent producer
-	config.Producer.Idempotent = true
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Retry.Max = 5
-	config.Producer.Return.Successes = true
-	config.Metadata.AllowAutoTopicCreation = true
+	// config.Producer.Idempotent = true
+	// config.Producer.RequiredAcks = sarama.WaitForAll
+	// config.Producer.Retry.Max = 5
+	// config.Producer.Return.Successes = true
+	// config.Metadata.AllowAutoTopicCreation = true
 
 	return &KafkaProvider{
 		Host:         host,
@@ -77,8 +77,7 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 		Value: sarama.ByteEncoder(message),
 	}
 
-	// ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
 	defer cancel()
 
 	writer.Input() <- msg
