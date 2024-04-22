@@ -43,11 +43,11 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	config.Net.MaxOpenRequests = 1
 
 	// config idempotent producer
-	// config.Producer.Idempotent = true
-	// config.Producer.RequiredAcks = sarama.WaitForAll
-	// config.Producer.Retry.Max = 5
+	config.Producer.Idempotent = true
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Retry.Max = 5
 	config.Producer.Return.Successes = true
-	// config.Metadata.AllowAutoTopicCreation = true
+	config.Metadata.AllowAutoTopicCreation = true
 
 	return &KafkaProvider{
 		Host:         host,
@@ -80,9 +80,9 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 	ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
 	defer cancel()
 
-	writer.Input() <- msg
 	select {
 	case writer.Input() <- msg:
+		fmt.Println("push message success:")
 	case <-ctx.Done():
 		logging.Logger.Panic(fmt.Sprintf("kafka publish message timeout: %v", ctx.Err()))
 	}
@@ -143,6 +143,7 @@ func (k *KafkaProvider) createKafkaWriter(topic string) sarama.AsyncProducer {
 
 	go func() {
 		for err := range producer.Errors() {
+			fmt.Println("kafka - failed to write access log entry:", err)
 			logging.Logger.Panic("kafka - failed to write access log entry:", zap.Error(err))
 		}
 	}()
