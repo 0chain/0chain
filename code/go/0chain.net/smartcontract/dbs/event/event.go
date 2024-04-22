@@ -130,6 +130,10 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
 			}
 
+			logging.Logger.Debug("Pushed event to kafka",
+				zap.String("event", filteredEvent.Tag.String()),
+				zap.Int64("round", events.round))
+
 			// updates the events as published
 			edb.setEventPublished(filteredEvent)
 
