@@ -46,7 +46,7 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	// config.Producer.Idempotent = true
 	// config.Producer.RequiredAcks = sarama.WaitForAll
 	// config.Producer.Retry.Max = 5
-	// config.Producer.Return.Successes = true
+	config.Producer.Return.Successes = true
 	// config.Metadata.AllowAutoTopicCreation = true
 
 	return &KafkaProvider{
