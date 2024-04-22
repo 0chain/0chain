@@ -381,7 +381,7 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 				events: events,
 			}
 
-			edb.mustPushEventsToKafka(es)
+			edb.mustPushEventsToKafka(es, true)
 		}
 	}
 

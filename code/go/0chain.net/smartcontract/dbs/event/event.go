@@ -96,15 +96,16 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 		return nil
 	}
 
+	edb.mustPushEventsToKafka(&events, false)
+
 	if err := edb.Store.Get().WithContext(ctx).Create(&events.events).Error; err != nil {
 		return err
 	}
 
-	edb.mustPushEventsToKafka(&events)
 	return nil
 }
 
-func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
+func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool) {
 	if edb.Store == nil {
 		logging.Logger.Panic("event database is nil")
 	}
@@ -152,16 +153,18 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents) {
 			}
 		}
 
-		// // updates the events as published
-		// if err := edb.setEventPublished(events.round); err != nil {
-		// 	logging.Logger.Panic(fmt.Sprintf("Failed to update event as published: %v", err))
-		// }
+		if updateColumn {
+			// updates the events as published
+			if err := edb.setEventPublished(events.round); err != nil {
+				logging.Logger.Panic(fmt.Sprintf("Failed to update event as published: %v", err))
+			}
+		}
 	}
 }
 
-// func (edb *EventDb) setEventPublished(round int64) error {
-// 	return edb.Store.Get().Model(&Event{}).Where("block_number = ?", round).Update("is_published", true).Error
-// }
+func (edb *EventDb) setEventPublished(round int64) error {
+	return edb.Store.Get().Model(&Event{}).Where("block_number = ?", round).Update("is_published", true).Error
+}
 
 func (edb *EventDb) getLastPublishedRound() (int64, error) {
 	var event Event
