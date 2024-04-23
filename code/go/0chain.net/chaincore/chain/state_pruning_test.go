@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,7 +71,7 @@ func Test_pruneClientState_withFailingMutliPutNode(t *testing.T) {
 	db, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	require.NoError(t, err)
 	lfb := block.NewBlock("", 2)
-	lfb.ClientState = util.NewMerklePatriciaTrie(db, 1, nil)
+	lfb.ClientState = util.NewMerklePatriciaTrie(db, 1, nil, statecache.NewEmpty())
 	// set up enough nodes to exceed BatchSize
 	for i := 0; i < util.BatchSize+1; i++ {
 		_, err := lfb.ClientState.Insert(util.Path(fmt.Sprintf("%032d", i)), &util.SecureSerializableValue{Buffer: []byte{1}})

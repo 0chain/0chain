@@ -15,6 +15,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -475,7 +476,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 				blobberClient := blobberClients[idx]
 				blobber := blobbers[idx]
 
-				blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+				blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.Id(), balances)
 				require.NoError(t, err)
 				require.NotNil(t, blobberSP)
 
@@ -504,7 +505,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 					challengeGenerationTime := initialTime + (step*(i+1))/tc.numChallenges
 
-					challID := fmt.Sprintf("%s-chall-%d", blobber.ID, i)
+					challID := fmt.Sprintf("%s-chall-%d", blobber.Id(), i)
 
 					challengeRoundCreatedAt := currentRound - 200
 
@@ -652,7 +653,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 					vsp, err := ssc.validatorsStakePools(validatorString, balances)
 					require.NoError(t, err)
 
-					blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+					blobberSP, err := ssc.getStakePool(spenum.Blobber, blobber.Id(), balances)
 					require.NoError(t, err)
 
 					if lastChallengeIgnored {
@@ -695,7 +696,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 			beforeBlobberSPs := make(map[string]*stakePool)
 			for _, blobber := range blobbers {
-				beforeBlobberSPs[blobber.ID], err = ssc.getStakePool(spenum.Blobber, blobber.ID, balances)
+				beforeBlobberSPs[blobber.Id()], err = ssc.getStakePool(spenum.Blobber, blobber.Id(), balances)
 				require.NoError(t, err)
 			}
 
@@ -1257,7 +1258,7 @@ func TestVerifyChallengeOldChallenge(t *testing.T) {
 
 func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
-	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot(), statecache.NewEmpty())
 	return tmpt
 }
 
@@ -1542,21 +1543,23 @@ func testCommitWrite(t *testing.T, balances *testBalances, client *Client, alloc
 	cc := &BlobberCloseConnection{
 		AllocationRoot:     allocRoot,
 		PrevAllocationRoot: prevAllocRoot,
-		WriteMarker: &WriteMarker{
-			AllocationRoot:         allocRoot,
-			PreviousAllocationRoot: prevAllocRoot,
-			AllocationID:           allocID,
-			//Size:                   100 * 1024 * 1024, // 100 MB
-			Size:      size,
-			BlobberID: blobberID,
-			Timestamp: common.Timestamp(tp),
-			ClientID:  client.id,
-		},
+		WriteMarker:        &WriteMarker{},
 	}
+	wm1 := &writeMarkerV1{
+		AllocationRoot:         allocRoot,
+		PreviousAllocationRoot: prevAllocRoot,
+		AllocationID:           allocID,
+		Size:                   size,
+		BlobberID:              blobberID,
+		Timestamp:              common.Timestamp(tp),
+		ClientID:               client.id,
+	}
+
 	var err error
-	cc.WriteMarker.Signature, err = client.scheme.Sign(
-		encryption.Hash(cc.WriteMarker.GetHashData()))
+	wm1.Signature, err = client.scheme.Sign(
+		encryption.Hash(wm1.GetHashData()))
 	require.NoError(t, err)
+	cc.WriteMarker.SetEntity(wm1)
 
 	// write
 	//tp += 1000

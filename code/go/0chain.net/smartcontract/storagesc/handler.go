@@ -254,6 +254,7 @@ func (srh *StorageRestHandler) getFreeAllocationBlobbers(w http.ResponseWriter, 
 		Size:            conf.FreeAllocationSettings.Size,
 		ReadPriceRange:  conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange: conf.FreeAllocationSettings.WritePriceRange,
+		IsRestricted:    2,
 	}
 
 	edb := balances.GetEventDB()
@@ -286,6 +287,7 @@ type allocationBlobbersRequest struct {
 	ReadPriceRange  PriceRange `json:"read_price_range"`
 	WritePriceRange PriceRange `json:"write_price_range"`
 	Size            int64      `json:"size"`
+	IsRestricted    int        `json:"is_restricted"`
 }
 
 func (nar *allocationBlobbersRequest) decode(b []byte) error {
@@ -405,13 +407,14 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		AllocationSize:     allocationSize,
 		AllocationSizeInGB: sizeInGB(allocationSize),
 		NumberOfDataShards: request.DataShards,
+		IsRestricted:       request.IsRestricted,
 	}
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
 		zap.Int64("ReadPriceRange.Max", allocation.ReadPriceRange.Max), zap.Int64("WritePriceRange.Min", allocation.WritePriceRange.Min),
 		zap.Int64("WritePriceRange.Max", allocation.WritePriceRange.Max),
 		zap.Int64("AllocationSize", allocation.AllocationSize), zap.Float64("AllocationSizeInGB", allocation.AllocationSizeInGB),
-		zap.Int64("last_health_check", int64(balances.Now())),
+		zap.Int64("last_health_check", int64(balances.Now())), zap.Any("isRestricted", allocation.IsRestricted),
 	)
 
 	blobberIDs, err := edb.GetBlobbersFromParams(allocation, limit, balances.Now(), healthCheckPeriod)
@@ -1402,6 +1405,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 
 	values := r.URL.Query()
 	active := values.Get("active")
+	stakable := values.Get("stakable") == "true"
 
 	var validators []event.Validator
 
@@ -1417,7 +1421,13 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 			healthCheckPeriod = conf.HealthCheckPeriod
 		}
 
-		validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
+		if stakable {
+			validators, err = edb.GetActiveAndStakableValidators(pagination, healthCheckPeriod)
+		} else {
+			validators, err = edb.GetActiveValidators(pagination, healthCheckPeriod)
+		}
+	} else if stakable {
+		validators, err = edb.GetStakableValidators(pagination)
 	} else {
 		validators, err = edb.GetValidators(pagination)
 	}
@@ -1857,7 +1867,7 @@ func changeBlobbersEventDB(
 		return fmt.Errorf("could not load blobber from event db: %v", err)
 	}
 
-	addBlobber := &StorageNode{
+	addBlobber := &storageNodeBase{
 		Provider: provider.Provider{
 			ID:           addID,
 			ProviderType: spenum.Blobber,
@@ -2435,30 +2445,40 @@ type storageNodeResponse struct {
 	TotalServiceCharge       currency.Coin `json:"total_service_charge"`
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
+
+	IsRestricted bool `json:"is_restricted"`
 }
 
 func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
-	return storageNodeResponse{
-		ID:                      sn.ID,
-		BaseURL:                 sn.BaseURL,
-		Terms:                   sn.Terms,
-		Capacity:                sn.Capacity,
-		Allocated:               sn.Allocated,
-		LastHealthCheck:         sn.LastHealthCheck,
-		PublicKey:               sn.PublicKey,
-		SavedData:               sn.SavedData,
-		DataReadLastRewardRound: sn.DataReadLastRewardRound,
-		LastRewardDataReadRound: sn.LastRewardDataReadRound,
-		StakePoolSettings:       sn.StakePoolSettings,
-		RewardRound:             sn.RewardRound,
-		IsKilled:                sn.IsKilled(),
-		IsShutdown:              sn.IsShutDown(),
-		NotAvailable:            sn.NotAvailable,
+	b := sn.mustBase()
+	sr := storageNodeResponse{
+		ID:                      b.ID,
+		BaseURL:                 b.BaseURL,
+		Terms:                   b.Terms,
+		Capacity:                b.Capacity,
+		Allocated:               b.Allocated,
+		LastHealthCheck:         b.LastHealthCheck,
+		PublicKey:               b.PublicKey,
+		SavedData:               b.SavedData,
+		DataReadLastRewardRound: b.DataReadLastRewardRound,
+		LastRewardDataReadRound: b.LastRewardDataReadRound,
+		StakePoolSettings:       b.StakePoolSettings,
+		RewardRound:             b.RewardRound,
+		IsKilled:                b.IsKilled(),
+		IsShutdown:              b.IsShutDown(),
+		NotAvailable:            b.NotAvailable,
 	}
+
+	sv2, ok := sn.Entity().(*storageNodeV2)
+	if ok && sv2.IsRestricted != nil {
+		sr.IsRestricted = *sv2.IsRestricted
+	}
+
+	return sr
 }
 
-func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
-	return StorageNode{
+func storageNodeResponseToStorageNodeV1(snr storageNodeResponse) *storageNodeV1 {
+	return &storageNodeV1{
 		Provider: provider.Provider{
 			ID:              snr.ID,
 			ProviderType:    spenum.Blobber,
@@ -2477,6 +2497,30 @@ func StoragNodeResponseToStorageNode(snr storageNodeResponse) StorageNode {
 		StakePoolSettings:       snr.StakePoolSettings,
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
+	}
+}
+
+func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {
+	return &storageNodeV2{
+		Provider: provider.Provider{
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
+		},
+		BaseURL:                 snr.BaseURL,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            &snr.IsRestricted,
 	}
 }
 
@@ -2512,6 +2556,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		SavedData:                blobber.SavedData,
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
+		IsRestricted:             blobber.IsRestricted,
 	}
 }
 
@@ -2547,6 +2592,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 	values := r.URL.Query()
 	active := values.Get("active")
 	idsStr := values.Get("blobber_ids")
+	stakable := values.Get("stakable") == "true"
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -2566,7 +2612,11 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 			healthCheckPeriod = conf.HealthCheckPeriod
 		}
 
-		blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
+		if stakable {
+			blobbers, err = edb.GetActiveAndStakableBlobbers(limit, healthCheckPeriod)
+		} else {
+			blobbers, err = edb.GetActiveBlobbers(limit, healthCheckPeriod)
+		}
 	} else if idsStr != "" {
 		var blobber_ids []string
 		err = json.Unmarshal([]byte(idsStr), &blobber_ids)
@@ -2586,6 +2636,8 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		}
 
 		blobbers, err = edb.GetBlobbersFromIDs(blobber_ids)
+	} else if stakable {
+		blobbers, err = edb.GetStakableBlobbers(limit)
 	} else {
 		blobbers, err = edb.GetBlobbers(limit)
 	}

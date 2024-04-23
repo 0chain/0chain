@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/statecache"
 )
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
@@ -25,6 +26,68 @@ type partition struct {
 	Loc     int    `json:"loc"`
 	Items   []item `json:"items"`
 	Changed bool   `json:"-" msg:"-"`
+}
+
+func (p *partition) clone() *partition {
+	// DEBUG: msgp marshal/unmarshal to get clone of partition
+	v, err := p.MarshalMsg(nil)
+	if err != nil {
+		panic("partiton marshal failed")
+	}
+
+	var np partition
+	_, err = np.UnmarshalMsg(v)
+	if err != nil {
+		panic("partition unmarshal failed")
+	}
+	return &np
+
+	// newPartition := &partition{
+	// 	Key:     p.Key,
+	// 	Loc:     p.Loc,
+	// 	Items:   make([]item, len(p.Items)),
+	// 	Changed: p.Changed,
+	// }
+
+	// for i, it := range p.Items {
+	// 	nit := item{
+	// 		ID:   it.ID,
+	// 		Data: make([]byte, len(it.Data)),
+	// 	}
+	// 	copy(nit.Data, it.Data)
+
+	// 	newPartition.Items[i] = nit
+	// }
+
+	// return newPartition
+}
+
+func (p *partition) Clone() statecache.Value {
+	return p.clone()
+}
+
+func (p *partition) CopyFrom(v interface{}) bool {
+	if ps, ok := v.(*partition); ok {
+		np := ps.clone()
+		*p = *np
+		// p.Key = ps.Key
+		// p.Loc = ps.Loc
+		// p.Items = make([]item, len(ps.Items))
+
+		// for i, it := range ps.Items {
+		// 	nit := item{
+		// 		ID:   it.ID,
+		// 		Data: make([]byte, len(it.Data)),
+		// 	}
+		// 	copy(nit.Data, it.Data)
+
+		// 	p.Items[i] = nit
+		// }
+
+		// p.Changed = ps.Changed
+		return true
+	}
+	return false
 }
 
 func (p *partition) save(state state.StateContextI) error {
@@ -161,4 +224,16 @@ func (p *partition) findIndex(id string) int {
 
 type location struct {
 	Location int
+}
+
+func (l *location) Clone() statecache.Value {
+	return &location{Location: l.Location}
+}
+
+func (l *location) CopyFrom(v interface{}) bool {
+	if l2, ok := v.(*location); ok {
+		l.Location = l2.Location
+		return true
+	}
+	return false
 }

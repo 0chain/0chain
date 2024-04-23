@@ -17,7 +17,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -375,7 +374,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int("delete num", len(deleteMap)))
 
 	wg.Run("finalize block - record dead nodes", fb.Round, func() error {
-		er := c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
+		// err = c.stateDB.(*util.PNodeDB).RecordDeadNodes(deletedNode, fb.Round)
+		er := c.stateDB.RecordDeadNodes(deletedNode, fb.Round)
 		if er != nil {
 			logging.Logger.Error("finalize block - record dead nodes failed",
 				zap.Int64("round", fb.Round),
@@ -522,6 +522,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		c.DeleteBlocks(deadBlocks)
 		return nil
 	})
+
+	// wg.Run("finalize block - prune state cache", fb.Round, func() error {
+	// 	if fb.Round > 100 {
+	// 		c.GetStateCache().PruneRoundBelow(fb.Round - 100)
+	// 	}
+	// 	return nil
+	// })
 
 	if err = wg.Wait(); err != nil {
 		if !waitgroup.ErrIsPanic(err) {

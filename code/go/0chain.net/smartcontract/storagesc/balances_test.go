@@ -16,6 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 
@@ -29,6 +30,7 @@ type testBalances struct {
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
 	block     *block.Block
+	tc        *statecache.TransactionCache
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
@@ -69,6 +71,13 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		},
 	}
 
+	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{
+		Round:    tb.block.Round,
+		Hash:     tb.block.Hash,
+		PrevHash: tb.block.PrevHash,
+	})
+	tb.tc = statecache.NewTransactionCache(bc)
+
 	if mpts {
 		tb.mpts = newMptStore(t)
 	}
@@ -78,6 +87,25 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 
 	_, err = tb.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
+
+	h := cstate.NewHardFork("apollo", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = cstate.NewHardFork("ares", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = cstate.NewHardFork("artemis", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	bk := &block.Block{}
+	bk.Round = 2
+	tb.setBlock(t, bk)
 
 	return
 }
@@ -185,6 +213,10 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 
 	tb.tree[key] = node
 	return "", nil
+}
+
+func (tb *testBalances) Cache() *statecache.TransactionCache {
+	return tb.tc
 }
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {
