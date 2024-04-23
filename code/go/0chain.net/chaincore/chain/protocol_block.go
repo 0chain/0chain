@@ -387,7 +387,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	})
 
 	var (
-		eventTx *event.EventDb
+		eventTx     *event.EventDb
 		eventsCount uint32
 	)
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
@@ -396,8 +396,16 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				fb.Events = append(fb.Events, block.CreateFinalizeBlockEvent(fb))
 			}
 			ts := time.Now()
-      var er error
-			eventTx, eventsCount, er = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
+			var er error
+			ssc := c.NewStateContext(fb, fb.ClientState, nil, c.GetEventDb())
+			eventTx, eventsCount, er = c.GetEventDb().ProcessEvents(
+				ctx,
+				fb.Events,
+				fb.Round,
+				fb.Hash,
+				len(fb.Txns),
+				c.storeEventsFunc(ssc),
+			)
 			if er != nil {
 				logging.Logger.Error("finalize block - add events failed",
 					zap.Error(err),

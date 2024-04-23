@@ -405,9 +405,13 @@ func initEntities(workdir string) {
 	round.SetupRoundSummaryDB(workdir)
 	block.SetupBlockSummaryDB(workdir)
 	block.SetupMagicBlockMapDB(workdir)
+	block.SetupBlockEventDB(workdir)
+
 	transaction.SetupTxnSummaryDB(workdir)
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
+	block.SetupBlockEventEntity(ememoryStorage)
+
 	block.SetupStateChange(memoryStorage)
 	state.SetupPartialState(memoryStorage)
 	state.SetupStateNodes(memoryStorage)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/smartcontract/common"
@@ -87,12 +88,24 @@ func filterEvents(events []Event) []Event {
 	return filteredEvents
 }
 
+var doOnce sync.Once
+
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
 	if len(events.events) == 0 {
 		return nil
 	}
 
+	edb.mustPushEventsToKafka(&events, false)
+
+	if err := edb.Store.Get().WithContext(ctx).Create(&events.events).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool) {
 	if edb.Store == nil {
 		logging.Logger.Panic("event database is nil")
 	}
@@ -102,7 +115,13 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 			filteredEvents = filterEvents(events.events)
 			broker         = edb.GetKafkaProv()
 			topic          = edb.dbConfig.KafkaTopic
+			eventsMap      = make(map[int64]*Event)
 		)
+
+		for i, e := range events.events {
+			eventsMap[e.SequenceNumber] = &events.events[i]
+		}
+
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
 				"event": filteredEvent,
@@ -114,20 +133,53 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 			}
 
 			ts := time.Now()
-			key := strconv.Itoa(int(events.round))
+			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
 			err = broker.PublishToKafka(topic, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
 			}
+
+			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
+
+			logging.Logger.Debug("Pushed event to kafka",
+				zap.String("event", filteredEvent.Tag.String()),
+				zap.Int64("seq", filteredEvent.SequenceNumber),
+				zap.Int64("round", events.round))
+
 			tm := time.Since(ts)
 			if tm > 100*time.Millisecond {
 				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
 			}
 		}
-	}
 
-	return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
+		if updateColumn {
+			// updates the events as published
+			if err := edb.setEventPublished(events.round); err != nil {
+				logging.Logger.Panic(fmt.Sprintf("Failed to update event as published: %v", err))
+			}
+		}
+	}
+}
+
+func (edb *EventDb) setEventPublished(round int64) error {
+	return edb.Store.Get().Model(&Event{}).Where("block_number = ?", round).Update("is_published", true).Error
+}
+
+func (edb *EventDb) getLastPublishedRound() (int64, error) {
+	var event Event
+	if err := edb.Store.Get().Model(&Event{}).Where("is_published = ?", true).Order("sequence_number desc").First(&event).Error; err != nil {
+		return 0, err
+	}
+	return event.BlockNumber, nil
+}
+
+func (edb *EventDb) getLatestFinalizedBlock() (int64, error) {
+	var block Block
+	if err := edb.Store.Get().Model(&Block{}).Order("round desc").First(&block).Error; err != nil {
+		return 0, err
+	}
+	return block.Round, nil
 }
 
 func (edb *EventDb) Drop() error {

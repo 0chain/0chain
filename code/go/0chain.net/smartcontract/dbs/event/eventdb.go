@@ -15,7 +15,8 @@ import (
 	"go.uber.org/atomic"
 )
 
-func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings,
+	getBlockEventsFunc func(round int64) (int64, []Event, error)) (*EventDb, error) {
 	eventDb, err := NewEventDbWithoutWorker(config, settings)
 	if err != nil {
 		return nil, err
@@ -25,7 +26,7 @@ func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*
 		return nil, err
 	}
 	goose.Migrate(sqldb)
-	go eventDb.addEventsWorker(common.GetRootContext())
+	go eventDb.addEventsWorker(common.GetRootContext(), getBlockEventsFunc)
 
 	return eventDb, nil
 }
@@ -75,7 +76,9 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		settings:               settings,
 	}
 
-	go eventDb.addEventsWorker(common.GetRootContext())
+	go eventDb.addEventsWorker(common.GetRootContext(), func(round int64) (int64, []Event, error) {
+		return round, []Event{}, nil
+	})
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
@@ -218,6 +221,14 @@ type BlockEvents struct {
 	events    []Event
 	tx        *EventDb
 	done      chan bool
+}
+
+func (be *BlockEvents) Events() []Event {
+	return be.events
+}
+
+func (be *BlockEvents) Round() int64 {
+	return be.round
 }
 
 func (edb *EventDb) AutoMigrate() error {
