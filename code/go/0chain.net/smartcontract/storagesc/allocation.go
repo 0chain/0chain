@@ -1556,3 +1556,32 @@ func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chain
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStat, alloc.AllocationID, &alloc)
 }
+
+func (sc *StorageSmartContract) resetAllocationStats(t *transaction.Transaction, input []byte, balances chainstate.StateContextI) (string, error) {
+	var allocationID string
+	if err := json.Unmarshal(input, &allocationID); err != nil {
+		return "", common.NewError("reset_blobber_stats_failed",
+			"malformed request: "+err.Error())
+	}
+
+	alloc, err := sc.getAllocation(allocationID, balances)
+	if err != nil {
+		return "", common.NewError("reset_allocation_stats_failed", err.Error())
+	}
+
+	totalBlobberAllocationUsedSize := int64(0)
+	for _, ba := range alloc.BlobberAllocs {
+		totalBlobberAllocationUsedSize += ba.Stats.UsedSize
+	}
+
+	totalAllocationUsedSize := (totalBlobberAllocationUsedSize * int64(alloc.DataShards)) / int64(alloc.ParityShards)
+	alloc.Stats.UsedSize = totalAllocationUsedSize
+
+	if _, err := balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc); err != nil {
+		return "", common.NewError("reset_allocation_stats_failed", err.Error())
+	}
+
+	emitUpdateAllocationStatEvent(alloc, balances)
+
+	return "allocation stats reset", nil
+}

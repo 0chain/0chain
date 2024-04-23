@@ -39,9 +39,10 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 	eventDb := &EventDb{
 		Store:         db,
 		dbConfig:      config,
+    eventsCounter: *atomic.NewUint64(0),
 		eventsChannel: make(chan BlockEvents, 1),
-		eventsCounter: *atomic.NewUint64(0),
 		partitionChan: make(chan int64, 100),
+    permanentPartitionChan: make(chan int64, 100),
 		settings:      settings,
 	}
 
@@ -66,11 +67,12 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:         db,
-		dbConfig:      config,
-		eventsChannel: make(chan BlockEvents, 1),
-		partitionChan: make(chan int64, 100),
-		settings:      settings,
+		Store:                  db,
+		dbConfig:               config,
+		eventsChannel:          make(chan BlockEvents, 1),
+		partitionChan:          make(chan int64, 100),
+		permanentPartitionChan: make(chan int64, 100),
+		settings:               settings,
 	}
 
 	go eventDb.addEventsWorker(common.GetRootContext())
@@ -88,6 +90,7 @@ type EventDb struct {
 	eventsCounter atomic.Uint64
 	kafka         queueProvider.KafkaProviderI
 	partitionChan chan int64
+  permanentPartitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -116,6 +119,9 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 		dbConfig: edb.dbConfig,
 		settings: edb.settings,
 		kafka:    kafka,
+    eventsChannel:          edb.eventsChannel,
+		partitionChan:          edb.partitionChan,
+    permanentPartitionChan: edb.permanentPartitionChan,
 	}
 	return &edbTx, nil
 }
