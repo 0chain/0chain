@@ -77,18 +77,8 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 		Value: sarama.ByteEncoder(message),
 	}
 
-	// ctx, cancel := context.WithTimeout(context.Background(), k.WriteTimeout)
-	// defer cancel()
-
 	writer.Input() <- msg
 	<-writer.Successes()
-	// select {
-	// case writer.Input() <- msg:
-	// fmt.Println("push message success:")
-	// case <-ctx.Done():
-	// 	logging.Logger.Panic(fmt.Sprintf("kafka publish message timeout: %v", ctx.Err()))
-	// }
-
 	return nil
 }
 

@@ -292,7 +292,7 @@ func (c *Chain) SetupEventDatabase() error {
 func (c *Chain) getBlockEvents(round int64) (int64, []event.Event, error) {
 	meta := datastore.GetEntityMetadata("last_block_events")
 	blockEvents := meta.Instance().(*block.BlockEvents)
-	key := strconv.FormatInt(round%int64(block.BlockEventsRingSize), 10)
+	key := strconv.FormatInt(round%int64(block.EventsRingSize), 10)
 
 	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
 	defer ememorystore.Close(bctx)
