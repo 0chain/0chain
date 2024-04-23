@@ -1,6 +1,6 @@
 package block
 
-// Last events entity db stores the last N block events in the rocksdb.
+// Block events entity db stores the last N block events in the rocksdb.
 // It will be used to retrieve the last N block events for kafka message syncing.
 
 import (
@@ -12,6 +12,19 @@ import (
 	"0chain.net/core/ememorystore"
 )
 
+const (
+	BlockEventsMetaName = "block_events"
+	BlockEventsDBName   = "block_eventsdb"
+)
+
+var (
+	// EventsRingSize represents the length of the block events ring
+	EventsRingSize           = 100
+	blockEventEntityMetadata *datastore.EntityMetadataImpl
+)
+
+// BlockEvents represents the entity to store the block events in rocksdb
+// The key is the round%BlockEventsRingSize.
 type BlockEvents struct {
 	datastore.NOIDField
 	Key    string `json:"key"`
@@ -19,63 +32,57 @@ type BlockEvents struct {
 	Events []byte `json:"events"`
 }
 
-var blockEventEntityMetadata *datastore.EntityMetadataImpl
-
 // SetupBlockEventEntity - setup the block event entity
 func SetupBlockEventEntity(store datastore.Store) {
 	blockEventEntityMetadata = datastore.MetadataProvider()
-	blockEventEntityMetadata.Name = "last_block_events"
-	blockEventEntityMetadata.DB = "last_block_eventsdb"
+	blockEventEntityMetadata.Name = BlockEventsMetaName
+	blockEventEntityMetadata.DB = BlockEventsDBName
 	blockEventEntityMetadata.Provider = BlockEventProvider
 	blockEventEntityMetadata.Store = store
 	blockEventEntityMetadata.IDColumnName = "key"
-	datastore.RegisterEntityMetadata("last_block_events", blockEventEntityMetadata)
+	datastore.RegisterEntityMetadata(BlockEventsMetaName, blockEventEntityMetadata)
 }
 
 // SetupBlockEventDB - sets up the last block events database
 func SetupBlockEventDB(workdir string) {
-	datadir := filepath.Join(workdir, "data/rocksdb/lastblockevents")
+	datadir := filepath.Join(workdir, "data/rocksdb/blockevents")
 	db, err := ememorystore.CreateDB(datadir)
 	if err != nil {
 		panic(err)
 	}
-	ememorystore.AddPool("last_block_eventsdb", db)
+	ememorystore.AddPool(BlockEventsDBName, db)
 }
 
 func BlockEventProvider() datastore.Entity {
 	return &BlockEvents{}
 }
 
-/*GetEntityMetadata - implement interface */
+// GetEntityMetadata returns the blockEventEntityMetadata
 func (b *BlockEvents) GetEntityMetadata() datastore.EntityMetadata {
 	return blockEventEntityMetadata
 }
 
-/*GetKey - implement interface */
+// GetKey returns the key of the entity
 func (b *BlockEvents) GetKey() datastore.Key {
 	return datastore.ToKey(b.Key)
 }
 
-/*SetKey - implement interface */
+// SetKey sets the key of the entity
 func (b *BlockEvents) SetKey(key datastore.Key) {
 	b.Key = datastore.ToString(key)
 }
 
-/*Read - store read */
+// Read reads the block events from the store
 func (b *BlockEvents) Read(ctx context.Context, key datastore.Key) error {
 	return b.GetEntityMetadata().GetStore().Read(ctx, key, b)
 }
 
-/*Write - store read */
+// Write writes the block events to the store
 func (b *BlockEvents) Write(ctx context.Context) error {
 	return b.GetEntityMetadata().GetStore().Write(ctx, b)
 }
 
-func (b *BlockEvents) MultiWrite(ctx context.Context, entities []datastore.Entity) error {
-	return b.GetEntityMetadata().GetStore().MultiWrite(ctx, blockEventEntityMetadata, entities)
-}
-
-/*Delete - store read */
+// Delete deletes the block events from the store
 func (b *BlockEvents) Delete(ctx context.Context) error {
 	return b.GetEntityMetadata().GetStore().Delete(ctx, b)
 }

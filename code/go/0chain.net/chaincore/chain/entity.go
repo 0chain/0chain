@@ -292,9 +292,7 @@ func (c *Chain) SetupEventDatabase() error {
 func (c *Chain) getBlockEvents(round int64) (int64, []event.Event, error) {
 	meta := datastore.GetEntityMetadata("last_block_events")
 	blockEvents := meta.Instance().(*block.BlockEvents)
-	// TODO: config the lastN
-	const lastN = 100
-	key := strconv.FormatInt(round%lastN, 10)
+	key := strconv.FormatInt(round%int64(block.BlockEventsRingSize), 10)
 
 	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
 	defer ememorystore.Close(bctx)
@@ -794,7 +792,7 @@ func (c *Chain) storeLastNEvents(es event.BlockEvents) error {
 	var (
 		round  = es.Round()
 		events = es.Events()
-		lastN  = int64(100)
+		lastN  = int64(block.EventsRingSize)
 	)
 
 	ed, err := json.Marshal(events)
