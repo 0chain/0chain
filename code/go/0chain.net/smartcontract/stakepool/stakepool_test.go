@@ -1,10 +1,11 @@
 package stakepool
 
 import (
-	"0chain.net/chaincore/block"
-	"github.com/0chain/common/core/logging"
 	"strconv"
 	"testing"
+
+	"0chain.net/chaincore/block"
+	"github.com/0chain/common/core/logging"
 
 	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/require"
@@ -161,7 +162,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			},
 		},
 		{
-			name: "100% service charge",
+			name: "100 percent service charge",
 			args: args{
 				value:              50,
 				numDelegates:       2,
@@ -171,6 +172,51 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      50,
 				delegateRewards: []currency.Coin{0, 0},
+				err:             false,
+				errMsg:          "",
+			},
+		},
+		{
+			name: "no delegates with 0 service charge",
+			args: args{
+				value:              100,
+				numDelegates:       0,
+				delegateBal:        []currency.Coin{},
+				serviceChargeRatio: 0,
+			},
+			want: want{
+				poolReward:      100,
+				delegateRewards: []currency.Coin{},
+				err:             false,
+				errMsg:          "",
+			},
+		},
+		{
+			name: "single delegates with 1 coin and 50 percent service charge",
+			args: args{
+				value:              1,
+				numDelegates:       1,
+				delegateBal:        []currency.Coin{1},
+				serviceChargeRatio: 0.5,
+			},
+			want: want{
+				poolReward:      0,
+				delegateRewards: []currency.Coin{1},
+				err:             false,
+				errMsg:          "",
+			},
+		},
+		{
+			name: "single delegates with 100 percent service charge",
+			args: args{
+				value:              20,
+				numDelegates:       1,
+				delegateBal:        []currency.Coin{100},
+				serviceChargeRatio: 1,
+			},
+			want: want{
+				poolReward:      20,
+				delegateRewards: []currency.Coin{0},
 				err:             false,
 				errMsg:          "",
 			},
