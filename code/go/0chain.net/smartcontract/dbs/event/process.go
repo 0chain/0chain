@@ -343,7 +343,7 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 			logging.Logger.Panic("could not get unpublished events", zap.Error(err))
 		}
 		logging.Logger.Debug("kafka - see no published round events")
-		// when see gorm.ErrRecordNotFound, it means there is no unpublished events, which could
+		// when see gorm.ErrRecordNotFound, it means there is no published events, which could
 		// happen when kafka is just introduced and run the first time.
 		return nil
 	}
