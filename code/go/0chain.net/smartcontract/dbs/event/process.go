@@ -357,11 +357,6 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 		return nil
 	}
 
-	// TODO: remove testing
-	if lfbRound > 5 {
-		round = lfbRound - 5
-	}
-
 	if round > lfbRound {
 		return nil
 	}
