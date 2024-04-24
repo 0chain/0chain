@@ -204,10 +204,12 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 	return tr, res.Error
 }
 
-func (edb *EventDb) UpdateTransactionErrors(lastPartition int64) error {
-	logging.Logger.Info("UpdateTransactionErrors", zap.Any("lastPartition", lastPartition), zap.Any("query", fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = 2"+
-		"GROUP BY transaction_output", lastPartition)))
+func (edb *EventDb) UpdateTransactionErrors(current int64) error {
+
+	from := (current - 1) * edb.settings.PermanentPartitionChangePeriod
+	to := (current) * edb.settings.PermanentPartitionChangePeriod
+
+	lastPartition := edb.partTableName("transactions", from, to)
 
 	db := edb.Get()
 
@@ -224,7 +226,7 @@ func (edb *EventDb) UpdateTransactionErrors(lastPartition int64) error {
 	defer cancelFunc()
 
 	if dbTxn := db.WithContext(timeout).Exec(fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT transaction_output, count(*) as count FROM transactions_%d WHERE status = 2"+
+		"SELECT transaction_output, count(*) as count FROM transactions_part_ WHERE status = 2"+
 		"GROUP BY transaction_output", lastPartition)); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))

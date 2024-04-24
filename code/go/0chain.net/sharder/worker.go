@@ -443,7 +443,6 @@ func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 	)
 
 	edb := sc.GetQueryStateContext().GetEventDB()
-	lastPartition := sc.GetCurrentRound() / edb.Settings().PartitionChangePeriod
 
 	for {
 		select {
@@ -452,17 +451,12 @@ func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 		case <-timer.C:
 			timer.Reset(timerDuration)
 
-			currentPartition := sc.GetCurrentRound() / edb.Settings().PartitionChangePeriod
-			if currentPartition == lastPartition {
-				continue
+			if sc.GetCurrentRound()%edb.Settings().PermanentPartitionChangePeriod == 0 {
+				err := edb.UpdateTransactionErrors(sc.GetCurrentRound())
+				if err != nil {
+					logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
+				}
 			}
-
-			err := edb.UpdateTransactionErrors(currentPartition - 1)
-			if err != nil {
-				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
-			}
-
-			lastPartition = currentPartition
 		}
 	}
 }
