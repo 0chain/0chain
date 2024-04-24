@@ -660,6 +660,7 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 		}
 	}
 	if len(events) == 0 {
+		logging.Logger.Info("no events to process", zap.Int64("round", round))
 		return s, nil
 	}
 
