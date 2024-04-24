@@ -1450,6 +1450,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"can't get blobber "+d.BlobberID+": "+err.Error())
 		}
+		logging.Logger.Error("Jayash", zap.Any("blobber", blobber), zap.Any("d", d), zap.Any("alloc", alloc))
 		blobber.SavedData += -d.Stats.UsedSize
 		blobber.Allocated += -d.Size
 		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)

@@ -316,10 +316,14 @@ func BenchmarkTests(
 					panic(err)
 				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
+				ids := ""
+				for _, id := range freeBlobbers {
+					ids += id
+				}
 				marker := fmt.Sprintf("%s:%f:%d:%s",
 					request.Recipient,
 					request.FreeTokens,
-					request.Nonce, freeBlobbers)
+					request.Nonce, ids)
 				signature, err := sigScheme.Sign(hex.EncodeToString([]byte(marker)))
 				if err != nil {
 					panic(err)
@@ -787,6 +791,7 @@ func BenchmarkTests(
 		},
 		// todo "update_config" waiting for PR489
 	}
+
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
 		testsI = append(testsI, test)
