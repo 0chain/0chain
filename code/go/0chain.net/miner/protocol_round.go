@@ -708,6 +708,9 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	//we don't want to cancel previous notarization too early, previous block should be notarized often
 	var cancel func()
+    if ctx.Err() != nil {
+        logging.Logger.Debug("updatePreviousBlockNotarization - context error")
+    }
 	ctx, cancel = context.WithTimeout(common.GetRootContext(), 5*time.Second)
 	defer cancel()
 	pb := mc.GetPreviousBlock(ctx, b)

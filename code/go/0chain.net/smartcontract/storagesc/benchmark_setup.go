@@ -62,7 +62,7 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	const mockWriePoolSize = 600000000
+	//const mockWriePoolSize = 600000000	// Lint issue - Unused variable
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:              id,
@@ -871,8 +871,8 @@ func getMockStakePoolSettings(blobber string) stakepool.Settings {
 func getMockBlobberStakePoolId(blobber, stake int, clients []string) string {
 	index := viper.GetInt(sc.NumBlobberDelegates)*blobber + stake
 	clinetIndex := index % len(clients)
-	clinetIndex = clinetIndex
-	return clients[index%len(clients)]
+	//clinetIndex = clinetIndex
+	return clients[clinetIndex]
 }
 
 func getMockValidatorStakePoolId(validator string, stake int) string {

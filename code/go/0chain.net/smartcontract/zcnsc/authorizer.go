@@ -93,7 +93,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	// Check existing Authorizer
-	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
+	_ , err = GetAuthorizerNode(authorizerID, ctx)
 	switch err {
 	case util.ErrValueNotPresent:
 	case nil:
@@ -109,7 +109,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	authorizerPublicKey := params.PublicKey
 	authorizerURL := params.URL
 
-	authorizer = NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
+	authorizer := NewAuthorizer(authorizerID, authorizerPublicKey, authorizerURL)
 	err = authorizer.Save(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)

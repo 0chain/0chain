@@ -88,7 +88,7 @@ func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllo
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrUpdateChallengePool, id, data)
 
-	return
+
 }
 
 func (cp *challengePool) moveToValidators(

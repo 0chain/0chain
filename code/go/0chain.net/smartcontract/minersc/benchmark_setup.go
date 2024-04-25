@@ -24,7 +24,10 @@ var mockRewardType = spenum.BlockRewardMiner
 
 func AddMockGlobalNode(balances cstate.StateContextI) {
 	var gn GlobalNode
-	gn.readConfig()
+	error := gn.readConfig()
+	if(error!=nil){
+		log.Fatal(error)
+	}
 	_, err := balances.InsertTrieNode(GlobalNodeKey, &gn)
 	if err != nil {
 		log.Fatal(err)
