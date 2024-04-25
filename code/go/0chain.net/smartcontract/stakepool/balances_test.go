@@ -36,17 +36,20 @@ type testBalances struct {
 	tree      map[datastore.Key]util.MPTSerializable
 	block     *block.Block
 	tc        *statecache.TransactionCache
+	eventDb   *event.EventDb
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
 }
 
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
+	// testEventDb, rollback := GetTestEventDB(t)
 	tb = &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 		txn:      new(transaction.Transaction),
 		block:    new(block.Block),
+		// eventDb:  testEventDb,
 	}
 
 	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
