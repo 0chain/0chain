@@ -57,7 +57,7 @@ dbs:
   settings:
     debug: false
     aggregate_period: 10
-    partition_change_period: 300
+    partition_change_period: 100
     partition_keep_count: 10
     permanent_partition_change_period: 300
     permanent_partition_keep_count: 10
