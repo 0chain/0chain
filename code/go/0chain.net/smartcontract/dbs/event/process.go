@@ -573,18 +573,22 @@ func (edb *EventDb) dropPartitions(current int64) error {
 
 func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, error) {
 	if gs != nil {
+		logging.Logger.Info("1Jayash updating historic data", zap.Int64("round", es.round), zap.Any("len_events", len(es.events)))
 		return tx.updateHistoricData(es, gs)
 	}
 
 	if es.round == 0 {
+		logging.Logger.Info("2Jayash updating historic data", zap.Int64("round", es.round), zap.Any("len_events", len(es.events)))
 		return tx.updateHistoricData(es, &Snapshot{Round: 0})
 	}
 
 	g, err := tx.GetGlobal()
 	if err != nil {
-		logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
+		logging.Logger.Panic("Jayash can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
 	}
 	gs = &g
+
+	logging.Logger.Info("3Jayash updating historic data", zap.Int64("round", es.round), zap.Any("len_events", len(es.events)))
 
 	return tx.updateHistoricData(es, gs)
 }
@@ -652,6 +656,7 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 }
 
 func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, error) {
+	logging.Logger.Info("Jayash updating historic data", zap.Int64("round", e.round), zap.Any("len_events", len(e.events)))
 	round := e.round
 	var events []Event
 	for _, ev := range e.events { //filter out round events
@@ -659,10 +664,15 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 			events = append(events, ev)
 		}
 	}
+
+	logging.Logger.Info("Jayash events to process", zap.Any("round", round), zap.Int("len_events", len(events)))
+
 	if len(events) == 0 {
-		logging.Logger.Info("no events to process", zap.Int64("round", round))
+		logging.Logger.Error("Jayash no events to process", zap.Int64("round", round))
 		return s, nil
 	}
+
+	logging.Logger.Info("2Jayash events to process", zap.Any("round", round), zap.Int("len_events", len(events)))
 
 	providers, err := edb.BuildChangedProvidersMapFromEvents(events)
 	if err != nil {
@@ -698,6 +708,8 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 		logging.Logger.Error("error creating new provider snapshots", zap.Error(err))
 		return s, err
 	}
+
+	logging.Logger.Info("Jayash updating historic data done", zap.Int64("round", e.round), zap.Any("len_events", len(e.events)))
 
 	return s, nil
 }
