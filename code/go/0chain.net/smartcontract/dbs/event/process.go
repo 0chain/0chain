@@ -572,6 +572,7 @@ func (edb *EventDb) dropPartitions(current int64) error {
 }
 
 func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, error) {
+	logging.Logger.Info("Jayash updating snapshots", zap.Int64("round", es.round), zap.Any("len_events", len(es.events)))
 	if gs != nil {
 		logging.Logger.Info("1Jayash updating historic data", zap.Int64("round", es.round), zap.Any("len_events", len(es.events)))
 		return tx.updateHistoricData(es, gs)
