@@ -453,7 +453,7 @@ func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 
 			currentRound := sc.GetCurrentRound()
 			if currentRound > permanentInterval+lastRound {
-				err := edb.UpdateTransactionErrors(currentRound)
+				err := edb.UpdateTransactionErrors(currentRound / permanentInterval)
 				if err != nil {
 					logging.Logger.Info("TrackTransactionErrors: ", zap.Error(err))
 				}

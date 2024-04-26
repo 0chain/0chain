@@ -226,7 +226,7 @@ func (edb *EventDb) UpdateTransactionErrors(current int64) error {
 	defer cancelFunc()
 
 	if dbTxn := db.WithContext(timeout).Exec(fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT transaction_output, count(*) as count FROM transactions_part_ WHERE status = 2"+
+		"SELECT transaction_output, count(*) as count FROM %s WHERE status = 2"+
 		"GROUP BY transaction_output", lastPartition)); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
