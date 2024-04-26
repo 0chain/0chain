@@ -155,7 +155,8 @@ func BenchmarkTests(
 				CreationDate: creationTime,
 			},
 			input: func() []byte {
-				wm := WriteMarker{
+				wm := &WriteMarker{}
+				wm1 := &writeMarkerV1{
 					AllocationRoot:         encryption.Hash("allocation root"),
 					PreviousAllocationRoot: encryption.Hash("allocation root"),
 					AllocationID:           getMockAllocationId(0),
@@ -166,11 +167,12 @@ func BenchmarkTests(
 				}
 				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
-				wm.Signature, _ = sigScheme.Sign(encryption.Hash(wm.GetHashData()))
+				wm1.Signature, _ = sigScheme.Sign(encryption.Hash(wm1.GetHashData()))
+				wm.SetEntity(wm1)
 				bytes, _ := json.Marshal(&BlobberCloseConnection{
 					AllocationRoot:     encryption.Hash("allocation root"),
 					PrevAllocationRoot: encryption.Hash("allocation root"),
-					WriteMarker:        &wm,
+					WriteMarker:        wm,
 				})
 				return bytes
 			}(),
@@ -354,7 +356,8 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&StorageNode{
+				b := &StorageNode{}
+				bv2 := &storageNodeV2{
 					Provider: provider.Provider{
 						ProviderType: spenum.Blobber,
 					},
@@ -362,7 +365,9 @@ func BenchmarkTests(
 					Terms:             getMockBlobberTerms(),
 					Capacity:          viper.GetInt64(bk.StorageMinBlobberCapacity) * 1000,
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_blobber")),
-				})
+				}
+				b.SetEntity(bv2)
+				bytes, _ := json.Marshal(b)
 				return bytes
 			}(),
 		},
@@ -430,7 +435,8 @@ func BenchmarkTests(
 			input: func() []byte {
 				stake := currency.Coin(viper.GetInt64(bk.StorageMaxStake) * 1e10)
 				totalStake := stake * currency.Coin(viper.GetInt(bk.NumBlobberDelegates))
-				bytes, _ := json.Marshal(&StorageNode{
+				b := &StorageNode{}
+				b.SetEntity(&storageNodeV2{
 					Provider: provider.Provider{
 						ID:           getMockBlobberId(0),
 						ProviderType: spenum.Blobber,
@@ -439,6 +445,7 @@ func BenchmarkTests(
 					Capacity:          int64(totalStake * GB),
 					StakePoolSettings: getMockStakePoolSettings(getMockBlobberId(0)),
 				})
+				bytes, _ := json.Marshal(b)
 				return bytes
 			}(),
 		},

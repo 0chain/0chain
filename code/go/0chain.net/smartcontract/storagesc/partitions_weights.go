@@ -157,15 +157,15 @@ func (bp *blobberWeightPartitionsWrap) add(state state.StateContextI, bw Challen
 // remove  is a bit complex as partitions will replace the removed one with the last part's tail item, so
 // the partition weight should be updated accordingly. Also,
 // if the last partition is empty, the partion weight should be removed
-func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobberID string) error {
+func (bp *blobberWeightPartitionsWrap) remove(balances state.StateContextI, blobberID string) error {
 	// get the blobber weight to be removed
 	bw := ChallengeReadyBlobber{}
-	_, err := bp.p.Get(state, blobberID, &bw)
+	_, err := bp.p.Get(balances, blobberID, &bw)
 	if err != nil {
 		return err
 	}
 
-	removeLocs, err := bp.p.RemoveX(state, blobberID)
+	removeLocs, err := bp.p.RemoveX(balances, blobberID)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobber
 			bp.partWeights.Parts = bp.partWeights.Parts[:len(bp.partWeights.Parts)-1]
 		}
 
-		return bp.save(state)
+		return bp.save(balances)
 	}
 
 	// for removed item and replace item in different part
@@ -200,10 +200,24 @@ func (bp *blobberWeightPartitionsWrap) remove(state state.StateContextI, blobber
 
 	// reduce the weight of the replace item's partition
 	bp.partWeights.Parts[removeLocs.Replace].Weight -= int(repBw.GetWeightV2())
+
+	actErr := state.WithActivation(balances, "artemis", func() error {
+		return nil
+	}, func() error {
+		if bp.partWeights.Parts[removeLocs.Replace].Weight == 0 {
+			// remove the last part weight, as 0 weight could only happen when it's last part
+			bp.partWeights.Parts = bp.partWeights.Parts[:len(bp.partWeights.Parts)-1]
+		}
+		return nil
+	})
+	if actErr != nil {
+		return actErr
+	}
+
 	// apply the difference to the removed item's partition
 	diff := int(repBw.GetWeightV2()) - int(bw.GetWeightV2())
 	bp.partWeights.Parts[removeLocs.From].Weight += diff
-	return bp.save(state)
+	return bp.save(balances)
 }
 
 func (bp *blobberWeightPartitionsWrap) update(state state.StateContextI, bw ChallengeReadyBlobber) error {

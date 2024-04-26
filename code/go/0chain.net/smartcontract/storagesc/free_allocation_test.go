@@ -245,7 +245,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 	blob := make([]string, mockNumBlobbers)
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
-		mockBlobber := &StorageNode{
+		mockBlobber := &StorageNode{}
+		mockBlobber.SetEntity(&storageNodeV2{
 			Provider: provider.Provider{
 				ID:              blob[i],
 				ProviderType:    spenum.Blobber,
@@ -256,7 +257,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Terms: Terms{
 				ReadPrice: mockFreeAllocationSettings.ReadPriceRange.Max,
 			},
-		}
+		})
 		mockAllBlobbers.Nodes.add(mockBlobber)
 	}
 
@@ -425,7 +426,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 }
 
 func signFreeAllocationMarker(t *testing.T, frm freeStorageMarker) (string, string) {
-	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
+	var ids string
+	for _, b := range frm.Blobbers {
+		ids += b
+	}
+	marker := fmt.Sprintf("%s:%f:%d:%s", frm.Recipient, frm.FreeTokens, frm.Nonce, ids)
 	signatureScheme := encryption.NewBLS0ChainScheme()
 	err := signatureScheme.GenerateKeys()
 	require.NoError(t, err)

@@ -10,6 +10,7 @@ import (
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 
@@ -288,6 +289,58 @@ func (conf *Config) validateStakeRange(min, max currency.Coin) (err error) {
 
 func (conf *Config) ValidateStakeRange(min, max currency.Coin) (err error) {
 	return conf.validateStakeRange(min, max)
+}
+
+func (conf *Config) Clone() statecache.Value {
+	// cc := *conf
+	// if conf.ReadPool != nil {
+	// 	cc.ReadPool = &readPoolConfig{}
+	// 	*cc.ReadPool = *conf.ReadPool
+	// }
+
+	// if conf.WritePool != nil {
+	// 	cc.WritePool = &writePoolConfig{}
+	// 	*cc.WritePool = *conf.WritePool
+	// }
+
+	// if conf.StakePool != nil {
+	// 	cc.StakePool = &stakePoolConfig{}
+	// 	*cc.StakePool = *conf.StakePool
+	// }
+
+	// if conf.BlockReward != nil {
+	// 	cc.BlockReward = &blockReward{}
+	// 	*cc.BlockReward = *conf.BlockReward
+	// }
+
+	// cc.Cost = make(map[string]int, len(conf.Cost))
+	// for k, v := range conf.Cost {
+	// 	cc.Cost[k] = v
+	// }
+
+	v, err := conf.MarshalMsg(nil)
+	if err != nil {
+		panic(fmt.Sprintf("could not marshal config: %v", err))
+	}
+
+	cc := newConfig()
+	_, err = cc.UnmarshalMsg(v)
+	if err != nil {
+		panic(fmt.Sprintf("could not unmarshal config: %v", err))
+	}
+
+	return cc
+}
+
+func (conf *Config) CopyFrom(v interface{}) bool {
+	cc, ok := v.(*Config)
+	if !ok {
+		return false
+	}
+
+	cv := cc.Clone().(*Config)
+	*conf = *cv
+	return true
 }
 
 // configs from sc.yaml

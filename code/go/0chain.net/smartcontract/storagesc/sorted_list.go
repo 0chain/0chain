@@ -66,12 +66,12 @@ type SortedBlobbers []*StorageNode
 //nolint:golint,unused
 func (sb SortedBlobbers) getIndex(id string) (i int, ok bool) {
 	i = sort.Search(len(sb), func(i int) bool {
-		return sb[i].ID >= id
+		return sb[i].Id() >= id
 	})
 	if i == len(sb) {
 		return // not found
 	}
-	if sb[i].ID == id {
+	if sb[i].Id() == id {
 		return i, true // found
 	}
 	return // not found
@@ -79,12 +79,12 @@ func (sb SortedBlobbers) getIndex(id string) (i int, ok bool) {
 
 func (sb SortedBlobbers) get(id string) (b *StorageNode, ok bool) {
 	var i = sort.Search(len(sb), func(i int) bool {
-		return sb[i].ID >= id
+		return sb[i].Id() >= id
 	})
 	if i == len(sb) {
 		return // not found
 	}
-	if sb[i].ID == id {
+	if sb[i].Id() == id {
 		return sb[i], true // found
 	}
 	return // not found
@@ -111,7 +111,7 @@ func (sb *SortedBlobbers) add(b *StorageNode) (ok bool) {
 		return true // added
 	}
 	var i = sort.Search(len(*sb), func(i int) bool {
-		return (*sb)[i].ID >= b.ID
+		return (*sb)[i].Id() >= b.Id()
 	})
 	// out of bounds
 	if i == len(*sb) {
@@ -119,7 +119,7 @@ func (sb *SortedBlobbers) add(b *StorageNode) (ok bool) {
 		return true // added
 	}
 	// the same
-	if (*sb)[i].ID == b.ID {
+	if (*sb)[i].Id() == b.Id() {
 		(*sb)[i] = b // replace
 		return false // already have
 	}
@@ -129,10 +129,11 @@ func (sb *SortedBlobbers) add(b *StorageNode) (ok bool) {
 }
 
 // replace if found
+//
 //nolint:golint,unused
 func (sb *SortedBlobbers) update(b *StorageNode) (ok bool) {
 	var i int
-	if i, ok = sb.getIndex(b.ID); !ok {
+	if i, ok = sb.getIndex(b.Id()); !ok {
 		return
 	}
 	(*sb)[i] = b // replace

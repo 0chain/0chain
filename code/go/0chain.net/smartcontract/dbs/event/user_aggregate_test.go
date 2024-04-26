@@ -192,13 +192,13 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 
 				fmt.Printf("testing aggregates: %+v\n", aggregates)
 				fmt.Printf("testing client41: %+v\n", aggregates["client41"])
-				assert.Equal(tt, int64(1133), aggregates["client41"].ClaimableReward) // had 33 in the user snampshot
+				assert.Equal(tt, int64(1133), aggregates["client41"].TotalReward) // had 33 in the user snampshot
 				fmt.Printf("testing client42: %+v\n", aggregates["client42"])
-				assert.Equal(tt, int64(2200), aggregates["client42"].ClaimableReward)
+				assert.Equal(tt, int64(2200), aggregates["client42"].TotalReward)
 				fmt.Printf("testing client43: %+v\n", aggregates["client43"])
-				assert.Equal(tt, int64(3300), aggregates["client43"].ClaimableReward)
+				assert.Equal(tt, int64(3300), aggregates["client43"].TotalReward)
 				fmt.Printf("testing client44: %+v\n", aggregates["client44"])
-				assert.Equal(tt, int64(4400), aggregates["client44"].ClaimableReward)
+				assert.Equal(tt, int64(4400), aggregates["client44"].TotalReward)
 
 				return true
 			},
@@ -216,7 +216,7 @@ func TestEventDb_updateUserAggregates(t *testing.T) {
 			snap := UserSnapshot{
 				UserID:          tt.args.clientWithSnapshot,
 				Round:           3,
-				ClaimableReward: 33,
+				TotalReward:     33,
 				CollectedReward: 44,
 				TotalStake:      55,
 				ReadPoolTotal:   66,
