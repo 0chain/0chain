@@ -190,6 +190,21 @@ func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 	return resultBlobbers, nil
 }
 
+func (edb *EventDb) GetStakableBlobbersFromIDs(ids []string) ([]Blobber, error) {
+	var blobbers []Blobber
+	result := edb.Store.Get().
+		Select("blobbers.*").
+		Table("blobbers").
+		Joins("left join delegate_pools ON delegate_pools.provider_type = 3 AND delegate_pools.provider_id = blobbers.id AND delegate_pools.status = 0").
+		Where("blobbers.is_killed = false AND blobbers.is_shutdown = false").
+		Where("blobbers.id IN (?)", ids).
+		Group("blobbers.id").
+		Having("count(delegate_pools.id) < blobbers.num_delegates").
+		Find(&blobbers)
+
+	return blobbers, result.Error
+}
+
 func (edb *EventDb) deleteBlobber(id string) error {
 	return edb.Store.Get().Model(&Blobber{}).Where("id = ?", id).Delete(&Blobber{}).Error
 }
