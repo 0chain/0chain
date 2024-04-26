@@ -416,7 +416,7 @@ func (edb *EventDb) WorkAggregates(
 	var err error
 	gSnapshot, err = updateSnapshots(gSnapshot, blockEvents, edb)
 	if err != nil {
-		logging.Logger.Error("Jayash snapshot could not be processed",
+		logging.Logger.Error("snapshot could not be processed",
 			zap.Int64("round", blockEvents.round),
 			zap.String("block", blockEvents.block),
 			zap.Int("block size", blockEvents.blockSize),
@@ -659,7 +659,6 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 			events = append(events, ev)
 		}
 	}
-
 	if len(events) == 0 {
 		return s, nil
 	}
