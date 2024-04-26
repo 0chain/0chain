@@ -65,11 +65,19 @@ msgp:
 	@cd $(root_path)/code/go/0chain.net && go generate -run=msgp ./...
 	@echo "Run msgp completed."
 
-swagger:
-	@echo "Run swagger..."
-	swagger generate spec -w  code/go/0chain.net/sharder/sharder  -m  -o docs/swagger.yaml
-	swagger generate markdown  -f docs/swagger.yaml --output=docs/swagger.md
-	@echo "swagger documentation generated"
+swagger-sharder:
+	@echo "Run swagger for sharder API ..."
+	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/sharder -c 0chain.net/smartcontract/... -c 0chain.net/chaincore/... -c 0chain.net/core/... -m -o docs/swagger-sharder.yaml
+	swagger generate markdown  -f docs/swagger-sharder.yaml --output=docs/swagger-sharder.md
+	@echo "swagger documentation generated for sharder API"
+
+swagger-miner:
+	@echo "Run swagger for miner API ..."
+	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/miner -c 0chain.net/chaincore/... -m -o docs/swagger-miner.yaml
+	swagger generate markdown  -f docs/swagger-miner.yaml --output=docs/swagger-miner.md
+	@echo "swagger documentation generated for miner API"
+
+swagger: swagger-sharder swagger-miner
 
 build-benchmark:
 	./docker.local/bin/build.benchmark.sh

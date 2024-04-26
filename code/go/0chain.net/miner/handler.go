@@ -35,7 +35,8 @@ func SetupHandlers() {
 //
 // responses:
 //  200: ChainStats
-//  500: Internal Server Error
+//  500:
+//    description: Internal Server Error
 
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain

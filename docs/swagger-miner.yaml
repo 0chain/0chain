@@ -1,0 +1,380 @@
+basePath: /
+definitions:
+    ChainStats:
+        properties:
+            count:
+                format: int64
+                type: integer
+                x-go-name: Count
+            current_round:
+                format: int64
+                type: integer
+                x-go-name: CurrentRound
+            delta:
+                $ref: '#/definitions/Duration'
+            latest_finalized_round:
+                format: int64
+                type: integer
+                x-go-name: LastFinalizedRound
+            max:
+                format: double
+                type: number
+                x-go-name: Max
+            mean:
+                format: double
+                type: number
+                x-go-name: Mean
+            min:
+                format: double
+                type: number
+                x-go-name: Min
+            percentile_50:
+                format: double
+                type: number
+                x-go-name: Percentile50
+            percentile_90:
+                format: double
+                type: number
+                x-go-name: Percentile90
+            percentile_95:
+                format: double
+                type: number
+                x-go-name: Percentile95
+            percentile_99:
+                format: double
+                type: number
+                x-go-name: Percentile99
+            rate_1_min:
+                format: double
+                type: number
+                x-go-name: Rate1
+            rate_5_min:
+                format: double
+                type: number
+                x-go-name: Rate5
+            rate_15_min:
+                format: double
+                type: number
+                x-go-name: Rate15
+            rate_mean:
+                format: double
+                type: number
+                x-go-name: RateMean
+            std_dev:
+                format: double
+                type: number
+                x-go-name: StdDev
+            total_txns:
+                format: int64
+                type: integer
+                x-go-name: RunningTxnCount
+        type: object
+        x-go-package: 0chain.net/chaincore/diagnostics
+    Client:
+        description: go:generate msgp -io=false -tests=false -v
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            id:
+                type: string
+                x-go-name: ID
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            version:
+                type: string
+                x-go-name: Version
+        title: Client - data structure that holds the client data
+        type: object
+        x-go-package: 0chain.net/chaincore/client
+    CreationDateField:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            CreationDateField - Can be used to add a creation date functionality to an entity */
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+        type: object
+        x-go-package: 0chain.net/core/datastore
+    DKGKeyShare:
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+            message:
+                type: string
+                x-go-name: Message
+            share:
+                type: string
+                x-go-name: Share
+            sign:
+                type: string
+                x-go-name: Sign
+        type: object
+        x-go-package: 0chain.net/chaincore/threshold/bls
+    Duration:
+        description: |-
+            A Duration represents the elapsed time between two instants
+            as an int64 nanosecond count. The representation limits the
+            largest representable duration to approximately 290 years.
+        format: int64
+        type: integer
+        x-go-package: time
+    GroupSharesOrSigns:
+        properties:
+            shares:
+                additionalProperties:
+                    $ref: '#/definitions/ShareOrSigns'
+                type: object
+                x-go-name: Shares
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    HashIDField:
+        properties:
+            hash:
+                type: string
+                x-go-name: Hash
+        title: HashIDField - Useful to embed this into all the entities and get consistent behavior */
+        type: object
+        x-go-package: 0chain.net/core/datastore
+    IDField:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            IDField - Useful to embed this into all the entities and get consistent behavior */
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+        type: object
+        x-go-package: 0chain.net/core/datastore
+    Info:
+        description: Info - (informal) info of a node that can be shared with other nodes
+        properties:
+            avg_block_txns:
+                format: int64
+                type: integer
+                x-go-name: AvgBlockTxns
+            build_tag:
+                type: string
+                x-go-name: BuildTag
+            miners_median_network_time:
+                $ref: '#/definitions/Duration'
+            state_missing_nodes:
+                format: int64
+                type: integer
+                x-go-name: StateMissingNodes
+        type: object
+        x-go-package: 0chain.net/chaincore/node
+    MPK:
+        properties:
+            ID:
+                type: string
+            Mpk:
+                items:
+                    type: string
+                type: array
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    MagicBlock:
+        properties:
+            hash:
+                type: string
+                x-go-name: Hash
+            k:
+                format: int64
+                type: integer
+                x-go-name: K
+            magic_block_number:
+                format: int64
+                type: integer
+                x-go-name: MagicBlockNumber
+            miners:
+                $ref: '#/definitions/Pool'
+            mpks:
+                $ref: '#/definitions/Mpks'
+            "n":
+                format: int64
+                type: integer
+                x-go-name: "N"
+            previous_hash:
+                type: string
+                x-go-name: PreviousMagicBlockHash
+            sharders:
+                $ref: '#/definitions/Pool'
+            share_or_signs:
+                $ref: '#/definitions/GroupSharesOrSigns'
+            starting_round:
+                format: int64
+                type: integer
+                x-go-name: StartingRound
+            t:
+                format: int64
+                type: integer
+                x-go-name: T
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    Mpks:
+        properties:
+            Mpks:
+                additionalProperties:
+                    $ref: '#/definitions/MPK'
+                type: object
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    Node:
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            description:
+                type: string
+                x-go-name: Description
+            host:
+                type: string
+                x-go-name: Host
+            id:
+                type: string
+                x-go-name: ID
+            in_prev_mb:
+                type: boolean
+                x-go-name: InPrevMB
+            info:
+                $ref: '#/definitions/Info'
+            n2n_host:
+                type: string
+                x-go-name: N2NHost
+            path:
+                type: string
+                x-go-name: Path
+            port:
+                format: int64
+                type: integer
+                x-go-name: Port
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            set_index:
+                format: int64
+                type: integer
+                x-go-name: SetIndex
+            status:
+                format: int64
+                type: integer
+                x-go-name: Status
+            type:
+                $ref: '#/definitions/NodeType'
+            version:
+                type: string
+                x-go-name: Version
+        title: Node - a struct holding the node information */
+        type: object
+        x-go-package: 0chain.net/chaincore/node
+    NodeType:
+        format: int8
+        type: integer
+        x-go-package: 0chain.net/chaincore/node
+    Pool:
+        properties:
+            nodes:
+                additionalProperties:
+                    $ref: '#/definitions/Node'
+                type: object
+                x-go-name: NodesMap
+            type:
+                $ref: '#/definitions/NodeType'
+        title: Pool - a pool of nodes used for the same purpose */
+        type: object
+        x-go-package: 0chain.net/chaincore/node
+    PoolMemberInfo:
+        description: PoolMemberInfo of a pool member
+        properties:
+            n2n_host:
+                type: string
+                x-go-name: N2NHost
+            port:
+                type: string
+                x-go-name: Port
+            public_key:
+                type: string
+                x-go-name: PublicKey
+            type:
+                type: string
+                x-go-name: Type
+        type: object
+        x-go-package: 0chain.net/chaincore/smartcontract
+    PoolMembersInfo:
+        description: PoolMembersInfo array of pool memebers
+        properties:
+            members_info:
+                items:
+                    $ref: '#/definitions/PoolMemberInfo'
+                type: array
+                x-go-name: MembersInfo
+        type: object
+        x-go-package: 0chain.net/chaincore/smartcontract
+    ShareOrSigns:
+        properties:
+            id:
+                type: string
+                x-go-name: ID
+            share_or_sign:
+                additionalProperties:
+                    $ref: '#/definitions/DKGKeyShare'
+                type: object
+                x-go-name: ShareOrSigns
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    Timestamp:
+        description: |-
+            go:generate msgp -io=false -tests=false -v
+            Timestamp - just a wrapper to control the json encoding */
+        format: int64
+        type: integer
+        x-go-package: 0chain.net/core/common
+    VersionField:
+        description: go:generate msgp -io=false -tests=false -v
+        properties:
+            version:
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: 0chain.net/core/datastore
+info:
+    title: 'Miner API:'
+    version: 0.1.0
+paths:
+    /v1/chain/get/stats:
+        get:
+            description: a handler to provide block statistics
+            operationId: chainstatus
+            responses:
+                "200":
+                    description: ChainStats
+                    schema:
+                        $ref: '#/definitions/ChainStats'
+                "500":
+                    description: ""
+    /v1/transaction/put:
+        post:
+            consumes:
+                - application/json
+            operationId: putTransaction
+            parameters:
+                - in: body
+                  name: Transaction
+                  required: true
+                  schema:
+                    type: integer
+            responses:
+                "200":
+                    description: ""
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+            summary: PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain.
+produces:
+    - application/json
+schemes:
+    - http
+    - https
+swagger: "2.0"
