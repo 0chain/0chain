@@ -396,10 +396,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			var er error
 			eventTx, er = c.GetEventDb().ProcessEvents(ctx, fb.Events, fb.Round, fb.Hash, len(fb.Txns))
 			if er != nil {
-				logging.Logger.Error("finalize block - add events failed",
+				logging.Logger.Error("Jayash finalize block - add events failed",
 					zap.Error(err),
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
+				panic(er)
+
 				EventsComputationTimer.Update(time.Since(ts).Microseconds())
 				return er //do not remove events in case of error
 			}
