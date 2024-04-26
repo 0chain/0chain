@@ -282,7 +282,7 @@ type nodeStat struct {
 	TotalReward int64 `json:"total_reward"`
 }
 
-// swagger:route GET /test/screst/nodeStat nodeStat
+// swagger:route GET /test/screst/nodeStat nodeStatOperation
 // lists sharders
 //
 // parameters:

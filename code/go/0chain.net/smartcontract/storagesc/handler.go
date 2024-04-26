@@ -140,8 +140,10 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	+name: blobber_urls
 //	 description: list of blobber URLs
 //	 in: query
-//	 type: []string
+//	 type: array
 //	 required: true
+//   items:
+//     type: string
 //
 // responses:
 //
@@ -1108,17 +1110,17 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 // Gets challenges for a blobber by challenge id
 //
 // parameters:
-//   - name: id
+//   +name: id
 //     description: id of blobber
 //     required: true
 //     in: query
 //     type: string
-//   - name: start
+//   +name: start
 //     description: start time of interval
 //     required: true
 //     in: query
 //     type: string
-//   - name: end
+//   +name: end
 //     description: end time of interval
 //     required: true
 //     in: query
@@ -2009,7 +2011,7 @@ func (srh *StorageRestHandler) getExpiredAllocations(w http.ResponseWriter, r *h
 	common.Respond(w, r, allocations, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations allocations
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations blobber-allocations
 // Gets a list of allocation information for allocations owned by the client
 //
 // parameters:
@@ -2773,7 +2775,7 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 // If a match is found the matching object is returned.
 //
 // parameters:
-//   - name: searchString
+//   +name: searchString
 //     description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, Wallet address
 //     required: true
 //     in: query
