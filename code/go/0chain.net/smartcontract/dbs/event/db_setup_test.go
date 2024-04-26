@@ -116,7 +116,7 @@ func TestMain(m *testing.M) {
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
-		Slowtablespace:  "slow_tablespace",
+		Slowtablespace:  "hdd_tablespace",
 	}
 	gEventDB = &EventDb{
 		Store:         postgresql.New(gormDB),
