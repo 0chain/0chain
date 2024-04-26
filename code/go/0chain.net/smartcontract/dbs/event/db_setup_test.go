@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -70,6 +71,9 @@ func TestMain(m *testing.M) {
 	}
 
 	hostAndPort := getHostPort(resource, "5432/tcp")
+	parts := strings.Split(hostAndPort, ":")
+	host := parts[0]
+	port := parts[1]
 	databaseUrl := fmt.Sprintf("postgres://zchain_user:zchian@%s/events_db?sslmode=disable", hostAndPort)
 
 	log.Println("Connecting to database on url:", databaseUrl)
@@ -108,11 +112,11 @@ func TestMain(m *testing.M) {
 
 	access := config.DbAccess{
 		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
+		Name:            "events_db",
+		User:            "zchain_user",
+		Password:        "zchian",
+		Host:            host,
+		Port:            port,
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
