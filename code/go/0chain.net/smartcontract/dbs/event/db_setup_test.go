@@ -106,21 +106,8 @@ func TestMain(m *testing.M) {
 
 	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: dbSetting}}
 
-	access := config.DbAccess{
-		Enabled:         true,
-		Name:            os.Getenv("POSTGRES_DB"),
-		User:            os.Getenv("POSTGRES_USER"),
-		Password:        os.Getenv("POSTGRES_PASSWORD"),
-		Host:            os.Getenv("POSTGRES_HOST"),
-		Port:            os.Getenv("POSTGRES_PORT"),
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-		Slowtablespace:  "hdd_tablespace",
-	}
 	gEventDB = &EventDb{
 		Store:         postgresql.New(gormDB),
-		dbConfig:      access,
 		eventsChannel: make(chan BlockEvents, 1),
 		settings:      dbSetting,
 	}
