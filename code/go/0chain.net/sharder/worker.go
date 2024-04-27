@@ -436,14 +436,13 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 }
 
 func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
-
 	var (
-		timerDuration = 10 * time.Minute
-		timer         = time.NewTimer(timerDuration)
+		timerDuration     = 10 * time.Minute
+		timer             = time.NewTimer(timerDuration)
+		edb               = sc.GetQueryStateContext().GetEventDB()
+		lastRound         = sc.GetCurrentRound()
+		permanentInterval = edb.Settings().PermanentPartitionChangePeriod
 	)
-
-	edb := sc.GetQueryStateContext().GetEventDB()
-	lastPartition := sc.GetCurrentRound() / edb.Settings().PartitionChangePeriod
 
 	for {
 		select {
@@ -452,17 +451,14 @@ func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 		case <-timer.C:
 			timer.Reset(timerDuration)
 
-			currentPartition := sc.GetCurrentRound() / edb.Settings().PartitionChangePeriod
-			if currentPartition == lastPartition {
-				continue
+			currentRound := sc.GetCurrentRound()
+			if currentRound > permanentInterval+lastRound {
+				err := edb.UpdateTransactionErrors(currentRound / permanentInterval)
+				if err != nil {
+					logging.Logger.Info("TrackTransactionErrors: ", zap.Error(err))
+				}
+				lastRound = currentRound / permanentInterval
 			}
-
-			err := edb.UpdateTransactionErrors(currentPartition - 1)
-			if err != nil {
-				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
-			}
-
-			lastPartition = currentPartition
 		}
 	}
 }
