@@ -25,7 +25,7 @@ import (
 var gEventDB *event.EventDb
 
 // returns an event db transaction and clean up function
-func GetTestEventDB(t *testing.T) (*event.EventDb, func()) {
+func GetTestEventDB(t *testing.TB) (*event.EventDb, func()) {
 	db, err := gEventDB.Begin(context.Background())
 	require.NoError(t, err)
 
