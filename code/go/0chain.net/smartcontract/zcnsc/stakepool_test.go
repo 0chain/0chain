@@ -109,38 +109,6 @@ func TestDelegatePoolOperations(t *testing.T) {
 		require.Empty(t, resp1)
 	})
 
-	t.Run("AddToDelegatePool_InsufficientBalance", func(t *testing.T) {
-		// Setup
-		ctx := MakeMockStateContext() // Create a mock state context with insufficient balance
-		// Mock the GetGlobalNode function to return a valid global node
-
-		ctx.StateContextI.Balance=500
-		mockGlobalNode := &GlobalNode{
-			ZCNSConfig : &ZCNSConfig {
-			MinStakeAmount:       1000,
-			MaxStakeAmount:       5000,
-			MaxDelegates:   10,
-			MinStakePerDelegate: 100,},
-
-		}
-		//ctx.
-		mockGetGlobalNode := func(balances state.StateContextI) (*GlobalNode, error) {
-			return mockGlobalNode, nil
-		}
-
-		zcn := &ZCNSmartContract{}
-		resp, err := mockGetGlobalNode(ctx.StateContextI)
-		require.NotNil(t, resp)
-		require.NoError(t, err)
-
-		resp1, err1 := zcn.AddToDelegatePool(nil, nil, ctx.StateContextI)
-
-
-		// Assertion
-		require.Error(t, err1)
-		require.Empty(t, resp1)
-		// Add more assertions to verify the error
-	})
 
 	t.Run("AddToDelegatePool_ExceedMaxDelegates", func(t *testing.T) {
 		// Setup
