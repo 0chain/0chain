@@ -111,8 +111,10 @@ func TestDelegatePoolOperations(t *testing.T) {
 
 	t.Run("AddToDelegatePool_InsufficientBalance", func(t *testing.T) {
 		// Setup
-		ctx := MakeMockStateContextWithBalance(500) // Create a mock state context with insufficient balance
+		ctx := MakeMockStateContext() // Create a mock state context with insufficient balance
 		// Mock the GetGlobalNode function to return a valid global node
+		
+		ctx.StateContextI.Balance=500
 		mockGlobalNode := &GlobalNode{
 			ZCNSConfig : &ZCNSConfig {
 			MinStakeAmount:       1000,
@@ -121,6 +123,7 @@ func TestDelegatePoolOperations(t *testing.T) {
 			MinStakePerDelegate: 100,},
 
 		}
+		//ctx.
 		mockGetGlobalNode := func(balances state.StateContextI) (*GlobalNode, error) {
 			return mockGlobalNode, nil
 		}
@@ -134,8 +137,8 @@ func TestDelegatePoolOperations(t *testing.T) {
 
 
 		// Assertion
-		require.Error(t, err)
-		require.Empty(t, resp)
+		require.Error(t, err1)
+		require.Empty(t, resp1)
 		// Add more assertions to verify the error
 	})
 
