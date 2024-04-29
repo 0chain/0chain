@@ -2635,11 +2635,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		if stakable {
-			blobbers, err = edb.GetStakableBlobbersFromIDs(blobber_ids)
-		} else {
-			blobbers, err = edb.GetBlobbersFromIDs(blobber_ids)
-		}
+		blobbers, err = edb.GetBlobbersFromIDs(blobber_ids)
 	} else if stakable {
 		blobbers, err = edb.GetStakableBlobbers(limit)
 	} else {
