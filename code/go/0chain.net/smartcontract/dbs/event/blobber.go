@@ -27,12 +27,13 @@ type Blobber struct {
 	ReadPrice  currency.Coin `json:"read_price"`
 	WritePrice currency.Coin `json:"write_price"`
 
-	Capacity     int64 `json:"capacity"`   // total blobber capacity
-	Allocated    int64 `json:"allocated"`  // allocated capacity
-	SavedData    int64 `json:"saved_data"` // total of files saved on blobber
-	ReadData     int64 `json:"read_data"`
-	NotAvailable bool  `json:"not_available"`
-	IsRestricted bool  `json:"is_restricted"`
+	Capacity        int64 `json:"capacity"`   // total blobber capacity
+	Allocated       int64 `json:"allocated"`  // allocated capacity
+	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData        int64 `json:"read_data"`
+	NotAvailable    bool  `json:"not_available"`
+	IsRestricted    bool  `json:"is_restricted"`
+	ActiveDelegates int   `json:"active_delegates"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	// todo update
@@ -422,6 +423,22 @@ func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
 	return CreateBuilder("blobbers", "id", ids).
 		AddUpdate("saved_data", savedData, "blobbers.saved_data + t.saved_data").
 		AddUpdate("read_data", readData, "blobbers.read_data + t.read_data").Exec(edb).Error
+}
+
+func (edb *EventDb) updateBlobberActiveDelegates(dpls []DelegatePoolLock) error {
+	var ids []string
+	var activeDelegates []int
+	for _, m := range dpls {
+		if m.ProviderType != spenum.Blobber {
+			continue
+		}
+		ids = append(ids, m.ProviderId)
+		activeDelegates = append(activeDelegates, 1)
+	}
+
+	return CreateBuilder("blobbers", "id", ids).
+		AddUpdate("active_delegates", activeDelegates, "blobbers.active_delegates + t.active_delegates").
+		Exec(edb).Error
 }
 
 func mergeUpdateBlobberStatsEvents() *eventsMergerImpl[Blobber] {
