@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//nolint: unused
 func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 	orderedPoolIds := mn.OrderedPoolIds()
 	for _, id := range orderedPoolIds {
@@ -42,6 +43,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 }
 
 // unlock all delegate pools of offline node
+//nolint: unused
 func (msc *MinerSmartContract) unlockOffline(
 	mn *MinerNode,
 	balances cstate.StateContextI,
@@ -71,6 +73,7 @@ func (msc *MinerSmartContract) viewChangeDeleteNodes(balances cstate.StateContex
 	return deleteNodesOnViewChange(balances, spenum.Sharder)
 }
 
+//nolint: unused
 func (msc *MinerSmartContract) viewChangePoolsWork(
 	mb *block.MagicBlock,
 	round int64,
