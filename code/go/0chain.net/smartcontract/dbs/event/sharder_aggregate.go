@@ -17,6 +17,7 @@ type SharderAggregate struct {
 	TotalStake      currency.Coin    `json:"total_stake"`
 	TotalRewards    currency.Coin    `json:"total_rewards"`
 	ServiceCharge   float64          `json:"service_charge"`
+	ActiveDelegates int              `json:"active_delegates"`
 	IsKilled        bool             `json:"is_killed"`
 	IsShutdown      bool             `json:"is_shutdown"`
 }
@@ -52,6 +53,7 @@ func (edb *EventDb) CreateSharderAggregates(sharders []*Sharder, round int64) er
 			Round:           round,
 			SharderID:       s.ID,
 			LastHealthCheck: s.LastHealthCheck,
+			ActiveDelegates: s.ActiveDelegates,
 		}
 		recalculateProviderFields(s, &aggregate)
 		aggregate.Fees = s.Fees

@@ -41,6 +41,7 @@ type Provider struct {
 	UpdatedAt       time.Time
 	DelegateWallet  string           `json:"delegate_wallet"`
 	NumDelegates    int              `json:"num_delegates"`
+	ActiveDelegates int              `json:"active_delegates"`
 	ServiceCharge   float64          `json:"service_charge"`
 	TotalStake      currency.Coin    `json:"total_stake"`
 	Rewards         ProviderRewards  `json:"rewards" gorm:"foreignKey:ProviderID"`

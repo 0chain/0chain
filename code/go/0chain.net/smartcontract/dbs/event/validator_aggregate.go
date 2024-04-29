@@ -14,11 +14,12 @@ type ValidatorAggregate struct {
 	URL             string           `json:"url"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 
-	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin `json:"total_rewards"`
-	ServiceCharge float64       `json:"service_charge"`
-	IsKilled      bool          `json:"is_killed"`
-	IsShutdown    bool          `json:"is_shutdown"`
+	TotalStake      currency.Coin `json:"total_stake"`
+	ActiveDelegates int           `json:"active_delegates"`
+	TotalRewards    currency.Coin `json:"total_rewards"`
+	ServiceCharge   float64       `json:"service_charge"`
+	IsKilled        bool          `json:"is_killed"`
+	IsShutdown      bool          `json:"is_shutdown"`
 }
 
 func (v *ValidatorAggregate) GetTotalStake() currency.Coin {
@@ -52,6 +53,7 @@ func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int
 			Round:           round,
 			ValidatorID:     v.ID,
 			LastHealthCheck: v.LastHealthCheck,
+			ActiveDelegates: v.ActiveDelegates,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

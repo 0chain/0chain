@@ -14,14 +14,15 @@ type AuthorizerAggregate struct {
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	URL             string           `json:"url"`
 
-	Fee           currency.Coin `json:"fee"`
-	TotalStake    currency.Coin `json:"total_stake"`
-	TotalRewards  currency.Coin `json:"total_rewards"`
-	TotalMint     currency.Coin `json:"total_mint"`
-	TotalBurn     currency.Coin `json:"total_burn"`
-	ServiceCharge float64       `json:"service_charge"`
-	IsKilled      bool          `json:"is_killed"`
-	IsShutdown    bool          `json:"is_shutdown"`
+	Fee             currency.Coin `json:"fee"`
+	TotalStake      currency.Coin `json:"total_stake"`
+	ActiveDelegates int           `json:"active_delegates"`
+	TotalRewards    currency.Coin `json:"total_rewards"`
+	TotalMint       currency.Coin `json:"total_mint"`
+	TotalBurn       currency.Coin `json:"total_burn"`
+	ServiceCharge   float64       `json:"service_charge"`
+	IsKilled        bool          `json:"is_killed"`
+	IsShutdown      bool          `json:"is_shutdown"`
 }
 
 func (a *AuthorizerAggregate) GetTotalStake() currency.Coin {
@@ -55,6 +56,7 @@ func (edb *EventDb) CreateAuthorizerAggregates(authorizers []*Authorizer, round 
 			Round:           round,
 			AuthorizerID:    v.ID,
 			LastHealthCheck: v.LastHealthCheck,
+			ActiveDelegates: v.ActiveDelegates,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)
