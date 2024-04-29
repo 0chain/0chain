@@ -343,3 +343,25 @@ func (edb *EventDb) feesSpecificRevenue(spus []dbs.StakePoolReward) error {
 
 	return nil
 }
+
+func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock) error {
+	var providerIds map[spenum.Provider][]string
+	var providerActiveDelegates map[spenum.Provider][]int
+	providerActiveDelegates = make(map[spenum.Provider][]int)
+
+	for _, m := range dpls {
+		providerIds[m.ProviderType] = append(providerIds[m.ProviderType], m.ProviderId)
+		providerActiveDelegates[m.ProviderType] = append(providerActiveDelegates[m.ProviderType], 1)
+	}
+
+	for providerType, activeDelegates := range providerActiveDelegates {
+		err := CreateBuilder(providerType.String(), "id", providerIds[providerType]).
+			AddUpdate("active_delegates", activeDelegates, fmt.Sprintf("%s.active_delegates + t.active_delegates", providerType.String())).
+			Exec(edb).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
