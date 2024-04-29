@@ -389,7 +389,7 @@ func TestDelegatePoolOperations(t *testing.T) {
 	t.Run("DeleteFromDelegatePool_NotEnoughBalanceForUnlock", func(t *testing.T) {
 		// Setup
 		ctx := MakeMockStateContext() // Create a mock state context
-		// Mock the GetGlobalNode function to return a valid global node
+		// Mock the GetGlobalNode function to return a valid global node,
 		mockGlobalNode := &GlobalNode{
 			ZCNSConfig : &ZCNSConfig {
 			MinStakeAmount:       1000,
