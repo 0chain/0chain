@@ -1011,7 +1011,7 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateBlobberActiveDelegates(*dpl)
+		return edb.updateProviderActiveDelegates(*dpl)
 	case TagAddOrUpdateChallengePool:
 		// challenge pool
 		cps, ok := fromEvent[[]ChallengePool](event.Data)

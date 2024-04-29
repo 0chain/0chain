@@ -411,20 +411,26 @@ func (edb *EventDb) updateBlobbersStats(blobbers []Blobber) error {
 		AddUpdate("read_data", readData, "blobbers.read_data + t.read_data").Exec(edb).Error
 }
 
-func (edb *EventDb) updateBlobberActiveDelegates(dpls []DelegatePoolLock) error {
-	var ids []string
-	var activeDelegates []int
+func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock) error {
+	var providerIds map[spenum.Provider][]string
+	var providerActiveDelegates map[spenum.Provider][]int
+	providerActiveDelegates = make(map[spenum.Provider][]int)
+
 	for _, m := range dpls {
-		if m.ProviderType != spenum.Blobber {
-			continue
-		}
-		ids = append(ids, m.ProviderId)
-		activeDelegates = append(activeDelegates, 1)
+		providerIds[m.ProviderType] = append(providerIds[m.ProviderType], m.ProviderId)
+		providerActiveDelegates[m.ProviderType] = append(providerActiveDelegates[m.ProviderType], 1)
 	}
 
-	return CreateBuilder("blobbers", "id", ids).
-		AddUpdate("active_delegates", activeDelegates, "blobbers.active_delegates + t.active_delegates").
-		Exec(edb).Error
+	for providerType, activeDelegates := range providerActiveDelegates {
+		err := CreateBuilder(providerType.String(), "id", providerIds[providerType]).
+			AddUpdate("active_delegates", activeDelegates, fmt.Sprintf("%s.active_delegates + t.active_delegates", providerType.String())).
+			Exec(edb).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func mergeUpdateBlobberStatsEvents() *eventsMergerImpl[Blobber] {
