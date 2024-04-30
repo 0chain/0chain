@@ -355,8 +355,11 @@ func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock) error
 	}
 
 	for providerType, activeDelegates := range providerActiveDelegates {
-		err := CreateBuilder(providerType.String(), "id", providerIds[providerType]).
-			AddUpdate("active_delegates", activeDelegates, fmt.Sprintf("%s.active_delegates + t.active_delegates", providerType.String())).
+		tableName := providerType.String() + "s"
+		incrementUpdate := tableName + ".active_delegates + t.active_delegates"
+
+		err := CreateBuilder(tableName, "id", providerIds[providerType]).
+			AddUpdate("active_delegates", activeDelegates, incrementUpdate).
 			Exec(edb).Error
 		if err != nil {
 			return err
