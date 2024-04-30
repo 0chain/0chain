@@ -345,6 +345,7 @@ func (edb *EventDb) feesSpecificRevenue(spus []dbs.StakePoolReward) error {
 }
 
 func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock) error {
+	logging.Logger.Info("update provider active delegates", zap.Any("delegates", dpls))
 	var providerIds map[spenum.Provider][]string
 	var providerActiveDelegates map[spenum.Provider][]int
 	providerActiveDelegates = make(map[spenum.Provider][]int)
