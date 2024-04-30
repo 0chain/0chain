@@ -52,8 +52,12 @@ func (edb *EventDb) partTableName(table string, from int64, to int64) string {
 }
 
 func (edb *EventDb) movePartitionToSlowTableSpace(current int64, table string) error {
-	from := current * edb.settings.PermanentPartitionChangePeriod
-	to := (current + 1) * edb.settings.PermanentPartitionChangePeriod
+	if current <= 0 {
+		return nil
+	}
+
+	from := (current - 1) * edb.settings.PermanentPartitionChangePeriod
+	to := (current) * edb.settings.PermanentPartitionChangePeriod
 
 	timeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelFunc()
