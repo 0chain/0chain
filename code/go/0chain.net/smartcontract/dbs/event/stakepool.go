@@ -348,6 +348,7 @@ func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock) error
 	logging.Logger.Info("update provider active delegates", zap.Any("delegates", dpls))
 	var providerIds map[spenum.Provider][]string
 	var providerActiveDelegates map[spenum.Provider][]int
+	providerIds = make(map[spenum.Provider][]string)
 	providerActiveDelegates = make(map[spenum.Provider][]int)
 
 	for _, m := range dpls {
