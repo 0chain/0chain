@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -62,7 +63,9 @@ func (wm *WriteMarker) mustUpdateBase(f func(base *writeMarkerBase) error) error
 			logging.Logger.Panic("invalid write marker base type")
 		}
 
-		f(b)
+		if err := f(b); err != nil {
+			log.Printf("Error encountered: %v", err)
+		}
 		return nil
 	})
 }
