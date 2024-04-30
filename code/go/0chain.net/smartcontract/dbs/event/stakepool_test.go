@@ -311,3 +311,100 @@ func assertMinerRewards(t *testing.T, eventDb *EventDb, minerId string, reward, 
 	assert.Equal(t, reward, uint64(miner.Rewards.Rewards))
 	assert.Equal(t, miner.Rewards.RoundServiceChargeLastUpdated, lastUpdated)
 }
+
+func TestUpdateActiveDelegates(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	err := edb.addMiner([]Miner{
+		{
+			Provider: Provider{
+				ID:           "miner one",
+				NumDelegates: 5,
+			},
+		},
+		{
+			Provider: Provider{
+				ID:           "miner two",
+				NumDelegates: 3,
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	var miners []Miner
+	miners, err = edb.GetMiners()
+	require.NoError(t, err)
+	require.EqualValues(t, 0, miners[0].ActiveDelegates)
+	require.EqualValues(t, 0, miners[1].ActiveDelegates)
+
+	var dpls1 []DelegatePoolLock
+
+	dpls1 = append(dpls1, DelegatePoolLock{
+		ProviderId:   "miner one",
+		ProviderType: spenum.Miner,
+	}, DelegatePoolLock{
+		ProviderId:   "miner one",
+		ProviderType: spenum.Miner,
+	}, DelegatePoolLock{
+		ProviderId:   "miner one",
+		ProviderType: spenum.Miner,
+	})
+
+	dpls1 = append(dpls1, DelegatePoolLock{
+		ProviderId:   "miner two",
+		ProviderType: spenum.Miner,
+	})
+
+	err = edb.updateProviderActiveDelegates(dpls1, true)
+	require.NoError(t, err)
+
+	miners, err = edb.GetMiners()
+	require.NoError(t, err)
+	require.EqualValues(t, 3, miners[0].ActiveDelegates)
+	require.EqualValues(t, 1, miners[1].ActiveDelegates)
+
+	var dpls2 []DelegatePoolLock
+	dpls2 = append(dpls2, DelegatePoolLock{
+		ProviderId:   "miner one",
+		ProviderType: spenum.Miner,
+	}, DelegatePoolLock{
+		ProviderId:   "miner one",
+		ProviderType: spenum.Miner,
+	})
+
+	dpls2 = append(dpls2, DelegatePoolLock{
+		ProviderId:   "miner two",
+		ProviderType: spenum.Miner,
+	}, DelegatePoolLock{
+		ProviderId:   "miner two",
+		ProviderType: spenum.Miner,
+	}, DelegatePoolLock{
+		ProviderId:   "miner two",
+		ProviderType: spenum.Miner,
+	})
+
+	err = edb.updateProviderActiveDelegates(dpls2, true)
+	require.NoError(t, err)
+
+	miners, err = edb.GetMiners()
+	require.NoError(t, err)
+	require.EqualValues(t, 5, miners[0].ActiveDelegates)
+	require.EqualValues(t, 4, miners[1].ActiveDelegates)
+
+	err = edb.updateProviderActiveDelegates(dpls2, false)
+	require.NoError(t, err)
+
+	miners, err = edb.GetMiners()
+	require.NoError(t, err)
+	require.EqualValues(t, 3, miners[0].ActiveDelegates)
+	require.EqualValues(t, 1, miners[1].ActiveDelegates)
+
+	err = edb.updateProviderActiveDelegates(dpls1, false)
+	require.NoError(t, err)
+
+	miners, err = edb.GetMiners()
+	require.NoError(t, err)
+	require.EqualValues(t, 0, miners[0].ActiveDelegates)
+	require.EqualValues(t, 0, miners[1].ActiveDelegates)
+}

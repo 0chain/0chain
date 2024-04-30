@@ -219,6 +219,7 @@ func (edb *EventDb) GetMiners() ([]Miner, error) {
 	result := edb.Store.Get().
 		Preload("Rewards").
 		Model(&Miner{}).
+		Order("id ").
 		Find(&miners)
 
 	return miners, result.Error

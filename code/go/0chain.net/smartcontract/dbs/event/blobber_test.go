@@ -421,3 +421,50 @@ func cleanupBlobbers(t *testing.T, edb *EventDb, blobbers []Blobber) {
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
+
+func TestUpdateBlobberChallenges(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	setUpBlobbers(t, edb, 10, false)
+
+	var challenges []ChallengeStatsDeltas
+	for i := 0; i < 10; i++ {
+		challenges = append(challenges, ChallengeStatsDeltas{
+			Id:             fmt.Sprintf("somethingNew_%v", i),
+			PassedDelta:    1,
+			CompletedDelta: 1,
+			OpenDelta:      2,
+		})
+	}
+
+	require.NoError(t, edb.updateBlobberChallenges(challenges))
+
+	for i := 0; i < 10; i++ {
+		b, err := edb.GetBlobber(fmt.Sprintf("somethingNew_%v", i))
+		require.NoError(t, err)
+		require.Equal(t, uint64(1), b.ChallengesPassed)
+		require.Equal(t, uint64(1), b.ChallengesCompleted)
+		require.Equal(t, uint64(2), b.OpenChallenges)
+	}
+
+	challenges = nil
+	for i := 0; i < 10; i++ {
+		challenges = append(challenges, ChallengeStatsDeltas{
+			Id:             fmt.Sprintf("somethingNew_%v", i),
+			PassedDelta:    2,
+			CompletedDelta: 2,
+			OpenDelta:      3,
+		})
+	}
+
+	require.NoError(t, edb.updateBlobberChallenges(challenges))
+
+	for i := 0; i < 10; i++ {
+		b, err := edb.GetBlobber(fmt.Sprintf("somethingNew_%v", i))
+		require.NoError(t, err)
+		require.Equal(t, uint64(3), b.ChallengesPassed)
+		require.Equal(t, uint64(3), b.ChallengesCompleted)
+		require.Equal(t, uint64(5), b.OpenChallenges)
+	}
+}

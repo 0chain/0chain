@@ -156,6 +156,17 @@ func TestUpdateProvidersHealthCheck(t *testing.T) {
 	edb.Get().Find(&blobbers)
 	require.Equal(t, len(blobbers), 2)
 
+	for _, blobber := range blobbers {
+		if blobber.ID == "one" {
+			require.Equal(t, int64(37), blobber.LastHealthCheck)
+			require.Equal(t, int64(11), blobber.Downtime)
+		} else {
+			require.Equal(t, int64(0), blobber.LastHealthCheck)
+			require.Equal(t, int64(0), blobber.Downtime)
+		}
+
+	}
+
 }
 
 func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
