@@ -16,6 +16,7 @@ type ValidatorAggregate struct {
 
 	TotalStake      currency.Coin `json:"total_stake"`
 	ActiveDelegates int           `json:"active_delegates"`
+	NumDeligates    int           `json:"num_delegates"`
 	TotalRewards    currency.Coin `json:"total_rewards"`
 	ServiceCharge   float64       `json:"service_charge"`
 	IsKilled        bool          `json:"is_killed"`
@@ -54,6 +55,7 @@ func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int
 			ValidatorID:     v.ID,
 			LastHealthCheck: v.LastHealthCheck,
 			ActiveDelegates: v.ActiveDelegates,
+			NumDeligates:    v.NumDelegates,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

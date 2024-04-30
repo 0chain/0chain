@@ -83,6 +83,12 @@ ALTER TABLE miner_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
 ALTER TABLE sharder_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
 ALTER TABLE authorizer_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
 
+ALTER TABLE blobber_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
+ALTER TABLE validator_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
+ALTER TABLE miner_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
+ALTER TABLE sharder_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
+ALTER TABLE authorizer_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
+
 
 -- +goose StatementEnd
 
@@ -95,10 +101,10 @@ ALTER TABLE sharders DROP COLUMN IF EXISTS active_delegates;
 ALTER TABLE authorizers DROP COLUMN IF EXISTS active_delegates;
 
 
-ALTER TABLE blobber_aggregates DROP COLUMN IF EXISTS active_delegates;
-ALTER TABLE validator_aggregates DROP COLUMN IF EXISTS active_delegates;
-ALTER TABLE miner_aggregates DROP COLUMN IF EXISTS active_delegates;
-ALTER TABLE sharder_aggregates DROP COLUMN IF EXISTS active_delegates;
-ALTER TABLE authorizer_aggregates DROP COLUMN IF EXISTS active_delegates;
+ALTER TABLE blobber_aggregates DROP COLUMN IF EXISTS num_delegates;
+ALTER TABLE validator_aggregates DROP COLUMN IF EXISTS num_delegates;
+ALTER TABLE miner_aggregates DROP COLUMN IF EXISTS num_delegates;
+ALTER TABLE sharder_aggregates DROP COLUMN IF EXISTS num_delegates;
+ALTER TABLE authorizer_aggregates DROP COLUMN IF EXISTS num_delegates;
 
 -- +goose StatementEnd

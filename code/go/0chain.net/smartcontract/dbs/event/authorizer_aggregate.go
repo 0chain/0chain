@@ -17,6 +17,7 @@ type AuthorizerAggregate struct {
 	Fee             currency.Coin `json:"fee"`
 	TotalStake      currency.Coin `json:"total_stake"`
 	ActiveDelegates int           `json:"active_delegates"`
+	NumDelegates    int           `json:"num_delegates"`
 	TotalRewards    currency.Coin `json:"total_rewards"`
 	TotalMint       currency.Coin `json:"total_mint"`
 	TotalBurn       currency.Coin `json:"total_burn"`
@@ -57,6 +58,7 @@ func (edb *EventDb) CreateAuthorizerAggregates(authorizers []*Authorizer, round 
 			AuthorizerID:    v.ID,
 			LastHealthCheck: v.LastHealthCheck,
 			ActiveDelegates: v.ActiveDelegates,
+			NumDelegates:    v.NumDelegates,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

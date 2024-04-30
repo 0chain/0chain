@@ -15,8 +15,8 @@ type BlobberAggregate struct {
 	WritePrice          currency.Coin    `json:"write_price"`
 	Capacity            int64            `json:"capacity"`       // total blobber capacity
 	ServiceCharge       float64          `json:"service_charge"` // blobber service charge ratio (0-1)
-	NumDelegates        int              `json:"num_delegates"`
 	ActiveDelegates     int              `json:"active_delegates"`
+	NumDelegates        int              `json:"num_delegates"`
 	Allocated           int64            `json:"allocated"` // allocated capacity
 	SavedData           int64            `json:"saved_data"`
 	ReadData            int64            `json:"read_data"`

@@ -15,6 +15,7 @@ type MinerAggregate struct {
 	Fees            currency.Coin    `json:"fees"`
 	TotalStake      currency.Coin    `json:"total_stake"`
 	ActiveDelegates int              `json:"active_delegates"`
+	NumDelegates    int              `json:"num_delegates"`
 	TotalRewards    currency.Coin    `json:"total_rewards"`
 	BlocksFinalised int64            `json:"blocks_finalised"`
 	ServiceCharge   float64          `json:"service_charge"`
@@ -55,6 +56,7 @@ func (edb *EventDb) CreateMinerAggregates(miners []*Miner, round int64) error {
 			LastHealthCheck: m.LastHealthCheck,
 			BlocksFinalised: m.BlocksFinalised,
 			ActiveDelegates: m.ActiveDelegates,
+			NumDelegates:    m.NumDelegates,
 		}
 		recalculateProviderFields(m, &aggregate)
 		aggregate.Fees = m.Fees
