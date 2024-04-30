@@ -1011,7 +1011,13 @@ func (edb *EventDb) addStat(event Event) (err error) {
 		if !ok {
 			return ErrInvalidEventData
 		}
-		return edb.updateProviderActiveDelegates(*dpl)
+		return edb.updateProviderActiveDelegates(*dpl, true)
+	case TagUnlockStakePool:
+		dpl, ok := fromEvent[[]DelegatePoolLock](event.Data)
+		if !ok {
+			return ErrInvalidEventData
+		}
+		return edb.updateProviderActiveDelegates(*dpl, false)
 	case TagAddOrUpdateChallengePool:
 		// challenge pool
 		cps, ok := fromEvent[[]ChallengePool](event.Data)

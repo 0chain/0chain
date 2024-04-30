@@ -344,7 +344,7 @@ func (edb *EventDb) feesSpecificRevenue(spus []dbs.StakePoolReward) error {
 	return nil
 }
 
-func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock) error {
+func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock, lock bool) error {
 	logging.Logger.Info("update provider active delegates", zap.Any("delegates", dpls))
 	var providerIds map[spenum.Provider][]string
 	var providerActiveDelegates map[spenum.Provider][]int
@@ -358,10 +358,16 @@ func (edb *EventDb) updateProviderActiveDelegates(dpls []DelegatePoolLock) error
 
 	for providerType, activeDelegates := range providerActiveDelegates {
 		tableName := providerType.String() + "s"
-		incrementUpdate := tableName + ".active_delegates + t.active_delegates"
+
+		update := ""
+		if lock {
+			update = tableName + ".active_delegates + t.active_delegates"
+		} else {
+			update = tableName + ".active_delegates - t.active_delegates"
+		}
 
 		err := CreateBuilder(tableName, "id", providerIds[providerType]).
-			AddUpdate("active_delegates", activeDelegates, incrementUpdate).
+			AddUpdate("active_delegates", activeDelegates, update).
 			Exec(edb).Error
 		if err != nil {
 			return err
