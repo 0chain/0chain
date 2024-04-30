@@ -43,15 +43,13 @@ type testBalances struct {
 }
 
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
-	testEventDb, rollback := GetTestEventDB(&t)
+
 	tb = &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
 		txn:      new(transaction.Transaction),
 		block:    new(block.Block),
-		eventDb:  testEventDb,
 	}
-	defer rollback()
 
 	bc := statecache.NewBlockCache(statecache.NewStateCache(), statecache.Block{})
 	tb.tc = statecache.NewTransactionCache(bc)
