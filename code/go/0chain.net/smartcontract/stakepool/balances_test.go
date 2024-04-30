@@ -2,7 +2,6 @@ package stakepool
 
 import (
 	"context"
-
 	"os"
 	"path/filepath"
 	"sync"
@@ -36,7 +35,7 @@ type testBalances struct {
 	tree      map[datastore.Key]util.MPTSerializable
 	block     *block.Block
 	tc        *statecache.TransactionCache
-	eventDb   *event.EventDb
+	events    []event.Event
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
@@ -88,10 +87,25 @@ func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)       {}
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)  {}
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer { return nil }
 func (tb *testBalances) GetEventDB() *event.EventDb                  { return nil }
-func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, interface{}, ...cstate.Appender) {
+func (tb *testBalances) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...cstate.Appender) {
+	tb.RWMutex.Lock()
+	defer tb.RWMutex.Unlock()
+	e := event.Event{
+		BlockNumber: tb.block.Round,
+		TxHash:      tb.txn.Hash,
+		Type:        eventType,
+		Tag:         tag,
+		Index:       index,
+		Data:        data,
+	}
+	if len(appenders) != 0 {
+		tb.events = appenders[0](tb.events, e)
+	} else {
+		tb.events = append(tb.events, e)
+	}
 }
 func (tb *testBalances) EmitError(error)                              {}
-func (tb *testBalances) GetEvents() []event.Event                     { return nil }
+func (tb *testBalances) GetEvents() []event.Event                     { return tb.events }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (tb *testBalances) GetLatestFinalizedBlock() *block.Block        { return nil }
 func (tb *testBalances) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
