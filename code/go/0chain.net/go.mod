@@ -48,6 +48,7 @@ require (
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.1
+	github.com/minio/sha256-simd v1.0.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
@@ -69,7 +70,6 @@ require (
 	github.com/aws/smithy-go v1.16.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.26 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/minio/sha256-simd v1.0.1 // indirect
 )
 
 require (
