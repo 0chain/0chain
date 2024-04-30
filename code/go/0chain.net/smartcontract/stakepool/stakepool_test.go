@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
 )
@@ -32,6 +33,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 	type want struct {
 		poolReward      currency.Coin
 		delegateRewards []currency.Coin
+		eventTag        event.EventTag
 		err             bool
 		errMsg          string
 	}
@@ -82,6 +84,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      0,
 				delegateRewards: []currency.Coin{0, 0},
+				eventTag:        event.TagNone,
 				err:             false,
 				errMsg:          "",
 			},
@@ -97,6 +100,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      0,
 				delegateRewards: []currency.Coin{1, 0, 0, 0},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -112,6 +116,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      1,
 				delegateRewards: []currency.Coin{1, 1, 1, 0, 0},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -127,6 +132,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      0,
 				delegateRewards: []currency.Coin{20, 20, 20, 20, 20},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -142,6 +148,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      0,
 				delegateRewards: []currency.Coin{0, 0, 0, 0},
+				eventTag:        event.TagStakePoolReward,
 				err:             true,
 				errMsg:          "no stake",
 			},
@@ -157,6 +164,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      25,
 				delegateRewards: []currency.Coin{11, 14},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -172,6 +180,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      50,
 				delegateRewards: []currency.Coin{0, 0},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -187,6 +196,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      100,
 				delegateRewards: []currency.Coin{},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -202,6 +212,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      0,
 				delegateRewards: []currency.Coin{1},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -217,6 +228,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			want: want{
 				poolReward:      20,
 				delegateRewards: []currency.Coin{0},
+				eventTag:        event.TagStakePoolReward,
 				err:             false,
 				errMsg:          "",
 			},
@@ -230,6 +242,11 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
+			}
+			events := balances.GetEvents()
+			if tt.want.eventTag != event.TagNone {
+				require.EqualValues(t, 1, len(events))
+				require.EqualValues(t, tt.want.eventTag, events[0].Tag)
 			}
 			validate(t, sp, tt.want)
 		})
