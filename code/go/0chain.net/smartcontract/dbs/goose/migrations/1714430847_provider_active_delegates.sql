@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE blobbers ADD COLUMN IF NOT EXISTS active_delegates boolean;
+ALTER TABLE blobbers ADD COLUMN IF NOT EXISTS active_delegates bigint;
 UPDATE blobbers
 SET active_delegates = (
     SELECT COUNT(*)
@@ -15,7 +15,7 @@ WHERE EXISTS (
       AND delegate_pools.status = 0
 );
 
-ALTER TABLE validators ADD COLUMN IF NOT EXISTS active_delegates boolean;
+ALTER TABLE validators ADD COLUMN IF NOT EXISTS active_delegates bigint;
 UPDATE validators
 SET active_delegates = (
     SELECT COUNT(*)
@@ -30,7 +30,7 @@ WHERE EXISTS (
       AND delegate_pools.status = 0
 );
 
-ALTER TABLE miners ADD COLUMN IF NOT EXISTS active_delegates boolean;
+ALTER TABLE miners ADD COLUMN IF NOT EXISTS active_delegates bigint;
 UPDATE miners
 SET active_delegates = (
     SELECT COUNT(*)
@@ -45,7 +45,7 @@ WHERE EXISTS (
       AND delegate_pools.status = 0
 );
 
-ALTER TABLE sharders ADD COLUMN IF NOT EXISTS active_delegates boolean;
+ALTER TABLE sharders ADD COLUMN IF NOT EXISTS active_delegates bigint;
 UPDATE sharders
 SET active_delegates = (
     SELECT COUNT(*)
@@ -60,7 +60,7 @@ WHERE EXISTS (
       AND delegate_pools.status = 0
 );
 
-ALTER TABLE authorizers ADD COLUMN IF NOT EXISTS active_delegates boolean;
+ALTER TABLE authorizers ADD COLUMN IF NOT EXISTS active_delegates bigint;
 UPDATE authorizers
 SET active_delegates = (
     SELECT COUNT(*)
@@ -77,17 +77,17 @@ WHERE EXISTS (
 
 
 
-ALTER TABLE blobber_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
-ALTER TABLE validator_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
-ALTER TABLE miner_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
-ALTER TABLE sharder_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
-ALTER TABLE authorizer_aggregates ADD COLUMN IF NOT EXISTS active_delegates boolean;
+ALTER TABLE blobber_aggregates ADD COLUMN IF NOT EXISTS active_delegates bigint;
+ALTER TABLE validator_aggregates ADD COLUMN IF NOT EXISTS active_delegates bigint;
+ALTER TABLE miner_aggregates ADD COLUMN IF NOT EXISTS active_delegates bigint;
+ALTER TABLE sharder_aggregates ADD COLUMN IF NOT EXISTS active_delegates bigint;
+ALTER TABLE authorizer_aggregates ADD COLUMN IF NOT EXISTS active_delegates bigint;
 
-ALTER TABLE blobber_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
-ALTER TABLE validator_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
-ALTER TABLE miner_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
-ALTER TABLE sharder_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
-ALTER TABLE authorizer_aggregates ADD COLUMN IF NOT EXISTS num_delegates boolean;
+ALTER TABLE blobber_aggregates ADD COLUMN IF NOT EXISTS num_delegates bigint;
+ALTER TABLE validator_aggregates ADD COLUMN IF NOT EXISTS num_delegates bigint;
+ALTER TABLE miner_aggregates ADD COLUMN IF NOT EXISTS num_delegates bigint;
+ALTER TABLE sharder_aggregates ADD COLUMN IF NOT EXISTS num_delegates bigint;
+ALTER TABLE authorizer_aggregates ADD COLUMN IF NOT EXISTS num_delegates bigint;
 
 
 -- +goose StatementEnd
