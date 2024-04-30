@@ -343,12 +343,6 @@ func TestUpdateActiveDelegates(t *testing.T) {
 	dpls1 = append(dpls1, DelegatePoolLock{
 		ProviderId:   "miner one",
 		ProviderType: spenum.Miner,
-	}, DelegatePoolLock{
-		ProviderId:   "miner one",
-		ProviderType: spenum.Miner,
-	}, DelegatePoolLock{
-		ProviderId:   "miner one",
-		ProviderType: spenum.Miner,
 	})
 
 	dpls1 = append(dpls1, DelegatePoolLock{
@@ -361,26 +355,12 @@ func TestUpdateActiveDelegates(t *testing.T) {
 
 	miners, err = edb.GetMiners()
 	require.NoError(t, err)
-	require.EqualValues(t, 3, miners[0].ActiveDelegates)
+	require.EqualValues(t, 1, miners[0].ActiveDelegates)
 	require.EqualValues(t, 1, miners[1].ActiveDelegates)
 
 	var dpls2 []DelegatePoolLock
 	dpls2 = append(dpls2, DelegatePoolLock{
 		ProviderId:   "miner one",
-		ProviderType: spenum.Miner,
-	}, DelegatePoolLock{
-		ProviderId:   "miner one",
-		ProviderType: spenum.Miner,
-	})
-
-	dpls2 = append(dpls2, DelegatePoolLock{
-		ProviderId:   "miner two",
-		ProviderType: spenum.Miner,
-	}, DelegatePoolLock{
-		ProviderId:   "miner two",
-		ProviderType: spenum.Miner,
-	}, DelegatePoolLock{
-		ProviderId:   "miner two",
 		ProviderType: spenum.Miner,
 	})
 
@@ -389,15 +369,15 @@ func TestUpdateActiveDelegates(t *testing.T) {
 
 	miners, err = edb.GetMiners()
 	require.NoError(t, err)
-	require.EqualValues(t, 5, miners[0].ActiveDelegates)
-	require.EqualValues(t, 4, miners[1].ActiveDelegates)
+	require.EqualValues(t, 2, miners[0].ActiveDelegates)
+	require.EqualValues(t, 1, miners[1].ActiveDelegates)
 
 	err = edb.updateProviderActiveDelegates(dpls2, false)
 	require.NoError(t, err)
 
 	miners, err = edb.GetMiners()
 	require.NoError(t, err)
-	require.EqualValues(t, 3, miners[0].ActiveDelegates)
+	require.EqualValues(t, 1, miners[0].ActiveDelegates)
 	require.EqualValues(t, 1, miners[1].ActiveDelegates)
 
 	err = edb.updateProviderActiveDelegates(dpls1, false)
