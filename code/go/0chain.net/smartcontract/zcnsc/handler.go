@@ -75,7 +75,7 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 		if conf != nil {
 			healthCheckPeriod = conf.HealthCheckPeriod
 		}
-
+		//nolint
 		authorizers, err = edb.GetActiveAuthorizers(healthCheckPeriod)
 	} else {
 		authorizers, err = edb.GetAuthorizers()

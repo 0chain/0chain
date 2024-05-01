@@ -767,7 +767,8 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	}
 
 	if maxTxnFee == 0 {
-		maxTxnFeeF = DefaultMaxTxnFee	//nolint: unused
+		//nolint: unused
+		maxTxnFeeF = DefaultMaxTxnFee
 	}
 
 	conf.MaxTxnFee = maxTxnFee

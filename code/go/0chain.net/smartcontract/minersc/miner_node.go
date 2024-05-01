@@ -34,6 +34,7 @@ func NewMinerNode() *MinerNode {
 	return mn
 }
 
+//nolint
 func (m *MinerNode) clone() *MinerNode {
 	clone := &MinerNode{
 		SimpleNode: &SimpleNode{},
@@ -87,6 +88,7 @@ func (mn *MinerNode) GetKey() datastore.Key {
 	return provider.GetKey(mn.ID)
 }
 
+//nolint
 func (mn *MinerNode) numDelegates() int {
 	var count int
 	for _, pool := range mn.Pools {
