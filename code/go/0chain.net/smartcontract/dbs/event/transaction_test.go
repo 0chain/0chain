@@ -202,16 +202,16 @@ func TestTransactionErrors(t *testing.T) {
 	now := time.Now()
 	SetUpTransactionData(t, edb, 10, true, []string{
 		// Add created date in such a way that 6 times should be in window of last day, 3 times in last 2 days making sure all have different times
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
 		now.AddDate(0, 0, -1).Add(45 * time.Second).Format(time.RFC3339),
-		now.AddDate(0, 0, -2).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -2).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -2).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -2).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
 	}, []string{
 		"output1",
 		"output1",
@@ -253,10 +253,10 @@ func TestTransactionErrors(t *testing.T) {
 
 	SetUpTransactionData(t, edb, 4, true, []string{
 		// Add more data on today's date and see how it works
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
-		now.AddDate(0, 0, -1).Add(time.Duration(rand.Intn(24)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
 	}, []string{
 		"output10",
 		"output10",
