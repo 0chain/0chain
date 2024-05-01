@@ -1,7 +1,9 @@
 package event
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -202,7 +204,12 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 	return tr, res.Error
 }
 
-func (edb *EventDb) UpdateTransactionErrors() error {
+func (edb *EventDb) UpdateTransactionErrors(current int64) error {
+	from := (current - 1) * edb.settings.PermanentPartitionChangePeriod
+	to := (current) * edb.settings.PermanentPartitionChangePeriod
+
+	lastPartition := edb.partTableName("transactions", from, to)
+
 	db := edb.Get()
 
 	// created_at for last day from now
@@ -216,9 +223,14 @@ func (edb *EventDb) UpdateTransactionErrors() error {
 		return err
 	}
 
-	if dbTxn := db.Exec("INSERT INTO transaction_errors (transaction_output, count) "+
-		"SELECT transaction_output, count(*) as count FROM transactions WHERE status = ? and created_at > ?"+
-		"GROUP BY transaction_output", 2, lastDayString); dbTxn.Error != nil {
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+
+	logging.Logger.Info("Inserting transactions in transaction error table", zap.Any("lastPartition", lastPartition), zap.Any("lastDayString", lastDayString))
+
+	if dbTxn := db.WithContext(timeout).Exec(fmt.Sprintf("INSERT INTO transaction_errors (transaction_output, count) "+
+		"SELECT transaction_output, count(*) as count FROM %s WHERE status = 2 and created_at > '%s' "+
+		"GROUP BY transaction_output", lastPartition, lastDayString)); dbTxn.Error != nil {
 
 		logging.Logger.Error("Error while inserting transactions in transaction error table", zap.Any("error", dbTxn.Error))
 		return dbTxn.Error

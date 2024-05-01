@@ -98,10 +98,6 @@ func TestBlobberWeightPartitionsWrapPick(t *testing.T) {
 			t.Errorf("Expected blobberID to be in weights, got %s", blobberID)
 		}
 	}
-	for _, bw := range weights {
-		fmt.Println("blobberID:", bw.BlobberID, "weight:", bw.GetWeightV2(), "picked:", pickMap[bw.BlobberID])
-	}
-
 }
 
 func TestBlobberWeightPartitionsWrapUpdateWeight(t *testing.T) {

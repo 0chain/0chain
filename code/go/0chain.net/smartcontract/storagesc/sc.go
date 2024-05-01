@@ -286,6 +286,19 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 			return resp, actErr
 		}
 
+		actErr = chainstate.WithActivation(balances, "artemis", func() error {
+			return nil
+		}, func() error {
+			if funcName == "reset_allocation_stats" {
+				resp, err = sc.resetAllocationStats(t, input, balances)
+				return err
+			}
+			return nil
+		})
+		if actErr != nil || resp != "" {
+			return resp, actErr
+		}
+
 		err = common.NewErrorf("invalid_storage_function_name",
 			"Invalid storage function '%s' called", funcName)
 	}

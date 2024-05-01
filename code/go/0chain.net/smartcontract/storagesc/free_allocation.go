@@ -1,15 +1,14 @@
 package storagesc
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
@@ -312,9 +311,32 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return
 	}
 
-	err = cstate.WithActivation(balances, "apollo", beforeHardfork, afterHardfork)
-	if err != nil {
-		return "", err
+	actErr := cstate.WithActivation(balances, "artemis", func() error {
+		err := cstate.WithActivation(balances, "apollo", beforeHardfork, afterHardfork)
+		return err
+	}, func() error {
+		var blobberAuthTickets []string
+
+		request = newAllocationRequest{
+			DataShards:           conf.FreeAllocationSettings.DataShards,
+			ParityShards:         conf.FreeAllocationSettings.ParityShards,
+			Size:                 conf.FreeAllocationSettings.Size,
+			Owner:                marker.Recipient,
+			OwnerPublicKey:       inputObj.RecipientPublicKey,
+			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
+			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
+			Blobbers:             marker.Blobbers,
+			ThirdPartyExtendable: true,
+		}
+
+		for range marker.Blobbers {
+			blobberAuthTickets = append(blobberAuthTickets, "")
+		}
+		request.BlobberAuthTickets = blobberAuthTickets
+		return nil
+	})
+	if actErr != nil {
+		return "", actErr
 	}
 
 	arBytes, err := request.encode()

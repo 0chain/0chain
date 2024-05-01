@@ -436,25 +436,25 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 }
 
 func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
-
 	var (
-		timer = time.NewTimer(10 * time.Minute)
+		timerDuration     = 1 * time.Hour
+		timer             = time.NewTimer(timerDuration)
+		edb               = sc.GetQueryStateContext().GetEventDB()
+		permanentInterval = edb.Settings().PermanentPartitionChangePeriod
 	)
-
-	edb := sc.GetQueryStateContext().GetEventDB()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
+			timer.Reset(timerDuration)
 
-			err := edb.UpdateTransactionErrors()
+			currentRound := sc.GetCurrentRound()
+			err := edb.UpdateTransactionErrors(currentRound / permanentInterval)
 			if err != nil {
-				logging.Logger.Info("TrackTransactionErrors : ", zap.Error(err))
+				logging.Logger.Error("TrackTransactionErrors: ", zap.Error(err))
 			}
-
-			timer = time.NewTimer(10 * time.Minute)
 		}
 	}
 }
