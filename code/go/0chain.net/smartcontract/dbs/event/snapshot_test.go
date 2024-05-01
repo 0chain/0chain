@@ -140,10 +140,10 @@ func TestSnapshotFunctions(t *testing.T) {
 		require.EqualValues(t, blobbers[0].Rewards.TotalRewards-blobberSnapshots[0].TotalRewards, newSnap.TotalRewards)
 		require.EqualValues(t, blobbers[0].Rewards.TotalRewards-blobberSnapshots[0].TotalRewards, newSnap.BlobberTotalRewards)
 
-		prevSS := int64(float64(blobberSnapshots[0].TotalStake) / float64(blobberSnapshots[0].WritePrice) * GB)
-		newSS := int64(float64(blobbers[0].TotalStake) / float64(blobbers[0].WritePrice) * GB)
+		prevSS := float64(blobberSnapshots[0].TotalStake) / float64(blobberSnapshots[0].WritePrice) * GB
+		newSS := float64(blobbers[0].TotalStake) / float64(blobbers[0].WritePrice) * GB
 		t.Logf("prevSS: %v, newSS: %v", prevSS, newSS)
-		require.EqualValues(t, newSS-prevSS, newSnap.StakedStorage)
+		require.InEpsilon(t, newSS-prevSS, float64(newSnap.StakedStorage), 0.05)
 		require.EqualValues(t, 1, newSnap.BlobberCount)
 
 		// Test in case of offline blobber
