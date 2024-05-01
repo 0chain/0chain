@@ -656,18 +656,20 @@ func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI
 }
 
 // allocation period used to calculate weighted average prices
+//nolint
 type allocPeriod struct {
 	read   currency.Coin    // read price
 	write  currency.Coin    // write price
 	period common.Timestamp // period (duration)
 	size   int64            // size for period
 }
-
+//nolint
 func (ap *allocPeriod) weight() float64 {
 	return float64(ap.period) * float64(ap.size)
 }
 
 // returns weighted average read and write prices
+//nolint
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
@@ -708,7 +710,7 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 	}
 	return
 }
-
+//nolint
 func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	psize, sizeDiff int64) (avg Terms, err error) {
 
