@@ -366,7 +366,7 @@ type stakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
 	ProviderID   string          `json:"provider_id,omitempty"`
 }
-
+//nolint:unused
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	if err = json.Unmarshal(p, spr); err != nil {
 		return

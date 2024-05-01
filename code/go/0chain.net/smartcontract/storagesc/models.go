@@ -53,7 +53,7 @@ func getBlobberAllocationsKey(blobberID string) string {
 type Allocations struct {
 	List SortedList
 }
-
+//nolint
 func (a *Allocations) has(id string) (ok bool) {
 	_, ok = a.List.getIndex(id)
 	return // false
@@ -1279,6 +1279,7 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 	return cost, nil
 }
 
+//nolint
 func (ba *BlobberAllocation) cost() (currency.Coin, error) {
 	cost, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 	if err != nil {
