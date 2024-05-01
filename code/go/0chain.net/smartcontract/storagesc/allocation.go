@@ -1558,16 +1558,10 @@ func emitUpdateAllocationStatEvent(allocation *StorageAllocation, balances chain
 }
 
 func (sc *StorageSmartContract) resetAllocationStats(t *transaction.Transaction, input []byte, balances chainstate.StateContextI) (string, error) {
-	var allocation map[string]string
-	if err := json.Unmarshal(input, &allocation); err != nil {
+	var allocationID string
+	if err := json.Unmarshal(input, &allocationID); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"malformed request: "+err.Error())
-	}
-
-	allocationID, ok := allocation["allocation_id"]
-	if !ok {
-		return "", common.NewError("reset_allocation_stats_failed",
-			"missing allocation_id in request")
 	}
 
 	alloc, err := sc.getAllocation(allocationID, balances)
