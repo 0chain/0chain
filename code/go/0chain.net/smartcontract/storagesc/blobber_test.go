@@ -1477,3 +1477,479 @@ func TestCommitBlobberConnection_TenPositiveWm(t *testing.T) {
 	})
 
 }
+
+func TestCommitBlobberConnection_TenPositiveTenNegativeWm(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+		client   = newClient(2000*x10, balances)
+		tp       = int64(0)
+		err      error
+	)
+
+	conf := setConfig(t, balances)
+
+	tp += 100
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+
+	// blobbers: stake 10k, balance 40k
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	var b1 *Client
+	for _, b := range blobs {
+		if b.id == alloc.BlobberAllocs[0].BlobberID {
+			b1 = b
+			break
+		}
+	}
+	require.NotNil(t, b1)
+
+	t.Run("write 10 write-markers then 10 delete of same size", func(t *testing.T) {
+
+		initialWriteMarkerSavedData := int64(0)
+		endWriteMarkerSavedData := int64(0)
+		endWriteMarkerAllocSavedData := int64(0)
+		movedBalance := currency.Coin(0)
+		prevAllocRoot := ""
+		var chainSize int64 = 0
+		var chainData []byte
+
+		cp, err := ssc.getChallengePool(allocID, balances)
+		require.NoError(t, err)
+
+		var apb, cpb = alloc.WritePool, cp.Balance
+		require.EqualValues(t, currency.Coin(1000*x10), apb)
+		require.EqualValues(t, movedBalance, cpb)
+
+		testingIterations := 10
+		delTestingIterations := 10
+		tp += 100
+		var prevHash string
+
+		for wmIndx := 1; wmIndx <= testingIterations; wmIndx++ {
+
+			allocationRootString := fmt.Sprintf("root%d", wmIndx)
+			allocationRootHex := []byte(allocationRootString)
+			allocationRoot := hex.EncodeToString(allocationRootHex)
+
+			var (
+				wmSize int64 = 1024 * 1024 // 1 MB,
+			)
+
+			// chainSize
+			chainSize += wmSize
+
+			// chainData
+			byteSlice := make([]byte, 32)
+			for i := 0; i < len(byteSlice); i++ {
+				byteSlice[i] = byte(i + 1 + wmIndx) // Example: fill with increasing byte values starting from 1+wmIndx
+			}
+			chainData = append(chainData, byteSlice...)
+
+			// chainhash
+			hasher := sha256.New()
+			if wmIndx != 1 {
+				prevChainHash, _ := hex.DecodeString(prevHash)
+				hasher.Write(prevChainHash)
+			}
+			for i := 0; i < len(chainData); i += 32 {
+				hasher.Write(chainData[i : i+32]) //nolint:errcheck
+				sum := hasher.Sum(nil)
+				hasher.Reset()
+				hasher.Write(sum) //nolint:errcheck
+			}
+			allocRootBytes, err := hex.DecodeString(allocationRoot)
+			require.NoError(t, err)
+
+			hasher.Write(allocRootBytes)
+			chainHash := hex.EncodeToString(hasher.Sum(nil))
+			fmt.Sprintln(allocationRoot)
+
+			var cc = &BlobberCloseConnection{
+				AllocationRoot:     allocationRoot,
+				PrevAllocationRoot: prevAllocRoot,
+				WriteMarker:        &WriteMarker{},
+				ChainData:          chainData,
+			}
+			wm := &writeMarkerV2{
+				Version:                writeMarkerV2Version,
+				AllocationRoot:         allocationRoot,
+				PreviousAllocationRoot: prevAllocRoot,
+				FileMetaRoot:           "",
+				AllocationID:           allocID,
+				Size:                   wmSize,
+				ChainSize:              chainSize,
+				ChainHash:              chainHash,
+				BlobberID:              b1.id,
+				Timestamp:              common.Timestamp(tp),
+				ClientID:               client.id,
+			}
+
+			wm.Signature, err = client.scheme.Sign(
+				encryption.Hash(wm.GetHashData()))
+			require.NoError(t, err)
+			cc.WriteMarker.SetEntity(wm)
+
+			blobBeforeWrite, err := ssc.getBlobber(b1.id, balances)
+			blobBeforeWriteBase := blobBeforeWrite.mustBase()
+			savedDataBeforeUpdate := blobBeforeWriteBase.SavedData
+			require.EqualValues(t, initialWriteMarkerSavedData, savedDataBeforeUpdate)
+
+			// write
+			tp += 100
+			var tx = newTransaction(b1.id, ssc.ID, 0, tp) // why this value is 0 in previous tests?
+			balances.setTransaction(t, tx)
+			var resp string
+			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+				balances)
+			require.NoError(t, err)
+			require.NotZero(t, resp)
+
+			// check out
+			cp, err = ssc.getChallengePool(allocID, balances)
+			require.NoError(t, err)
+
+			alloc, err = ssc.getAllocation(allocID, balances)
+			require.NoError(t, err)
+
+			blobAfterWrite, err := ssc.getBlobber(b1.id, balances)
+			blobAfterWriteBase := blobAfterWrite.mustBase()
+			endWriteMarkerSavedData = wm.Size + initialWriteMarkerSavedData
+			initialWriteMarkerSavedData = endWriteMarkerSavedData // for next iteration of new wm, initial saved data is not 0
+			require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
+
+			size := (int64(math.Ceil(float64(wm.Size) / CHUNK_SIZE))) * CHUNK_SIZE
+			rdtu, err := alloc.restDurationInTimeUnits(wm.Timestamp, conf.TimeUnit)
+			require.NoError(t, err)
+
+			var moved = int64(sizeInGB(size) * float64(avgTerms.WritePrice) * rdtu)
+			movedBalance += currency.Coin(moved)
+			require.EqualValues(t, movedBalance, cp.Balance)
+
+			require.EqualValues(t, alloc.Stats.NumWrites, wmIndx)
+			require.EqualValues(t, alloc.Stats.NumReads, 0)
+
+			endWriteMarkerAllocSavedData += int64(float64(wm.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+			require.EqualValues(t, alloc.Stats.UsedSize, endWriteMarkerAllocSavedData)
+
+			prevHash = chainHash
+			prevAllocRoot = allocationRoot
+			//fmt.Println(wmIndx)
+		}
+
+		for wmIndx := testingIterations + 1; wmIndx <= testingIterations+delTestingIterations; wmIndx++ {
+
+			allocationRootString := fmt.Sprintf("root%d", wmIndx)
+			allocationRootHex := []byte(allocationRootString)
+			allocationRoot := hex.EncodeToString(allocationRootHex)
+
+			var (
+				wmSize int64 = -1 * 1024 * 1024 // -1 MB,
+			)
+
+			// chainSize
+			chainSize += wmSize
+
+			// chainData
+			byteSlice := make([]byte, 32)
+			for i := 0; i < len(byteSlice); i++ {
+				byteSlice[i] = byte(i + 1 + wmIndx) // Example: fill with increasing byte values starting from 1+wmIndx
+			}
+			chainData = append(chainData, byteSlice...)
+
+			// chainhash
+			hasher := sha256.New()
+			if wmIndx != 1 {
+				prevChainHash, _ := hex.DecodeString(prevHash)
+				hasher.Write(prevChainHash)
+			}
+			for i := 0; i < len(chainData); i += 32 {
+				hasher.Write(chainData[i : i+32]) //nolint:errcheck
+				sum := hasher.Sum(nil)
+				hasher.Reset()
+				hasher.Write(sum) //nolint:errcheck
+			}
+			allocRootBytes, err := hex.DecodeString(allocationRoot)
+			require.NoError(t, err)
+
+			hasher.Write(allocRootBytes)
+			chainHash := hex.EncodeToString(hasher.Sum(nil))
+			fmt.Sprintln(allocationRoot)
+
+			var cc = &BlobberCloseConnection{
+				AllocationRoot:     allocationRoot,
+				PrevAllocationRoot: prevAllocRoot,
+				WriteMarker:        &WriteMarker{},
+				ChainData:          chainData,
+			}
+			wm := &writeMarkerV2{
+				Version:                writeMarkerV2Version,
+				AllocationRoot:         allocationRoot,
+				PreviousAllocationRoot: prevAllocRoot,
+				FileMetaRoot:           "",
+				AllocationID:           allocID,
+				Size:                   wmSize,
+				ChainSize:              chainSize,
+				ChainHash:              chainHash,
+				BlobberID:              b1.id,
+				Timestamp:              common.Timestamp(tp),
+				ClientID:               client.id,
+			}
+
+			wm.Signature, err = client.scheme.Sign(
+				encryption.Hash(wm.GetHashData()))
+			require.NoError(t, err)
+			cc.WriteMarker.SetEntity(wm)
+
+			blobBeforeWrite, err := ssc.getBlobber(b1.id, balances)
+			blobBeforeWriteBase := blobBeforeWrite.mustBase()
+			savedDataBeforeUpdate := blobBeforeWriteBase.SavedData
+			require.EqualValues(t, initialWriteMarkerSavedData, savedDataBeforeUpdate)
+
+			// write
+			tp += 100
+			var tx = newTransaction(b1.id, ssc.ID, 0, tp) // why this value is 0 in previous tests?
+			balances.setTransaction(t, tx)
+			var resp string
+			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+				balances)
+			require.NoError(t, err)
+			require.NotZero(t, resp)
+
+			// check out
+			cp, err = ssc.getChallengePool(allocID, balances)
+			require.NoError(t, err)
+
+			alloc, err = ssc.getAllocation(allocID, balances)
+			require.NoError(t, err)
+
+			blobAfterWrite, err := ssc.getBlobber(b1.id, balances)
+			blobAfterWriteBase := blobAfterWrite.mustBase()
+			endWriteMarkerSavedData = wm.Size + initialWriteMarkerSavedData
+			initialWriteMarkerSavedData = endWriteMarkerSavedData // for next iteration of new wm, initial saved data is not 0
+			require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
+
+			size := (int64(math.Ceil(float64(wm.Size) / CHUNK_SIZE))) * CHUNK_SIZE
+			rdtu, err := alloc.restDurationInTimeUnits(wm.Timestamp, conf.TimeUnit)
+			require.NoError(t, err)
+
+			var moved = int64(sizeInGB(size) * float64(avgTerms.WritePrice) * rdtu)
+			movedBalance += currency.Coin(moved)
+			//fmt.Println(movedBalance, cp.Balance)
+			require.EqualValues(t, movedBalance, cp.Balance)
+
+			require.EqualValues(t, alloc.Stats.NumWrites, wmIndx)
+			require.EqualValues(t, alloc.Stats.NumReads, 0)
+
+			endWriteMarkerAllocSavedData += int64(float64(wm.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+			require.EqualValues(t, alloc.Stats.UsedSize, endWriteMarkerAllocSavedData)
+
+			prevHash = chainHash
+			prevAllocRoot = allocationRoot
+			//fmt.Println(wmIndx)
+		}
+		// 10 delete Wms
+
+	})
+
+	//t.Run("write 10 write-markers then 10 delete of same size", func(t *testing.T) {
+	//
+	//	cp, err := ssc.getChallengePool(allocID, balances)
+	//	require.NoError(t, err)
+	//
+	//	writeTestingIterations := 10
+	//	deleteTestingIterations := 10
+	//
+	//	var apb, cpb = alloc.WritePool, cp.Balance
+	//	require.EqualValues(t, currency.Coin(1000*x10), apb) // is this write, considering from previous test, coins have been transferred to cp
+	//	//require.EqualValues(t, currency.Coin(1000*x10)-movedBalance, apb)
+	//	require.EqualValues(t, movedBalance, cpb)
+	//
+	//	tp += 100
+	//
+	//	for wmIndx := 1; wmIndx <= writeTestingIterations; wmIndx++ {
+	//		var cc = &BlobberCloseConnection{
+	//			AllocationRoot:     "root-1", // what is this referring exactly ask Jayash
+	//			PrevAllocationRoot: "",       // will this be populated after each iteration and changes as per num-iter
+	//			WriteMarker:        &WriteMarker{},
+	//		}
+	//		wm := &writeMarkerV1{
+	//			AllocationRoot:         "root-1",
+	//			PreviousAllocationRoot: "",
+	//			AllocationID:           allocID,
+	//			Size:                   100 * 1024 * 1024, // 100 MB
+	//			BlobberID:              b2.id,
+	//			Timestamp:              common.Timestamp(tp),
+	//			ClientID:               client.id,
+	//		}
+	//
+	//		wm.Signature, err = client.scheme.Sign(
+	//			encryption.Hash(wm.GetHashData()))
+	//		require.NoError(t, err)
+	//		cc.WriteMarker.SetEntity(wm)
+	//
+	//		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+	//		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+	//		savedDataBeforeUpdate := blobBeforeWriteBase.SavedData
+	//		require.EqualValues(t, initialWriteMarkerSavedData, savedDataBeforeUpdate)
+	//
+	//		// write
+	//		tp += 100
+	//		var tx = newTransaction(b2.id, ssc.ID, 0, tp) // why this value is 0 in previous tests?
+	//		balances.setTransaction(t, tx)
+	//		var resp string
+	//		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+	//			balances)
+	//		require.NoError(t, err)
+	//		require.NotZero(t, resp)
+	//
+	//		// check out
+	//		cp, err = ssc.getChallengePool(allocID, balances)
+	//		require.NoError(t, err)
+	//
+	//		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+	//		blobAfterWriteBase := blobAfterWrite.mustBase()
+	//		endWriteMarkerSavedData = wm.Size + initialWriteMarkerSavedData
+	//		initialWriteMarkerSavedData = endWriteMarkerSavedData // for next iteration of new wm, initial saved data is not 0
+	//		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
+	//
+	//		size := (int64(math.Ceil(float64(wm.Size) / CHUNK_SIZE))) * CHUNK_SIZE
+	//		rdtu, err := alloc.restDurationInTimeUnits(wm.Timestamp, conf.TimeUnit)
+	//		require.NoError(t, err)
+	//
+	//		var moved = int64(sizeInGB(size) * float64(avgTerms.WritePrice) * rdtu)
+	//		movedBalance += currency.Coin(moved)
+	//		require.EqualValues(t, movedBalance, cp.Balance)
+	//
+	//		require.EqualValues(t, alloc.Stats.UsedSize, int64(wmIndx)*wm.Size)
+	//		require.EqualValues(t, alloc.Stats.NumWrites, wmIndx)
+	//		require.EqualValues(t, alloc.Stats.NumReads, 0)
+	//	}
+	//
+	//	cp, err = ssc.getChallengePool(allocID, balances)
+	//	require.NoError(t, err)
+	//	require.EqualValues(t, cp.Balance, movedBalance)
+	//
+	//	for delWmIndx := 1; delWmIndx <= deleteTestingIterations; delWmIndx++ {
+	//
+	//		tp += 100
+	//		var cc = &BlobberCloseConnection{
+	//			AllocationRoot:     "root-2",
+	//			PrevAllocationRoot: "root-1",
+	//			WriteMarker:        &WriteMarker{},
+	//		}
+	//		wm1 := &writeMarkerV1{
+	//			AllocationRoot:         "root-2",
+	//			PreviousAllocationRoot: "root-1",
+	//			AllocationID:           allocID,
+	//			Size:                   -100 * 1024 * 1024, // 50 MB
+	//			BlobberID:              b2.id,
+	//			Timestamp:              common.Timestamp(tp),
+	//			ClientID:               client.id,
+	//		}
+	//
+	//		wm1.Signature, err = client.scheme.Sign(
+	//			encryption.Hash(wm1.GetHashData()))
+	//		require.NoError(t, err)
+	//		cc.WriteMarker.SetEntity(wm1)
+	//
+	//		blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+	//		blobBeforeWriteBase := blobBeforeWrite.mustBase()
+	//		savedDataBeforeUpdate := blobBeforeWriteBase.SavedData
+	//		require.EqualValues(t, initialWriteMarkerSavedData, savedDataBeforeUpdate)
+	//
+	//		// write
+	//		tp += 100
+	//		var tx = newTransaction(b2.id, ssc.ID, 0, tp) // why this value is 0 in previous tests?
+	//		balances.setTransaction(t, tx)
+	//		var resp string
+	//		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+	//			balances)
+	//		require.NoError(t, err)
+	//		require.NotZero(t, resp)
+	//
+	//		// check out
+	//		cp, err = ssc.getChallengePool(allocID, balances)
+	//		require.NoError(t, err)
+	//
+	//		blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+	//		blobAfterWriteBase := blobAfterWrite.mustBase()
+	//		endWriteMarkerSavedData = initialWriteMarkerSavedData - wm1.Size
+	//		initialWriteMarkerSavedData = endWriteMarkerSavedData // for next iteration of new wm, initial saved data is not 0
+	//		require.EqualValues(t, endWriteMarkerSavedData, blobAfterWriteBase.SavedData)
+	//
+	//		size := (int64(math.Ceil(float64(wm1.Size) / CHUNK_SIZE))) * CHUNK_SIZE
+	//		rdtu, err := alloc.restDurationInTimeUnits(wm1.Timestamp, conf.TimeUnit)
+	//		require.NoError(t, err)
+	//
+	//		var moved = int64(sizeInGB(size) * float64(avgTerms.WritePrice) * rdtu)
+	//		movedBalance += currency.Coin(moved)
+	//		require.EqualValues(t, movedBalance, cp.Balance)
+	//
+	//		require.EqualValues(t, (10-delWmIndx)*100*1024*1024, alloc.Stats.UsedSize)
+	//		require.EqualValues(t, delWmIndx+10, alloc.Stats.NumWrites)
+	//		require.EqualValues(t, 0, alloc.Stats.NumReads)
+	//
+	//	}
+	//})
+
+}
+
+//t.Run("delete", func(t *testing.T) {
+//	var cp *challengePool
+//	cp, err = ssc.getChallengePool(allocID, balances)
+//	require.NoError(t, err)
+//
+//	var wpb, cpb = alloc.WritePool, cp.Balance
+//	require.EqualValues(t, currency.Coin(10000000000000), wpb)
+//	require.EqualValues(t, currency.Coin(4881117078), cpb)
+//
+//	tp += 100
+//	var cc = &BlobberCloseConnection{
+//		AllocationRoot:     "root-2",
+//		PrevAllocationRoot: "root-1",
+//		WriteMarker:        &WriteMarker{},
+//	}
+//	wm1 := &writeMarkerV1{
+//		AllocationRoot:         "root-2",
+//		PreviousAllocationRoot: "root-1",
+//		AllocationID:           allocID,
+//		Size:                   -50 * 1024 * 1024, // 50 MB
+//		BlobberID:              b2.id,
+//		Timestamp:              common.Timestamp(tp),
+//		ClientID:               client.id,
+//	}
+//	wm1.Signature, err = client.scheme.Sign(
+//		encryption.Hash(wm1.GetHashData()))
+//	require.NoError(t, err)
+//	cc.WriteMarker.SetEntity(wm1)
+//
+//	blobBeforeWrite, err := ssc.getBlobber(b2.id, balances)
+//	blobBeforeWriteBase := blobBeforeWrite.mustBase()
+//	require.EqualValues(t, endWriteMarkerSavedData, blobBeforeWriteBase.SavedData)
+//	// write
+//	tp += 100
+//	var tx = newTransaction(b2.id, ssc.ID, 0, tp)
+//	balances.setTransaction(t, tx)
+//	var resp string
+//	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+//		balances)
+//	require.NoError(t, err)
+//	require.NotZero(t, resp)
+//
+//	// check out
+//	cp, err = ssc.getChallengePool(allocID, balances)
+//	require.NoError(t, err)
+//
+//	blobAfterWrite, err := ssc.getBlobber(b2.id, balances)
+//	blobAfterWriteBase := blobAfterWrite.mustBase()
+//	// asserting by dividing `endWriteMarkerSavedData` since write marker value would half after delete
+//	require.EqualValues(t, endWriteMarkerSavedData/2, blobAfterWriteBase.SavedData)
+//
+//	require.EqualValues(t, currency.Coin(2440746919), cp.Balance)
+//
+//})
