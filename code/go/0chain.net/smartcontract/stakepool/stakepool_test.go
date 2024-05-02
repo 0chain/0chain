@@ -370,8 +370,8 @@ func TestStakePool_DistributeRewardsRandN(t *testing.T) {
 			want: want{
 				poolReward: 0,
 				eventTags:  []event.EventTag{event.TagStakePoolReward},
-				err:        false,
-				errMsg:     "",
+				err:        true,
+				errMsg:     "no stake",
 			},
 		},
 		{
