@@ -1,6 +1,6 @@
 module 0chain.net
 
-go 1.20
+go 1.21
 
 require (
 	github.com/alicebob/miniredis/v2 v2.30.5
@@ -14,8 +14,6 @@ require (
 	github.com/gomodule/redigo v1.8.9
 	github.com/guregu/null v4.0.0+incompatible
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/herumi/bls v1.37.0
-	github.com/herumi/mcl v1.86.0
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
@@ -33,8 +31,8 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.13.0
-	golang.org/x/net v0.15.0
+	golang.org/x/crypto v0.17.0
+	golang.org/x/net v0.19.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/postgres v1.5.2
@@ -42,16 +40,18 @@ require (
 )
 
 require (
-	github.com/0chain/common v0.0.7-0.20231108122201-3e2bad6b9d20
-	github.com/0chain/gosdk v1.11.0
+	github.com/0chain/common v1.13.0
+	github.com/0chain/gosdk v1.13.6
 	github.com/go-faker/faker/v4 v4.2.0
+	github.com/herumi/bls v1.37.0
+	github.com/herumi/bls-go-binary v1.33.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
-	github.com/linxGnu/grocksdb v1.8.0
+	github.com/linxGnu/grocksdb v1.8.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
-	golang.org/x/sys v0.12.0
+	golang.org/x/sys v0.15.0
 	gorm.io/driver/sqlite v1.5.3
 	moul.io/zapgorm2 v1.3.0
 )
@@ -67,6 +67,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.19.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.25.1 // indirect
 	github.com/aws/smithy-go v1.16.0 // indirect
+	github.com/ethereum/go-ethereum v1.10.26 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 )
@@ -136,7 +137,7 @@ require (
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.uber.org/multierr v1.9.0 // indirect; indirect //do not update
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.10.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

@@ -248,11 +248,13 @@ const (
 	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
 	EventDbSlowTableSpace  = DbsEvents + "slowtablespace"
 
-	EventDbDebug                 = DbSettings + "debug"
-	EventDbAggregatePeriod       = DbSettings + "aggregate_period"
-	EventDbPartitionChangePeriod = DbSettings + "partition_change_period"
-	EventDbPartitionKeepCount    = DbSettings + "partition_keep_count"
-	EventDbPageLimit             = DbSettings + "page_limit"
+	EventDbDebug                          = DbSettings + "debug"
+	EventDbAggregatePeriod                = DbSettings + "aggregate_period"
+	EventDbPartitionChangePeriod          = DbSettings + "partition_change_period"
+	EventDbPartitionKeepCount             = DbSettings + "partition_keep_count"
+	EventDbPermanentPartitionChangePeriod = DbSettings + "permanent_partition_change_period"
+	EventDbPermanentPartitionKeepCount    = DbSettings + "permanent_partition_keep_count"
+	EventDbPageLimit                      = DbSettings + "page_limit"
 )
 
 func (s Source) String() string {
@@ -452,6 +454,20 @@ var MockBenchData = BenchData{
 		ValidatorPublicKeys:  make([]string, 100),
 		Now:                  common.Now(),
 	},
+}
+
+func GetOldestPermanentAggregateRound() int64 {
+	var (
+		permanentPeriod = viper.GetInt(EventDbPermanentPartitionChangePeriod)
+		permanentKeep   = viper.GetInt(EventDbPermanentPartitionKeepCount)
+		blocks          = viper.GetInt(NumBlocks)
+		oldestRoundKept = int64((blocks/permanentPeriod - permanentKeep + 1) * permanentPeriod)
+	)
+	if oldestRoundKept < 0 {
+		return 0
+	} else {
+		return oldestRoundKept
+	}
 }
 
 func GetOldestAggregateRound() int64 {

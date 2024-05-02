@@ -15,6 +15,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/statecache"
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/partitions"
@@ -470,7 +471,6 @@ func TestStorageSmartContract_blobberBlockRewards(t *testing.T) {
 			ssc := newTestStorageSC()
 			setupRewards(t, tt.params, balances, ssc)
 			err := ssc.blobberBlockRewards(&transaction.Transaction{}, marshal, balances)
-			fmt.Println(err)
 			require.EqualValues(t, tt.wantErr, err != nil)
 			compareResult(t, tt.params, tt.result, balances, ssc)
 		})
@@ -490,6 +490,11 @@ func prepareState(n, partSize int, sctx state.StateContextI) func() {
 		pdb.Close()
 		_ = os.RemoveAll(dir)
 	}
+
+	// mpt := util.NewMerklePatriciaTrie(pdb, 0, nil, statecache.NewEmpty())
+	// sctx = state.NewStateContext(nil,
+	// mpt, nil, nil, nil,
+	// nil, nil, nil, nil)
 
 	part, err := partitions.CreateIfNotExists(sctx, "brn_test", partSize)
 	if err != nil {
@@ -604,7 +609,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 		_ = os.RemoveAll(dir)
 	}
 
-	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil)
+	mpt := util.NewMerklePatriciaTrie(pdb, 0, nil, statecache.NewEmpty())
 	b := block.Block{}
 	return state.NewStateContext(&b,
 		mpt, nil, nil, nil,

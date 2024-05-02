@@ -32,6 +32,7 @@ type Blobber struct {
 	SavedData    int64 `json:"saved_data"` // total of files saved on blobber
 	ReadData     int64 `json:"read_data"`
 	NotAvailable bool  `json:"not_available"`
+	IsRestricted bool  `json:"is_restricted"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	// todo update
@@ -75,6 +76,55 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 		return nil, fmt.Errorf("error retrieving blobber %v, error %v", id, err)
 	}
 	return &blobber, nil
+}
+
+func (edb *EventDb) GetActiveAndStakableBlobbers(pagination common2.Pagination, healthCheckTimeLimit time.Duration) ([]Blobber, error) {
+	now := common.Now()
+	var blobbers []Blobber
+	result := edb.Store.Get().
+		Select("blobbers.*").
+		Table("blobbers").
+		Joins("left join delegate_pools ON delegate_pools.provider_type = 3 AND delegate_pools.provider_id = blobbers.id AND delegate_pools.status = 0").
+		Where("blobbers.last_health_check > ? AND blobbers.is_killed = false AND blobbers.is_shutdown = false", common.ToTime(now).Add(-healthCheckTimeLimit).Unix()).
+		Group("blobbers.id").
+		Having("count(delegate_pools.id) < blobbers.num_delegates").
+		Limit(pagination.Limit).
+		Offset(pagination.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   pagination.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pagination.IsDescending,
+		}).
+		Find(&blobbers)
+
+	return blobbers, result.Error
+}
+
+func (edb *EventDb) GetStakableBlobbers(pagination common2.Pagination) ([]Blobber, error) {
+	var blobbers []Blobber
+	result := edb.Store.Get().
+		Select("blobbers.*").
+		Table("blobbers").
+		Joins("left join delegate_pools ON delegate_pools.provider_type = 3 AND delegate_pools.provider_id = blobbers.id AND delegate_pools.status = 0").
+		Where("blobbers.is_killed = false AND blobbers.is_shutdown = false").
+		Group("blobbers.id").
+		Having("count(delegate_pools.id) < blobbers.num_delegates").
+		Limit(pagination.Limit).
+		Offset(pagination.Offset).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "capacity"},
+			Desc:   pagination.IsDescending,
+		}).
+		Order(clause.OrderByColumn{
+			Column: clause.Column{Name: "id"},
+			Desc:   pagination.IsDescending,
+		}).
+		Find(&blobbers)
+
+	return blobbers, result.Error
 }
 
 func (edb *EventDb) GetBlobbers(limit common2.Pagination) ([]Blobber, error) {
@@ -181,6 +231,7 @@ type AllocationQuery struct {
 	AllocationSize     int64
 	AllocationSizeInGB float64
 	NumberOfDataShards int
+	IsRestricted       int
 }
 
 func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination) ([]string, error) {
@@ -203,6 +254,11 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("capacity - allocated >= ?", allocation.AllocationSize)
 	dbStore = dbStore.Where("last_health_check > ?", common.ToTime(now).Add(-healthCheckPeriod).Unix())
 	dbStore = dbStore.Where("(total_stake - offers_total) > ? * write_price", allocation.AllocationSizeInGB)
+	if allocation.IsRestricted == 1 {
+		dbStore = dbStore.Where("is_restricted = true")
+	} else if allocation.IsRestricted == 2 {
+		dbStore = dbStore.Where("is_restricted = false")
+	}
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
 	dbStore = dbStore.Where("not_available = false")
@@ -252,6 +308,7 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"allocated",
 		"saved_data",
 		"not_available",
+		"is_restricted",
 		"offers_total",
 		"delegate_wallet",
 		"num_delegates",
