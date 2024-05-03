@@ -120,30 +120,30 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //
 // parameters:
 //
-//	+name: free_allocation_data
-//	 description: allocation data
-//	 required: true
-//	 in: query
-//	 type: string
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: sort
-//	 description: desc or asc
-//	 in: query
-//	 type: string
-//	+name: blobber_urls
-//	 description: list of blobber URLs
-//	 in: query
-//	 type: array
-//	 required: true
-//   items:
-//     type: string
+//		+name: free_allocation_data
+//		 description: allocation data
+//		 required: true
+//		 in: query
+//		 type: string
+//		+name: offset
+//		 description: offset
+//		 in: query
+//		 type: string
+//		+name: limit
+//		 description: limit
+//		 in: query
+//		 type: string
+//		+name: sort
+//		 description: desc or asc
+//		 in: query
+//		 type: string
+//		+name: blobber_urls
+//		 description: list of blobber URLs
+//		 in: query
+//		 type: array
+//		 required: true
+//	  items:
+//	    type: string
 //
 // responses:
 //
@@ -745,6 +745,16 @@ type fullBlock struct {
 //	 in: query
 //	 type: string
 //
+// +name: start
+//
+//	 description: Starting block number for the range of blocks to retrieve.
+//	 in: query
+//	 type: string
+//	+name: end
+//	 description: Ending block number for the range of blocks to retrieve.
+//	 in: query
+//	 type: string
+//
 // responses:
 //
 //	200: []fullBlock
@@ -970,6 +980,16 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 //	 in: query
 //	 type: string
 //
+// +name: offset
+//
+//	 description: Pagination offset to specify the starting point of the result set.
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: Maximum number of results to return.
+//	 in: query
+//	 type: string
+//
 // responses:
 //
 //	200: userPoolStat
@@ -1110,21 +1130,22 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 // Gets challenges for a blobber by challenge id
 //
 // parameters:
-//   +name: id
-//     description: id of blobber
-//     required: true
-//     in: query
-//     type: string
-//   +name: start
-//     description: start time of interval
-//     required: true
-//     in: query
-//     type: string
-//   +name: end
-//     description: end time of interval
-//     required: true
-//     in: query
-//     type: string
+//
+//	+name: id
+//	  description: id of blobber
+//	  required: true
+//	  in: query
+//	  type: string
+//	+name: start
+//	  description: start time of interval
+//	  required: true
+//	  in: query
+//	  type: string
+//	+name: end
+//	  description: end time of interval
+//	  required: true
+//	  in: query
+//	  type: string
 //
 // responses:
 //
@@ -1248,23 +1269,27 @@ type ChallengesResponse struct {
 //
 // parameters:
 //
-//	+name: blobber
-//	 description: id of blobber for which to get open challenges
-//	 required: true
-//	 in: query
-//	 type: string
-//	+name: offset
-//	 description: offset
-//	 in: query
-//	 type: string
-//	+name: limit
-//	 description: limit
-//	 in: query
-//	 type: string
-//	+name: sort
-//	 description: desc or asc
-//	 in: query
-//	 type: string
+//		+name: blobber
+//		 description: id of blobber for which to get open challenges
+//		 required: true
+//		 in: query
+//		 type: string
+//		+name: offset
+//		 description: offset
+//		 in: query
+//		 type: string
+//		+name: limit
+//		 description: limit
+//		 in: query
+//		 type: string
+//		+name: sort
+//		 description: desc or asc
+//		 in: query
+//		 type: string
+//	 +name: from
+//	  description: Starting point for fetching challenges.
+//	  in: query
+//	  type: string
 //
 // responses:
 //
@@ -1390,12 +1415,40 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 	}
 }
 
-// Gets list of all validators alive (e.g. excluding blobbers with zero capacity).
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators validators
+// Get a list of validators based on activity and stakability. Retrieves a list of validators, optionally filtered by whether they are active and/or stakable.
+//
+// parameters:
+//
+//	+name: active
+//	 description: Filter validators based on whether they are currently active. Set to 'true' to filter only active validators.
+//	 in: query
+//	 type: string
+//
+//	+name: stakable
+//	 description: Filter validators based on whether they are currently stakable. Set to 'true' to filter only stakable validators.
+//	 in: query
+//	 type: string
+//
+//	+name: offset
+//	 description: The starting point for pagination.
+//	 in: query
+//	 type: integer
+//
+//	+name: limit
+//	 description: The maximum number of validators to return.
+//	 in: query
+//	 type: integer
+//
+//	+name: order
+//	 description: Order of the validators returned, e.g., 'asc' for ascending.
+//	 in: query
+//	 type: string
 //
 // responses:
 //
 //	200: Validator
-//	400:
+//	500:
 func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request) {
 
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -1673,14 +1726,18 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 //
 // parameters:
 //
-//	+name: client
-//	 description: client
-//	 in: query
-//	 type: string
-//	+name: blobber
-//	 description: blobber
-//	 in: query
-//	 type: string
+//		+name: client
+//		 description: client
+//		 in: query
+//		 type: string
+//		+name: blobber
+//		 description: blobber
+//		 in: query
+//		 type: string
+//	 +name: allocation
+//	  description: Allocation ID associated with the read marker.
+//	  in: query
+//	  type: string
 //
 // responses:
 //
@@ -1994,6 +2051,22 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 	}
 	common.Respond(w, r, allocations, nil)
 }
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations getExpiredAllocations
+// Get expired allocations for a specific blobber. Retrieves a list of expired allocations associated with a specified blobber.
+//
+// parameters:
+//
+//  +name: blobber_id
+//   description: The identifier of the blobber to retrieve expired allocations for.
+//   required: true
+//   in: query
+//   type: string
+//
+// responses:
+//
+//  200: StorageAllocation
+//  500:
 
 func (srh *StorageRestHandler) getExpiredAllocations(w http.ResponseWriter, r *http.Request) {
 	blobberID := r.URL.Query().Get("blobber_id")
@@ -2385,9 +2458,18 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction transaction
 // Gets transaction information from transaction hash
 //
+// parameters:
+//
+//	+name: transaction_hash
+//	 description: The hash of the transaction to retrieve.
+//	 required: true
+//	 in: query
+//	 type: string
+//
 // responses:
 //
 //	200: Transaction
+//	400:
 //	500:
 func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *http.Request) {
 	var transactionHash = r.URL.Query().Get("transaction_hash")
@@ -2668,7 +2750,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 // parameters:
 //
 //	+name: blobber_id
-//	 description: blobber for which to return information
+//	 description: blobber for which to return information from the sharders
 //	 required: true
 //	 in: query
 //	 type: string
@@ -2775,11 +2857,12 @@ func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *ht
 // If a match is found the matching object is returned.
 //
 // parameters:
-//   +name: searchString
-//     description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, Wallet address
-//     required: true
-//     in: query
-//     type: string
+//
+//	+name: searchString
+//	  description: Generic query string, supported inputs: Block hash, Round num, Transaction hash, Wallet address
+//	  required: true
+//	  in: query
+//	  type: string
 //
 // responses:
 //
@@ -2865,6 +2948,10 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 //	 type: string
 //	+name: sort
 //	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: round
+//	 description: round number
 //	 in: query
 //	 type: string
 //

@@ -1357,22 +1357,45 @@ definitions:
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     Provider:
+        format: int64
         properties:
-            id:
+            CreatedAt:
+                format: date-time
                 type: string
-                x-go-name: ID
+            ID:
+                type: string
+            UpdatedAt:
+                format: date-time
+                type: string
+            delegate_wallet:
+                type: string
+                x-go-name: DelegateWallet
+            downtime:
+                format: uint64
+                type: integer
+                x-go-name: Downtime
             is_killed:
                 type: boolean
-                x-go-name: HasBeenKilled
-            is_shut_down:
+                x-go-name: IsKilled
+            is_shutdown:
                 type: boolean
-                x-go-name: HasBeenShutDown
+                x-go-name: IsShutdown
             last_health_check:
                 $ref: '#/definitions/Timestamp'
-            provider_type:
-                $ref: '#/definitions/Provider'
-        type: object
-        x-go-package: 0chain.net/smartcontract/provider
+            num_delegates:
+                format: int64
+                type: integer
+                x-go-name: NumDelegates
+            rewards:
+                $ref: '#/definitions/ProviderRewards'
+            service_charge:
+                format: double
+                type: number
+                x-go-name: ServiceCharge
+            total_stake:
+                $ref: '#/definitions/Coin'
+        type: integer
+        x-go-package: 0chain.net/smartcontract/stakepool/spenum
     ProviderRewards:
         description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
         properties:
@@ -1537,8 +1560,6 @@ definitions:
             delegate_wallet:
                 type: string
                 x-go-name: DelegateWallet
-            min_stake:
-                $ref: '#/definitions/Coin'
             num_delegates:
                 format: int64
                 type: integer
@@ -1548,7 +1569,7 @@ definitions:
                 type: number
                 x-go-name: ServiceChargeRatio
         type: object
-        x-go-package: 0chain.net/smartcontract/stakepool
+        x-go-package: 0chain.net/smartcontract/dto
     SharderSnapshot:
         properties:
             creation_round:
@@ -3232,6 +3253,14 @@ paths:
                   in: query
                   name: sort
                   type: string
+                - description: Starting block number for the range of blocks to retrieve.
+                  in: query
+                  name: start
+                  type: string
+                - description: Ending block number for the range of blocks to retrieve.
+                  in: query
+                  name: end
+                  type: string
             responses:
                 "200":
                     description: fullBlock
@@ -3268,7 +3297,7 @@ paths:
             description: Get blobber information
             operationId: getBlobber
             parameters:
-                - description: blobber for which to return information
+                - description: blobber for which to return information from the sharders
                   in: query
                   name: blobber_id
                   required: true
@@ -3299,6 +3328,23 @@ paths:
                         $ref: '#/definitions/challengePoolStat'
                 "400":
                     description: ""
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations:
+        get:
+            operationId: getExpiredAllocations
+            parameters:
+                - description: The identifier of the blobber to retrieve expired allocations for.
+                  in: query
+                  name: blobber_id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: StorageAllocation
+                    schema:
+                        $ref: '#/definitions/StorageAllocation'
+                "500":
+                    description: ""
+            summary: Get expired allocations for a specific blobber. Retrieves a list of expired allocations associated with a specified blobber.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat:
         get:
             description: Gets  statistic for all locked tokens of the read pool
@@ -3349,6 +3395,14 @@ paths:
                   in: query
                   name: client_id
                   required: true
+                  type: string
+                - description: Pagination offset to specify the starting point of the result set.
+                  in: query
+                  name: offset
+                  type: string
+                - description: Maximum number of results to return.
+                  in: query
+                  name: limit
                   type: string
             responses:
                 "200":
@@ -3453,6 +3507,10 @@ paths:
                   in: query
                   name: blobber
                   type: string
+                - description: Allocation ID associated with the read marker.
+                  in: query
+                  name: allocation
+                  type: string
             responses:
                 "200":
                     description: ReadMarker
@@ -3481,6 +3539,10 @@ paths:
                 - description: desc or asc
                   in: query
                   name: sort
+                  type: string
+                - description: Starting point for fetching challenges.
+                  in: query
+                  name: from
                   type: string
             responses:
                 "200":
@@ -3678,6 +3740,10 @@ paths:
                   in: query
                   name: sort
                   type: string
+                - description: round number
+                  in: query
+                  name: round
+                  type: string
             responses:
                 "200":
                     description: StringMap
@@ -3772,11 +3838,19 @@ paths:
         get:
             description: Gets transaction information from transaction hash
             operationId: transaction
+            parameters:
+                - description: The hash of the transaction to retrieve.
+                  in: query
+                  name: transaction_hash
+                  required: true
+                  type: string
             responses:
                 "200":
                     description: Transaction
                     schema:
                         $ref: '#/definitions/Transaction'
+                "400":
+                    description: ""
                 "500":
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions:
@@ -3830,6 +3904,38 @@ paths:
             summary: |-
                 Gets filtered list of transaction information. The list is filtered on the first valid input,
                 or otherwise all the endpoint returns all translations.
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators:
+        get:
+            operationId: validators
+            parameters:
+                - description: Filter validators based on whether they are currently active. Set to 'true' to filter only active validators.
+                  in: query
+                  name: active
+                  type: string
+                - description: Filter validators based on whether they are currently stakable. Set to 'true' to filter only stakable validators.
+                  in: query
+                  name: stakable
+                  type: string
+                - description: The starting point for pagination.
+                  in: query
+                  name: offset
+                  type: integer
+                - description: The maximum number of validators to return.
+                  in: query
+                  name: limit
+                  type: integer
+                - description: Order of the validators returned, e.g., 'asc' for ascending.
+                  in: query
+                  name: order
+                  type: string
+            responses:
+                "200":
+                    description: Validator
+                    schema:
+                        $ref: '#/definitions/Validator'
+                "500":
+                    description: ""
+            summary: Get a list of validators based on activity and stakability. Retrieves a list of validators, optionally filtered by whether they are active and/or stakable.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers:
         get:
             description: Gets list of write markers satisfying filter

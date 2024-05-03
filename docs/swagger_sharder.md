@@ -55,6 +55,7 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getClientPools | [get client pools](#get-client-pools) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList | [get dkg list](#get-dkg-list) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents | [get events](#get-events) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations | [get expired allocations](#get-expired-allocations) | Get expired allocations for a specific blobber. Retrieves a list of expired allocations associated with a specified blobber. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns | [get group share or signs](#get-group-share-or-signs) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat | [get m s stake pool stat](#get-m-s-stake-pool-stat) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock | [get magic block](#get-magic-block) |  |
@@ -101,6 +102,7 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction | [transaction](#transaction) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions | [transactions](#transactions) | Gets filtered list of transaction information. The list is filtered on the first valid input,
 or otherwise all the endpoint returns all translations. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators | [validators](#validators) | Get a list of validators based on activity and stakability. Retrieves a list of validators, optionally filtered by whether they are active and/or stakable. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config | [vesting config](#vesting-config) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers | [writemarkers](#writemarkers) |  |
   
@@ -925,7 +927,7 @@ Get blobber information
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| blobber_id | `query` | string | `string` |  | ✓ |  | blobber for which to return information |
+| blobber_id | `query` | string | `string` |  | ✓ |  | blobber for which to return information from the sharders |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -1147,6 +1149,41 @@ Status: OK
 Status: Bad Request
 
 ###### <span id="get-events-400-schema"></span> Schema
+
+### <span id="get-expired-allocations"></span> Get expired allocations for a specific blobber. Retrieves a list of expired allocations associated with a specified blobber. (*getExpiredAllocations*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations
+```
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| blobber_id | `query` | string | `string` |  | ✓ |  | The identifier of the blobber to retrieve expired allocations for. |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#get-expired-allocations-200) | OK | StorageAllocation |  | [schema](#get-expired-allocations-200-schema) |
+| [500](#get-expired-allocations-500) | Internal Server Error |  |  | [schema](#get-expired-allocations-500-schema) |
+
+#### Responses
+
+
+##### <span id="get-expired-allocations-200"></span> 200 - StorageAllocation
+Status: OK
+
+###### <span id="get-expired-allocations-200-schema"></span> Schema
+   
+  
+
+[StorageAllocation](#storage-allocation)
+
+##### <span id="get-expired-allocations-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="get-expired-allocations-500-schema"></span> Schema
 
 ### <span id="get-group-share-or-signs"></span> get group share or signs (*getGroupShareOrSigns*)
 
@@ -1644,6 +1681,8 @@ Gets statistic for a user's stake pools
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | client_id | `query` | string | `string` |  | ✓ |  | client for which to get stake pool information |
+| limit | `query` | string | `string` |  |  |  | Maximum number of results to return. |
+| offset | `query` | string | `string` |  |  |  | Pagination offset to specify the starting point of the result set. |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -1725,9 +1764,11 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | block_hash | `query` | string | `string` |  | ✓ |  | block hash |
+| end | `query` | string | `string` |  |  |  | Ending block number for the range of blocks to retrieve. |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
+| start | `query` | string | `string` |  |  |  | Starting block number for the range of blocks to retrieve. |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -2011,6 +2052,7 @@ Gets latest read marker for a client and blobber
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
+| allocation | `query` | string | `string` |  |  |  | Allocation ID associated with the read marker. |
 | blobber | `query` | string | `string` |  |  |  | blobber |
 | client | `query` | string | `string` |  |  |  | client |
 
@@ -2181,6 +2223,7 @@ Gets open challenges for a blobber
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | blobber | `query` | string | `string` |  | ✓ |  | id of blobber for which to get open challenges |
+| from | `query` | string | `string` |  |  |  | Starting point for fetching challenges. |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
@@ -2580,6 +2623,7 @@ Gets list of snapshot records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| round | `query` | string | `string` |  |  |  | round number |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
@@ -2799,10 +2843,17 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/
 
 Gets transaction information from transaction hash
 
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| transaction_hash | `query` | string | `string` |  | ✓ |  | The hash of the transaction to retrieve. |
+
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
 | [200](#transaction-200) | OK | Transaction |  | [schema](#transaction-200-schema) |
+| [400](#transaction-400) | Bad Request |  |  | [schema](#transaction-400-schema) |
 | [500](#transaction-500) | Internal Server Error |  |  | [schema](#transaction-500-schema) |
 
 #### Responses
@@ -2816,6 +2867,11 @@ Status: OK
   
 
 [Transaction](#transaction)
+
+##### <span id="transaction-400"></span> 400
+Status: Bad Request
+
+###### <span id="transaction-400-schema"></span> Schema
 
 ##### <span id="transaction-500"></span> 500
 Status: Internal Server Error
@@ -2871,6 +2927,45 @@ Status: Bad Request
 Status: Internal Server Error
 
 ###### <span id="transactions-500-schema"></span> Schema
+
+### <span id="validators"></span> Get a list of validators based on activity and stakability. Retrieves a list of validators, optionally filtered by whether they are active and/or stakable. (*validators*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators
+```
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| active | `query` | string | `string` |  |  |  | Filter validators based on whether they are currently active. Set to 'true' to filter only active validators. |
+| limit | `query` | integer | `int64` |  |  |  | The maximum number of validators to return. |
+| offset | `query` | integer | `int64` |  |  |  | The starting point for pagination. |
+| order | `query` | string | `string` |  |  |  | Order of the validators returned, e.g., 'asc' for ascending. |
+| stakable | `query` | string | `string` |  |  |  | Filter validators based on whether they are currently stakable. Set to 'true' to filter only stakable validators. |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#validators-200) | OK | Validator |  | [schema](#validators-200-schema) |
+| [500](#validators-500) | Internal Server Error |  |  | [schema](#validators-500-schema) |
+
+#### Responses
+
+
+##### <span id="validators-200"></span> 200 - Validator
+Status: OK
+
+###### <span id="validators-200-schema"></span> Schema
+   
+  
+
+[Validator](#validator)
+
+##### <span id="validators-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="validators-500-schema"></span> Schema
 
 ### <span id="vesting-config"></span> vesting config (*vesting_config*)
 
@@ -4063,17 +4158,9 @@ it can be used as a scan destination, similar to [NullString].
 
   
 
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| HasBeenKilled | boolean| `bool` |  | |  |  |
-| HasBeenShutDown | boolean| `bool` |  | |  |  |
-| ID | string| `string` |  | |  |  |
-| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
-| provider_type | [Provider](#provider)| `Provider` |  | |  |  |
+| Name | Type | Go type | Default | Description | Example |
+|------|------|---------| ------- |-------------|---------|
+| Provider | int64 (formatted integer)| int64 | |  |  |
 
 
 
@@ -4235,7 +4322,6 @@ it can be used as a scan destination, similar to [NullString].
 | DelegateWallet | string| `string` |  | |  |  |
 | MaxNumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
 | ServiceChargeRatio | double (formatted number)| `float64` |  | |  |  |
-| min_stake | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
