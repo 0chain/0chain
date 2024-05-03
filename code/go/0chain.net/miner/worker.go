@@ -257,17 +257,20 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 
 func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 	// start in a second, repeat every 30 minutes
-	tk := time.NewTicker(time.Second)
+	// DEBUG: do only once
+	// tk := time.NewTicker(time.Second)
 	for {
 		select {
-		case <-tk.C:
-			mc.syncAllMissingNodes(ctx)
-			// do all missing nodes check and sync every 30 minutes
-			// TODO: move the interval to a config file
-			tk.Reset(30 * time.Minute)
+		// case <-tk.C:
+		// 	mc.syncAllMissingNodes(ctx)
+		// 	return
+		// do all missing nodes check and sync every 30 minutes
+		// TODO: move the interval to a config file
+		// tk.Reset(30 * time.Minute)
 		case <-mc.syncMissingNodesChannel:
 			mc.syncAllMissingNodes(ctx)
-			tk.Reset(30 * time.Minute)
+			return
+			// tk.Reset(30 * time.Minute)
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return
@@ -277,7 +280,11 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 
 func (mc *Chain) triggerSyncMissingNodes() {
 	go func() {
-		mc.syncMissingNodesChannel <- struct{}{}
+		select {
+		case mc.syncMissingNodesChannel <- struct{}{}:
+		default:
+			// incase the worker is exit
+		}
 	}()
 }
 
