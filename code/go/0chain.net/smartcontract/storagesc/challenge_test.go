@@ -1524,6 +1524,7 @@ func preparePopulateGenerateChallenge(t *testing.T, ssc *StorageSmartContract, b
 		blobberIndexes := generateRandomNumbers(data+parity-1, len(blobbers)-1)
 		for _, i := range blobberIndexes {
 			nar.Blobbers = append(nar.Blobbers, blobbers[i].id)
+			nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		}
 
 		var resp, err = nar.callNewAllocReq(t, client.id, 1000*x10, ssc, 1,
@@ -1539,12 +1540,16 @@ func preparePopulateGenerateChallenge(t *testing.T, ssc *StorageSmartContract, b
 		for _, b := range alloc.BlobberAllocs {
 			b.Stats.UsedSize = int64(1 * GB / data)
 			b.AllocationRoot = "root-" + strconv.Itoa(i)
-			b.LastWriteMarker = &WriteMarker{
-				AllocationRoot: b.AllocationRoot,
-				ClientID:       alloc.Owner,
-				Timestamp:      common.Timestamp(time.Now().Unix()),
-				Size:           b.Stats.UsedSize,
-			}
+
+			lastWM := &WriteMarker{}
+			lastWm2 := &writeMarkerV2{}
+			lastWm2.AllocationRoot = b.AllocationRoot
+			lastWm2.ClientID = alloc.Owner
+			lastWm2.Timestamp = common.Timestamp(time.Now().Unix())
+			lastWm2.Size = b.Stats.UsedSize
+			lastWM.SetEntity(lastWm2)
+
+			b.LastWriteMarker = lastWM
 
 			err = partitionsBlobberAllocationsAdd(balances, b.BlobberID, alloc.ID)
 			require.NoError(t, err)
