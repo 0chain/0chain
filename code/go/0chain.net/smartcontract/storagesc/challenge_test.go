@@ -431,6 +431,18 @@ func TestPopulateGenerateChallenge(t *testing.T) {
 	conf, err := GetConfig(balances)
 	require.NoError(t, err)
 
+	blobberAllocationPartitionSize = 3
+	blobberRewardsPartitionSize = 3
+	allChallengeReadyBlobbersPartitionSize = 3
+	allValidatorsPartitionSize = 3
+
+	defer func() {
+		blobberAllocationPartitionSize = 10
+		blobberRewardsPartitionSize = 5
+		allChallengeReadyBlobbersPartitionSize = 50
+		allValidatorsPartitionSize = 50
+	}()
+
 	preparePopulateGenerateChallenge(t, ssc, balances)
 	require.NoError(t, err)
 

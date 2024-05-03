@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const allChallengeReadyBlobbersPartitionSize = 3
+var allChallengeReadyBlobbersPartitionSize = 50
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
