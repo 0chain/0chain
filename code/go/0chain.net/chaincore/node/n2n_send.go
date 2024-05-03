@@ -3,7 +3,6 @@ package node
 import (
 	"bytes"
 	"context"
-	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -521,15 +520,16 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 
 		go func() {
 			senderValidateFunc := func() error {
-				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-				defer cancel()
-				return n2nVerifyRequestsWithContext.Run(ctx, func() error {
-					if !validateSendRequest(sender, r) {
-						return errors.New("failed to validate request")
-					}
+				// ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				// defer cancel()
+				// return n2nVerifyRequestsWithContext.Run(ctx, func() error {
+				// 	if !validateSendRequest(sender, r) {
+				// 		return errors.New("failed to validate request")
+				// 	}
 
-					return nil
-				})
+				// 	return nil
+				// })
+				return nil
 			}
 			// TODO:
 			root, _ := context.WithTimeout(common.GetRootContext(), 5*time.Second) //nolint:govet
