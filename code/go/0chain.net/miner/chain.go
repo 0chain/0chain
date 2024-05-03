@@ -76,6 +76,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.restartRoundEventChannel = make(chan struct{})
 	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
+	minerChain.syncMissingNodesChannel = make(chan struct{}, 1)
 	minerChain.nbpMutex = &sync.Mutex{}
 	minerChain.notarizationBlockProcessMap = make(map[string]struct{})
 	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
@@ -148,6 +149,7 @@ type Chain struct {
 	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
 	restartRoundEventChannel             chan struct{}      // trigger rre
 	restartRoundEventWorkerIsDoneChannel chan struct{}      // rre worker closed
+	syncMissingNodesChannel              chan struct{}
 	nbpMutex                             *sync.Mutex
 	notarizationBlockProcessMap          map[string]struct{}
 	notarizationBlockProcessC            chan *Notarization

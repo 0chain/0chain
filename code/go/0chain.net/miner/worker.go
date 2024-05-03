@@ -265,11 +265,20 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 			// do all missing nodes check and sync every 30 minutes
 			// TODO: move the interval to a config file
 			tk.Reset(30 * time.Minute)
+		case <-mc.syncMissingNodesChannel:
+			mc.syncAllMissingNodes(ctx)
+			tk.Reset(30 * time.Minute)
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return
 		}
 	}
+}
+
+func (mc *Chain) triggerSyncMissingNodes() {
+	go func() {
+		mc.syncMissingNodesChannel <- struct{}{}
+	}()
 }
 
 func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
@@ -283,6 +292,8 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		if lfb == nil || lfb.ClientState == nil {
 			time.Sleep(10 * time.Second)
 			lfb = mc.GetLatestFinalizedBlock()
+			logging.Logger.Debug("sync all missing nodes - LFB is nil or ClientState is nil, wait...",
+				zap.Int64("round", lfb.Round))
 			continue
 		}
 

@@ -1769,6 +1769,9 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	logging.Logger.Info("ensure_lfb - set lfb",
 		zap.Int64("round", rcvd.Round))
 
+	// triger sync missing state nodes
+	mc.triggerSyncMissingNodes()
+
 	if rcvd.MagicBlock != nil {
 
 		// update magic block or notify to do finalization
