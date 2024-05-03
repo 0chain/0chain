@@ -519,9 +519,9 @@ func verifyChallengeTickets(balances cstate.StateContextI,
 			return nil, errors.New("found nil validation tickets")
 		}
 
-		//if _, ok := challenge.ValidatorIDMap[vt.ValidatorID]; !ok {
-		//	return nil, errors.New("found invalid validator id in validation ticket")
-		//}
+		if _, ok := challenge.ValidatorIDMap[vt.ValidatorID]; !ok {
+			return nil, errors.New("found invalid validator id in validation ticket")
+		}
 
 		_, ok := vtsMap[vt.ValidatorID]
 		if ok {
