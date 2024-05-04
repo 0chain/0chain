@@ -293,7 +293,13 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		return false
 	}
 
-	mc.verifyCachedVRFShares(ctx, msg, mr, dkg)
+	if reachedThreshold := mc.verifyCachedVRFShares(ctx, msg, mr, dkg); reachedThreshold {
+		if mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold) {
+			mc.TryProposeBlock(common.GetRootContext(), mr)
+			mc.StartVerification(common.GetRootContext(), mr)
+		}
+		return true
+	}
 
 	if !verifyVRFShare(mr, vrfs, msg, dkg) {
 		return false
@@ -349,7 +355,7 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 	return true
 }
 
-func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Round, dkg *bls.DKG) {
+func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Round, dkg *bls.DKG) (reachedThreshold bool) {
 	if err := mc.verifyCachedVRFSharesWorker.Run(ctx, func() error {
 		var (
 			vrfShares     = r.vrfSharesCache.getAll()
@@ -375,6 +381,7 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 
 			removeVRFKeys[vrfs.GetParty().GetKey()] = struct{}{}
 			if enough := r.AddVRFShare(vrfs, blsThreshold); enough {
+				reachedThreshold = true
 				return nil
 			}
 		}
@@ -382,6 +389,7 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 	}); err != nil {
 		Logger.Error("verify cached vrf shares failed", zap.Error(err), zap.Int64("round", r.GetRoundNumber()))
 	}
+	return
 }
 
 // ThresholdNumBLSSigReceived do we've sufficient BLSshares?
