@@ -649,13 +649,13 @@ func (r *Round) VRFShareExist(share *VRFShare) (exist bool) {
 }
 
 // AddVRFShare - implement interface
-func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
+func (r *Round) AddVRFShare(share *VRFShare, threshold int) (enough bool) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
-		logging.Logger.Info("add_vrf_share already at threshold. Returning false.")
-		return false
+		logging.Logger.Info("add_vrf_share already at threshold.", zap.Int64("round", r.Number))
+		return true
 	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		logging.Logger.Info("add_vrf_share share is already there. Returning false.")
@@ -667,7 +667,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Int("round_vrf_num", len(r.getVRFShares())),
 		zap.Int("threshold", threshold))
-	return true
+	return false
 }
 
 // GetVRFShares - implement interface

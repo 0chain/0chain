@@ -373,8 +373,10 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 				continue
 			}
 
-			r.AddVRFShare(vrfs, blsThreshold)
 			removeVRFKeys[vrfs.GetParty().GetKey()] = struct{}{}
+			if enough := r.AddVRFShare(vrfs, blsThreshold); enough {
+				return nil
+			}
 		}
 		return nil
 	}); err != nil {
