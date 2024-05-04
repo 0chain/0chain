@@ -403,7 +403,8 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		// But, received a BLS message from a node now
 		Logger.Info("DKG ThresholdNumSigReceived VRF is already completed.",
 			zap.Int64("round", mr.GetRoundNumber()))
-		return false
+		// return false
+		return true
 	}
 
 	var shares = mr.GetVRFShares()
