@@ -108,12 +108,13 @@ func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
 		ticketsMap[vt.VerifierID] = true
 	}
 
-	if !c.reachedNotarization(round, hash, bvt) {
+	threashold, reached := c.reachedNotarization(round, hash, bvt)
+	if !reached {
 		return common.NewError("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
 
-	if err := c.VerifyTickets(ctx, hash, bvt, round); err != nil {
+	if err := c.VerifyTickets(ctx, hash, bvt[:threashold], round); err != nil {
 		return err
 	}
 
@@ -167,7 +168,8 @@ func (c *Chain) UpdateBlockNotarization(b *block.Block) bool {
 		return false
 	}
 
-	if c.reachedNotarization(b.Round, b.Hash, b.GetVerificationTickets()) {
+	_, reached := c.reachedNotarization(b.Round, b.Hash, b.GetVerificationTickets())
+	if reached {
 		b.SetBlockNotarized()
 		return true
 	}
@@ -176,7 +178,7 @@ func (c *Chain) UpdateBlockNotarization(b *block.Block) bool {
 }
 
 func (c *Chain) reachedNotarization(round int64, hash string,
-	bvt []*block.VerificationTicket) bool {
+	bvt []*block.VerificationTicket) (int64, bool) {
 
 	var (
 		mb        = c.GetMagicBlock(round)
@@ -195,7 +197,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 				zap.Int("num_signatures", numSignatures),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
-			return false
+			return 0, false
 		}
 	}
 	if c.ThresholdByStake() > 0 {
@@ -204,7 +206,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 			verifiersStake, err = maths.SafeAddUInt64(verifiersStake, c.getMiningStake(ticket.VerifierID))
 			if err != nil {
 				logging.Logger.Error("reached_notarization", zap.Error(err))
-				return false
+				return 0, false
 			}
 		}
 
@@ -218,11 +220,11 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 				zap.Int("signature threshold", threshold),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
-			return false
+			return 0, false
 		}
 	}
 
-	return true
+	return int64(threshold), true
 }
 
 /*
