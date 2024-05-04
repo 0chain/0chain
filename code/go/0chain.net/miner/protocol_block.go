@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -417,6 +418,25 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 		zap.Int8("state_status", b.GetStateStatus()))
 
 	return
+}
+
+var totalSuccessVerifiedBlocks int64
+
+func (mc *Chain) addSuccessVerifyBlock(round int64) {
+	num := atomic.AddInt64(&totalSuccessVerifiedBlocks, 1)
+	if num > 100 {
+		mc.setReadyToTicketsVerify(true)
+	}
+	// var rnds []int64
+	// for rnd := mc.GetLatestFinalizedBlock().Round + 1; rnd <= b.Round; rnd++ {
+	// 	rnds = append(rnds, rnd)
+	// }
+	// sort.Slice(rnds, func(i, j int) bool {
+	// 	return rnds[i] < rnds[j]
+	// })
+	// nvrs := len(rnds)
+	// mc.AddSuccessVerifyRound(b.Round)
+	// logging.Logger.Info("success verify blocks", zap.Int64("round", b.Round), zap.Int("successive_rounds", nvrs))
 }
 
 func (mc *Chain) syncAndRetry(ctx context.Context, b *block.Block, desc string, f func(ctx context.Context, ch chan struct{}) error) error {

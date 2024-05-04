@@ -277,6 +277,10 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 func (mc *Chain) handleVerificationTicketMessage(ctx context.Context,
 	msg *BlockMessage) {
 
+	if !mc.readyToTicketsVerify() {
+		return
+	}
+
 	var (
 		bvt = msg.BlockVerificationTicket
 		rn  = bvt.Round

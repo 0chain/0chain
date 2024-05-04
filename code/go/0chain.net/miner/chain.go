@@ -87,7 +87,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.nbmMutex = &sync.Mutex{}
 	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
 	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
-	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
+	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(4)
 	minerChain.generateBlockWorker = common.NewWithContextFunc(1)
 }
 
@@ -150,6 +150,7 @@ type Chain struct {
 	restartRoundEventChannel             chan struct{}      // trigger rre
 	restartRoundEventWorkerIsDoneChannel chan struct{}      // rre worker closed
 	syncMissingNodesChannel              chan struct{}
+	enableTicketsVerify                  int32
 	nbpMutex                             *sync.Mutex
 	notarizationBlockProcessMap          map[string]struct{}
 	notarizationBlockProcessC            chan *Notarization
@@ -162,6 +163,20 @@ type Chain struct {
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
 	verifyCachedVRFSharesWorker          *common.WithContextFunc
 	generateBlockWorker                  *common.WithContextFunc
+}
+
+func (mc *Chain) readyToTicketsVerify() bool {
+	return atomic.LoadInt32(&mc.enableTicketsVerify) > 0
+}
+
+func (mc *Chain) setReadyToTicketsVerify(v bool) {
+	if v {
+		if atomic.CompareAndSwapInt32(&mc.enableTicketsVerify, 0, 1) {
+			logging.Logger.Debug("set ready to tickets verify")
+		}
+	} else {
+		atomic.CompareAndSwapInt32(&mc.enableTicketsVerify, 1, 0)
+	}
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
