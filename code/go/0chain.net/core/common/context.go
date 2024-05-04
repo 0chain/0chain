@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -74,21 +75,65 @@ func HandleShutdown(server *http.Server, closers []func()) chan struct{} {
 
 // WithContextFunc provides the capacity for canceling a function by context
 type WithContextFunc struct {
-	c chan struct{}
+	name    string
+	timeout time.Duration
+	c       chan struct{}
 }
+
+type ContextFuncOption func(wcf *WithContextFunc)
 
 // NewWithContextFunc returns a WithContextFunc instance
 //
 // params:
 // - concurrent: represents the max concurrent processing number
-func NewWithContextFunc(concurrent int) *WithContextFunc {
-	return &WithContextFunc{
+func NewWithContextFunc(concurrent int, options ...ContextFuncOption) *WithContextFunc {
+	wcf := &WithContextFunc{
 		c: make(chan struct{}, concurrent),
+	}
+
+	for _, option := range options {
+		option(wcf)
+	}
+
+	return wcf
+}
+
+func OptionTimeout(duration time.Duration) ContextFuncOption {
+	return func(wcf *WithContextFunc) {
+		wcf.timeout = duration
+	}
+}
+
+func OptionRunName(name string) ContextFuncOption {
+	return func(wcf *WithContextFunc) {
+		wcf.name = name
 	}
 }
 
 // Run tries to acquire a slot from a buffered channel and runs the function
 func (wcf *WithContextFunc) Run(ctx context.Context, f func() error) error {
+	if wcf.timeout > 0 {
+		return wcf.runWithTimeout(ctx, f)
+	}
+
+	return wcf.run(ctx, f)
+}
+
+func (wcf *WithContextFunc) runWithTimeout(ctx context.Context, f func() error) error {
+	select {
+	case <-time.After(wcf.timeout):
+		return fmt.Errorf("WithContextFunc run timeout, name: %s", wcf.name)
+	case <-ctx.Done():
+		return ctx.Err()
+	case wcf.c <- struct{}{}:
+		defer func() {
+			<-wcf.c
+		}()
+		return f()
+	}
+}
+
+func (wcf *WithContextFunc) run(ctx context.Context, f func() error) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

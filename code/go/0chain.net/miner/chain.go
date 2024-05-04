@@ -87,7 +87,9 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.nbmMutex = &sync.Mutex{}
 	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
 	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
-	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(4)
+	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(4,
+		common.OptionRunName("verify_cached_vrf_shares"),
+		common.OptionTimeout(100*time.Millisecond))
 	minerChain.generateBlockWorker = common.NewWithContextFunc(1)
 }
 
