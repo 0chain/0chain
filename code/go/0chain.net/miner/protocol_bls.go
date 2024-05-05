@@ -159,8 +159,17 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 		Logger.Error("BLS sign VRFS share: could not find round"+
 			" object for non-zero round",
 			zap.Int64("PrevRoundNum", prn))
-		return "", common.NewError("no_prev_round",
-			"could not find the previous round")
+		_, err := mc.GetNotarizedBlock(context.Background(), "", prn)
+		if err != nil {
+			Logger.Error("BLS - get previous notarized block failed",
+				zap.Int64("round", prn),
+				zap.Error(err))
+			return "", fmt.Errorf("could not get previous notarized block: %v", err)
+			// return "", common.NewError("no_prev_round",
+			// 	"could not find the previous round")
+		}
+
+		pr = mc.GetMinerRound(prn)
 	}
 
 	if pr.GetRandomSeed() == 0 && pr.GetRoundNumber() > 0 {
@@ -240,9 +249,24 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	}
 
 	var (
-		vrfRTC  = vrfs.GetRoundTimeoutCount()
-		roundTC = mr.GetTimeoutCount()
+		vrfRTC       = vrfs.GetRoundTimeoutCount()
+		roundTC      = mr.GetTimeoutCount()
+		blsThreshold = dkg.T
 	)
+
+	if mr.VRFShareExist(vrfs) {
+		Logger.Debug("AddVRFShare - share already exist",
+			zap.Int64("round", rn), zap.String("share", vrfs.Share))
+		return false
+	}
+
+	if len(mr.GetVRFShares()) >= blsThreshold {
+		Logger.Info("Ignoring VRFShare. Already at threshold",
+			zap.Int64("Round", rn),
+			zap.Int("VRF_Shares", len(mr.GetVRFShares())),
+			zap.Int("bls_threshold", blsThreshold))
+		return false
+	}
 
 	if vrfRTC != roundTC {
 		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
@@ -254,23 +278,24 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 
 		// add vrf to cache if the vrf share has timeout count > round's timeout count
 		if vrfRTC > roundTC {
-			mr.vrfSharesCache.add(vrfs)
+			if mr.vrfSharesCache.add(vrfs, blsThreshold) {
+				msg, err := mc.GetBlsMessageForRound(mr.Round)
+				if err != nil {
+					Logger.Error("DKG AddVRFShare - getBlsMessageForRound",
+						zap.Int64("round", rn),
+						zap.Error(err))
+					return false
+				}
+
+				if reachedThreshold := mc.verifyCachedVRFShares(ctx, msg, mr, dkg); reachedThreshold {
+					if mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold) {
+						mc.TryProposeBlock(common.GetRootContext(), mr)
+						mc.StartVerification(common.GetRootContext(), mr)
+					}
+					return true
+				}
+			}
 		}
-		return false
-	}
-
-	if mr.VRFShareExist(vrfs) {
-		Logger.Debug("AddVRFShare - share already exist",
-			zap.Int64("round", rn), zap.String("share", vrfs.Share))
-		return false
-	}
-
-	blsThreshold := dkg.T
-	if len(mr.GetVRFShares()) >= blsThreshold {
-		Logger.Info("Ignoring VRFShare. Already at threshold",
-			zap.Int64("Round", rn),
-			zap.Int("VRF_Shares", len(mr.GetVRFShares())),
-			zap.Int("bls_threshold", blsThreshold))
 		return false
 	}
 
@@ -287,7 +312,8 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	msg, err := mc.GetBlsMessageForRound(mr.Round)
 	if err != nil {
 		// cache the vrf share if the previous round is not ready yet
-		mr.vrfSharesCache.add(vrfs)
+		// TODO: remove perhaps
+		mr.vrfSharesCache.add(vrfs, blsThreshold)
 
 		Logger.Warn("failed to get bls message", zap.String("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false

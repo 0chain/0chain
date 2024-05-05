@@ -658,7 +658,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) (enough bool) {
 		return true
 	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
-		logging.Logger.Info("add_vrf_share share is already there. Returning false.")
+		// logging.Logger.Info("add_vrf_share share is already there. Returning false.")
 		return false
 	}
 	r.setPhase(ShareVRF)

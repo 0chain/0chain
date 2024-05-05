@@ -29,9 +29,39 @@ func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
 	)
 
 	if msg.VRFShare.Round > mc.GetCurrentRound() {
+		var (
+			rn  = msg.VRFShare.Round
+			dkg = mc.GetDKG(rn)
+		)
+
+		if dkg == nil {
+			logging.Logger.Warn("handle vrf share future - dkg is nil", zap.Int64("round", rn))
+			return
+		}
+
 		logging.Logger.Debug("received VRF share for the future round, caching it",
 			zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("vrf_share_round", msg.VRFShare.Round))
-		mr.vrfSharesCache.add(msg.VRFShare)
+		// when enough tickets are received, start round here
+		if mr.vrfSharesCache.add(msg.VRFShare, dkg.T) {
+			logging.Logger.Debug("handle vrf share - future shares reached threshold",
+				zap.Int64("current_round", mc.GetCurrentRound()),
+				zap.Int64("vrf_share_round", msg.VRFShare.Round))
+			msg, err := mc.GetBlsMessageForRound(mr.Round)
+			if err != nil {
+				logging.Logger.Error("handle vrf share - failed to get bls message for round",
+					zap.Int64("round", rn), zap.Error(err))
+				return
+			}
+
+			if reachedThreshold := mc.verifyCachedVRFShares(ctx, msg, mr, dkg); reachedThreshold {
+				if mc.ThresholdNumBLSSigReceived(ctx, mr, dkg.T) {
+					mc.TryProposeBlock(common.GetRootContext(), mr)
+					mc.StartVerification(common.GetRootContext(), mr)
+				}
+			}
+			return
+		}
+
 		return
 	}
 
@@ -239,7 +269,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 				zap.Int64("round", b.Round),
 				zap.Int64("block RRS", b.GetRoundRandomSeed()),
 				zap.Int64("round RRS", mr.GetRandomSeed()))
-			//mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+			// mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 	}
 

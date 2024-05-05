@@ -80,24 +80,36 @@ func (r *Round) SetOwnVerificationTicket(ownVerificationTicket *block.BlockVerif
 
 type vrfSharesCache struct {
 	vrfShares map[string]*round.VRFShare
+	round     int64
 	mutex     *sync.Mutex
 }
 
-func newVRFSharesCache() *vrfSharesCache {
+func newVRFSharesCache(roundNum int64) *vrfSharesCache {
 	return &vrfSharesCache{
 		vrfShares: make(map[string]*round.VRFShare),
+		round:     roundNum,
 		mutex:     &sync.Mutex{},
 	}
 }
 
-func (v *vrfSharesCache) add(vrfShare *round.VRFShare) {
+func (v *vrfSharesCache) add(vrfShare *round.VRFShare, vrfThreshold int) bool {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
+	if v.round != vrfShare.Round {
+		return false
+	}
+
 	k := vrfShare.GetParty().GetKey()
 	if _, ok := v.vrfShares[k]; ok {
-		return
+		return false
 	}
 	v.vrfShares[k] = vrfShare
+
+	if len(v.vrfShares) >= vrfThreshold {
+		return true
+	}
+
+	return false
 }
 
 func (v *vrfSharesCache) getAll() []*round.VRFShare {
