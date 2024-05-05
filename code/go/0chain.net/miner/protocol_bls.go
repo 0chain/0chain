@@ -173,11 +173,20 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 	}
 
 	if pr.GetRandomSeed() == 0 && pr.GetRoundNumber() > 0 {
-		Logger.Error("BLS sign VRF share: error in getting prev. random seed",
-			zap.Int64("prev_round", pr.Number),
-			zap.Bool("prev_round_has_seed", pr.HasRandomSeed()))
-		return "", common.NewErrorf("prev_round_rrs_zero",
-			"prev. round %d random seed is 0", pr.GetRoundNumber())
+		_, err := mc.GetNotarizedBlock(context.Background(), "", prn)
+		if err != nil {
+			Logger.Error("BLS - get previous notarized block failed",
+				zap.Int64("round", prn),
+				zap.Error(err))
+			return "", fmt.Errorf("could not get previous notarized block: %v", err)
+		}
+
+		pr = mc.GetMinerRound(prn)
+		// Logger.Error("BLS sign VRF share: error in getting prev. random seed",
+		// 	zap.Int64("prev_round", pr.Number),
+		// 	zap.Bool("prev_round_has_seed", pr.HasRandomSeed()))
+		// return "", common.NewErrorf("prev_round_rrs_zero",
+		// 	"prev. round %d random seed is 0", pr.GetRoundNumber())
 	}
 
 	var (
