@@ -2853,7 +2853,6 @@ Gets transaction information from transaction hash
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
 | [200](#transaction-200) | OK | Transaction |  | [schema](#transaction-200-schema) |
-| [400](#transaction-400) | Bad Request |  |  | [schema](#transaction-400-schema) |
 | [500](#transaction-500) | Internal Server Error |  |  | [schema](#transaction-500-schema) |
 
 #### Responses
@@ -2867,11 +2866,6 @@ Status: OK
   
 
 [Transaction](#transaction)
-
-##### <span id="transaction-400"></span> 400
-Status: Bad Request
-
-###### <span id="transaction-400-schema"></span> Schema
 
 ##### <span id="transaction-500"></span> 500
 Status: Internal Server Error
@@ -2948,7 +2942,7 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
 | [200](#validators-200) | OK | Validator |  | [schema](#validators-200-schema) |
-| [500](#validators-500) | Internal Server Error |  |  | [schema](#validators-500-schema) |
+| [400](#validators-400) | Bad Request |  |  | [schema](#validators-400-schema) |
 
 #### Responses
 
@@ -2962,10 +2956,10 @@ Status: OK
 
 [Validator](#validator)
 
-##### <span id="validators-500"></span> 500
-Status: Internal Server Error
+##### <span id="validators-400"></span> 400
+Status: Bad Request
 
-###### <span id="validators-500-schema"></span> Schema
+###### <span id="validators-400-schema"></span> Schema
 
 ### <span id="vesting-config"></span> vesting config (*vesting_config*)
 
@@ -4322,6 +4316,7 @@ it can be used as a scan destination, similar to [NullString].
 | DelegateWallet | string| `string` |  | |  |  |
 | MaxNumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
 | ServiceChargeRatio | double (formatted number)| `float64` |  | |  |  |
+| min_stake | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 

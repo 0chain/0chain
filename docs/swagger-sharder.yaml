@@ -639,7 +639,7 @@ definitions:
             status:
                 $ref: '#/definitions/PoolStatus'
         type: object
-        x-go-package: 0chain.net/smartcontract/stakepool
+        x-go-package: 0chain.net/smartcontract/dto
     DelegatePoolResponse:
         properties:
             balance:
@@ -1359,41 +1359,19 @@ definitions:
     Provider:
         format: int64
         properties:
-            CreatedAt:
-                format: date-time
+            id:
                 type: string
-            ID:
-                type: string
-            UpdatedAt:
-                format: date-time
-                type: string
-            delegate_wallet:
-                type: string
-                x-go-name: DelegateWallet
-            downtime:
-                format: uint64
-                type: integer
-                x-go-name: Downtime
+                x-go-name: ID
             is_killed:
                 type: boolean
-                x-go-name: IsKilled
-            is_shutdown:
+                x-go-name: HasBeenKilled
+            is_shut_down:
                 type: boolean
-                x-go-name: IsShutdown
+                x-go-name: HasBeenShutDown
             last_health_check:
                 $ref: '#/definitions/Timestamp'
-            num_delegates:
-                format: int64
-                type: integer
-                x-go-name: NumDelegates
-            rewards:
-                $ref: '#/definitions/ProviderRewards'
-            service_charge:
-                format: double
-                type: number
-                x-go-name: ServiceCharge
-            total_stake:
-                $ref: '#/definitions/Coin'
+            provider_type:
+                $ref: '#/definitions/Provider'
         type: integer
         x-go-package: 0chain.net/smartcontract/stakepool/spenum
     ProviderRewards:
@@ -1560,6 +1538,8 @@ definitions:
             delegate_wallet:
                 type: string
                 x-go-name: DelegateWallet
+            min_stake:
+                $ref: '#/definitions/Coin'
             num_delegates:
                 format: int64
                 type: integer
@@ -1569,7 +1549,7 @@ definitions:
                 type: number
                 x-go-name: ServiceChargeRatio
         type: object
-        x-go-package: 0chain.net/smartcontract/dto
+        x-go-package: 0chain.net/smartcontract/stakepool
     SharderSnapshot:
         properties:
             creation_round:
@@ -1788,7 +1768,7 @@ definitions:
             settings:
                 $ref: '#/definitions/Settings'
         type: object
-        x-go-package: 0chain.net/smartcontract/dto
+        x-go-package: 0chain.net/smartcontract/stakepool
     StakePoolResponse:
         properties:
             minter:
@@ -3849,8 +3829,6 @@ paths:
                     description: Transaction
                     schema:
                         $ref: '#/definitions/Transaction'
-                "400":
-                    description: ""
                 "500":
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions:
@@ -3933,7 +3911,7 @@ paths:
                     description: Validator
                     schema:
                         $ref: '#/definitions/Validator'
-                "500":
+                "400":
                     description: ""
             summary: Get a list of validators based on activity and stakability. Retrieves a list of validators, optionally filtered by whether they are active and/or stakable.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers:

@@ -1448,7 +1448,7 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 // responses:
 //
 //	200: Validator
-//	500:
+//	400:
 func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request) {
 
 	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
@@ -2469,7 +2469,6 @@ func (srh *StorageRestHandler) getTransactionByFilter(w http.ResponseWriter, r *
 // responses:
 //
 //	200: Transaction
-//	400:
 //	500:
 func (srh *StorageRestHandler) getTransactionByHash(w http.ResponseWriter, r *http.Request) {
 	var transactionHash = r.URL.Query().Get("transaction_hash")
