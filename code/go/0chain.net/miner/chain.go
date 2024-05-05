@@ -91,6 +91,7 @@ func SetupMinerChain(c *chain.Chain) {
 		common.OptionRunName("verify_cached_vrf_shares"),
 		common.OptionTimeout(100*time.Millisecond))
 	minerChain.generateBlockWorker = common.NewWithContextFunc(1)
+	minerChain.rrsm = cache.NewLRUCache[int64, int64](500)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -142,6 +143,9 @@ type Chain struct {
 	roundDkg            round.RoundStorage
 	discoverClients     bool
 	started             uint32
+	// TODO: a temp rrs map for debuging purpose
+	// rrsm     cache.NewLRUCache(500) // key: round, value: rrs
+	rrsm *cache.LRU[int64, int64]
 
 	// view change process control
 	viewChangeProcess

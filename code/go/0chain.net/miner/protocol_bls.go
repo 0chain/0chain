@@ -151,46 +151,58 @@ func ComputeBlsID(key string) string {
 func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 
 	var (
-		prn = r.GetRoundNumber() - 1
-		pr  = mc.GetMinerRound(prn)
+		prn   = r.GetRoundNumber() - 1
+		pr    = mc.GetMinerRound(prn)
+		prRRS int64
 	)
 
 	if pr == nil {
 		Logger.Error("BLS sign VRFS share: could not find round"+
 			" object for non-zero round",
 			zap.Int64("PrevRoundNum", prn))
-		_, err := mc.GetNotarizedBlock(context.Background(), "", prn)
+		rrs, err := mc.rrsm.Get(prn)
 		if err != nil {
-			Logger.Error("BLS - get previous notarized block failed",
+			Logger.Error("BLS - get previous round rrs failed",
 				zap.Int64("round", prn),
 				zap.Error(err))
-			return "", fmt.Errorf("could not get previous notarized block: %v", err)
-			// return "", common.NewError("no_prev_round",
-			// 	"could not find the previous round")
+			return "", fmt.Errorf("could not get previous rrs: %v", err)
 		}
 
-		pr = mc.GetMinerRound(prn)
+		prRRS = rrs.(int64)
 	}
 
 	if pr.GetRandomSeed() == 0 && pr.GetRoundNumber() > 0 {
-		_, err := mc.GetNotarizedBlock(context.Background(), "", prn)
+		rrs, err := mc.rrsm.Get(prn)
 		if err != nil {
-			Logger.Error("BLS - get previous notarized block failed",
+			Logger.Error("BLS - get previous round rrs failed",
 				zap.Int64("round", prn),
 				zap.Error(err))
-			return "", fmt.Errorf("could not get previous notarized block: %v", err)
+			return "", fmt.Errorf("could not get previous rrs: %v", err)
 		}
 
-		pr = mc.GetMinerRound(prn)
+		prRRS = rrs.(int64)
+
+		// _, err := mc.GetNotarizedBlock(context.Background(), "", prn)
+		// if err != nil {
+		// 	Logger.Error("BLS - get previous notarized block failed",
+		// 		zap.Int64("round", prn),
+		// 		zap.Error(err))
+		// 	return "", fmt.Errorf("could not get previous notarized block: %v", err)
+		// }
+
+		// pr = mc.GetMinerRound(prn)
 		// Logger.Error("BLS sign VRF share: error in getting prev. random seed",
 		// 	zap.Int64("prev_round", pr.Number),
 		// 	zap.Bool("prev_round_has_seed", pr.HasRandomSeed()))
 		// return "", common.NewErrorf("prev_round_rrs_zero",
 		// 	"prev. round %d random seed is 0", pr.GetRoundNumber())
+	} else {
+		prRRS = pr.GetRandomSeed()
 	}
 
 	var (
-		prrs   = strconv.FormatInt(pr.GetRandomSeed(), 16) // pr.VRFOutput
+		// prrs   = strconv.FormatInt(pr.GetRandomSeed(), 16) // pr.VRFOutput
+		prrs   = strconv.FormatInt(prRRS, 16) // pr.VRFOutput
 		blsMsg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetNormalizedTimeoutCount(), prrs)
 	)
 

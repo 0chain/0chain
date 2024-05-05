@@ -9,7 +9,7 @@ import (
 
 var ErrKeyNotFound = common.NewError("missing key", "key not found")
 
-//LRU - LRU cache
+// LRU - LRU cache
 type LRU[K comparable, V any] struct {
 	Cache *lru.Cache[K, V]
 	hit   int64
@@ -17,7 +17,7 @@ type LRU[K comparable, V any] struct {
 	//lock  sync.Mutex
 }
 
-//NewLRUCache - create a new LRU cache
+// NewLRUCache - create a new LRU cache
 func NewLRUCache[K comparable, V any](size int) *LRU[K, V] {
 	c := &LRU[K, V]{}
 	c.Cache, _ = lru.New[K, V](size)
@@ -25,13 +25,13 @@ func NewLRUCache[K comparable, V any](size int) *LRU[K, V] {
 	return c
 }
 
-//Add - add a key and a value
+// Add - add a key and a value
 func (c *LRU[K, V]) Add(key K, value V) error {
 	c.Cache.Add(key, value)
 	return nil
 }
 
-//Get - get the value associated with the key
+// Get - get the value associated with the key
 func (c *LRU[K, V]) Get(key K) (interface{}, error) {
 	//c.lock.Lock()
 	//defer c.lock.Unlock()

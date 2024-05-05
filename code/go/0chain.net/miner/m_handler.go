@@ -66,11 +66,10 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 			VRFShareHandler,
 			nil,
 		),
-		"/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
-			node.ToN2NReceiveEntityHandler(
-				VerificationTicketReceiptHandler,
-				nil,
-			),
+		// "/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
+		"/v1/_m2m/block/verification_ticket": node.ToN2NReceiveEntityHandler(
+			VerificationTicketReceiptHandler,
+			nil,
 		),
 		"/v1/_m2m/block/verify": node.ToN2NReceiveEntityHandler(
 			memorystore.WithConnectionEntityJSONHandler(
@@ -288,6 +287,9 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		logging.Logger.Debug("handle verify block", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil
 	}
+
+	// DEBUG: record the block's RRS
+	mc.rrsm.Add(b.Round, b.RoundRandomSeed)
 
 	var pr = mc.GetMinerRound(b.Round - 1)
 	if pr == nil {
