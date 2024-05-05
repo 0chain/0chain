@@ -266,7 +266,7 @@ func (r *Round) Restart() error {
 	}
 
 	r.roundGuard.Lock()
-	r.vrfSharesCache = newVRFSharesCache()
+	r.vrfSharesCache = newVRFSharesCache(r.GetRoundNumber())
 	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
 	r.verificationTickets = make(map[string]*block.BlockVerificationTicket)
 	r.roundGuard.Unlock()
