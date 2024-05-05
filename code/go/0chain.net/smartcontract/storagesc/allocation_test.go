@@ -1847,6 +1847,14 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	}
 }
 
+func TestUpdateAllocationRequest(t *testing.T) {
+	// Setup allocation
+	// Tests :
+	// 1. Update single operation and check the stats and tag events
+	// 2. Update all operations at once and check the stats and events at the end
+
+}
+
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	var (
 		ssc            = newTestStorageSC()
