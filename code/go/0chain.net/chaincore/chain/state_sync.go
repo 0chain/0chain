@@ -227,6 +227,10 @@ func (c *Chain) SyncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, s
 		return nil
 	}
 
+	if err := c.SaveStateNodes(ctx, ns); err != nil {
+		return common.NewError("saving synced state nodes failed", err.Error())
+	}
+
 	atomic.AddInt64(syncedNum, int64(len(ns.Nodes)))
 
 	logging.Logger.Debug("sync missing nodes deep - get nodes", zap.Int("num", len(ns.Nodes)))
