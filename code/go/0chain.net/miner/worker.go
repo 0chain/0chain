@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -393,7 +392,9 @@ func (mc *Chain) syncMissingNodesDeepFrom(ctx context.Context, keys []util.Key) 
 	// check the responsed node types
 	ns, err := mc.GetStateNodes(ctx, keys)
 	if err != nil {
-		return fmt.Errorf("sync missing nodes deep failed: %v", err)
+		logging.Logger.Error("sync missing nodes deep failed:", zap.Error(err))
+		// return fmt.Errorf("sync missing nodes deep failed: %v", err)
+		return nil
 	}
 
 	logging.Logger.Debug("sync missing nodes deep - get nodes", zap.Int("num", len(ns.Nodes)))
