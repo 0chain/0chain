@@ -734,7 +734,7 @@ func (sc *Chain) syncLFBMissingNodes(b *block.Block) error {
 			zap.Any("missing nodes", keysStr),
 			zap.String("block", b.Hash))
 
-		if err := sc.GetStateNodes(context.Background(), keys); err != nil {
+		if err := sc.SyncStateNodes(context.Background(), keys); err != nil {
 			logging.Logger.Warn("load_lfb, sync missing nodes failed", zap.Error(err))
 			return err
 		}

@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -357,14 +358,19 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		// pull missing nodes
 		start := (idx - 1) * batchSize
 		end := idx * batchSize
-		wc := make(chan struct{}, 1)
-		mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
-		<-wc
-		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
-			zap.Int("num", batchSize),
-			zap.Int("remaining", len(missingNodes)-end))
+		// wc := make(chan struct{}, 1)
+		// mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
+		// <-wc
 
-		node.Self.Underlying().Info.SetStateMissingNodes(int64(len(missingNodes) - end))
+		if err := mc.syncMissingNodesDeepFrom(ctx, missingNodes[start:end]); err != nil {
+			logging.Logger.Error("sync all missing nodes - sync missing nodes from remote failed", zap.Error(err))
+		}
+
+		// logging.Logger.Debug("sync all missing nodes - pull missing nodes",
+		// 	zap.Int("num", batchSize),
+		// 	zap.Int("remaining", len(missingNodes)-end))
+
+		// node.Self.Underlying().Info.SetStateMissingNodes(int64(len(missingNodes) - end))
 		tk.Reset(2 * time.Second)
 	}
 
@@ -380,4 +386,38 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	}
 
 	logging.Logger.Debug("sync all missing nodes - done")
+}
+
+func (mc *Chain) syncMissingNodesDeepFrom(ctx context.Context, keys []util.Key) error {
+	// get nodes from remote by calling the mc.SyncMissingNodes first, then
+	// check the responsed node types
+	ns, err := mc.GetStateNodes(ctx, keys)
+	if err != nil {
+		return fmt.Errorf("sync missing nodes deep failed: %v", err)
+	}
+
+	logging.Logger.Debug("sync missing nodes deep - get nodes", zap.Int("num", len(ns.Nodes)))
+
+	for _, n := range ns.Nodes {
+		switch n.GetNodeType() {
+		case util.NodeTypeValueNode, util.NodeTypeLeafNode:
+			continue // continue to next node
+		case util.NodeTypeFullNode:
+			fn := n.(*util.FullNode)
+			fkeys := make([]util.Key, len(fn.Children))
+			for i, ckey := range fn.Children {
+				fkeys[i] = ckey
+			}
+
+			if err := mc.syncMissingNodesDeepFrom(ctx, fkeys); err != nil {
+				return err
+			}
+		case util.NodeTypeExtensionNode:
+			en := n.(*util.ExtensionNode)
+			if err := mc.syncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

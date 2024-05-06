@@ -529,7 +529,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 					zap.Int64("round", mns.round),
 					zap.Strings("keys", keysStr))
 
-				if err := c.GetStateNodes(ctx, mns.keys); err != nil {
+				if err := c.SyncStateNodes(ctx, mns.keys); err != nil {
 					logging.Logger.Debug("sync missing nodes failed",
 						zap.Int64("round", mns.round),
 						zap.Strings("keys", keysStr),

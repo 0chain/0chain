@@ -72,8 +72,8 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 }
 
 // GetStateNodes - get a bunch of state nodes from the network
-func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) error {
-	ns, err := c.getStateNodes(ctx, keys)
+func (c *Chain) SyncStateNodes(ctx context.Context, keys []util.Key) error {
+	ns, err := c.GetStateNodes(ctx, keys)
 	if err != nil {
 		return common.NewError("sync state nodes failed", err.Error())
 	}
@@ -149,7 +149,7 @@ func (c *Chain) SaveStateNodes(ctx context.Context, ns *state.Nodes) error {
 	return ns.SaveState(ctx, c.stateDB)
 }
 
-func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
+func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
 	nsRequestor := StateNodesRequestor
 	params := &url.Values{}
 	for _, key := range keys {
