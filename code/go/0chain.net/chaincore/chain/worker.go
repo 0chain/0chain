@@ -469,6 +469,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 	// ticker to check if the BC is stuck
 	tk := time.NewTicker(c.bcStuckCheckInterval)
+	var totalSyncNum int64
 
 	for {
 		select {
@@ -525,17 +526,17 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 					keysStr[i] = util.ToHex(mns.keys[i])
 				}
 
-				logging.Logger.Debug("sync missing nodes",
-					zap.Int64("round", mns.round),
-					zap.Strings("keys", keysStr))
-
-				if err := c.SyncStateNodes(ctx, mns.keys); err != nil {
+				if err := c.SyncMissingNodesDeepFrom(ctx, mns.keys, &totalSyncNum); err != nil {
 					logging.Logger.Debug("sync missing nodes failed",
 						zap.Int64("round", mns.round),
 						zap.Strings("keys", keysStr),
 						zap.Error(err))
 					return
 				}
+				logging.Logger.Debug("sync missing nodes",
+					zap.Int64("round", mns.round),
+					zap.Strings("keys", keysStr),
+					zap.Int64("total synced in lfb state worker", totalSyncNum))
 				synced = true
 			}()
 		case <-ctx.Done():
