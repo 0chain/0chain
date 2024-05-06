@@ -263,15 +263,15 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 		select {
 		case <-tk.C:
 			mc.syncAllMissingNodes(ctx)
-			tk.Reset(30 * time.Minute)
-			// return
+			// tk.Reset(30 * time.Minute)
+			return
 		// do all missing nodes check and sync every 30 minutes
 		// TODO: move the interval to a config file
 		// tk.Reset(30 * time.Minute)
 		case <-mc.syncMissingNodesChannel:
 			mc.syncAllMissingNodes(ctx)
-			// return
-			tk.Reset(30 * time.Minute)
+			return
+			// tk.Reset(30 * time.Minute)
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return
@@ -363,7 +363,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		// mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
 		// <-wc
 
-		if err := mc.SyncMissingNodesDeepFrom(ctx, missingNodes[start:end], &syncedNum); err != nil {
+		if err := mc.SyncMissingNodesDeepFrom(ctx, missingNodes[start:end], &syncedNum, false); err != nil {
 			logging.Logger.Error("sync all missing nodes - sync missing nodes from remote failed", zap.Error(err))
 		}
 
@@ -381,7 +381,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	if mod > 0 {
 		// wc := make(chan struct{}, 1)
 		// mc.SyncMissingNodes(lfb.Round, missingNodes[batchs*batchSize:], wc)
-		mc.SyncMissingNodesDeepFrom(ctx, missingNodes[batchs*batchSize:], &syncedNum)
+		mc.SyncMissingNodesDeepFrom(ctx, missingNodes[batchs*batchSize:], &syncedNum, false)
 		// <-wc
 		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
 			zap.Int64("total synced num", syncedNum))

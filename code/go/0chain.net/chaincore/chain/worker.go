@@ -526,7 +526,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 					keysStr[i] = util.ToHex(mns.keys[i])
 				}
 
-				if err := c.SyncMissingNodesDeepFrom(ctx, mns.keys, &totalSyncNum); err != nil {
+				if err := c.SyncMissingNodesDeepFrom(ctx, mns.keys, &totalSyncNum, true); err != nil {
 					logging.Logger.Debug("sync missing nodes failed",
 						zap.Int64("round", mns.round),
 						zap.Strings("keys", keysStr),
