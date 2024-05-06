@@ -259,12 +259,12 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 	// start in a second, repeat every 30 minutes
 	// DEBUG: do only once
-	// tk := time.NewTicker(time.Second)
+	tk := time.NewTicker(time.Second)
 	for {
 		select {
-		// case <-tk.C:
-		// 	mc.syncAllMissingNodes(ctx)
-		// 	return
+		case <-tk.C:
+			mc.syncAllMissingNodes(ctx)
+			return
 		// do all missing nodes check and sync every 30 minutes
 		// TODO: move the interval to a config file
 		// tk.Reset(30 * time.Minute)
@@ -366,9 +366,9 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 			logging.Logger.Error("sync all missing nodes - sync missing nodes from remote failed", zap.Error(err))
 		}
 
-		// logging.Logger.Debug("sync all missing nodes - pull missing nodes",
-		// 	zap.Int("num", batchSize),
-		// 	zap.Int("remaining", len(missingNodes)-end))
+		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
+			zap.Int("num", batchSize),
+			zap.Int("remaining start nodes", len(missingNodes)-end))
 
 		// node.Self.Underlying().Info.SetStateMissingNodes(int64(len(missingNodes) - end))
 		tk.Reset(2 * time.Second)
