@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -264,14 +263,15 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 		select {
 		case <-tk.C:
 			mc.syncAllMissingNodes(ctx)
-			return
+			tk.Reset(30 * time.Minute)
+			// return
 		// do all missing nodes check and sync every 30 minutes
 		// TODO: move the interval to a config file
 		// tk.Reset(30 * time.Minute)
 		case <-mc.syncMissingNodesChannel:
 			mc.syncAllMissingNodes(ctx)
-			return
-			// tk.Reset(30 * time.Minute)
+			// return
+			tk.Reset(30 * time.Minute)
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return
@@ -363,7 +363,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		// mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
 		// <-wc
 
-		if err := mc.syncMissingNodesDeepFrom(ctx, missingNodes[start:end], &syncedNum); err != nil {
+		if err := mc.SyncMissingNodesDeepFrom(ctx, missingNodes[start:end], &syncedNum); err != nil {
 			logging.Logger.Error("sync all missing nodes - sync missing nodes from remote failed", zap.Error(err))
 		}
 
@@ -381,7 +381,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	if mod > 0 {
 		// wc := make(chan struct{}, 1)
 		// mc.SyncMissingNodes(lfb.Round, missingNodes[batchs*batchSize:], wc)
-		mc.syncMissingNodesDeepFrom(ctx, missingNodes[batchs*batchSize:], &syncedNum)
+		mc.SyncMissingNodesDeepFrom(ctx, missingNodes[batchs*batchSize:], &syncedNum)
 		// <-wc
 		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
 			zap.Int64("total synced num", syncedNum))
@@ -390,42 +390,42 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	logging.Logger.Debug("sync all missing nodes - done")
 }
 
-func (mc *Chain) syncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, syncedNum *int64) error {
-	// get nodes from remote by calling the mc.SyncMissingNodes first, then
-	// check the responsed node types
-	ns, err := mc.GetStateNodes(ctx, keys)
-	if err != nil {
-		logging.Logger.Error("sync missing nodes deep failed:", zap.Error(err))
-		// return fmt.Errorf("sync missing nodes deep failed: %v", err)
-		return nil
-	}
+// func (mc *Chain) syncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, syncedNum *int64) error {
+// 	// get nodes from remote by calling the mc.SyncMissingNodes first, then
+// 	// check the responsed node types
+// 	ns, err := mc.GetStateNodes(ctx, keys)
+// 	if err != nil {
+// 		logging.Logger.Error("sync missing nodes deep failed:", zap.Error(err))
+// 		// return fmt.Errorf("sync missing nodes deep failed: %v", err)
+// 		return nil
+// 	}
 
-	atomic.AddInt64(syncedNum, int64(len(ns.Nodes)))
+// 	atomic.AddInt64(syncedNum, int64(len(ns.Nodes)))
 
-	logging.Logger.Debug("sync missing nodes deep - get nodes", zap.Int("num", len(ns.Nodes)))
+// 	logging.Logger.Debug("sync missing nodes deep - get nodes", zap.Int("num", len(ns.Nodes)))
 
-	for _, n := range ns.Nodes {
-		switch n.GetNodeType() {
-		case util.NodeTypeValueNode, util.NodeTypeLeafNode:
-			continue // continue to next node
-		case util.NodeTypeFullNode:
-			fn := n.(*util.FullNode)
-			fkeys := make([]util.Key, len(fn.Children))
-			for i, ckey := range fn.Children {
-				fkeys[i] = ckey
-			}
+// 	for _, n := range ns.Nodes {
+// 		switch n.GetNodeType() {
+// 		case util.NodeTypeValueNode, util.NodeTypeLeafNode:
+// 			continue // continue to next node
+// 		case util.NodeTypeFullNode:
+// 			fn := n.(*util.FullNode)
+// 			fkeys := make([]util.Key, len(fn.Children))
+// 			for i, ckey := range fn.Children {
+// 				fkeys[i] = ckey
+// 			}
 
-			mc.syncMissingNodesDeepFrom(ctx, fkeys, syncedNum)
-			// if err := mc.syncMissingNodesDeepFrom(ctx, fkeys); err != nil {
-			// return err
-			// }
-		case util.NodeTypeExtensionNode:
-			en := n.(*util.ExtensionNode)
-			mc.syncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}, syncedNum)
-			// if err := mc.syncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}); err != nil {
-			// return err
-			// }
-		}
-	}
-	return nil
-}
+// 			mc.syncMissingNodesDeepFrom(ctx, fkeys, syncedNum)
+// 			// if err := mc.syncMissingNodesDeepFrom(ctx, fkeys); err != nil {
+// 			// return err
+// 			// }
+// 		case util.NodeTypeExtensionNode:
+// 			en := n.(*util.ExtensionNode)
+// 			mc.syncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}, syncedNum)
+// 			// if err := mc.syncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}); err != nil {
+// 			// return err
+// 			// }
+// 		}
+// 	}
+// 	return nil
+// }

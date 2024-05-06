@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -214,6 +215,46 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	}
 
 	return ns, nil
+}
+
+func (c *Chain) SyncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, syncedNum *int64) error {
+	// get nodes from remote by calling the mc.SyncMissingNodes first, then
+	// check the responsed node types
+	ns, err := c.GetStateNodes(ctx, keys)
+	if err != nil {
+		logging.Logger.Error("sync missing nodes deep failed:", zap.Error(err))
+		// return fmt.Errorf("sync missing nodes deep failed: %v", err)
+		return nil
+	}
+
+	atomic.AddInt64(syncedNum, int64(len(ns.Nodes)))
+
+	logging.Logger.Debug("sync missing nodes deep - get nodes", zap.Int("num", len(ns.Nodes)))
+
+	for _, n := range ns.Nodes {
+		switch n.GetNodeType() {
+		case util.NodeTypeValueNode, util.NodeTypeLeafNode:
+			continue // continue to next node
+		case util.NodeTypeFullNode:
+			fn := n.(*util.FullNode)
+			fkeys := make([]util.Key, len(fn.Children))
+			for i, ckey := range fn.Children {
+				fkeys[i] = ckey
+			}
+
+			c.SyncMissingNodesDeepFrom(ctx, fkeys, syncedNum)
+			// if err := mc.syncMissingNodesDeepFrom(ctx, fkeys); err != nil {
+			// return err
+			// }
+		case util.NodeTypeExtensionNode:
+			en := n.(*util.ExtensionNode)
+			c.SyncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}, syncedNum)
+			// if err := mc.syncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}); err != nil {
+			// return err
+			// }
+		}
+	}
+	return nil
 }
 
 func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
