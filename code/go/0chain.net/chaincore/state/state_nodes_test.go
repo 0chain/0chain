@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
@@ -538,4 +539,5 @@ func TestStateNodesMarshalMsgpack(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, nodes, nd)
+	fmt.Println("version:", nd.Nodes[0].GetVersion())
 }
