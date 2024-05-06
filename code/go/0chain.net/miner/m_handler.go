@@ -62,21 +62,21 @@ const (
 
 func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlerfMap := map[string]common.ReqRespHandlerf{
-		vrfsShareRoundM2MV1Pattern: node.ToN2NReceiveEntityHandler(
-			VRFShareHandler,
-			nil,
+		vrfsShareRoundM2MV1Pattern: node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				VRFShareHandler,
+				nil,
+			)),
+		"/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil),
 		),
-		// "/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
-		"/v1/_m2m/block/verification_ticket": node.ToN2NReceiveEntityHandler(
-			VerificationTicketReceiptHandler,
-			nil,
-		),
-		"/v1/_m2m/block/verify": node.ToN2NReceiveEntityHandler(
-			memorystore.WithConnectionEntityJSONHandler(
-				VerifyBlockHandler,
-				datastore.GetEntityMetadata("block")),
-			nil,
-		),
+		"/v1/_m2m/block/verify": node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				memorystore.WithConnectionEntityJSONHandler(
+					VerifyBlockHandler,
+					datastore.GetEntityMetadata("block")),
+				nil,
+			)),
 		blockNotarizationPattern: node.ToN2NReceiveEntityHandler(
 			NotarizationReceiptHandler,
 			nil,
