@@ -886,9 +886,7 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
-	if err != nil {
-		return "", err
-	}
+	
 	dp, ok := sp.GetPools()[t.ClientID]
 	if !ok {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
