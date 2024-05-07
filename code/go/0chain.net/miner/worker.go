@@ -311,6 +311,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 
 	var (
 		missingNodes []util.Key
+		doneClean    = make(chan struct{})
 	)
 
 	// get all missing nodes from LFB
@@ -329,6 +330,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 			logging.Logger.Debug("sync all missing nodes - start cleaning up dead nodes...")
 			mc.GetStateDB().(*util.PNodeDB).CleanupDeadNodes(ctx, lfb.Round)
 			logging.Logger.Debug("sync all missing nodes - done cleaning up dead!!")
+			close(doneClean)
 		}()
 
 		// Record the number of missing nodes and the time it took to acquire them
@@ -393,6 +395,8 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 			zap.Int64("total synced num", syncedNum))
 	}
 
+	<-doneClean
+	mc.SetInitStateSynced()
 	logging.Logger.Debug("sync all missing nodes - done")
 }
 

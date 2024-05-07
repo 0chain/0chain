@@ -424,7 +424,7 @@ func (c *Chain) IsBlockSyncing() bool {
 		currentRound = c.GetCurrentRound()
 	)
 
-	if currentRound < lfbTkt.Round ||
+	if !c.IsInitStateSynced() || currentRound < lfbTkt.Round ||
 		lfb.Round+aheadN < lfbTkt.Round ||
 		lfb.Round+int64(config.GetLFBTicketAhead()) < currentRound {
 		return true

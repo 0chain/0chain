@@ -219,6 +219,16 @@ type Chain struct {
 	OnBlockAdded func(b *block.Block)
 
 	stateCache *statecache.StateCache
+
+	initStateSynced int32
+}
+
+func (c *Chain) SetInitStateSynced() {
+	atomic.CompareAndSwapInt32(&c.initStateSynced, 0, 1)
+}
+
+func (c *Chain) IsInitStateSynced() bool {
+	return atomic.LoadInt32(&c.initStateSynced) == 1
 }
 
 type stateNodeStat struct {
