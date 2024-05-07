@@ -436,7 +436,9 @@ func (c *Chain) SyncMissingNodes(round int64, keys []util.Key, wc ...chan struct
 			}:
 				return
 			case <-time.After(time.Second):
-				logging.Logger.Debug("push to sync missing nodes channel timeout, retry...")
+				// logging.Logger.Debug("push to sync missing nodes channel timeout, retry...")
+				logging.Logger.Debug("push to sync missing nodes channel timeout")
+				return
 			}
 		}
 	}()
@@ -526,7 +528,8 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 					keysStr[i] = util.ToHex(mns.keys[i])
 				}
 
-				if err := c.SyncMissingNodesDeepFrom(ctx, mns.keys, &totalSyncNum, true); err != nil {
+				// if err := c.SyncMissingNodesDeepFrom(ctx, mns.keys, &totalSyncNum, true); err != nil {
+				if err := c.SyncStateNodes(ctx, mns.keys); err != nil {
 					logging.Logger.Debug("sync missing nodes failed",
 						zap.Int64("round", mns.round),
 						zap.Strings("keys", keysStr),
