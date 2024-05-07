@@ -538,8 +538,8 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				}
 				logging.Logger.Debug("sync missing nodes",
 					zap.Int64("round", mns.round),
-					zap.Strings("keys", keysStr),
-					zap.Int64("total synced in lfb state worker", totalSyncNum))
+					zap.Strings("keys", keysStr))
+				// zap.Int64("total synced in lfb state worker", totalSyncNum))
 				synced = true
 			}()
 		case <-ctx.Done():

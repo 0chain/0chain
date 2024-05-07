@@ -325,6 +325,12 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 			continue
 		}
 
+		go func() {
+			logging.Logger.Debug("sync all missing nodes - start cleaning up dead nodes...")
+			mc.GetStateDB().(*util.PNodeDB).CleanupDeadNodes(ctx, lfb.Round)
+			logging.Logger.Debug("sync all missing nodes - done cleaning up dead!!")
+		}()
+
 		// Record the number of missing nodes and the time it took to acquire them
 		mc.MissingNodesStat.Counter.Inc(int64(len(missingNodes)))
 		mc.MissingNodesStat.Timer.UpdateSince(start)

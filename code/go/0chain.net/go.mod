@@ -40,14 +40,14 @@ require (
 )
 
 require (
-	github.com/0chain/common v1.13.0
+	github.com/0chain/common v1.13.1-0.20240507044424-c65bfb02ee79
 	github.com/0chain/gosdk v1.13.6
 	github.com/go-faker/faker/v4 v4.2.0
-	github.com/herumi/bls v1.37.0
 	github.com/herumi/bls-go-binary v1.33.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9
 	github.com/linxGnu/grocksdb v1.8.1
+	github.com/minio/sha256-simd v1.0.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
@@ -69,7 +69,6 @@ require (
 	github.com/aws/smithy-go v1.16.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.26 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/minio/sha256-simd v1.0.1 // indirect
 )
 
 require (
@@ -101,7 +100,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.3.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
