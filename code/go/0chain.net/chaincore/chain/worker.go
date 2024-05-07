@@ -471,7 +471,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 	// ticker to check if the BC is stuck
 	tk := time.NewTicker(c.bcStuckCheckInterval)
-	var totalSyncNum int64
+	// var totalSyncNum int64
 
 	for {
 		select {
