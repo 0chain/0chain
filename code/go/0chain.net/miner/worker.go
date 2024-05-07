@@ -329,8 +329,8 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 
 		go func() {
 			logging.Logger.Debug("sync all missing nodes - start cleaning up dead nodes...")
-			mc.GetStateDB().(*util.PNodeDB).CleanupDeadNodes(ctx, lfb.Round)
-			logging.Logger.Debug("sync all missing nodes - done cleaning up dead!!")
+			cleanNum := mc.GetStateDB().(*util.PNodeDB).CleanupDeadNodes(ctx, lfb.Round)
+			logging.Logger.Debug("sync all missing nodes - done cleaning up dead!!", zap.Int64("num", cleanNum))
 			close(doneClean)
 		}()
 
