@@ -312,6 +312,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	var (
 		missingNodes []util.Key
 		doneClean    = make(chan struct{})
+		roundNum     = lfb.Round
 	)
 
 	// get all missing nodes from LFB
@@ -371,7 +372,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 		// mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
 		// <-wc
 
-		if err := mc.SyncMissingNodesDeepFrom(ctx, missingNodes[start:end], &syncedNum, false); err != nil {
+		if err := mc.SyncMissingNodesDeepFrom(ctx, missingNodes[start:end], roundNum, &syncedNum, false); err != nil {
 			logging.Logger.Error("sync all missing nodes - sync missing nodes from remote failed", zap.Error(err))
 		}
 
@@ -389,7 +390,7 @@ func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
 	if mod > 0 {
 		// wc := make(chan struct{}, 1)
 		// mc.SyncMissingNodes(lfb.Round, missingNodes[batchs*batchSize:], wc)
-		mc.SyncMissingNodesDeepFrom(ctx, missingNodes[batchs*batchSize:], &syncedNum, false)
+		mc.SyncMissingNodesDeepFrom(ctx, missingNodes[batchs*batchSize:], roundNum, &syncedNum, false)
 		// <-wc
 		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
 			zap.Int64("total synced num", syncedNum))

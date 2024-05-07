@@ -217,7 +217,7 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	return ns, nil
 }
 
-func (c *Chain) SyncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, syncedNum *int64, localCheck bool) error {
+func (c *Chain) SyncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, version int64, syncedNum *int64, localCheck bool) error {
 	var (
 		ns             *state.Nodes
 		err            error
@@ -229,6 +229,10 @@ func (c *Chain) SyncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, s
 				logging.Logger.Error("sync missing nodes deep failed:", zap.Error(err))
 				// return fmt.Errorf("sync missing nodes deep failed: %v", err)
 				return nil, nil
+			}
+
+			for i := range ns.Nodes {
+				ns.Nodes[i].SetVersion(util.Sequence(version))
 			}
 
 			if err := c.SaveStateNodes(ctx, ns); err != nil {
@@ -271,13 +275,13 @@ func (c *Chain) SyncMissingNodesDeepFrom(ctx context.Context, keys []util.Key, s
 				fkeys[i] = ckey
 			}
 
-			c.SyncMissingNodesDeepFrom(ctx, fkeys, syncedNum, true)
+			c.SyncMissingNodesDeepFrom(ctx, fkeys, version, syncedNum, true)
 			// if err := mc.syncMissingNodesDeepFrom(ctx, fkeys); err != nil {
 			// return err
 			// }
 		case util.NodeTypeExtensionNode:
 			en := n.(*util.ExtensionNode)
-			c.SyncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}, syncedNum, true)
+			c.SyncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}, version, syncedNum, true)
 			// if err := mc.syncMissingNodesDeepFrom(ctx, []util.Key{en.NodeKey}); err != nil {
 			// return err
 			// }
