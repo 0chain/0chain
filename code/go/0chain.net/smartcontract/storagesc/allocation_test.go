@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -1847,12 +1848,142 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	}
 }
 
+func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, client *Client, tp int64, balances *testBalances, mockBlobberCapacity int, zeroStats bool) (alloc *StorageAllocation) {
+	var err error
+
+	allocID, _ := addAllocation(t, ssc, client, tp, 0, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	if !zeroStats {
+		for _, ba := range alloc.BlobberAllocs {
+			const allocRoot = "alloc-root-1"
+			var cc = &BlobberCloseConnection{
+				AllocationRoot:     allocRoot,
+				PrevAllocationRoot: "",
+				WriteMarker:        &WriteMarker{},
+			}
+			wm1 := &writeMarkerV1{
+				AllocationRoot:         allocRoot,
+				PreviousAllocationRoot: "",
+				AllocationID:           allocID,
+				Size:                   10 * 1024 * 1024, // 100 MB
+				BlobberID:              ba.BlobberID,
+				Timestamp:              common.Timestamp(tp),
+				ClientID:               client.id,
+			}
+			wm1.Signature, err = client.scheme.Sign(
+				encryption.Hash(wm1.GetHashData()))
+			require.NoError(t, err)
+			cc.WriteMarker.SetEntity(wm1)
+			var tx = newTransaction(ba.BlobberID, ssc.ID, 0, tp)
+			balances.setTransaction(t, tx)
+			resp, err := ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
+			require.NoError(t, err)
+			require.NotZero(t, resp)
+		}
+	}
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	return alloc
+}
+
+func compareAllocationData(t *testing.T, beforeAlloc, afterAlloc StorageAllocation) {
+	beforeAllocJson, err := json.Marshal(beforeAlloc)
+	require.NoError(t, err)
+
+	afterAllocJson, err := json.Marshal(afterAlloc)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, string(beforeAllocJson), string(afterAllocJson))
+}
+
 func TestUpdateAllocationRequest(t *testing.T) {
-	// Setup allocation
 	// Tests :
 	// 1. Update single operation and check the stats and tag events
 	// 2. Update all operations at once and check the stats and events at the end
 
+	var (
+		ssc                 = newTestStorageSC()
+		balances            = newTestBalances(t, false)
+		mockBlobberCapacity = 2 * GB
+	)
+
+	t.Run("Extend unused allocation duration should work without adding extra payment", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			allocID     = beforeAlloc.ID
+		)
+
+		// extend
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.Extend = true
+		tp += int64(360 * time.Hour / 1e9)
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.Expiration, "Allocation expiration should be increased")
+
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+
+		beforeAlloc.Tx = afterAlloc.Tx
+		beforeAlloc.Expiration = afterAlloc.Expiration
+		compareAllocationData(t, *beforeAlloc, *afterAlloc)
+	})
+
+	t.Run("Extend used allocation duration should work with adding extra payment", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			// Allocation
+			beforeAlloc = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID     = beforeAlloc.ID
+		)
+
+		require.Equal(t, 0, int(beforeAlloc.WritePool), "Write pool should be zero")
+
+		// extend
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.Extend = true
+		tp += int64(360 * time.Hour)
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 100*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.Expiration, "Allocation expiration should be increased")
+		require.Equal(t, 100*x10, int(afterAlloc.WritePool), "Write pool should be updated")
+
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+
+		beforeAlloc.Tx = afterAlloc.Tx
+		beforeAlloc.Expiration = afterAlloc.Expiration
+		compareAllocationData(t, *beforeAlloc, *afterAlloc)
+	})
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {

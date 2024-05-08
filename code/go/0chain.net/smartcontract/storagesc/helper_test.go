@@ -370,16 +370,16 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.OwnerPublicKey = client.pk
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
-	nar.Size = 1 * GB // 2 GB
+	nar.Size = 10 * GB // 20 GB
 
 	for i := 0; i < nblobs; i++ {
-		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
+		var b = addBlobber(t, ssc, 200*GB, now, avgTerms, 5000*x10, balances)
 		nar.Blobbers = append(nar.Blobbers, b.id)
 		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		blobs = append(blobs, b)
 	}
 
-	var resp, err = nar.callNewAllocReq(t, client.id, 1000*x10, ssc, now,
+	var resp, err = nar.callNewAllocReq(t, client.id, 100*x10, ssc, now,
 		balances)
 	require.NoError(t, err)
 
