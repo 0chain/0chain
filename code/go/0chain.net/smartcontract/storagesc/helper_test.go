@@ -358,7 +358,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	allocID string, blobs []*Client) {
 
 	if nblobs <= 0 {
-		nblobs = 30
+		nblobs = 20
 	}
 
 	setConfig(t, balances)
@@ -377,6 +377,13 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		nar.Blobbers = append(nar.Blobbers, b.id)
 		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		blobs = append(blobs, b)
+	}
+
+	for i := 0; i < nblobs; i++ {
+		sp, err := ssc.getStakePool(spenum.Blobber, blobs[i].id, balances)
+		require.NoError(t, err)
+		require.EqualValues(t, 0, sp.TotalOffers)
+		fmt.Println(" > Total offers : ", blobs[i].id, " : ", sp.TotalOffers)
 	}
 
 	var resp, err = nar.callNewAllocReq(t, client.id, 100*x10, ssc, now,

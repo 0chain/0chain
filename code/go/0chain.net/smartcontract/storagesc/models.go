@@ -1428,6 +1428,14 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"error removing offer: "+err.Error())
 			}
 
+			actErr = cstate.WithActivation(balances, "athena", func() (e error) { return },
+				func() (e error) {
+					return sp.Save(spenum.Blobber, d.BlobberID, balances)
+				})
+			if actErr != nil {
+				return actErr
+			}
+
 			cp, err := sc.getChallengePool(sa.ID, balances)
 			if err != nil {
 				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)

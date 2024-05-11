@@ -981,8 +981,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", err
 	}
 
-	fmt.Println("cpiv", alloc.BlobberAllocs[0].ChallengePoolIntegralValue)
-
 	if t.ClientID != alloc.Owner {
 		if !alloc.ThirdPartyExtendable || !request.Extend {
 			return "", common.NewError("allocation_updating_failed",
