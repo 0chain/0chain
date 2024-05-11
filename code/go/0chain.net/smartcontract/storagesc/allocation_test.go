@@ -2068,6 +2068,23 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			fmt.Println(" >>>>>>> Total offers : ", b.id, " : ", sp.TotalOffers)
 		}
 
+		// Cancel allocation
+		tp += 1000
+		var req2 lockRequest
+		req2.AllocationID = allocID
+
+		var tx = newTransaction(client.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		_, err = ssc.cancelAllocationRequest(tx, mustEncode(t, &req2), balances)
+		require.NoError(t, err)
+
+		for _, b := range blobberClients {
+			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
+			require.NoError(t, err)
+
+			fmt.Println(" >>>>>>> Total offers : ", b.id, " : ", sp.TotalOffers)
+		}
+
 		return
 
 		var deco StorageAllocation
