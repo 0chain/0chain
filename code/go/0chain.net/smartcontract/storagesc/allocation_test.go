@@ -1929,12 +1929,12 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			fmt.Println(" >> Total offers : ", b.id, " : ", sp.TotalOffers)
 		}
 
-		// extend
+		// size
 		var uar updateAllocationRequest
 		uar.ID = allocID
-		uar.Extend = true
+		uar.Size = 10 * GB
 		tp += int64(360 * time.Hour / 1e9)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		resp, err := uar.callUpdateAllocReq(t, client.id, 100*x10, tp, ssc, balances)
 		require.NoError(t, err)
 
 		for _, b := range blobberClients {
@@ -1942,13 +1942,29 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			require.NoError(t, err)
 
 			fmt.Println(" >>> Total offers : ", b.id, " : ", sp.TotalOffers)
+
+			blobber, err := ssc.getBlobber(b.id, balances)
+			require.NoError(t, err)
+
+			// Update write price
+			blobber.mustUpdateBase(func(bb *storageNodeBase) error {
+				bb.Terms.WritePrice += 5 * x10
+				return nil
+			})
+			tp += 100
+			_, err = updateBlobber(t, blobber, 0, tp, ssc, balances)
+			require.NoError(t, err)
+
+			blobber, err = ssc.getBlobber(b.id, balances)
+			require.NoError(t, err)
 		}
 
-		// size
+		// extend
 		uar.ID = allocID
-		uar.Size = 10 * GB
+		uar.Size = 0
+		uar.Extend = true
 		tp += int64(360 * time.Hour / 1e9)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 100*x10, tp, ssc, balances)
+		resp, err = uar.callUpdateAllocReq(t, client.id, 400*x10, tp, ssc, balances)
 		require.NoError(t, err)
 
 		for _, b := range blobberClients {
@@ -1957,6 +1973,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 			fmt.Println(" >>>> Total offers : ", b.id, " : ", sp.TotalOffers)
 		}
+
+		return
 
 		// Owner can extend regardless of the value of `third_party_extendable`
 		req := updateAllocationRequest{

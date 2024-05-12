@@ -739,6 +739,7 @@ func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *
 }
 
 func (d *BlobberAllocation) Offer() currency.Coin {
+	fmt.Println("Offer", d.Size, sizeInGB(d.Size), d.Terms.WritePrice)
 	return currency.Coin(sizeInGB(d.Size) * float64(d.Terms.WritePrice))
 }
 

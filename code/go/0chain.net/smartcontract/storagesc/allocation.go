@@ -838,6 +838,8 @@ func (sc *StorageSmartContract) extendAllocation(
 		originalRemainingDuration = alloc.Expiration - txn.CreationDate
 	)
 
+	fmt.Println("Diff: ", diff, " Size: ", size)
+
 	alloc.Expiration = common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()) // new expiration
 
 	alloc.Size += req.Size // new size
@@ -894,6 +896,8 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		// update blobber's offer
 		newOffer := details.Offer()
+
+		fmt.Println("New Offer: ", newOffer, " Old Offer: ", oldOffer)
 		if newOffer != oldOffer {
 			if newOffer > oldOffer {
 				coin, err := currency.MinusCoin(newOffer, oldOffer)
