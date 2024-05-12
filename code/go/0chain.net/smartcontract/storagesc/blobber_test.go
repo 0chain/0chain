@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"encoding/hex"
 	"fmt"
 	"github.com/minio/sha256-simd"
@@ -1337,7 +1338,7 @@ type LoopRequest struct {
 	PrevAllocatedRootsArray      *[]string
 	WmSizeAllocatedArray         *[]int64
 	IsRollbackRequest            bool
-	NumberOfWrites               *int
+	NumberOfWrites               *int64
 }
 
 func (lr *LoopRequest) createChainData(t *testing.T, iterIndx int, allocationRoot string) (chainHash string, err error) {
@@ -1429,6 +1430,34 @@ func (lr *LoopRequest) checkDataPostCommit(t *testing.T, wm *writeMarkerV2) {
 	require.EqualValues(t, alloc.Stats.UsedSize, *lr.EndWriteMarkerAllocSavedData)
 }
 
+func (lr *LoopRequest) checkEmitEvents(t *testing.T, wm *writeMarkerV2) {
+	events := lr.Balances.GetEvents()
+	require.EqualValues(t, 5, len(events))
+	alloc, err := lr.Ssc.getAllocation(*lr.AllocId, lr.Balances)
+	require.NoError(t, err)
+	requiredEventTags := []event.EventTag{event.TagToChallengePool, event.TagAddOrUpdateChallengePool, event.TagAddWriteMarker, event.TagUpdateAllocationStat, event.TagUpdateBlobberStat, event.TagFromChallengePool}
+	for i, evnt := range events {
+		require.Contains(t, requiredEventTags, evnt.Tag)
+		if evnt.Tag == event.TagAddWriteMarker {
+			myInst := *events[i].Data.(*event.WriteMarker)
+			require.EqualValues(t, wm.Size, myInst.Size)
+			require.EqualValues(t, wm.AllocationRoot, myInst.AllocationRoot)
+			require.EqualValues(t, wm.Signature, myInst.Signature)
+		} else if evnt.Tag == event.TagUpdateAllocationStat {
+			myInst := *events[i].Data.(*event.Allocation)
+			require.EqualValues(t, *lr.EndWriteMarkerAllocSavedData, myInst.UsedSize)
+			require.EqualValues(t, *lr.NumberOfWrites, myInst.NumWrites)
+			require.EqualValues(t, alloc.MovedToChallenge, myInst.MovedToChallenge)
+			require.EqualValues(t, alloc.MovedBack, myInst.MovedBack)
+			require.EqualValues(t, alloc.WritePool, myInst.WritePool)
+		} else if evnt.Tag == event.TagUpdateBlobberStat {
+			myInst := (events[i].Data).(event.Blobber)
+			//changeSize := int64(float64(wm.Size) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+			require.EqualValues(t, wm.Size, myInst.SavedData)
+		}
+	}
+}
+
 func (lr *LoopRequest) checkDataPostLoop(t *testing.T) {
 
 	// check out
@@ -1507,11 +1536,17 @@ func (req *LoopRequest) runWmRequestInLoopAndTest(t *testing.T) {
 		*req.NumberOfWrites++
 
 		req.checkDataPostCommit(t, wm)
-
+		req.checkEmitEvents(t, wm)
+		req.flushEventsListFromBalances(t)
 		*req.PrevHash = chainHash
 		*req.PrevAllocRoot = allocationRoot
 	}
 	req.checkDataPostLoop(t)
+}
+
+func (req *LoopRequest) flushEventsListFromBalances(t *testing.T) {
+	req.Balances.events = []event.Event{}
+	return
 }
 
 func TestCommitBlobberConnection(t *testing.T) {
@@ -1544,7 +1579,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 	require.NotNil(t, b1)
 
 	movedBalance := currency.Coin(0)
-	totalNumWrites := 0
+	totalNumWrites := int64(0)
 	endWriteMarkerAllocSavedData := int64(0)
 
 	t.Run("write 10 write-markers in a row", func(t *testing.T) {
@@ -1597,6 +1632,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 			WmSize:                       wmSize,
 			NumberOfWrites:               &totalNumWrites,
 		}
+		loopRequest.flushEventsListFromBalances(t)
 		loopRequest.runWmRequestInLoopAndTest(t)
 	})
 
@@ -1661,6 +1697,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 			NumberOfWrites:               &totalNumWrites,
 		}
 		//10 +ve WMs
+		loopRequest.flushEventsListFromBalances(t)
 		loopRequest.runWmRequestInLoopAndTest(t)
 
 		//rollback of last 10+ve WMs
@@ -1740,6 +1777,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 			NumberOfWrites:               &totalNumWrites,
 		}
 
+		loopRequest.flushEventsListFromBalances(t)
 		loopRequest.runWmRequestInLoopAndTest(t)
 
 		var WmSizeDel []int64
@@ -1812,7 +1850,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 			IsRollbackRequest:            false,
 			NumberOfWrites:               &totalNumWrites,
 		}
-
+		loopRequest.flushEventsListFromBalances(t)
 		loopRequest.runWmRequestInLoopAndTest(t)
 
 		loopRequest.IsRollbackRequest = true
@@ -1891,7 +1929,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 			WmSizeAllocatedArray:         &wmSizeArr,
 			NumberOfWrites:               &totalNumWrites,
 		}
-
+		loopRequest.flushEventsListFromBalances(t)
 		//+ve 10 WM
 		loopRequest.runWmRequestInLoopAndTest(t)
 
@@ -1979,7 +2017,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 			WmSizeAllocatedArray:         &wmSizeArr,
 			NumberOfWrites:               &totalNumWrites,
 		}
-
+		loopRequest.flushEventsListFromBalances(t)
 		//+ve 10 WM
 		loopRequest.runWmRequestInLoopAndTest(t)
 
