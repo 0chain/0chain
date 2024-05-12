@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/smartcontract/dbs"
 	"github.com/0chain/common/core/logging"
 
 	"0chain.net/chaincore/transaction"
@@ -38,10 +39,11 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 		errMsg          string
 	}
 
-	setup := func(t *testing.T, arg args) (*StakePool, state.StateContextI) {
+	setup := func(t *testing.T, arg args, w want) (*StakePool, state.StateContextI, map[string]currency.Coin) {
 		var (
-			balances = newTestBalances(t, false)
-			sp       = NewStakePool()
+			balances        = newTestBalances(t, false)
+			sp              = NewStakePool()
+			DelegateRewards = make(map[string]currency.Coin)
 		)
 		require.GreaterOrEqual(t, arg.serviceChargeRatio, float64(0))
 		require.LessOrEqual(t, arg.serviceChargeRatio, float64(1))
@@ -52,10 +54,13 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 				DelegateID: delegateId,
 				Balance:    arg.delegateBal[i],
 			}
+			if arg.serviceChargeRatio < 1 && len(w.eventTags) > 0 {
+				DelegateRewards[delegateId] = w.delegateRewards[i]
+			}
 			sp.Settings.ServiceChargeRatio = arg.serviceChargeRatio
 		}
 
-		return sp, balances
+		return sp, balances, DelegateRewards
 	}
 
 	validate := func(t *testing.T, sp *StakePool, want want) {
@@ -237,7 +242,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sp, balances := setup(t, tt.args)
+			sp, balances, DelegateRewards := setup(t, tt.args, tt.want)
 			err := sp.DistributeRewards(tt.args.value, providerID, providerType, spenum.BlockRewardBlobber, balances)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
@@ -248,6 +253,18 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 			if len(tt.want.eventTags) > 0 {
 				for i, event := range events {
 					require.EqualValues(t, tt.want.eventTags[i], event.Tag)
+					require.EqualValues(t, event.Data, &dbs.StakePoolReward{
+						ProviderID: dbs.ProviderID{
+							ID:   providerID,
+							Type: providerType,
+						},
+						Reward:            tt.want.poolReward,
+						DelegateRewards:   DelegateRewards,
+						DelegatePenalties: make(map[string]currency.Coin),
+						RewardType:        spenum.BlockRewardBlobber,
+						AllocationID:      "",
+						DelegateWallet:    "",
+					})
 				}
 			}
 			validate(t, sp, tt.want)
