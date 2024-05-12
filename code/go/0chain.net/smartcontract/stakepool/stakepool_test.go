@@ -47,6 +47,13 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 		)
 		require.GreaterOrEqual(t, arg.serviceChargeRatio, float64(0))
 		require.LessOrEqual(t, arg.serviceChargeRatio, float64(1))
+		stake := currency.Coin(0)
+
+		for _, bal := range arg.delegateBal {
+			newStake, err := currency.AddCoin(stake, bal)
+			require.NoError(t, err)
+			stake = newStake
+		}
 
 		for i := 0; i < arg.numDelegates; i++ {
 			delegateId := "delegate_" + strconv.Itoa(i)
@@ -54,7 +61,7 @@ func TestStakePool_DistributeRewards(t *testing.T) {
 				DelegateID: delegateId,
 				Balance:    arg.delegateBal[i],
 			}
-			if arg.serviceChargeRatio < 1 && len(w.eventTags) > 0 {
+			if arg.serviceChargeRatio < 1 && len(w.eventTags) > 0 && stake > 0 {
 				DelegateRewards[delegateId] = w.delegateRewards[i]
 			}
 			sp.Settings.ServiceChargeRatio = arg.serviceChargeRatio
