@@ -7,8 +7,6 @@ import (
 	"0chain.net/core/encryption"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/core/transaction"
 )
 
 func Test_WhenAuthorizerExists_StakePool_IsCreated(t *testing.T) {
@@ -57,13 +55,16 @@ func Test_WhenAuthorizerDoesNotExists_StakePool_IsNotUpdatedOrCreated(t *testing
 
 func Test_StakePoolLock_NoGetFuncProvided(t *testing.T) {
 	// Mock state context
-	ctx := &mockStateContext{}
+	ctx := MakeMockStateContext()
 
-	// Mock transaction
-	tr := &transaction.Transaction{}
+	// Create the transaction
+	tr := CreateAddAuthorizerTransaction(defaultClient, ctx)
 
-	// Call the function with an empty funcs slice
-	resp, err := zcnsc.StakePoolLock(tr, []byte("valid_input"), ctx, stakepool.ValidationSettings{})
+	// Create the ZCNSmartContract
+	sc := CreateZCNSmartContract()
+
+	// Execute the transaction on the smart contract
+	resp, err := sc.AddAuthorizer(tr, CreateAuthorizerParamPayload("random_authorizer_delegate_wallet", AuthorizerPublicKey), ctx)
 
 	// Assertions
 	require.Error(t, err)
