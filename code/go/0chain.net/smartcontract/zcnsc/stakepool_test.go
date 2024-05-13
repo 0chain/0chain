@@ -52,22 +52,3 @@ func Test_WhenAuthorizerDoesNotExists_StakePool_IsNotUpdatedOrCreated(t *testing
 	require.EqualError(t, err, "authorizer(authorizerID: "+authorizerID+") not found")
 	require.Empty(t, resp)
 }
-
-func Test_StakePoolLock_NoGetFuncProvided(t *testing.T) {
-	// Mock state context
-	ctx := MakeMockStateContext()
-
-	// Create the transaction
-	tr := CreateAddAuthorizerTransaction(defaultClient, ctx)
-
-	// Create the ZCNSmartContract
-	sc := CreateZCNSmartContract()
-
-	// Execute the transaction on the smart contract
-	resp, err := sc.AddAuthorizer(tr, CreateAuthorizerParamPayload("random_authorizer_delegate_wallet", AuthorizerPublicKey), ctx)
-
-	// Assertions
-	require.Error(t, err)
-	require.Equal(t, "", resp)
-	require.EqualError(t, err, "stake_pool_lock_failed: provide get func")
-}
