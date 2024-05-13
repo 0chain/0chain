@@ -524,7 +524,7 @@ func (edb *EventDb) ManagePermanentPartitions(round int64) error {
 }
 
 func (edb *EventDb) ManagePartitions(round int64) error {
-	return edb.managePermanentPartitions(round)
+	return edb.managePartitions(round)
 }
 
 func (edb *EventDb) managePartitionsAsync(current int64) {

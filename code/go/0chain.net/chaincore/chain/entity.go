@@ -737,7 +737,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 
 		eventDB := c.GetEventDb()
 		if eventDB != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 			defer cancel()
 			tx, eventsCount, err := eventDB.ProcessEvents(
 				ctx,
