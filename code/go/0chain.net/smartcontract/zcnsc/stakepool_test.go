@@ -2,15 +2,15 @@ package zcnsc_test
 
 import (
 	"encoding/hex"
-	"errors"
+	// "errors"
 	"testing"
 
-	"0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/transaction"
+	// "0chain.net/chaincore/chain/state"
+	// "0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/stakepool"
-	"0chain.net/smartcontract/stakepool/spenum"
-	"0chain.net/smartcontract/zcnsc"
+	// "0chain.net/smartcontract/stakepool"
+	// "0chain.net/smartcontract/stakepool/spenum"
+	// "0chain.net/smartcontract/zcnsc"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 )
