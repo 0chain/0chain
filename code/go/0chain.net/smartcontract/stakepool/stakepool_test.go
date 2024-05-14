@@ -538,6 +538,7 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 	}
 	validate := func(t *testing.T, sp *StakePool, arg args) {
 		totalReward, err := currency.MultCoin(arg.value, currency.Coin(10000))
+		totalReward = currency.Coin((float64(totalReward) * (1 - arg.serviceChargeRatio)))
 		require.NoError(t, err)
 		expectedReward := float64(totalReward) / float64(len(sp.Pools)) // assuming uniform distribution
 		tolerance := 0.1 * float64(expectedReward)
