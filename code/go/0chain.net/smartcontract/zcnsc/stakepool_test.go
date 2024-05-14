@@ -84,3 +84,19 @@ func Test_WhenAuthorizerDoesNotExists_StakePool_IsNotUpdatedOrCreated_With_Empty
     require.Error(t, err)
     require.Empty(t, resp)
 }
+func Test_WhenAuthorizerDoesNotExists_StakePool_poolSetting_With_Empty(t *testing.T) {
+    const authorizerID = "auth0"
+    // Default authorizer transaction
+    ctx := MakeMockStateContext()
+    contract := CreateZCNSmartContract()
+	params := UpdateAuthorizerStakePoolPayload{}
+	poolSettings := params.StakePoolSettings
+	poolSettings.DelegateWallet = "" 
+    // Add UpdateAuthorizerStakePool
+    var payload []byte
+    tr, err := CreateTransaction(poolSettings.DelegateWallet, UpdateAuthorizerStakePoolFunc, payload, ctx)
+    require.NoError(t, err)
+    resp, err := contract.UpdateAuthorizerStakePool(tr, payload, ctx)
+    require.Error(t, err)
+    require.Empty(t, resp)
+}
