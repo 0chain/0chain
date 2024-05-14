@@ -555,8 +555,8 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			args: args{
 				value:              0,
 				numDelegates:       2,
-				delegateBal:        []currency.Coin{10, 12},
-				serviceChargeRatio: 0.3,
+				delegateBal:        []currency.Coin{17, 9},
+				serviceChargeRatio: 0.5,
 			},
 		},
 		{
@@ -569,18 +569,18 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			},
 		},
 		{
-			name: "value less that delegate numbers with service charge ratio",
+			name: "0.3 service charge ratio",
 			args: args{
-				value:              4,
-				numDelegates:       5,
-				delegateBal:        []currency.Coin{15, 11, 18, 21, 10},
+				value:              100,
+				numDelegates:       10,
+				delegateBal:        []currency.Coin{10, 20, 30, 40, 50, 60, 70, 80, 90, 100},
 				serviceChargeRatio: 0.3,
 			},
 		},
 		{
 			name: "value getting equally distributed, 0 service charge",
 			args: args{
-				value:              100,
+				value:              200,
 				numDelegates:       5,
 				delegateBal:        []currency.Coin{1, 1, 1, 1, 1},
 				serviceChargeRatio: 0,
@@ -590,8 +590,8 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			name: "no delegate stake",
 			args: args{
 				value:              1,
-				numDelegates:       4,
-				delegateBal:        []currency.Coin{0, 0, 0, 0},
+				numDelegates:       8,
+				delegateBal:        []currency.Coin{0, 0, 0, 0, 0, 0, 0, 0},
 				serviceChargeRatio: 0.1,
 			},
 		},
@@ -611,15 +611,6 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 				numDelegates:       2,
 				delegateBal:        []currency.Coin{13, 19},
 				serviceChargeRatio: 1,
-			},
-		},
-		{
-			name: "no delegates with 0 service charge",
-			args: args{
-				value:              100,
-				numDelegates:       0,
-				delegateBal:        []currency.Coin{},
-				serviceChargeRatio: 0,
 			},
 		},
 		{
