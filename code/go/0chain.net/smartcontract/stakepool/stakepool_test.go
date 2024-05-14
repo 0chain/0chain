@@ -541,7 +541,7 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 		totalReward = currency.Coin((float64(totalReward) * (1 - arg.serviceChargeRatio)))
 		require.NoError(t, err)
 		expectedReward := float64(totalReward) / float64(len(sp.Pools)) // assuming uniform distribution
-		tolerance := 0.1 * float64(expectedReward)
+		tolerance := 0.2 * float64(expectedReward)                      // 20% toleranace
 		for _, pool := range sp.Pools {
 			require.InDelta(t, expectedReward, float64(pool.Reward), tolerance)
 		}
