@@ -786,7 +786,7 @@ definitions:
             status:
                 $ref: '#/definitions/PoolStatus'
         type: object
-        x-go-package: 0chain.net/smartcontract/dto
+        x-go-package: 0chain.net/smartcontract/stakepool
     DelegatePoolResponse:
         properties:
             balance:
@@ -1550,41 +1550,19 @@ definitions:
     Provider:
         format: int64
         properties:
-            CreatedAt:
-                format: date-time
+            id:
                 type: string
-            ID:
-                type: string
-            UpdatedAt:
-                format: date-time
-                type: string
-            delegate_wallet:
-                type: string
-                x-go-name: DelegateWallet
-            downtime:
-                format: uint64
-                type: integer
-                x-go-name: Downtime
+                x-go-name: ID
             is_killed:
                 type: boolean
-                x-go-name: IsKilled
-            is_shutdown:
+                x-go-name: HasBeenKilled
+            is_shut_down:
                 type: boolean
-                x-go-name: IsShutdown
+                x-go-name: HasBeenShutDown
             last_health_check:
                 $ref: '#/definitions/Timestamp'
-            num_delegates:
-                format: int64
-                type: integer
-                x-go-name: NumDelegates
-            rewards:
-                $ref: '#/definitions/ProviderRewards'
-            service_charge:
-                format: double
-                type: number
-                x-go-name: ServiceCharge
-            total_stake:
-                $ref: '#/definitions/Coin'
+            provider_type:
+                $ref: '#/definitions/Provider'
         type: integer
         x-go-package: 0chain.net/smartcontract/stakepool/spenum
     ProviderRewards:
@@ -3303,7 +3281,7 @@ paths:
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term:
         get:
-            operationId: alloc-blobber-term
+            operationId: GetAllocBlobberTerms
             parameters:
                 - description: id of allocation
                   in: query

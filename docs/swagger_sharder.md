@@ -28,8 +28,8 @@
 
 | Method  | URI     | Name   | Summary |
 |---------|---------|--------|---------|
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term | [get alloc blobber terms](#get-alloc-blobber-terms) | Get terms of storage service for a specific allocation and blobber (write_price, read_price) if blobber_id is specified, otherwise, get terms of service for all blobbers of the allocation. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig | [get global config](#get-global-config) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term | [alloc blobber term](#alloc-blobber-term) | Get terms of storage service for a specific allocation and blobber (write_price, read_price) if blobber_id is specified, otherwise, get terms of service for all blobbers of the allocation. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers | [alloc blobbers](#alloc-blobbers) | returns list of all active blobbers that match the allocation request, or an error if not enough blobbers are available. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count | [alloc write marker count](#alloc-write-marker-count) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation | [allocation](#allocation) |  |
@@ -108,6 +108,51 @@
 
 ## Paths
 
+### <span id="get-alloc-blobber-terms"></span> Get terms of storage service for a specific allocation and blobber (write_price, read_price) if blobber_id is specified, otherwise, get terms of service for all blobbers of the allocation. (*GetAllocBlobberTerms*)
+
+```
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term
+```
+
+#### Parameters
+
+| Name | Source | Type | Go type | Separator | Required | Default | Description |
+|------|--------|------|---------|-----------| :------: |---------|-------------|
+| allocation_id | `query` | string | `string` |  | ✓ |  | id of allocation |
+| blobber_id | `query` | string | `string` |  |  |  | id of blobber |
+| limit | `query` | string | `string` |  |  |  | limit |
+| offset | `query` | string | `string` |  |  |  | offset |
+| sort | `query` | string | `string` |  |  |  | desc or asc |
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#get-alloc-blobber-terms-200) | OK | Terms |  | [schema](#get-alloc-blobber-terms-200-schema) |
+| [400](#get-alloc-blobber-terms-400) | Bad Request |  |  | [schema](#get-alloc-blobber-terms-400-schema) |
+| [500](#get-alloc-blobber-terms-500) | Internal Server Error |  |  | [schema](#get-alloc-blobber-terms-500-schema) |
+
+#### Responses
+
+
+##### <span id="get-alloc-blobber-terms-200"></span> 200 - Terms
+Status: OK
+
+###### <span id="get-alloc-blobber-terms-200-schema"></span> Schema
+   
+  
+
+[Terms](#terms)
+
+##### <span id="get-alloc-blobber-terms-400"></span> 400
+Status: Bad Request
+
+###### <span id="get-alloc-blobber-terms-400-schema"></span> Schema
+
+##### <span id="get-alloc-blobber-terms-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="get-alloc-blobber-terms-500-schema"></span> Schema
+
 ### <span id="get-global-config"></span> get global config (*GetGlobalConfig*)
 
 ```
@@ -138,51 +183,6 @@ Status: OK
 Status: Not Found
 
 ###### <span id="get-global-config-404-schema"></span> Schema
-
-### <span id="alloc-blobber-term"></span> Get terms of storage service for a specific allocation and blobber (write_price, read_price) if blobber_id is specified, otherwise, get terms of service for all blobbers of the allocation. (*alloc-blobber-term*)
-
-```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term
-```
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| allocation_id | `query` | string | `string` |  | ✓ |  | id of allocation |
-| blobber_id | `query` | string | `string` |  |  |  | id of blobber |
-| limit | `query` | string | `string` |  |  |  | limit |
-| offset | `query` | string | `string` |  |  |  | offset |
-| sort | `query` | string | `string` |  |  |  | desc or asc |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#alloc-blobber-term-200) | OK | Terms |  | [schema](#alloc-blobber-term-200-schema) |
-| [400](#alloc-blobber-term-400) | Bad Request |  |  | [schema](#alloc-blobber-term-400-schema) |
-| [500](#alloc-blobber-term-500) | Internal Server Error |  |  | [schema](#alloc-blobber-term-500-schema) |
-
-#### Responses
-
-
-##### <span id="alloc-blobber-term-200"></span> 200 - Terms
-Status: OK
-
-###### <span id="alloc-blobber-term-200-schema"></span> Schema
-   
-  
-
-[Terms](#terms)
-
-##### <span id="alloc-blobber-term-400"></span> 400
-Status: Bad Request
-
-###### <span id="alloc-blobber-term-400-schema"></span> Schema
-
-##### <span id="alloc-blobber-term-500"></span> 500
-Status: Internal Server Error
-
-###### <span id="alloc-blobber-term-500-schema"></span> Schema
 
 ### <span id="alloc-blobbers"></span> returns list of all active blobbers that match the allocation request, or an error if not enough blobbers are available. (*alloc_blobbers*)
 
