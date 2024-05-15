@@ -4442,7 +4442,6 @@ it can be used as a scan destination, similar to [NullString].
 | DelegateWallet | string| `string` |  | |  |  |
 | MaxNumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
 | ServiceChargeRatio | double (formatted number)| `float64` |  | |  |  |
-| min_stake | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 

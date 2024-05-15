@@ -1550,19 +1550,41 @@ definitions:
     Provider:
         format: int64
         properties:
-            id:
+            CreatedAt:
+                format: date-time
                 type: string
-                x-go-name: ID
+            ID:
+                type: string
+            UpdatedAt:
+                format: date-time
+                type: string
+            delegate_wallet:
+                type: string
+                x-go-name: DelegateWallet
+            downtime:
+                format: uint64
+                type: integer
+                x-go-name: Downtime
             is_killed:
                 type: boolean
-                x-go-name: HasBeenKilled
-            is_shut_down:
+                x-go-name: IsKilled
+            is_shutdown:
                 type: boolean
-                x-go-name: HasBeenShutDown
+                x-go-name: IsShutdown
             last_health_check:
                 $ref: '#/definitions/Timestamp'
-            provider_type:
-                $ref: '#/definitions/Provider'
+            num_delegates:
+                format: int64
+                type: integer
+                x-go-name: NumDelegates
+            rewards:
+                $ref: '#/definitions/ProviderRewards'
+            service_charge:
+                format: double
+                type: number
+                x-go-name: ServiceCharge
+            total_stake:
+                $ref: '#/definitions/Coin'
         type: integer
         x-go-package: 0chain.net/smartcontract/stakepool/spenum
     ProviderRewards:
@@ -1729,8 +1751,6 @@ definitions:
             delegate_wallet:
                 type: string
                 x-go-name: DelegateWallet
-            min_stake:
-                $ref: '#/definitions/Coin'
             num_delegates:
                 format: int64
                 type: integer
@@ -1740,7 +1760,7 @@ definitions:
                 type: number
                 x-go-name: ServiceChargeRatio
         type: object
-        x-go-package: 0chain.net/smartcontract/stakepool
+        x-go-package: 0chain.net/smartcontract/dto
     SharderAggregate:
         properties:
             created_at:
