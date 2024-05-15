@@ -2,6 +2,10 @@ package event
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -97,7 +101,7 @@ func TestFindTransactionByHash(t *testing.T) {
 		ClientId:       "someClientID",
 		BlockHash:      "blockHash",
 	}
-	SetUpTransactionData(t, eventDb)
+	SetUpTransactionData(t, eventDb, 10, false)
 	t.Run("GetTransactionByHash", func(t *testing.T) {
 		gotTr, err := eventDb.GetTransactionByHash("something_0")
 
@@ -163,14 +167,127 @@ func compareTransactions(t *testing.T, gotTr []Transaction, offset, limit int) {
 	}
 }
 
-func SetUpTransactionData(t *testing.T, eventDb *EventDb) {
-	for i := 0; i < 10; i++ {
+func SetUpTransactionData(t *testing.T, eventDb *EventDb, txnCount int, withError bool, options ...[]string) {
+	for i := 0; i < txnCount; i++ {
 		tr := Transaction{
-			Hash:      fmt.Sprintf("something_%d", i),
+			Hash:      uuid.New().String(),
 			ClientId:  "someClientID",
 			BlockHash: "blockHash",
 		}
+
+		if len(options) >= 1 {
+			txnCreatedAts := options[0]
+			createdAt, err := time.Parse(time.RFC3339, txnCreatedAts[i])
+			require.NoError(t, err, "Error while parsing time")
+			tr.CreatedAt = createdAt
+		}
+
+		if withError {
+			if len(options) >= 2 {
+				txnOutputs := options[1]
+				tr.TransactionOutput = txnOutputs[i]
+				tr.Status = 2
+			}
+		}
+
 		err := eventDb.addTransactions([]Transaction{tr})
 		require.NoError(t, err, "Error while inserting Transaction to event Database")
 	}
+}
+
+func TestTransactionErrors(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+
+	now := time.Now()
+	SetUpTransactionData(t, edb, 10, true, []string{
+		// Add created date in such a way that 6 times should be in window of last day, 3 times in last 2 days making sure all have different times
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(45 * time.Second).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -2).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+	}, []string{
+		"output1",
+		"output1",
+		"output3",
+		"output4",
+		"output3",
+		"output5",
+		"output1",
+		"output4",
+		"output3",
+		"output4",
+	})
+
+	err := edb.UpdateTransactionErrors(0)
+	require.NoError(t, err)
+
+	txnErrors, err := edb.GetTransactionErrors()
+	require.NoError(t, err)
+
+	logging.Logger.Info("txnErrors", zap.Any("txnErrors", txnErrors))
+	require.Len(t, txnErrors, 4)
+
+	require.Equal(t, map[string][]TransactionErrors{
+		"output1": {
+			{TransactionOutput: "output1", Count: 2},
+		},
+		"output3": {
+			{TransactionOutput: "output3", Count: 2},
+		},
+		"output4": {
+			{TransactionOutput: "output4", Count: 1},
+		},
+		"output5": {
+			{TransactionOutput: "output5", Count: 1},
+		},
+	}, txnErrors)
+
+	time.Sleep(1 * time.Minute)
+
+	SetUpTransactionData(t, edb, 4, true, []string{
+		// Add more data on today's date and see how it works
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+		now.AddDate(0, 0, -1).Add(time.Duration(1+rand.Intn(23)) * time.Hour).Format(time.RFC3339),
+	}, []string{
+		"output10",
+		"output10",
+		"output11",
+		"output4",
+	})
+
+	err = edb.UpdateTransactionErrors(0)
+	require.NoError(t, err)
+
+	txnErrors, err = edb.GetTransactionErrors()
+	require.NoError(t, err)
+
+	logging.Logger.Info("txnErrors", zap.Any("txnErrors", txnErrors))
+	require.Len(t, txnErrors, 5)
+
+	require.Equal(t, map[string][]TransactionErrors{
+		"output1": {
+			{TransactionOutput: "output1", Count: 2},
+		},
+		"output3": {
+			{TransactionOutput: "output3", Count: 2},
+		},
+		"output4": {
+			{TransactionOutput: "output4", Count: 2},
+		},
+		"output10": {
+			{TransactionOutput: "output10", Count: 2},
+		},
+		"output11": {
+			{TransactionOutput: "output11", Count: 1},
+		},
+	}, txnErrors)
 }

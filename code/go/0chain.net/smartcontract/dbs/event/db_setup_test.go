@@ -131,9 +131,9 @@ func TestMain(m *testing.M) {
 }
 
 func getHostPort(resource *dockertest.Resource, id string) string {
-	dockerURL := os.Getenv("DOCKER_HOST_ENV")
-	if dockerURL == "" {
-		return resource.GetHostPort(id)
-	}
-	return dockerURL + ":" + resource.GetPort(id)
+	//dockerURL := os.Getenv("DOCKER_HOST_ENV")
+	//if dockerURL == "" {
+	//	return resource.GetHostPort(id)
+	//}
+	return "host.docker.internal" + ":" + resource.GetPort(id)
 }

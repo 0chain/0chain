@@ -945,10 +945,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	// Chain hash is the hash of all previous roots of WM's and ChainSize will be the size of all previous WM's
 	if commitConnection.WriteMarker.GetVersion() == writeMarkerV2Version {
 		wm2 := commitConnection.WriteMarker.Entity().(*writeMarkerV2)
-		if wm2.ChainSize < 0 {
-			return "", common.NewError("commit_connection_failed",
-				"Invalid chain size")
-		}
 
 		var (
 			lastWMChainHash string

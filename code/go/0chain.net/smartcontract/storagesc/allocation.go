@@ -1574,7 +1574,7 @@ func (sc *StorageSmartContract) resetAllocationStats(t *transaction.Transaction,
 		totalBlobberAllocationUsedSize += ba.Stats.UsedSize
 	}
 
-	totalAllocationUsedSize := (totalBlobberAllocationUsedSize * int64(alloc.DataShards)) / int64(alloc.ParityShards)
+	totalAllocationUsedSize := (totalBlobberAllocationUsedSize * int64(alloc.DataShards)) / (int64(alloc.DataShards + alloc.ParityShards))
 	alloc.Stats.UsedSize = totalAllocationUsedSize
 
 	if _, err := balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc); err != nil {
