@@ -510,7 +510,6 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 	providerID := "provider_id"
 	providerType := spenum.Blobber
 	var RoundRandomSeed int64 = 839695260482366273
-	var NumMinerDelegatesRewarded int = 10
 	type args struct {
 		value              currency.Coin
 		numDelegates       int
@@ -541,7 +540,7 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 		totalReward = currency.Coin((float64(totalReward) * (1 - arg.serviceChargeRatio)))
 		require.NoError(t, err)
 		expectedReward := float64(totalReward) / float64(len(sp.Pools)) // assuming uniform distribution
-		tolerance := 0.2 * float64(expectedReward)                      // 20% toleranace
+		tolerance := 0.1 * float64(expectedReward)                      // 20% toleranace
 		for _, pool := range sp.Pools {
 			require.InDelta(t, expectedReward, float64(pool.Reward), tolerance)
 		}
@@ -639,7 +638,7 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			sp, balances := setup(t, tt.args)
 
 			for i := 0; i < 10000; i++ {
-				err := sp.DistributeRewardsRandN(tt.args.value, providerID, providerType, RoundRandomSeed, NumMinerDelegatesRewarded, spenum.BlockRewardBlobber, balances)
+				err := sp.DistributeRewardsRandN(tt.args.value, providerID, providerType, RoundRandomSeed, tt.args.numDelegates, spenum.BlockRewardBlobber, balances)
 				require.NoError(t, err)
 			}
 			validate(t, sp, tt.args)
