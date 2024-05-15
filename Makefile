@@ -65,6 +65,12 @@ msgp:
 	@cd $(root_path)/code/go/0chain.net && go generate -run=msgp ./...
 	@echo "Run msgp completed."
 
+swagger-storage-sc:
+	@echo "Run swagger for storage smart contract API ..."
+	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/smartcontract/storagesc -c 0chain.net/smartcontract/dbs -c 0chain.net/chaincore/... -c 0chain.net/core/... -m -o docs/swagger-storage-sc.yaml
+	swagger generate markdown  -f docs/swagger-storage-sc.yaml --output=docs/storage-sc-api.md
+	@echo "swagger documentation generated for storage smart contract API"
+
 swagger-sharder:
 	@echo "Run swagger for sharder API ..."
 	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/sharder -c 0chain.net/smartcontract/... -c 0chain.net/chaincore/... -c 0chain.net/core/... -m -o docs/swagger-sharder.yaml
