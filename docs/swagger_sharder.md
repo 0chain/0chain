@@ -29,8 +29,8 @@
 | Method  | URI     | Name   | Summary |
 |---------|---------|--------|---------|
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig | [get global config](#get-global-config) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term | [alloc blobber term](#alloc-blobber-term) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers | [alloc blobbers](#alloc-blobbers) | returns list of all blobbers alive that match the allocation request. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term | [alloc blobber term](#alloc-blobber-term) | Get terms of storage service for a specific allocation and blobber (write_price, read_price) if blobber_id is specified, otherwise, get terms of service for all blobbers of the allocation. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers | [alloc blobbers](#alloc-blobbers) | returns list of all active blobbers that match the allocation request, or an error if not enough blobbers are available. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count | [alloc write marker count](#alloc-write-marker-count) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation | [allocation](#allocation) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-update-min-lock | [allocation update min lock](#allocation-update-min-lock) | Calculates the cost for updating an allocation. |
@@ -39,8 +39,7 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges | [blobber challenges](#blobber-challenges) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids | [blobber ids](#blobber-ids) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block | [block](#block) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward | [collected reward](#collected-reward) | Returns collected reward for a client_id.
-> Note: start-date and end-date resolves to the closest block number for those timestamps on the network. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward | [collected reward](#collected-reward) | Returns collected reward for a client_id. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs | [configs](#configs) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers | [count readmarkers](#count-readmarkers) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/delegate-rewards | [delegate rewards](#delegate-rewards) |  |
@@ -89,19 +88,18 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/provider-rewards | [provider rewards](#provider-rewards) |  |
 | POST | /v1/transaction/put | [put transaction](#put-transaction) | PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers | [readmarkers](#readmarkers) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate | [replicate authorizer aggregates](#replicate-authorizer-aggregates) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate | [replicate blobber aggregates](#replicate-blobber-aggregates) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate | [replicate miner aggregates](#replicate-miner-aggregates) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate | [replicate sharder aggregates](#replicate-sharder-aggregates) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots | [replicate snapshots](#replicate-snapshots) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate | [replicate user aggregates](#replicate-user-aggregates) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate | [replicate validator aggregates](#replicate-validator-aggregates) |  |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate | [replicate authorizer aggregates](#replicate-authorizer-aggregates) | Gets list of authorizer aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate | [replicate blobber aggregates](#replicate-blobber-aggregates) | Gets list of blobber aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate | [replicate miner aggregates](#replicate-miner-aggregates) | Gets list of miner aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate | [replicate sharder aggregates](#replicate-sharder-aggregates) | Gets list of sharder aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots | [replicate snapshots](#replicate-snapshots) | Gets list of global snapshot records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate | [replicate user aggregates](#replicate-user-aggregates) | Gets list of user aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate | [replicate validator aggregates](#replicate-validator-aggregates) | Gets list of validator aggregate records |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search | [search](#search) | Generic search endpoint. |
 | GET | /v1/sharder/get/stats | [sharderstats](#sharderstats) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config | [storage config](#storage-config) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction | [transaction](#transaction) |  |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions | [transactions](#transactions) | Gets filtered list of transaction information. The list is filtered on the first valid input,
-or otherwise all the endpoint returns all translations. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions | [transactions](#transactions) | Gets filtered list of transaction information. The list is filtered on the first valid input, or otherwise all the endpoint returns all translations. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators | [validators](#validators) | Get a list of validators based on activity and stakability. Retrieves a list of validators, optionally filtered by whether they are active and/or stakable. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/vesting_config | [vesting config](#vesting-config) |  |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers | [writemarkers](#writemarkers) |  |
@@ -141,20 +139,21 @@ Status: Not Found
 
 ###### <span id="get-global-config-404-schema"></span> Schema
 
-### <span id="alloc-blobber-term"></span> alloc blobber term (*alloc-blobber-term*)
+### <span id="alloc-blobber-term"></span> Get terms of storage service for a specific allocation and blobber (write_price, read_price) if blobber_id is specified, otherwise, get terms of service for all blobbers of the allocation. (*alloc-blobber-term*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc-blobber-term
 ```
 
-Gets statistic for all locked tokens of a stake pool
-
 #### Parameters
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| allocation_id | `query` | string | `string` |  |  |  | id of allocation |
+| allocation_id | `query` | string | `string` |  | ✓ |  | id of allocation |
 | blobber_id | `query` | string | `string` |  |  |  | id of blobber |
+| limit | `query` | string | `string` |  |  |  | limit |
+| offset | `query` | string | `string` |  |  |  | offset |
+| sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -185,17 +184,24 @@ Status: Internal Server Error
 
 ###### <span id="alloc-blobber-term-500-schema"></span> Schema
 
-### <span id="alloc-blobbers"></span> returns list of all blobbers alive that match the allocation request. (*alloc_blobbers*)
+### <span id="alloc-blobbers"></span> returns list of all active blobbers that match the allocation request, or an error if not enough blobbers are available. (*alloc_blobbers*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers
 ```
 
+Before the user attempts to create an allocation, they can use this endpoint to get a list of blobbers that match the allocation request. This includes:
+
+Read and write price ranges
+Data and parity shards
+Size
+Restricted status
+
 #### Parameters
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| allocation_data | `query` | string | `string` |  | ✓ |  | allocation data |
+| allocation_data | `query` | string | `string` |  | ✓ |  | Allocation request data, in valid JSON format, following the allocationBlobbersRequest struct. |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
@@ -271,7 +277,7 @@ Gets allocation object
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| allocation | `query` | string | `string` |  | ✓ |  | offset |
+| allocation | `query` | string | `string` |  | ✓ |  | Id of the allocation to get |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -312,26 +318,26 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| data | `query` | string | `string` |  | ✓ |  | json marshall of update allocation request input data |
+| data | `query` | string | `string` |  | ✓ |  | Update allocation request data, in valid JSON format, following the updateAllocationRequest struct. |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#allocation-update-min-lock-200) | OK | Int64Map |  | [schema](#allocation-update-min-lock-200-schema) |
+| [200](#allocation-update-min-lock-200) | OK | AllocationUpdateMinLockResponse |  | [schema](#allocation-update-min-lock-200-schema) |
 | [400](#allocation-update-min-lock-400) | Bad Request |  |  | [schema](#allocation-update-min-lock-400-schema) |
 | [500](#allocation-update-min-lock-500) | Internal Server Error |  |  | [schema](#allocation-update-min-lock-500-schema) |
 
 #### Responses
 
 
-##### <span id="allocation-update-min-lock-200"></span> 200 - Int64Map
+##### <span id="allocation-update-min-lock-200"></span> 200 - AllocationUpdateMinLockResponse
 Status: OK
 
 ###### <span id="allocation-update-min-lock-200-schema"></span> Schema
    
   
 
-[Int64Map](#int64-map)
+[AllocationUpdateMinLockResponse](#allocation-update-min-lock-response)
 
 ##### <span id="allocation-update-min-lock-400"></span> 400
 Status: Bad Request
@@ -441,15 +447,15 @@ Status: Internal Server Error
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges
 ```
 
-Gets challenges for a blobber by challenge id
+Gets list of challenges for a blobber in a specific time interval by blobber id
 
 #### Parameters
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| end | `query` | string | `string` |  | ✓ |  | end time of interval |
-| id | `query` | string | `string` |  | ✓ |  | id of blobber |
-| start | `query` | string | `string` |  | ✓ |  | start time of interval |
+| from | `query` | string | `string` |  | ✓ |  | start time of the interval for which to get challenges (epoch timestamp in seconds) |
+| id | `query` | string | `string` |  | ✓ |  | id of blobber for which to get challenges |
+| to | `query` | string | `string` |  | ✓ |  | end time of interval for which to get challenges (epoch timestamp in seconds) |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -500,7 +506,6 @@ convert list of blobber urls into ids
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | blobber_urls | `query` | string | `string` |  | ✓ |  | list of blobber URLs |
-| free_allocation_data | `query` | string | `string` |  | ✓ |  | allocation data |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
@@ -541,8 +546,8 @@ Gets block information
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| block_hash | `query` | string | `string` |  |  |  | block hash |
-| date | `query` | string | `string` |  |  |  | block created closest to the date (epoch timestamp in nanoseconds) |
+| block_hash | `query` | string | `string` |  |  |  | Hash (or identifier) of the block |
+| date | `query` | string | `string` |  |  |  | block created closest to the date (epoch timestamp in seconds) |
 | round | `query` | string | `string` |  |  |  | block round |
 
 #### All responses
@@ -574,11 +579,13 @@ Status: Internal Server Error
 
 ###### <span id="block-500-schema"></span> Schema
 
-### <span id="collected-reward"></span> Returns collected reward for a client_id.</br>> Note: start-date and end-date resolves to the closest block number for those timestamps on the network. (*collected_reward*)
+### <span id="collected-reward"></span> Returns collected reward for a client_id. (*collected_reward*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward
 ```
+
+> Note: start-date and end-date resolves to the closest block number for those timestamps on the network.
 
 > Note: Using start/end-block and start/end-date together would only return results with start/end-block
 
@@ -586,12 +593,12 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| client-id | `query` | string | `string` |  | ✓ |  | client id |
+| client-id | `query` | string | `string` |  | ✓ |  | ID of the client for which to get rewards |
 | data-points | `query` | string | `string` |  |  |  | number of data points in response |
-| end-block | `query` | string | `string` |  |  |  | end block |
-| end-date | `query` | string | `string` |  |  |  | end date |
-| start-block | `query` | string | `string` |  |  |  | start block |
-| start-date | `query` | string | `string` |  |  |  | start date |
+| end-block | `query` | string | `string` |  |  |  | end block number till which to collect rewards |
+| end-date | `query` | string | `string` |  |  |  | end date till which to collect rewards |
+| start-block | `query` | string | `string` |  |  |  | start block number from which to start collecting rewards |
+| start-date | `query` | string | `string` |  |  |  | start date from which to start collecting rewards |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -752,7 +759,7 @@ Gets errors returned by indicated transaction
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
-| transaction_hash | `query` | string | `string` |  | ✓ |  | transaction_hash |
+| transaction_hash | `query` | string | `string` |  | ✓ |  | Hash of the transactions to get errors of. |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -820,14 +827,18 @@ Status: Not Found
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers
 ```
 
+Before the user attempts to create a free allocation, they can use this endpoint to get a list of blobbers that match the allocation request. This includes:
+
+Read and write price ranges
+Data and parity shards
+Size
+Restricted status
+
 #### Parameters
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| free_allocation_data | `query` | string | `string` |  | ✓ |  | allocation data |
-| limit | `query` | string | `string` |  |  |  | limit |
-| offset | `query` | string | `string` |  |  |  | offset |
-| sort | `query` | string | `string` |  |  |  | desc or asc |
+| free_allocation_data | `query` | string | `string` |  | ✓ |  | Free Allocation request data, in valid JSON format, following the freeStorageAllocationInput struct. |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -970,7 +981,6 @@ Gets challenges for a blobber by challenge id
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| blobber | `query` | string | `string` |  | ✓ |  | id of blobber |
 | challenge | `query` | string | `string` |  | ✓ |  | id of challenge |
 
 #### All responses
@@ -1594,7 +1604,7 @@ Gets statistic for all locked tokens of a stake pool
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | provider_id | `query` | string | `string` |  | ✓ |  | id of a provider |
-| provider_type | `query` | string | `string` |  | ✓ |  | type of the provider, ie: blobber. validator |
+| provider_type | `query` | string | `string` |  | ✓ |  | type of the provider, possible values are 3 (blobber), 4 (validator), 5 (authorizer) |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -1683,6 +1693,7 @@ Gets statistic for a user's stake pools
 | client_id | `query` | string | `string` |  | ✓ |  | client for which to get stake pool information |
 | limit | `query` | string | `string` |  |  |  | Maximum number of results to return. |
 | offset | `query` | string | `string` |  |  |  | Pagination offset to specify the starting point of the result set. |
+| sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -1719,7 +1730,7 @@ Gets writemarkers according to a filter
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| allocation_id | `query` | string | `string` |  | ✓ |  | count write markers for this allocation |
+| allocation_id | `query` | string | `string` |  | ✓ |  | List write markers for this allocation |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
@@ -1878,21 +1889,21 @@ Gets validator information
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-validator-200) | OK | Validator |  | [schema](#get-validator-200-schema) |
+| [200](#get-validator-200) | OK | validatorNodeResponse |  | [schema](#get-validator-200-schema) |
 | [400](#get-validator-400) | Bad Request |  |  | [schema](#get-validator-400-schema) |
 | [500](#get-validator-500) | Internal Server Error |  |  | [schema](#get-validator-500-schema) |
 
 #### Responses
 
 
-##### <span id="get-validator-200"></span> 200 - Validator
+##### <span id="get-validator-200"></span> 200 - validatorNodeResponse
 Status: OK
 
 ###### <span id="get-validator-200-schema"></span> Schema
    
   
 
-[Validator](#validator)
+[ValidatorNodeResponse](#validator-node-response)
 
 ##### <span id="get-validator-400"></span> 400
 Status: Bad Request
@@ -2053,8 +2064,8 @@ Gets latest read marker for a client and blobber
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | allocation | `query` | string | `string` |  |  |  | Allocation ID associated with the read marker. |
-| blobber | `query` | string | `string` |  |  |  | blobber |
-| client | `query` | string | `string` |  |  |  | client |
+| blobber | `query` | string | `string` |  |  |  | blobber ID associated with the read marker. |
+| client | `query` | string | `string` |  |  |  | ID of the client for which to get the latest read marker. |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -2223,7 +2234,7 @@ Gets open challenges for a blobber
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | blobber | `query` | string | `string` |  | ✓ |  | id of blobber for which to get open challenges |
-| from | `query` | string | `string` |  |  |  | Starting point for fetching challenges. |
+| from | `query` | string | `string` |  |  |  | Starting round number for fetching challenges. |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
@@ -2424,8 +2435,8 @@ Gets read markers according to a filter
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| allocation_id | `query` | string | `string` |  |  |  | filter read markers by this allocation |
-| auth_ticket | `query` | string | `string` |  |  |  | filter in only read markers using auth thicket |
+| allocation_id | `query` | string | `string` |  |  |  | filter in only read markers by this allocation |
+| auth_ticket | `query` | string | `string` |  |  |  | filter in only read markers using this auth ticket |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
@@ -2453,13 +2464,13 @@ Status: Internal Server Error
 
 ###### <span id="readmarkers-500-schema"></span> Schema
 
-### <span id="replicate-authorizer-aggregates"></span> replicate authorizer aggregates (*replicateAuthorizerAggregates*)
+### <span id="replicate-authorizer-aggregates"></span> Gets list of authorizer aggregate records (*replicateAuthorizerAggregates*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate
 ```
 
-Gets list of authorizer aggregate records
+> Note: This endpoint is DEPRECATED and will be removed in the next release.
 
 #### Parameters
 
@@ -2467,38 +2478,39 @@ Gets list of authorizer aggregate records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| round | `query` | string | `string` |  |  |  | round number to start from |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#replicate-authorizer-aggregates-200) | OK | StringMap |  | [schema](#replicate-authorizer-aggregates-200-schema) |
+| [200](#replicate-authorizer-aggregates-200) | OK | AuthorizerAggregate |  | [schema](#replicate-authorizer-aggregates-200-schema) |
 | [500](#replicate-authorizer-aggregates-500) | Internal Server Error |  |  | [schema](#replicate-authorizer-aggregates-500-schema) |
 
 #### Responses
 
 
-##### <span id="replicate-authorizer-aggregates-200"></span> 200 - StringMap
+##### <span id="replicate-authorizer-aggregates-200"></span> 200 - AuthorizerAggregate
 Status: OK
 
 ###### <span id="replicate-authorizer-aggregates-200-schema"></span> Schema
    
   
 
-[StringMap](#string-map)
+[AuthorizerAggregate](#authorizer-aggregate)
 
 ##### <span id="replicate-authorizer-aggregates-500"></span> 500
 Status: Internal Server Error
 
 ###### <span id="replicate-authorizer-aggregates-500-schema"></span> Schema
 
-### <span id="replicate-blobber-aggregates"></span> replicate blobber aggregates (*replicateBlobberAggregates*)
+### <span id="replicate-blobber-aggregates"></span> Gets list of blobber aggregate records (*replicateBlobberAggregates*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate
 ```
 
-Gets list of blobber aggregate records
+> Note: This endpoint is DEPRECATED and will be removed in the next release.
 
 #### Parameters
 
@@ -2506,38 +2518,39 @@ Gets list of blobber aggregate records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| round | `query` | string | `string` |  |  |  | round number to start from |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#replicate-blobber-aggregates-200) | OK | StringMap |  | [schema](#replicate-blobber-aggregates-200-schema) |
+| [200](#replicate-blobber-aggregates-200) | OK | BlobberAggregate |  | [schema](#replicate-blobber-aggregates-200-schema) |
 | [500](#replicate-blobber-aggregates-500) | Internal Server Error |  |  | [schema](#replicate-blobber-aggregates-500-schema) |
 
 #### Responses
 
 
-##### <span id="replicate-blobber-aggregates-200"></span> 200 - StringMap
+##### <span id="replicate-blobber-aggregates-200"></span> 200 - BlobberAggregate
 Status: OK
 
 ###### <span id="replicate-blobber-aggregates-200-schema"></span> Schema
    
   
 
-[StringMap](#string-map)
+[BlobberAggregate](#blobber-aggregate)
 
 ##### <span id="replicate-blobber-aggregates-500"></span> 500
 Status: Internal Server Error
 
 ###### <span id="replicate-blobber-aggregates-500-schema"></span> Schema
 
-### <span id="replicate-miner-aggregates"></span> replicate miner aggregates (*replicateMinerAggregates*)
+### <span id="replicate-miner-aggregates"></span> Gets list of miner aggregate records (*replicateMinerAggregates*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate
 ```
 
-Gets list of miner aggregate records
+> Note: This endpoint is DEPRECATED and will be removed in the next release.
 
 #### Parameters
 
@@ -2545,38 +2558,39 @@ Gets list of miner aggregate records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| round | `query` | string | `string` |  |  |  | round number to start from |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#replicate-miner-aggregates-200) | OK | StringMap |  | [schema](#replicate-miner-aggregates-200-schema) |
+| [200](#replicate-miner-aggregates-200) | OK | MinerAggregate |  | [schema](#replicate-miner-aggregates-200-schema) |
 | [500](#replicate-miner-aggregates-500) | Internal Server Error |  |  | [schema](#replicate-miner-aggregates-500-schema) |
 
 #### Responses
 
 
-##### <span id="replicate-miner-aggregates-200"></span> 200 - StringMap
+##### <span id="replicate-miner-aggregates-200"></span> 200 - MinerAggregate
 Status: OK
 
 ###### <span id="replicate-miner-aggregates-200-schema"></span> Schema
    
   
 
-[StringMap](#string-map)
+[MinerAggregate](#miner-aggregate)
 
 ##### <span id="replicate-miner-aggregates-500"></span> 500
 Status: Internal Server Error
 
 ###### <span id="replicate-miner-aggregates-500-schema"></span> Schema
 
-### <span id="replicate-sharder-aggregates"></span> replicate sharder aggregates (*replicateSharderAggregates*)
+### <span id="replicate-sharder-aggregates"></span> Gets list of sharder aggregate records (*replicateSharderAggregates*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate
 ```
 
-Gets list of sharder aggregate records
+> Note: This endpoint is DEPRECATED and will be removed in the next release.
 
 #### Parameters
 
@@ -2584,38 +2598,39 @@ Gets list of sharder aggregate records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| round | `query` | string | `string` |  |  |  | round number to start from |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#replicate-sharder-aggregates-200) | OK | StringMap |  | [schema](#replicate-sharder-aggregates-200-schema) |
+| [200](#replicate-sharder-aggregates-200) | OK | SharderAggregate |  | [schema](#replicate-sharder-aggregates-200-schema) |
 | [500](#replicate-sharder-aggregates-500) | Internal Server Error |  |  | [schema](#replicate-sharder-aggregates-500-schema) |
 
 #### Responses
 
 
-##### <span id="replicate-sharder-aggregates-200"></span> 200 - StringMap
+##### <span id="replicate-sharder-aggregates-200"></span> 200 - SharderAggregate
 Status: OK
 
 ###### <span id="replicate-sharder-aggregates-200-schema"></span> Schema
    
   
 
-[StringMap](#string-map)
+[SharderAggregate](#sharder-aggregate)
 
 ##### <span id="replicate-sharder-aggregates-500"></span> 500
 Status: Internal Server Error
 
 ###### <span id="replicate-sharder-aggregates-500-schema"></span> Schema
 
-### <span id="replicate-snapshots"></span> replicate snapshots (*replicateSnapshots*)
+### <span id="replicate-snapshots"></span> Gets list of global snapshot records (*replicateSnapshots*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots
 ```
 
-Gets list of snapshot records
+> Note: This endpoint is DEPRECATED and will be removed in the next release.
 
 #### Parameters
 
@@ -2623,39 +2638,39 @@ Gets list of snapshot records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
-| round | `query` | string | `string` |  |  |  | round number |
+| round | `query` | string | `string` |  |  |  | round number to start from |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#replicate-snapshots-200) | OK | StringMap |  | [schema](#replicate-snapshots-200-schema) |
+| [200](#replicate-snapshots-200) | OK | Snapshot |  | [schema](#replicate-snapshots-200-schema) |
 | [500](#replicate-snapshots-500) | Internal Server Error |  |  | [schema](#replicate-snapshots-500-schema) |
 
 #### Responses
 
 
-##### <span id="replicate-snapshots-200"></span> 200 - StringMap
+##### <span id="replicate-snapshots-200"></span> 200 - Snapshot
 Status: OK
 
 ###### <span id="replicate-snapshots-200-schema"></span> Schema
    
   
 
-[StringMap](#string-map)
+[][Snapshot](#snapshot)
 
 ##### <span id="replicate-snapshots-500"></span> 500
 Status: Internal Server Error
 
 ###### <span id="replicate-snapshots-500-schema"></span> Schema
 
-### <span id="replicate-user-aggregates"></span> replicate user aggregates (*replicateUserAggregates*)
+### <span id="replicate-user-aggregates"></span> Gets list of user aggregate records (*replicateUserAggregates*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate
 ```
 
-Gets list of user aggregate records
+> Note: This endpoint is DEPRECATED and will be removed in the next release.
 
 #### Parameters
 
@@ -2663,38 +2678,39 @@ Gets list of user aggregate records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| round | `query` | string | `string` |  |  |  | round number to start from |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#replicate-user-aggregates-200) | OK | StringMap |  | [schema](#replicate-user-aggregates-200-schema) |
+| [200](#replicate-user-aggregates-200) | OK | UserAggregate |  | [schema](#replicate-user-aggregates-200-schema) |
 | [500](#replicate-user-aggregates-500) | Internal Server Error |  |  | [schema](#replicate-user-aggregates-500-schema) |
 
 #### Responses
 
 
-##### <span id="replicate-user-aggregates-200"></span> 200 - StringMap
+##### <span id="replicate-user-aggregates-200"></span> 200 - UserAggregate
 Status: OK
 
 ###### <span id="replicate-user-aggregates-200-schema"></span> Schema
    
   
 
-[StringMap](#string-map)
+[UserAggregate](#user-aggregate)
 
 ##### <span id="replicate-user-aggregates-500"></span> 500
 Status: Internal Server Error
 
 ###### <span id="replicate-user-aggregates-500-schema"></span> Schema
 
-### <span id="replicate-validator-aggregates"></span> replicate validator aggregates (*replicateValidatorAggregates*)
+### <span id="replicate-validator-aggregates"></span> Gets list of validator aggregate records (*replicateValidatorAggregates*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate
 ```
 
-Gets list of validator aggregate records
+> Note: This endpoint is DEPRECATED and will be removed in the next release.
 
 #### Parameters
 
@@ -2702,25 +2718,26 @@ Gets list of validator aggregate records
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| round | `query` | string | `string` |  |  |  | round number to start from |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#replicate-validator-aggregates-200) | OK | StringMap |  | [schema](#replicate-validator-aggregates-200-schema) |
+| [200](#replicate-validator-aggregates-200) | OK | ValidatorAggregate |  | [schema](#replicate-validator-aggregates-200-schema) |
 | [500](#replicate-validator-aggregates-500) | Internal Server Error |  |  | [schema](#replicate-validator-aggregates-500-schema) |
 
 #### Responses
 
 
-##### <span id="replicate-validator-aggregates-200"></span> 200 - StringMap
+##### <span id="replicate-validator-aggregates-200"></span> 200 - ValidatorAggregate
 Status: OK
 
 ###### <span id="replicate-validator-aggregates-200-schema"></span> Schema
    
   
 
-[StringMap](#string-map)
+[ValidatorAggregate](#validator-aggregate)
 
 ##### <span id="replicate-validator-aggregates-500"></span> 500
 Status: Internal Server Error
@@ -2747,21 +2764,17 @@ If a match is found the matching object is returned.
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#search-200) | OK | StringMap |  | [schema](#search-200-schema) |
+| [200](#search-200) | OK |  |  | [schema](#search-200-schema) |
 | [400](#search-400) | Bad Request |  |  | [schema](#search-400-schema) |
 | [500](#search-500) | Internal Server Error |  |  | [schema](#search-500-schema) |
 
 #### Responses
 
 
-##### <span id="search-200"></span> 200 - StringMap
+##### <span id="search-200"></span> 200
 Status: OK
 
 ###### <span id="search-200-schema"></span> Schema
-   
-  
-
-[StringMap](#string-map)
 
 ##### <span id="search-400"></span> 400
 Status: Bad Request
@@ -2872,7 +2885,7 @@ Status: Internal Server Error
 
 ###### <span id="transaction-500-schema"></span> Schema
 
-### <span id="transactions"></span> Gets filtered list of transaction information. The list is filtered on the first valid input,</br>or otherwise all the endpoint returns all translations. (*transactions*)
+### <span id="transactions"></span> Gets filtered list of transaction information. The list is filtered on the first valid input, or otherwise all the endpoint returns all translations. (*transactions*)
 
 ```
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions
@@ -2886,11 +2899,11 @@ Filters processed in the order: client id, to client id, block hash and start, e
 |------|--------|------|---------|-----------| :------: |---------|-------------|
 | block_hash | `query` | string | `string` |  |  |  | restrict to transactions in indicated block |
 | client_id | `query` | string | `string` |  |  |  | restrict to transactions sent by the specified client |
-| end | `query` | string | `string` |  |  |  | restrict to transactions in specified start block and endblock |
+| end | `query` | string | `string` |  |  |  | restrict to transactions within specified start block and end block |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
 | sort | `query` | string | `string` |  |  |  | desc or asc |
-| start | `query` | string | `string` |  |  |  | restrict to transactions in specified start block and endblock |
+| start | `query` | string | `string` |  |  |  | restrict to transactions within specified start block and end block |
 | to_client_id | `query` | string | `string` |  |  |  | restrict to transactions sent to a specified client |
 
 #### All responses
@@ -2941,20 +2954,20 @@ GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#validators-200) | OK | Validator |  | [schema](#validators-200-schema) |
+| [200](#validators-200) | OK | validatorNodeResponse |  | [schema](#validators-200-schema) |
 | [400](#validators-400) | Bad Request |  |  | [schema](#validators-400-schema) |
 
 #### Responses
 
 
-##### <span id="validators-200"></span> 200 - Validator
+##### <span id="validators-200"></span> 200 - validatorNodeResponse
 Status: OK
 
 ###### <span id="validators-200-schema"></span> Schema
    
   
 
-[Validator](#validator)
+[][ValidatorNodeResponse](#validator-node-response)
 
 ##### <span id="validators-400"></span> 400
 Status: Bad Request
@@ -3004,9 +3017,9 @@ Gets list of write markers satisfying filter
 
 | Name | Source | Type | Go type | Separator | Required | Default | Description |
 |------|--------|------|---------|-----------| :------: |---------|-------------|
-| is_descending | `query` | string | `string` |  |  |  | is descending |
 | limit | `query` | string | `string` |  |  |  | limit |
 | offset | `query` | string | `string` |  |  |  | offset |
+| sort | `query` | string | `string` |  |  |  | asc or desc |
 
 #### All responses
 | Code | Status | Description | Has headers | Schema |
@@ -3112,6 +3125,21 @@ Status: Internal Server Error
 
 
 
+### <span id="allocation-update-min-lock-response"></span> AllocationUpdateMinLockResponse
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| MinLockDemand | int64 (formatted integer)| `int64` |  | |  |  |
+
+
+
 ### <span id="approved-minter"></span> ApprovedMinter
 
 
@@ -3120,6 +3148,34 @@ Status: Internal Server Error
 | Name | Type | Go type | Default | Description | Example |
 |------|------|---------| ------- |-------------|---------|
 | ApprovedMinter | int64 (formatted integer)| int64 | |  |  |
+
+
+
+### <span id="authorizer-aggregate"></span> AuthorizerAggregate
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| AuthorizerID | string| `string` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| IsKilled | boolean| `bool` |  | |  |  |
+| IsShutdown | boolean| `bool` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| URL | string| `string` |  | |  |  |
+| fee | [Coin](#coin)| `Coin` |  | |  |  |
+| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| total_burn | [Coin](#coin)| `Coin` |  | |  |  |
+| total_mint | [Coin](#coin)| `Coin` |  | |  |  |
+| total_rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
@@ -3145,6 +3201,49 @@ Status: Internal Server Error
 | total_mint | [Coin](#coin)| `Coin` |  | |  |  |
 | total_rewards | [Coin](#coin)| `Coin` |  | |  |  |
 | total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
+### <span id="blobber-aggregate"></span> BlobberAggregate
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Allocated | int64 (formatted integer)| `int64` |  | |  |  |
+| BlobberID | string| `string` |  | |  |  |
+| Capacity | int64 (formatted integer)| `int64` |  | |  |  |
+| ChallengesCompleted | uint64 (formatted integer)| `uint64` |  | |  |  |
+| ChallengesPassed | uint64 (formatted integer)| `uint64` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| Downtime | uint64 (formatted integer)| `uint64` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| InactiveRounds | int64 (formatted integer)| `int64` |  | |  |  |
+| IsKilled | boolean| `bool` |  | |  |  |
+| IsRestricted | boolean| `bool` |  | |  |  |
+| IsShutdown | boolean| `bool` |  | |  |  |
+| NotAvailable | boolean| `bool` |  | |  |  |
+| OpenChallenges | uint64 (formatted integer)| `uint64` |  | |  |  |
+| RankMetric | double (formatted number)| `float64` |  | |  |  |
+| ReadData | int64 (formatted integer)| `int64` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| SavedData | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| URL | string| `string` |  | |  |  |
+| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| offers_total | [Coin](#coin)| `Coin` |  | |  |  |
+| total_block_rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| total_read_income | [Coin](#coin)| `Coin` |  | |  |  |
+| total_rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| total_slashed_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| total_storage_income | [Coin](#coin)| `Coin` |  | |  |  |
+| write_price | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 
@@ -3761,6 +3860,33 @@ model.Model
 
 
 
+### <span id="miner-aggregate"></span> MinerAggregate
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| BlocksFinalised | int64 (formatted integer)| `int64` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| IsKilled | boolean| `bool` |  | |  |  |
+| IsShutdown | boolean| `bool` |  | |  |  |
+| MinerID | string| `string` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| URL | string| `string` |  | |  |  |
+| fees | [Coin](#coin)| `Coin` |  | |  |  |
+| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| total_rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
 ### <span id="miner-dto-node"></span> MinerDtoNode
 
 
@@ -4320,6 +4446,32 @@ it can be used as a scan destination, similar to [NullString].
 
 
 
+### <span id="sharder-aggregate"></span> SharderAggregate
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| IsKilled | boolean| `bool` |  | |  |  |
+| IsShutdown | boolean| `bool` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| SharderID | string| `string` |  | |  |  |
+| URL | string| `string` |  | |  |  |
+| fees | [Coin](#coin)| `Coin` |  | |  |  |
+| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| total_rewards | [Coin](#coin)| `Coin` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
 ### <span id="sharder-snapshot"></span> SharderSnapshot
 
 
@@ -4457,6 +4609,50 @@ it can be used as a scan destination, similar to [NullString].
 
 
 [SimpleNodes](#simple-nodes)
+
+### <span id="snapshot"></span> Snapshot
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| ActiveAllocatedDelta | int64 (formatted integer)| `int64` |  | |  |  |
+| AllocatedStorage | int64 (formatted integer)| `int64` |  | |  |  |
+| AuthorizerCount | int64 (formatted integer)| `int64` |  | |  |  |
+| BlobberCount | int64 (formatted integer)| `int64` |  | |  |  |
+| BlobberTotalRewards | int64 (formatted integer)| `int64` |  | |  |  |
+| BlockCount | int64 (formatted integer)| `int64` |  | |  |  |
+| ClientLocks | int64 (formatted integer)| `int64` |  | |  |  |
+| CreatedAt | int64 (formatted integer)| `int64` |  | |  |  |
+| MaxCapacityStorage | int64 (formatted integer)| `int64` |  | |  |  |
+| MinerCount | int64 (formatted integer)| `int64` |  | |  |  |
+| MinerTotalRewards | int64 (formatted integer)| `int64` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| SharderCount | int64 (formatted integer)| `int64` |  | |  |  |
+| SharderTotalRewards | int64 (formatted integer)| `int64` |  | |  |  |
+| StakedStorage | int64 (formatted integer)| `int64` |  | |  |  |
+| StorageTokenStake | int64 (formatted integer)| `int64` |  | |  |  |
+| SuccessfulChallenges | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalAllocations | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalChallengePools | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalChallenges | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalMint | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalReadPoolLocked | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalRewards | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalStaked | int64 (formatted integer)| `int64` |  | | updated from blobber snapshot aggregate table |  |
+| TotalTxnFee | int64 (formatted integer)| `int64` |  | |  |  |
+| TransactionsCount | int64 (formatted integer)| `int64` |  | |  |  |
+| UniqueAddresses | int64 (formatted integer)| `int64` |  | |  |  |
+| UsedStorage | int64 (formatted integer)| `int64` |  | |  |  |
+| ValidatorCount | int64 (formatted integer)| `int64` |  | |  |  |
+| ZCNSupply | int64 (formatted integer)| `int64` |  | |  |  |
+
+
 
 ### <span id="stake-pool"></span> StakePool
 
@@ -4752,6 +4948,29 @@ Timestamp - just a wrapper to control the json encoding */
 
 
 
+### <span id="user-aggregate"></span> UserAggregate
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| CollectedReward | int64 (formatted integer)| `int64` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| PayedFees | int64 (formatted integer)| `int64` |  | |  |  |
+| ReadPoolTotal | int64 (formatted integer)| `int64` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalReward | int64 (formatted integer)| `int64` |  | |  |  |
+| TotalStake | int64 (formatted integer)| `int64` |  | |  |  |
+| UserID | string| `string` |  | |  |  |
+| WritePoolTotal | int64 (formatted integer)| `int64` |  | |  |  |
+
+
+
 ### <span id="user-pool-stat"></span> UserPoolStat
 
 
@@ -4813,6 +5032,31 @@ Timestamp - just a wrapper to control the json encoding */
 | UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
+### <span id="validator-aggregate"></span> ValidatorAggregate
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| IsKilled | boolean| `bool` |  | |  |  |
+| IsShutdown | boolean| `bool` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| URL | string| `string` |  | |  |  |
+| ValidatorID | string| `string` |  | |  |  |
+| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| total_rewards | [Coin](#coin)| `Coin` |  | |  |  |
 | total_stake | [Coin](#coin)| `Coin` |  | |  |  |
 
 
@@ -4988,6 +5232,23 @@ Timestamp - just a wrapper to control the json encoding */
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
 | Events | [][Event](#event)| `[]*Event` |  | |  |  |
+
+
+
+### <span id="free-storage-allocation-input"></span> freeStorageAllocationInput
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Blobbers | []string| `[]string` |  | |  |  |
+| Marker | string| `string` |  | |  |  |
+| RecipientPublicKey | string| `string` |  | |  |  |
 
 
 
@@ -5176,3 +5437,29 @@ Timestamp - just a wrapper to control the json encoding */
   
 
 []string
+
+### <span id="validator-node-response"></span> validatorNodeResponse
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| BaseUrl | string| `string` |  | |  |  |
+| DelegateWallet | string| `string` |  | | StakePoolSettings |  |
+| IsKilled | boolean| `bool` |  | |  |  |
+| IsShutdown | boolean| `bool` |  | |  |  |
+| NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
+| PublicKey | string| `string` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| ValidatorID | string| `string` |  | |  |  |
+| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| stake_total | [Coin](#coin)| `Coin` |  | |  |  |
+| total_service_charge | [Coin](#coin)| `Coin` |  | |  |  |
+| uncollected_service_charge | [Coin](#coin)| `Coin` |  | |  |  |
+
+
