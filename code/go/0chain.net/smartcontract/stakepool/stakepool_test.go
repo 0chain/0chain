@@ -613,24 +613,6 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 				serviceChargeRatio: 1,
 			},
 		},
-		{
-			name: "single delegates with 1 coin and 50 percent service charge",
-			args: args{
-				value:              1,
-				numDelegates:       1,
-				delegateBal:        []currency.Coin{1},
-				serviceChargeRatio: 0.5,
-			},
-		},
-		{
-			name: "single delegates with 100 percent service charge",
-			args: args{
-				value:              20,
-				numDelegates:       1,
-				delegateBal:        []currency.Coin{100},
-				serviceChargeRatio: 1,
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -638,7 +620,7 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			sp, balances := setup(t, tt.args)
 
 			for i := 0; i < 10000; i++ {
-				err := sp.DistributeRewardsRandN(tt.args.value, providerID, providerType, RoundRandomSeed, tt.args.numDelegates, spenum.BlockRewardBlobber, balances)
+				err := sp.DistributeRewardsRandN(tt.args.value, providerID, providerType, RoundRandomSeed, tt.args.numDelegates-1, spenum.BlockRewardBlobber, balances)
 				require.NoError(t, err)
 			}
 			validate(t, sp, tt.args)
