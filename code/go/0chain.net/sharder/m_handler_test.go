@@ -51,6 +51,7 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			//nolint:all 
 			sc := &MockChainer{}
 			sc.On("GetLatestFinalizedBlock").Return(b)
 			sc.On("GetBlockChannel").Return(make(chan *block.Block, 1))
@@ -165,6 +166,7 @@ func TestNotarizedBlockHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			//nolint:all 
 			sc := &MockChainer{}
 			sc.On("GetLatestFinalizedBlock").Return(b)
 			sc.On("GetBlock", mock.Anything, mock.Anything).Return(b, nil)
@@ -213,6 +215,7 @@ func TestNotarizedBlockKickHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			//nolint:all 
 			sc := &MockChainer{}
 			sc.On("GetLatestFinalizedBlock").Return(b)
 			sc.On("GetBlockChannel").Return(make(chan *block.Block, 1))
