@@ -66,7 +66,6 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			//nolint:all 
 			c := MockChainer{}
 
 			var data io.Reader
@@ -234,7 +233,6 @@ func TestRoundInfoHandler(t *testing.T) {
 	blocksSubstring := `Block Verification and Notarization`
 	vrfSubstring := `VRF Shares`
 
-	//nolint:all 
 	c := MockChainer{}
 	c.On("GetCurrentRound").Return(int64(1))
 	mb := block.NewMagicBlock()
