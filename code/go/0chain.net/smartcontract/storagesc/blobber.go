@@ -1015,6 +1015,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	actErr := cstate.WithActivation(balances, "athena", func() error { return nil },
+		func() error {
+			if blobber.IsKilled() || blobber.IsShutDown() {
+				return common.NewError("commit_connection_failed",
+					"blobber is killed or shutdown")
+			}
+			return nil
+		})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	if blobAlloc.Stats.UsedSize == 0 {
 		blobAlloc.LatestFinalizedChallCreatedAt = commitMarkerBase.Timestamp
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitMarkerBase.Timestamp

@@ -941,6 +941,27 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, actErr
 	}
 
+	actErr = cstate.WithActivation(balances, "athena", func() error { return nil }, func() error {
+		blobber, err := sc.getBlobber(blobberID, balances)
+		if err != nil {
+			return common.NewError("add_challenge", err.Error())
+		}
+
+		if blobber.IsKilled() || blobber.IsShutDown() {
+			err := partitionsChallengeReadyBlobbersRemove(balances, blobberID)
+			if err != nil {
+				return common.NewError("add_challenge", err.Error())
+			}
+
+			return common.NewError("add_challenge", "blobber is killed or shutdown")
+		}
+
+		return nil
+	})
+	if actErr != nil {
+		return nil, actErr
+	}
+
 	if blobberID == "" {
 		return nil, common.NewError("add_challenges", "empty blobber id")
 	}
