@@ -728,9 +728,9 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 
 func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI, sc *StorageSmartContract, passRate float64, totalWritePrice, cancellationCharge currency.Coin) (currency.Coin, error) {
 	blobberWritePriceWeight := float64(d.Terms.WritePrice) / float64(totalWritePrice)
-	reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight * passRate)
+	reward, _ := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight * passRate)
 
-	err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
+	err := sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", d.BlobberID, err)
 	}
@@ -1379,7 +1379,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 						var cp *challengePool
 						cp, e = sc.getChallengePool(sa.ID, balances)
 						if e != nil {
-							e = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
+							_ = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
 						}
 
 						e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)

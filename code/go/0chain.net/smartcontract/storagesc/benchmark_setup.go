@@ -62,7 +62,7 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	const mockWriePoolSize = 600000000
+	//const mockWriePoolSize = 600000000 // Lint issue - Unused variable
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:              id,

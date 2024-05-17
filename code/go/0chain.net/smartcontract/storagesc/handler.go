@@ -786,7 +786,7 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var fullBlocks []fullBlock
-	txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
+	txs, _ := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
 	var txnIndex int
 	for i, b := range blocks {
 		fBlock := fullBlock{Block: blocks[i]}
