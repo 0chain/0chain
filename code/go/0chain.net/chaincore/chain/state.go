@@ -767,6 +767,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	return []*event.User{stateToUser(fromClient, fs), stateToUser(toClient, ts)}, nil
 }
 
+//nolint:unused
 func (c *Chain) mintAmountWithAssert(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
 	originBalance, err := sctx.GetClientBalance(toClient)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -795,6 +796,7 @@ func (c *Chain) mintAmountWithAssert(sctx bcstate.StateContextI, toClient datast
 	return tEvent, nil
 }
 
+//nolint:unused
 func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount currency.Coin) (eu *event.User, err error) {
 	if amount == 0 {
 		return nil, nil

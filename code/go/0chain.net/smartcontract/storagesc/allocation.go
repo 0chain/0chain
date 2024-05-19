@@ -163,6 +163,7 @@ func sizeInGB(size int64) float64 {
 }
 
 // exclude blobbers with not enough token in stake pool to fit the size
+//
 //nolint:unused
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	size int64, balances chainstate.CommonStateContextI) (filter filterBlobberFunc) {
@@ -518,7 +519,7 @@ func (uar *updateAllocationRequest) validate(
 	alloc *StorageAllocation,
 ) error {
 	if uar.Size == 0 &&
-		uar.Extend == false &&
+		!uar.Extend &&
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
 		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&
@@ -658,6 +659,7 @@ func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI
 }
 
 // allocation period used to calculate weighted average prices
+//
 //nolint:unused
 type allocPeriod struct {
 	read   currency.Coin    // read price
@@ -672,6 +674,7 @@ func (ap *allocPeriod) weight() float64 {
 }
 
 // returns weighted average read and write prices
+//
 //nolint:unused
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
@@ -1106,7 +1109,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	return string(alloc.Encode()), nil
 }
 
-//nolint:unused	
+//nolint:unused
 func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
 	blobberMap := make(map[string]*StorageNode)
 	for _, storageNode := range allBlobbers {

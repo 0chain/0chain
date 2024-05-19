@@ -424,8 +424,9 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	}
 
 	if len(blobberIDs) < numberOfBlobbers && !isForce {
-		return nil, errors.New(fmt.Sprintf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers))
+		return nil, fmt.Errorf("not enough blobbers to honor the allocation: %d < %d", len(blobberIDs), numberOfBlobbers)
 	}
+
 	return blobberIDs, nil
 }
 
@@ -877,6 +878,7 @@ func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) 
 	}
 
 	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
+	//nolint:gosimple
 	return
 }
 
@@ -2631,7 +2633,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		}
 
 		if len(blobber_ids) > common2.MaxQueryLimit {
-			common.Respond(w, r, nil, errors.New(fmt.Sprintf("too many ids, cannot exceed %d", common2.MaxQueryLimit)))
+			common.Respond(w, r, nil, fmt.Errorf("too many ids, cannot exceed %d", common2.MaxQueryLimit))
 			return
 		}
 

@@ -40,6 +40,7 @@ func (ssc *StorageSmartContract) addToFundedPools(
 	return err
 }
 
+//nolint:unused
 func (ssc *StorageSmartContract) isFundedPool(
 	clientId, poolId string,
 	balances cstate.StateContextI,

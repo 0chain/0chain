@@ -59,9 +59,10 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var err error
-
-	authorizers := make([]event.Authorizer, 0)
+	var (
+		err         error
+		authorizers []event.Authorizer
+	)
 
 	if active == "true" {
 		conf, err := GetGlobalNode(stateCtx)

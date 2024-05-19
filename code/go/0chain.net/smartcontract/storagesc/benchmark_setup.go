@@ -871,8 +871,7 @@ func getMockStakePoolSettings(blobber string) stakepool.Settings {
 func getMockBlobberStakePoolId(blobber, stake int, clients []string) string {
 	index := viper.GetInt(sc.NumBlobberDelegates)*blobber + stake
 	clinetIndex := index % len(clients)
-	clinetIndex = clinetIndex
-	return clients[index%len(clients)]
+	return clients[clinetIndex]
 }
 
 func getMockValidatorStakePoolId(validator string, stake int) string {

@@ -54,6 +54,7 @@ type Allocations struct {
 	List SortedList
 }
 
+//nolint:unused
 func (a *Allocations) has(id string) (ok bool) {
 	_, ok = a.List.getIndex(id)
 	return // false
@@ -1279,6 +1280,7 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 	return cost, nil
 }
 
+//nolint:unused
 func (ba *BlobberAllocation) cost() (currency.Coin, error) {
 	cost, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 	if err != nil {
@@ -1630,6 +1632,7 @@ type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
 type filterValidatorFunc func(validator *ValidationNode) (kick bool, err error)
 
+//nolint:unused
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
 	filtered []*StorageNode, err error) {

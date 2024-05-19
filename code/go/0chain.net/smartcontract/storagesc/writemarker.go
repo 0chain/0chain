@@ -55,6 +55,7 @@ func (wm *WriteMarker) mustBase() *writeMarkerBase {
 	return b
 }
 
+//nolint:unused
 func (wm *WriteMarker) mustUpdateBase(f func(base *writeMarkerBase) error) error {
 	return wm.UpdateBase(func(eb entitywrapper.EntityBaseI) error {
 		b, ok := eb.(*writeMarkerBase)

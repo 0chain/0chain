@@ -367,6 +367,7 @@ type stakePoolRequest struct {
 	ProviderID   string          `json:"provider_id,omitempty"`
 }
 
+//nolint:unused
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	if err = json.Unmarshal(p, spr); err != nil {
 		return
