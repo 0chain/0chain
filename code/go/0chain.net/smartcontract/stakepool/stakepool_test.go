@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -536,14 +537,34 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 		return sp, balances
 	}
 	validate := func(t *testing.T, sp *StakePool, arg args) {
-		totalReward, err := currency.MultCoin(arg.value, currency.Coin(10000))
-		totalReward = currency.Coin((float64(totalReward) * (1 - arg.serviceChargeRatio)))
+		totalStake := currency.Coin(0)
+		serviceCharge, err := currency.Float64ToCoin(arg.serviceChargeRatio * float64(arg.value))
 		require.NoError(t, err)
-
+		valueLeft := arg.value - serviceCharge
+		for _, bal := range arg.delegateBal {
+			totalStake, err = currency.AddCoin(totalStake, bal)
+			require.NoError(t, err)
+		}
+		i := 0
 		for _, pool := range sp.Pools {
-			expectedReward := (float64(pool.Balance) / float64(arg.value)) * float64(totalReward)
-			tolerance := 0.1 * float64(expectedReward) // 10% toleranace
-			require.InDelta(t, expectedReward, float64(pool.Reward), tolerance)
+			expectedRewardPerRound := float64(0)
+			probabiltyOfSelection := float64(1) / float64(len(sp.Pools))
+			for j, bal := range arg.delegateBal {
+				if i == j || totalStake-bal <= 0 {
+					continue
+				}
+				ratio := float64(pool.Balance) / float64(totalStake-bal)
+				reward, err := currency.MultFloat64(valueLeft, ratio)
+				require.NoError(t, err)
+				expectedRewardPerRound = expectedRewardPerRound + float64(reward)*probabiltyOfSelection
+			}
+			totalExpectedReward := expectedRewardPerRound * float64(10000)
+			tolerance := 0.05 * float64(totalExpectedReward) // 5% tolerance
+			fmt.Println("Expected Reward: ", totalExpectedReward, "Actual Reward: ", pool.Reward)
+			require.InDelta(t, totalExpectedReward, float64(pool.Reward), tolerance)
+
+			i = i + 1
+
 		}
 	}
 
