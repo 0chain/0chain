@@ -75,7 +75,7 @@ func (sn *StorageNode) IsActive(now common.Timestamp, healthCheckPeriod time.Dur
 
 // implement provider.AbstractProvider interface
 func (sn *StorageNode) Kill() {
-	//noling:errcheck
+	//nolint:errcheck
 	sn.mustUpdateBase(func(b *storageNodeBase) error {
 		b.Kill()
 		return nil

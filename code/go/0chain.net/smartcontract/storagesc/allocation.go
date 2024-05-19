@@ -163,6 +163,7 @@ func sizeInGB(size int64) float64 {
 }
 
 // exclude blobbers with not enough token in stake pool to fit the size
+//nolint:unused
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	size int64, balances chainstate.CommonStateContextI) (filter filterBlobberFunc) {
 
