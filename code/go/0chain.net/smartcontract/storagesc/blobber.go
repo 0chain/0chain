@@ -1033,7 +1033,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	blobAlloc.LastWriteMarker = commitConnection.WriteMarker
 	blobAlloc.Stats.UsedSize += changeSize
 	blobAlloc.Stats.NumWrites++
-
+	//nolint:errcheck
 	blobber.mustUpdateBase(func(b *storageNodeBase) error {
 		b.SavedData += changeSize
 		return nil

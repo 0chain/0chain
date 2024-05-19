@@ -1583,6 +1583,7 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, actErr
 	}
 
+	//nolint:errcheck
 	addedBlobber.mustUpdateBase(func(b *storageNodeBase) error {
 		b.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 		return nil

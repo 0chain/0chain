@@ -2480,7 +2480,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
 		require.NoError(t, err)
-
+		//nolint:errcheck
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.SavedData = int64(mockBlobberCapacity) / 2
 			return nil

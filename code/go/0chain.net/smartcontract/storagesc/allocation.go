@@ -1480,7 +1480,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"can't get blobber "+d.BlobberID+": "+err.Error())
 		}
-
+		//nolint:errcheck
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.SavedData += -d.Stats.UsedSize
 			b.Allocated += -d.Size
