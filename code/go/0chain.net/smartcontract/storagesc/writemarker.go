@@ -61,7 +61,7 @@ func (wm *WriteMarker) mustUpdateBase(f func(base *writeMarkerBase) error) error
 		if !ok {
 			logging.Logger.Panic("invalid write marker base type")
 		}
-
+		//nolint:errcheck
 		f(b)
 		return nil
 	})

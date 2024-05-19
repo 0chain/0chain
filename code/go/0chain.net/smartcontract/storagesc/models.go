@@ -1447,6 +1447,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"can't get blobber "+d.BlobberID+": "+err.Error())
 			}
 
+			//nolint:errcheck
 			blobber.mustUpdateBase(func(b *storageNodeBase) error {
 				b.SavedData += -d.Stats.UsedSize
 				b.Allocated += -d.Size
@@ -1624,6 +1625,7 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 
 type StorageAllocationDecode StorageAllocation
 
+//nolint:unused
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
 type filterValidatorFunc func(validator *ValidationNode) (kick bool, err error)

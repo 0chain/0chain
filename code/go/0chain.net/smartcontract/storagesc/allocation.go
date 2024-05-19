@@ -658,6 +658,7 @@ func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI
 }
 
 // allocation period used to calculate weighted average prices
+//nolint:unused
 type allocPeriod struct {
 	read   currency.Coin    // read price
 	write  currency.Coin    // write price
@@ -665,11 +666,13 @@ type allocPeriod struct {
 	size   int64            // size for period
 }
 
+//nolint:unused
 func (ap *allocPeriod) weight() float64 {
 	return float64(ap.period) * float64(ap.size)
 }
 
 // returns weighted average read and write prices
+//nolint:unused
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
@@ -711,6 +714,7 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 	return
 }
 
+//nolint:unused
 func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	psize, sizeDiff int64) (avg Terms, err error) {
 
@@ -1102,6 +1106,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	return string(alloc.Encode()), nil
 }
 
+//nolint:unused	
 func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
 	blobberMap := make(map[string]*StorageNode)
 	for _, storageNode := range allBlobbers {
@@ -1118,6 +1123,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	return
 }
 
+//nolint:unused
 func randomizeNodes(in []*StorageNode, out []*StorageNode, n int, seed int64) []*StorageNode {
 	nOut := minInt(len(in), n)
 	nOut = maxInt(1, nOut)
@@ -1134,6 +1140,7 @@ func randomizeNodes(in []*StorageNode, out []*StorageNode, n int, seed int64) []
 	return out
 }
 
+//nolint:unused
 func minInt(x, y int) int {
 	if x < y {
 		return x
@@ -1141,6 +1148,7 @@ func minInt(x, y int) int {
 	return y
 }
 
+//nolint:unused
 func maxInt(x, y int) int {
 	if x > y {
 		return x
@@ -1148,6 +1156,7 @@ func maxInt(x, y int) int {
 	return y
 }
 
+//nolint:unused
 func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	for _, s := range sl {
 		if s.mustBase().ID == c.mustBase().ID {
