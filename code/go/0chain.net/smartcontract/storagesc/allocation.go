@@ -435,6 +435,7 @@ func setupNewAllocation(
 	for _, b := range blobberNodes {
 		bAlloc := newBlobberAllocation(bSize, sa, b.mustBase(), conf, now)
 		sa.BlobberAllocs = append(sa.BlobberAllocs, bAlloc)
+		//nolint:errcheck
 		b.mustUpdateBase(func(snb *storageNodeBase) error {
 			sa.BlobberAllocsMap[snb.ID] = bAlloc
 			snb.Allocated += bSize
