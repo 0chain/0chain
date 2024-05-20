@@ -975,7 +975,6 @@ func (c *Chain) emitUserEvent(sc bcstate.StateContextI, usr *event.User) {
 		func(events []event.Event, current event.Event) []event.Event {
 			return append(events, current)
 		})
-	return
 }
 
 func (c *Chain) emitUniqueAddressEvent(sc bcstate.StateContextI, s *state.State) {
@@ -983,6 +982,4 @@ func (c *Chain) emitUniqueAddressEvent(sc bcstate.StateContextI, s *state.State)
 		return
 	}
 	sc.EmitEvent(event.TypeStats, event.TagUniqueAddress, s.TxnHash, nil)
-
-	return
 }

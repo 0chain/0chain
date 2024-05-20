@@ -1398,7 +1398,7 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 //	400:
 func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request) {
 
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, _ := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))

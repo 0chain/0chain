@@ -65,7 +65,8 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 	)
 
 	if active == "true" {
-		conf, err := GetGlobalNode(stateCtx)
+		var conf *GlobalNode
+		conf, err = GetGlobalNode(stateCtx)
 		if err != nil && err != util.ErrValueNotPresent {
 			const cantGetConfigErrMsg = "can't get config"
 			common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg))

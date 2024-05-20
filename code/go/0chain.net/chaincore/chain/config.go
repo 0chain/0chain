@@ -767,7 +767,10 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	}
 
 	if maxTxnFee == 0 {
-		maxTxnFeeF = DefaultMaxTxnFee
+		maxTxnFee, err = currency.ParseZCN(DefaultMaxTxnFee)
+		if err != nil {
+			return err
+		}
 	}
 
 	conf.MaxTxnFee = maxTxnFee
