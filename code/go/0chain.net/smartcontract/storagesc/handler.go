@@ -1410,6 +1410,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 	stakable := values.Get("stakable") == "true"
 
 	var validators []event.Validator
+	var err error
 
 	if active == "true" {
 		conf, err2 := getConfig(srh.GetQueryStateContext())
