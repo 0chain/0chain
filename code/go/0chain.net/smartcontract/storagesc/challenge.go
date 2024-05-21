@@ -955,6 +955,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return common.NewError("add_challenge", err.Error())
 			}
 
+			if blobProcessedCount > 10 {
+				return nil
+			}
+			blobProcessedCount++
+
 			blobberID, err = partsWeight.pick(balances, r)
 			if err != nil {
 				return common.NewError("add_challenge", err.Error())
@@ -964,11 +969,6 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			if err != nil {
 				return common.NewError("add_challenge", err.Error())
 			}
-
-			if blobProcessedCount > 10 {
-				return nil
-			}
-			blobProcessedCount++
 		}
 
 		return nil
