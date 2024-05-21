@@ -941,7 +941,9 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, actErr
 	}
 
+	blobProcessedCount := 0
 	actErr = cstate.WithActivation(balances, "athena", func() error { return nil }, func() error {
+
 		blobber, err := sc.getBlobber(blobberID, balances)
 		if err != nil {
 			return common.NewError("add_challenge", err.Error())
@@ -962,12 +964,21 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			if err != nil {
 				return common.NewError("add_challenge", err.Error())
 			}
+
+			if blobProcessedCount > 10 {
+				return nil
+			}
+			blobProcessedCount++
 		}
 
 		return nil
 	})
 	if actErr != nil {
 		return nil, actErr
+	}
+
+	if blobProcessedCount > 10 {
+		return nil, nil
 	}
 
 	if blobberID == "" {
