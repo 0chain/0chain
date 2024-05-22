@@ -205,8 +205,8 @@ func (edb *EventDb) GetTransactionsForBlocks(blockStart, blockEnd int64) ([]Tran
 }
 
 func (edb *EventDb) UpdateTransactionErrors(current int64) error {
-	from := (current - 1) * edb.settings.PermanentPartitionChangePeriod
-	to := (current) * edb.settings.PermanentPartitionChangePeriod
+	from := (current) * edb.settings.PermanentPartitionChangePeriod
+	to := (current + 1) * edb.settings.PermanentPartitionChangePeriod
 
 	lastPartition := edb.partTableName("transactions", from, to)
 
