@@ -225,7 +225,7 @@ func TestTransactionErrors(t *testing.T) {
 		"output4",
 	})
 
-	err := edb.UpdateTransactionErrors(1)
+	err := edb.UpdateTransactionErrors(0)
 	require.NoError(t, err)
 
 	txnErrors, err := edb.GetTransactionErrors()
@@ -264,7 +264,7 @@ func TestTransactionErrors(t *testing.T) {
 		"output4",
 	})
 
-	err = edb.UpdateTransactionErrors(1)
+	err = edb.UpdateTransactionErrors(0)
 	require.NoError(t, err)
 
 	txnErrors, err = edb.GetTransactionErrors()

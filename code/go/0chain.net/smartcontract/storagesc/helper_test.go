@@ -499,6 +499,10 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	}
 	storChall.TotalValidators = len(valSlice)
 	storChall.ValidatorIDs = valIDs
+	storChall.ValidatorIDMap = make(map[string]struct{}, len(storChall.ValidatorIDs))
+	for _, vID := range storChall.ValidatorIDs {
+		storChall.ValidatorIDMap[vID] = struct{}{}
+	}
 
 	storChall.AllocationID = allocID
 	storChall.BlobberID = blobber.Id()
