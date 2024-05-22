@@ -458,6 +458,10 @@ func (edb *EventDb) WorkEvents(
 		logging.Logger.Warn("work events - lost connection")
 	}
 
+	if blockEvents.round == 3000 {
+		logging.Logger.Panic("panic after 3000")
+	}
+
 	currentPermanentPartition := blockEvents.round / edb.settings.PermanentPartitionChangePeriod
 	if blockEvents.round%edb.settings.PermanentPartitionChangePeriod == 0 {
 		edb.managePermanentPartitionsAsync(currentPermanentPartition)
