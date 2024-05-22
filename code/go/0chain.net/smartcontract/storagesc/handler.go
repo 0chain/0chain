@@ -424,7 +424,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	}
 
 	if len(blobberIDs) < numberOfBlobbers && !isForce {
-		return nil, fmt.Errorf("not enough blobbers to honor the allocation: %d < %d", len(blobberIDs), numberOfBlobbers)
+		return nil, fmt.Errorf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers)
 	}
 
 	return blobberIDs, nil
