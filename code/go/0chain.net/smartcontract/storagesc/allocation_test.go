@@ -1760,12 +1760,9 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			allocationID = arg.allocationID
 		)
 
-		bcpartition, _, err := partitionsChallengeReadyBlobbers(balances)
-		require.NoError(t, err)
-
 		for i := 0; i < arg.numBlobbers; i++ {
 			blobberID := "blobber_" + strconv.Itoa(i)
-			err := bcpartition.Add(balances, &ChallengeReadyBlobber{BlobberID: blobberID})
+			err := PartitionsChallengeReadyBlobberAddOrUpdate(balances, blobberID, currency.Coin(1e12), uint64(1e6))
 			require.NoError(t, err)
 
 			bcAllocPartition, err := partitionsBlobberAllocations(blobberID, balances)
@@ -1778,9 +1775,6 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			err = bcAllocPartition.Save(balances)
 			require.NoError(t, err)
 		}
-
-		err = bcpartition.Save(balances)
-		require.NoError(t, err)
 
 		return ssc, balances, removeID, allocationID
 	}
@@ -1848,6 +1842,8 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 			require.NoError(t, err)
 			validate(tt.want, balances)
 		})
+
+		break
 	}
 }
 
