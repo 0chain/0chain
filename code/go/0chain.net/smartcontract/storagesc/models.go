@@ -2128,6 +2128,15 @@ func (sa *StorageAllocation) CopyFrom(v interface{}) bool {
 	return true
 }
 
+func (sa *StorageAllocation) RefreshAllocationUsedSize() {
+	totalBlobberAllocationUsedSize := int64(0)
+	for _, ba := range sa.BlobberAllocs {
+		totalBlobberAllocationUsedSize += ba.Stats.UsedSize
+	}
+
+	sa.Stats.UsedSize = (totalBlobberAllocationUsedSize * int64(sa.DataShards)) / (int64(sa.DataShards + sa.ParityShards))
+}
+
 type BlobberCloseConnection struct {
 	AllocationRoot     string       `json:"allocation_root"`
 	PrevAllocationRoot string       `json:"prev_allocation_root"`
