@@ -42,3 +42,27 @@ type ResetBlobberStatsDto struct {
 	NewAllocated  int64  `json:"new_allocated"`
 	NewSavedData  int64  `json:"new_saved_data"`
 }
+
+type ResetBlobberStatsV2Dto struct {
+	AllocatedUpdates   BlobberAllocatedUpdates   `json:"allocated_updates"`
+	SavedDataUpdates   BlobberSavedDataUpdates   `json:"saved_data_updates"`
+	TotalOffersUpdates BlobberTotalOffersUpdates `json:"total_offers_updates"`
+}
+
+type BlobberAllocatedUpdates struct {
+	BlobberIds    []string `json:"blobber_ids"`
+	PrevAllocated []int64  `json:"prev_allocated"`
+	NewAllocated  []int64  `json:"new_allocated"`
+}
+
+type BlobberSavedDataUpdates struct {
+	BlobberIds    []string `json:"blobber_ids"`
+	PrevSavedData []int64  `json:"prev_saved_data"`
+	NewSavedData  []int64  `json:"new_saved_data"`
+}
+
+type BlobberTotalOffersUpdates struct {
+	BlobberIds      []string        `json:"blobber_ids"`
+	PrevTotalOffers []currency.Coin `json:"prev_total_offers"`
+	NewTotalOffers  []currency.Coin `json:"new_total_offers"`
+}
