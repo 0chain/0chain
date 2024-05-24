@@ -91,67 +91,135 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 
 	// Update blobber details in mpt and eventsdb
 
-	var fixRequest = &dto.ResetBlobberStatsDto{}
+	var fixRequest = &dto.ResetBlobberStatsV2Dto{}
 	if err = json.Unmarshal(input, fixRequest); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"malformed request: "+err.Error())
 	}
 
-	blobber, err := ssc.getBlobber(fixRequest.BlobberID, balances)
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't get the blobber: "+err.Error())
-	}
-
-	if err := blobber.mustUpdateBase(func(snb *storageNodeBase) error {
-		if snb.Allocated != fixRequest.PrevAllocated || snb.SavedData != fixRequest.PrevSavedData {
-			return common.NewError("reset_blobber_stats_failed",
-				"blobber's allocated or saved_data doesn't match with the provided values")
+	if len(fixRequest.AllocatedUpdates.BlobberIds) != 0 {
+		if len(fixRequest.AllocatedUpdates.BlobberIds) != len(fixRequest.AllocatedUpdates.PrevAllocated) ||
+			len(fixRequest.AllocatedUpdates.BlobberIds) != len(fixRequest.AllocatedUpdates.NewAllocated) {
+			return "", common.NewError("reset_blobber_stats_failed",
+				"invalid allocated updates")
 		}
 
-		snb.SavedData = fixRequest.NewSavedData
-		snb.Allocated = fixRequest.NewAllocated
-		return nil
-	}); err != nil {
-		return "", err
+		for i, blobberID := range fixRequest.AllocatedUpdates.BlobberIds {
+			blobber, err := ssc.getBlobber(blobberID, balances)
+			if err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"can't get the blobber: "+err.Error())
+			}
+
+			prevAllocated := fixRequest.AllocatedUpdates.PrevAllocated[i]
+			newAllocated := fixRequest.AllocatedUpdates.NewAllocated[i]
+
+			if err := blobber.mustUpdateBase(func(snb *storageNodeBase) error {
+				if snb.Allocated != prevAllocated {
+					return common.NewError("reset_blobber_stats_failed",
+						"blobber's allocated doesn't match with the provided values")
+				}
+
+				snb.Allocated = newAllocated
+				return nil
+			}); err != nil {
+				return "", err
+			}
+
+			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+
+		}
 	}
 
-	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't Save blobber: "+err.Error())
+	if len(fixRequest.SavedDataUpdates.BlobberIds) != 0 {
+		if len(fixRequest.SavedDataUpdates.BlobberIds) != len(fixRequest.SavedDataUpdates.PrevSavedData) ||
+			len(fixRequest.SavedDataUpdates.BlobberIds) != len(fixRequest.SavedDataUpdates.NewSavedData) {
+			return "", common.NewError("reset_blobber_stats_failed",
+				"invalid saved data updates")
+		}
+
+		for i, blobberID := range fixRequest.SavedDataUpdates.BlobberIds {
+			blobber, err := ssc.getBlobber(blobberID, balances)
+			if err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"can't get the blobber: "+err.Error())
+			}
+
+			prevSavedData := fixRequest.SavedDataUpdates.PrevSavedData[i]
+			newSavedData := fixRequest.SavedDataUpdates.NewSavedData[i]
+
+			if err := blobber.mustUpdateBase(func(snb *storageNodeBase) error {
+				if snb.SavedData != prevSavedData {
+					return common.NewError("reset_blobber_stats_failed",
+						"blobber's saved data doesn't match with the provided values")
+				}
+
+				snb.SavedData = newSavedData
+				return nil
+			}); err != nil {
+				return "", err
+			}
+
+			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+
+			// Update challenge ready blobber partition
+
+			bb := blobber.mustBase()
+			sp, err := getStakePool(spenum.Blobber, bb.ID, balances)
+			if err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"can't get related stake pool: "+err.Error())
+			}
+
+			sd, err := maths.ConvertToUint64(bb.SavedData)
+			if err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"can't convert saved_data to uint64: "+err.Error())
+			}
+
+			spBalance, err := sp.stake()
+			if err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"can't get stake pool balance: "+err.Error())
+			}
+
+			if err := PartitionsChallengeReadyBlobberUpdate(balances, bb.ID, spBalance, sd); err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"error updating challenge ready partitions: "+err.Error())
+			}
+		}
+
 	}
-	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
-	// Update challenge ready blobber partition
+	if len(fixRequest.TotalOffersUpdates.BlobberIds) != 0 {
+		if len(fixRequest.TotalOffersUpdates.BlobberIds) != len(fixRequest.TotalOffersUpdates.PrevTotalOffers) {
+			return "", common.NewError("reset_blobber_stats_failed",
+				"invalid total offers updates")
+		}
 
-	bb := blobber.mustBase()
-	sp, err := getStakePool(spenum.Blobber, bb.ID, balances)
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't get related stake pool: "+err.Error())
+		for i, blobberID := range fixRequest.TotalOffersUpdates.BlobberIds {
+			prevTotalOffers := fixRequest.TotalOffersUpdates.PrevTotalOffers[i]
+
+			sp, err := getStakePool(spenum.Blobber, blobberID, balances)
+			if err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"can't get related stake pool: "+err.Error())
+			}
+
+			if sp.TotalOffers != prevTotalOffers {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"blobber's total offers doesn't match with the provided values")
+			}
+
+			sp.TotalOffers = prevTotalOffers
+			if err := sp.Save(spenum.Blobber, blobberID, balances); err != nil {
+				return "", common.NewError("reset_blobber_stats_failed",
+					"can't save stake pool: "+err.Error())
+			}
+		}
 	}
 
-	sd, err := maths.ConvertToUint64(bb.SavedData)
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't convert saved_data to uint64: "+err.Error())
-	}
-
-	spBalance, err := sp.stake()
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't get stake pool balance: "+err.Error())
-	}
-
-	if err := PartitionsChallengeReadyBlobberUpdate(balances, bb.ID, spBalance, sd); err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"error updating challenge ready partitions: "+err.Error())
-	}
-
-	// Return blobber struct in response
-
-	return string(blobber.Encode()), nil
+	return "", nil
 }
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
@@ -1015,6 +1083,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	actErr := cstate.WithActivation(balances, "athena", func() error { return nil },
+		func() error {
+			if blobber.IsKilled() || blobber.IsShutDown() {
+				return common.NewError("commit_connection_failed",
+					"blobber is killed or shutdown")
+			}
+			return nil
+		})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	if blobAlloc.Stats.UsedSize == 0 {
 		blobAlloc.LatestFinalizedChallCreatedAt = commitMarkerBase.Timestamp
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitMarkerBase.Timestamp
@@ -1038,11 +1118,22 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		b.SavedData += changeSize
 		return nil
 	})
-	allocationWmSize := int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
-	if alloc.Stats.UsedSize+allocationWmSize <= 0 {
-		alloc.Stats.UsedSize = 0
-	} else {
-		alloc.Stats.UsedSize += allocationWmSize
+
+	actErr = cstate.WithActivation(balances, "athena", func() error {
+		allocationWmSize := int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+		if alloc.Stats.UsedSize+allocationWmSize <= 0 {
+			alloc.Stats.UsedSize = 0
+		} else {
+			alloc.Stats.UsedSize += allocationWmSize
+		}
+		return nil
+	},
+		func() error {
+			alloc.RefreshAllocationUsedSize()
+			return nil
+		})
+	if actErr != nil {
+		return "", actErr
 	}
 
 	alloc.Stats.NumWrites++
