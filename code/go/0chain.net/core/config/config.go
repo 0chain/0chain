@@ -212,6 +212,7 @@ type DbAccess struct {
 	KafkaUsername     string
 	KafkaPassword     string
 	KafkaWriteTimeout time.Duration
+	KafkaTriggerRound int64
 }
 
 type DbSettings struct {
