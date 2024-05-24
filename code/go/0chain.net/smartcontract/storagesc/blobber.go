@@ -1119,7 +1119,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return nil
 	})
 
-	actErr := cstate.WithActivation(balances, "athena", func() error {
+	actErr = cstate.WithActivation(balances, "athena", func() error {
 		allocationWmSize := int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
 		if alloc.Stats.UsedSize+allocationWmSize <= 0 {
 			alloc.Stats.UsedSize = 0
