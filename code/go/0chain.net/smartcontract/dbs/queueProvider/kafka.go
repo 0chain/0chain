@@ -48,6 +48,7 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Retry.Max = 5
 	config.Metadata.AllowAutoTopicCreation = true
+	config.Producer.MaxMessageBytes = 10 * 1024 * 1024
 
 	return &KafkaProvider{
 		Host:         host,
