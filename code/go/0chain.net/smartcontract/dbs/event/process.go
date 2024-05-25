@@ -364,6 +364,9 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 		return nil
 	}
 
+	if round < edb.Config().KafkaTriggerRound {
+		return nil
+	}
 	// since we are not sure if the lfb events are all published, so we will publish all events in
 	// lfb anyway
 	if round < lfbRound {
