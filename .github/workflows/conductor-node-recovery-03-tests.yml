@@ -383,6 +383,7 @@ jobs:
           bridge_address: 0x7700D773022b19622095118Fadf46f7B9448Be9b
           token_address: 0xb9EF770B6A5e12E45983C5D80545258aA38F3B78
           authorizers_address: 0x481daB4407b9880DE0A68dc62E6aF611c4949E42
+          uniswap_address: 0x4c12C2FeEDD86267d17dB64BaB2cFD12cD8611f5
           ethereum_address: 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97
           password: "12345678"
         EOF
