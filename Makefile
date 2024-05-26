@@ -67,13 +67,13 @@ msgp:
 
 swagger-storage-sc:
 	@echo "Run swagger for storage smart contract API ..."
-	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/smartcontract/storagesc -c 0chain.net/smartcontract/dbs -c 0chain.net/chaincore/... -c 0chain.net/core/... -m -o docs/swagger-storage-sc.yaml
+	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/smartcontract/storagesc -c 0chain.net/smartcontract/dbs -c 0chain.net/chaincore/... -c 0chain.net/core/... -x 0chain.net/chaincore/chain -m -o docs/swagger-storage-sc.yaml
 	swagger generate markdown  -f docs/swagger-storage-sc.yaml --output=docs/storage-sc-api.md
 	@echo "swagger documentation generated for storage smart contract API"
 
 swagger-miner-sc:
 	@echo "Run swagger for miner smart contract API ..."
-	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/smartcontract/minersc -c 0chain.net/smartcontract/dbs -c 0chain.net/smartcontract/rest -c 0chain.net/chaincore/... -c 0chain.net/core/... -m -o docs/swagger-miner-sc.yaml
+	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/smartcontract/minersc -c 0chain.net/smartcontract/dbs -c 0chain.net/smartcontract/rest -c 0chain.net/chaincore/... -x 0chain.net/chaincore/chain -c 0chain.net/core/... -m -o docs/swagger-miner-sc.yaml
 	swagger generate markdown  -f docs/swagger-miner-sc.yaml --output=docs/miner-sc-api.md
 	@echo "swagger documentation generated for miner smart contract API"
 

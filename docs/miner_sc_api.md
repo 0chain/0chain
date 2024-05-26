@@ -252,7 +252,7 @@ Retrieve hardfork information given its name, which is the round when it was app
 |------|--------|-------------|:-----------:|--------|
 | [200](#get-hardfork-200) | OK | StringMap |  | [schema](#get-hardfork-200-schema) |
 | [400](#get-hardfork-400) | Bad Request |  |  | [schema](#get-hardfork-400-schema) |
-| [484](#get-hardfork-484) | Status 484 |  |  | [schema](#get-hardfork-484-schema) |
+| [500](#get-hardfork-500) | Internal Server Error |  |  | [schema](#get-hardfork-500-schema) |
 
 #### Responses
 
@@ -271,10 +271,10 @@ Status: Bad Request
 
 ###### <span id="get-hardfork-400-schema"></span> Schema
 
-##### <span id="get-hardfork-484"></span> 484
-Status: Status 484
+##### <span id="get-hardfork-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="get-hardfork-484-schema"></span> Schema
+###### <span id="get-hardfork-500-schema"></span> Schema
 
 ### <span id="get-magic-block"></span> Get magic block. (*GetMagicBlock*)
 
@@ -331,7 +331,7 @@ Retrieves a list of miners given the filters, supports pagination.
 |------|--------|-------------|:-----------:|--------|
 | [200](#get-miner-list-200) | OK | InterfaceMap |  | [schema](#get-miner-list-200-schema) |
 | [400](#get-miner-list-400) | Bad Request |  |  | [schema](#get-miner-list-400-schema) |
-| [484](#get-miner-list-484) | Status 484 |  |  | [schema](#get-miner-list-484-schema) |
+| [500](#get-miner-list-500) | Internal Server Error |  |  | [schema](#get-miner-list-500-schema) |
 
 #### Responses
 
@@ -350,10 +350,10 @@ Status: Bad Request
 
 ###### <span id="get-miner-list-400-schema"></span> Schema
 
-##### <span id="get-miner-list-484"></span> 484
-Status: Status 484
+##### <span id="get-miner-list-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="get-miner-list-484-schema"></span> Schema
+###### <span id="get-miner-list-500-schema"></span> Schema
 
 ### <span id="get-miner-s-c-configs"></span> Get Miner SC configs. (*GetMinerSCConfigs*)
 
@@ -368,7 +368,7 @@ Retrieve the miner SC global configuration.
 |------|--------|-------------|:-----------:|--------|
 | [200](#get-miner-s-c-configs-200) | OK | StringMap |  | [schema](#get-miner-s-c-configs-200-schema) |
 | [400](#get-miner-s-c-configs-400) | Bad Request |  |  | [schema](#get-miner-s-c-configs-400-schema) |
-| [484](#get-miner-s-c-configs-484) | Status 484 |  |  | [schema](#get-miner-s-c-configs-484-schema) |
+| [500](#get-miner-s-c-configs-500) | Internal Server Error |  |  | [schema](#get-miner-s-c-configs-500-schema) |
 
 #### Responses
 
@@ -387,10 +387,10 @@ Status: Bad Request
 
 ###### <span id="get-miner-s-c-configs-400-schema"></span> Schema
 
-##### <span id="get-miner-s-c-configs-484"></span> 484
-Status: Status 484
+##### <span id="get-miner-s-c-configs-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="get-miner-s-c-configs-484-schema"></span> Schema
+###### <span id="get-miner-s-c-configs-500-schema"></span> Schema
 
 ### <span id="get-miners-stats"></span> Get miners stats. (*GetMinersStats*)
 
@@ -473,7 +473,7 @@ Retrieve the stats of a miner or sharder given the ID.
 |------|--------|-------------|:-----------:|--------|
 | [200](#get-node-stat-200) | OK | nodeStat |  | [schema](#get-node-stat-200-schema) |
 | [400](#get-node-stat-400) | Bad Request |  |  | [schema](#get-node-stat-400-schema) |
-| [484](#get-node-stat-484) | Status 484 |  |  | [schema](#get-node-stat-484-schema) |
+| [500](#get-node-stat-500) | Internal Server Error |  |  | [schema](#get-node-stat-500-schema) |
 
 #### Responses
 
@@ -492,10 +492,10 @@ Status: Bad Request
 
 ###### <span id="get-node-stat-400-schema"></span> Schema
 
-##### <span id="get-node-stat-484"></span> 484
-Status: Status 484
+##### <span id="get-node-stat-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="get-node-stat-484-schema"></span> Schema
+###### <span id="get-node-stat-500-schema"></span> Schema
 
 ### <span id="get-nodepool"></span> Get Node Pool. (*GetNodepool*)
 
@@ -510,7 +510,7 @@ Retrieve the node pool information for all the nodes in the network (miners/shar
 |------|--------|-------------|:-----------:|--------|
 | [200](#get-nodepool-200) | OK | PoolMembersInfo |  | [schema](#get-nodepool-200-schema) |
 | [400](#get-nodepool-400) | Bad Request |  |  | [schema](#get-nodepool-400-schema) |
-| [484](#get-nodepool-484) | Status 484 |  |  | [schema](#get-nodepool-484-schema) |
+| [500](#get-nodepool-500) | Internal Server Error |  |  | [schema](#get-nodepool-500-schema) |
 
 #### Responses
 
@@ -529,10 +529,10 @@ Status: Bad Request
 
 ###### <span id="get-nodepool-400-schema"></span> Schema
 
-##### <span id="get-nodepool-484"></span> 484
-Status: Status 484
+##### <span id="get-nodepool-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="get-nodepool-484-schema"></span> Schema
+###### <span id="get-nodepool-500-schema"></span> Schema
 
 ### <span id="get-phase"></span> Get phase node from the client state. (*GetPhase*)
 
@@ -668,7 +668,7 @@ Retrieves a list of sharders based on the filters, supports pagination.
 |------|--------|-------------|:-----------:|--------|
 | [200](#get-sharder-list-200) | OK | InterfaceMap |  | [schema](#get-sharder-list-200-schema) |
 | [400](#get-sharder-list-400) | Bad Request |  |  | [schema](#get-sharder-list-400-schema) |
-| [484](#get-sharder-list-484) | Status 484 |  |  | [schema](#get-sharder-list-484-schema) |
+| [500](#get-sharder-list-500) | Internal Server Error |  |  | [schema](#get-sharder-list-500-schema) |
 
 #### Responses
 
@@ -687,10 +687,10 @@ Status: Bad Request
 
 ###### <span id="get-sharder-list-400-schema"></span> Schema
 
-##### <span id="get-sharder-list-484"></span> 484
-Status: Status 484
+##### <span id="get-sharder-list-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="get-sharder-list-484-schema"></span> Schema
+###### <span id="get-sharder-list-500-schema"></span> Schema
 
 ### <span id="get-sharders-stats"></span> Get sharders stats. (*GetShardersStats*)
 
@@ -789,7 +789,7 @@ Retrieve user stake pools, supports pagination.
 |------|--------|-------------|:-----------:|--------|
 | [200](#get-user-pools-200) | OK | userPoolStat |  | [schema](#get-user-pools-200-schema) |
 | [400](#get-user-pools-400) | Bad Request |  |  | [schema](#get-user-pools-400-schema) |
-| [484](#get-user-pools-484) | Status 484 |  |  | [schema](#get-user-pools-484-schema) |
+| [500](#get-user-pools-500) | Internal Server Error |  |  | [schema](#get-user-pools-500-schema) |
 
 #### Responses
 
@@ -808,10 +808,10 @@ Status: Bad Request
 
 ###### <span id="get-user-pools-400-schema"></span> Schema
 
-##### <span id="get-user-pools-484"></span> 484
-Status: Status 484
+##### <span id="get-user-pools-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="get-user-pools-484-schema"></span> Schema
+###### <span id="get-user-pools-500-schema"></span> Schema
 
 ### <span id="node-pool-stat"></span> Get node pool stats. (*NodePoolStat*)
 
@@ -833,7 +833,7 @@ Retrieves node stake pool stats for a given client, given the id of the client a
 |------|--------|-------------|:-----------:|--------|
 | [200](#node-pool-stat-200) | OK | NodePool |  | [schema](#node-pool-stat-200-schema) |
 | [400](#node-pool-stat-400) | Bad Request |  |  | [schema](#node-pool-stat-400-schema) |
-| [484](#node-pool-stat-484) | Status 484 |  |  | [schema](#node-pool-stat-484-schema) |
+| [500](#node-pool-stat-500) | Internal Server Error |  |  | [schema](#node-pool-stat-500-schema) |
 
 #### Responses
 
@@ -852,10 +852,10 @@ Status: Bad Request
 
 ###### <span id="node-pool-stat-400-schema"></span> Schema
 
-##### <span id="node-pool-stat-484"></span> 484
-Status: Status 484
+##### <span id="node-pool-stat-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="node-pool-stat-484-schema"></span> Schema
+###### <span id="node-pool-stat-500-schema"></span> Schema
 
 ### <span id="node-stat-operation"></span> node stat operation (*nodeStatOperation*)
 
@@ -877,7 +877,7 @@ lists sharders
 |------|--------|-------------|:-----------:|--------|
 | [200](#node-stat-operation-200) | OK | nodeStat |  | [schema](#node-stat-operation-200-schema) |
 | [400](#node-stat-operation-400) | Bad Request |  |  | [schema](#node-stat-operation-400-schema) |
-| [484](#node-stat-operation-484) | Status 484 |  |  | [schema](#node-stat-operation-484-schema) |
+| [500](#node-stat-operation-500) | Internal Server Error |  |  | [schema](#node-stat-operation-500-schema) |
 
 #### Responses
 
@@ -896,10 +896,10 @@ Status: Bad Request
 
 ###### <span id="node-stat-operation-400-schema"></span> Schema
 
-##### <span id="node-stat-operation-484"></span> 484
-Status: Status 484
+##### <span id="node-stat-operation-500"></span> 500
+Status: Internal Server Error
 
-###### <span id="node-stat-operation-484-schema"></span> Schema
+###### <span id="node-stat-operation-500-schema"></span> Schema
 
 ### <span id="put-transaction"></span> PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. (*putTransaction*)
 
@@ -2030,11 +2030,18 @@ it can be used as a scan destination, similar to [NullString].
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| HasBeenKilled | boolean| `bool` |  | |  |  |
-| HasBeenShutDown | boolean| `bool` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| DelegateWallet | string| `string` |  | |  |  |
+| Downtime | uint64 (formatted integer)| `uint64` |  | |  |  |
 | ID | string| `string` |  | |  |  |
+| IsKilled | boolean| `bool` |  | |  |  |
+| IsShutdown | boolean| `bool` |  | |  |  |
+| NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
+| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
+| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
 | last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
-| provider_type | [Provider](#provider)| `Provider` |  | |  |  |
+| rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
+| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
 
 
 

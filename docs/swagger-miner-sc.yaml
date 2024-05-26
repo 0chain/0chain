@@ -1348,21 +1348,43 @@ definitions:
         x-go-package: 0chain.net/smartcontract/stakepool/spenum
     Provider:
         properties:
-            id:
+            CreatedAt:
+                format: date-time
                 type: string
-                x-go-name: ID
+            ID:
+                type: string
+            UpdatedAt:
+                format: date-time
+                type: string
+            delegate_wallet:
+                type: string
+                x-go-name: DelegateWallet
+            downtime:
+                format: uint64
+                type: integer
+                x-go-name: Downtime
             is_killed:
                 type: boolean
-                x-go-name: HasBeenKilled
-            is_shut_down:
+                x-go-name: IsKilled
+            is_shutdown:
                 type: boolean
-                x-go-name: HasBeenShutDown
+                x-go-name: IsShutdown
             last_health_check:
                 $ref: '#/definitions/Timestamp'
-            provider_type:
-                $ref: '#/definitions/Provider'
+            num_delegates:
+                format: int64
+                type: integer
+                x-go-name: NumDelegates
+            rewards:
+                $ref: '#/definitions/ProviderRewards'
+            service_charge:
+                format: double
+                type: number
+                x-go-name: ServiceCharge
+            total_stake:
+                $ref: '#/definitions/Coin'
         type: object
-        x-go-package: 0chain.net/smartcontract/provider
+        x-go-package: 0chain.net/smartcontract/dbs/event
     ProviderRewards:
         description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
         properties:
@@ -2425,7 +2447,7 @@ paths:
                         $ref: '#/definitions/nodeStat'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs:
         get:
@@ -2438,7 +2460,7 @@ paths:
                         $ref: '#/definitions/StringMap'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get Miner SC configs.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/delegate-rewards:
@@ -2621,7 +2643,7 @@ paths:
                         $ref: '#/definitions/InterfaceMap'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get Miner List.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList:
@@ -2647,7 +2669,7 @@ paths:
                         $ref: '#/definitions/PoolMembersInfo'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get Node Pool.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase:
@@ -2710,7 +2732,7 @@ paths:
                         $ref: '#/definitions/InterfaceMap'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get Sharder List.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat:
@@ -2767,7 +2789,7 @@ paths:
                         $ref: '#/definitions/userPoolStat'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get User Pools.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings:
@@ -2793,7 +2815,7 @@ paths:
                         $ref: '#/definitions/StringMap'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get hardfork.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat:
@@ -2819,7 +2841,7 @@ paths:
                         type: array
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get node pool stats.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat:
@@ -2839,7 +2861,7 @@ paths:
                         $ref: '#/definitions/nodeStat'
                 "400":
                     description: ""
-                "484":
+                "500":
                     description: ""
             summary: Get node stats.
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/provider-rewards:

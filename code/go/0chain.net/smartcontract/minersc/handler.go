@@ -201,7 +201,7 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 //
 //	200: StringMap
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) {
 	gn, err := getGlobalNode(mrh.GetQueryStateContext())
 	if err != nil {
@@ -220,7 +220,7 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 //
 //	200: StringMap
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getHardfork(w http.ResponseWriter, r *http.Request) {
 	n := r.URL.Query().Get("name")
 	if len(n) == 0 {
@@ -255,7 +255,7 @@ func (mrh *MinerRestHandler) getHardfork(w http.ResponseWriter, r *http.Request)
 //
 //	200: []NodePool
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getNodePoolStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id     = r.URL.Query().Get("id")
@@ -316,7 +316,7 @@ type nodeStat struct {
 //
 //	200: nodeStat
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id               = r.URL.Query().Get("id")
@@ -379,7 +379,7 @@ func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request
 //
 //	200: nodeStat
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request) {
 	var (
 		id = r.URL.Query().Get("id")
@@ -671,7 +671,7 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 //
 //	200: InterfaceMap
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Request) {
 	var (
 		activeString   = r.URL.Query().Get("active")
@@ -800,7 +800,7 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 //
 //	200: InterfaceMap
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request) {
 	var (
 		activeString   = r.URL.Query().Get("active")
@@ -890,7 +890,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 //
 //	200: userPoolStat
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getUserPools(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
 
@@ -1105,7 +1105,7 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 //
 //	200: PoolMembersInfo
 //	400:
-//	484:
+//	500:
 func (mrh *MinerRestHandler) getNodePool(w http.ResponseWriter, r *http.Request) {
 	npi := (&smartcontract.BCContext{}).GetNodepoolInfo()
 	common.Respond(w, r, npi, nil)
