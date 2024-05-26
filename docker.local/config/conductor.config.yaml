@@ -578,6 +578,16 @@ commands:
       remotepath:
         required: false
         default: /remote/upload.bin
+  add_hardfork:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/add_hardfork.sh $remotepath"
+    args:
+      hardfork_name:
+        required: true
+        default: "ares"
+      round:
+        required: true
+        default: "0"
   update_blobber_config:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/update_blobber_config.sh $blobber_id $key $value"

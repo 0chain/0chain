@@ -284,6 +284,11 @@ func waitSharderKeep(ex Executor, val interface{},
 	return ex.WaitSharderKeep(wsk, tm)
 }
 
+// hardforks
+func initialHardfork(ex Executor, val interface{}) (err error) {
+	return err
+}
+
 //
 // control nodes behavior / misbehavior
 //

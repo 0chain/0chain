@@ -210,6 +210,12 @@ func isIgnoringGenerateBlock(rNum int64) bool {
 	return cfg != nil && cfg.OnRound == rNum && nodeType == generator && typeRank == 1
 }
 
+func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) ([]*transaction.Transaction, int, error) {
+	state := crpc.Client().State()
+
+	return mc.buildInTxns(ctx, lfb, b)
+}
+
 func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
 	// inject double-spend transaction if configured
 	pb := b.PrevBlock
@@ -229,7 +235,7 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 	s := crpc.Client().State()
 
 	if !s.GenerateAllChallenges && (s.GenerateChallenge == nil || s.StopChallengeGeneration || node.Self.ID != s.GenerateChallenge.MinerID) {
-		logging.Logger.Info("createGenerateChallengeTxn: Challenge generation has been stopped for the whole system or for this miner only", 
+		logging.Logger.Info("createGenerateChallengeTxn: Challenge generation has been stopped for the whole system or for this miner only",
 			zap.Bool("stopChalGen", s.StopChallengeGeneration),
 			zap.String("current_miner", node.Self.ID))
 		return nil, nil
