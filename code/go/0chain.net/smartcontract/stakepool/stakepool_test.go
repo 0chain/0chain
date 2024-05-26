@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/smartcontract/dbs"
@@ -545,25 +546,13 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			totalStake, err = currency.AddCoin(totalStake, bal)
 			require.NoError(t, err)
 		}
-		i := 0
 		for _, pool := range sp.Pools {
-			expectedRewardPerRound := float64(0)
 			probabiltyOfSelection := float64(1) / float64(len(sp.Pools))
-			for j, bal := range arg.delegateBal {
-				if i == j || totalStake-bal <= 0 {
-					continue
-				}
-				ratio := float64(pool.Balance) / float64(totalStake-bal)
-				reward, err := currency.MultFloat64(valueLeft, ratio)
-				require.NoError(t, err)
-				expectedRewardPerRound = expectedRewardPerRound + float64(reward)*probabiltyOfSelection
-			}
+			expectedRewardPerRound := float64(valueLeft) * probabiltyOfSelection
 			totalExpectedReward := expectedRewardPerRound * float64(10000)
 			tolerance := 0.05 * float64(totalExpectedReward) // 5% tolerance
 			fmt.Println("Expected Reward: ", totalExpectedReward, "Actual Reward: ", pool.Reward)
 			require.InDelta(t, totalExpectedReward, float64(pool.Reward), tolerance)
-
-			i = i + 1
 
 		}
 	}
@@ -642,7 +631,8 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			sp, balances := setup(t, tt.args)
 
 			for i := 0; i < 10000; i++ {
-				err := sp.DistributeRewardsRandN(tt.args.value, providerID, providerType, RoundRandomSeed, tt.args.numDelegates-1, spenum.BlockRewardBlobber, balances)
+				RoundRandomSeed = time.Now().UnixNano()
+				err := sp.DistributeRewardsRandN(tt.args.value, providerID, providerType, RoundRandomSeed, 1, spenum.BlockRewardBlobber, balances)
 				require.NoError(t, err)
 			}
 			validate(t, sp, tt.args)
