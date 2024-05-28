@@ -338,8 +338,12 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			zap.String("lfb block", lfb.Hash))
 		for idx := range frchain {
 			fb := frchain[len(frchain)-1-idx]
-			if roundNumber-fb.Round < 2 {
-				// finalize the block only when it has at least 2 confirmation
+			// if roundNumber-fb.Round < 2 {
+			// 	// finalize the block only when it has at least 2 confirmation
+			// 	logging.Logger.Debug("finalize round - block has less than 3 confirmation")
+			// 	continue
+			// }
+			if time.Since(fb.CreateTime) < 200*time.Millisecond {
 				logging.Logger.Debug("finalize round - block has less than 3 confirmation")
 				continue
 			}
