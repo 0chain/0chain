@@ -275,8 +275,10 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		logging.Logger.Info("Storage function name", zap.String("function", funcName))
 		processedResetStats := false
 		actErr := chainstate.WithActivation(balances, "ares", func() error {
+			logging.Logger.Info("Before ares", zap.String("function", funcName))
 			return nil
 		}, func() error {
+			logging.Logger.Info("Jayash Storage function name", zap.String("function", funcName))
 			if funcName == "reset_blobber_stats" {
 				processedResetStats = true
 				resp, err = sc.resetBlobberStats(t, input, balances)
