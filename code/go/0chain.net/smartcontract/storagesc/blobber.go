@@ -107,6 +107,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 	}
 
 	sp.TotalOffers = fixRequest.NewTotalOffers
+	sp.isOfferChanged = true
 	if err := sp.Save(spenum.Blobber, fixRequest.BlobberID, balances); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"can't save stake pool: "+err.Error())
