@@ -93,8 +93,6 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 			"malformed request: "+err.Error())
 	}
 
-	logging.Logger.Info("Jayash reset_blobber_stats", zap.Any("fixRequest", fixRequest))
-
 	sp, err := getStakePool(spenum.Blobber, fixRequest.BlobberID, balances)
 	if err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
