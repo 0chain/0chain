@@ -337,6 +337,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			zap.Int64("lfb round", lfb.Round),
 			zap.String("lfb block", lfb.Hash))
 		fbSteadyStateTM := SteadyStateFinalizationTimer.Mean()
+		proposalWaitTM := c.BlockProposalMaxWaitTime()
 		for idx := range frchain {
 			fb := frchain[len(frchain)-1-idx]
 			// if roundNumber-fb.Round < 2 {
@@ -344,7 +345,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			// 	logging.Logger.Debug("finalize round - block has less than 3 confirmation")
 			// 	continue
 			// }
-			if time.Since(fb.CreateTime) < time.Duration(1.5*fbSteadyStateTM) {
+			if time.Since(fb.CreateTime) < time.Duration(fbSteadyStateTM)+proposalWaitTM {
 				logging.Logger.Debug("finalize round - block is too new")
 				continue
 			}
