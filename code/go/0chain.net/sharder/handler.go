@@ -202,6 +202,10 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
+	fmt.Fprintf(w, "<h3>Finalization To Kafka Event Push Latency Statistics (in milliseconds)</h3>")
+	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationToKafkaLatencyMetric)
+	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h3>Transactions Save Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, txnSaveTimer, 1000000.0)

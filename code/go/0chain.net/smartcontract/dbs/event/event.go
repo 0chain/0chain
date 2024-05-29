@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/chaincore/chain"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -135,6 +136,11 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			ts := time.Now()
 			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
 			err = broker.PublishToKafka(topic, []byte(key), eventJson)
+			if filteredEvent.Tag == TagFinalizeBlock {
+				blockData := filteredEvent.Data.(Block)
+				finalizationTime := blockData.FinalizationTime
+				chain.FinalizationToKafkaLatencyMetric.Update(time.Since(finalizationTime).Milliseconds())
+			}
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
