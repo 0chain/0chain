@@ -1,10 +1,10 @@
 package event
 
 import (
-	"0chain.net/chaincore/chain"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rcrowley/go-metrics"
 	"strconv"
 	"sync"
 	"time"
@@ -27,6 +27,20 @@ type Event struct {
 	IsPublished    bool        `json:"is_published"`
 	SequenceNumber int64       `json:"sequence_number"`
 	Data           interface{} `json:"data" gorm:"-"`
+}
+
+// FinalizationToKafkaLatencyMetric - a metric which tracks how much time it takes from a block which got finalized to respective event being pushed into kafka
+var FinalizationToKafkaLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+
+// KafkaEventPushLatencyMetric - a metric which tracks how long it takes for an event to be pushed to kafka
+var KafkaEventPushLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+
+func InitMetrics() {
+	FinalizationToKafkaLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+	_ = metrics.Register("finalization_to_kafka_latency", FinalizationToKafkaLatencyMetric)
+
+	KafkaEventPushLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+	_ = metrics.Register("kafka_event_push_latency", KafkaEventPushLatencyMetric)
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -144,7 +158,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			if filteredEvent.Tag == TagFinalizeBlock {
 				blockData := filteredEvent.Data.(Block)
 				finalizationTime := blockData.FinalizationTime
-				chain.FinalizationToKafkaLatencyMetric.Update(time.Since(finalizationTime).Milliseconds()) // update block finalization to kafka push latency metric
+				FinalizationToKafkaLatencyMetric.Update(time.Since(finalizationTime).Milliseconds()) // update block finalization to kafka push latency metric
 			}
 
 			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
@@ -155,7 +169,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 				zap.Int64("round", events.round))
 
 			tm := time.Since(ts)
-			chain.KafkaEventPushLatencyMetric.Update(tm.Milliseconds()) // update kafka latency metric
+			KafkaEventPushLatencyMetric.Update(tm.Milliseconds()) // update kafka latency metric
 			if tm > 100*time.Millisecond {
 				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
 			}
