@@ -18,10 +18,18 @@ func SetupM2SReceivers() {
 	sc := GetSharderChain()
 	options := &node.ReceiveOptions{}
 	options.MessageFilter = sc
-	http.HandleFunc("/v1/_m2s/block/finalized", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(FinalizedBlockHandler(sc), options)))
-	http.HandleFunc("/v1/_m2s/block/notarized", common.N2NRateLimit(node.RejectDuplicateNotarizedBlockHandler(
-		sc, node.ToN2NReceiveEntityHandler(NotarizedBlockHandler(sc), options))))
-	http.HandleFunc("/v1/_m2s/block/notarized/kick", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler(sc), nil)))
+	commonMiddlewares := func(handler datastore.JSONEntityReqResponderF, options *node.ReceiveOptions) func(http.ResponseWriter, *http.Request) {
+		return common.N2NRateLimit(
+			node.RejectDuplicateNotarizedBlockHandler(
+				sc, node.ToN2NReceiveEntityHandler(handler, options)))
+	}
+
+	http.HandleFunc("/v1/_m2s/block/finalized",
+		commonMiddlewares(FinalizedBlockHandler(sc), options))
+	http.HandleFunc("/v1/_m2s/block/notarized",
+		commonMiddlewares(handleNotarizedBlock(sc), options))
+	http.HandleFunc("/v1/_m2s/block/notarized/kick",
+		commonMiddlewares(NotarizedBlockKickHandler(sc), nil))
 }
 
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
@@ -30,10 +38,10 @@ type Chainer interface {
 	GetLatestFinalizedBlock() *block.Block
 	GetBlock(ctx context.Context, hash datastore.Key) (*block.Block, error)
 	PushToBlockProcessor(b *block.Block) error
-	ForceFinalizeRound()
+	// ForceFinalizeRound()
 }
 
-//AcceptMessage - implement the node.MessageFilterI interface
+// AcceptMessage - implement the node.MessageFilterI interface
 func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 	switch entityName {
 	case "block":
@@ -56,12 +64,18 @@ func SetupM2SResponders(sc Chainer) {
 /*FinalizedBlockHandler - handle the finalized block */
 func FinalizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		return NotarizedBlockHandler(sc)(ctx, entity)
+		return handleNotarizedBlock(sc)(ctx, entity)
 	}
 }
 
-/*NotarizedBlockHandler - handle the notarized block */
 func NotarizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
+	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		return true, nil
+	}
+}
+
+/*handleNotarizedBlock - handle the notarized block */
+func handleNotarizedBlock(sc Chainer) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		b, ok := entity.(*block.Block)
 		if !ok {

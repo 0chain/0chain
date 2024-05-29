@@ -169,7 +169,7 @@ func TestNotarizedBlockHandler(t *testing.T) {
 			sc.On("GetLatestFinalizedBlock").Return(b)
 			sc.On("GetBlock", mock.Anything, mock.Anything).Return(b, nil)
 
-			got, err := NotarizedBlockHandler(sc)(tt.args.ctx, tt.args.entity)
+			got, err := handleNotarizedBlock(sc)(tt.args.ctx, tt.args.entity)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NotarizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
