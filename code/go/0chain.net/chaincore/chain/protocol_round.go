@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"sort"
 	"sync"
@@ -300,7 +301,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 
 			b = b.PrevBlock
 			if b.Round == plfb.Round && b.Hash != plfb.Hash {
-				logging.Logger.Error("finalize round, computed lfb could not connect to prev lfb",
+				fmt.Println("finalize round, computed lfb could not connect to prev lfb",
+					"round:", b.Round,
+					"block:", b.Hash,
+					"prev lfb block:", plfb.Hash,
+					"computed lfb:", lfb.Round,
+					"computed lfb block:", lfb.Hash)
+				logging.Logger.Panic("finalize round, computed lfb could not connect to prev lfb",
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.String("prev lfb block", plfb.Hash),
