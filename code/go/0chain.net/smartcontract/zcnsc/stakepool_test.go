@@ -52,3 +52,41 @@ func Test_WhenAuthorizerDoesNotExists_StakePool_IsNotUpdatedOrCreated(t *testing
 	require.EqualError(t, err, "authorizer(authorizerID: "+authorizerID+") not found")
 	require.Empty(t, resp)
 }
+
+func Test_WhenAuthorizerDoesNotExists_StakePool_Without_ClientID(t *testing.T) {
+    const authorizerID = "auth0"
+    ctx := MakeMockStateContext()
+    contract := CreateZCNSmartContract()
+    payload := CreateAuthorizerStakingPoolParamPayload(authorizerID)
+    tr, err := CreateTransaction(authorizerID, UpdateAuthorizerStakePoolFunc, payload, ctx)
+    require.NoError(t, err)
+    tr.ClientID = ""
+    resp, err := contract.UpdateAuthorizerStakePool(tr, payload, ctx)
+    require.Error(t, err)
+    require.EqualError(t, err, "update_authorizer_staking_pool_failed: tran.ClientID is empty")
+    require.Empty(t, resp)
+}
+func Test_WhenAuthorizerDoesNotExists_StakePool_Without_Payload(t *testing.T) {
+    const authorizerID = "auth0"
+    ctx := MakeMockStateContext()
+    contract := CreateZCNSmartContract()
+    var payload []byte
+    tr, err := CreateTransaction(authorizerID, UpdateAuthorizerStakePoolFunc, payload, ctx)
+    require.NoError(t, err)
+    resp, err := contract.UpdateAuthorizerStakePool(tr, payload, ctx)
+    require.Error(t, err)
+    require.EqualError(t, err, "update_authorizer_staking_pool_failed: input data is nil")
+    require.Empty(t, resp)
+}
+func Test_AddToDelegatePool_StakePool_Value_NotPresent(t *testing.T) {
+    const authorizerID = "auth0"
+    ctx := MakeMockStateContext()
+    contract := CreateZCNSmartContract()
+    payload := CreateAuthorizerStakingPoolParamPayload(authorizerID)
+    tr, err := CreateTransaction(authorizerID, UpdateAuthorizerStakePoolFunc, payload, ctx)
+    require.NoError(t, err)
+    resp, err := contract.AddToDelegatePool(tr, payload, ctx)
+    require.Error(t, err)
+    require.EqualError(t, err, "stake_pool_lock_failed: can't get stake pool: value not present")
+    require.Empty(t, resp)
+}
