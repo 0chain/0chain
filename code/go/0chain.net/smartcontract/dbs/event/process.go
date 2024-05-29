@@ -461,10 +461,6 @@ func (edb *EventDb) WorkEvents(
 		logging.Logger.Warn("work events - lost connection")
 	}
 
-	if blockEvents.round == edb.Config().KafkaTriggerRound {
-		logging.Logger.Panic("panic after " + fmt.Sprintf("round %v", blockEvents.round))
-	}
-
 	currentPermanentPartition := blockEvents.round / edb.settings.PermanentPartitionChangePeriod
 	if blockEvents.round%edb.settings.PermanentPartitionChangePeriod == 0 {
 		edb.managePermanentPartitionsAsync(currentPermanentPartition)
