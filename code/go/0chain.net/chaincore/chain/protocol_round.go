@@ -46,15 +46,23 @@ var FinalizationLagMetric metrics.Histogram
 // FinalizationToKafkaLatencyMetric - a metric which tracks how much time it takes from a block which got finalized to respective event being pushed into kafka
 var FinalizationToKafkaLatencyMetric metrics.Histogram
 
+// KafkaEventPushLatencyMetric - a metric which tracks how long it takes for an event to be pushed to kafka
+var KafkaEventPushLatencyMetric metrics.Histogram
+
 func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
 	StartToFinalizeTxnTypeTimer = make(map[string]metrics.Timer)
+
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
 	_ = metrics.Register("finalization_lag", FinalizationLagMetric)
+
 	FinalizationToKafkaLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
 	_ = metrics.Register("finalization_to_kafka_latency", FinalizationToKafkaLatencyMetric)
+
+	KafkaEventPushLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+	_ = metrics.Register("kafka_event_push_latency", KafkaEventPushLatencyMetric)
 }
 
 // ComputeFinalizedBlock iterates through all previous blocks of notarized block on round r until finds single notarized block on the round,

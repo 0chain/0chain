@@ -87,6 +87,11 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Kafka Event Push Latency Statistics (in milliseconds)</h3>")
+	diagnostics.WriteHistogramStatistics(w, c, chain.KafkaEventPushLatencyMetric)
+	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h3>Block Generation Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, bgTimer, 1000000.0)
