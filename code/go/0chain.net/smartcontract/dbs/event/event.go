@@ -11,12 +11,13 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber int64       `json:"block_number"`
-	TxHash      string      `json:"tx_hash"`
-	Type        EventType   `json:"type"`
-	Tag         EventTag    `json:"tag"`
-	Index       string      `json:"index"`
-	Data        interface{} `json:"data" gorm:"-"`
+	BlockNumber int64        `json:"block_number"`
+	TxHash      string       `json:"tx_hash"`
+	Type        EventType    `json:"type"`
+	Tag         EventTag     `json:"tag"`
+	Index       string       `json:"index"`
+	Data        interface{}  `json:"data" gorm:"-"`
+	Version     EventVersion `json:"version" gorm:"-"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
