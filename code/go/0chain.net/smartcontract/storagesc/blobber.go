@@ -75,8 +75,6 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 	input []byte,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	// Authorize with owner
-
 	var conf *Config
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
@@ -89,69 +87,31 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 		return "", err
 	}
 
-	// Update blobber details in mpt and eventsdb
-
 	var fixRequest = &dto.ResetBlobberStatsDto{}
 	if err = json.Unmarshal(input, fixRequest); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"malformed request: "+err.Error())
 	}
 
-	blobber, err := ssc.getBlobber(fixRequest.BlobberID, balances)
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't get the blobber: "+err.Error())
-	}
-
-	if err := blobber.mustUpdateBase(func(snb *storageNodeBase) error {
-		if snb.Allocated != fixRequest.PrevAllocated || snb.SavedData != fixRequest.PrevSavedData {
-			return common.NewError("reset_blobber_stats_failed",
-				"blobber's allocated or saved_data doesn't match with the provided values")
-		}
-
-		snb.SavedData = fixRequest.NewSavedData
-		snb.Allocated = fixRequest.NewAllocated
-		return nil
-	}); err != nil {
-		return "", err
-	}
-
-	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-	if err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"can't Save blobber: "+err.Error())
-	}
-	emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
-
-	// Update challenge ready blobber partition
-
-	bb := blobber.mustBase()
-	sp, err := getStakePool(spenum.Blobber, bb.ID, balances)
+	sp, err := getStakePool(spenum.Blobber, fixRequest.BlobberID, balances)
 	if err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"can't get related stake pool: "+err.Error())
 	}
 
-	sd, err := maths.ConvertToUint64(bb.SavedData)
-	if err != nil {
+	if sp.TotalOffers != fixRequest.PrevTotalOffers {
 		return "", common.NewError("reset_blobber_stats_failed",
-			"can't convert saved_data to uint64: "+err.Error())
+			"blobber's total offers doesn't match with the provided values")
 	}
 
-	spBalance, err := sp.stake()
-	if err != nil {
+	sp.TotalOffers = fixRequest.NewTotalOffers
+	sp.isOfferChanged = true
+	if err := sp.Save(spenum.Blobber, fixRequest.BlobberID, balances); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
-			"can't get stake pool balance: "+err.Error())
+			"can't save stake pool: "+err.Error())
 	}
 
-	if err := PartitionsChallengeReadyBlobberUpdate(balances, bb.ID, spBalance, sd); err != nil {
-		return "", common.NewError("reset_blobber_stats_failed",
-			"error updating challenge ready partitions: "+err.Error())
-	}
-
-	// Return blobber struct in response
-
-	return string(blobber.Encode()), nil
+	return "reset_blobber_stats_successfully", nil
 }
 
 func (sc *StorageSmartContract) hasBlobberUrl(blobberURL string,
@@ -1015,6 +975,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
+	actErr := cstate.WithActivation(balances, "athena", func() error { return nil },
+		func() error {
+			if blobber.IsKilled() || blobber.IsShutDown() {
+				return common.NewError("commit_connection_failed",
+					"blobber is killed or shutdown")
+			}
+			return nil
+		})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	if blobAlloc.Stats.UsedSize == 0 {
 		blobAlloc.LatestFinalizedChallCreatedAt = commitMarkerBase.Timestamp
 		blobAlloc.LatestSuccessfulChallCreatedAt = commitMarkerBase.Timestamp
@@ -1038,11 +1010,22 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		b.SavedData += changeSize
 		return nil
 	})
-	allocationWmSize := int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
-	if alloc.Stats.UsedSize+allocationWmSize <= 0 {
-		alloc.Stats.UsedSize = 0
-	} else {
-		alloc.Stats.UsedSize += allocationWmSize
+
+	actErr = cstate.WithActivation(balances, "athena", func() error {
+		allocationWmSize := int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
+		if alloc.Stats.UsedSize+allocationWmSize <= 0 {
+			alloc.Stats.UsedSize = 0
+		} else {
+			alloc.Stats.UsedSize += allocationWmSize
+		}
+		return nil
+	},
+		func() error {
+			alloc.RefreshAllocationUsedSize()
+			return nil
+		})
+	if actErr != nil {
+		return "", actErr
 	}
 
 	alloc.Stats.NumWrites++
