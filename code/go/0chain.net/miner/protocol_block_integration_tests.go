@@ -1,12 +1,10 @@
-//go:build integration_tests
-// +build integration_tests
-
 package miner
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"strings"
@@ -211,9 +209,18 @@ func isIgnoringGenerateBlock(rNum int64) bool {
 }
 
 func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) ([]*transaction.Transaction, int, error) {
-	state := crpc.Client().State()
+	DefaultHardfork := crpc.Client().State().Hardfork.Name
 
-	return mc.buildInTxns(ctx, lfb, b)
+	txns, cost, err := mc.buildInTxns(ctx, lfb, b)
+	if DefaultHardfork != "" {
+		addHardforkTxn, err := mc.createHardforkTxn(b, DefaultHardfork)
+		if err != nil {
+			return nil, 0, err
+		}
+		txns = append(txns, addHardforkTxn)
+
+	}
+	return txns, cost, err
 }
 
 func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler func(ctx context.Context, qe datastore.CollectionEntity) bool) {
@@ -250,4 +257,20 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 	logging.Logger.Info("createGenerateChallengeTxn: Challenge should have been generated", zap.Any("txn", txn))
 
 	return txn, err
+}
+
+func (mc *Chain) createHardforkTxn(b *block.Block, hfName string) (*transaction.Transaction, error) {
+	brTxn := transaction.Provider().(*transaction.Transaction)
+	brTxn.ClientID = node.Self.ID
+	brTxn.PublicKey = node.Self.PublicKey
+	brTxn.ToClientID = storagesc.ADDRESS
+	brTxn.CreationDate = b.CreationDate
+	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionData = fmt.Sprintf(`{"name":"add_hardfork","input":{"field":{
+		"%s":1
+	}}}`, hfName)
+	if err := brTxn.ComputeProperties(); err != nil {
+		return nil, err
+	}
+	return brTxn, nil
 }

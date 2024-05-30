@@ -95,11 +95,13 @@ type State struct {
 	// Authorizers related states
 	AdversarialAuthorizer *config.AdversarialAuthorizer
 
+	Hardfork *config.Hardfork
+
 	ServerStatsCollectorEnabled        bool
 	ClientStatsCollectorEnabled        bool
 	NotifyOnBlockGeneration            bool
 	NotifyOnValidationTicketGeneration bool
-	MissUpDownload bool
+	MissUpDownload                     bool
 }
 
 // Name returns NodeName by given NodeID.

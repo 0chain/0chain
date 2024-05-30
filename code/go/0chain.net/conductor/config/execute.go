@@ -18,6 +18,7 @@ type Executor interface {
 	SetMonitor(name NodeName) (err error)
 	CleanupBC(timeout time.Duration) (err error)
 	SetEnv(map[string]string) (err error)
+	SetInitialHardfork(hardfork Hardfork) (err error)
 
 	// common control
 
@@ -286,7 +287,11 @@ func waitSharderKeep(ex Executor, val interface{},
 
 // hardforks
 func initialHardfork(ex Executor, val interface{}) (err error) {
-	return err
+	var hardfork Hardfork
+	if err = mapstructure.Decode(val, &hardfork); err != nil {
+		return fmt.Errorf("decoding 'initial_hardfork': %v", err)
+	}
+	return ex.SetInitialHardfork(hardfork)
 }
 
 //

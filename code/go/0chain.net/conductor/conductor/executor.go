@@ -153,6 +153,19 @@ func (r *Runner) Start(names []NodeName, lock bool,
 	return
 }
 
+// Change Default hardfork
+func (r *Runner) SetInitialHardfork(hf Hardfork) (err error) {
+	if err = hf.IsValid(); err != nil {
+		return err
+	}
+	if r.verbose {
+		log.Printf(" [INF] setting initial hardfork: %s", hf.Name)
+	}
+	r.SetServerState(hf)
+	r.conf.DefaultHardfork = hf
+	return
+}
+
 func (r *Runner) Unlock(names []NodeName, tm time.Duration) (err error) {
 
 	if r.verbose {
@@ -925,7 +938,7 @@ func (r *Runner) runAsyncCommand(reply chan error, name string, params map[strin
 	if retryCount == 0 {
 		retryCount = 1
 	}
-	
+
 	for i := 0; i < retryCount; i++ {
 		err = r.conf.Execute(name, params, failureThreshold)
 		if err == nil {
@@ -934,7 +947,7 @@ func (r *Runner) runAsyncCommand(reply chan error, name string, params map[strin
 		}
 		log.Printf(" [ERR] command %q failed: %v", name, err)
 	}
-	
+
 	reply <- err // nil or error (of the latest run)
 }
 
@@ -1146,6 +1159,8 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.BlobberUpload = update
 		case *config.BlobberDelete:
 			state.BlobberDelete = update
+		case *config.Hardfork:
+			state.Hardfork = update
 		case *config.AdversarialValidator:
 			state.AdversarialValidator = update
 		case *config.LockNotarizationAndSendNextRoundVRF:

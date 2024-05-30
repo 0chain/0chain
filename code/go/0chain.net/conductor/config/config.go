@@ -107,10 +107,10 @@ type Command struct {
 
 // CommandName
 type CommandName struct {
-	Name   string                 `json:"name" yaml:"name" mapstructure:"name"`
-	Params map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
-	FailureThreshold string `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
-	RetryCount int `json:"retry_count" yaml:"retry_count" mapstructure:"retry_count"`
+	Name             string                 `json:"name" yaml:"name" mapstructure:"name"`
+	Params           map[string]interface{} `json:"params" yaml:"params" mapstructure:"params"`
+	FailureThreshold string                 `json:"failure_threshold" yaml:"failure_threshold" mapstructure:"failure_threshold"`
+	RetryCount       int                    `json:"retry_count" yaml:"retry_count" mapstructure:"retry_count"`
 }
 
 // A Config represents conductor testing configurations.
@@ -132,6 +132,8 @@ type Config struct {
 	AggregatesBaseUrl string `json:"aggregate_base_url" yaml:"aggregate_base_url" mapstructure:"aggregate_base_url"`
 	// Sharder1BaseUrl is base url of sharder1
 	Sharder1BaseURL string `json:"sharder1_base_url" yaml:"sharder1_base_url"  mapstructure:"sharder1_base_url"`
+	// Default Hardfork
+	DefaultHardfork Hardfork `json:"default_hardfork" yaml:"default_hardfork" mapstructure:"default_hardfork"`
 	// Nodes for tests.
 	Nodes Nodes `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
 	// Tests cases and related.
@@ -251,9 +253,9 @@ func (c *Config) Execute(name string, params map[string]string, failureThreshold
 		log.Printf("[INF] Setting failure threshold of %v for command %v\n", failureThreshold, name)
 		failureCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(failureThreshold))
 		defer cancel()
-		
+
 		// Context watcher
-		go func (cmd *exec.Cmd)  {
+		go func(cmd *exec.Cmd) {
 			<-failureCtx.Done()
 			if failureCtx.Err() == context.DeadlineExceeded {
 				log.Printf("[ERR] Command %v exceeded failure threshold of %v\n", name, failureThreshold)
@@ -275,7 +277,7 @@ func (c *Config) Execute(name string, params map[string]string, failureThreshold
 			}
 		}(cmd)
 	}
-	
+
 	err = cmd.Run()
 	if n.CanFail {
 		return nil // ignore an error
