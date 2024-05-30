@@ -156,7 +156,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 
 			if filteredEvent.Tag == TagFinalizeBlock {
-				blockData := filteredEvent.Data.(Block)
+				blockData := filteredEvent.Data.(*Block)
 				finalizationTime := blockData.FinalizationTime
 				FinalizationToKafkaLatencyMetric.Update(time.Since(finalizationTime).Milliseconds()) // update block finalization to kafka push latency metric
 			}
