@@ -216,7 +216,9 @@ func TestSharders(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10, CommitNow())
+	eventDb.ProcessEvents(context.TODO(), events, 100, "hash", 10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 
 	sharder, err := eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -236,7 +238,9 @@ func TestSharders(t *testing.T) {
 		Tag:         TagAddSharder,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10, CommitNow())
+	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteSn}, 100, "hash", 10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -260,7 +264,9 @@ func TestSharders(t *testing.T) {
 		Tag:         TagUpdateSharder,
 		Data:        string(data),
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10, CommitNow())
+	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateSn}, 100, "hash", 10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
@@ -275,7 +281,9 @@ func TestSharders(t *testing.T) {
 		Tag:         TagDeleteSharder,
 		Data:        sn.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10, CommitNow())
+	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "hash", 10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 
 	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)
