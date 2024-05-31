@@ -768,11 +768,12 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 
 	if maxTxnFee == 0 {
 		maxTxnFee, err = currency.ParseZCN(DefaultMaxTxnFee)
+		if err != nil {
+			return err
+		}
 	}
-
 	conf.MaxTxnFee = maxTxnFee
 
-	//nolint:ineffassign
 	conf.ClientSignatureScheme, err = cf.GetString(config2.ClientSignatureScheme)
 	if err != nil {
 		return err
