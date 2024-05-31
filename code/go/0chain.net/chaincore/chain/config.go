@@ -773,6 +773,7 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	conf.MaxTxnFee = maxTxnFee
 
 	conf.ClientSignatureScheme, err = cf.GetString(config2.ClientSignatureScheme)
+	//nolint:ineffassign
 	if err != nil {
 		return err
 	}
