@@ -96,7 +96,9 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 		return nil
 	}
 
-	edb.mustPushEventsToKafka(&events, false)
+	if events.round >= edb.Config().KafkaTriggerRound {
+		edb.mustPushEventsToKafka(&events, false)
+	}
 
 	if err := edb.Store.Get().WithContext(ctx).Create(&events.events).Error; err != nil {
 		return err
