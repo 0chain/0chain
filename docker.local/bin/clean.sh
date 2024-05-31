@@ -32,3 +32,8 @@ do
   echo "deleting sharder$i blocks on the file system"
   rm -rf docker.local/sharder"$i"/data/blocks/*
 done
+
+echo "deleting kafka config"
+rm -rf docker.local/kafka/config/*
+echo "deleting kafka data"
+rm -rf docker.local/kafka/data/*

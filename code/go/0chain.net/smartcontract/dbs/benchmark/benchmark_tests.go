@@ -42,7 +42,8 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 		return err
 	}
 	var gs *event.Snapshot
-	_, err = event.Work(et.ctx, gs, be)
+	_, err = event.Work(et.ctx, gs, be,
+		func(round int64) (int64, []event.Event, error) { return round, []event.Event{}, nil })
 	if err != nil {
 		return err
 	}
