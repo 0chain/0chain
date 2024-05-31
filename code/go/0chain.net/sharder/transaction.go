@@ -174,6 +174,7 @@ func (sc *Chain) storeTransactions(sTxns []datastore.Entity, roundNumber int64) 
 	}
 	err := txnSummaryMetadata.GetStore().Merge(tctx, &rtcDelta)
 	if err != nil {
+		logging.Logger.Info("Jayash storeTxn err-1", zap.Int64("round", roundNumber), zap.Error(err))
 		return err
 	}
 
@@ -184,12 +185,14 @@ func (sc *Chain) storeTransactions(sTxns []datastore.Entity, roundNumber int64) 
 	}
 	err = txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 	if err != nil {
+		logging.Logger.Info("Jayash storeTxn err-2", zap.Int64("round", roundNumber), zap.Error(err))
 		return err
 	}
 
 	tCon := ememorystore.GetEntityCon(tctx, txnSummaryMetadata)
 	err = tCon.Commit()
 	if err != nil {
+		logging.Logger.Info("Jayash storeTxn err-3", zap.Int64("round", roundNumber), zap.Error(err))
 		return err
 	}
 	return nil
