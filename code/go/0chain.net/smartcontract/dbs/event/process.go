@@ -386,7 +386,9 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 				events: events,
 			}
 
-			edb.mustPushEventsToKafka(es, true)
+			if es.round >= edb.Config().KafkaTriggerRound {
+				edb.mustPushEventsToKafka(es, true)
+			}
 		}
 	}
 
