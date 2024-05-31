@@ -521,11 +521,15 @@ func (sp *StakePool) getRandPools(seed int64, n int) []*DelegatePool {
 	}
 
 	// get random N from pools N
-	plsIdxs := rand.New(rand.NewSource(seed)).Perm(n)
+	plsIdxs := rand.New(rand.NewSource(seed)).Perm(len(sp.Pools))
 	selected := make([]*DelegatePool, 0, n)
-
+	count := n
 	for _, idx := range plsIdxs {
 		selected = append(selected, pls[idx])
+		count--
+		if count == 0 {
+			break
+		}
 	}
 
 	return selected

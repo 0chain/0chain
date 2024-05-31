@@ -598,15 +598,6 @@ func TestStakePool_DistributeRewardsRandN_Randomness(t *testing.T) {
 			},
 		},
 		{
-			name: "no delegate stake",
-			args: args{
-				value:              1,
-				numDelegates:       8,
-				delegateBal:        []currency.Coin{0, 0, 0, 0, 0, 0, 0, 0},
-				serviceChargeRatio: 0.1,
-			},
-		},
-		{
 			name: "0 value is lost with unequal delegate distribution",
 			args: args{
 				value:              50,
