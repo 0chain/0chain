@@ -1379,14 +1379,20 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 						blobberIsKilled = true
 
 						var cp *challengePool
-						cp, e = sc.getChallengePool(sa.ID, balances)
-						if e != nil {
-							_ = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
-						}
-
-						e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
-						if e != nil {
-							e = fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
+						athenaActErr := cstate.WithActivation(balances, "athena", func() (e error) { return },
+							func() (e error) {
+								cp, e = sc.getChallengePool(sa.ID, balances)
+								if e != nil {
+									return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
+								}
+								e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
+								if e != nil {
+									return fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
+								}
+								return
+							})
+						if athenaActErr != nil {
+							return athenaActErr
 						}
 					}
 					return e

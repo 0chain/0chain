@@ -14,6 +14,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/util"
@@ -391,7 +392,17 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 func (_ *StorageSmartContract) refreshProvider(
 	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
-	sp, _ := getStakePool(providerType, providerID, balances)
+	var sp *stakePool
+	actErr := cstate.WithActivation(balances, "athena", func() error { return nil }, func() error {
+		sp, err = getStakePool(providerType, providerID, balances)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if actErr != nil {
+		return nil, actErr
+	}
 
 	if providerType == spenum.Blobber {
 		spBalance, err := sp.stake()
