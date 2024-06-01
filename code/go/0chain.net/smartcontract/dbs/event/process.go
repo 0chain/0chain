@@ -57,11 +57,10 @@ func (edb *EventDb) ProcessEvents(
 		return nil, 0, err
 	}
 
-	latestGlobalCounter := edb.GetEventsCounter()
 	localCounter := uint32(0)
 	for i := range es {
 		localCounter++
-		es[i].SequenceNumber = int64(latestGlobalCounter) + int64(localCounter)
+		es[i].SequenceNumber = int64(localCounter)
 	}
 
 	pdu := time.Since(ts)

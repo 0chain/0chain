@@ -387,8 +387,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	})
 
 	var (
-		eventTx     *event.EventDb
-		eventsCount uint32
+		eventTx *event.EventDb
 	)
 	if len(fb.Events) > 0 && c.GetEventDb() != nil {
 		wg.Run("finalize block - add events", fb.Round, func() error {
@@ -398,7 +397,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			ts := time.Now()
 			var er error
 			ssc := c.NewStateContext(fb, fb.ClientState, nil, c.GetEventDb())
-			eventTx, eventsCount, er = c.GetEventDb().ProcessEvents(
+			eventTx, _, er = c.GetEventDb().ProcessEvents(
 				ctx,
 				fb.Events,
 				fb.Round,
@@ -413,11 +412,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 					zap.String("hash", fb.Hash))
 				EventsComputationTimer.Update(time.Since(ts).Microseconds())
 				return er //do not remove events in case of error
-			}
-
-			if eventTx == nil {
-				// Already committed
-				c.GetEventDb().AddToEventsCounter(uint64(eventsCount))
 			}
 
 			EventsComputationTimer.Update(time.Since(ts).Microseconds())
@@ -476,7 +470,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 						zap.String("block", fb.Hash),
 						zap.Error(cerr))
 				} else {
-					c.GetEventDb().AddToEventsCounter(uint64(eventsCount))
 					logging.Logger.Debug("finalize block - commit events",
 						zap.Int64("round", fb.Round),
 						zap.String("block", fb.Hash))
@@ -512,7 +505,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.Error(err))
 			return err // should return error if event commit failed
 		} else {
-			c.GetEventDb().AddToEventsCounter(uint64(eventsCount))
 			logging.Logger.Debug("finalize block - commit events",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash))

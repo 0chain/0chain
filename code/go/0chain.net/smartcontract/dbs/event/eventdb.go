@@ -38,13 +38,13 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:         db,
-		dbConfig:      config,
-    eventsCounter: *atomic.NewUint64(0),
-		eventsChannel: make(chan BlockEvents, 1),
-		partitionChan: make(chan int64, 100),
-    permanentPartitionChan: make(chan int64, 100),
-		settings:      settings,
+		Store:                  db,
+		dbConfig:               config,
+		eventsCounter:          *atomic.NewUint64(0),
+		eventsChannel:          make(chan BlockEvents, 1),
+		partitionChan:          make(chan int64, 100),
+		permanentPartitionChan: make(chan int64, 100),
+		settings:               settings,
 	}
 
 	if config.KafkaEnabled {
@@ -87,13 +87,13 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 
 type EventDb struct {
 	dbs.Store
-	dbConfig      config.DbAccess   // depends on the sharder, change on restart
-	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
-	eventsChannel chan BlockEvents
-	eventsCounter atomic.Uint64
-	kafka         queueProvider.KafkaProviderI
-	partitionChan chan int64
-  permanentPartitionChan chan int64
+	dbConfig               config.DbAccess   // depends on the sharder, change on restart
+	settings               config.DbSettings // the same across all sharders, needs to mirror blockchain
+	eventsChannel          chan BlockEvents
+	eventsCounter          atomic.Uint64
+	kafka                  queueProvider.KafkaProviderI
+	partitionChan          chan int64
+	permanentPartitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -119,12 +119,12 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
-		dbConfig: edb.dbConfig,
-		settings: edb.settings,
-		kafka:    kafka,
-    eventsChannel:          edb.eventsChannel,
+		dbConfig:               edb.dbConfig,
+		settings:               edb.settings,
+		kafka:                  kafka,
+		eventsChannel:          edb.eventsChannel,
 		partitionChan:          edb.partitionChan,
-    permanentPartitionChan: edb.permanentPartitionChan,
+		permanentPartitionChan: edb.permanentPartitionChan,
 	}
 	return &edbTx, nil
 }
@@ -276,14 +276,6 @@ func (edb *EventDb) AutoMigrate() error {
 
 func (edb *EventDb) Config() config.DbAccess {
 	return edb.dbConfig
-}
-
-func (edb *EventDb) GetEventsCounter() uint64 {
-	return edb.eventsCounter.Load()
-}
-
-func (edb *EventDb) SetEventsCounter(value uint64) {
-	edb.eventsCounter.Store(value)
 }
 
 func (edb *EventDb) AddToEventsCounter(value uint64) uint64 {

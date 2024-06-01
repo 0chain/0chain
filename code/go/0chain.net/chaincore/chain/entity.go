@@ -739,7 +739,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 		if eventDB != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 			defer cancel()
-			tx, eventsCount, err := eventDB.ProcessEvents(
+			_, _, err := eventDB.ProcessEvents(
 				ctx,
 				stateCtx.GetEvents(),
 				0,
@@ -749,10 +749,6 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 				event.CommitNow())
 			if err != nil {
 				panic(err)
-			}
-			if tx == nil {
-				// Already committed
-				eventDB.AddToEventsCounter(uint64(eventsCount))
 			}
 		}
 
