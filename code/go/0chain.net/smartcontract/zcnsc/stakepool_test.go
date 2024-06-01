@@ -79,14 +79,23 @@ func Test_WhenAuthorizerDoesNotExists_StakePool_Without_Payload(t *testing.T) {
     require.Empty(t, resp)
 }
 func Test_AddToDelegatePool_StakePool_Value_NotPresent(t *testing.T) {
-    const authorizerID = "auth0"
     ctx := MakeMockStateContext()
-    contract := CreateZCNSmartContract()
-    payload := CreateAuthorizerStakingPoolParamPayload(authorizerID)
-    tr, err := CreateTransaction(authorizerID, UpdateAuthorizerStakePoolFunc, payload, ctx)
+    publicKeyBytes, _ := hex.DecodeString(AuthorizerPublicKey)
+    id := encryption.Hash(publicKeyBytes)
+    sc := CreateZCNSmartContract()
+    tr := CreateAddAuthorizerTransaction(ownerId, ctx)
+    resp, err := sc.AddAuthorizer(tr, CreateAuthorizerParamPayload("random_authorizer_delegate_wallet", AuthorizerPublicKey), ctx)
     require.NoError(t, err)
-    resp, err := contract.AddToDelegatePool(tr, payload, ctx)
-    require.Error(t, err)
-    require.EqualError(t, err, "stake_pool_lock_failed: can't get stake pool: value not present")
+    require.NotEmpty(t, resp)
+    // Check nodes state
+    node, err2 := GetAuthorizerNode(id, ctx)
+    require.NoError(t, err2)
+    require.NotNil(t, node)
+    payload := CreateAuthorizerStakingPoolParamPayload(id)
+    tr, err = CreateTransaction(id, UpdateAuthorizerStakePoolFunc, payload, ctx)
+    require.NoError(t, err)
+    resp, err1 := sc.AddToDelegatePool(tr, payload, ctx)
+    require.Error(t, err1)
+    require.EqualError(t, err1, "stake_pool_lock_failed: can't get stake pool: value not present")
     require.Empty(t, resp)
 }
