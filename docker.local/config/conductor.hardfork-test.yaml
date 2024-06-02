@@ -23,6 +23,9 @@ tests:
           sharders: ['sharder-1','sharder-2']
           miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
           start: true
+      - initial_hardfork : 
+          Name : 'apollo'
+          Round : 1
       - command:
           name: "verify_hardfork"
           params:
