@@ -14,6 +14,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 	"github.com/stretchr/testify/require"
 )
@@ -51,6 +52,11 @@ type mockStateContextI struct {
 	data map[string][]byte
 	b    *block.Block
 	txn  *transaction.Transaction
+	tc   *statecache.TransactionCache
+}
+
+func (m *mockStateContextI) Cache() *statecache.TransactionCache {
+	return m.tc
 }
 
 func (m *mockStateContextI) GetTrieNode(key string, v util.MPTSerializable) error {
@@ -111,8 +117,22 @@ func (ti *testItem) Msgsize() int {
 	return len(d)
 }
 
+func newTxnStateCache() *statecache.TransactionCache {
+	bc := statecache.NewBlockCache(statecache.NewStateCache(),
+		statecache.Block{
+			Hash: "hash_test",
+		})
+
+	return statecache.NewTransactionCache(bc)
+}
+
 func TestCreateIfNotExists(t *testing.T) {
-	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
+	s := &mockStateContextI{
+		data: make(map[string][]byte),
+		b:    &block.Block{},
+		txn:  &transaction.Transaction{},
+		tc:   newTxnStateCache(),
+	}
 	p, err := CreateIfNotExists(s, "foo", 100)
 	require.NoError(t, err)
 
@@ -138,7 +158,12 @@ func TestCreateIfNotExists(t *testing.T) {
 }
 
 func TestPartitionsSave(t *testing.T) {
-	balances := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
+	balances := &mockStateContextI{
+		data: make(map[string][]byte),
+		b:    &block.Block{},
+		txn:  &transaction.Transaction{},
+		tc:   newTxnStateCache(),
+	}
 	parts, err := newPartitions("test_rs", 10)
 	require.NoError(t, err)
 
@@ -824,10 +849,10 @@ func TestGetRandomItems(t *testing.T) {
 				return
 			}
 
-			if tc.num > tc.size {
-				require.Len(t, its, len(p.Last.Items))
-			} else {
+			if tc.num < tc.size {
 				require.Len(t, its, tc.num)
+			} else {
+				require.Len(t, its, tc.size)
 			}
 
 			for _, it := range its {
@@ -1234,10 +1259,25 @@ func TestErrItemExist(t *testing.T) {
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
-	s := &mockStateContextI{data: make(map[string][]byte), b: &block.Block{}, txn: &transaction.Transaction{}}
+  b := &block.Block{}
+	b.Round = 200
+	s := &mockStateContextI{
+		data: make(map[string][]byte),
+		b:    b,
+		txn:  &transaction.Transaction{},
+		tc:   newTxnStateCache(),
+	}
 	s.StateContextI = &mocks.StateContextI{}
-	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"))
+	stx := util.NewMerklePatriciaTrie(nil, 0, util.Key("root_test"), statecache.NewEmpty())
 	s.StateContextI.On("GetState").Return(stx)
+	enableHardForks(t, s)
+
+	addPartition(t, s, name, size, num)
+
+	return s
+}
+
+func addPartition(t *testing.T, s state.StateContextI, name string, size, num int) {
 	parts, err := newPartitions(name, size)
 	require.NoError(t, err)
 
@@ -1251,7 +1291,23 @@ func prepareState(t *testing.T, name string, size, num int) state.StateContextI 
 
 	err = parts.Save(s)
 	require.NoError(t, err)
-	return s
+}
+
+func enableHardForks(t *testing.T, tb state.StateContextI) {
+	h := state.NewHardFork("apollo", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = state.NewHardFork("ares", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = state.NewHardFork("artemis", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestPartitionsForEachPart(t *testing.T) {

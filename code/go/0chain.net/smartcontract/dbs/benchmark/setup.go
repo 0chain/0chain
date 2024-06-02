@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -63,6 +64,9 @@ func AddMockTransactions(
 	if !viper.GetBool(benchmark.EventDbEnabled) {
 		return
 	}
+
+	fmt.Printf("From AddMockTransactions, edb config = %+v\n", eventDb.Config())
+
 	const txnTxnSmartContract = 1000
 	for blockNumber := int64(1); blockNumber <= viper.GetInt64(benchmark.NumBlocks); blockNumber++ {
 		_ = eventDb.ManagePartitions(blockNumber)
@@ -185,11 +189,27 @@ func GetMockTransactionHash(blockNumber int64, index int) string {
 
 func AddAggregatePartitions(edb *event.EventDb) {
 	var (
-		period      = viper.GetInt(benchmark.EventDbPartitionChangePeriod)
-		keep        = viper.GetInt(benchmark.EventDbPartitionKeepCount)
-		blocks      = viper.GetInt64(benchmark.NumBlocks)
-		firstPeriod = benchmark.GetOldestAggregateRound()
+		period               = viper.GetInt(benchmark.EventDbPartitionChangePeriod)
+		keep                 = viper.GetInt(benchmark.EventDbPartitionKeepCount)
+		permanentPeriod      = viper.GetInt(benchmark.EventDbPermanentPartitionChangePeriod)
+		permanentKeep        = viper.GetInt(benchmark.EventDbPermanentPartitionKeepCount)
+		blocks               = viper.GetInt64(benchmark.NumBlocks)
+		firstPermanentPeriod = benchmark.GetOldestPermanentAggregateRound()
+		firstPeriod          = benchmark.GetOldestAggregateRound()
 	)
+
+	for i := 0; i < permanentKeep; i++ {
+		round := firstPermanentPeriod + int64(i*permanentPeriod)
+		if round < 0 {
+			continue
+		} else if round > blocks {
+			break
+		}
+
+		if err := edb.AddPermanentPartitions(round); err != nil {
+			log.Println(err)
+		}
+	}
 
 	for i := 0; i < keep; i++ {
 		round := firstPeriod + int64(i*period)

@@ -84,6 +84,8 @@ const (
 	DbsAggregatePeriod
 	DbsPartitionChangePeriod
 	DbsPartitionKeepCount
+	DbsPermanentPartitionChangePeriod
+	DbsPermanentPartitionKeepCount
 	DbsAggregatePageLimit
 
 	HealthCheckDeepScanEnabled          // todo restart worker
@@ -220,6 +222,8 @@ func initGlobalSettingNames() {
 	GlobalSettingName[DbsAggregatePeriod] = "server_chain.dbs.settings.aggregate_period"
 	GlobalSettingName[DbsPartitionChangePeriod] = "server_chain.dbs.settings.partition_change_period"
 	GlobalSettingName[DbsPartitionKeepCount] = "server_chain.dbs.settings.partition_keep_count"
+	GlobalSettingName[DbsPermanentPartitionChangePeriod] = "server_chain.dbs.settings.rolling_partition_change_period"
+	GlobalSettingName[DbsPermanentPartitionKeepCount] = "server_chain.dbs.settings.rolling_partition_keep_count"
 	GlobalSettingName[DbsAggregatePageLimit] = "server_chain.dbs.settings.page_limit" +
 		""
 	GlobalSettingName[HealthCheckDeepScanEnabled] = "server_chain.health_check.deep_scan.enabled"
@@ -342,11 +346,13 @@ func initGlobalSettings() {
 		GlobalSettingName[DbsEventsMaxOpenConns]:    {Int, false},
 		GlobalSettingName[DbsEventsConnMaxLifetime]: {Duration, false},
 
-		GlobalSettingName[DbsAggregateDebug]:        {Boolean, true},
-		GlobalSettingName[DbsAggregatePeriod]:       {Int64, true},
-		GlobalSettingName[DbsPartitionChangePeriod]: {Int64, true},
-		GlobalSettingName[DbsPartitionKeepCount]:    {Int64, true},
-		GlobalSettingName[DbsAggregatePageLimit]:    {Int64, true},
+		GlobalSettingName[DbsAggregateDebug]:                 {Boolean, true},
+		GlobalSettingName[DbsAggregatePeriod]:                {Int64, true},
+		GlobalSettingName[DbsPartitionChangePeriod]:          {Int64, true},
+		GlobalSettingName[DbsPartitionKeepCount]:             {Int64, true},
+		GlobalSettingName[DbsPermanentPartitionChangePeriod]: {Int64, true},
+		GlobalSettingName[DbsPermanentPartitionKeepCount]:    {Int64, true},
+		GlobalSettingName[DbsAggregatePageLimit]:             {Int64, true},
 
 		GlobalSettingName[HealthCheckDeepScanEnabled]:          {Boolean, false},
 		GlobalSettingName[HealthCheckDeepScanBatchSize]:        {Int64, false},

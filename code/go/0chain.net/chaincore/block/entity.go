@@ -25,6 +25,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecache"
 	"github.com/0chain/common/core/util"
 )
 
@@ -344,29 +345,6 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	}
 }
 
-/*SetStateDB - set the state from the previous block */
-func (b *Block) SetStateDB(prevBlock *Block, stateDB util.NodeDB) {
-	var pndb util.NodeDB
-	var rootHash util.Key
-	if prevBlock.ClientState == nil {
-		logging.Logger.Error("set state db - prior state not available",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int64("previous round", prevBlock.Round),
-			zap.String("previous block", prevBlock.Hash))
-		pndb = stateDB
-	} else {
-		pndb = prevBlock.ClientState.GetNodeDB()
-	}
-	rootHash = prevBlock.ClientStateHash
-	logging.Logger.Warn("set state db",
-		zap.Int64("round", b.Round),
-		zap.String("block", b.Hash),
-		zap.String("prev_block", prevBlock.Hash),
-		zap.String("root", util.ToHex(rootHash)))
-	b.CreateState(pndb, rootHash)
-}
-
 // InitStateDB - initialize the block's state from the db
 // (assuming it's already computed).
 func (b *Block) InitStateDB(ndb util.NodeDB) error {
@@ -384,7 +362,7 @@ func (b *Block) InitStateDB(ndb util.NodeDB) error {
 func (b *Block) CreateState(pndb util.NodeDB, root util.Key) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round), root)
+	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round), root, statecache.NewEmpty())
 }
 
 // setClientState sets the block client state
@@ -812,8 +790,13 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block, waitC ...chan struct{}) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, waitC ...chan struct{}) ([]event.Event, error)
+	UpdateState(ctx context.Context,
+		b *Block, bState util.MerklePatriciaTrieI,
+		txn *transaction.Transaction,
+		blockStateCache *statecache.BlockCache,
+		waitC ...chan struct{}) ([]event.Event, error)
 	GetEventDb() *event.EventDb
+	GetStateCache() *statecache.StateCache
 }
 
 // CreateStateWithPreviousBlock creates block client state with previous block
@@ -845,7 +828,7 @@ func CreateStateWithPreviousBlock(prevBlock *Block, stateDB util.NodeDB, round i
 func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePatriciaTrieI {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, stateDB, false)
-	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root)
+	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root, statecache.NewEmpty())
 }
 
 // ComputeState computes block client state
@@ -924,9 +907,15 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 	//b.SetStateDB(pb, c.GetStateDB())
 
 	bState := CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
+	blockStateCache := statecache.NewBlockCache(c.GetStateCache(), statecache.Block{
+		Round:    b.Round,
+		Hash:     b.Hash,
+		PrevHash: b.PrevHash,
+	})
 
 	beginStateRoot := bState.GetRoot()
 	b.Events = []event.Event{}
+	ts := time.Now()
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			if err := txn.ComputeClientID(); err != nil {
@@ -953,7 +942,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			},
 		})
 
-		events, err := c.UpdateState(ctx, b, bState, txn, waitC...)
+		events, err := c.UpdateState(ctx, b, bState, txn, blockStateCache, waitC...)
 		switch err {
 		case context.Canceled:
 			b.SetStateStatus(StateCancelled)
@@ -1031,17 +1020,22 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 	StateSanityCheck(ctx, b)
 	b.SetStateStatus(StateSuccessful)
 
+	// commit the block state cache to the global state cache
+	blockStateCache.Commit()
+
 	logging.Logger.Info("compute state successful",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("block ptr", fmt.Sprintf("%p", b)),
 		zap.Int("block_size", len(b.Txns)),
+		zap.Any("duration", time.Since(ts)),
 		zap.Int("changes", b.ClientState.GetChangeCount()),
 		zap.String("begin_client_state", util.ToHex(beginStateRoot)),
 		zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())),
 		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 		zap.String("prev_block", b.PrevHash),
 		zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
+
 	return nil
 }
 
