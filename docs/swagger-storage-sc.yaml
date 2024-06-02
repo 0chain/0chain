@@ -1107,7 +1107,6 @@ definitions:
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     Provider:
-        format: int64
         properties:
             id:
                 type: string
@@ -1122,8 +1121,8 @@ definitions:
                 $ref: '#/definitions/Timestamp'
             provider_type:
                 $ref: '#/definitions/Provider'
-        type: integer
-        x-go-package: 0chain.net/smartcontract/stakepool/spenum
+        type: object
+        x-go-package: 0chain.net/smartcontract/provider
     ProviderRewards:
         description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
         properties:
@@ -3530,25 +3529,6 @@ paths:
                 "500":
                     description: ""
             summary: Get write markers.
-    /v1/transaction/put:
-        post:
-            consumes:
-                - application/json
-            operationId: putTransaction
-            parameters:
-                - in: body
-                  name: Transaction
-                  required: true
-                  schema:
-                    type: integer
-            responses:
-                "200":
-                    description: ""
-                "400":
-                    description: ""
-                "500":
-                    description: ""
-            summary: PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain.
 produces:
     - application/json
 schemes:

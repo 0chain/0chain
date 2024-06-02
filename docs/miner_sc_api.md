@@ -49,7 +49,6 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools | [get user pools](#get-user-pools) | Get User Pools. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat | [node pool stat](#node-pool-stat) | Get node pool stats. |
 | GET | /test/screst/nodeStat | [node stat operation](#node-stat-operation) |  |
-| POST | /v1/transaction/put | [put transaction](#put-transaction) | PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. |
   
 
 
@@ -900,46 +899,6 @@ Status: Bad Request
 Status: Internal Server Error
 
 ###### <span id="node-stat-operation-500-schema"></span> Schema
-
-### <span id="put-transaction"></span> PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. (*putTransaction*)
-
-```
-POST /v1/transaction/put
-```
-
-#### Consumes
-  * application/json
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| Transaction | `body` | integer | `int64` | | ✓ | |  |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#put-transaction-200) | OK |  |  | [schema](#put-transaction-200-schema) |
-| [400](#put-transaction-400) | Bad Request |  |  | [schema](#put-transaction-400-schema) |
-| [500](#put-transaction-500) | Internal Server Error |  |  | [schema](#put-transaction-500-schema) |
-
-#### Responses
-
-
-##### <span id="put-transaction-200"></span> 200
-Status: OK
-
-###### <span id="put-transaction-200-schema"></span> Schema
-
-##### <span id="put-transaction-400"></span> 400
-Status: Bad Request
-
-###### <span id="put-transaction-400-schema"></span> Schema
-
-##### <span id="put-transaction-500"></span> 500
-Status: Internal Server Error
-
-###### <span id="put-transaction-500-schema"></span> Schema
 
 ## Models
 
@@ -2024,24 +1983,9 @@ it can be used as a scan destination, similar to [NullString].
 
   
 
-
-
-**Properties**
-
-| Name | Type | Go type | Required | Default | Description | Example |
-|------|------|---------|:--------:| ------- |-------------|---------|
-| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
-| DelegateWallet | string| `string` |  | |  |  |
-| Downtime | uint64 (formatted integer)| `uint64` |  | |  |  |
-| ID | string| `string` |  | |  |  |
-| IsKilled | boolean| `bool` |  | |  |  |
-| IsShutdown | boolean| `bool` |  | |  |  |
-| NumDelegates | int64 (formatted integer)| `int64` |  | |  |  |
-| ServiceCharge | double (formatted number)| `float64` |  | |  |  |
-| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
-| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
-| rewards | [ProviderRewards](#provider-rewards)| `ProviderRewards` |  | |  |  |
-| total_stake | [Coin](#coin)| `Coin` |  | |  |  |
+| Name | Type | Go type | Default | Description | Example |
+|------|------|---------| ------- |-------------|---------|
+| Provider | int64 (formatted integer)| int64 | |  |  |
 
 
 

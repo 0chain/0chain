@@ -60,7 +60,6 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator | [get validator](#get-validator) | Get validator information. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators | [get validators](#get-validators) | Get validators. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers | [get write markers](#get-write-markers) | Get write markers. |
-| POST | /v1/transaction/put | [put transaction](#put-transaction) | PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate | [replicate authorizer aggregates](#replicate-authorizer-aggregates) | Gets list of authorizer aggregate records |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate | [replicate blobber aggregates](#replicate-blobber-aggregates) | Gets list of blobber aggregate records |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate | [replicate miner aggregates](#replicate-miner-aggregates) | Gets list of miner aggregate records |
@@ -1503,46 +1502,6 @@ Status: Internal Server Error
 
 ###### <span id="get-write-markers-500-schema"></span> Schema
 
-### <span id="put-transaction"></span> PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. (*putTransaction*)
-
-```
-POST /v1/transaction/put
-```
-
-#### Consumes
-  * application/json
-
-#### Parameters
-
-| Name | Source | Type | Go type | Separator | Required | Default | Description |
-|------|--------|------|---------|-----------| :------: |---------|-------------|
-| Transaction | `body` | integer | `int64` | | ✓ | |  |
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#put-transaction-200) | OK |  |  | [schema](#put-transaction-200-schema) |
-| [400](#put-transaction-400) | Bad Request |  |  | [schema](#put-transaction-400-schema) |
-| [500](#put-transaction-500) | Internal Server Error |  |  | [schema](#put-transaction-500-schema) |
-
-#### Responses
-
-
-##### <span id="put-transaction-200"></span> 200
-Status: OK
-
-###### <span id="put-transaction-200-schema"></span> Schema
-
-##### <span id="put-transaction-400"></span> 400
-Status: Bad Request
-
-###### <span id="put-transaction-400-schema"></span> Schema
-
-##### <span id="put-transaction-500"></span> 500
-Status: Internal Server Error
-
-###### <span id="put-transaction-500-schema"></span> Schema
-
 ### <span id="replicate-authorizer-aggregates"></span> Gets list of authorizer aggregate records (*replicateAuthorizerAggregates*)
 
 ```
@@ -2729,9 +2688,17 @@ it can be used as a scan destination, similar to [NullString].
 
   
 
-| Name | Type | Go type | Default | Description | Example |
-|------|------|---------| ------- |-------------|---------|
-| Provider | int64 (formatted integer)| int64 | |  |  |
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| HasBeenKilled | boolean| `bool` |  | |  |  |
+| HasBeenShutDown | boolean| `bool` |  | |  |  |
+| ID | string| `string` |  | |  |  |
+| last_health_check | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| provider_type | [Provider](#provider)| `Provider` |  | |  |  |
 
 
 

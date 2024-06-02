@@ -357,7 +357,7 @@ paths:
         post:
             consumes:
                 - application/json
-            operationId: putTransaction
+            operationId: PutTransaction
             parameters:
                 - in: body
                   name: Transaction

@@ -28,45 +28,14 @@
 
 | Method  | URI     | Name   | Summary |
 |---------|---------|--------|---------|
-| GET | /v1/chain/get/stats | [chainstatus](#chainstatus) |  |
 | POST | /v1/transaction/put | [put transaction](#put-transaction) | PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. |
+| GET | /v1/chain/get/stats | [chainstatus](#chainstatus) |  |
   
 
 
 ## Paths
 
-### <span id="chainstatus"></span> chainstatus (*chainstatus*)
-
-```
-GET /v1/chain/get/stats
-```
-
-a handler to provide block statistics
-
-#### All responses
-| Code | Status | Description | Has headers | Schema |
-|------|--------|-------------|:-----------:|--------|
-| [200](#chainstatus-200) | OK | ChainStats |  | [schema](#chainstatus-200-schema) |
-| [500](#chainstatus-500) | Internal Server Error |  |  | [schema](#chainstatus-500-schema) |
-
-#### Responses
-
-
-##### <span id="chainstatus-200"></span> 200 - ChainStats
-Status: OK
-
-###### <span id="chainstatus-200-schema"></span> Schema
-   
-  
-
-[ChainStats](#chain-stats)
-
-##### <span id="chainstatus-500"></span> 500
-Status: Internal Server Error
-
-###### <span id="chainstatus-500-schema"></span> Schema
-
-### <span id="put-transaction"></span> PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. (*putTransaction*)
+### <span id="put-transaction"></span> PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain. (*PutTransaction*)
 
 ```
 POST /v1/transaction/put
@@ -105,6 +74,37 @@ Status: Bad Request
 Status: Internal Server Error
 
 ###### <span id="put-transaction-500-schema"></span> Schema
+
+### <span id="chainstatus"></span> chainstatus (*chainstatus*)
+
+```
+GET /v1/chain/get/stats
+```
+
+a handler to provide block statistics
+
+#### All responses
+| Code | Status | Description | Has headers | Schema |
+|------|--------|-------------|:-----------:|--------|
+| [200](#chainstatus-200) | OK | ChainStats |  | [schema](#chainstatus-200-schema) |
+| [500](#chainstatus-500) | Internal Server Error |  |  | [schema](#chainstatus-500-schema) |
+
+#### Responses
+
+
+##### <span id="chainstatus-200"></span> 200 - ChainStats
+Status: OK
+
+###### <span id="chainstatus-200-schema"></span> Schema
+   
+  
+
+[ChainStats](#chain-stats)
+
+##### <span id="chainstatus-500"></span> 500
+Status: Internal Server Error
+
+###### <span id="chainstatus-500-schema"></span> Schema
 
 ## Models
 

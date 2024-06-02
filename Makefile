@@ -77,6 +77,12 @@ swagger-miner-sc:
 	swagger generate markdown  -f docs/swagger-miner-sc.yaml --output=docs/miner-sc-api.md
 	@echo "swagger documentation generated for miner smart contract API"
 
+swagger-zcn-sc:
+	@echo "Run swagger for 0chain smart contract API ..."
+	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/smartcontract/zcnsc -c 0chain.net/smartcontract/dbs -c 0chain.net/smartcontract/rest -c 0chain.net/chaincore/... -x 0chain.net/chaincore/chain -c 0chain.net/core/... -m -o docs/swagger-zcn-sc.yaml
+	swagger generate markdown  -f docs/swagger-zcn-sc.yaml --output=docs/zcn-sc-api.md
+	@echo "swagger documentation generated for ZCN smart contract API"
+
 swagger-sharder:
 	@echo "Run swagger for sharder API ..."
 	swagger generate spec -w code/go/0chain.net/ -c 0chain.net/sharder -c 0chain.net/smartcontract/... -c 0chain.net/chaincore/... -c 0chain.net/core/... -m -o docs/swagger-sharder.yaml

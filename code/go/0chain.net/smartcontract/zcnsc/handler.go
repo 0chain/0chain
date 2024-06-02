@@ -42,8 +42,15 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes getAuthorizerNodes
-// get authorizer nodes
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes GetAuthorizerNodes
+// Get authorizer nodes.
+// Retrieve the list of authorizer nodes.
+//
+// parameters:
+//	+name: active
+//	 in: query
+//	 type: boolean
+//	 description: "If true, returns only active authorizers"
 //
 // responses:
 //
@@ -89,8 +96,9 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, toNodeResponse(authorizers), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/GetGlobalConfig GetGlobalConfig
-// get zcn configuration settings
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getGlobalConfig GetGlobalConfig
+// Get smart contract configuration.
+// Retrieve the smart contract configuration in JSON format.
 //
 // responses:
 //
@@ -106,12 +114,21 @@ func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, gn.ToStringMap(), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3/getAuthorizer getAuthorizer
-// get details of a given authorizer ID
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizer GetAuthorizer
+// Get authorizer.
+// Retrieve details of an authorizer given its ID.
+//
+// parameters:
+//	+name: id
+//	 in: query
+//	 type: string
+//	 description: "Authorizer ID"
+//	 required: true
 //
 // responses:
 //
 //	200: authorizerResponse
+//  400:
 //	404:
 func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
@@ -134,6 +151,23 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/v1/mint_nonce GetMintNonce
+// Get mint nonce.
+// Retrieve the latest mint nonce for the client with the given client ID.
+//
+// parameters:
+//	+name: client_id
+//	 in: query
+//	 type: string
+//	 description: "Client ID"
+//	 required: true
+//
+// responses:
+//
+//	200: Int64Map
+//  400:
+//	404:
+
 // MintNonceHandler returns the latest mint nonce for the client with the help of the given client id
 func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Request) {
 	edb := zrh.GetQueryStateContext().GetEventDB()
@@ -152,6 +186,28 @@ func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Reque
 
 	common.Respond(w, r, user.MintNonce, nil)
 }
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/v1/not_processed_burn_tickets GetNotProcessedBurnTickets
+// Get not processed burn tickets.
+// Retrieve the not processed ZCN burn tickets for the given ethereum address and client id with a help of offset nonce.
+// The burn tickets are returned in ascending order of nonce. Only burn tickets with nonce greater than the given nonce are returned.
+// This is an indicator of the burn tickets that are not processed yet after the given nonce. If nonce is not provided, all un-processed burn tickets are returned.
+//
+// parameters:
+//	+name: ethereum_address
+//	 in: query
+//	 type: string
+//	 description: "Ethereum address"
+//	 required: true
+//	+name: nonce
+//	 in: query
+//	 type: string
+//	 description: "Offset nonce"
+//
+// responses:
+//
+//	200: []BurnTicket
+//  400:
 
 // NotProcessedBurnTicketsHandler returns not processed ZCN burn tickets for the given ethereum address and client id
 // with a help of offset nonce
