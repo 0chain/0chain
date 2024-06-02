@@ -42,21 +42,8 @@ func (n *LockNotarizationAndSendNextRoundVRF) Decode(val interface{}) error {
 
 // Hardfork represents the hardfork directive state.
 type Hardfork struct {
-	Name string `json:"name" yaml:"name" mapstructure:"name"`
-}
-
-func (hf *Hardfork) IsValid() error {
-	validHardforks := map[string]bool{
-		"artemis": true,
-		"ares":    true,
-		"apollo":  true,
-	}
-
-	if _, valid := validHardforks[hf.Name]; !valid {
-		return fmt.Errorf("invalid hardfork name: %s", hf.Name)
-	}
-
-	return nil
+	Name  string `json:"name" yaml:"name" mapstructure:"name"`
+	Round int64  `json:"round" yaml:"round" mapstructure:"round"`
 }
 
 // BlobberList represents the blobber_list directive state.

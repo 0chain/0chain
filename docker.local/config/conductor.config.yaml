@@ -21,7 +21,8 @@ aggregate_base_url: "http://localhost:9081/v2"
 sharder1_base_url: "http://localhost:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 
 default_hardfork : {
-    "Name" : "ares"
+    Name : "ares",
+    Round : 0
 }
 
 #
@@ -583,14 +584,25 @@ commands:
         default: /remote/upload.bin
   add_hardfork:
     work_dir: "../"
-    exec: "sh -x 0chain/docker.local/bin/conductor/add_hardfork.sh $remotepath"
+    exec: "sh -x 0chain/docker.local/bin/conductor/add_hardfork.sh $names $rounds"
     args:
-      name:
+      names:
         required: true
         default: "ares"
-      round:
+      rounds:
         required: true
-        default: "0"
+        default: "1"
+  verify_hardfork:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/verify_hardfork.sh $names $rounds"
+    should_fail: false
+    args:
+      names:
+        required: true
+        default: "ares"
+      rounds:
+        required: true
+        default: 1
   update_blobber_config:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/update_blobber_config.sh $blobber_id $key $value"

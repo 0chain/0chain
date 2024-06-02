@@ -215,7 +215,7 @@ func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) (
 	DefaultHardfork := crpc.Client().State().Hardfork.Name
 
 	txns, cost, err := mc.buildInTxns(ctx, lfb, b)
-	if DefaultHardfork != "" {
+	if DefaultHardfork != "" && b.Round == 1 {
 		addHardforkTxn, err := mc.createHardforkTxn(b, DefaultHardfork)
 		if err != nil {
 			return nil, 0, err
@@ -236,7 +236,7 @@ func beforeBlockGeneration(b *block.Block, ctx context.Context, txnIterHandler f
 		return
 	}
 	dstxn := pb.Txns[rand.Intn(len(pb.Txns))]     // a random one from the previous block
-	state.DoubleSpendTransactionHash = dstxn.Hash // exclude the duplicate transactio from checks
+	state.DoubleSpendTransactionHash = dstxn.Hash // exclude the duplicate transaction from checks
 	logging.Logger.Info("injecting double-spend transaction", zap.String("hash", dstxn.Hash))
 	txnIterHandler(ctx, dstxn) // inject double-spend transaction
 }

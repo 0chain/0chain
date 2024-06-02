@@ -155,9 +155,6 @@ func (r *Runner) Start(names []NodeName, lock bool,
 
 // Change Default hardfork
 func (r *Runner) SetInitialHardfork(hf Hardfork) (err error) {
-	if err = hf.IsValid(); err != nil {
-		return err
-	}
 	if r.verbose {
 		log.Printf(" [INF] setting initial hardfork: %s", hf.Name)
 	}
