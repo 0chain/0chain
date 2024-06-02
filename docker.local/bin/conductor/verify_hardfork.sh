@@ -21,7 +21,7 @@ RESPONSE=$(curl -s -w "%{http_code}" -o response_body.txt "$ENDPOINT")
 
 # Extract the HTTP status code from the response
 BODY=$(echo "$RESPONSE" | sed '$d')
-HTTP_STATUS=$(tail -n1 <<< "$RESPONSE")
+HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
 echo $HTTP_STATUS
 
 # Check if the HTTP status code is 200 (OK)
