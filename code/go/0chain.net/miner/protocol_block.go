@@ -34,6 +34,8 @@ import (
 // InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
+const NoTransactionCost = "no_transaction_cost"
+
 // ErrLFBClientStateNil is returned when client state of latest finalized block is nil
 var ErrLFBClientStateNil = errors.New("client state of latest finalized block is empty")
 
@@ -359,6 +361,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 			c, err := mc.EstimateTransactionCost(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 			if err != nil {
 				return err
+			}
+			if c == math.MaxInt {
+				return block.ErrCostNotFound
 			}
 
 			cost += c
@@ -956,7 +961,7 @@ func txnIterHandlerFunc(
 			tii.invalidTxns = append(tii.invalidTxns, txn)
 			return false, errors.New("invalid transaction value, exceeds max token supply")
 		}
-
+		
 		cost, fee, err := mc.EstimateTransactionCostFee(ctx, lfb, txn, chain.WithSync(), chain.WithNotifyC(waitC))
 		if err != nil {
 			logging.Logger.Debug("generate block - bad transaction cost fee",
@@ -969,6 +974,10 @@ func txnIterHandlerFunc(
 			}
 
 			// skipping and continue
+			return true, nil
+		}
+		if cost == math.MaxInt {
+			logging.Logger.Debug("generate block (no transaction cost , skipping)")
 			return true, nil
 		}
 
@@ -1181,6 +1190,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			// we would just skip the error so that the work on txns collection and state computation above
 			// would not be wasted. Therefore, we will pack the block anyway.
 			logging.Logger.Debug("Bad transaction cost", zap.Error(err), zap.String("txn_hash", txn.Hash))
+			break
+		}
+		if cost == math.MaxInt {
+			logging.Logger.Debug("No transaction cost")
 			break
 		}
 		if iterInfo.cost+cost >= mc.ChainConfig.MaxBlockCost() {
