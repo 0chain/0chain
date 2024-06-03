@@ -108,6 +108,9 @@ func SetupConfig(workdir string) {
 	if err := viper.ReadConfigFile(file); err != nil {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
+
+	viper.AutomaticEnv()
+
 	setupDevConfig()
 }
 
