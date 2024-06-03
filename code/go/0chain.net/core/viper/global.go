@@ -206,11 +206,6 @@ func ReadConfigFile(path string) error {
 	return vi.ReadConfigFile(path)
 }
 
-// ReadConfigFile wraps viper's method.
-func AutomaticEnv() {
-	vi.AutomaticEnv()
-}
-
 // ReadRemoteConfig wraps viper's method.
 func ReadRemoteConfig() error {
 	return vi.ReadRemoteConfig()

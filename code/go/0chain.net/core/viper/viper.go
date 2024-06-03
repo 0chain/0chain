@@ -398,10 +398,3 @@ func (v *Viper) SetConfigType(in string) {
 
 	v.viper.SetConfigType(in)
 }
-
-func (v *Viper) AutomaticEnv() {
-	v.mutex.Lock()
-	defer v.mutex.Unlock()
-
-	v.viper.AutomaticEnv()
-}
