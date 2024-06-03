@@ -273,10 +273,18 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	default:
 		logging.Logger.Info("Storage function name", zap.String("function", funcName))
+		processedResetStats := false
 		actErr := chainstate.WithActivation(balances, "ares", func() error {
+			logging.Logger.Info("Before ares", zap.String("function", funcName))
 			return nil
 		}, func() error {
 			if funcName == "reset_blobber_stats" {
+				_ = chainstate.WithActivation(balances, "athena", func() error {
+					return nil
+				}, func() error {
+					processedResetStats = true
+					return nil
+				})
 				resp, err = sc.resetBlobberStats(t, input, balances)
 				return err
 			}
@@ -284,6 +292,10 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		})
 		if actErr != nil || resp != "" {
 			return resp, actErr
+		}
+
+		if processedResetStats {
+			return
 		}
 
 		actErr = chainstate.WithActivation(balances, "artemis", func() error {
