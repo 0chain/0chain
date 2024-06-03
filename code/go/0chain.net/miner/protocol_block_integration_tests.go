@@ -215,14 +215,11 @@ func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) (
 	DefaultHardfork := crpc.Client().State().Hardfork.Name
 
 	txns, cost, err := mc.buildInTxns(ctx, lfb, b)
-	logging.Logger.Info("DefaultHardfork: ", DefaultHardfork, "\n")
-	logging.Logger.Info("round: ", b.Round)
 	if DefaultHardfork != "" && b.Round == 1 {
 		addHardforkTxn, err := mc.createHardforkTxn(b, DefaultHardfork)
 		if err != nil {
 			return nil, 0, err
 		}
-		logging.Logger.Info("addHardforkTxn: ", addHardforkTxn)
 		txns = append(txns, addHardforkTxn)
 
 	}
