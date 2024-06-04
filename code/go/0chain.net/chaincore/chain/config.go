@@ -471,6 +471,16 @@ func (c *ConfigImpl) FromViper() error {
 		logging.Logger.Error("error during BindEnv", zap.Error(err))
 	}
 
+	if err := viper.BindEnv("server_chain.kafka.host", "KAFKA_HOSTNAME"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+	if err := viper.BindEnv("server_chain.kafka.username", "KAFKA_USERNAME"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+	if err := viper.BindEnv("server_chain.kafka.password", "KAFKA_PASSWORD"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+
 	conf := c.conf
 	conf.IsStateEnabled = viper.GetBool("server_chain.state.enabled")
 	conf.IsDkgEnabled = viper.GetBool("server_chain.dkg")
