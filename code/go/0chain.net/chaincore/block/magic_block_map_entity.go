@@ -10,7 +10,7 @@ import (
 	"0chain.net/core/ememorystore"
 )
 
-/*MagicBlockSummary - the summary of the transaction */
+/*MagicBlockMap - the summary of the transaction */
 type MagicBlockMap struct {
 	datastore.IDField
 	Hash       string `json:"hash"`
@@ -19,7 +19,7 @@ type MagicBlockMap struct {
 
 var magicBlockMapEntityMetadata *datastore.EntityMetadataImpl
 
-//MagicBlockSummaryProvider - factory method
+//MagicBlockMapProvider - factory method
 func MagicBlockMapProvider() datastore.Entity {
 	mb := &MagicBlockMap{}
 	return mb

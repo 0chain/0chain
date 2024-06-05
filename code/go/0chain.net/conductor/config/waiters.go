@@ -79,7 +79,7 @@ func (wr *WaitRound) IsZero() bool {
 	return wr.Round == 0 && wr.Name == "" && wr.Shift == 0
 }
 
-// WaitContibuteMpk wait for MPK contributing of a node.
+// WaitContributeMpk wait for MPK contributing of a node.
 type WaitContributeMpk struct {
 	Miner NodeName `json:"miner" yaml:"miner" mapstructure:"miner"`
 }
