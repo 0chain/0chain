@@ -28,7 +28,6 @@ echo $HTTP_STATUS
 if [ "$HTTP_STATUS" -eq 200 ]; then
     echo $BODY
     exit 0
-    fi
 else
     echo "Failed to call endpoint. HTTP status: $HTTP_STATUS"
     exit 1
