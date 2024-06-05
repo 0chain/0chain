@@ -14,7 +14,7 @@ names=$1
 rounds=$2
 
 # Define the endpoint URL
-ENDPOINT="http://localhost:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/hardfork$name"
+ENDPOINT="http://localhost:7171/v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/hardfork?name=$names"
 
 # Send a GET request to the endpoint and store the response
 RESPONSE=$(curl -s -w "%{http_code}" -o response_body.txt "$ENDPOINT")
