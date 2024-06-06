@@ -463,7 +463,7 @@ func (edb *EventDb) WorkEvents(
 		logging.Logger.Warn("work events - lost connection")
 	}
 
-	if blockEvents.round == edb.Config().KafkaTriggerRound {
+	if blockEvents.round == edb.Config().KafkaPanicRound {
 		logging.Logger.Panic("panic after " + fmt.Sprintf("round %v", blockEvents.round))
 	}
 

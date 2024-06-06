@@ -198,3 +198,4 @@ kafka:
   topic: "events"
   write_timeout: 10s
   trigger_round: 2000
+  panic_round: 0
