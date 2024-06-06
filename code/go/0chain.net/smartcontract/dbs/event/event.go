@@ -125,7 +125,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
 
-		results := make([]chan int64, len(filteredEvents))
+		var results []chan int64
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
 				"event": filteredEvent,
