@@ -82,6 +82,7 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) chan i
 	go func() {
 		r := <-writer.Successes()
 		res <- r.Offset
+		close(res)
 	}()
 	return res
 }
