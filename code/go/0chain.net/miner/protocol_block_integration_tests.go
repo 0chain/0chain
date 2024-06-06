@@ -1,6 +1,3 @@
-//go:build integration_tests
-// +build integration_tests
-
 package miner
 
 import (
@@ -215,12 +212,13 @@ func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) (
 	DefaultHardfork := crpc.Client().State().Hardfork.Name
 	txns, cost, err := mc.buildInTxns(ctx, lfb, b)
 	if DefaultHardfork != "" && b.Round == 1 {
-		fmt.Println("Adding hardfork transaction : ", DefaultHardfork)
-		log.Println("Adding hardfork transaction : ", DefaultHardfork)
+		logging.Logger.Debug("Adding hardfork transaction : ", zap.Strings("hardforks", []string{DefaultHardfork}))
+
 		addHardforkTxn, err := mc.createHardforkTxn(b, DefaultHardfork)
 		if err != nil {
 			return nil, 0, err
 		}
+		logging.Logger.Debug("Successfully added hardfork")
 		txns = append(txns, addHardforkTxn)
 
 	}
