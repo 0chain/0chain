@@ -11,7 +11,7 @@ import (
 )
 
 type KafkaProviderI interface {
-	PublishToKafka(topic string, key, message []byte) error
+	PublishToKafka(topic string, key, message []byte) chan int64
 	ReconnectWriter(topic string) error
 	CloseWriter(topic string) error
 	CloseAllWriters() error
@@ -57,11 +57,11 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	}
 }
 
-func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error {
+func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) chan int64 {
 	k.mutex.RLock()
 	writer := writers[topic]
 	k.mutex.RUnlock()
-
+	res := make(chan int64)
 	if writer == nil {
 		k.mutex.Lock() // Upgrade to write lock
 		defer k.mutex.Unlock()
@@ -79,8 +79,11 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 	}
 
 	writer.Input() <- msg
-	<-writer.Successes()
-	return nil
+	go func() {
+		r := <-writer.Successes()
+		res <- r.Offset
+	}()
+	return res
 }
 
 func (k *KafkaProvider) ReconnectWriter(topic string) error {

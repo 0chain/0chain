@@ -18,15 +18,15 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber    int64       `json:"block_number"`
-	TxHash         string      `json:"tx_hash"`
-	Type           EventType   `json:"type"`
-	Tag            EventTag    `json:"tag"`
-	Index          string      `json:"index"`
-	IsPublished    bool        `json:"is_published"`
-	SequenceNumber int64       `json:"sequence_number"`
-	Data           interface{} `json:"data" gorm:"-"`
-	Version     EventVersion `json:"version" gorm:"-"`
+	BlockNumber    int64        `json:"block_number"`
+	TxHash         string       `json:"tx_hash"`
+	Type           EventType    `json:"type"`
+	Tag            EventTag     `json:"tag"`
+	Index          string       `json:"index"`
+	IsPublished    bool         `json:"is_published"`
+	SequenceNumber int64        `json:"sequence_number"`
+	Data           interface{}  `json:"data" gorm:"-"`
+	Version        EventVersion `json:"version" gorm:"-"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -125,6 +125,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
 
+		results := make([]chan int64, len(filteredEvents))
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
 				"event": filteredEvent,
@@ -137,11 +138,8 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 			ts := time.Now()
 			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
-			err = broker.PublishToKafka(topic, []byte(key), eventJson)
-			if err != nil {
-				// Panic to break early for debugging, change back to error later
-				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
-			}
+			res := broker.PublishToKafka(topic, []byte(key), eventJson)
+			results = append(results, res)
 
 			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
 
@@ -156,6 +154,22 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 		}
 
+		//wait for all responses
+		timeout, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelFunc()
+		sent := 0
+	L:
+		for _, ch := range results {
+			select {
+			case <-ch:
+				sent++
+				if sent == len(filteredEvents) {
+					break L
+				}
+			case <-timeout.Done():
+				logging.Logger.Panic(fmt.Sprintf("Timeout to publish event to kafka"))
+			}
+		}
 		if updateColumn {
 			// updates the events as published
 			if err := edb.setEventPublished(events.round); err != nil {
