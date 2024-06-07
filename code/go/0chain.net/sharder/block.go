@@ -55,7 +55,7 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 	//Try to get the block from the cache
 	b, err := sc.GetBlock(ctx, bs.Hash)
 	if err != nil {
-		bi, err := GetSharderChain().BlockTxnCache.Get(bs.Hash)
+		bi, err := GetSharderChain().BlockCache.Get(bs.Hash)
 		if err != nil {
 			db := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 			db.Hash = bs.Hash
@@ -69,7 +69,7 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 				return nil, common.NewError("block_not_available", "Block not available")
 			}
 		} else {
-			b = bi.(*block.Block)
+			b = bi
 		}
 	}
 	return b, nil
