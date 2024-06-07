@@ -15,7 +15,6 @@ import (
 
 // handleVRFShare - handles the vrf share.
 func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
-
 	var mr = mc.getOrCreateRound(ctx, msg.VRFShare.Round)
 	if mr == nil {
 		return
