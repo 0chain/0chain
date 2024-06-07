@@ -690,7 +690,7 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 			if err != nil {
 				return false
 			}
-			return get.(bool)
+			return get
 		case <-ctx.Done():
 			{
 				return false
@@ -702,7 +702,7 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 	if err != nil {
 		return false
 	}
-	return get.(bool)
+	return get
 }
 
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
