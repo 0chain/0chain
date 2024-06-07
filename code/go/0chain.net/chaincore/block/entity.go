@@ -843,7 +843,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 	}
 
 	if atomic.CompareAndSwapInt32(&timeoutCount, 0, 1) {
-		if b.Round == 50 {
+		if b.Round == 500 {
 			// sleep to cause timeout
 			logging.Logger.Debug("[debug] computeState sleep to cause timeout on round 50")
 			time.Sleep(5 * time.Second)
