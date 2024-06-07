@@ -830,8 +830,6 @@ func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePat
 	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root, statecache.NewEmpty())
 }
 
-var timeoutCount int32
-
 // ComputeState computes block client state
 func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struct{}) error {
 	select {
@@ -840,14 +838,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 		b.SetStateStatus(StateCancelled)
 		return ctx.Err()
 	default:
-	}
-
-	if atomic.CompareAndSwapInt32(&timeoutCount, 0, 1) {
-		if b.Round == 500 {
-			// sleep to cause timeout
-			logging.Logger.Debug("[debug] computeState sleep to cause timeout on round 50")
-			time.Sleep(5 * time.Second)
-		}
 	}
 
 	if b.IsStateComputed() {

@@ -45,8 +45,6 @@ func init() {
 
 var ErrWrongNonce = common.NewError("wrong_nonce", "nonce of sender is not valid")
 
-var timeoutCount int
-
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block, waitC ...chan struct{}) (err error) {
 	return c.ComputeBlockStateWithLock(ctx, func() error {
