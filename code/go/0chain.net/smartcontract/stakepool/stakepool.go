@@ -523,7 +523,7 @@ func (sp *StakePool) getRandPools(balances cstate.StateContextI, seed int64, n i
 	var plsIdxs []int
 	var selected []*DelegatePool
 
-	_ = cstate.WithActivation(balances, "apollo", func() error {
+	_ = cstate.WithActivation(balances, "demeter", func() error {
 		plsIdxs = rand.New(rand.NewSource(seed)).Perm(n)
 		selected = make([]*DelegatePool, 0, n)
 
