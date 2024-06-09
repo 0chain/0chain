@@ -42,7 +42,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes GetAuthorizerNodes
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizerNodes zcn-sc GetAuthorizerNodes
 // Get authorizer nodes.
 // Retrieve the list of authorizer nodes.
 //
@@ -96,7 +96,7 @@ func (zrh *ZcnRestHandler) getAuthorizerNodes(w http.ResponseWriter, r *http.Req
 	common.Respond(w, r, toNodeResponse(authorizers), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getGlobalConfig GetGlobalConfig
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getGlobalConfig zcn-sc GetGlobalConfig
 // Get smart contract configuration.
 // Retrieve the smart contract configuration in JSON format.
 //
@@ -114,7 +114,7 @@ func (zrh *ZcnRestHandler) GetGlobalConfig(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, gn.ToStringMap(), nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizer GetAuthorizer
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/getAuthorizer zcn-sc GetAuthorizer
 // Get authorizer.
 // Retrieve details of an authorizer given its ID.
 //
@@ -151,7 +151,7 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/v1/mint_nonce GetMintNonce
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/v1/mint_nonce zcn-sc GetMintNonce
 // Get mint nonce.
 // Retrieve the latest mint nonce for the client with the given client ID.
 //
@@ -187,7 +187,7 @@ func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Reque
 	common.Respond(w, r, user.MintNonce, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/v1/not_processed_burn_tickets GetNotProcessedBurnTickets
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/v1/not_processed_burn_tickets zcn-sc GetNotProcessedBurnTickets
 // Get not processed burn tickets.
 // Retrieve the not processed ZCN burn tickets for the given ethereum address and client id with a help of offset nonce.
 // The burn tickets are returned in ascending order of nonce. Only burn tickets with nonce greater than the given nonce are returned.

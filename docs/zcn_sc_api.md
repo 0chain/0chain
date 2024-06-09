@@ -23,7 +23,7 @@
 
 ## All endpoints
 
-###  operations
+###  zcn_sc
 
 | Method  | URI     | Name   | Summary |
 |---------|---------|--------|---------|
@@ -472,6 +472,41 @@ Status: Bad Request
 
 
 
+### <span id="block-summary"></span> BlockSummary
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Hash | string| `string` |  | |  |  |
+| K | int64 (formatted integer)| `int64` |  | |  |  |
+| MagicBlockNumber | int64 (formatted integer)| `int64` |  | |  |  |
+| MerkleTreeRoot | string| `string` |  | |  |  |
+| MinerID | string| `string` |  | |  |  |
+| N | int64 (formatted integer)| `int64` |  | |  |  |
+| NumTxns | int64 (formatted integer)| `int64` |  | |  |  |
+| PreviousMagicBlockHash | string| `string` |  | |  |  |
+| ReceiptMerkleTreeRoot | string| `string` |  | |  |  |
+| Round | int64 (formatted integer)| `int64` |  | |  |  |
+| RoundRandomSeed | int64 (formatted integer)| `int64` |  | |  |  |
+| StartingRound | int64 (formatted integer)| `int64` |  | |  |  |
+| StateChangesCount | int64 (formatted integer)| `int64` |  | |  |  |
+| T | int64 (formatted integer)| `int64` |  | |  |  |
+| Version | string| `string` |  | | Version of the entity |  |
+| creation_date | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| miners | [Pool](#pool)| `Pool` |  | |  |  |
+| mpks | [Mpks](#mpks)| `Mpks` |  | |  |  |
+| sharders | [Pool](#pool)| `Pool` |  | |  |  |
+| share_or_signs | [GroupSharesOrSigns](#group-shares-or-signs)| `GroupSharesOrSigns` |  | |  |  |
+| state_hash | [Key](#key)| `Key` |  | |  |  |
+
+
+
 ### <span id="burn-ticket"></span> BurnTicket
 
 
@@ -501,22 +536,22 @@ Status: Bad Request
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| Count | int64 (formatted integer)| `int64` |  | |  |  |
-| CurrentRound | int64 (formatted integer)| `int64` |  | |  |  |
-| LastFinalizedRound | int64 (formatted integer)| `int64` |  | |  |  |
-| Max | double (formatted number)| `float64` |  | |  |  |
-| Mean | double (formatted number)| `float64` |  | |  |  |
-| Min | double (formatted number)| `float64` |  | |  |  |
-| Percentile50 | double (formatted number)| `float64` |  | |  |  |
-| Percentile90 | double (formatted number)| `float64` |  | |  |  |
-| Percentile95 | double (formatted number)| `float64` |  | |  |  |
-| Percentile99 | double (formatted number)| `float64` |  | |  |  |
-| Rate1 | double (formatted number)| `float64` |  | |  |  |
-| Rate15 | double (formatted number)| `float64` |  | |  |  |
-| Rate5 | double (formatted number)| `float64` |  | |  |  |
-| RateMean | double (formatted number)| `float64` |  | |  |  |
-| RunningTxnCount | int64 (formatted integer)| `int64` |  | |  |  |
-| StdDev | double (formatted number)| `float64` |  | |  |  |
+| Count | int64 (formatted integer)| `int64` |  | | Number of finalized blocks generated in the block chain since genesis. |  |
+| CurrentRound | int64 (formatted integer)| `int64` |  | | The number that represents the current round of the blockchain. |  |
+| LastFinalizedRound | int64 (formatted integer)| `int64` |  | | The number that represents the round that generated the latest finalized block. |  |
+| Max | double (formatted number)| `float64` |  | | Maximum finalization time of a block, in milliseconds. |  |
+| Mean | double (formatted number)| `float64` |  | | Mean (Average) finalization time of a block, in milliseconds. |  |
+| Min | double (formatted number)| `float64` |  | | Minimum finalization time of a block, in milliseconds. |  |
+| Percentile50 | double (formatted number)| `float64` |  | | The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below. |  |
+| Percentile90 | double (formatted number)| `float64` |  | | The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below. |  |
+| Percentile95 | double (formatted number)| `float64` |  | | The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below. |  |
+| Percentile99 | double (formatted number)| `float64` |  | | The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below. |  |
+| Rate1 | double (formatted number)| `float64` |  | | The moving average rate of occurrence of block finalization events per second during the specified time window. |  |
+| Rate15 | double (formatted number)| `float64` |  | | The moving average rate of occurrence of block finalization events per second during the specified time window. |  |
+| Rate5 | double (formatted number)| `float64` |  | | The moving average rate of occurrence of block finalization events per second during the specified time window. |  |
+| RateMean | double (formatted number)| `float64` |  | | The overall mean rate of occurrence of block finalization events per second. |  |
+| RunningTxnCount | int64 (formatted integer)| `int64` |  | | The total count of all transactions included in all the blocks generated by the blockchain. |  |
+| StdDev | double (formatted number)| `float64` |  | | Standard deviation of the finalization time of a block from the mean number, in milliseconds. |  |
 | delta | [Duration](#duration)| `Duration` |  | |  |  |
 
 
@@ -560,7 +595,7 @@ Status: Bad Request
 ### <span id="client"></span> Client
 
 
-> go:generate msgp -io=false -tests=false -v
+> Client - data structure that holds the client data
   
 
 
@@ -572,8 +607,8 @@ Status: Bad Request
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
 | ID | string| `string` |  | |  |  |
-| PublicKey | string| `string` |  | |  |  |
-| Version | string| `string` |  | |  |  |
+| PublicKey | string| `string` |  | | The public key of the client |  |
+| Version | string| `string` |  | | Version of the entity |  |
 | creation_date | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 
 
@@ -776,6 +811,16 @@ model.Model
 
 [InterfaceMap](#interface-map)
 
+### <span id="key"></span> Key
+
+
+> Key - a type for the merkle patricia trie node key
+  
+
+
+
+[]uint8 (formatted integer)
+
 ### <span id="m-p-k"></span> MPK
 
 
@@ -906,6 +951,17 @@ gorm.Model
 
 
 
+### <span id="n-o-id-field"></span> NOIDField
+
+
+> NOIDFied - used when we just want to create a datastore entity that doesn't
+have it's own id (like 1-to-many) that is only required to send it around with the parent key */
+  
+
+
+
+[interface{}](#interface)
+
 ### <span id="node"></span> Node
 
 
@@ -924,10 +980,10 @@ gorm.Model
 | N2NHost | string| `string` |  | |  |  |
 | Path | string| `string` |  | |  |  |
 | Port | int64 (formatted integer)| `int64` |  | |  |  |
-| PublicKey | string| `string` |  | |  |  |
+| PublicKey | string| `string` |  | | The public key of the client |  |
 | SetIndex | int64 (formatted integer)| `int64` |  | |  |  |
 | Status | int64 (formatted integer)| `int64` |  | |  |  |
-| Version | string| `string` |  | |  |  |
+| Version | string| `string` |  | | Version of the entity |  |
 | creation_date | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | info | [Info](#info)| `Info` |  | |  |  |
 | type | [NodeType](#node-type)| `NodeType` |  | |  |  |
@@ -1283,6 +1339,24 @@ it can be used as a scan destination, similar to [NullString].
 
 
 
+### <span id="state"></span> State
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Nonce | int64 (formatted integer)| `int64` |  | | Latest nonce used by the client wallet. |  |
+| Round | int64 (formatted integer)| `int64` |  | | Latest round when the latest txn happened. |  |
+| TxnHash | string| `string` |  | | Latest transaction run by the client wallet. |  |
+| balance | [Coin](#coin)| `Coin` |  | |  |  |
+
+
+
 ### <span id="string-map"></span> StringMap
 
 
@@ -1327,24 +1401,52 @@ Timestamp - just a wrapper to control the json encoding */
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| BlockHash | string| `string` |  | |  |  |
-| ClientId | string| `string` |  | |  |  |
-| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
-| CreationDate | int64 (formatted integer)| `int64` |  | |  |  |
+| ChainID | string| `string` | ✓ | | ChainID - the chain id of the transaction |  |
+| ClientID | string| `string` | ✓ | | ClientID of the client issuing the transaction |  |
 | Hash | string| `string` |  | |  |  |
-| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
-| Nonce | int64 (formatted integer)| `int64` |  | |  |  |
-| OutputHash | string| `string` |  | |  |  |
+| Nonce | int64 (formatted integer)| `int64` | ✓ | | Nonce - the nonce associated with the transaction |  |
+| OutputHash | string| `string` | ✓ | | OutputHash - the hash of the transaction output |  |
+| PublicKey | string| `string` | ✓ | | Public key of the client issuing the transaction |  |
+| Signature | string| `string` | ✓ | | Signature - Issuer signature of the transaction |  |
+| Status | int64 (formatted integer)| `int64` | ✓ | | Status - the status of the transaction |  |
+| ToClientID | string| `string` | ✓ | | ToClientID - the client id of the recipient, the other party in the transaction. It can be a client id or the address of a smart contract |  |
+| TransactionData | string| `string` | ✓ | | TransactionData - the data associated with the transaction |  |
+| TransactionOutput | string| `string` | ✓ | | TransactionOutput - the output of the transaction |  |
+| TransactionType | int64 (formatted integer)| `int64` | ✓ | | TransactionType - the type of the transaction. </br>Possible values are:</br>0: TxnTypeSend - A transaction to send tokens to another account, state is maintained by account.</br>10: TxnTypeData - A transaction to just store a piece of data on the block chain.</br>1000: TxnTypeSmartContract - A smart contract transaction type. |  |
+| Version | string| `string` |  | | Version of the entity |  |
+| creation_date | [Timestamp](#timestamp)| `Timestamp` | ✓ | |  |  |
+| transaction_fee | [Coin](#coin)| `Coin` | ✓ | |  |  |
+| transaction_value | [Coin](#coin)| `Coin` | ✓ | |  |  |
+
+
+
+### <span id="unverified-block-body"></span> UnverifiedBlockBody
+
+
+> UnverifiedBlockBody - used to compute the signature
+This is what is used to verify the correctness of the block & the associated signature
+  
+
+
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| LatestFinalizedMagicBlockHash | string| `string` |  | |  |  |
+| LatestFinalizedMagicBlockRound | int64 (formatted integer)| `int64` |  | |  |  |
+| MinerID | string| `string` |  | |  |  |
+| PrevBlockVerificationTickets | [][VerificationTicket](#verification-ticket)| `[]*VerificationTicket` |  | |  |  |
+| PrevHash | string| `string` |  | |  |  |
 | Round | int64 (formatted integer)| `int64` |  | |  |  |
-| Signature | string| `string` |  | |  |  |
-| Status | int64 (formatted integer)| `int64` |  | |  |  |
-| ToClientId | string| `string` |  | |  |  |
-| TransactionData | string| `string` |  | |  |  |
-| TransactionOutput | string| `string` |  | |  |  |
-| TransactionType | int64 (formatted integer)| `int64` |  | |  |  |
-| Version | string| `string` |  | |  |  |
-| fee | [Coin](#coin)| `Coin` |  | |  |  |
-| value | [Coin](#coin)| `Coin` |  | |  |  |
+| RoundRandomSeed | int64 (formatted integer)| `int64` |  | |  |  |
+| RoundTimeoutCount | int64 (formatted integer)| `int64` |  | |  |  |
+| Txns | [][Transaction](#transaction)| `[]*Transaction` |  | | The entire transaction payload to represent full block |  |
+| Version | string| `string` |  | | Version of the entity |  |
+| creation_date | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| state_hash | [Key](#key)| `Key` |  | |  |  |
 
 
 
@@ -1487,6 +1589,22 @@ Timestamp - just a wrapper to control the json encoding */
 
 
 
+### <span id="verification-ticket"></span> VerificationTicket
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Signature | string| `string` |  | |  |  |
+| VerifierID | string| `string` |  | |  |  |
+
+
+
 ### <span id="version-field"></span> VersionField
 
 
@@ -1501,7 +1619,7 @@ Timestamp - just a wrapper to control the json encoding */
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| Version | string| `string` |  | |  |  |
+| Version | string| `string` |  | | Version of the entity |  |
 
 
 

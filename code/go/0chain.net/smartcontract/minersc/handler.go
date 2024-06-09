@@ -69,7 +69,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/delegate-rewards GetDelegateRewards
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/delegate-rewards miner-sc GetDelegateRewards
 // Get delegate rewards.
 // Retrieve a list of delegate rewards satisfying the filter. Supports pagination.
 //
@@ -129,7 +129,7 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/provider-rewards GetProviderRewards
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/provider-rewards miner-sc GetProviderRewards
 // Get provider rewards.
 // Retrieve list of provider rewards satisfying filter, supports pagination.
 //
@@ -193,7 +193,7 @@ func (mrh *MinerRestHandler) getProviderRewards(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, rtv, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs GetMinerSCConfigs
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/configs miner-sc GetMinerSCConfigs
 // Get Miner SC configs.
 // Retrieve the miner SC global configuration.
 //
@@ -212,7 +212,7 @@ func (mrh *MinerRestHandler) getConfigs(w http.ResponseWriter, r *http.Request) 
 	common.Respond(w, r, rtv, err)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/hardfork GetHardfork
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/hardfork miner-sc GetHardfork
 // Get hardfork.
 // Retrieve hardfork information given its name, which is the round when it was applied.
 //
@@ -235,7 +235,7 @@ func (mrh *MinerRestHandler) getHardfork(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, map[string]string{"round": strconv.FormatInt(round, 10)}, err)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat NodePoolStat
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodePoolStat miner-sc NodePoolStat
 // Get node pool stats.
 // Retrieves node stake pool stats for a given client, given the id of the client and the node.
 //
@@ -296,7 +296,7 @@ type nodeStat struct {
 	TotalReward int64 `json:"total_reward"`
 }
 
-// swagger:route GET /test/screst/nodeStat nodeStatOperation
+// swagger:route GET /test/screst/nodeStat miner-sc nodeStatOperation
 // lists sharders
 //
 // parameters:
@@ -363,7 +363,7 @@ func (mrh *MinerRestHandler) testNodeStat(w http.ResponseWriter, r *http.Request
 		TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat GetNodeStat
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/nodeStat miner-sc GetNodeStat
 // Get node stats.
 // Retrieve the stats of a miner or sharder given the ID.
 //
@@ -412,7 +412,7 @@ func (mrh *MinerRestHandler) getNodeStat(w http.ResponseWriter, r *http.Request)
 		TotalReward:  int64(sharder.Rewards.TotalRewards)}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents GetEvents
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getEvents miner-sc GetEvents
 // Get Events.
 // Retrieve a list of events based on the filters, supports pagination.
 //
@@ -498,7 +498,7 @@ func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 	}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock GetMagicBlock
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMagicBlock miner-sc GetMagicBlock
 // Get magic block.
 // Retrieve the magic block, which is the first block in the beginning of each view change process, containing the information of the nodes contributing to the network (miners/sharders).
 //
@@ -516,7 +516,7 @@ func (mrh *MinerRestHandler) getMagicBlock(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, mb, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns GetGroupShareOrSigns
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getGroupShareOrSigns miner-sc GetGroupShareOrSigns
 // Get group shares/signs.
 // Retrieve a list of group shares and signatures, part of DKG process. Read about it in View Change protocol in public docs.
 //
@@ -534,7 +534,7 @@ func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http
 	common.Respond(w, r, sos, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList GetMpksList
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMpksList miner-sc GetMpksList
 // Get MPKs list.
 // Retrievs MPKs list of network nodes (miners/sharders).
 //
@@ -552,7 +552,7 @@ func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, mpks, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList GetDkgList
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getDkgList miner-sc GetDkgList
 // Get DKG miners/sharder list.
 // Retrieve a list of the miners/sharders that are part of the DKG process, number of revealed shares and weither nodes are waiting.
 //
@@ -569,7 +569,7 @@ func (mrh *MinerRestHandler) getDkgList(w http.ResponseWriter, r *http.Request) 
 	common.Respond(w, r, dkgMinersList, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase GetPhase
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getPhase miner-sc GetPhase
 // Get phase node from the client state.
 // Phase node has information about the current phase of the network, including the current round, and number of restarts.
 //
@@ -586,7 +586,7 @@ func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, pn, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList GetSharderKeepList
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderKeepList miner-sc GetSharderKeepList
 // Get sharder keep list.
 // Retrieve a list of sharders in the keep list.
 //
@@ -603,7 +603,7 @@ func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, allShardersList, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats GetShardersStats
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_sharders_stats miner-sc GetShardersStats
 // Get sharders stats.
 // Retreive statistics about the sharders, including counts of active and inactive sharders.
 //
@@ -636,7 +636,7 @@ func (mrh *MinerRestHandler) getShardersStats(w http.ResponseWriter, r *http.Req
 
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList GetSharderList
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getSharderList miner-sc GetSharderList
 // Get Sharder List.
 // Retrieves a list of sharders based on the filters, supports pagination.
 //
@@ -732,7 +732,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 	}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats GetMinersStats
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/get_miners_stats miner-sc GetMinersStats
 // Get miners stats.
 // Retrieve statitics about the miners, including counts of active and inactive miners.
 //
@@ -765,7 +765,7 @@ func (mrh *MinerRestHandler) getMinersStats(w http.ResponseWriter, r *http.Reque
 
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList GetMinerList
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getMinerList miner-sc GetMinerList
 // Get Miner List.
 // Retrieves a list of miners given the filters, supports pagination.
 //
@@ -862,7 +862,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 	}, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools GetUserPools
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getUserPools miner-sc GetUserPools
 // Get User Pools.
 // Retrieve user stake pools, supports pagination.
 //
@@ -953,7 +953,7 @@ func toUPS(pool event.DelegatePool) storagesc.DelegatePoolStat {
 	return dp
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat GetStakePoolStat
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getStakePoolStat miner-sc GetStakePoolStat
 // Get Stake Pool Stat.
 // Retrieve statistic for all locked tokens of a stake pool.
 //
@@ -1097,7 +1097,7 @@ func getProviderStakePoolStats(providerType int, providerID string, edb *event.E
 	}
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool GetNodepool
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/getNodepool miner-sc GetNodepool
 // Get Node Pool.
 // Retrieve the node pool information for all the nodes in the network (miners/sharders).
 //
@@ -1111,7 +1111,7 @@ func (mrh *MinerRestHandler) getNodePool(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, npi, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings GetGlobalSettings
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9/globalSettings miner-sc GetGlobalSettings
 // Get global chain settings.
 // Retrieve global configuration object for the chain.
 //

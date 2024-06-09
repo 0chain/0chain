@@ -30,13 +30,13 @@ func SetupHandlers() {
 	))
 }
 
-// swagger:route GET /v1/chain/get/stats chainstatus
-// a handler to provide block statistics
+// swagger:route GET /v1/chain/get/stats miner GetChainStats
+// Get chain stats.
+// Retrieves the statistics related to the chain progress. No parameters needed.
 //
 // responses:
 //  200: ChainStats
 //  500:
-//    description: Internal Server Error
 
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain
@@ -141,6 +141,12 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
+// swagger:route GET /v1/miner/get/stats miner GetMinerStats
+// Get Miner Stats.
+// Retrieves the statistics related to the miner progress. No parameters needed.
+//
+// responses:
+//   200: ExploreStats
 func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain
 	var total int64

@@ -451,41 +451,49 @@ definitions:
         properties:
             chain_id:
                 type: string
-                x-go-name: ChainId
-            created_at:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
+                x-go-name: ChainID
             creation_date:
-                format: int64
-                type: integer
-                x-go-name: CreationDate
+                $ref: '#/definitions/Timestamp'
             hash:
                 type: string
                 x-go-name: Hash
-            id:
-                format: uint64
+            k:
+                format: int64
                 type: integer
-                x-go-name: ID
-            magic_block_hash:
+                x-go-name: K
+            latest_finalized_magic_block_hash:
                 type: string
-                x-go-name: MagicBlockHash
-            merkle_tree_root:
-                type: string
-                x-go-name: MerkleTreeRoot
+                x-go-name: LatestFinalizedMagicBlockHash
+            latest_finalized_magic_block_round:
+                format: int64
+                type: integer
+                x-go-name: LatestFinalizedMagicBlockRound
+            magic_block_number:
+                format: int64
+                type: integer
+                x-go-name: MagicBlockNumber
             miner_id:
                 type: string
                 x-go-name: MinerID
-            num_txns:
+            miners:
+                $ref: '#/definitions/Pool'
+            mpks:
+                $ref: '#/definitions/Mpks'
+            "n":
                 format: int64
                 type: integer
-                x-go-name: NumTxns
+                x-go-name: "N"
             prev_hash:
                 type: string
                 x-go-name: PrevHash
-            receipt_merkle_tree_root:
+            prev_verification_tickets:
+                items:
+                    $ref: '#/definitions/VerificationTicket'
+                type: array
+                x-go-name: PrevBlockVerificationTickets
+            previous_hash:
                 type: string
-                x-go-name: ReceiptMerkleTreeRoot
+                x-go-name: PreviousMagicBlockHash
             round:
                 format: int64
                 type: integer
@@ -499,92 +507,204 @@ definitions:
                 type: integer
                 x-go-name: RoundTimeoutCount
             running_txn_count:
-                type: string
+                format: int64
+                type: integer
                 x-go-name: RunningTxnCount
+            sharders:
+                $ref: '#/definitions/Pool'
+            share_or_signs:
+                $ref: '#/definitions/GroupSharesOrSigns'
             signature:
                 type: string
                 x-go-name: Signature
+            starting_round:
+                format: int64
+                type: integer
+                x-go-name: StartingRound
+            state_changes_count:
+                description: |-
+                    StateChangesCount represents the state changes number in client state of current block.
+                    this will be used to verify the state changes acquire from remote
+                format: int64
+                type: integer
+                x-go-name: StateChangesCount
+            state_hash:
+                $ref: '#/definitions/Key'
+            t:
+                format: int64
+                type: integer
+                x-go-name: T
+            transactions:
+                description: The entire transaction payload to represent full block
+                items:
+                    $ref: '#/definitions/Transaction'
+                type: array
+                x-go-name: Txns
+            verification_tickets:
+                items:
+                    $ref: '#/definitions/VerificationTicket'
+                type: array
+                x-go-name: VerificationTickets
+            version:
+                description: Version of the entity
+                type: string
+                x-go-name: Version
+        title: Block - data structure that holds the block data */
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    BlockSummary:
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            hash:
+                type: string
+                x-go-name: Hash
+            k:
+                format: int64
+                type: integer
+                x-go-name: K
+            magic_block_number:
+                format: int64
+                type: integer
+                x-go-name: MagicBlockNumber
+            merkle_tree_root:
+                type: string
+                x-go-name: MerkleTreeRoot
+            miner_id:
+                type: string
+                x-go-name: MinerID
+            miners:
+                $ref: '#/definitions/Pool'
+            mpks:
+                $ref: '#/definitions/Mpks'
+            "n":
+                format: int64
+                type: integer
+                x-go-name: "N"
+            num_txns:
+                format: int64
+                type: integer
+                x-go-name: NumTxns
+            previous_hash:
+                type: string
+                x-go-name: PreviousMagicBlockHash
+            receipt_merkle_tree_root:
+                type: string
+                x-go-name: ReceiptMerkleTreeRoot
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            round_random_seed:
+                format: int64
+                type: integer
+                x-go-name: RoundRandomSeed
+            sharders:
+                $ref: '#/definitions/Pool'
+            share_or_signs:
+                $ref: '#/definitions/GroupSharesOrSigns'
+            starting_round:
+                format: int64
+                type: integer
+                x-go-name: StartingRound
             state_changes_count:
                 format: int64
                 type: integer
                 x-go-name: StateChangesCount
             state_hash:
-                type: string
-                x-go-name: StateHash
-            updated_at:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
+                $ref: '#/definitions/Key'
+            t:
+                format: int64
+                type: integer
+                x-go-name: T
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
+        title: BlockSummary - the summary of the block */
         type: object
-        x-go-package: 0chain.net/smartcontract/dbs/event
+        x-go-package: 0chain.net/chaincore/block
     ChainStats:
         properties:
             count:
+                description: Number of finalized blocks generated in the block chain since genesis.
                 format: int64
                 type: integer
                 x-go-name: Count
             current_round:
+                description: The number that represents the current round of the blockchain.
                 format: int64
                 type: integer
                 x-go-name: CurrentRound
             delta:
                 $ref: '#/definitions/Duration'
             latest_finalized_round:
+                description: The number that represents the round that generated the latest finalized block.
                 format: int64
                 type: integer
                 x-go-name: LastFinalizedRound
             max:
+                description: Maximum finalization time of a block, in milliseconds.
                 format: double
                 type: number
                 x-go-name: Max
             mean:
+                description: Mean (Average) finalization time of a block, in milliseconds.
                 format: double
                 type: number
                 x-go-name: Mean
             min:
+                description: Minimum finalization time of a block, in milliseconds.
                 format: double
                 type: number
                 x-go-name: Min
             percentile_50:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile50
             percentile_90:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile90
             percentile_95:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile95
             percentile_99:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile99
             rate_1_min:
+                description: The moving average rate of occurrence of block finalization events per second during the specified time window.
                 format: double
                 type: number
                 x-go-name: Rate1
             rate_5_min:
+                description: The moving average rate of occurrence of block finalization events per second during the specified time window.
                 format: double
                 type: number
                 x-go-name: Rate5
             rate_15_min:
+                description: The moving average rate of occurrence of block finalization events per second during the specified time window.
                 format: double
                 type: number
                 x-go-name: Rate15
             rate_mean:
+                description: The overall mean rate of occurrence of block finalization events per second.
                 format: double
                 type: number
                 x-go-name: RateMean
             std_dev:
+                description: Standard deviation of the finalization time of a block from the mean number, in milliseconds.
                 format: double
                 type: number
                 x-go-name: StdDev
             total_txns:
+                description: The total count of all transactions included in all the blocks generated by the blockchain.
                 format: int64
                 type: integer
                 x-go-name: RunningTxnCount
@@ -665,7 +785,7 @@ definitions:
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     Client:
-        description: go:generate msgp -io=false -tests=false -v
+        description: Client - data structure that holds the client data
         properties:
             creation_date:
                 $ref: '#/definitions/Timestamp'
@@ -673,12 +793,13 @@ definitions:
                 type: string
                 x-go-name: ID
             public_key:
+                description: The public key of the client
                 type: string
                 x-go-name: PublicKey
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
-        title: Client - data structure that holds the client data
         type: object
         x-go-package: 0chain.net/chaincore/client
     Coin:
@@ -837,6 +958,13 @@ definitions:
                 x-go-name: StateMissingNodes
         type: object
         x-go-package: 0chain.net/chaincore/node
+    Key:
+        description: Key - a type for the merkle patricia trie node key
+        items:
+            format: uint8
+            type: integer
+        type: array
+        x-go-package: github.com/0chain/common/core/util
     MPK:
         properties:
             ID:
@@ -994,6 +1122,12 @@ definitions:
                 type: object
         type: object
         x-go-package: 0chain.net/chaincore/block
+    NOIDField:
+        description: |-
+            NOIDFied - used when we just want to create a datastore entity that doesn't
+            have it's own id (like 1-to-many) that is only required to send it around with the parent key */
+        type: object
+        x-go-package: 0chain.net/core/datastore
     Node:
         properties:
             creation_date:
@@ -1023,6 +1157,7 @@ definitions:
                 type: integer
                 x-go-name: Port
             public_key:
+                description: The public key of the client
                 type: string
                 x-go-name: PublicKey
             set_index:
@@ -1036,6 +1171,7 @@ definitions:
             type:
                 $ref: '#/definitions/NodeType'
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
         title: Node - a struct holding the node information */
@@ -1107,6 +1243,7 @@ definitions:
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
     Provider:
+        format: int64
         properties:
             id:
                 type: string
@@ -1121,8 +1258,8 @@ definitions:
                 $ref: '#/definitions/Timestamp'
             provider_type:
                 $ref: '#/definitions/Provider'
-        type: object
-        x-go-package: 0chain.net/smartcontract/provider
+        type: integer
+        x-go-package: 0chain.net/smartcontract/stakepool/spenum
     ProviderRewards:
         description: ProviderRewards is a tables stores the rewards and total_rewards for all kinds of providers
         properties:
@@ -1507,6 +1644,27 @@ definitions:
                 x-go-name: ZCNSupply
         type: object
         x-go-package: 0chain.net/smartcontract/dbs/event
+    State:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            nonce:
+                description: Latest nonce used by the client wallet.
+                format: int64
+                type: integer
+                x-go-name: Nonce
+            round:
+                description: Latest round when the latest txn happened.
+                format: int64
+                type: integer
+                x-go-name: Round
+            txn:
+                description: Latest transaction run by the client wallet.
+                type: string
+                x-go-name: TxnHash
+        title: State - state that needs consensus within the blockchain.
+        type: object
+        x-go-package: 0chain.net/chaincore/state
     StorageAllocation:
         properties:
             blobber_details:
@@ -1746,67 +1904,134 @@ definitions:
     Transaction:
         description: Transaction model to save the transaction data
         properties:
-            block_hash:
+            chain_id:
+                description: ChainID - the chain id of the transaction
                 type: string
-                x-go-name: BlockHash
+                x-go-name: ChainID
             client_id:
+                description: ClientID of the client issuing the transaction
                 type: string
-                x-go-name: ClientId
-            created_at:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
+                x-go-name: ClientID
             creation_date:
-                format: int64
-                type: integer
-                x-go-name: CreationDate
-            fee:
-                $ref: '#/definitions/Coin'
+                $ref: '#/definitions/Timestamp'
             hash:
                 type: string
                 x-go-name: Hash
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            nonce:
+            public_key:
+                description: Public key of the client issuing the transaction
+                type: string
+                x-go-name: PublicKey
+            signature:
+                description: Signature - Issuer signature of the transaction
+                type: string
+                x-go-name: Signature
+            to_client_id:
+                description: ToClientID - the client id of the recipient, the other party in the transaction. It can be a client id or the address of a smart contract
+                type: string
+                x-go-name: ToClientID
+            transaction_data:
+                description: TransactionData - the data associated with the transaction
+                type: string
+                x-go-name: TransactionData
+            transaction_fee:
+                $ref: '#/definitions/Coin'
+            transaction_nonce:
+                description: Nonce - the nonce associated with the transaction
                 format: int64
                 type: integer
                 x-go-name: Nonce
-            output_hash:
+            transaction_output:
+                description: TransactionOutput - the output of the transaction
+                type: string
+                x-go-name: TransactionOutput
+            transaction_status:
+                description: Status - the status of the transaction
+                format: int64
+                type: integer
+                x-go-name: Status
+            transaction_type:
+                description: "TransactionType - the type of the transaction. \nPossible values are:\n0: TxnTypeSend - A transaction to send tokens to another account, state is maintained by account.\n10: TxnTypeData - A transaction to just store a piece of data on the block chain.\n1000: TxnTypeSmartContract - A smart contract transaction type."
+                format: int64
+                type: integer
+                x-go-name: TransactionType
+            transaction_value:
+                $ref: '#/definitions/Coin'
+            txn_output_hash:
+                description: OutputHash - the hash of the transaction output
                 type: string
                 x-go-name: OutputHash
+            version:
+                description: Version of the entity
+                type: string
+                x-go-name: Version
+        required:
+            - client_id
+            - public_key
+            - to_client_id
+            - chain_id
+            - transaction_data
+            - transaction_value
+            - signature
+            - creation_date
+            - transaction_fee
+            - transaction_nonce
+            - transaction_type
+            - transaction_output
+            - txn_output_hash
+            - transaction_status
+        type: object
+        x-go-package: 0chain.net/chaincore/transaction
+    UnverifiedBlockBody:
+        description: |-
+            UnverifiedBlockBody - used to compute the signature
+            This is what is used to verify the correctness of the block & the associated signature
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            latest_finalized_magic_block_hash:
+                type: string
+                x-go-name: LatestFinalizedMagicBlockHash
+            latest_finalized_magic_block_round:
+                format: int64
+                type: integer
+                x-go-name: LatestFinalizedMagicBlockRound
+            miner_id:
+                type: string
+                x-go-name: MinerID
+            prev_hash:
+                type: string
+                x-go-name: PrevHash
+            prev_verification_tickets:
+                items:
+                    $ref: '#/definitions/VerificationTicket'
+                type: array
+                x-go-name: PrevBlockVerificationTickets
             round:
                 format: int64
                 type: integer
                 x-go-name: Round
-            signature:
-                type: string
-                x-go-name: Signature
-            status:
+            round_random_seed:
                 format: int64
                 type: integer
-                x-go-name: Status
-            to_client_id:
-                type: string
-                x-go-name: ToClientId
-            transaction_data:
-                type: string
-                x-go-name: TransactionData
-            transaction_output:
-                type: string
-                x-go-name: TransactionOutput
-            transaction_type:
+                x-go-name: RoundRandomSeed
+            round_timeout_count:
                 format: int64
                 type: integer
-                x-go-name: TransactionType
-            value:
-                $ref: '#/definitions/Coin'
+                x-go-name: RoundTimeoutCount
+            state_hash:
+                $ref: '#/definitions/Key'
+            transactions:
+                description: The entire transaction payload to represent full block
+                items:
+                    $ref: '#/definitions/Transaction'
+                type: array
+                x-go-name: Txns
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
         type: object
-        x-go-package: 0chain.net/smartcontract/dbs/event
+        x-go-package: 0chain.net/chaincore/block
     UpdatableModel:
         properties:
             created_at:
@@ -2035,10 +2260,22 @@ definitions:
                 $ref: '#/definitions/Coin'
         type: object
         x-go-package: 0chain.net/smartcontract/dbs/event
+    VerificationTicket:
+        properties:
+            signature:
+                type: string
+                x-go-name: Signature
+            verifier_id:
+                type: string
+                x-go-name: VerifierID
+        title: VerificationTicket - verification ticket for the block */
+        type: object
+        x-go-package: 0chain.net/chaincore/block
     VersionField:
         description: go:generate msgp -io=false -tests=false -v
         properties:
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
         type: object
@@ -2407,6 +2644,8 @@ paths:
                 "500":
                     description: ""
             summary: Get allocation/blobber terms of service.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_blobbers:
         get:
             description: |-
@@ -2447,6 +2686,8 @@ paths:
                 "400":
                     description: ""
             summary: Get blobbers for allocation request.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count:
         get:
             description: Returns the count of write markers for an allocation given its id.
@@ -2465,6 +2706,8 @@ paths:
                 "400":
                     description: ""
             summary: Count of write markers for an allocation.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation:
         get:
             description: Retrieves information about a specific allocation given its id.
@@ -2485,6 +2728,8 @@ paths:
                 "500":
                     description: ""
             summary: Get allocation information
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation-update-min-lock:
         get:
             description: Based on the allocation request data, this endpoint calculates the minimum lock demand for updating an allocation, which represents the cost of the allocation.
@@ -2505,6 +2750,8 @@ paths:
                 "500":
                     description: ""
             summary: Calculates the cost for updating an allocation.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations:
         get:
             description: Gets a list of allocation information for allocations owned by the client. Supports pagination.
@@ -2539,6 +2786,8 @@ paths:
                 "500":
                     description: ""
             summary: Get client allocations.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations:
         get:
             description: Gets a list of allocation information for allocations hosted on a specific blobber. Supports pagination.
@@ -2573,6 +2822,8 @@ paths:
                 "500":
                     description: ""
             summary: Get blobber allocations.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges:
         get:
             description: Gets list of challenges for a blobber in a specific time interval, given the blobber id.
@@ -2605,6 +2856,8 @@ paths:
                 "500":
                     description: ""
             summary: Get blobber challenges.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids:
         get:
             description: Returns list of blobber ids given their urls. Supports pagination.
@@ -2635,6 +2888,8 @@ paths:
                 "400":
                     description: ""
             summary: Get blobber ids by blobber urls.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/block:
         get:
             description: Returns block information for a given block hash or block round.
@@ -2662,6 +2917,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets block information
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward:
         get:
             description: |-
@@ -2705,6 +2962,8 @@ paths:
                 "400":
                     description: ""
             summary: Get collected reward.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/count_readmarkers:
         get:
             description: Returns the count of read markers for a given allocation.
@@ -2723,6 +2982,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets read markers count.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/errors:
         get:
             description: Retrieves a list of errors associated with a specific transaction. Supports pagination.
@@ -2757,6 +3018,8 @@ paths:
                 "500":
                     description: ""
             summary: Get transaction errors.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/free_alloc_blobbers:
         get:
             description: |-
@@ -2786,6 +3049,8 @@ paths:
                 "400":
                     description: ""
             summary: Get free allocation blobbers.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks:
         get:
             description: Gets block information for a list of blocks given a range of block numbers. Supports pagination.
@@ -2825,6 +3090,8 @@ paths:
                 "500":
                     description: ""
             summary: Get blocks for round range.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator:
         get:
             description: Retrieve information for a validator given its id.
@@ -2845,6 +3112,8 @@ paths:
                 "500":
                     description: ""
             summary: Get validator information.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber:
         get:
             description: Retrieves information about a specific blobber given its id.
@@ -2865,6 +3134,8 @@ paths:
                 "500":
                     description: ""
             summary: Get blobber information.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getChallengePoolStat:
         get:
             description: Retrieve statistic for all locked tokens of a challenge pool.
@@ -2883,6 +3154,8 @@ paths:
                 "400":
                     description: ""
             summary: Get challenge pool statistics.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations:
         get:
             description: Retrieves a list of expired allocations associated with a specified blobber.
@@ -2901,6 +3174,8 @@ paths:
                 "500":
                     description: ""
             summary: Get expired allocations.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getReadPoolStat:
         get:
             description: Retrieve statistic for all locked tokens of the read pool of a client given their id.
@@ -2919,6 +3194,8 @@ paths:
                 "400":
                     description: ""
             summary: Get read pool statistics.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getStakePoolStat:
         get:
             description: Retrieve statistic for all locked tokens of a stake pool associated with a specific client and provider. Provider can be a blobber, validator, or authorizer.
@@ -2944,6 +3221,8 @@ paths:
                 "500":
                     description: ""
             summary: Get stake pool statistics.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getUserStakePoolStat:
         get:
             description: Retrieve statistic for a user's stake pools given the user's id.
@@ -2974,6 +3253,8 @@ paths:
                 "400":
                     description: ""
             summary: Get user stake pool statistics.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers:
         get:
             description: Retrieves writemarkers of an allocation given the allocation id. Supports pagination.
@@ -3008,6 +3289,8 @@ paths:
                 "500":
                     description: ""
             summary: Get write markers.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers:
         get:
             description: Retrieve active blobbers' ids. Retrieved  blobbers should be alive (e.g. excluding blobbers with zero capacity).
@@ -3033,6 +3316,8 @@ paths:
                 "500":
                     description: ""
             summary: Get active blobbers ids.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getchallenge:
         get:
             description: Returns challenge information given its id.
@@ -3055,6 +3340,8 @@ paths:
                 "500":
                     description: ""
             summary: Get challenge information.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/latestreadmarker:
         get:
             description: Retrievs latest read marker for a client and a blobber.
@@ -3082,6 +3369,8 @@ paths:
                 "500":
                     description: ""
             summary: Get latest read marker.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/openchallenges:
         get:
             description: Retrieves open challenges for a blobber given its id.
@@ -3120,6 +3409,8 @@ paths:
                 "500":
                     description: ""
             summary: Get blobber open challenges.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/readmarkers:
         get:
             description: Retrieves read markers given an allocation id or an auth ticket. Supports pagination.
@@ -3155,6 +3446,8 @@ paths:
                 "500":
                     description: ""
             summary: Get read markers.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
@@ -3184,6 +3477,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets list of authorizer aggregate records
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
@@ -3213,6 +3508,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets list of blobber aggregate records
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
@@ -3242,6 +3539,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets list of miner aggregate records
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
@@ -3271,6 +3570,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets list of sharder aggregate records
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
@@ -3302,6 +3603,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets list of global snapshot records
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
@@ -3331,6 +3634,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets list of user aggregate records
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
@@ -3360,6 +3665,8 @@ paths:
                 "500":
                     description: ""
             summary: Gets list of validator aggregate records
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search:
         get:
             description: |-
@@ -3383,6 +3690,8 @@ paths:
                 "500":
                     description: ""
             summary: Generic search endpoint.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/storage-config:
         get:
             description: Retrieve the current storage smart contract settings.
@@ -3395,6 +3704,8 @@ paths:
                 "400":
                     description: ""
             summary: Get storage smart contract settings.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transaction:
         get:
             description: Gets transaction information given transaction hash.
@@ -3413,6 +3724,8 @@ paths:
                 "500":
                     description: ""
             summary: Get transaction information
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/transactions:
         get:
             description: |-
@@ -3465,6 +3778,8 @@ paths:
                 "500":
                     description: ""
             summary: "Get Transactions\tlist."
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators:
         get:
             description: Retrieves a list of validators, optionally filtered by whether they are active and/or stakable.
@@ -3500,6 +3815,8 @@ paths:
                 "400":
                     description: ""
             summary: Get validators.
+            tags:
+                - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers:
         get:
             description: Retrieves a list of write markers satisfying filter. Supports pagination.
@@ -3529,6 +3846,8 @@ paths:
                 "500":
                     description: ""
             summary: Get write markers.
+            tags:
+                - storage-sc
 produces:
     - application/json
 schemes:

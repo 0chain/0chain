@@ -186,6 +186,20 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 }
 
 // GetBalanceHandler - get the balance of a client
+// swagger:route GET /v1/client/get/balance sharder GetClientBalance
+// Get client balance.
+// Retrieves the balance of a client.
+//
+// parameters:
+//    +name: client_id
+//      in: query
+//      required: true
+//      type: string
+//      description: Client ID
+//
+// responses:
+//   200: State
+//   400:
 func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
 	if c.GetEventDb() == nil {
@@ -200,6 +214,13 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	return userToState(user), nil
 }
 
+// swagger:route GET /v1/current-round sharder GetCurrentRound
+// Get round.
+// Retrieves the current round number as int64.
+//
+// Responses:
+//   200:
+//   400:
 func (c *Chain) GetCurrentRoundHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return c.GetCurrentRound(), nil
 }

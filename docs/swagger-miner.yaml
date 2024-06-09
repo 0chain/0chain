@@ -1,77 +1,307 @@
 basePath: /
 definitions:
+    Block:
+        properties:
+            chain_id:
+                type: string
+                x-go-name: ChainID
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            hash:
+                type: string
+                x-go-name: Hash
+            k:
+                format: int64
+                type: integer
+                x-go-name: K
+            latest_finalized_magic_block_hash:
+                type: string
+                x-go-name: LatestFinalizedMagicBlockHash
+            latest_finalized_magic_block_round:
+                format: int64
+                type: integer
+                x-go-name: LatestFinalizedMagicBlockRound
+            magic_block_number:
+                format: int64
+                type: integer
+                x-go-name: MagicBlockNumber
+            miner_id:
+                type: string
+                x-go-name: MinerID
+            miners:
+                $ref: '#/definitions/Pool'
+            mpks:
+                $ref: '#/definitions/Mpks'
+            "n":
+                format: int64
+                type: integer
+                x-go-name: "N"
+            prev_hash:
+                type: string
+                x-go-name: PrevHash
+            prev_verification_tickets:
+                items:
+                    $ref: '#/definitions/VerificationTicket'
+                type: array
+                x-go-name: PrevBlockVerificationTickets
+            previous_hash:
+                type: string
+                x-go-name: PreviousMagicBlockHash
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            round_random_seed:
+                format: int64
+                type: integer
+                x-go-name: RoundRandomSeed
+            round_timeout_count:
+                format: int64
+                type: integer
+                x-go-name: RoundTimeoutCount
+            running_txn_count:
+                format: int64
+                type: integer
+                x-go-name: RunningTxnCount
+            sharders:
+                $ref: '#/definitions/Pool'
+            share_or_signs:
+                $ref: '#/definitions/GroupSharesOrSigns'
+            signature:
+                type: string
+                x-go-name: Signature
+            starting_round:
+                format: int64
+                type: integer
+                x-go-name: StartingRound
+            state_changes_count:
+                description: |-
+                    StateChangesCount represents the state changes number in client state of current block.
+                    this will be used to verify the state changes acquire from remote
+                format: int64
+                type: integer
+                x-go-name: StateChangesCount
+            state_hash:
+                $ref: '#/definitions/Key'
+            t:
+                format: int64
+                type: integer
+                x-go-name: T
+            transactions:
+                description: The entire transaction payload to represent full block
+                items:
+                    $ref: '#/definitions/Transaction'
+                type: array
+                x-go-name: Txns
+            verification_tickets:
+                items:
+                    $ref: '#/definitions/VerificationTicket'
+                type: array
+                x-go-name: VerificationTickets
+            version:
+                description: Version of the entity
+                type: string
+                x-go-name: Version
+        title: Block - data structure that holds the block data */
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    BlockFeeStatsResponse:
+        properties:
+            max_fee:
+                format: int64
+                type: integer
+                x-go-name: MaxFee
+            mean_fee:
+                format: int64
+                type: integer
+                x-go-name: MeanFee
+            min_fee:
+                format: int64
+                type: integer
+                x-go-name: MinFee
+        type: object
+        x-go-package: 0chain.net/chaincore
+    BlockSummary:
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            hash:
+                type: string
+                x-go-name: Hash
+            k:
+                format: int64
+                type: integer
+                x-go-name: K
+            magic_block_number:
+                format: int64
+                type: integer
+                x-go-name: MagicBlockNumber
+            merkle_tree_root:
+                type: string
+                x-go-name: MerkleTreeRoot
+            miner_id:
+                type: string
+                x-go-name: MinerID
+            miners:
+                $ref: '#/definitions/Pool'
+            mpks:
+                $ref: '#/definitions/Mpks'
+            "n":
+                format: int64
+                type: integer
+                x-go-name: "N"
+            num_txns:
+                format: int64
+                type: integer
+                x-go-name: NumTxns
+            previous_hash:
+                type: string
+                x-go-name: PreviousMagicBlockHash
+            receipt_merkle_tree_root:
+                type: string
+                x-go-name: ReceiptMerkleTreeRoot
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            round_random_seed:
+                format: int64
+                type: integer
+                x-go-name: RoundRandomSeed
+            sharders:
+                $ref: '#/definitions/Pool'
+            share_or_signs:
+                $ref: '#/definitions/GroupSharesOrSigns'
+            starting_round:
+                format: int64
+                type: integer
+                x-go-name: StartingRound
+            state_changes_count:
+                format: int64
+                type: integer
+                x-go-name: StateChangesCount
+            state_hash:
+                $ref: '#/definitions/Key'
+            t:
+                format: int64
+                type: integer
+                x-go-name: T
+            version:
+                description: Version of the entity
+                type: string
+                x-go-name: Version
+        title: BlockSummary - the summary of the block */
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    ChainInfo:
+        properties:
+            block_hash:
+                type: string
+                x-go-name: BlockHash
+            client_state_hash:
+                type: string
+                x-go-name: ClientStateHash
+            finalized_blocks_count:
+                format: int64
+                type: integer
+                x-go-name: FinalizedCount
+            round:
+                format: int64
+                type: integer
+                x-go-name: FinalizedRound
+            ts:
+                type: string
+                x-go-name: TimeStamp
+        type: object
+        x-go-package: 0chain.net/chaincore
     ChainStats:
         properties:
             count:
+                description: Number of finalized blocks generated in the block chain since genesis.
                 format: int64
                 type: integer
                 x-go-name: Count
             current_round:
+                description: The number that represents the current round of the blockchain.
                 format: int64
                 type: integer
                 x-go-name: CurrentRound
             delta:
                 $ref: '#/definitions/Duration'
             latest_finalized_round:
+                description: The number that represents the round that generated the latest finalized block.
                 format: int64
                 type: integer
                 x-go-name: LastFinalizedRound
             max:
+                description: Maximum finalization time of a block, in milliseconds.
                 format: double
                 type: number
                 x-go-name: Max
             mean:
+                description: Mean (Average) finalization time of a block, in milliseconds.
                 format: double
                 type: number
                 x-go-name: Mean
             min:
+                description: Minimum finalization time of a block, in milliseconds.
                 format: double
                 type: number
                 x-go-name: Min
             percentile_50:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile50
             percentile_90:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile90
             percentile_95:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile95
             percentile_99:
+                description: The block finalization time value, in milliseconds, which the specified percentage of block finalization events lie below.
                 format: double
                 type: number
                 x-go-name: Percentile99
             rate_1_min:
+                description: The moving average rate of occurrence of block finalization events per second during the specified time window.
                 format: double
                 type: number
                 x-go-name: Rate1
             rate_5_min:
+                description: The moving average rate of occurrence of block finalization events per second during the specified time window.
                 format: double
                 type: number
                 x-go-name: Rate5
             rate_15_min:
+                description: The moving average rate of occurrence of block finalization events per second during the specified time window.
                 format: double
                 type: number
                 x-go-name: Rate15
             rate_mean:
+                description: The overall mean rate of occurrence of block finalization events per second.
                 format: double
                 type: number
                 x-go-name: RateMean
             std_dev:
+                description: Standard deviation of the finalization time of a block from the mean number, in milliseconds.
                 format: double
                 type: number
                 x-go-name: StdDev
             total_txns:
+                description: The total count of all transactions included in all the blocks generated by the blockchain.
                 format: int64
                 type: integer
                 x-go-name: RunningTxnCount
         type: object
         x-go-package: 0chain.net/chaincore/diagnostics
     Client:
-        description: go:generate msgp -io=false -tests=false -v
+        description: Client - data structure that holds the client data
         properties:
             creation_date:
                 $ref: '#/definitions/Timestamp'
@@ -79,14 +309,21 @@ definitions:
                 type: string
                 x-go-name: ID
             public_key:
+                description: The public key of the client
                 type: string
                 x-go-name: PublicKey
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
-        title: Client - data structure that holds the client data
         type: object
         x-go-package: 0chain.net/chaincore/client
+    Coin:
+        description: go:generate msgp -io=false -tests=false -v
+        format: uint64
+        title: Coin - any quantity that is represented as an integer in the lowest denomination
+        type: integer
+        x-go-package: github.com/0chain/common/core/currency
     CreationDateField:
         description: |-
             go:generate msgp -io=false -tests=false -v
@@ -120,6 +357,70 @@ definitions:
         format: int64
         type: integer
         x-go-package: time
+    ExploreStats:
+        description: 'ExplorerStats is a struct that holds the miner''s stats. '
+        properties:
+            average_block_size:
+                description: Average number of transactions per block for the blocks generated by the miner.
+                format: int64
+                type: integer
+                x-go-name: AverageBlockSize
+            block_finality:
+                description: The average block finality time in milliseconds.
+                format: double
+                type: number
+                x-go-name: BlockFinality
+            blocks_finalized:
+                description: The count of finalized blocks that was generated by the miner.
+                format: int64
+                type: integer
+                x-go-name: BlocksFinalized
+            current_round:
+                description: Current round the miner is working on.
+                format: int64
+                type: integer
+                x-go-name: CurrentRound
+            last_finalized_round:
+                description: Latest finalization round as seen by the miner.
+                format: int64
+                type: integer
+                x-go-name: LastFinalizedRound
+            network_times:
+                additionalProperties:
+                    $ref: '#/definitions/Duration'
+                description: Median network time of the nodes contributing to blockchain progress (miners/sharders) as seen by the miner.
+                type: object
+                x-go-name: NetworkTime
+            round_timeout:
+                description: Number of timeouts happened during the round.
+                format: int64
+                type: integer
+                x-go-name: RoundTimeout
+            state_health:
+                description: Number of missing nodes as seen by the miner.
+                format: int64
+                type: integer
+                x-go-name: StateHealth
+            timeouts:
+                description: Total timeouts occurred in the blockchain.
+                format: int64
+                type: integer
+                x-go-name: Timeouts
+        type: object
+        x-go-name: ExplorerStats
+        x-go-package: 0chain.net/miner
+    FeesTableResponse:
+        properties:
+            sc_fees_table_map:
+                additionalProperties:
+                    additionalProperties:
+                        format: int64
+                        type: integer
+                    type: object
+                type: object
+                x-go-name: ScFeesTableMap
+        type: object
+        x-go-package: 0chain.net/chaincore
     GroupSharesOrSigns:
         properties:
             shares:
@@ -165,6 +466,27 @@ definitions:
                 x-go-name: StateMissingNodes
         type: object
         x-go-package: 0chain.net/chaincore/node
+    InfoResponse:
+        properties:
+            chain_info:
+                items:
+                    $ref: '#/definitions/ChainInfo'
+                type: array
+                x-go-name: ChainInfo
+            round_info:
+                items:
+                    $ref: '#/definitions/RoundInfo'
+                type: array
+                x-go-name: RoundInfo
+        type: object
+        x-go-package: 0chain.net/chaincore
+    Key:
+        description: Key - a type for the merkle patricia trie node key
+        items:
+            format: uint8
+            type: integer
+        type: array
+        x-go-package: github.com/0chain/common/core/util
     MPK:
         properties:
             ID:
@@ -221,6 +543,12 @@ definitions:
                 type: object
         type: object
         x-go-package: 0chain.net/chaincore/block
+    NOIDField:
+        description: |-
+            NOIDFied - used when we just want to create a datastore entity that doesn't
+            have it's own id (like 1-to-many) that is only required to send it around with the parent key */
+        type: object
+        x-go-package: 0chain.net/core/datastore
     Node:
         properties:
             creation_date:
@@ -250,6 +578,7 @@ definitions:
                 type: integer
                 x-go-name: Port
             public_key:
+                description: The public key of the client
                 type: string
                 x-go-name: PublicKey
             set_index:
@@ -263,6 +592,7 @@ definitions:
             type:
                 $ref: '#/definitions/NodeType'
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
         title: Node - a struct holding the node information */
@@ -311,6 +641,31 @@ definitions:
                 x-go-name: MembersInfo
         type: object
         x-go-package: 0chain.net/chaincore/smartcontract
+    RoundInfo:
+        properties:
+            multi_notarized_blocks_count:
+                description: count of rounds with multiple notarized blocks.
+                format: int8
+                type: integer
+                x-go-name: MultiNotarizedBlocksCount
+            notarized_blocks_count:
+                format: int8
+                type: integer
+                x-go-name: NotarizedBlocksCount
+            round_number:
+                format: int64
+                type: integer
+                x-go-name: Round
+            ts:
+                type: string
+                x-go-name: TimeStamp
+            zero_notarized_blocks_count:
+                description: count of rounds with no notarization for any blocks
+                format: int8
+                type: integer
+                x-go-name: ZeroNotarizedBlocksCount
+        type: object
+        x-go-package: 0chain.net/chaincore
     ShareOrSigns:
         properties:
             id:
@@ -323,6 +678,27 @@ definitions:
                 x-go-name: ShareOrSigns
         type: object
         x-go-package: 0chain.net/chaincore/block
+    State:
+        properties:
+            balance:
+                $ref: '#/definitions/Coin'
+            nonce:
+                description: Latest nonce used by the client wallet.
+                format: int64
+                type: integer
+                x-go-name: Nonce
+            round:
+                description: Latest round when the latest txn happened.
+                format: int64
+                type: integer
+                x-go-name: Round
+            txn:
+                description: Latest transaction run by the client wallet.
+                type: string
+                x-go-name: TxnHash
+        title: State - state that needs consensus within the blockchain.
+        type: object
+        x-go-package: 0chain.net/chaincore/state
     Timestamp:
         description: |-
             go:generate msgp -io=false -tests=false -v
@@ -330,10 +706,159 @@ definitions:
         format: int64
         type: integer
         x-go-package: 0chain.net/core/common
+    Transaction:
+        properties:
+            chain_id:
+                description: ChainID - the chain id of the transaction
+                type: string
+                x-go-name: ChainID
+            client_id:
+                description: ClientID of the client issuing the transaction
+                type: string
+                x-go-name: ClientID
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            hash:
+                type: string
+                x-go-name: Hash
+            public_key:
+                description: Public key of the client issuing the transaction
+                type: string
+                x-go-name: PublicKey
+            signature:
+                description: Signature - Issuer signature of the transaction
+                type: string
+                x-go-name: Signature
+            to_client_id:
+                description: ToClientID - the client id of the recipient, the other party in the transaction. It can be a client id or the address of a smart contract
+                type: string
+                x-go-name: ToClientID
+            transaction_data:
+                description: TransactionData - the data associated with the transaction
+                type: string
+                x-go-name: TransactionData
+            transaction_fee:
+                $ref: '#/definitions/Coin'
+            transaction_nonce:
+                description: Nonce - the nonce associated with the transaction
+                format: int64
+                type: integer
+                x-go-name: Nonce
+            transaction_output:
+                description: TransactionOutput - the output of the transaction
+                type: string
+                x-go-name: TransactionOutput
+            transaction_status:
+                description: Status - the status of the transaction
+                format: int64
+                type: integer
+                x-go-name: Status
+            transaction_type:
+                description: "TransactionType - the type of the transaction. \nPossible values are:\n0: TxnTypeSend - A transaction to send tokens to another account, state is maintained by account.\n10: TxnTypeData - A transaction to just store a piece of data on the block chain.\n1000: TxnTypeSmartContract - A smart contract transaction type."
+                format: int64
+                type: integer
+                x-go-name: TransactionType
+            transaction_value:
+                $ref: '#/definitions/Coin'
+            txn_output_hash:
+                description: OutputHash - the hash of the transaction output
+                type: string
+                x-go-name: OutputHash
+            version:
+                description: Version of the entity
+                type: string
+                x-go-name: Version
+        required:
+            - client_id
+            - public_key
+            - to_client_id
+            - chain_id
+            - transaction_data
+            - transaction_value
+            - signature
+            - creation_date
+            - transaction_fee
+            - transaction_nonce
+            - transaction_type
+            - transaction_output
+            - txn_output_hash
+            - transaction_status
+        type: object
+        x-go-package: 0chain.net/chaincore/transaction
+    TxnFeeResponse:
+        properties:
+            fee:
+                type: string
+                x-go-name: Fee
+        type: object
+        x-go-package: 0chain.net/chaincore
+    UnverifiedBlockBody:
+        description: |-
+            UnverifiedBlockBody - used to compute the signature
+            This is what is used to verify the correctness of the block & the associated signature
+        properties:
+            creation_date:
+                $ref: '#/definitions/Timestamp'
+            latest_finalized_magic_block_hash:
+                type: string
+                x-go-name: LatestFinalizedMagicBlockHash
+            latest_finalized_magic_block_round:
+                format: int64
+                type: integer
+                x-go-name: LatestFinalizedMagicBlockRound
+            miner_id:
+                type: string
+                x-go-name: MinerID
+            prev_hash:
+                type: string
+                x-go-name: PrevHash
+            prev_verification_tickets:
+                items:
+                    $ref: '#/definitions/VerificationTicket'
+                type: array
+                x-go-name: PrevBlockVerificationTickets
+            round:
+                format: int64
+                type: integer
+                x-go-name: Round
+            round_random_seed:
+                format: int64
+                type: integer
+                x-go-name: RoundRandomSeed
+            round_timeout_count:
+                format: int64
+                type: integer
+                x-go-name: RoundTimeoutCount
+            state_hash:
+                $ref: '#/definitions/Key'
+            transactions:
+                description: The entire transaction payload to represent full block
+                items:
+                    $ref: '#/definitions/Transaction'
+                type: array
+                x-go-name: Txns
+            version:
+                description: Version of the entity
+                type: string
+                x-go-name: Version
+        type: object
+        x-go-package: 0chain.net/chaincore/block
+    VerificationTicket:
+        properties:
+            signature:
+                type: string
+                x-go-name: Signature
+            verifier_id:
+                type: string
+                x-go-name: VerifierID
+        title: VerificationTicket - verification ticket for the block */
+        type: object
+        x-go-package: 0chain.net/chaincore/block
     VersionField:
         description: go:generate msgp -io=false -tests=false -v
         properties:
             version:
+                description: Version of the entity
                 type: string
                 x-go-name: Version
         type: object
@@ -342,10 +867,53 @@ info:
     title: 'Miner API:'
     version: 0.1.0
 paths:
+    /v1/block/get/fee_stats:
+        get:
+            description: Returns the fee statistics for the transactions of the LFB (latest finalized block). No parameters needed.
+            operationId: GetBlockFeeStats
+            responses:
+                "200":
+                    description: BlockFeeStatsResponse
+                    schema:
+                        $ref: '#/definitions/BlockFeeStatsResponse'
+            summary: Get block fee stats.
+            tags:
+                - miner
+                - sharder
+    /v1/block/get/latest_finalized:
+        get:
+            description: Retrieves the latest finalized block. No parameters needed.
+            operationId: GetLatestFinalizedBlock
+            responses:
+                "200":
+                    description: BlockSummary
+                    schema:
+                        $ref: '#/definitions/BlockSummary'
+            summary: Get latest finalized block.
+            tags:
+                - miner
+                - sharder
+    /v1/block/get/recent_finalized:
+        get:
+            description: Returns a list of the 10 most recent finalized blocks. No parameters needed.
+            operationId: GetRecentFinalizedBlock
+            responses:
+                "200":
+                    description: BlockSummary
+                    schema:
+                        items:
+                            $ref: '#/definitions/BlockSummary'
+                        type: array
+                "400":
+                    description: ""
+            summary: Get recent finalized blocks.
+            tags:
+                - miner
+                - sharder
     /v1/chain/get/stats:
         get:
-            description: a handler to provide block statistics
-            operationId: chainstatus
+            description: Retrieves the statistics related to the chain progress. No parameters needed.
+            operationId: GetChainStats
             responses:
                 "200":
                     description: ChainStats
@@ -353,25 +921,120 @@ paths:
                         $ref: '#/definitions/ChainStats'
                 "500":
                     description: ""
+            summary: Get chain stats.
+            tags:
+                - miner
+    /v1/client/get:
+        get:
+            description: Retrieves the client information.
+            operationId: GetClient
+            parameters:
+                - description: '"Client ID"'
+                  in: query
+                  name: id
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: Client
+                    schema:
+                        $ref: '#/definitions/Client'
+                "400":
+                    description: ""
+            summary: Get client.
+            tags:
+                - miner
+    /v1/diagnostics/get/info:
+        get:
+            description: Returns the latest block/round information known to the node. No parameters needed.
+            operationId: GetDiagnosticsInfo
+            responses:
+                "200":
+                    description: InfoResponse
+                    schema:
+                        $ref: '#/definitions/InfoResponse'
+            summary: Get latest block and round metrics cached in the miner.
+            tags:
+                - miner
+                - sharder
+    /v1/estimate_txn_fee:
+        get:
+            consumes:
+                - application/json
+            description: |-
+                Estimate transaction fees
+                Returns an on-chain calculation of the fee based on the provided txn data (in SAS which is the indivisible unit of ZCN coin, 1 ZCN = 10^10 SAS). Txn data is provided in the body of the request.
+            operationId: GetTxnFees
+            parameters:
+                - description: Transaction Data
+                  in: body
+                  name: transaction
+                  required: true
+                  schema:
+                    $ref: '#/definitions/Transaction'
+                  x-go-name: Transaction
+            responses:
+                "200":
+                    description: TxnFeeResponse
+                    schema:
+                        $ref: '#/definitions/TxnFeeResponse'
+            tags:
+                - miner
+                - sharder
+    /v1/fees_table:
+        get:
+            description: |-
+                Get transaction fees table
+                Returns the transaction fees table based on the latest finalized block.
+            operationId: GetTxnFeesTable
+            responses:
+                "200":
+                    description: FeesTableResponse
+                    schema:
+                        $ref: '#/definitions/FeesTableResponse'
+            tags:
+                - miner
+                - sharder
+    /v1/miner/get/stats:
+        get:
+            description: Retrieves the statistics related to the miner progress. No parameters needed.
+            operationId: GetMinerStats
+            responses:
+                "200":
+                    description: ExploreStats
+                    schema:
+                        $ref: '#/definitions/ExploreStats'
+            summary: Get Miner Stats.
+            tags:
+                - miner
     /v1/transaction/put:
         post:
             consumes:
                 - application/json
+            description: |-
+                Put a transaction to the transaction pool.
+                Transaction size cannot exceed the max payload size which is a global configuration of the chain.
             operationId: PutTransaction
             parameters:
-                - in: body
-                  name: Transaction
+                - description: Transaction Data
+                  in: body
+                  name: transaction
                   required: true
                   schema:
-                    type: integer
+                    $ref: '#/definitions/Transaction'
+                  x-go-name: Transaction
             responses:
                 "200":
-                    description: ""
+                    description: Transaction
+                    schema:
+                        $ref: '#/definitions/Transaction'
                 "400":
                     description: ""
                 "500":
                     description: ""
-            summary: PutTransaction - Put a transaction to the transaction pool. Transaction size cannot exceed the max payload size which is a global configuration of the chain.
+            summary: Put Transaction.
+            tags:
+                - miner
 produces:
     - application/json
 schemes:
