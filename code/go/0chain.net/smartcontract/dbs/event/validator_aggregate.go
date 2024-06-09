@@ -53,6 +53,7 @@ func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int
 			Round:           round,
 			ValidatorID:     v.ID,
 			LastHealthCheck: v.LastHealthCheck,
+			URL: 			 v.BaseUrl,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

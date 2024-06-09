@@ -111,6 +111,9 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 		scRestRE = regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
 		pathParams = scRestRE.FindStringSubmatch(r.URL.Path)
 		if len(pathParams) == 3 {
+			// This is a call for an undefined endpoint, it's undefined since it fell back to this handler instead of the actual handler of the endpoint
+			fmt.Fprintf(w, "invalid_path: Invalid Rest API path")
+			w.WriteHeader(http.StatusNotFound)
 			return
 		} else {
 			c.GetSCRestPoints(w, r)
