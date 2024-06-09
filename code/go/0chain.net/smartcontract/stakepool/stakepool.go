@@ -452,7 +452,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	}
 
 	valueBalance := valueLeft
-	stake, pools, err := sp.getRandStakePools(seed, randN)
+	stake, pools, err := sp.getRandStakePools(balances, seed, randN)
 	if err != nil {
 		return err
 	}
@@ -501,7 +501,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	return nil
 }
 
-func (sp *StakePool) getRandPools(seed int64, n int) []*DelegatePool {
+func (sp *StakePool) getRandPools(balances cstate.StateContextI, seed int64, n int) []*DelegatePool {
 	if len(sp.Pools) == 0 {
 		return nil
 	}
@@ -520,19 +520,37 @@ func (sp *StakePool) getRandPools(seed int64, n int) []*DelegatePool {
 		return pls
 	}
 
-	// get random N from pools N
-	plsIdxs := rand.New(rand.NewSource(seed)).Perm(n)
-	selected := make([]*DelegatePool, 0, n)
+	var plsIdxs []int
+	var selected []*DelegatePool
 
-	for _, idx := range plsIdxs {
-		selected = append(selected, pls[idx])
-	}
+	_ = cstate.WithActivation(balances, "apollo", func() error {
+		plsIdxs = rand.New(rand.NewSource(seed)).Perm(n)
+		selected = make([]*DelegatePool, 0, n)
+
+		for _, idx := range plsIdxs {
+			selected = append(selected, pls[idx])
+		}
+		return nil
+	}, func() error {
+		plsIdxs = rand.New(rand.NewSource(seed)).Perm(len(sp.Pools))
+		selected = make([]*DelegatePool, 0, n)
+
+		count := n
+		for _, idx := range plsIdxs {
+			selected = append(selected, pls[idx])
+			count--
+			if count == 0 {
+				break
+			}
+		}
+		return nil
+	})
 
 	return selected
 }
 
-func (sp *StakePool) getRandStakePools(seed int64, n int) (currency.Coin, []*DelegatePool, error) {
-	pools := sp.getRandPools(seed, n)
+func (sp *StakePool) getRandStakePools(balances cstate.StateContextI, seed int64, n int) (currency.Coin, []*DelegatePool, error) {
+	pools := sp.getRandPools(balances, seed, n)
 	if len(pools) == 0 {
 		return 0, nil, nil
 	}
