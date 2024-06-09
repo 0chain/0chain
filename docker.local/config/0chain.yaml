@@ -189,3 +189,12 @@ integration_tests:
   # lock_interval used by nodes to request server to connect to blockchain
   # after start
   lock_interval: 1s
+
+kafka:
+  enabled: false
+  host: "198.19.0.99:9092"
+  username: "admin"
+  password: "password"
+  topic: "events"
+  write_timeout: 10s
+  trigger_round: 2000

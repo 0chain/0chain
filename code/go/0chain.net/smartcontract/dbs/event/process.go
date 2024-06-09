@@ -7,6 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/dbs/queueProvider"
+	"gorm.io/gorm"
+
 	"0chain.net/chaincore/state"
 	"golang.org/x/net/context"
 
@@ -45,18 +48,26 @@ func (edb *EventDb) ProcessEvents(
 	round int64,
 	block string,
 	blockSize int,
+	storeEvents func(BlockEvents) error,
 	opts ...ProcessEventsOptionsFunc,
-) (*EventDb, error) {
+) (*EventDb, uint32, error) {
 	ts := time.Now()
 	es, err := mergeEvents(round, block, events)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	latestGlobalCounter := edb.GetEventsCounter()
+	localCounter := uint32(0)
+	for i := range es {
+		localCounter++
+		es[i].SequenceNumber = int64(latestGlobalCounter) + int64(localCounter)
 	}
 
 	pdu := time.Since(ts)
 	tx, err := edb.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var doOnce sync.Once
@@ -78,6 +89,13 @@ func (edb *EventDb) ProcessEvents(
 		done:      make(chan bool, 1),
 	}
 
+	if err := storeEvents(event); err != nil {
+		logging.Logger.Error("process events - save state last events failed",
+			zap.Int64("round", event.round),
+			zap.Error(err))
+		return nil, 0, err
+	}
+
 	select {
 	case edb.eventsChannel <- event:
 	case <-ctx.Done():
@@ -89,9 +107,9 @@ func (edb *EventDb) ProcessEvents(
 		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
-		return nil, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
+		return nil, 0, fmt.Errorf("process events - push to process channel context done: %v", ctx.Err())
 	}
 
 	select {
@@ -109,10 +127,10 @@ func (edb *EventDb) ProcessEvents(
 		if !commit {
 			err := txRollback()
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
-			return nil, errors.New("process events failed")
+			return nil, 0, err
 		}
 
 		var opt ProcessEventsOptions
@@ -121,10 +139,10 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if opt.CommitNow {
-			return nil, tx.Commit()
+			return nil, localCounter, tx.Commit()
 		}
 
-		return tx, nil
+		return tx, localCounter, nil
 	case <-ctx.Done():
 		du := time.Since(ts)
 		logging.Logger.Warn("process events - context done",
@@ -136,9 +154,9 @@ func (edb *EventDb) ProcessEvents(
 		err := txRollback()
 		if err != nil {
 			logging.Logger.Error("can't rollback", zap.Error(err))
-			return nil, ctx.Err()
+			return nil, 0, ctx.Err()
 		}
-		return nil, ctx.Err()
+		return nil, 0, ctx.Err()
 	}
 }
 
@@ -277,7 +295,8 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	return append(mergedEvents, others...), nil
 }
 
-func (edb *EventDb) addEventsWorker(ctx context.Context) {
+func (edb *EventDb) addEventsWorker(ctx context.Context,
+	getBlockEvents func(round int64) (int64, []Event, error)) {
 	var gs *Snapshot
 	err := edb.managePermanentPartitions(0)
 	if err != nil {
@@ -298,7 +317,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 				es.done <- commit
 			}()
 
-			s, err := Work(ctx, gs, es)
+			s, err := Work(ctx, gs, es, getBlockEvents)
 			if err != nil {
 				logging.Logger.Error("process events", zap.Error(err))
 				commit = false
@@ -312,12 +331,83 @@ func (edb *EventDb) addEventsWorker(ctx context.Context) {
 	}
 }
 
+func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (int64, []Event, error)) error {
+	logging.Logger.Debug("kafka - publish unpublished events")
+	if !edb.dbConfig.KafkaEnabled {
+		return nil
+	}
+
+	logging.Logger.Debug("kafka - publish unpublished events enabled")
+	// get last published round, it's not guaranteed that all events in that block is published.
+	// so we still need to re-publish all events in that block.
+	round, err := edb.getLastPublishedRound()
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			logging.Logger.Panic("could not get unpublished events", zap.Error(err))
+		}
+		logging.Logger.Debug("kafka - see no published round events")
+		// when see gorm.ErrRecordNotFound, it means there is no published events, which could
+		// happen when kafka is just introduced and run the first time.
+		return nil
+	}
+
+	lfbRound, err := edb.getLatestFinalizedBlock()
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			logging.Logger.Panic("kafka - could not get latest finalized block", zap.Error(err))
+		}
+		logging.Logger.Debug("kafka - see no lfb")
+		return nil
+	}
+
+	if round > lfbRound {
+		return nil
+	}
+
+	if round < edb.Config().KafkaTriggerRound {
+		return nil
+	}
+	// since we are not sure if the lfb events are all published, so we will publish all events in
+	// lfb anyway
+	if round < lfbRound {
+		if round < lfbRound {
+			// see missed events
+			logging.Logger.Debug("kafka - see unpublished events", zap.Int64("from", round), zap.Int64("to", lfbRound))
+		}
+
+		// get all events from round to lfbRound
+		for r := round; r <= lfbRound; r++ {
+			rd, events, err := getBlockEvents(r)
+			if err != nil {
+				return err
+			}
+			es := &BlockEvents{
+				round:  rd,
+				events: events,
+			}
+
+			if es.round >= edb.Config().KafkaTriggerRound {
+				edb.mustPushEventsToKafka(es, true)
+			}
+		}
+	}
+
+	return nil
+}
+
 func Work(
 	ctx context.Context,
 	gSnapshot *Snapshot,
 	blockEvents BlockEvents,
+	getBlockEvents func(round int64) (int64, []Event, error),
 ) (*Snapshot, error) {
 	tx := blockEvents.tx
+
+	doOnce.Do(func() {
+		if err := tx.publishUnPublishedEvents(getBlockEvents); err != nil {
+			logging.Logger.Panic("push unpublished events", zap.Error(err))
+		}
+	})
 
 	tse := time.Now()
 
@@ -582,7 +672,8 @@ func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, erro
 
 	g, err := tx.GetGlobal()
 	if err != nil {
-		logging.Logger.Panic("can't load snapshot for", zap.Int64("round", es.round), zap.Error(err))
+		logging.Logger.Warn(fmt.Sprintf("can't load snapshot for round: %d, err: %v", es.round, err))
+		return tx.updateHistoricData(es, &Snapshot{Round: es.round})
 	}
 	gs = &g
 
@@ -670,6 +761,7 @@ func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, e
 	}
 
 	s.Round = round
+
 	err = edb.UpdateSnapshotFromEvents(s, events)
 	if err != nil {
 		logging.Logger.Error("error updating snapshot", zap.Error(err))
@@ -1171,4 +1263,21 @@ func setEventData[T any](e *Event, data interface{}) error {
 	}
 
 	return ErrInvalidEventData
+}
+
+func (edb *EventDb) kafkaProv() *queueProvider.KafkaProvider {
+	kafka := queueProvider.NewKafkaProvider(
+		edb.dbConfig.KafkaHost,
+		edb.dbConfig.KafkaUsername,
+		edb.dbConfig.KafkaPassword,
+		edb.dbConfig.KafkaWriteTimeout)
+	return kafka
+}
+
+func (edb *EventDb) GetKafkaProv() queueProvider.KafkaProviderI {
+	if edb.kafka == nil {
+		kafka := edb.kafkaProv()
+		edb.kafka = kafka
+	}
+	return edb.kafka
 }
