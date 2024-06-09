@@ -62,7 +62,7 @@ func addMockAllocation(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) {
-	const mockWriePoolSize = 600000000  //nolint:unused
+	// const mockWriePoolSize = 600000000  //nolint:unused
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{
 		ID:              id,
