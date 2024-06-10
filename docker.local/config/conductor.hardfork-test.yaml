@@ -17,15 +17,15 @@ tests:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - initial_hardfork : 
-          Name : 'apollo'
-          Round : 1
+          name : 'apollo'
+          round : 1
       - wait_add:
           sharders: ['sharder-1','sharder-2']
           miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
           start: true
       - initial_hardfork : 
-          Name : 'apollo'
-          Round : 1
+          name : 'apollo'
+          round : 1
       - sleep: "6m"
       - command:
           name: "verify_hardfork"
