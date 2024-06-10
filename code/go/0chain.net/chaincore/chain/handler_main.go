@@ -11,6 +11,12 @@ import (
 	"0chain.net/core/common"
 )
 
+// swagger:route GET /v1/block/get/latest_finalized miner sharder GetLatestFinalizedBlock
+// Get latest finalized block.
+// Retrieves the latest finalized block. No parameters needed.
+//
+// responses:
+//  200: BlockSummary
 /*LatestFinalizedBlockHandler - provide the latest finalized block by this miner */
 func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return GetServerChain().GetLatestFinalizedBlockSummary(), nil

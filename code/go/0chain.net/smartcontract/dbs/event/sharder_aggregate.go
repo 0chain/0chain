@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
+// swagger:model SharderAggregate
 type SharderAggregate struct {
 	model.ImmutableModel
 

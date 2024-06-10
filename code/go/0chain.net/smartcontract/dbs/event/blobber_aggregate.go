@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
+// swagger:model BlobberAggregate
 type BlobberAggregate struct {
 	model.ImmutableModel
 	BlobberID           string           `json:"blobber_id" gorm:"index:idx_blobber_aggregate,priority:2,unique"`
