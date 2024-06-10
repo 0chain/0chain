@@ -212,7 +212,15 @@ func isIgnoringGenerateBlock(rNum int64) bool {
 }
 
 func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) ([]*transaction.Transaction, int, error) {
-	DefaultHardfork := crpc.Client().State().Hardfork.Name
+	DefaultHardforkConfig := crpc.Client().State().Hardfork
+	if DefaultHardforkConfig != nil {
+		log.Printf("Hardfork is enabled: %s", DefaultHardfork)
+	}
+	else{
+		log.Printf("Hardfork is not enabled")
+	}
+	DefaultHardfork := DefaultHardforkConfig.Name
+
 	txns, cost, err := mc.buildInTxns(ctx, lfb, b)
 	if DefaultHardfork != "" && b.Round == 1 {
 		log.Printf("Adding hardfork transaction : %s", DefaultHardfork)
