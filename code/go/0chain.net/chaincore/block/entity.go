@@ -140,6 +140,7 @@ func (u *UnverifiedBlockBody) Clone() *UnverifiedBlockBody {
 }
 
 /*Block - data structure that holds the block data */
+// swagger:model
 type Block struct {
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`

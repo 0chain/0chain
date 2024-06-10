@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
+// swagger:model ValidatorAggregate
 type ValidatorAggregate struct {
 	model.ImmutableModel
 
