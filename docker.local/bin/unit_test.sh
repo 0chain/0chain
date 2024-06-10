@@ -4,7 +4,7 @@ set -e
 cmd="build"
 dockerfile="docker.local/build.unit_test/Dockerfile"
 platform=""
-generate_mocks=1
+generate_mocks=0
 
 for arg in "$@"
 do
