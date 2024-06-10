@@ -215,8 +215,7 @@ func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) (
 	DefaultHardforkConfig := crpc.Client().State().Hardfork
 	if DefaultHardforkConfig != nil {
 		log.Printf("Hardfork is enabled: %s", DefaultHardfork)
-	}
-	else{
+	} else {
 		log.Printf("Hardfork is not enabled")
 	}
 	DefaultHardfork := DefaultHardforkConfig.Name
