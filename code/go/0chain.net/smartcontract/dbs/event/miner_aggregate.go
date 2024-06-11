@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
+// swagger:model MinerAggregate
 type MinerAggregate struct {
 	model.ImmutableModel
 	MinerID         string           `json:"miner_id" gorm:"index:idx_miner_aggregate,unique"`
