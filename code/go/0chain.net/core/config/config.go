@@ -91,6 +91,10 @@ func SetupDefaultConfig() {
 	viper.SetDefault(GlobalSettingName[DbsAggregateDebug], false)
 	viper.SetDefault(GlobalSettingName[DbsAggregatePeriod], 10)
 	viper.SetDefault(GlobalSettingName[DbsAggregatePageLimit], 50)
+
+	viper.SetDefault("kafka.host", "localhost:9092")
+	viper.SetDefault("kafka.topic", "events")
+	viper.SetDefault("kafka.write_timeout", 10*time.Second) // seconds
 }
 
 // SetupConfig setups the main configuration system.
@@ -198,18 +202,27 @@ type DbAccess struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
 
-	MaxIdleConns    int           `json:"max_idle_conns"`
-	MaxOpenConns    int           `json:"max_open_conns"`
-	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
-	Slowtablespace  string        `json:"slowtablespace"`
+	MaxIdleConns      int           `json:"max_idle_conns"`
+	MaxOpenConns      int           `json:"max_open_conns"`
+	ConnMaxLifetime   time.Duration `json:"conn_max_lifetime"`
+	Slowtablespace    string        `json:"slowtablespace"`
+	KafkaEnabled      bool
+	KafkaHost         string
+	KafkaTopic        string
+	KafkaUsername     string
+	KafkaPassword     string
+	KafkaWriteTimeout time.Duration
+	KafkaTriggerRound int64
 }
 
 type DbSettings struct {
-	Debug                 bool  `json:"debug"`
-	AggregatePeriod       int64 `json:"aggregate_period"`
-	PartitionChangePeriod int64 `json:"partition_change_period"`
-	PartitionKeepCount    int64 `json:"partition_keep_count"`
-	PageLimit             int64 `json:"page_limit"`
+	Debug                          bool  `json:"debug"`
+	AggregatePeriod                int64 `json:"aggregate_period"`
+	PartitionChangePeriod          int64 `json:"partition_change_period"`
+	PartitionKeepCount             int64 `json:"partition_keep_count"`
+	PermanentPartitionChangePeriod int64 `json:"permanent_partition_change_period"`
+	PermanentPartitionKeepCount    int64 `json:"permanent_partition_keep_count"`
+	PageLimit                      int64 `json:"page_limit"`
 }
 
 func (s *DbSettings) Update(updates map[string]string) error {

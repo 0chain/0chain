@@ -39,7 +39,9 @@ func TestAddEvents(t *testing.T) {
 			Type:   TypeError,
 			Data:   "someData",
 		},
-	}, 100, "hash", 10, CommitNow())
+	}, 100, "hash", 10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 	errObj := Error{}
 	time.Sleep(100 * time.Millisecond)
 	result := eventDb.Store.Get().Model(&Error{}).Where(&Error{TransactionID: "somehash", Error: "someData"}).Take(&errObj)

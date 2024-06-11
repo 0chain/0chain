@@ -3,11 +3,13 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -276,11 +278,40 @@ func (c *Chain) SetupEventDatabase() error {
 	time.Sleep(time.Second * 2)
 
 	var err error
-	c.EventDb, err = event.NewEventDbWithWorker(c.ChainConfig.DbsEvents(), c.ChainConfig.DbSettings())
+	c.EventDb, err = event.NewEventDbWithWorker(
+		c.ChainConfig.DbsEvents(),
+		c.ChainConfig.DbSettings(),
+		c.getBlockEvents,
+	)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *Chain) getBlockEvents(round int64) (int64, []event.Event, error) {
+	meta := datastore.GetEntityMetadata("last_block_events")
+	blockEvents := meta.Instance().(*block.BlockEvents)
+	key := strconv.FormatInt(round%int64(block.EventsRingSize), 10)
+
+	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
+	defer ememorystore.Close(bctx)
+
+	err := meta.GetStore().Read(bctx, datastore.ToKey(key), blockEvents)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	if blockEvents.Round != round {
+		return 0, nil, fmt.Errorf("could not find events in round %d", round)
+	}
+
+	var events []event.Event
+	if err := json.Unmarshal(blockEvents.Events, &events); err != nil {
+		return 0, nil, fmt.Errorf("failed to unmarshal events: %v", err)
+	}
+
+	return blockEvents.Round, events, nil
 }
 
 func (c *Chain) SetupStateCache() {
@@ -706,11 +737,22 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 
 		eventDB := c.GetEventDb()
 		if eventDB != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 			defer cancel()
-			_, err := eventDB.ProcessEvents(ctx, stateCtx.GetEvents(), 0, gb.Hash, 1, event.CommitNow())
+			tx, eventsCount, err := eventDB.ProcessEvents(
+				ctx,
+				stateCtx.GetEvents(),
+				0,
+				gb.Hash,
+				1,
+				c.storeEventsFunc(stateCtx),
+				event.CommitNow())
 			if err != nil {
 				panic(err)
+			}
+			if tx == nil {
+				// Already committed
+				eventDB.AddToEventsCounter(uint64(eventsCount))
 			}
 		}
 
@@ -723,6 +765,54 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 
 	logging.Logger.Info("initial state root", zap.String("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
+}
+
+func (c *Chain) storeEventsFunc(ssc cstate.StateContextI) func(e event.BlockEvents) error {
+	return func(e event.BlockEvents) error {
+		if !node.Self.IsSharder() {
+			return nil
+		}
+
+		return cstate.WithActivation(ssc, "artemis",
+			func() error { return nil },
+			func() error {
+				return c.storeLastNEvents(e)
+			})
+	}
+}
+
+func (c *Chain) storeLastNEvents(es event.BlockEvents) error {
+	var (
+		round  = es.Round()
+		events = es.Events()
+		lastN  = int64(block.EventsRingSize)
+	)
+
+	ed, err := json.Marshal(events)
+	if err != nil {
+		return err
+	}
+
+	ebs := &block.BlockEvents{
+		Key:    strconv.FormatInt(round%lastN, 10),
+		Round:  round,
+		Events: ed,
+	}
+
+	return c.storeBlockEvents(ebs)
+}
+
+func (c *Chain) storeBlockEvents(b datastore.Entity) error {
+	meta := b.GetEntityMetadata()
+	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
+	defer ememorystore.Close(bctx)
+
+	if err := b.Write(bctx); err != nil {
+		return err
+	}
+
+	con := ememorystore.GetEntityCon(bctx, meta)
+	return con.Commit()
 }
 
 func (c *Chain) mustInitGBState(initStates *state.InitStates, stateCtx *cstate.StateContext) {

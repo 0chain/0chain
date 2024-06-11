@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// swagger:model UserAggregate
 type UserAggregate struct {
 	UserID          string `json:"user_id" gorm:"uniqueIndex"`
 	Round           int64  `json:"round"`
