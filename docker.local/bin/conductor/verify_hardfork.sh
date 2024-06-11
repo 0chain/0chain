@@ -39,6 +39,7 @@ if [ "$HTTP_STATUS" -eq 200 ]; then
     else
         echo "Round value does not match. Expected: $rounds, Got: $RESPONSE_ROUND"
         exit 1
+    fi
 else
     echo "Failed to call endpoint. HTTP status: $HTTP_STATUS"
     exit 1
