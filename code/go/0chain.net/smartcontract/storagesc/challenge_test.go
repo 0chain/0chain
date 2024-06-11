@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -418,6 +419,114 @@ func TestBlobberReward(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func TestPopulateGenerateChallenge(t *testing.T) {
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, true)
+		err      error
+	)
+
+	conf, err := GetConfig(balances)
+	require.NoError(t, err)
+
+	blobberAllocationPartitionSize = 3
+	blobberRewardsPartitionSize = 3
+	allChallengeReadyBlobbersPartitionSize = 3
+	allValidatorsPartitionSize = 3
+
+	defer func() {
+		blobberAllocationPartitionSize = 10
+		blobberRewardsPartitionSize = 5
+		allChallengeReadyBlobbersPartitionSize = 50
+		allValidatorsPartitionSize = 50
+	}()
+
+	preparePopulateGenerateChallenge(t, ssc, balances)
+	require.NoError(t, err)
+
+	var challenged map[string]map[string]int64
+
+	var challengedAllocations, challengedBlobbers, challengedValidators map[string]int64
+	challenged = make(map[string]map[string]int64)
+	challengedAllocations = make(map[string]int64)
+	challengedBlobbers = make(map[string]int64)
+	challengedValidators = make(map[string]int64)
+
+	numChallenges := 200000
+	for i := 0; i < numChallenges; i++ {
+		client := newClient(2000*x10, balances)
+		txn := newTransaction(client.id, ADDRESS, 100, 1)
+
+		validators, err := getValidatorsList(balances)
+		require.NoError(t, err)
+
+		challengeReadyParts, partsWeight, err := partitionsChallengeReadyBlobbers(balances)
+		require.NoError(t, err)
+
+		hashSeed := encryption.Hash(txn.Hash + "txn.PrevHash")
+		// the "1" was the index when generating multiple challenges.
+		// keep it in case we need to generate more than 1 challenge at once.
+		challengeID := encryption.Hash(hashSeed + "1")
+
+		seedSource, err := strconv.ParseUint(challengeID[0:16], 16, 64)
+		require.NoError(t, err)
+
+		result, err := ssc.populateGenerateChallenge(
+			challengeReadyParts,
+			partsWeight,
+			int64(seedSource),
+			validators,
+			txn,
+			challengeID,
+			balances,
+			conf.ValidatorsPerChallenge,
+			conf,
+		)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		if _, ok := challenged[result.storageChallenge.BlobberID]; !ok {
+			challenged[result.storageChallenge.BlobberID] = make(map[string]int64)
+		}
+		if _, ok := challenged[result.storageChallenge.BlobberID][result.storageChallenge.AllocationID]; !ok {
+			challenged[result.storageChallenge.BlobberID][result.storageChallenge.AllocationID] = 0
+		}
+		challenged[result.storageChallenge.BlobberID][result.storageChallenge.AllocationID]++
+
+		challengedAllocations[result.storageChallenge.AllocationID]++
+		challengedBlobbers[result.storageChallenge.BlobberID]++
+
+		for _, v := range result.storageChallenge.ValidatorIDs {
+			challengedValidators[v]++
+		}
+	}
+
+	for _, count := range challengedValidators {
+		require.InEpsilon(t, float64(numChallenges*3)/float64(len(challengedValidators)), float64(count), 0.05)
+	}
+
+	_, partsWeight, err := partitionsChallengeReadyBlobbers(balances)
+	require.NoError(t, err)
+
+	pws := partsWeight.partWeights
+
+	totalWeight := pws.totalWeight()
+
+	for pidx, _ := range pws.Parts {
+		if err := partsWeight.iterBlobberWeight(balances, pidx,
+			func(id string, bw *ChallengeReadyBlobber) (stop bool) {
+				totalChallengesForBlobber := challengedBlobbers[bw.BlobberID]
+				require.InEpsilon(t, float64(numChallenges)*(float64(bw.GetWeightV2())/float64(totalWeight)), float64(challengedBlobbers[bw.BlobberID]), 0.05)
+				totalAllocationsChallengesForBlobber := int64(len(challenged[bw.BlobberID]))
+				for _, count := range challenged[bw.BlobberID] {
+					require.InEpsilon(t, totalChallengesForBlobber/totalAllocationsChallengesForBlobber, count, 0.15)
+				}
+				return false
+			}); err != nil {
+		}
+	}
 }
 
 func TestCompleteRewardFlow(t *testing.T) {
@@ -1351,6 +1460,128 @@ func TestGetRandomSubSlice(t *testing.T) {
 		result := getRandomSubSlice(slice, size, seed)
 		require.Len(t, result, 0)
 	})
+}
+
+func generateRandomNumbers(n, m int) []int {
+	if n > m {
+		panic("Cannot generate unique numbers if " + strconv.Itoa(n) + " is greater than " + strconv.Itoa(m))
+	}
+
+	if n == m {
+		numbers := make([]int, 0, n)
+		for i := 0; i <= n; i++ {
+			numbers = append(numbers, i)
+		}
+		return numbers
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	numbers := make([]int, 0, n)
+	numMap := make(map[int]bool)
+
+	for len(numbers) <= n {
+		num := rand.Intn(m)
+		if !numMap[num] {
+			numMap[num] = true
+			numbers = append(numbers, num)
+		}
+	}
+
+	return numbers
+}
+
+func preparePopulateGenerateChallenge(t *testing.T, ssc *StorageSmartContract, balances *testBalances) {
+	// Initialise blobbers and add them to challenge ready partitions
+	stake := currency.Coin(1e12)
+	used := uint64(1e6)
+
+	var blobbers []*Client
+
+	for i := 0; i < 10; i++ {
+		b := addBlobber(t, ssc, 100*GB, 1, avgTerms, 500000*x10, balances)
+		blobbers = append(blobbers, b)
+
+		err := PartitionsChallengeReadyBlobberAddOrUpdate(balances, b.id, stake, used)
+		require.NoError(t, err)
+
+		if i%2 == 1 {
+			stake *= 2
+		}
+	}
+
+	// Initialise validators and add them to validator partitions
+	testAddValidators(t, balances, ssc, 10, 1)
+
+	// Add 24 allocations for different data and parity shards
+	allocDataParities := [][]int{
+		{1, 1}, {7, 2}, {6, 4}, {5, 5}, {9, 1}, {1, 9},
+	}
+	var data, parity int
+	for i := 0; i < 24; i++ {
+		if i%4 == 0 {
+			data = allocDataParities[i/4][0]
+			parity = allocDataParities[i/4][1]
+		}
+
+		client := newClient(2000*x10, balances)
+		var nar = new(newAllocationRequest)
+		nar.DataShards = data
+		nar.ParityShards = parity
+		nar.Owner = client.id
+		nar.OwnerPublicKey = client.pk
+		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
+		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
+		nar.Size = 1 * GB // 2 GB
+
+		blobberIndexes := generateRandomNumbers(data+parity-1, len(blobbers)-1)
+		for _, i := range blobberIndexes {
+			nar.Blobbers = append(nar.Blobbers, blobbers[i].id)
+			nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
+		}
+
+		var resp, err = nar.callNewAllocReq(t, client.id, 1000*x10, ssc, 1,
+			balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		alloc, err := ssc.getAllocation(deco.ID, balances)
+		require.NoError(t, err)
+
+		for _, b := range alloc.BlobberAllocs {
+			b.Stats.UsedSize = int64(1 * GB / data)
+			b.AllocationRoot = "root-" + strconv.Itoa(i)
+
+			lastWM := &WriteMarker{}
+			lastWm2 := &writeMarkerV2{}
+			lastWm2.AllocationRoot = b.AllocationRoot
+			lastWm2.ClientID = alloc.Owner
+			lastWm2.Timestamp = common.Timestamp(time.Now().Unix())
+			lastWm2.Size = b.Stats.UsedSize
+			lastWM.SetEntity(lastWm2)
+
+			b.LastWriteMarker = lastWM
+
+			err = partitionsBlobberAllocationsAdd(balances, b.BlobberID, alloc.ID)
+			require.NoError(t, err)
+
+			r := rand.New(rand.NewSource(int64(time.Now().Second())))
+
+			// get blobber allocations partitions
+			blobberAllocParts, err := partitionsBlobberAllocations(b.BlobberID, balances)
+			require.NoError(t, err)
+
+			// get random allocations from the partitions
+			var randBlobberAllocs []BlobberAllocationNode
+			blobberAllocParts.GetRandomItems(balances, r, &randBlobberAllocs)
+		}
+
+		alloc.Stats.UsedSize = 1 * GB
+
+		err = alloc.save(balances, ADDRESS)
+		require.NoError(t, err)
+	}
 }
 
 func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
