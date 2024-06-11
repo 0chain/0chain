@@ -15,7 +15,6 @@ import (
 
 // handleVRFShare - handles the vrf share.
 func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
-
 	var mr = mc.getOrCreateRound(ctx, msg.VRFShare.Round)
 	if mr == nil {
 		return
@@ -31,7 +30,13 @@ func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
 	if msg.VRFShare.Round > mc.GetCurrentRound() {
 		logging.Logger.Debug("received VRF share for the future round, caching it",
 			zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("vrf_share_round", msg.VRFShare.Round))
-		mr.vrfSharesCache.add(msg.VRFShare)
+		vrfCache, err := gRoundVRFSharesCache.Get(msg.VRFShare.Round)
+		if err != nil {
+			logging.Logger.Error("Error getting vrfs cache", zap.Error(err), zap.Int64("round", msg.VRFShare.Round))
+			return
+		}
+
+		vrfCache.add(msg.VRFShare)
 		return
 	}
 
