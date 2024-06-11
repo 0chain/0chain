@@ -101,7 +101,7 @@ func main() {
 	r.rounds = make(map[config.RoundName]config.Round)
 	r.nodeHistory = make(map[NodeName]*config.Node)
 	r.setupTimeout(0)
-	r.SetServerState(conf.DefaultHardfork)
+	r.SetServerState(&conf.DefaultHardfork)
 
 	var success bool
 	// not always error means failure
