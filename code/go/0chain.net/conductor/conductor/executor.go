@@ -158,7 +158,7 @@ func (r *Runner) SetInitialHardfork(hf Hardfork) (err error) {
 	if r.verbose {
 		log.Printf(" [INF] setting initial hardfork: %s", hf.Name)
 	}
-	r.SetServerState(hf)
+	r.SetServerState(&hf)
 	r.conf.DefaultHardfork = hf
 	return
 }
