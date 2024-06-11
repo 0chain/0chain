@@ -93,6 +93,7 @@ func main() {
 			log.Fatal("Error while starting RPC server:", err)
 			os.Exit(1)
 		}
+		r.SetServerState(&conf.DefaultHardfork)
 	}()
 	defer r.server.Close()
 
@@ -101,8 +102,6 @@ func main() {
 	r.rounds = make(map[config.RoundName]config.Round)
 	r.nodeHistory = make(map[NodeName]*config.Node)
 	r.setupTimeout(0)
-	r.SetServerState(&conf.DefaultHardfork)
-
 	var success bool
 	// not always error means failure
 
@@ -110,6 +109,7 @@ func main() {
 	if err != nil {
 		log.Print("[ERR] ", err)
 	}
+	r.SetServerState(&conf.DefaultHardfork)
 
 	if success {
 		os.Exit(0)
