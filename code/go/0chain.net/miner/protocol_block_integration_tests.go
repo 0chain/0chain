@@ -224,8 +224,6 @@ func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) (
 		log.Printf("Successfully added hardfork")
 		txns = append(txns, addHardforkTxn)
 
-	} else {
-		log.Panicf("Failed to add hardfork :", crpc.Client().State())
 	}
 	return txns, cost, err
 }
