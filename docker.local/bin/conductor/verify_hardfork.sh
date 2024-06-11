@@ -26,8 +26,19 @@ echo $HTTP_STATUS
 
 # Check if the HTTP status code is 200 (OK)
 if [ "$HTTP_STATUS" -eq 200 ]; then
-    echo $BODY
-    exit 0
+    RESPONSE_BODY=$(cat response_body.txt)
+    RESPONSE_ROUND=$(echo "$RESPONSE_BODY" | grep -oP '(?<="round":")[^"]*')
+
+    # Print the successful response
+    echo "Response Body: $RESPONSE_BODY"
+
+    # Check if the round matches
+    if [ "$RESPONSE_ROUND" == "$rounds" ]; then
+        echo "Round value matches: $RESPONSE_ROUND"
+        exit 0
+    else
+        echo "Round value does not match. Expected: $rounds, Got: $RESPONSE_ROUND"
+        exit 1
 else
     echo "Failed to call endpoint. HTTP status: $HTTP_STATUS"
     exit 1
