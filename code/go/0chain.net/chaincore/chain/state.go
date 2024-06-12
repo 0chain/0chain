@@ -424,6 +424,11 @@ func (c *Chain) updateState(ctx context.Context,
 		if err == nil {
 			// commit transaction state cache
 			txnStateCache.Commit()
+
+			// TODO: do state check on developer mode only
+			if er := sctx.DoStateCheck(); er != nil {
+				logging.Logger.Panic(err.Error())
+			}
 		}
 
 		if bcstate.ErrInvalidState(err) {

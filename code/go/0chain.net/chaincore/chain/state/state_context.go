@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"reflect"
@@ -10,6 +11,7 @@ import (
 
 	"0chain.net/core/config"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/statecheck"
 	"go.uber.org/zap"
 
 	"0chain.net/core/common"
@@ -118,6 +120,7 @@ type StateContextI interface {
 type StateContext struct {
 	block           *block.Block
 	state           util.MerklePatriciaTrieI
+	stateChecker    *statecheck.StateCheck
 	txn             *transaction.Transaction
 	transfers       []*state.Transfer
 	signedTransfers []*state.SignedTransfer
@@ -169,6 +172,7 @@ func NewStateContext(
 	return &StateContext{
 		block:                         b,
 		state:                         s,
+		stateChecker:                  statecheck.NewStateCheck(),
 		txn:                           t,
 		getMagicBlock:                 getMagicBlock,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
@@ -382,14 +386,6 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) error {
-	// // // get from MPT
-	// if err := sc.getNodeValue(key, v); err != nil {
-	// 	// fmt.Println("get node value error", err)
-	// 	return err
-	// }
-
-	// return nil
-
 	cv, ok := sc.Cache().Get(key)
 	if ok {
 		ccv, ok := statecache.Copyable(v)
@@ -400,6 +396,13 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 		if !ccv.CopyFrom(cv) {
 			panic("state context cache - get trie node copy from failed")
 		}
+
+		// TODO: do in development mode only
+		err := sc.stateChecker.Add(key, ccv)
+		if err != nil {
+			panic("[state checker] adding failed")
+		}
+
 		return nil
 	}
 
@@ -412,6 +415,12 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 	// cache it if it's cacheable
 	if cv, ok := statecache.Cacheable(v); ok {
 		sc.Cache().Set(key, cv)
+	}
+
+	// TODO: do in development mode only
+	err := sc.stateChecker.Add(key, v)
+	if err != nil {
+		panic("[state checker] adding in GetTrieNode failed")
 	}
 	return nil
 }
@@ -427,6 +436,12 @@ func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializa
 		sc.Cache().Set(key, vn)
 	}
 
+	// TODO: do in development mode only
+	err = sc.stateChecker.Add(key, node)
+	if err != nil {
+		panic("[state checker] adding in InsertTrieNode failed")
+	}
+
 	return k, nil
 }
 
@@ -437,7 +452,32 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	}
 
 	sc.Cache().Remove(key)
+
+	sc.stateChecker.Remove(key)
 	return k, nil
+}
+
+func (sc *StateContext) DoStateCheck() error {
+	// iterate through all the nodes in the state checker,
+	// confirms that they are the same as the value in MPT
+	return sc.stateChecker.ForEach(func(key string, value interface{}) error {
+		mptV, err := sc.getNodeValueRaw(key)
+		if err != nil {
+			return fmt.Errorf("[state check] get node value raw failed: %v", err)
+		}
+
+		// compare the MPT serialized value
+		v, err := value.(util.MPTSerializable).MarshalMsg(nil)
+		if err != nil {
+			return fmt.Errorf("[state check] failed to decode MPT node value: %v", err)
+		}
+
+		if !bytes.Equal(mptV, v) {
+			return errors.New("[state check] value in MPT does not match the value in state checker")
+		}
+
+		return nil
+	})
 }
 
 // SetStateContext - set the state context
@@ -452,6 +492,10 @@ func (sc *StateContext) GetLatestFinalizedBlock() *block.Block {
 
 func (sc *StateContext) getNodeValue(key datastore.Key, v util.MPTSerializable) error {
 	return sc.state.GetNodeValue(util.Path(encryption.Hash(key)), v)
+}
+
+func (sc *StateContext) getNodeValueRaw(key datastore.Key) ([]byte, error) {
+	return sc.state.GetNodeValueRaw(util.Path(encryption.Hash(key)))
 }
 
 func (sc *StateContext) setNodeValue(key datastore.Key, node util.MPTSerializable) (datastore.Key, error) {
