@@ -20,7 +20,7 @@ var (
 	pullingEntityCache = newPullingCache(1000, 5)
 )
 
-//pushDataCacheEntry - cached push data
+// pushDataCacheEntry - cached push data
 type pushDataCacheEntry struct {
 	Options    SendOptions
 	Data       []byte
@@ -44,7 +44,7 @@ func p2pKey(uri string, id string) string {
 	return uri + ":" + id
 }
 
-//PushToPullHandler - handles a pull request of cached push entity data
+// PushToPullHandler - handles a pull request of cached push entity data
 func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	pushURI := r.FormValue("_puri")
 	id := r.FormValue("id")
@@ -138,12 +138,9 @@ func (c *pullingCache) pullOrCacheRequest(ctx context.Context, key string, pullH
 		go c.runHandler(ctx, key, ch)
 		return
 	case nil:
-		ch, ok := v.(chan pullHandlerFunc)
-		if ok {
-			select {
-			case ch <- pullHandler:
-			default:
-			}
+		select {
+		case v <- pullHandler:
+		default:
 		}
 	default:
 		logging.Logger.Error("Unexpected error on pulling entity", zap.Error(err))
