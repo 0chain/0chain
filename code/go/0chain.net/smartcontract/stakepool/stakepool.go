@@ -525,26 +525,15 @@ func (sp *StakePool) getRandPools(balances cstate.StateContextI, seed int64, n i
 
 	_ = cstate.WithActivation(balances, "demeter", func() error {
 		plsIdxs = rand.New(rand.NewSource(seed)).Perm(n)
-		selected = make([]*DelegatePool, 0, n)
-
-		for _, idx := range plsIdxs {
-			selected = append(selected, pls[idx])
-		}
 		return nil
 	}, func() error {
-		plsIdxs = rand.New(rand.NewSource(seed)).Perm(len(sp.Pools))
-		selected = make([]*DelegatePool, 0, n)
-
-		count := n
-		for _, idx := range plsIdxs {
-			selected = append(selected, pls[idx])
-			count--
-			if count == 0 {
-				break
-			}
-		}
+		plsIdxs = rand.New(rand.NewSource(seed)).Perm(len(sp.Pools))[:n]
 		return nil
 	})
+
+	for _, idx := range plsIdxs {
+		selected = append(selected, pls[idx])
+	}
 
 	return selected
 }
