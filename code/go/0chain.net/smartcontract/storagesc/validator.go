@@ -68,6 +68,32 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			return "", err
 		}
 
+		actErr := state.WithActivation(balances, "demeter", func() error {
+			return nil
+		}, func() error {
+			has, err := sc.hasValidatorUrl(newValidator.BaseURL, balances)
+			if err != nil {
+				return fmt.Errorf("could not check validator url: %v", err)
+			}
+
+			if has {
+				return fmt.Errorf("invalid validator, url: %s already used", newValidator.BaseURL)
+			}
+
+			// Save url
+			if newValidator.BaseURL != "" {
+				_, err = balances.InsertTrieNode(newValidator.GetUrlKey(sc.ID), &datastore.NOIDField{})
+				if err != nil {
+					return common.NewError("add_or_update_blobber_failed",
+						"saving blobber url: "+err.Error())
+				}
+			}
+			return nil
+		})
+		if actErr != nil {
+			return "", actErr
+		}
+
 		sc.statIncr(statAddValidator)
 		sc.statIncr(statNumberOfValidators)
 	default:
