@@ -690,7 +690,14 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 
 	c.mustInitGBState(initStates, stateCtx)
 
-	err := faucetsc.InitConfig(stateCtx)
+	// Initial state changes related to conductor testing
+	err := initialStateCT(stateCtx)
+	if err != nil {
+		logging.Logger.Error("chain.stateDB initialHardfork failed", zap.Error(err))
+		panic(err)
+	}
+
+	err = faucetsc.InitConfig(stateCtx)
 	if err != nil {
 		logging.Logger.Error("chain.stateDB faucetsc InitConfig failed", zap.Error(err))
 		panic(err)

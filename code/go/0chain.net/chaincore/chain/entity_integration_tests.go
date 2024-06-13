@@ -9,11 +9,14 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
+	"0chain.net/core/common"
+	"github.com/0chain/0box/code/zboxcore/balance"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -65,4 +68,25 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		return false, nil
 	}
 	return c.chainHasTransaction(ctx, b, txn)
+}
+
+func initialStateCT(balances cstate.CommonStateContextI) error {
+	// Set initial hardfork from client state
+	if err := setInitialHardfork(balances); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setInitialHardfork(balances cstate.CommonStateContextI) error {
+	state := crpc.Client().State()
+	if state.Hardfork != nil {
+		h := cstate.NewHardFork(state.Hardfork.Name, state.Hardfork.Round)
+		if _, err := balances.InsertTrieNode(h.GetKey(), h); err != nil {
+			return common.NewError("setInitialHardfork", err.Error())
+		}
+	}
+
+	return nil
 }
