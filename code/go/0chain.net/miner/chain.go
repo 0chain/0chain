@@ -228,6 +228,7 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.GetGeneratorsNumOfRound(roundNum))
 	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
+	//nolint:errcheck
 	gRoundVRFSharesCache.Add(roundNum, newVRFSharesCache())
 	return &mr
 }
