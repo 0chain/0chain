@@ -41,10 +41,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context,
 	})
 }
 
-func (mc *Chain) GenerateBuiltInTxns(ctx context.Context, lfb, b *block.Block) ([]*transaction.Transaction, int, error) {
-	return mc.buildInTxns(ctx, lfb, b)
-}
-
 func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transaction, error) {
 	return mc.createGenChalTxn(b)
 }

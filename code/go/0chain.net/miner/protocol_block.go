@@ -1069,7 +1069,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	cctx, cancel := context.WithTimeout(ctx, mc.ChainConfig.BlockProposalMaxWaitTime())
 	defer cancel()
 
-	buildInTxns, cost, err := mc.GenerateBuiltInTxns(ctx, lfb, b)
+	buildInTxns, cost, err := mc.buildInTxns(ctx, lfb, b)
 	if err != nil {
 		return fmt.Errorf("get build-in txns failed: %v", err)
 	}
