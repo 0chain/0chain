@@ -345,3 +345,35 @@ func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
 
 	return string(validator.Encode()), nil
 }
+
+func (sc *StorageSmartContract) fixValidatorBaseUrl(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
+	var req dto.FixValidatorRequest
+	err := json.Unmarshal(input, &req)
+	if err != nil {
+		return "", common.NewError("fix_validator_failed", "invalid request")
+	}
+
+	validator, err := sc.getValidator(req.ValidatorID, balances)
+	if err != nil {
+		return "", common.NewError("fix_validator_failed", "validator not found")
+	}
+
+	has, err := sc.hasValidatorUrl(validator.BaseURL, balances)
+	if err != nil {
+		return "", common.NewError("fix_validator_failed", "could not check validator url")
+	}
+
+	if has {
+		return "", common.NewError("fix_validator_failed", "invalid validator, url already used")
+	}
+
+	// Save url
+	if validator.BaseURL != "" {
+		_, err = balances.InsertTrieNode(validator.GetUrlKey(sc.ID), &datastore.NOIDField{})
+		if err != nil {
+			return "", common.NewError("fix_validator_failed", "saving blobber url: "+err.Error())
+		}
+	}
+
+	return string(validator.Encode()), nil
+}
