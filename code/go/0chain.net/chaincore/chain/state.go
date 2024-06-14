@@ -427,7 +427,7 @@ func (c *Chain) updateState(ctx context.Context,
 
 			// TODO: do state check on developer mode only
 			if er := sctx.DoStateCheck(); er != nil {
-				logging.Logger.Panic(err.Error())
+				logging.Logger.Panic(er.Error())
 			}
 		}
 
