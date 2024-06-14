@@ -1449,6 +1449,14 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
+			err = cstate.WithActivation(balances, "demeter", func() error { return nil },
+				func() error {
+					return sp.Save(spenum.Blobber, d.BlobberID, balances)
+				})
+			if err != nil {
+				return err
+			}
+
 			blobber, err := sc.getBlobber(d.BlobberID, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
