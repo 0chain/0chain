@@ -479,6 +479,7 @@ func (sc *StateContext) DoStateCheck() error {
 			return errors.New("[state check] value in MPT does not match the value in state checker")
 		}
 
+		logging.Logger.Debug("[state check] success!")
 		return nil
 	})
 }
