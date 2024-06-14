@@ -35,7 +35,7 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getWriteMarkers | [get allocation write markers](#get-allocation-write-markers) | Get write markers. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocations | [get allocations](#get-allocations) | Get client allocations. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getBlobber | [get blobber](#get-blobber) | Get blobber information. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations | [get blobber allocations](#get-blobber-allocations) | Get blobber allocations. |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get-blobber-allocations | [get blobber allocations](#get-blobber-allocations) | Get blobber allocations. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges | [get blobber challenges](#get-blobber-challenges) | Get blobber challenges. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber_ids | [get blobber ids](#get-blobber-ids) | Get blobber ids by blobber urls. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getblobbers | [get blobbers](#get-blobbers) | Get active blobbers ids. |
@@ -60,13 +60,13 @@
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_validator | [get validator](#get-validator) | Get validator information. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/validators | [get validators](#get-validators) | Get validators. |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/writemarkers | [get write markers](#get-write-markers) | Get write markers. |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate | [replicate authorizer aggregates](#replicate-authorizer-aggregates) | Gets list of authorizer aggregate records |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate | [replicate blobber aggregates](#replicate-blobber-aggregates) | Gets list of blobber aggregate records |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate | [replicate miner aggregates](#replicate-miner-aggregates) | Gets list of miner aggregate records |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate | [replicate sharder aggregates](#replicate-sharder-aggregates) | Gets list of sharder aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregates | [replicate authorizer aggregates](#replicate-authorizer-aggregates) | Gets list of authorizer aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregates | [replicate blobber aggregates](#replicate-blobber-aggregates) | Gets list of blobber aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregates | [replicate miner aggregates](#replicate-miner-aggregates) | Gets list of miner aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregates | [replicate sharder aggregates](#replicate-sharder-aggregates) | Gets list of sharder aggregate records |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots | [replicate snapshots](#replicate-snapshots) | Gets list of global snapshot records |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate | [replicate user aggregates](#replicate-user-aggregates) | Gets list of user aggregate records |
-| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate | [replicate validator aggregates](#replicate-validator-aggregates) | Gets list of validator aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregates | [replicate user aggregates](#replicate-user-aggregates) | Gets list of user aggregate records |
+| GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregates | [replicate validator aggregates](#replicate-validator-aggregates) | Gets list of validator aggregate records |
 | GET | /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/search | [search](#search) | Generic search endpoint. |
   
 
@@ -95,21 +95,21 @@ Otherwise, get terms of service for all blobbers of the allocation.
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-alloc-blobber-terms-200) | OK | Terms |  | [schema](#get-alloc-blobber-terms-200-schema) |
+| [200](#get-alloc-blobber-terms-200) | OK | AllocationBlobberTerm |  | [schema](#get-alloc-blobber-terms-200-schema) |
 | [400](#get-alloc-blobber-terms-400) | Bad Request |  |  | [schema](#get-alloc-blobber-terms-400-schema) |
 | [500](#get-alloc-blobber-terms-500) | Internal Server Error |  |  | [schema](#get-alloc-blobber-terms-500-schema) |
 
 #### Responses
 
 
-##### <span id="get-alloc-blobber-terms-200"></span> 200 - Terms
+##### <span id="get-alloc-blobber-terms-200"></span> 200 - AllocationBlobberTerm
 Status: OK
 
 ###### <span id="get-alloc-blobber-terms-200-schema"></span> Schema
    
   
 
-[Terms](#terms)
+[][AllocationBlobberTerm](#allocation-blobber-term)
 
 ##### <span id="get-alloc-blobber-terms-400"></span> 400
 Status: Bad Request
@@ -188,20 +188,20 @@ Returns the count of write markers for an allocation given its id.
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-alloc-write-marker-count-200) | OK | challengePoolStat |  | [schema](#get-alloc-write-marker-count-200-schema) |
+| [200](#get-alloc-write-marker-count-200) | OK | writeMarkerCountResponse |  | [schema](#get-alloc-write-marker-count-200-schema) |
 | [400](#get-alloc-write-marker-count-400) | Bad Request |  |  | [schema](#get-alloc-write-marker-count-400-schema) |
 
 #### Responses
 
 
-##### <span id="get-alloc-write-marker-count-200"></span> 200 - challengePoolStat
+##### <span id="get-alloc-write-marker-count-200"></span> 200 - writeMarkerCountResponse
 Status: OK
 
 ###### <span id="get-alloc-write-marker-count-200-schema"></span> Schema
    
   
 
-[ChallengePoolStat](#challenge-pool-stat)
+[WriteMarkerCountResponse](#write-marker-count-response)
 
 ##### <span id="get-alloc-write-marker-count-400"></span> 400
 Status: Bad Request
@@ -225,21 +225,21 @@ Retrieves information about a specific allocation given its id.
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-allocation-200) | OK | StorageAllocation |  | [schema](#get-allocation-200-schema) |
+| [200](#get-allocation-200) | OK | StorageAllocationBlobbers |  | [schema](#get-allocation-200-schema) |
 | [400](#get-allocation-400) | Bad Request |  |  | [schema](#get-allocation-400-schema) |
 | [500](#get-allocation-500) | Internal Server Error |  |  | [schema](#get-allocation-500-schema) |
 
 #### Responses
 
 
-##### <span id="get-allocation-200"></span> 200 - StorageAllocation
+##### <span id="get-allocation-200"></span> 200 - StorageAllocationBlobbers
 Status: OK
 
 ###### <span id="get-allocation-200-schema"></span> Schema
    
   
 
-[StorageAllocation](#storage-allocation)
+[StorageAllocationBlobbers](#storage-allocation-blobbers)
 
 ##### <span id="get-allocation-400"></span> 400
 Status: Bad Request
@@ -432,7 +432,7 @@ Status: Internal Server Error
 ### <span id="get-blobber-allocations"></span> Get blobber allocations. (*GetBlobberAllocations*)
 
 ```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get-blobber-allocations
 ```
 
 Gets a list of allocation information for allocations hosted on a specific blobber. Supports pagination.
@@ -811,20 +811,20 @@ Returns collected reward for a client_id.
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-collected-reward-200) | OK | challengePoolStat |  | [schema](#get-collected-reward-200-schema) |
+| [200](#get-collected-reward-200) | OK | collectedRewardResponse |  | [schema](#get-collected-reward-200-schema) |
 | [400](#get-collected-reward-400) | Bad Request |  |  | [schema](#get-collected-reward-400-schema) |
 
 #### Responses
 
 
-##### <span id="get-collected-reward-200"></span> 200 - challengePoolStat
+##### <span id="get-collected-reward-200"></span> 200 - collectedRewardResponse
 Status: OK
 
 ###### <span id="get-collected-reward-200-schema"></span> Schema
    
   
 
-[ChallengePoolStat](#challenge-pool-stat)
+[CollectedRewardResponse](#collected-reward-response)
 
 ##### <span id="get-collected-reward-400"></span> 400
 Status: Bad Request
@@ -837,7 +837,7 @@ Status: Bad Request
 GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations
 ```
 
-Retrieves a list of expired allocations associated with a specified blobber.
+Retrieves a list of expired allocations ids associated with a specified blobber.
 
 #### Parameters
 
@@ -848,20 +848,16 @@ Retrieves a list of expired allocations associated with a specified blobber.
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-expired-allocations-200) | OK | StorageAllocation |  | [schema](#get-expired-allocations-200-schema) |
+| [200](#get-expired-allocations-200) | OK |  |  | [schema](#get-expired-allocations-200-schema) |
 | [500](#get-expired-allocations-500) | Internal Server Error |  |  | [schema](#get-expired-allocations-500-schema) |
 
 #### Responses
 
 
-##### <span id="get-expired-allocations-200"></span> 200 - StorageAllocation
+##### <span id="get-expired-allocations-200"></span> 200
 Status: OK
 
 ###### <span id="get-expired-allocations-200-schema"></span> Schema
-   
-  
-
-[StorageAllocation](#storage-allocation)
 
 ##### <span id="get-expired-allocations-500"></span> 500
 Status: Internal Server Error
@@ -1029,20 +1025,20 @@ Retrieves read markers given an allocation id or an auth ticket. Supports pagina
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-read-markers-200) | OK | ReadMarker |  | [schema](#get-read-markers-200-schema) |
+| [200](#get-read-markers-200) | OK | readMarkerResponse |  | [schema](#get-read-markers-200-schema) |
 | [500](#get-read-markers-500) | Internal Server Error |  |  | [schema](#get-read-markers-500-schema) |
 
 #### Responses
 
 
-##### <span id="get-read-markers-200"></span> 200 - ReadMarker
+##### <span id="get-read-markers-200"></span> 200 - readMarkerResponse
 Status: OK
 
 ###### <span id="get-read-markers-200-schema"></span> Schema
    
   
 
-[][ReadMarker](#read-marker)
+[][ReadMarkerResponse](#read-marker-response)
 
 ##### <span id="get-read-markers-500"></span> 500
 Status: Internal Server Error
@@ -1476,21 +1472,21 @@ Retrieves a list of write markers satisfying filter. Supports pagination.
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-write-markers-200) | OK | WriteMarker |  | [schema](#get-write-markers-200-schema) |
+| [200](#get-write-markers-200) | OK | writeMarkerResponse |  | [schema](#get-write-markers-200-schema) |
 | [400](#get-write-markers-400) | Bad Request |  |  | [schema](#get-write-markers-400-schema) |
 | [500](#get-write-markers-500) | Internal Server Error |  |  | [schema](#get-write-markers-500-schema) |
 
 #### Responses
 
 
-##### <span id="get-write-markers-200"></span> 200 - WriteMarker
+##### <span id="get-write-markers-200"></span> 200 - writeMarkerResponse
 Status: OK
 
 ###### <span id="get-write-markers-200-schema"></span> Schema
    
   
 
-[][WriteMarker](#write-marker)
+[][WriteMarkerResponse](#write-marker-response)
 
 ##### <span id="get-write-markers-400"></span> 400
 Status: Bad Request
@@ -1505,7 +1501,7 @@ Status: Internal Server Error
 ### <span id="replicate-authorizer-aggregates"></span> Gets list of authorizer aggregate records (*replicateAuthorizerAggregates*)
 
 ```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregates
 ```
 
 > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -1545,7 +1541,7 @@ Status: Internal Server Error
 ### <span id="replicate-blobber-aggregates"></span> Gets list of blobber aggregate records (*replicateBlobberAggregates*)
 
 ```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregates
 ```
 
 > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -1585,7 +1581,7 @@ Status: Internal Server Error
 ### <span id="replicate-miner-aggregates"></span> Gets list of miner aggregate records (*replicateMinerAggregates*)
 
 ```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregates
 ```
 
 > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -1625,7 +1621,7 @@ Status: Internal Server Error
 ### <span id="replicate-sharder-aggregates"></span> Gets list of sharder aggregate records (*replicateSharderAggregates*)
 
 ```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregates
 ```
 
 > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -1705,7 +1701,7 @@ Status: Internal Server Error
 ### <span id="replicate-user-aggregates"></span> Gets list of user aggregate records (*replicateUserAggregates*)
 
 ```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregates
 ```
 
 > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -1745,7 +1741,7 @@ Status: Internal Server Error
 ### <span id="replicate-validator-aggregates"></span> Gets list of validator aggregate records (*replicateValidatorAggregates*)
 
 ```
-GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate
+GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregates
 ```
 
 > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -2086,34 +2082,26 @@ Status: Internal Server Error
 
 | Name | Type | Go type | Required | Default | Description | Example |
 |------|------|---------|:--------:| ------- |-------------|---------|
-| ChainID | string| `string` |  | |  |  |
+| ChainId | string| `string` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| CreationDate | int64 (formatted integer)| `int64` |  | |  |  |
 | Hash | string| `string` |  | |  |  |
-| K | int64 (formatted integer)| `int64` |  | |  |  |
-| LatestFinalizedMagicBlockHash | string| `string` |  | |  |  |
-| LatestFinalizedMagicBlockRound | int64 (formatted integer)| `int64` |  | |  |  |
-| MagicBlockNumber | int64 (formatted integer)| `int64` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| MagicBlockHash | string| `string` |  | |  |  |
+| MerkleTreeRoot | string| `string` |  | |  |  |
 | MinerID | string| `string` |  | |  |  |
-| N | int64 (formatted integer)| `int64` |  | |  |  |
-| PrevBlockVerificationTickets | [][VerificationTicket](#verification-ticket)| `[]*VerificationTicket` |  | |  |  |
+| NumTxns | int64 (formatted integer)| `int64` |  | |  |  |
 | PrevHash | string| `string` |  | |  |  |
-| PreviousMagicBlockHash | string| `string` |  | |  |  |
+| ReceiptMerkleTreeRoot | string| `string` |  | |  |  |
 | Round | int64 (formatted integer)| `int64` |  | |  |  |
 | RoundRandomSeed | int64 (formatted integer)| `int64` |  | |  |  |
 | RoundTimeoutCount | int64 (formatted integer)| `int64` |  | |  |  |
-| RunningTxnCount | int64 (formatted integer)| `int64` |  | |  |  |
+| RunningTxnCount | string| `string` |  | |  |  |
 | Signature | string| `string` |  | |  |  |
-| StartingRound | int64 (formatted integer)| `int64` |  | |  |  |
-| StateChangesCount | int64 (formatted integer)| `int64` |  | | StateChangesCount represents the state changes number in client state of current block.</br>this will be used to verify the state changes acquire from remote |  |
-| T | int64 (formatted integer)| `int64` |  | |  |  |
-| Txns | [][Transaction](#transaction)| `[]*Transaction` |  | | The entire transaction payload to represent full block |  |
-| VerificationTickets | [][VerificationTicket](#verification-ticket)| `[]*VerificationTicket` |  | |  |  |
-| Version | string| `string` |  | | Version of the entity |  |
-| creation_date | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
-| miners | [Pool](#pool)| `Pool` |  | |  |  |
-| mpks | [Mpks](#mpks)| `Mpks` |  | |  |  |
-| sharders | [Pool](#pool)| `Pool` |  | |  |  |
-| share_or_signs | [GroupSharesOrSigns](#group-shares-or-signs)| `GroupSharesOrSigns` |  | |  |  |
-| state_hash | [Key](#key)| `Key` |  | |  |  |
+| StateChangesCount | int64 (formatted integer)| `int64` |  | |  |  |
+| StateHash | string| `string` |  | |  |  |
+| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| Version | string| `string` |  | |  |  |
 
 
 
@@ -2811,6 +2799,35 @@ it can be used as a scan destination, similar to [NullString].
 
 
 
+### <span id="read-marker-response"></span> ReadMarkerResponse
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| AllocationID | string| `string` |  | |  |  |
+| AuthTicket | string| `string` |  | |  |  |
+| BlobberID | string| `string` |  | |  |  |
+| BlockNumber | int64 (formatted integer)| `int64` |  | |  |  |
+| ClientID | string| `string` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| OwnerID | string| `string` |  | |  |  |
+| PayerID | string| `string` |  | |  |  |
+| ReadCounter | int64 (formatted integer)| `int64` |  | |  |  |
+| ReadSize | double (formatted number)| `float64` |  | |  |  |
+| Signature | string| `string` |  | |  |  |
+| Timestamp | int64 (formatted integer)| `int64` |  | |  |  |
+| TransactionID | string| `string` |  | |  |  |
+| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+
+
+
 ### <span id="read-pool"></span> ReadPool
 
 
@@ -3107,6 +3124,45 @@ it can be used as a scan destination, similar to [NullString].
 
 
 
+### <span id="storage-allocation-blobbers"></span> StorageAllocationBlobbers
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| BlobberAllocs | [][BlobberAllocation](#blobber-allocation)| `[]*BlobberAllocation` |  | | Blobbers not to be used anywhere except /allocation and /allocations table</br>if Blobbers are getting used in any smart-contract, we should avoid. |  |
+| Blobbers | [][StorageNodeResponse](#storage-node-response)| `[]*StorageNodeResponse` |  | |  |  |
+| Canceled | boolean| `bool` |  | | Canceled set to true where allocation finalized by cancel_allocation</br>transaction. |  |
+| DataShards | int64 (formatted integer)| `int64` |  | |  |  |
+| DiverseBlobbers | boolean| `bool` |  | |  |  |
+| FileOptions | uint16 (formatted integer)| `uint16` |  | | FileOptions to define file restrictions on an allocation for third-parties</br>default 00000000 for all crud operations suggesting only owner has the below listed abilities.</br>enabling option/s allows any third party to perform certain ops</br>00000001 - 1  - upload</br>00000010 - 2  - delete</br>00000100 - 4  - update</br>00001000 - 8  - move</br>00010000 - 16 - copy</br>00100000 - 32 - rename |  |
+| Finalized | boolean| `bool` |  | | Finalized is true where allocation has been finalized. |  |
+| ID | string| `string` |  | | ID is unique allocation ID that is equal to hash of transaction with</br>which the allocation has created. |  |
+| Owner | string| `string` |  | |  |  |
+| OwnerPublicKey | string| `string` |  | |  |  |
+| ParityShards | int64 (formatted integer)| `int64` |  | |  |  |
+| PreferredBlobbers | []string| `[]string` |  | |  |  |
+| Size | int64 (formatted integer)| `int64` |  | |  |  |
+| ThirdPartyExtendable | boolean| `bool` |  | | Flag to determine if anyone can extend this allocation |  |
+| Tx | string| `string` |  | | Tx keeps hash with which the allocation has created or updated. todo do we need this field? |  |
+| expiration_date | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| moved_back | [Coin](#coin)| `Coin` |  | |  |  |
+| moved_to_challenge | [Coin](#coin)| `Coin` |  | |  |  |
+| moved_to_validators | [Coin](#coin)| `Coin` |  | |  |  |
+| read_price_range | [PriceRange](#price-range)| `PriceRange` |  | |  |  |
+| start_time | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+| stats | [StorageAllocationStats](#storage-allocation-stats)| `StorageAllocationStats` |  | |  |  |
+| time_unit | [Duration](#duration)| `Duration` |  | |  |  |
+| write_pool | [Coin](#coin)| `Coin` |  | |  |  |
+| write_price_range | [PriceRange](#price-range)| `PriceRange` |  | |  |  |
+
+
+
 ### <span id="storage-allocation-stats"></span> StorageAllocationStats
 
 
@@ -3229,10 +3285,7 @@ Timestamp - just a wrapper to control the json encoding */
 ### <span id="transaction"></span> Transaction
 
 
-> Transaction model to save the transaction data
   
-
-
 
 
 
@@ -3512,6 +3565,48 @@ This is what is used to verify the correctness of the block & the associated sig
 
 [interface{}](#interface)
 
+### <span id="write-marker-count-response"></span> WriteMarkerCountResponse
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| Count | int64 (formatted integer)| `int64` |  | |  |  |
+
+
+
+### <span id="write-marker-response"></span> WriteMarkerResponse
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| AllocationID | string| `string` |  | |  |  |
+| AllocationRoot | string| `string` |  | |  |  |
+| BlobberID | string| `string` |  | |  |  |
+| BlockNumber | int64 (formatted integer)| `int64` |  | |  |  |
+| ClientID | string| `string` |  | |  |  |
+| CreatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+| ID | uint64 (formatted integer)| `uint64` |  | |  |  |
+| PreviousAllocationRoot | string| `string` |  | |  |  |
+| Signature | string| `string` |  | |  |  |
+| Size | int64 (formatted integer)| `int64` |  | |  |  |
+| Timestamp | int64 (formatted integer)| `int64` |  | |  |  |
+| TransactionID | string| `string` |  | |  |  |
+| UpdatedAt | date-time (formatted string)| `strfmt.DateTime` |  | |  |  |
+
+
+
 ### <span id="challenge-pool-stat"></span> challengePoolStat
 
 
@@ -3528,6 +3623,21 @@ This is what is used to verify the correctness of the block & the associated sig
 | balance | [Coin](#coin)| `Coin` |  | |  |  |
 | expiration | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
 | start_time | [Timestamp](#timestamp)| `Timestamp` |  | |  |  |
+
+
+
+### <span id="collected-reward-response"></span> collectedRewardResponse
+
+
+  
+
+
+
+**Properties**
+
+| Name | Type | Go type | Required | Default | Description | Example |
+|------|------|---------|:--------:| ------- |-------------|---------|
+| CollectedReward | int64 (formatted integer)| `int64` |  | |  |  |
 
 
 

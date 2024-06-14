@@ -47,7 +47,7 @@
 | GET | /v1/healthcheck | [get health check](#get-health-check) | Health Check. |
 | GET | /v1/block/magic/get | [get magic block](#get-magic-block) | Get Magic Block. |
 | GET | /v1/sharder/get/stats | [get sharder stats](#get-sharder-stats) | Get Sharder Stats. |
-| GET | /v1/transaction/get/confirmation | [get transaction confirmationz](#get-transaction-confirmationz) | Get transaction confirmation. |
+| GET | /v1/transaction/get/confirmation | [get transaction confirmation](#get-transaction-confirmation) | Get transaction confirmation. |
   
 
 
@@ -364,7 +364,7 @@ Status: Not Found
 
 ###### <span id="get-sharder-stats-404-schema"></span> Schema
 
-### <span id="get-transaction-confirmationz"></span> Get transaction confirmation. (*GetTransactionConfirmationz*)
+### <span id="get-transaction-confirmation"></span> Get transaction confirmation. (*GetTransactionConfirmation*)
 
 ```
 GET /v1/transaction/get/confirmation
@@ -383,25 +383,25 @@ If content == confirmation, only the confirmation is returned. Otherwise, the co
 #### All responses
 | Code | Status | Description | Has headers | Schema |
 |------|--------|-------------|:-----------:|--------|
-| [200](#get-transaction-confirmationz-200) | OK | ConfirmationResponse |  | [schema](#get-transaction-confirmationz-200-schema) |
-| [400](#get-transaction-confirmationz-400) | Bad Request |  |  | [schema](#get-transaction-confirmationz-400-schema) |
+| [200](#get-transaction-confirmation-200) | OK | ConfirmationResponse |  | [schema](#get-transaction-confirmation-200-schema) |
+| [400](#get-transaction-confirmation-400) | Bad Request |  |  | [schema](#get-transaction-confirmation-400-schema) |
 
 #### Responses
 
 
-##### <span id="get-transaction-confirmationz-200"></span> 200 - ConfirmationResponse
+##### <span id="get-transaction-confirmation-200"></span> 200 - ConfirmationResponse
 Status: OK
 
-###### <span id="get-transaction-confirmationz-200-schema"></span> Schema
+###### <span id="get-transaction-confirmation-200-schema"></span> Schema
    
   
 
 [ConfirmationResponse](#confirmation-response)
 
-##### <span id="get-transaction-confirmationz-400"></span> 400
+##### <span id="get-transaction-confirmation-400"></span> 400
 Status: Bad Request
 
-###### <span id="get-transaction-confirmationz-400-schema"></span> Schema
+###### <span id="get-transaction-confirmation-400-schema"></span> Schema
 
 ### <span id="get-txn-fees"></span> get txn fees (*GetTxnFees*)
 

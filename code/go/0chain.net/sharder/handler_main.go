@@ -18,7 +18,7 @@ func SetupHandlers() {
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */
-// swagger:route GET /v1/transaction/get/confirmation sharder GetTransactionConfirmationz
+// swagger:route GET /v1/transaction/get/confirmation sharder GetTransactionConfirmation
 // Get transaction confirmation.
 // Get the confirmation of the transaction from the sharders.
 // If content == confirmation, only the confirmation is returned. Otherwise, the confirmation and the latest finalized block are returned.
