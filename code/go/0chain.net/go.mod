@@ -40,7 +40,7 @@ require (
 )
 
 require (
-	github.com/0chain/common v1.13.0
+	github.com/0chain/common v1.13.1-0.20240612120311-98a057f1331a
 	github.com/0chain/gosdk v1.12.7
 	github.com/IBM/sarama v1.42.2
 	github.com/go-faker/faker/v4 v4.2.0
@@ -159,4 +159,4 @@ require (
 
 replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
 
-replace github.com/0chain/common => ../../../../common
+// replace github.com/0chain/common => ../../../../common
