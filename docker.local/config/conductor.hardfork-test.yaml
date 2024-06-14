@@ -26,7 +26,6 @@ tests:
       - initial_hardfork : 
           name : 'apollo'
           round : 1
-      - sleep : "10m"
       - command:
           name: "verify_hardfork"
           params:
