@@ -40,6 +40,10 @@ github.com/0chain/common v1.13.1-0.20240612120311-98a057f1331a h1:sWR+taaSwD/sVT
 github.com/0chain/common v1.13.1-0.20240612120311-98a057f1331a/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
 github.com/0chain/common v1.13.1-0.20240614041555-5b5cfaaf05ad h1:SHFEeKOEdjLxJCpOCRlWSnmJNn84Od99bwnpTc8K2Qc=
 github.com/0chain/common v1.13.1-0.20240614041555-5b5cfaaf05ad/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
+github.com/0chain/common v1.13.1-0.20240614051137-1ef1c4b84a0d h1:nH5jSVgJZAbN+tPG+p2EF2PGiXvOKcom1QqPZFNg5jw=
+github.com/0chain/common v1.13.1-0.20240614051137-1ef1c4b84a0d/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
+github.com/0chain/common v1.13.1-0.20240614051543-d8871e61a1d1 h1:wNJazw0ZlpvnUc5Z4xwew3tLWsEqIObUZQzWZ9D9qZ0=
+github.com/0chain/common v1.13.1-0.20240614051543-d8871e61a1d1/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
 github.com/0chain/gosdk v1.12.7 h1:tgdxeiJxtJuRZ3ysmxXdqeqDufeqUzDwY33jI92R+qs=

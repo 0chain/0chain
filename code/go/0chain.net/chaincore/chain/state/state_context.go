@@ -473,6 +473,9 @@ func (sc *StateContext) DoStateCheck() error {
 		}
 
 		if !bytes.Equal(mptV, v) {
+			logging.Logger.Debug("[state check] value mismatch",
+				zap.String("key", key),
+				zap.String("key call stack", string(sc.stateChecker.GetStack(key))))
 			return errors.New("[state check] value in MPT does not match the value in state checker")
 		}
 
