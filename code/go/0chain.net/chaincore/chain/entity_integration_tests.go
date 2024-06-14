@@ -16,7 +16,6 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
 	"0chain.net/core/common"
-	"github.com/0chain/0box/code/zboxcore/balance"
 	"github.com/0chain/common/core/logging"
 )
 
