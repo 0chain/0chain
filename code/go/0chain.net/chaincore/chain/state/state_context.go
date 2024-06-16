@@ -134,6 +134,15 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+	devMode                       bool
+}
+
+func (sc *StateContext) IsDevMode() bool {
+	return sc.devMode
+}
+
+func (sc *StateContext) SetDevMode(devMode bool) {
+	sc.devMode = devMode
 }
 
 type GetNow func() common.Timestamp
@@ -398,9 +407,11 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 		}
 
 		// TODO: do in development mode only
-		err := sc.stateChecker.Add(key, ccv)
-		if err != nil {
-			panic("[state checker] adding failed")
+		if sc.IsDevMode() {
+			err := sc.stateChecker.Add(key, ccv)
+			if err != nil {
+				panic("[state checker] adding failed")
+			}
 		}
 
 		return nil
@@ -418,9 +429,11 @@ func (sc *StateContext) GetTrieNode(key datastore.Key, v util.MPTSerializable) e
 	}
 
 	// TODO: do in development mode only
-	err := sc.stateChecker.Add(key, v)
-	if err != nil {
-		panic("[state checker] adding in GetTrieNode failed")
+	if sc.IsDevMode() {
+		err := sc.stateChecker.Add(key, v)
+		if err != nil {
+			panic("[state checker] adding in GetTrieNode failed")
+		}
 	}
 	return nil
 }
@@ -437,9 +450,11 @@ func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.MPTSerializa
 	}
 
 	// TODO: do in development mode only
-	err = sc.stateChecker.Add(key, node)
-	if err != nil {
-		panic("[state checker] adding in InsertTrieNode failed")
+	if sc.IsDevMode() {
+		err = sc.stateChecker.Add(key, node)
+		if err != nil {
+			panic("[state checker] adding in InsertTrieNode failed")
+		}
 	}
 
 	return k, nil
@@ -453,7 +468,9 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 
 	sc.Cache().Remove(key)
 
-	sc.stateChecker.Remove(key)
+	if sc.IsDevMode() {
+		sc.stateChecker.Remove(key)
+	}
 	return k, nil
 }
 
