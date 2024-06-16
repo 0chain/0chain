@@ -1103,6 +1103,21 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil, common.NewError("add_challenge",
 					err.Error())
 			}
+
+			actErr = cstate.WithActivation(balances, "demeter", func() error {
+				return nil
+			}, func() error {
+				err = validators.Remove(balances, validator.Id())
+				if err != nil {
+					return common.NewError("add_challenge",
+						"error removing validator from partition: "+err.Error())
+				}
+				return validators.Save(balances)
+			})
+			if actErr != nil {
+				return nil, actErr
+			}
+
 			continue
 		}
 
