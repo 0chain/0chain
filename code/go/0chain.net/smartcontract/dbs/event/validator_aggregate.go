@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
+// swagger:model ValidatorAggregate
 type ValidatorAggregate struct {
 	model.ImmutableModel
 
@@ -52,6 +53,7 @@ func (edb *EventDb) CreateValidatorAggregates(validators []*Validator, round int
 			Round:           round,
 			ValidatorID:     v.ID,
 			LastHealthCheck: v.LastHealthCheck,
+			URL: 			 v.BaseUrl,
 		}
 		recalculateProviderFields(v, &agg)
 		aggregates = append(aggregates, agg)

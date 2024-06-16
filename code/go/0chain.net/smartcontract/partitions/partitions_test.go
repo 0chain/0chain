@@ -1259,7 +1259,7 @@ func TestErrItemExist(t *testing.T) {
 }
 
 func prepareState(t *testing.T, name string, size, num int) state.StateContextI {
-	b := &block.Block{}
+  b := &block.Block{}
 	b.Round = 200
 	s := &mockStateContextI{
 		data: make(map[string][]byte),
@@ -1310,6 +1310,11 @@ func enableHardForks(t *testing.T, tb state.StateContextI) {
 	}
 
 	h = state.NewHardFork("athena", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = state.NewHardFork("demeter", 1)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}

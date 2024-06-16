@@ -1712,21 +1712,37 @@ func (sa *StorageAllocation) validateEachBlobber(
 				} else if !success {
 					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
 				}
-
-				logging.Logger.Info("blobber auth ticket verified",
-					zap.String("id", b.ID),
-					zap.Any("success", success),
-					zap.String("auth_ticket", blobberAuthTickets[i]),
-					zap.String("public_key", snr.PublicKey))
 			}
 
 			return nil
 		}
 
-		actErr := cstate.WithActivation(balances, "artemis",
-			beforeArtemisFork,
-			artemisFork,
-		)
+		athenaFork := func() error {
+			snr := storageNodeResponseToStorageNodeV2(*b)
+			sn.SetEntity(snr)
+			if *snr.IsRestricted {
+				success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
+				if err != nil {
+					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+				} else if !success {
+					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+				}
+			}
+
+			err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
+			if err != nil {
+				logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
+				return err
+			}
+			return nil
+		}
+
+		actErr := cstate.WithActivation(balances, "athena", func() error {
+			return cstate.WithActivation(balances, "artemis",
+				beforeArtemisFork,
+				artemisFork,
+			)
+		}, athenaFork)
 		if actErr != nil {
 			errs = append(errs, actErr.Error())
 			continue
@@ -2111,6 +2127,15 @@ func (sa *StorageAllocation) CopyFrom(v interface{}) bool {
 
 	*sa = *clone
 	return true
+}
+
+func (sa *StorageAllocation) RefreshAllocationUsedSize() {
+	totalBlobberAllocationUsedSize := int64(0)
+	for _, ba := range sa.BlobberAllocs {
+		totalBlobberAllocationUsedSize += ba.Stats.UsedSize
+	}
+
+	sa.Stats.UsedSize = (totalBlobberAllocationUsedSize * int64(sa.DataShards)) / (int64(sa.DataShards + sa.ParityShards))
 }
 
 type BlobberCloseConnection struct {

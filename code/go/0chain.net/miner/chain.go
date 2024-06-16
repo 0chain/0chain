@@ -221,11 +221,14 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 
 // CreateRound - create a round.
 func (mc *Chain) CreateRound(r *round.Round) *Round {
-	var mr Round
+	var (
+		mr       Round
+		roundNum = r.GetRoundNumber()
+	)
 	mr.Round = r
-	mr.blocksToVerifyChannel = make(chan *block.Block, mc.GetGeneratorsNumOfRound(r.GetRoundNumber()))
+	mr.blocksToVerifyChannel = make(chan *block.Block, mc.GetGeneratorsNumOfRound(roundNum))
 	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
-	mr.vrfSharesCache = newVRFSharesCache()
+	gRoundVRFSharesCache.Add(roundNum, newVRFSharesCache())
 	return &mr
 }
 

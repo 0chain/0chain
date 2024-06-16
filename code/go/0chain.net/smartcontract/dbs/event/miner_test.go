@@ -433,7 +433,11 @@ func TestMiners(t *testing.T) {
 		Index:       mnMiner2.ID,
 	}
 	events := []Event{eventAddMn, eventAddMnTwo}
-	eventDb.ProcessEvents(context.TODO(), events, 1, "hash", 10, CommitNow())
+	eventDb.ProcessEvents(
+		context.TODO(),
+		events, 1, "hash", 10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 	time.Sleep(100 * time.Millisecond)
 	miner, err := eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -460,7 +464,14 @@ func TestMiners(t *testing.T) {
 		Data:        mnMiner2,
 		Index:       mnMiner2.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventAddOrOverwriteMn, eventAddOrOverwriteMn2}, 2, "hash", 10, CommitNow())
+	eventDb.ProcessEvents(
+		context.TODO(),
+		[]Event{eventAddOrOverwriteMn, eventAddOrOverwriteMn2},
+		2,
+		"hash",
+		10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -497,7 +508,14 @@ func TestMiners(t *testing.T) {
 		Tag:         TagUpdateMiner,
 		Data:        update2,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{eventUpdateMn, eventUpdateMn2}, 100, "bhash", 10, CommitNow())
+	eventDb.ProcessEvents(
+		context.TODO(),
+		[]Event{eventUpdateMn, eventUpdateMn2},
+		100,
+		"bhash",
+		10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	require.NoError(t, err)
@@ -512,7 +530,12 @@ func TestMiners(t *testing.T) {
 		Tag:         TagDeleteMiner,
 		Data:        mn.ID,
 	}
-	eventDb.ProcessEvents(context.TODO(), []Event{deleteEvent}, 100, "bhash", 10, CommitNow())
+	eventDb.ProcessEvents(
+		context.TODO(),
+		[]Event{deleteEvent},
+		100, "bhash", 10,
+		func(be BlockEvents) error { return nil },
+		CommitNow())
 
 	miner, err = eventDb.GetMiner(mn.ID)
 	assert.Error(t, err)

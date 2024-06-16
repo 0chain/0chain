@@ -10,10 +10,13 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/goose"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"0chain.net/smartcontract/dbs/queueProvider"
 	"0chain.net/smartcontract/dbs/sqlite"
+	"go.uber.org/atomic"
 )
 
-func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*EventDb, error) {
+func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings,
+	getBlockEventsFunc func(round int64) (int64, []Event, error)) (*EventDb, error) {
 	eventDb, err := NewEventDbWithoutWorker(config, settings)
 	if err != nil {
 		return nil, err
@@ -23,7 +26,7 @@ func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings) (*
 		return nil, err
 	}
 	goose.Migrate(sqldb)
-	go eventDb.addEventsWorker(common.GetRootContext())
+	go eventDb.addEventsWorker(common.GetRootContext(), getBlockEventsFunc)
 
 	return eventDb, nil
 }
@@ -34,14 +37,26 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 	if err != nil {
 		return nil, err
 	}
-
 	eventDb := &EventDb{
-		Store:                  db,
-		dbConfig:               config,
-		eventsChannel:          make(chan BlockEvents, 1),
-		partitionChan:          make(chan int64, 100),
-		permanentPartitionChan: make(chan int64, 100),
-		settings:               settings,
+		Store:         db,
+		dbConfig:      config,
+    eventsCounter: *atomic.NewUint64(0),
+		eventsChannel: make(chan BlockEvents, 1),
+		partitionChan: make(chan int64, 100),
+    permanentPartitionChan: make(chan int64, 100),
+		settings:      settings,
+	}
+
+	if config.KafkaEnabled {
+		eventDb.kafka = queueProvider.NewKafkaProvider(config.KafkaHost,
+			config.KafkaUsername, config.KafkaPassword, config.KafkaWriteTimeout)
+	}
+
+	// Load last sequence number. Useful when the sharder is restarted.
+	var maxSequenceNumber uint64
+	err = eventDb.Get().Model(&Event{}).Select("max(sequence_number)").Scan(&maxSequenceNumber).Error
+	if err == nil && maxSequenceNumber > 0 {
+		eventDb.eventsCounter.Store(maxSequenceNumber)
 	}
 
 	return eventDb, nil
@@ -60,7 +75,10 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 		permanentPartitionChan: make(chan int64, 100),
 		settings:               settings,
 	}
-	go eventDb.addEventsWorker(common.GetRootContext())
+
+	go eventDb.addEventsWorker(common.GetRootContext(), func(round int64) (int64, []Event, error) {
+		return round, []Event{}, nil
+	})
 	if err := eventDb.AutoMigrate(); err != nil {
 		return nil, err
 	}
@@ -69,11 +87,13 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 
 type EventDb struct {
 	dbs.Store
-	dbConfig               config.DbAccess   // depends on the sharder, change on restart
-	settings               config.DbSettings // the same across all sharders, needs to mirror blockchain
-	eventsChannel          chan BlockEvents
-	partitionChan          chan int64
-	permanentPartitionChan chan int64
+	dbConfig      config.DbAccess   // depends on the sharder, change on restart
+	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
+	eventsChannel chan BlockEvents
+	eventsCounter atomic.Uint64
+	kafka         queueProvider.KafkaProviderI
+	partitionChan chan int64
+  permanentPartitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -82,16 +102,29 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 		return nil, fmt.Errorf("begin transcation: %v", tx.Error)
 	}
 
+	var kafka queueProvider.KafkaProviderI
+	if edb.kafka != nil {
+		kafka = edb.kafka
+	} else {
+		kafka = queueProvider.NewKafkaProvider(
+			edb.dbConfig.KafkaHost,
+			edb.dbConfig.KafkaUsername,
+			edb.dbConfig.KafkaPassword,
+			edb.dbConfig.KafkaWriteTimeout,
+		)
+	}
+
 	edbTx := EventDb{
 		Store: edbTx{
 			Store: edb,
 			tx:    tx,
 		},
-		dbConfig:               edb.dbConfig,
-		settings:               edb.settings,
-		eventsChannel:          edb.eventsChannel,
+		dbConfig: edb.dbConfig,
+		settings: edb.settings,
+		kafka:    kafka,
+    eventsChannel:          edb.eventsChannel,
 		partitionChan:          edb.partitionChan,
-		permanentPartitionChan: edb.permanentPartitionChan,
+    permanentPartitionChan: edb.permanentPartitionChan,
 	}
 	return &edbTx, nil
 }
@@ -112,16 +145,22 @@ func (edb *EventDb) Rollback() error {
 
 func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, error) {
 	cloneConfig := config.DbAccess{
-		Enabled:         true,
-		Name:            dbName,
-		User:            edb.dbConfig.User,
-		Password:        edb.dbConfig.Password,
-		Host:            edb.dbConfig.Host,
-		Port:            edb.dbConfig.Port,
-		MaxIdleConns:    edb.dbConfig.MaxIdleConns,
-		MaxOpenConns:    edb.dbConfig.MaxOpenConns,
-		ConnMaxLifetime: edb.dbConfig.ConnMaxLifetime,
-		Slowtablespace:  edb.dbConfig.Slowtablespace,
+		Enabled:           true,
+		Name:              dbName,
+		User:              edb.dbConfig.User,
+		Password:          edb.dbConfig.Password,
+		Host:              edb.dbConfig.Host,
+		Port:              edb.dbConfig.Port,
+		MaxIdleConns:      edb.dbConfig.MaxIdleConns,
+		MaxOpenConns:      edb.dbConfig.MaxOpenConns,
+		ConnMaxLifetime:   edb.dbConfig.ConnMaxLifetime,
+		Slowtablespace:    edb.dbConfig.Slowtablespace,
+		KafkaEnabled:      edb.dbConfig.KafkaEnabled,
+		KafkaHost:         edb.dbConfig.KafkaHost,
+		KafkaUsername:     edb.dbConfig.KafkaUsername,
+		KafkaPassword:     edb.dbConfig.KafkaPassword,
+		KafkaTopic:        edb.dbConfig.KafkaTopic,
+		KafkaWriteTimeout: edb.dbConfig.KafkaWriteTimeout,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
@@ -129,12 +168,27 @@ func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, 
 		return nil, err
 	}
 
-	return &EventDb{
+	var kafka queueProvider.KafkaProviderI
+	if edb.kafka != nil {
+		kafka = edb.kafka
+	} else {
+		kafka = queueProvider.NewKafkaProvider(
+			edb.dbConfig.KafkaHost,
+			edb.dbConfig.KafkaUsername,
+			edb.dbConfig.KafkaPassword,
+			edb.dbConfig.KafkaWriteTimeout,
+		)
+	}
+
+	newEdb := &EventDb{
 		Store:         clone,
 		dbConfig:      cloneConfig,
 		eventsChannel: nil,
 		settings:      edb.settings,
-	}, nil
+		kafka:         kafka,
+	}
+
+	return newEdb, nil
 }
 
 func (edb *EventDb) UpdateSettings(updates map[string]string) error {
@@ -167,6 +221,14 @@ type BlockEvents struct {
 	events    []Event
 	tx        *EventDb
 	done      chan bool
+}
+
+func (be *BlockEvents) Events() []Event {
+	return be.events
+}
+
+func (be *BlockEvents) Round() int64 {
+	return be.round
 }
 
 func (edb *EventDb) AutoMigrate() error {
@@ -214,4 +276,16 @@ func (edb *EventDb) AutoMigrate() error {
 
 func (edb *EventDb) Config() config.DbAccess {
 	return edb.dbConfig
+}
+
+func (edb *EventDb) GetEventsCounter() uint64 {
+	return edb.eventsCounter.Load()
+}
+
+func (edb *EventDb) SetEventsCounter(value uint64) {
+	edb.eventsCounter.Store(value)
+}
+
+func (edb *EventDb) AddToEventsCounter(value uint64) uint64 {
+	return edb.eventsCounter.Add(value)
 }

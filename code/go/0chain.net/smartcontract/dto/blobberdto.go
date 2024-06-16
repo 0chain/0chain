@@ -36,9 +36,7 @@ type Terms struct {
 }
 
 type ResetBlobberStatsDto struct {
-	BlobberID     string `json:"blobber_id"`
-	PrevAllocated int64  `json:"prev_allocated"`
-	PrevSavedData int64  `json:"prev_saved_data"`
-	NewAllocated  int64  `json:"new_allocated"`
-	NewSavedData  int64  `json:"new_saved_data"`
+	BlobberID       string        `json:"blobber_id"`
+	PrevTotalOffers currency.Coin `json:"prev_total_offers"`
+	NewTotalOffers  currency.Coin `json:"new_total_offers"`
 }
