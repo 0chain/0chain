@@ -870,7 +870,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			challengeBlobbers[i], challengeBlobbers[j] = challengeBlobbers[j], challengeBlobbers[i]
 		})
 
-		var blobbersSelected []ChallengeReadyBlobber
+		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
 		} else {
