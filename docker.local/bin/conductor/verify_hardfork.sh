@@ -33,7 +33,7 @@ if [ "$HTTP_STATUS" -eq 200 ]; then
     echo "Response Body: $RESPONSE_BODY"
 
     # Check if the round matches
-    if [ "$RESPONSE_ROUND" == "$rounds" ]; then
+    if [ "$RESPONSE_ROUND" = "$rounds" ]; then
         echo "Round value matches: $RESPONSE_ROUND"
         exit 0
     else
