@@ -1428,10 +1428,15 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"error removing offer: "+err.Error())
 			}
 
-			actErr = cstate.WithActivation(balances, "athena", func() (e error) { return },
-				func() (e error) {
-					return sp.Save(spenum.Blobber, d.BlobberID, balances)
-				})
+			actErr = cstate.WithActivation(balances, "demeter", func() (e error) {
+				actErr = cstate.WithActivation(balances, "athena", func() (e error) { return },
+					func() (e error) {
+						return sp.Save(spenum.Blobber, d.BlobberID, balances)
+					})
+				return actErr
+			}, func() (e error) {
+				return nil
+			})
 			if actErr != nil {
 				return actErr
 			}
@@ -1449,12 +1454,12 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
-			err = cstate.WithActivation(balances, "demeter", func() error { return nil },
-				func() error {
+			actErr = cstate.WithActivation(balances, "demeter", func() (e error) { return },
+				func() (e error) {
 					return sp.Save(spenum.Blobber, d.BlobberID, balances)
 				})
-			if err != nil {
-				return err
+			if actErr != nil {
+				return actErr
 			}
 
 			blobber, err := sc.getBlobber(d.BlobberID, balances)
