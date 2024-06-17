@@ -7,12 +7,9 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/cache"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
-
-var gRoundVRFSharesCache = cache.NewLRUCache[int64, *vrfSharesCache](100)
 
 /*Round - a round from miner's perspective */
 type Round struct {
@@ -26,7 +23,7 @@ type Round struct {
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
-	// vrfSharesCache        *vrfSharesCache
+	vrfSharesCache        *vrfSharesCache
 	ownVerificationTicket *block.BlockVerificationTicket
 }
 
@@ -257,6 +254,7 @@ func (r *Round) Restart() error {
 	}
 
 	r.roundGuard.Lock()
+	r.vrfSharesCache = newVRFSharesCache()
 	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
 	r.verificationTickets = make(map[string]*block.BlockVerificationTicket)
 	r.roundGuard.Unlock()
