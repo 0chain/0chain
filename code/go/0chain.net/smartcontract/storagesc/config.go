@@ -512,6 +512,11 @@ func (ssc *StorageSmartContract) getConfig(
 	return conf, nil
 }
 
+func (ssc *StorageSmartContract) saveConfig(balances chainState.StateContextI, conf *Config) error {
+	_, err := balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
+	return err
+}
+
 // getReadPoolConfig
 func (ssc *StorageSmartContract) getReadPoolConfig(
 	balances chainState.StateContextI, setup bool) (

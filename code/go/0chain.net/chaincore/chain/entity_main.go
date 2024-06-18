@@ -12,7 +12,7 @@ import (
 	"0chain.net/chaincore/transaction"
 )
 
-// IsRoundGenerator - is this miner a generator for this round
+//IsRoundGenerator - is this miner a generator for this round
 func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 	rank := r.GetMinerRank(nd)
 
