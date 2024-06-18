@@ -1,6 +1,7 @@
 package event
 
 import (
+	"0chain.net/chaincore/node"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -124,12 +125,12 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 		for i, e := range events.events {
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
-
+		self := node.Self.Underlying()
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
 				"event":  filteredEvent,
 				"round":  events.round,
-				"source": edb.dbConfig.SharderId,
+				"source": self.ID,
 			}
 			eventJson, err := json.Marshal(data)
 			if err != nil {

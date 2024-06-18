@@ -213,8 +213,6 @@ type DbAccess struct {
 	KafkaPassword     string
 	KafkaWriteTimeout time.Duration
 	KafkaTriggerRound int64
-
-	SharderId string `json:"sharder_id"`
 }
 
 type DbSettings struct {
