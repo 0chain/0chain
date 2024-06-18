@@ -1099,21 +1099,24 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 		validator, err := getValidator(randValidator.Id, balances)
 		if err != nil {
-			if cstate.ErrInvalidState(err) {
-				actErr = cstate.WithActivation(balances, "demeter", func() error {
+			actErr = cstate.WithActivation(balances, "demeter", func() error {
+				if cstate.ErrInvalidState(err) {
 					return common.NewError("add_challenge",
 						err.Error())
-				}, func() error {
+				}
+			}, func() error {
+				if cstate.ErrValueNotPresent(err) {
 					err = validators.Remove(balances, validator.Id())
 					if err != nil {
 						return common.NewError("add_challenge",
 							"error removing validator from partition: "+err.Error())
 					}
 					return validators.Save(balances)
-				})
-				if actErr != nil {
-					return nil, actErr
 				}
+				return nil
+			})
+			if actErr != nil {
+				return nil, actErr
 			}
 
 			continue

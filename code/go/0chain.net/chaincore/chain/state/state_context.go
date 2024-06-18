@@ -486,6 +486,11 @@ func ErrInvalidState(err error) bool {
 	return err != nil && strings.Contains(err.Error(), util.ErrNodeNotFound.Error())
 }
 
+// ErrInvalidState checks if the error is an invalid state error
+func ErrValueNotPresent(err error) bool {
+	return err != nil && strings.Contains(err.Error(), util.ErrValueNotPresent.Error())
+}
+
 type errorIndex struct {
 	err   error
 	index int
