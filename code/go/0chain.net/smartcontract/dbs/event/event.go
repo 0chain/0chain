@@ -18,14 +18,15 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber    int64       `json:"block_number"`
-	TxHash         string      `json:"tx_hash"`
-	Type           EventType   `json:"type"`
-	Tag            EventTag    `json:"tag"`
-	Index          string      `json:"index"`
-	IsPublished    bool        `json:"is_published"`
-	SequenceNumber int64       `json:"sequence_number"`
-	Data           interface{} `json:"data" gorm:"-"`
+	BlockNumber              int64       `json:"block_number"`
+	TxHash                   string      `json:"tx_hash"`
+	Type                     EventType   `json:"type"`
+	Tag                      EventTag    `json:"tag"`
+	Index                    string      `json:"index"`
+	IsPublished              bool        `json:"is_published"`
+	SequenceNumber           int64       `json:"sequence_number"`
+	RoundLocalSequenceNumber int64       `json:"round_local_sequence_number"`
+	Data                     interface{} `json:"data" gorm:"-"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -126,8 +127,9 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
-				"event": filteredEvent,
-				"round": events.round,
+				"event":  filteredEvent,
+				"round":  events.round,
+				"source": edb.dbConfig.SharderId,
 			}
 			eventJson, err := json.Marshal(data)
 			if err != nil {
