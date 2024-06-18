@@ -29,7 +29,6 @@ tests:
       - wait_round:
           shift: 10
           timeout: "5m"
-      - sleep : "10m"
       - command:
           name: "verify_hardfork"
           params:
