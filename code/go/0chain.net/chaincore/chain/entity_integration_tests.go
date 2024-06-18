@@ -5,6 +5,7 @@ package chain
 
 import (
 	"context"
+	"log"
 
 	"go.uber.org/zap"
 
@@ -85,6 +86,7 @@ func setInitialHardfork(balances cstate.CommonStateContextI) error {
 		if _, err := balances.InsertTrieNode(h.GetKey(), h); err != nil {
 			return common.NewError("setInitialHardfork", err.Error())
 		}
+		log.Panicf("Conductor: InsertTriedNode successfull")
 	}
 
 	return nil
