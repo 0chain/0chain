@@ -87,6 +87,8 @@ func setInitialHardfork(balances cstate.CommonStateContextI) error {
 			return common.NewError("setInitialHardfork", err.Error())
 		}
 		log.Panicf("Conductor: InsertTriedNode successfull")
+	} else {
+		log.Panicf("Conductor: Hardfork is nil")
 	}
 
 	return nil
