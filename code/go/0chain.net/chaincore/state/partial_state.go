@@ -122,8 +122,6 @@ func (ps *PartialState) ComputeProperties() error {
 		nodesNum = len(ps.Nodes)
 	)
 
-	// fmt.Println("dbSize", dbSize, "nodesNum", nodesNum)
-
 	if dbSize != nodesNum {
 		logging.Logger.Error("malformed partial state, the db size must be the same as the nodes number",
 			zap.Int("db size", dbSize),
