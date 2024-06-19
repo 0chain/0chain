@@ -80,13 +80,12 @@ func initialStateCT(balances cstate.CommonStateContextI) error {
 }
 
 func setInitialHardfork(balances cstate.CommonStateContextI) error {
-	state := crpc.Client().State()
-	if state.Hardfork != nil {
-		h := cstate.NewHardFork(state.Hardfork.Name, state.Hardfork.Round)
+	DefaultHardforkConfig := crpc.Client().State().Hardfork
+	if DefaultHardforkConfig != nil {
+		h := cstate.NewHardFork(DefaultHardforkConfig.Name, DefaultHardforkConfig.Round)
 		if _, err := balances.InsertTrieNode(h.GetKey(), h); err != nil {
 			return common.NewError("setInitialHardfork", err.Error())
 		}
-		log.Panicf("Conductor: InsertTriedNode successfull")
 	} else {
 		log.Panicf("Conductor: Hardfork is nil")
 	}

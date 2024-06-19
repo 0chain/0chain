@@ -86,7 +86,6 @@ func main() {
 		log.Fatal("[ERR]", err)
 		os.Exit(1)
 	}
-	r.SetServerState(&conf.DefaultHardfork)
 
 	log.Print("(rpc) start listening on:", conf.Bind)
 	go func() {
@@ -94,7 +93,6 @@ func main() {
 			log.Fatal("Error while starting RPC server:", err)
 			os.Exit(1)
 		}
-		r.SetServerState(&conf.DefaultHardfork)
 	}()
 	defer r.server.Close()
 
@@ -110,7 +108,6 @@ func main() {
 	if err != nil {
 		log.Print("[ERR] ", err)
 	}
-	r.SetServerState(&conf.DefaultHardfork)
 
 	if success {
 		os.Exit(0)
