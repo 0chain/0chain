@@ -154,9 +154,9 @@ func (r *Runner) Start(names []NodeName, lock bool,
 }
 
 // Change Default hardfork
-func (r *Runner) SetInitialHardfork(hf Hardfork) (err error) {
+func (r *Runner) SetInitialHardfork(hf config.Hardfork) (err error) {
 	if r.verbose {
-		log.Printf(" [INF] setting initial hardfork: %s", hf.Name)
+		log.Printf(" [INF] setting initial hardfork: %s and round : %s", hf.Name, strconv.FormatInt(hf.Round, 10))
 	}
 	if err := r.SetServerState(&hf); err != nil {
 		log.Panicf("Error setting initial hardfork: %v", err)
@@ -1161,6 +1161,7 @@ func (r *Runner) SetServerState(update interface{}) error {
 		case *config.BlobberDelete:
 			state.BlobberDelete = update
 		case *config.Hardfork:
+			log.Printf(" [INF] xx setting hardfork to %v\n", update)
 			state.Hardfork = update
 		case *config.AdversarialValidator:
 			state.AdversarialValidator = update
