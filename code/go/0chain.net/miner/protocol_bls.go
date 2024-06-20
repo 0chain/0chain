@@ -254,12 +254,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 
 		// add vrf to cache if the vrf share has timeout count > round's timeout count
 		if vrfRTC > roundTC {
-			vrfsCache, err := gRoundVRFSharesCache.Get(rn)
-			if err != nil {
-				Logger.Error("Error getting vrfs cache", zap.Error(err), zap.Int64("round", rn))
-				return false
-			}
-			vrfsCache.add(vrfs)
+			mr.vrfSharesCache.add(vrfs)
 		}
 		return false
 	}
@@ -292,12 +287,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	msg, err := mc.GetBlsMessageForRound(mr.Round)
 	if err != nil {
 		// cache the vrf share if the previous round is not ready yet
-		vrfCache, err := gRoundVRFSharesCache.Get(rn)
-		if err != nil {
-			Logger.Error("Error getting vrfs cache", zap.Error(err), zap.Int64("round", rn))
-			return false
-		}
-		vrfCache.add(vrfs)
+		mr.vrfSharesCache.add(vrfs)
 
 		Logger.Warn("failed to get bls message", zap.String("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
@@ -361,14 +351,8 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 
 func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Round, dkg *bls.DKG) {
 	if err := mc.verifyCachedVRFSharesWorker.Run(ctx, func() error {
-		roundVrfShares, err := gRoundVRFSharesCache.Get(r.GetRoundNumber())
-		if err != nil {
-			// no cached vrf shares
-			return nil
-		}
-
 		var (
-			vrfShares     = roundVrfShares.getAll()
+			vrfShares     = r.vrfSharesCache.getAll()
 			blsThreshold  = dkg.T
 			roundTC       = r.GetTimeoutCount()
 			removeVRFKeys = make(map[string]struct{}, len(vrfShares))
@@ -378,7 +362,7 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 			return nil
 		}
 
-		defer roundVrfShares.clean(removeVRFKeys)
+		defer r.vrfSharesCache.clean(removeVRFKeys)
 
 		for _, vrfs := range vrfShares {
 			if vrfs.GetRoundTimeoutCount() != roundTC {
