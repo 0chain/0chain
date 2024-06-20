@@ -81,53 +81,6 @@ func TestUpdateSettings(t *testing.T) {
 			ClientID: p.client,
 		}
 
-		//h := chainstate.NewHardFork("apollo", 1)
-		//balances.On(
-		//	"InsertTrieNode",
-		//	h.GetKey(),
-		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
-		//		return true
-		//	}),
-		//).Return("", nil).Once()
-		//
-		//h = chainstate.NewHardFork("ares", 1)
-		//balances.On(
-		//	"InsertTrieNode",
-		//	h.GetKey(),
-		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
-		//		return true
-		//	}),
-		//).Return("", nil).Once()
-		//
-		//h = chainstate.NewHardFork("artemis", 1)
-		//balances.On(
-		//	"InsertTrieNode",
-		//	h.GetKey(),
-		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
-		//		return true
-		//	}),
-		//).Return("", nil).Once()
-		//
-		//h = chainstate.NewHardFork("athena", 1)
-		//balances.On(
-		//	"InsertTrieNode",
-		//	h.GetKey(),
-		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
-		//		return true
-		//	}),
-		//).Return("", nil).Once()
-		//
-		//h = chainstate.NewHardFork("demeter", 1)
-		//balances.On(
-		//	"InsertTrieNode",
-		//	h.GetKey(),
-		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
-		//		return true
-		//	}),
-		//).Return("", nil).Once()
-
-		//enableHardForks(t, balances)
-
 		var oldChanges config.StringMap
 		oldChanges.Fields = p.previousMap
 		balances.On("GetTrieNode", settingChangesKey,
@@ -171,27 +124,22 @@ func TestUpdateSettings(t *testing.T) {
 				}
 				return true
 			}),
-		).Return(nil, nil).Once()
+		).Return("", nil).Once()
 
 		h := chainstate.NewHardFork("demeter", 1)
 		balances.On("GetTrieNode", h.GetKey(),
 			mock.MatchedBy(func(c *chainstate.HardFork) bool {
 				return true
-			})).Return(nil).Once()
+			})).Return(nil)
 
 		b := &block.Block{}
 		b.Round = 0
 		balances.On("GetBlock", mock.Anything, mock.Anything).Return(b, nil)
 
-		balances.On("GetTrieNode", h.GetKey(),
-			mock.MatchedBy(func(c *chainstate.HardFork) bool {
+		balances.On("InsertTrieNode", scConfigKey(ADDRESS),
+			mock.MatchedBy(func(c *Config) bool {
 				return true
-			})).Return(nil).Once()
-
-		//balances.On("InsertTrieNode", scConfigKey(ADDRESS),
-		//	mock.MatchedBy(func(c *Config) bool {
-		//		return true
-		//	})).Return("", nil).Once()
+			})).Return("", nil).Once()
 
 		return args{
 			ssc:      ssc,
