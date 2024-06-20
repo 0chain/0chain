@@ -1231,11 +1231,12 @@ func (r *Runner) Run() (err error, success bool) {
 
 			log.Print("=======================================================")
 			log.Printf("Test case %d: %s", i, testCase.Name)
+			log.Printf("Default hardfork at run :%s", r.conf.DefaultHardfork.Name)
 			r.SetServerState(&r.conf.DefaultHardfork)
 			for j, d := range testCase.Flow {
 				log.Print("---------------------------------------------------")
 				log.Printf("  %d/%d step", i, j)
-
+				r.SetServerState(&r.conf.DefaultHardfork)
 				err, mustFail := d.Execute(r)
 				if err == nil {
 					err = r.proceedWaiting()
