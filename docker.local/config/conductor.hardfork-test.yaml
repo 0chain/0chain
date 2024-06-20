@@ -23,6 +23,7 @@ tests:
           sharders: ['sharder-1','sharder-2']
           miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
           start: true
+      - sleep : "3m"
       - command:
           name: "verify_hardfork"
           params:
