@@ -25,12 +25,19 @@ func enableHardForks(t *testing.T, tb chainstate.StateContextI) {
 		t.Fatal(err)
 	}
 
+	return
+
 	h = chainstate.NewHardFork("ares", 1)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
 	h = chainstate.NewHardFork("artemis", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainstate.NewHardFork("athena", 1)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +81,52 @@ func TestUpdateSettings(t *testing.T) {
 			ClientID: p.client,
 		}
 
-		enableHardForks(t, balances)
+		//h := chainstate.NewHardFork("apollo", 1)
+		//balances.On(
+		//	"InsertTrieNode",
+		//	h.GetKey(),
+		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
+		//		return true
+		//	}),
+		//).Return("", nil).Once()
+		//
+		//h = chainstate.NewHardFork("ares", 1)
+		//balances.On(
+		//	"InsertTrieNode",
+		//	h.GetKey(),
+		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
+		//		return true
+		//	}),
+		//).Return("", nil).Once()
+		//
+		//h = chainstate.NewHardFork("artemis", 1)
+		//balances.On(
+		//	"InsertTrieNode",
+		//	h.GetKey(),
+		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
+		//		return true
+		//	}),
+		//).Return("", nil).Once()
+		//
+		//h = chainstate.NewHardFork("athena", 1)
+		//balances.On(
+		//	"InsertTrieNode",
+		//	h.GetKey(),
+		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
+		//		return true
+		//	}),
+		//).Return("", nil).Once()
+		//
+		//h = chainstate.NewHardFork("demeter", 1)
+		//balances.On(
+		//	"InsertTrieNode",
+		//	h.GetKey(),
+		//	mock.MatchedBy(func(actual *chainstate.HardFork) bool {
+		//		return true
+		//	}),
+		//).Return("", nil).Once()
+
+		//enableHardForks(t, balances)
 
 		var oldChanges config.StringMap
 		oldChanges.Fields = p.previousMap
@@ -96,6 +148,15 @@ func TestUpdateSettings(t *testing.T) {
 			expected.Fields[key] = value
 		}
 
+		var conf = &Config{
+			OwnerId: owner,
+		}
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
+			mock.MatchedBy(func(c *Config) bool {
+				*c = *conf
+				return true
+			})).Return(nil).Once()
+
 		balances.On(
 			"InsertTrieNode",
 			settingChangesKey,
@@ -110,16 +171,27 @@ func TestUpdateSettings(t *testing.T) {
 				}
 				return true
 			}),
-		).Return("", nil).Once()
+		).Return(nil, nil).Once()
 
-		var conf = &Config{
-			OwnerId: owner,
-		}
-		balances.On("GetTrieNode", scConfigKey(ADDRESS),
-			mock.MatchedBy(func(c *Config) bool {
-				*c = *conf
+		h := chainstate.NewHardFork("demeter", 1)
+		balances.On("GetTrieNode", h.GetKey(),
+			mock.MatchedBy(func(c *chainstate.HardFork) bool {
 				return true
 			})).Return(nil).Once()
+
+		b := &block.Block{}
+		b.Round = 0
+		balances.On("GetBlock", mock.Anything, mock.Anything).Return(b, nil)
+
+		balances.On("GetTrieNode", h.GetKey(),
+			mock.MatchedBy(func(c *chainstate.HardFork) bool {
+				return true
+			})).Return(nil).Once()
+
+		//balances.On("InsertTrieNode", scConfigKey(ADDRESS),
+		//	mock.MatchedBy(func(c *Config) bool {
+		//		return true
+		//	})).Return("", nil).Once()
 
 		return args{
 			ssc:      ssc,

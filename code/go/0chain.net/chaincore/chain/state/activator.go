@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/0chain/common/core/logging"
@@ -42,6 +43,7 @@ func WithActivation(ctx StateContextI, name string, before func() error, after f
 	if errors.Is(err, util.ErrNodeNotFound) {
 		return err
 	}
+	fmt.Println("round", round)
 	if ctx.GetBlock().Round < round {
 		err = before()
 	} else {
