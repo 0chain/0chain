@@ -19,6 +19,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func enableHardForks(t *testing.T, tb chainstate.StateContextI) {
+	h := chainstate.NewHardFork("apollo", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainstate.NewHardFork("ares", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainstate.NewHardFork("artemis", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainstate.NewHardFork("demeter", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSettings(t *testing.T) {
 	require.Len(t, SettingName, int(NumberOfSettings))
 	require.Len(t, Settings, int(NumberOfSettings))
@@ -51,6 +73,8 @@ func TestUpdateSettings(t *testing.T) {
 		var txn = &transaction.Transaction{
 			ClientID: p.client,
 		}
+
+		enableHardForks(t, balances)
 
 		var oldChanges config.StringMap
 		oldChanges.Fields = p.previousMap
