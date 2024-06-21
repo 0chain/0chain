@@ -1379,20 +1379,20 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 						blobberIsKilled = true
 
 						var cp *challengePool
-						demeterActError := cstate.WithActivation(balances, "demeter", func() (e error) { return },
-							func() (e error) {
-								cp, e = sc.getChallengePool(sa.ID, balances)
-								if e != nil {
-									return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
-								}
-								e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
-								if e != nil {
-									return fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
-								}
-								return nil
-							})
-						if demeterActError != nil {
-							return demeterActError
+						cp, e = sc.getChallengePool(sa.ID, balances)
+						if e != nil {
+							e = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
+
+							if demeterActErr := cstate.WithActivation(balances, "demeter", func() (e error) { return }, func() error {
+								return e
+							}); demeterActErr != nil {
+								return demeterActErr
+							}
+						}
+
+						e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
+						if e != nil {
+							e = fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
 						}
 					}
 					return e

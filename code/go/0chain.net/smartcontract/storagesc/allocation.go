@@ -519,7 +519,7 @@ func (uar *updateAllocationRequest) validate(
 	alloc *StorageAllocation,
 ) error {
 	if uar.Size == 0 &&
-		!uar.Extend &&
+		uar.Extend == false &&
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
 		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&

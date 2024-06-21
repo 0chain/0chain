@@ -392,16 +392,11 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 func (_ *StorageSmartContract) refreshProvider(
 	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
-	var sp *stakePool
-	actErr := cstate.WithActivation(balances, "demeter", func() error { return nil }, func() error {
-		sp, err = getStakePool(providerType, providerID, balances)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if actErr != nil {
-		return nil, actErr
+	sp, err := getStakePool(providerType, providerID, balances)
+	if demeterActErr := cstate.WithActivation(balances, "demeter", func() (e error) { return }, func() error {
+		return err
+	}); demeterActErr != nil {
+		return nil, demeterActErr
 	}
 
 	if providerType == spenum.Blobber {
