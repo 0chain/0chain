@@ -1002,22 +1002,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
 
-	cp, err := sc.getChallengePool(alloc.ID, balances)
-	if err != nil {
-		return "", common.NewError("allocation_updating_failed", err.Error())
-	}
-
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance, request.Extend, t.CreationDate)
-	if err != nil {
-		return "", common.NewError("allocation_updating_failed", err.Error())
-	}
-
-	if t.Value < tokensRequiredToLock {
-		return "", common.NewError("allocation_updating_failed",
-			fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock))
-	}
-
-	// lock tokens if this transaction provides them
 	if t.Value > 0 {
 		if err = alloc.addToWritePool(t, balances, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false)); err != nil {
 			return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1090,6 +1074,23 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			alloc.OwnerPublicKey = request.OwnerPublicKey
 		}
 	}
+
+	cp, err := sc.getChallengePool(alloc.ID, balances)
+	if err != nil {
+		return "", common.NewError("allocation_updating_failed", err.Error())
+	}
+
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance, request.Extend, t.CreationDate)
+	if err != nil {
+		return "", common.NewError("allocation_updating_failed", err.Error())
+	}
+
+	if t.Value < tokensRequiredToLock {
+		return "", common.NewError("allocation_updating_failed",
+			fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock+t.Value))
+	}
+
+	// lock tokens if this transaction provides them
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)
 	if err != nil {
