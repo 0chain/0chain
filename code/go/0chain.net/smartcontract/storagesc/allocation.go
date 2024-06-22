@@ -894,7 +894,6 @@ func (sc *StorageSmartContract) extendAllocation(
 
 		// update blobber's offer
 		newOffer := details.Offer()
-
 		if newOffer != oldOffer {
 			if newOffer > oldOffer {
 				coin, err := currency.MinusCoin(newOffer, oldOffer)
@@ -1002,10 +1001,18 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
 
-	if t.Value > 0 {
-		if err = alloc.addToWritePool(t, balances, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false)); err != nil {
-			return "", common.NewError("allocation_updating_failed", err.Error())
+	actErr := chainstate.WithActivation(balances, "demeter", func() error {
+		return nil
+	}, func() error {
+		if t.Value > 0 {
+			if err = alloc.addToWritePool(t, balances, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false)); err != nil {
+				return common.NewError("allocation_updating_failed", err.Error())
+			}
 		}
+		return nil
+	})
+	if actErr != nil {
+		return "", actErr
 	}
 
 	var blobbers []*StorageNode
@@ -1086,8 +1093,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if t.Value < tokensRequiredToLock {
-		return "", common.NewError("allocation_updating_failed",
-			fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock+t.Value))
+		actErr := chainstate.WithActivation(balances, "demeter", func() error {
+			return common.NewError("allocation_updating_failed",
+				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock))
+		}, func() error {
+			return common.NewError("allocation_updating_failed",
+				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock+t.Value))
+
+		})
+		if actErr != nil {
+			return "", actErr
+		}
 	}
 
 	// lock tokens if this transaction provides them
