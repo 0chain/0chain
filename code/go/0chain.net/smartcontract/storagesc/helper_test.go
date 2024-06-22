@@ -383,7 +383,6 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		sp, err := ssc.getStakePool(spenum.Blobber, blobs[i].id, balances)
 		require.NoError(t, err)
 		require.EqualValues(t, 0, sp.TotalOffers)
-		fmt.Println(" > Total offers : ", blobs[i].id, " : ", sp.TotalOffers)
 	}
 
 	var resp, err = nar.callNewAllocReq(t, client.id, 100*x10, ssc, now,

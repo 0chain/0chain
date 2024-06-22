@@ -1867,7 +1867,7 @@ func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, clien
 				AllocationRoot:         allocRoot,
 				PreviousAllocationRoot: "",
 				AllocationID:           allocID,
-				Size:                   10 * 1024 * 1024, // 100 MB
+				Size:                   ba.Size, // 100 MB
 				BlobberID:              ba.BlobberID,
 				Timestamp:              common.Timestamp(tp),
 				ClientID:               client.id,
@@ -1908,218 +1908,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 	var (
 		ssc                 = newTestStorageSC()
 		balances            = newTestBalances(t, false)
-		otherClient         = newClient(50*x10, balances)
 		mockBlobberCapacity = 2 * GB
 	)
-
-	t.Run("Local debugging", func(t *testing.T) {
-		var (
-			tp     = int64(0)
-			client = newClient(2000*x10, balances)
-
-			// Allocation
-			beforeAlloc, blobberClients = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
-			allocID                     = beforeAlloc.ID
-		)
-
-		for _, b := range blobberClients {
-			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
-			require.NoError(t, err)
-
-			fmt.Println(" >> Total offers : ", b.id, " : ", sp.TotalOffers)
-		}
-
-		// size
-		var uar updateAllocationRequest
-		uar.ID = allocID
-		uar.Size = 10 * GB
-		tp += int64(360 * time.Hour / 1e9)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 100*x10, tp, ssc, balances)
-		require.NoError(t, err)
-
-		for _, b := range blobberClients {
-			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
-			require.NoError(t, err)
-
-			fmt.Println(" >>> Total offers : ", b.id, " : ", sp.TotalOffers)
-
-			blobber, err := ssc.getBlobber(b.id, balances)
-			require.NoError(t, err)
-
-			// Update write price
-			blobber.mustUpdateBase(func(bb *storageNodeBase) error {
-				bb.Terms.WritePrice += 5 * x10
-				return nil
-			})
-			tp += 100
-			_, err = updateBlobber(t, blobber, 0, tp, ssc, balances)
-			require.NoError(t, err)
-
-			blobber, err = ssc.getBlobber(b.id, balances)
-			require.NoError(t, err)
-		}
-
-		// extend
-		uar.ID = allocID
-		uar.Size = 0
-		uar.Extend = true
-		tp += int64(360 * time.Hour / 1e9)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 400*x10, tp, ssc, balances)
-		require.NoError(t, err)
-
-		for _, b := range blobberClients {
-			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
-			require.NoError(t, err)
-
-			fmt.Println(" >>>> Total offers : ", b.id, " : ", sp.TotalOffers)
-		}
-
-		return
-
-		// Owner can extend regardless of the value of `third_party_extendable`
-		req := updateAllocationRequest{
-			ID:     beforeAlloc.ID,
-			Extend: true,
-		}
-		tp += 1000
-		resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
-		require.NoError(t, err)
-
-		// Others cannot extend the allocation if `third_party_extendable` = false
-		req = updateAllocationRequest{
-			ID:     beforeAlloc.ID,
-			Extend: true,
-		}
-		tp += 1000
-		resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
-		require.Error(t, err)
-		assert.Equal(t, "allocation_updating_failed: only owner can update the allocation", err.Error())
-
-		// Owner can change `third_party_extendable`
-		req = updateAllocationRequest{
-			ID:                      beforeAlloc.ID,
-			SetThirdPartyExtendable: true,
-		}
-		tp += 1000
-		resp, err = req.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
-		require.NoError(t, err)
-
-		// Others can extend the allocation if `third_party_extendable` = true
-		alloc, err := ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		req = updateAllocationRequest{
-			ID:     alloc.ID,
-			Extend: true,
-		}
-		tp += 1000
-		expectedSize := alloc.Size
-		resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
-		require.NoError(t, err)
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		assert.Equal(t, expectedSize, alloc.Size)
-		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
-
-		// Other cannot perform any other action than extending.
-		req = updateAllocationRequest{
-			ID:                 alloc.ID,
-			FileOptions:        61,
-			FileOptionsChanged: true,
-		}
-		tp += 1000
-		expectedFileOptions := alloc.FileOptions
-		resp, err = req.callUpdateAllocReq(t, otherClient.id, 20*x10, tp, ssc, balances)
-		require.Error(t, err)
-
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		assert.Equal(t, expectedFileOptions, alloc.FileOptions)
-
-		for _, b := range blobberClients {
-			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
-			require.NoError(t, err)
-
-			fmt.Println(" >>>>> Total offers : ", b.id, " : ", sp.TotalOffers)
-		}
-
-		//
-		// add blobber
-		//
-		tp += 1000
-		nb := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
-		tp += 1000
-		req = updateAllocationRequest{
-			ID:           alloc.ID,
-			AddBlobberId: nb.id,
-		}
-		resp, err = req.callUpdateAllocReq(t, client.id, 10*x10, tp, ssc, balances)
-		require.NoError(t, err)
-
-		blobberClients = append(blobberClients, nb)
-
-		for _, b := range blobberClients {
-			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
-			require.NoError(t, err)
-
-			fmt.Println(" >>>>>> Total offers : ", b.id, " : ", sp.TotalOffers)
-		}
-
-		// replace blobber
-		tp += 1000
-		nb = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
-		tp += 1000
-		req = updateAllocationRequest{
-			ID:              alloc.ID,
-			RemoveBlobberId: blobberClients[0].id,
-			AddBlobberId:    nb.id,
-		}
-
-		resp, err = req.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.NoError(t, err)
-
-		blobberClients = append(blobberClients, nb)
-
-		for _, b := range blobberClients {
-			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
-			require.NoError(t, err)
-
-			fmt.Println(" >>>>>>> Total offers : ", b.id, " : ", sp.TotalOffers)
-		}
-
-		// Cancel allocation
-		tp += 1000
-		var req2 lockRequest
-		req2.AllocationID = allocID
-
-		var tx = newTransaction(client.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.cancelAllocationRequest(tx, mustEncode(t, &req2), balances)
-		require.NoError(t, err)
-
-		for _, b := range blobberClients {
-			sp, err := ssc.getStakePool(spenum.Blobber, b.id, balances)
-			require.NoError(t, err)
-
-			fmt.Println(" >>>>>>> Total offers : ", b.id, " : ", sp.TotalOffers)
-		}
-
-		return
-
-		var deco StorageAllocation
-		require.NoError(t, deco.Decode([]byte(resp)))
-
-		afterAlloc, err := ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
-		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.Expiration, "Allocation expiration should be increased")
-
-		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
-
-		beforeAlloc.Tx = afterAlloc.Tx
-		beforeAlloc.Expiration = afterAlloc.Expiration
-		compareAllocationData(t, *beforeAlloc, *afterAlloc)
-	})
 
 	t.Run("Extend unused allocation duration should work without adding extra payment", func(t *testing.T) {
 		var (
@@ -2156,7 +1946,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 	})
 
 	t.Run("Extend used allocation duration should work with adding extra payment", func(t *testing.T) {
-		t.Skip()
 		var (
 			tp     = int64(10)
 			client = newClient(200000*x10, balances)
@@ -2172,7 +1961,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		var uar updateAllocationRequest
 		uar.ID = allocID
 		uar.Extend = true
-		tp += int64(360 * time.Hour)
+		tp += int64(360 * time.Hour / 1e9)
 		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
 		require.Error(t, err)
 
@@ -2187,7 +1976,12 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.Expiration, "Allocation expiration should be increased")
-		require.Equal(t, 100*x10, int(afterAlloc.WritePool), "Write pool should be updated")
+		require.Equal(t, 50*x10, int(afterAlloc.WritePool), "Write pool should be updated")
+
+		cp, err := ssc.getChallengePool(allocID, balances)
+		require.NoError(t, err)
+
+		require.Equal(t, 150*x10, int(cp.Balance), "Write pool should be updated")
 
 		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
 
