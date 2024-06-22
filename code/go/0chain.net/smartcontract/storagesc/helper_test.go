@@ -354,11 +354,23 @@ var avgTerms = Terms{
 
 // add allocation and 20 blobbers
 func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
-	now int64, nblobs int, balances chainState.StateContextI) (
+	now, allocSize, blobberCapacity int64, blobberBalance, lockTokens currency.Coin, nblobs int, balances chainState.StateContextI, preStakeTokens bool) (
 	allocID string, blobs []*Client) {
 
 	if nblobs <= 0 {
-		nblobs = 20
+		nblobs = 30
+	}
+
+	if lockTokens == 0 {
+		lockTokens = 1000 * x10
+	}
+
+	if blobberCapacity == 0 {
+		blobberCapacity = 2 * GB
+	}
+
+	if blobberBalance == 0 {
+		blobberBalance = 50 * x10
 	}
 
 	setConfig(t, balances)
@@ -370,7 +382,12 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.OwnerPublicKey = client.pk
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
-	nar.Size = 10 * GB // 20 GB
+
+	if allocSize == 0 {
+		nar.Size = 10 * GB // 20 GB
+	} else {
+		nar.Size = allocSize
+	}
 
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, 200*GB, now, avgTerms, 5000*x10, balances)
@@ -379,13 +396,15 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		blobs = append(blobs, b)
 	}
 
-	for i := 0; i < nblobs; i++ {
-		sp, err := ssc.getStakePool(spenum.Blobber, blobs[i].id, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 0, sp.TotalOffers)
+	if preStakeTokens {
+		for i := 0; i < nblobs; i++ {
+			sp, err := ssc.getStakePool(spenum.Blobber, blobs[i].id, balances)
+			require.NoError(t, err)
+			require.EqualValues(t, 0, sp.TotalOffers)
+		}
 	}
 
-	var resp, err = nar.callNewAllocReq(t, client.id, 100*x10, ssc, now,
+	var resp, err = nar.callNewAllocReq(t, client.id, lockTokens, ssc, now,
 		balances)
 	require.NoError(t, err)
 

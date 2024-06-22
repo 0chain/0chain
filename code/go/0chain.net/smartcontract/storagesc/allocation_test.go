@@ -1000,7 +1000,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
-			Capacity:     25 * GB, // 20 GB
+			Capacity:     50 * GB, // 50 GB
 			Allocated:    5 * GB,  //  5 GB
 			NotAvailable: notAvailable,
 			IsRestricted: &isRestricted,
@@ -1851,7 +1851,7 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, client *Client, tp int64, balances *testBalances, mockBlobberCapacity int, zeroStats bool) (alloc *StorageAllocation, blobbers []*Client) {
 	var err error
 
-	allocID, blobbers := addAllocation(t, ssc, client, tp, 0, balances)
+	allocID, blobbers := addAllocation(t, ssc, client, tp, 10*GB, 200*GB, 5000*x10, 100*x10, 20, balances, true)
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
@@ -2101,7 +2101,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		client         = newClient(2000*x10, balances)
 		otherClient    = newClient(50*x10, balances)
 		tp             = int64(0)
-		allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+		allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 		alloc          *StorageAllocation
 		resp           string
 		err            error
@@ -2507,7 +2507,7 @@ func Test_finalize_allocation(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -2688,7 +2688,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// bind another allocation to the blobber
 
