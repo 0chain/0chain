@@ -61,22 +61,16 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				} else {
 					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
 				}
-				var roundNum int64
 				switch bmsg.Type {
 				case MessageVRFShare:
-					roundNum = bmsg.VRFShare.Round
 					protocol.HandleVRFShare(ctx, bmsg)
 				case MessageVerify:
-					roundNum = bmsg.Block.Round
 					protocol.HandleVerifyBlockMessage(ctx, bmsg)
 				case MessageVerificationTicket:
-					roundNum = bmsg.BlockVerificationTicket.Round
 					protocol.HandleVerificationTicketMessage(ctx, bmsg)
 				case MessageNotarization:
-					roundNum = bmsg.Notarization.Round
 					protocol.HandleNotarizationMessage(ctx, bmsg)
 				case MessageNotarizedBlock:
-					roundNum = bmsg.Block.Round
 					protocol.HandleNotarizedBlockMessage(ctx, bmsg)
 				}
 				if bmsg.Sender != nil {
@@ -89,13 +83,6 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 					logging.Logger.Debug("message (done)",
 						zap.Any("msg", GetMessageLookup(bmsg.Type)),
 						zap.Duration("duration", time.Since(ts)))
-				}
-
-				// delete rounds below on receiving messages because sometimes miner could not finalize block due to insufficient
-				// state while the network is moving on, we should not keep unnecessary rounds and blocks in miners, which will cause
-				// lot of memory leak.
-				if roundNum > 0 {
-					mc.DeleteRoundsBelow(roundNum)
 				}
 			}(msg)
 		}
