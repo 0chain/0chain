@@ -72,6 +72,15 @@ func TestUpdateSettings(t *testing.T) {
 			expected.Fields[key] = value
 		}
 
+		var conf = &Config{
+			OwnerId: owner,
+		}
+		balances.On("GetTrieNode", scConfigKey(ADDRESS),
+			mock.MatchedBy(func(c *Config) bool {
+				*c = *conf
+				return true
+			})).Return(nil).Once()
+
 		balances.On(
 			"InsertTrieNode",
 			settingChangesKey,
@@ -88,14 +97,20 @@ func TestUpdateSettings(t *testing.T) {
 			}),
 		).Return("", nil).Once()
 
-		var conf = &Config{
-			OwnerId: owner,
-		}
-		balances.On("GetTrieNode", scConfigKey(ADDRESS),
-			mock.MatchedBy(func(c *Config) bool {
-				*c = *conf
+		h := chainstate.NewHardFork("demeter", 1)
+		balances.On("GetTrieNode", h.GetKey(),
+			mock.MatchedBy(func(c *chainstate.HardFork) bool {
 				return true
-			})).Return(nil).Once()
+			})).Return(nil)
+
+		b := &block.Block{}
+		b.Round = 0
+		balances.On("GetBlock", mock.Anything, mock.Anything).Return(b, nil)
+
+		balances.On("InsertTrieNode", scConfigKey(ADDRESS),
+			mock.MatchedBy(func(c *Config) bool {
+				return true
+			})).Return("", nil).Once()
 
 		return args{
 			ssc:      ssc,
