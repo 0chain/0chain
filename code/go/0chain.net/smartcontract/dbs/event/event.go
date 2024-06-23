@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -25,6 +24,7 @@ type Event struct {
 	Tag                      EventTag    `json:"tag"`
 	Index                    string      `json:"index"`
 	IsPublished              bool        `json:"is_published"`
+	EventKey                 string      `json:"event_key"`
 	SequenceNumber           int64       `json:"sequence_number"`
 	RoundLocalSequenceNumber int64       `json:"round_local_sequence_number"`
 	Data                     interface{} `json:"data" gorm:"-"`
@@ -138,7 +138,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 
 			ts := time.Now()
-			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
+			key := filteredEvent.EventKey
 			err = broker.PublishToKafka(topic, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
