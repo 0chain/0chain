@@ -384,13 +384,13 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 
 	if allocSize == 0 {
-		nar.Size = 10 * GB // 20 GB
+		nar.Size = 1 * GB // 20 GB
 	} else {
 		nar.Size = allocSize
 	}
 
 	for i := 0; i < nblobs; i++ {
-		var b = addBlobber(t, ssc, 200*GB, now, avgTerms, 5000*x10, balances)
+		var b = addBlobber(t, ssc, blobberCapacity, now, avgTerms, blobberBalance, balances)
 		nar.Blobbers = append(nar.Blobbers, b.id)
 		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		blobs = append(blobs, b)
