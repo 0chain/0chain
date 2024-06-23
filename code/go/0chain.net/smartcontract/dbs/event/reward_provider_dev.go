@@ -1,10 +1,11 @@
 package event
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/url"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/pkg/errors"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
@@ -227,6 +228,16 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 
 	result.TotalReward = result.TotalProviderReward + result.TotalDelegateReward
 
+	return result, nil
+}
+
+func (edb *EventDb) GetQueryData(preload string, fields string, table interface{}) ([]interface{}, error) {
+	var result []interface{}
+
+	err := edb.Get().Preload(preload).Select(fields).Model(&table).Find(&result).Error
+	if err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 

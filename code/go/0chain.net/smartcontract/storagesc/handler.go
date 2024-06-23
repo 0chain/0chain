@@ -70,7 +70,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getWriteMarkers", common.UserRateLimit(srh.getWriteMarkers)),
 		rest.MakeEndpoint(storage+"/get_validator", common.UserRateLimit(srh.getValidator)),
 		rest.MakeEndpoint(storage+"/validators", common.UserRateLimit(srh.validators)),
-		rest.MakeEndpoint(storage+"/openchallenges", common.UserRateLimit(srh.getOpenChallenges)), 
+		rest.MakeEndpoint(storage+"/openchallenges", common.UserRateLimit(srh.getOpenChallenges)),
 		rest.MakeEndpoint(storage+"/getchallenge", common.UserRateLimit(srh.getChallenge)),
 		rest.MakeEndpoint(storage+"/blobber-challenges", common.UserRateLimit(srh.getBlobberChallenges)),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", common.UserRateLimit(srh.getStakePoolStat)),
@@ -110,6 +110,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-delegate-rewards", srh.getDelegateRewardsByFilter))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/parition-size-frequency", srh.getPartitionSizeFrequency))
 		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/blobber-selection-frequency", srh.getBlobberPartitionSelectionFrequency))
+		restEndpoints = append(restEndpoints, rest.MakeEndpoint(storage+"/query-data", srh.getQueryData))
 	}
 
 	return restEndpoints
@@ -299,13 +300,13 @@ func (nar *allocationBlobbersRequest) decode(b []byte) error {
 // Returns list of all active blobbers that match the allocation request, or an error if not enough blobbers are available.
 // Before the user attempts to create an allocation, they can use this endpoint to get a list of blobbers that match the allocation request. This includes:
 //
-//   * Read and write price ranges
+//   - Read and write price ranges
 //
-//   * Data and parity shards
+//   - Data and parity shards
 //
-//   * Size
+//   - Size
 //
-//   * Restricted status
+//   - Restricted status
 //
 // parameters:
 //
@@ -1000,7 +1001,9 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 //	required: true
 //	in: query
 //	type: string
+//
 // +name: offset
+//
 //	description: Pagination offset to specify the starting point of the result set.
 //	in: query
 //	type: string
@@ -1765,20 +1768,20 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 //
 // parameters:
 //
-//	+name: client
-//	 description: ID of the client for which to get the latest read marker.
-//	 in: query
-//	 type: string
-//   required: true
-//	+name: blobber
-//	 description: blobber ID associated with the read marker.
-//	 in: query
-//	 type: string
-//	 required: true
-//	+name: allocation
-//	 description: Allocation ID associated with the read marker.
-//	 in: query
-//	 type: string
+//		+name: client
+//		 description: ID of the client for which to get the latest read marker.
+//		 in: query
+//		 type: string
+//	  required: true
+//		+name: blobber
+//		 description: blobber ID associated with the read marker.
+//		 in: query
+//		 type: string
+//		 required: true
+//		+name: allocation
+//		 description: Allocation ID associated with the read marker.
+//		 in: query
+//		 type: string
 //
 // responses:
 //
@@ -2197,7 +2200,7 @@ func (srh *StorageRestHandler) getBlobberAllocations(w http.ResponseWriter, r *h
 
 // getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation storage-sc GetAllocation
 // Get allocation information
-// 
+//
 // Retrieves information about a specific allocation given its id.
 //
 // parameters:
@@ -3138,6 +3141,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3197,6 +3201,7 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3257,6 +3262,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3317,6 +3323,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3377,6 +3384,7 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
