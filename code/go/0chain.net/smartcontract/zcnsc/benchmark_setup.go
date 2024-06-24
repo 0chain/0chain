@@ -160,6 +160,7 @@ func getMockDelegatePool(id string) *stakepool.DelegatePool {
 	}
 }
 
+//nolint:unused
 func getMockAuthoriserStakePoolId(authoriser string, stake int) string {
 	return encryption.Hash(authoriser + "pool" + strconv.Itoa(stake))
 }

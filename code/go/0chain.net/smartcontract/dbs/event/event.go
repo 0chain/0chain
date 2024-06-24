@@ -28,6 +28,7 @@ type Event struct {
 	SequenceNumber           int64       `json:"sequence_number"`
 	RoundLocalSequenceNumber int64       `json:"round_local_sequence_number" gorm:"-"`
 	Data                     interface{} `json:"data" gorm:"-"`
+	Version     EventVersion `json:"version" gorm:"-"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {

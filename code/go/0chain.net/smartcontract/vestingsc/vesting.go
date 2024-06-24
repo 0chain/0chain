@@ -874,6 +874,7 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 // REST handlers
 //
 
+//nolint:unused
 func (vsc *VestingSmartContract) getPoolInfoHandler(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
