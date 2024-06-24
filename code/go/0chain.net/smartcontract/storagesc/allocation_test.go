@@ -2092,6 +2092,49 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		}
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
+
+	t.Run("Add blobber to unused allocation should work", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			allocID        = beforeAlloc.ID
+		)
+
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+
+		// add blobber
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.AddBlobberId = nb3.id
+		uar.AddBlobberAuthTicket = ""
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+		assert.Equal(t, 21, len(afterAlloc.BlobberAllocs), "Blobber should be added to the allocation")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAlloc.Tx
+		expectedAlloc.ParityShards = 11
+		expectedAlloc.WritePool = afterAlloc.WritePool
+		randAllocDeepCopy := afterAlloc.deepCopy(t)
+		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, randAllocDeepCopy.BlobberAllocs[0])
+		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
+		compareAllocationData(t, *expectedAlloc, *afterAlloc)
+	})
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
