@@ -119,6 +119,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			filteredEvents = filterEvents(events.events)
 			broker         = edb.GetKafkaProv()
 			topic          = edb.dbConfig.KafkaTopic
+			topicPartition = edb.dbConfig.KafkaTopicPartition
 			eventsMap      = make(map[int64]*Event)
 		)
 
@@ -139,7 +140,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 			ts := time.Now()
 			key := filteredEvent.EventKey
-			err = broker.PublishToKafka(topic, []byte(key), eventJson)
+			err = broker.PublishToKafka(topic, topicPartition, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
