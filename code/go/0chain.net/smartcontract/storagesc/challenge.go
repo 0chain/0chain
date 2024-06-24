@@ -640,6 +640,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
+		//nolint:errcheck 
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.RewardRound = RewardRound{
 				StartRound: rewardRound,
@@ -869,6 +870,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			challengeBlobbers[i], challengeBlobbers[j] = challengeBlobbers[j], challengeBlobbers[i]
 		})
 
+		//nolint:all
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers

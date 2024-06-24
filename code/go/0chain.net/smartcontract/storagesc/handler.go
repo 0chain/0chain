@@ -434,8 +434,9 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	}
 
 	if len(blobberIDs) < numberOfBlobbers && !isForce {
-		return nil, errors.New(fmt.Sprintf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers))
+		return nil, fmt.Errorf("not enough blobbers to honor the allocation : %d < %d", len(blobberIDs), numberOfBlobbers)
 	}
+
 	return blobberIDs, nil
 }
 
@@ -815,7 +816,7 @@ func (srh *StorageRestHandler) getBlocks(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var fullBlocks []fullBlock
-	txs, err := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
+	txs, _ := edb.GetTransactionsForBlocks(blocks[0].Round, blocks[len(blocks)-1].Round)
 	var txnIndex int
 	for i, b := range blocks {
 		fBlock := fullBlock{Block: blocks[i]}
@@ -908,6 +909,7 @@ func (srh *StorageRestHandler) getBlock(w http.ResponseWriter, r *http.Request) 
 	}
 
 	common.Respond(w, r, nil, common.NewErrBadRequest("no filter selected"))
+	//nolint:gosimple
 	return
 }
 
@@ -1482,7 +1484,7 @@ func newValidatorNodeResponse(v event.Validator) *validatorNodeResponse {
 //	400:
 func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request) {
 
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, _ := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	edb := srh.GetQueryStateContext().GetEventDB()
 	if edb == nil {
 		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
@@ -1494,6 +1496,7 @@ func (srh *StorageRestHandler) validators(w http.ResponseWriter, r *http.Request
 	stakable := values.Get("stakable") == "true"
 
 	var validators []event.Validator
+	var err error
 
 	if active == "true" {
 		conf, err2 := getConfig(srh.GetQueryStateContext())
@@ -2779,7 +2782,7 @@ func (srh *StorageRestHandler) getBlobbers(w http.ResponseWriter, r *http.Reques
 		}
 
 		if len(blobber_ids) > common2.MaxQueryLimit {
-			common.Respond(w, r, nil, errors.New(fmt.Sprintf("too many ids, cannot exceed %d", common2.MaxQueryLimit)))
+			common.Respond(w, r, nil, fmt.Errorf("too many ids, cannot exceed %d", common2.MaxQueryLimit))
 			return
 		}
 
