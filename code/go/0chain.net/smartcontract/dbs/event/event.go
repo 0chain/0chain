@@ -24,9 +24,9 @@ type Event struct {
 	Tag                      EventTag    `json:"tag"`
 	Index                    string      `json:"index"`
 	IsPublished              bool        `json:"is_published"`
-	EventKey                 string      `json:"event_key"`
+	EventKey                 string      `json:"event_key" gorm:"-"`
 	SequenceNumber           int64       `json:"sequence_number"`
-	RoundLocalSequenceNumber int64       `json:"round_local_sequence_number"`
+	RoundLocalSequenceNumber int64       `json:"round_local_sequence_number" gorm:"-"`
 	Data                     interface{} `json:"data" gorm:"-"`
 }
 
