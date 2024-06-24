@@ -174,6 +174,7 @@ func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
 	return nil
 }
 
+//nolint:unused
 func newBLS0ChainSchemeFromPublicKey(publicKey []byte) (*BLS0ChainScheme, error) {
 	b0 := &BLS0ChainScheme{}
 	var pubKey bls.PublicKey
