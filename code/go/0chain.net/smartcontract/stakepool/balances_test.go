@@ -41,6 +41,9 @@ type testBalances struct {
 	skipMerge bool      // don't merge for now
 }
 
+func scConfigKey(scKey string) datastore.Key {
+	return scKey + encryption.Hash("storagesc_config")
+}
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 
 	tb = &testBalances{
@@ -56,6 +59,35 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	if mpts {
 		tb.mpts = newMptStore(t)
 	}
+
+	h := cstate.NewHardFork("apollo", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = cstate.NewHardFork("ares", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = cstate.NewHardFork("artemis", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = cstate.NewHardFork("athena", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = cstate.NewHardFork("demeter", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	bk := &block.Block{}
+	bk.Round = 2
+	tb.setBlock(t, bk)
 
 	return
 }
@@ -75,6 +107,11 @@ func (tb *testBalances) GetTransaction() *transaction.Transaction {
 }
 
 // stubs
+
+func (tb *testBalances) setBlock(t testing.TB, block *block.Block) {
+	tb.block = block
+}
+
 func (tb *testBalances) GetBlock() *block.Block                      { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI          { return nil }
 func (tb *testBalances) Validate() error                             { return nil }

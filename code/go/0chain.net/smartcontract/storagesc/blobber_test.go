@@ -1561,7 +1561,8 @@ func TestCommitBlobberConnection(t *testing.T) {
 	conf := setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// blobbers: stake 10k, balance 40k
 
