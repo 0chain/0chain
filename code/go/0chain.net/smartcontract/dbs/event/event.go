@@ -26,6 +26,7 @@ type Event struct {
 	IsPublished    bool        `json:"is_published"`
 	SequenceNumber int64       `json:"sequence_number"`
 	Data           interface{} `json:"data" gorm:"-"`
+	Version     EventVersion `json:"version" gorm:"-"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {

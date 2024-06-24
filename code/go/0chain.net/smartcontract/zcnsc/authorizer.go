@@ -93,6 +93,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	}
 
 	// Check existing Authorizer
+	//nolint:staticcheck
 	authorizer, err := GetAuthorizerNode(authorizerID, ctx)
 	switch err {
 	case util.ErrValueNotPresent:
