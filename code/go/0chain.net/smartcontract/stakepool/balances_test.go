@@ -42,6 +42,7 @@ type testBalances struct {
 }
 
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
+
 	tb = &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
