@@ -108,6 +108,11 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 		t.Fatal(err)
 	}
 
+	h = cstate.NewHardFork("athena", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
 	h = cstate.NewHardFork("demeter", 1)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)

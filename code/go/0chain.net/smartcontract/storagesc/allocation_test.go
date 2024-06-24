@@ -999,7 +999,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
-			Capacity:     25 * GB, // 20 GB
+			Capacity:     50 * GB, // 50 GB
 			Allocated:    5 * GB,  //  5 GB
 			NotAvailable: notAvailable,
 			IsRestricted: &isRestricted,

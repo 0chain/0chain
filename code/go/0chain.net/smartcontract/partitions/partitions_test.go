@@ -1309,6 +1309,11 @@ func enableHardForks(t *testing.T, tb state.StateContextI) {
 		t.Fatal(err)
 	}
 
+	h = state.NewHardFork("athena", 1)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
 	h = state.NewHardFork("demeter", 1)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
