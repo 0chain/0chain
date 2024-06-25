@@ -949,6 +949,7 @@ func getMinersList(state cstate.CommonStateContextI) (*MinerNodes, error) {
 	return minerNodes, nil
 }
 
+//nolint:unused
 func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 	nodeIDs := make(NodeIDs, len(miners.Nodes))
 	for i, m := range miners.Nodes {
@@ -1061,6 +1062,7 @@ func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 	return sharders, nil
 }
 
+//nolint:unused
 func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
 	nodeIDs := make(NodeIDs, len(sharders.Nodes))
 	for i, n := range sharders.Nodes {
@@ -1128,6 +1130,7 @@ func getNodesList(
 
 // quick fix: localhost check + duplicate check
 // TODO: remove this after more robust challenge based node addtion/health_check is added
+//nolint:unused
 func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
 	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)
 	host := strings.TrimSpace(nn.Host)

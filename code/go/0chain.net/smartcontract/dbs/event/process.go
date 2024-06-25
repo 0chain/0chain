@@ -62,6 +62,8 @@ func (edb *EventDb) ProcessEvents(
 	for i := range es {
 		localCounter++
 		es[i].SequenceNumber = int64(latestGlobalCounter) + int64(localCounter)
+		es[i].RoundLocalSequenceNumber = int64(localCounter)
+		es[i].EventKey = fmt.Sprintf("%v:%v", round, int64(localCounter))
 	}
 
 	pdu := time.Since(ts)
@@ -386,7 +388,9 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 				events: events,
 			}
 
-			edb.mustPushEventsToKafka(es, true)
+			if es.round >= edb.Config().KafkaTriggerRound {
+				edb.mustPushEventsToKafka(es, true)
+			}
 		}
 	}
 

@@ -471,6 +471,16 @@ func (c *ConfigImpl) FromViper() error {
 		logging.Logger.Error("error during BindEnv", zap.Error(err))
 	}
 
+	if err := viper.BindEnv("server_chain.kafka.host", "KAFKA_HOSTNAME"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+	if err := viper.BindEnv("server_chain.kafka.username", "KAFKA_USERNAME"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+	if err := viper.BindEnv("server_chain.kafka.password", "KAFKA_PASSWORD"); err != nil {
+		logging.Logger.Error("error during BindEnv", zap.Error(err))
+	}
+
 	conf := c.conf
 	conf.IsStateEnabled = viper.GetBool("server_chain.state.enabled")
 	conf.IsDkgEnabled = viper.GetBool("server_chain.dkg")
@@ -587,10 +597,11 @@ func (c *ConfigImpl) FromViper() error {
 		conf.DbsEvents.Slowtablespace = "hddtablespace"
 	}
 	conf.DbsEvents.KafkaEnabled = viper.GetBool("kafka.enabled")
-	conf.DbsEvents.KafkaHost = viper.GetString("kafka.host")
+	conf.DbsEvents.KafkaHost = viper.GetString("server_chain.kafka.host")
 	conf.DbsEvents.KafkaTopic = viper.GetString("kafka.topic")
-	conf.DbsEvents.KafkaUsername = viper.GetString("kafka.username")
-	conf.DbsEvents.KafkaPassword = viper.GetString("kafka.password")
+	conf.DbsEvents.KafkaTopicPartition = viper.GetInt("kafka.partition")
+	conf.DbsEvents.KafkaUsername = viper.GetString("server_chain.kafka.username")
+	conf.DbsEvents.KafkaPassword = viper.GetString("server_chain.kafka.password")
 	conf.DbsEvents.KafkaWriteTimeout = viper.GetDuration("kafka.write_timeout")
 	conf.DbsEvents.KafkaTriggerRound = viper.GetInt64("kafka.trigger_round")
 	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
@@ -773,7 +784,7 @@ func (c *ConfigImpl) Update(fields map[string]string, version int64) error {
 	}
 
 	if maxTxnFee == 0 {
-		maxTxnFeeF = DefaultMaxTxnFee
+		maxTxnFee, _ = currency.ParseZCN(DefaultMaxTxnFee)
 	}
 
 	conf.MaxTxnFee = maxTxnFee

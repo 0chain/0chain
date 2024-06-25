@@ -999,7 +999,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
-			Capacity:     25 * GB, // 20 GB
+			Capacity:     50 * GB, // 50 GB
 			Allocated:    5 * GB,  //  5 GB
 			NotAvailable: notAvailable,
 			IsRestricted: &isRestricted,
@@ -2290,7 +2290,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
 		require.NoError(t, err)
-
+		//nolint:errcheck
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.SavedData = int64(mockBlobberCapacity) / 2
 			return nil
@@ -2476,7 +2476,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 
 		blobber, err := ssc.getBlobber(ba.BlobberID, balances)
 		require.NoError(t, err)
-
+		//nolint:errcheck
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.SavedData = int64(mockBlobberCapacity) / 2
 			return nil
