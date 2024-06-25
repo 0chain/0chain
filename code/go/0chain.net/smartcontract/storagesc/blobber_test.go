@@ -214,7 +214,7 @@ func Test_flow_reward(t *testing.T) {
 	conf := setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -659,7 +659,7 @@ func Test_flow_penalty(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -866,7 +866,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -1083,7 +1083,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -1561,7 +1561,8 @@ func TestCommitBlobberConnection(t *testing.T) {
 	conf := setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// blobbers: stake 10k, balance 40k
 

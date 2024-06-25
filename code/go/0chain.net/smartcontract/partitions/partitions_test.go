@@ -1294,27 +1294,27 @@ func addPartition(t *testing.T, s state.StateContextI, name string, size, num in
 }
 
 func enableHardForks(t *testing.T, tb state.StateContextI) {
-	h := state.NewHardFork("apollo", 1)
+	h := state.NewHardFork("apollo", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = state.NewHardFork("ares", 1)
+	h = state.NewHardFork("ares", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = state.NewHardFork("artemis", 1)
+	h = state.NewHardFork("artemis", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = state.NewHardFork("athena", 1)
+	h = state.NewHardFork("athena", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = state.NewHardFork("demeter", 1)
+	h = state.NewHardFork("demeter", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
