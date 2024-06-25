@@ -79,7 +79,11 @@ func (k *KafkaProvider) PublishToKafka(topic string, topicPartition int, key, me
 	}
 
 	writer.Input() <- msg
-	<-writer.Successes()
+	x := <-writer.Successes()
+	logging.Logger.Debug("received producer message kafka response",
+		zap.Int("sent_partition", int((*x).Partition)),
+		zap.Any("message_partition", topicPartition),
+	)
 	return nil
 }
 
