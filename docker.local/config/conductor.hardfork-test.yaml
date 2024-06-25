@@ -29,18 +29,5 @@ tests:
           params:
             names : "apollo"
             rounds : 1
-      # - wait_round:
-      #     shift: 100
-      #     timeout: "5m"
-      # - command:
-      #     name: "add_hardfork"
-      #     params:
-      #       names : "artemis"
-      #       rounds : 101
-      # - command:
-      #     name: "verify_hardfork"
-      #     params:
-      #       names : "artemis"
-      #       rounds : 101
 
     
