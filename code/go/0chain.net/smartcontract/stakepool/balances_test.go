@@ -42,6 +42,7 @@ type testBalances struct {
 }
 
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
+
 	tb = &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
@@ -87,6 +88,9 @@ func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)  {}
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer { return nil }
 func (tb *testBalances) GetEventDB() *event.EventDb                  { return nil }
 func (tb *testBalances) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...cstate.Appender) {
+	tb.EmitEventWithVersion(event.Version1, eventType, tag, index, data, appenders...)
+}
+func (tb *testBalances) EmitEventWithVersion(eventVersion event.EventVersion, eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...cstate.Appender) {
 	tb.RWMutex.Lock()
 	defer tb.RWMutex.Unlock()
 	e := event.Event{

@@ -1,10 +1,10 @@
 package event
 
 import (
+	"0chain.net/chaincore/node"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -18,14 +18,17 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber    int64       `json:"block_number"`
-	TxHash         string      `json:"tx_hash"`
-	Type           EventType   `json:"type"`
-	Tag            EventTag    `json:"tag"`
-	Index          string      `json:"index"`
-	IsPublished    bool        `json:"is_published"`
-	SequenceNumber int64       `json:"sequence_number"`
-	Data           interface{} `json:"data" gorm:"-"`
+	BlockNumber              int64       `json:"block_number"`
+	TxHash                   string      `json:"tx_hash"`
+	Type                     EventType   `json:"type"`
+	Tag                      EventTag    `json:"tag"`
+	Index                    string      `json:"index"`
+	IsPublished              bool        `json:"is_published"`
+	EventKey                 string      `json:"event_key" gorm:"-"`
+	SequenceNumber           int64       `json:"sequence_number"`
+	RoundLocalSequenceNumber int64       `json:"round_local_sequence_number" gorm:"-"`
+	Data                     interface{} `json:"data" gorm:"-"`
+	Version     EventVersion `json:"version" gorm:"-"`
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -117,17 +120,19 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			filteredEvents = filterEvents(events.events)
 			broker         = edb.GetKafkaProv()
 			topic          = edb.dbConfig.KafkaTopic
+			topicPartition = edb.dbConfig.KafkaTopicPartition
 			eventsMap      = make(map[int64]*Event)
 		)
 
 		for i, e := range events.events {
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
-
+		self := node.Self.Underlying()
 		for _, filteredEvent := range filteredEvents {
 			data := map[string]interface{}{
-				"event": filteredEvent,
-				"round": events.round,
+				"event":  filteredEvent,
+				"round":  events.round,
+				"source": self.ID,
 			}
 			eventJson, err := json.Marshal(data)
 			if err != nil {
@@ -135,8 +140,8 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 
 			ts := time.Now()
-			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
-			err = broker.PublishToKafka(topic, []byte(key), eventJson)
+			key := filteredEvent.EventKey
+			err = broker.PublishToKafka(topic, topicPartition, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))

@@ -37,5 +37,6 @@ func CreateFinalizeBlockEvent(block *Block) event.Event {
 		Tag:         event.TagFinalizeBlock,
 		Index:       block.Hash,
 		Data:        blockToBlockEvent(block),
+		Version:     event.Version1,
 	}
 }
