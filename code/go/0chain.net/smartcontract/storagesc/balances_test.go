@@ -96,27 +96,27 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	_, err = tb.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
-	h := cstate.NewHardFork("apollo", 1)
+	h := cstate.NewHardFork("apollo", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = cstate.NewHardFork("ares", 1)
+	h = cstate.NewHardFork("ares", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = cstate.NewHardFork("artemis", 1)
+	h = cstate.NewHardFork("artemis", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = cstate.NewHardFork("athena", 1)
+	h = cstate.NewHardFork("athena", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
 
-	h = cstate.NewHardFork("demeter", 1)
+	h = cstate.NewHardFork("demeter", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
