@@ -1,12 +1,13 @@
 package event
 
 import (
-	"0chain.net/chaincore/node"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
+
+	"0chain.net/chaincore/node"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -117,17 +118,17 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 	if edb.dbConfig.KafkaEnabled {
 		var (
-			filteredEvents = filterEvents(events.events)
-			broker         = edb.GetKafkaProv()
-			topic          = edb.dbConfig.KafkaTopic
-			eventsMap      = make(map[int64]*Event)
+			//filteredEvents = filterEvents(events.events)
+			broker    = edb.GetKafkaProv()
+			topic     = edb.dbConfig.KafkaTopic
+			eventsMap = make(map[int64]*Event)
 		)
 
 		for i, e := range events.events {
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
 		self := node.Self.Underlying()
-		for _, filteredEvent := range filteredEvents {
+		for _, filteredEvent := range events.events {
 			data := map[string]interface{}{
 				"event":  filteredEvent,
 				"round":  events.round,
