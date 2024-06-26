@@ -11,7 +11,7 @@ import (
 )
 
 type KafkaProviderI interface {
-	PublishToKafka(topic string, topicPartition int, key, message []byte) error
+	PublishToKafka(topic string, key, message []byte) error
 	ReconnectWriter(topic string) error
 	CloseWriter(topic string) error
 	CloseAllWriters() error
@@ -57,7 +57,7 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	}
 }
 
-func (k *KafkaProvider) PublishToKafka(topic string, topicPartition int, key, message []byte) error {
+func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error {
 	k.mutex.RLock()
 	writer := writers[topic]
 	k.mutex.RUnlock()
@@ -72,10 +72,9 @@ func (k *KafkaProvider) PublishToKafka(topic string, topicPartition int, key, me
 		}
 	}
 	msg := &sarama.ProducerMessage{
-		Topic:     topic,
-		Key:       sarama.ByteEncoder(key),
-		Value:     sarama.ByteEncoder(message),
-		Partition: int32(topicPartition),
+		Topic: topic,
+		Key:   sarama.ByteEncoder(key),
+		Value: sarama.ByteEncoder(message),
 	}
 
 	writer.Input() <- msg
