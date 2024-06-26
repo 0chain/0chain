@@ -1,13 +1,12 @@
 package event
 
 import (
+	"0chain.net/chaincore/node"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
-
-	"0chain.net/chaincore/node"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -82,16 +81,6 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func filterEvents(events []Event) []Event {
-	var filteredEvents []Event
-	for _, event := range events {
-		if event.Data != nil {
-			filteredEvents = append(filteredEvents, event)
-		}
-	}
-	return filteredEvents
-}
-
 var doOnce sync.Once
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
@@ -118,7 +107,6 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 	if edb.dbConfig.KafkaEnabled {
 		var (
-			//filteredEvents = filterEvents(events.events)
 			broker    = edb.GetKafkaProv()
 			topic     = edb.dbConfig.KafkaTopic
 			eventsMap = make(map[int64]*Event)
@@ -128,9 +116,9 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
 		self := node.Self.Underlying()
-		for _, filteredEvent := range events.events {
+		for _, event := range events.events {
 			data := map[string]interface{}{
-				"event":  filteredEvent,
+				"event":  event,
 				"round":  events.round,
 				"source": self.ID,
 			}
@@ -140,18 +128,18 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 
 			ts := time.Now()
-			key := filteredEvent.EventKey
+			key := event.EventKey
 			err = broker.PublishToKafka(topic, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later
 				logging.Logger.Panic(fmt.Sprintf("Unable to publish event to kafka: %v", err))
 			}
 
-			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
+			eventsMap[event.SequenceNumber].IsPublished = true
 
 			logging.Logger.Debug("Pushed event to kafka",
-				zap.String("event", filteredEvent.Tag.String()),
-				zap.Int64("seq", filteredEvent.SequenceNumber),
+				zap.String("event", event.Tag.String()),
+				zap.Int64("seq", event.SequenceNumber),
 				zap.Int64("round", events.round))
 
 			tm := time.Since(ts)
