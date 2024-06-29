@@ -144,6 +144,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 	}
 
+	//nolint:errcheck
 	notifyConductor(b)
 
 	Logger.Debug("update finalized blocks storage success",

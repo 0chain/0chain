@@ -1,8 +1,13 @@
 package event
 
 type (
-	EventType int
-	EventTag  int
+	EventType    int
+	EventTag     int
+	EventVersion string
+)
+
+const (
+	Version1 EventVersion = "1.0"
 )
 
 const (

@@ -163,6 +163,8 @@ func sizeInGB(size int64) float64 {
 }
 
 // exclude blobbers with not enough token in stake pool to fit the size
+//
+//nolint:unused
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	size int64, balances chainstate.CommonStateContextI) (filter filterBlobberFunc) {
 
@@ -283,7 +285,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
-	sa := request.storageAllocation(conf, txn.CreationDate) // (set fields, ignore expiration)
+	_ = request.storageAllocation(conf, txn.CreationDate) // (set fields, ignore expiration)
 	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
@@ -435,6 +437,7 @@ func setupNewAllocation(
 	for _, b := range blobberNodes {
 		bAlloc := newBlobberAllocation(bSize, sa, b.mustBase(), conf, now)
 		sa.BlobberAllocs = append(sa.BlobberAllocs, bAlloc)
+		//nolint:errcheck
 		b.mustUpdateBase(func(snb *storageNodeBase) error {
 			sa.BlobberAllocsMap[snb.ID] = bAlloc
 			snb.Allocated += bSize
@@ -516,7 +519,7 @@ func (uar *updateAllocationRequest) validate(
 	alloc *StorageAllocation,
 ) error {
 	if uar.Size == 0 &&
-		uar.Extend == false &&
+		!uar.Extend &&
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
 		(!uar.SetThirdPartyExtendable || (uar.SetThirdPartyExtendable && alloc.ThirdPartyExtendable)) &&
@@ -656,6 +659,8 @@ func (sa *StorageAllocation) saveUpdatedStakes(balances chainstate.StateContextI
 }
 
 // allocation period used to calculate weighted average prices
+//
+//nolint:unused
 type allocPeriod struct {
 	read   currency.Coin    // read price
 	write  currency.Coin    // write price
@@ -663,11 +668,14 @@ type allocPeriod struct {
 	size   int64            // size for period
 }
 
+//nolint:unused
 func (ap *allocPeriod) weight() float64 {
 	return float64(ap.period) * float64(ap.size)
 }
 
 // returns weighted average read and write prices
+//
+//nolint:unused
 func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, err error) {
 	var (
 		apw, npw = ap.weight(), np.weight() // weights
@@ -709,6 +717,7 @@ func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite currency.Coin, e
 	return
 }
 
+//nolint:unused
 func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 	psize, sizeDiff int64) (avg Terms, err error) {
 
@@ -1001,6 +1010,20 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// update allocation transaction hash
 	alloc.Tx = t.Hash
 
+	actErr := chainstate.WithActivation(balances, "demeter", func() error {
+		return nil
+	}, func() error {
+		if t.Value > 0 {
+			if err = alloc.addToWritePool(t, balances, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false)); err != nil {
+				return common.NewError("allocation_updating_failed", err.Error())
+			}
+		}
+		return nil
+	})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	var blobbers []*StorageNode
 	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
@@ -1079,16 +1102,20 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if t.Value < tokensRequiredToLock {
-		return "", common.NewError("allocation_updating_failed",
-			fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock))
+		actErr := chainstate.WithActivation(balances, "demeter", func() error {
+			return common.NewError("allocation_updating_failed",
+				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock))
+		}, func() error {
+			return common.NewError("allocation_updating_failed",
+				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock+t.Value))
+
+		})
+		if actErr != nil {
+			return "", actErr
+		}
 	}
 
 	// lock tokens if this transaction provides them
-	if t.Value > 0 {
-		if err = alloc.addToWritePool(t, balances, NewTokenTransfer(t.Value, t.ClientID, t.ToClientID, false)); err != nil {
-			return "", common.NewError("allocation_updating_failed", err.Error())
-		}
-	}
 
 	err = alloc.saveUpdatedAllocation(blobbers, balances)
 	if err != nil {
@@ -1100,6 +1127,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	return string(alloc.Encode()), nil
 }
 
+//nolint:unused
 func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
 	blobberMap := make(map[string]*StorageNode)
 	for _, storageNode := range allBlobbers {
@@ -1116,6 +1144,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	return
 }
 
+//nolint:unused
 func randomizeNodes(in []*StorageNode, out []*StorageNode, n int, seed int64) []*StorageNode {
 	nOut := minInt(len(in), n)
 	nOut = maxInt(1, nOut)
@@ -1132,6 +1161,7 @@ func randomizeNodes(in []*StorageNode, out []*StorageNode, n int, seed int64) []
 	return out
 }
 
+//nolint:unused
 func minInt(x, y int) int {
 	if x < y {
 		return x
@@ -1139,6 +1169,7 @@ func minInt(x, y int) int {
 	return y
 }
 
+//nolint:unused
 func maxInt(x, y int) int {
 	if x > y {
 		return x
@@ -1146,6 +1177,7 @@ func maxInt(x, y int) int {
 	return y
 }
 
+//nolint:unused
 func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	for _, s := range sl {
 		if s.mustBase().ID == c.mustBase().ID {
@@ -1479,7 +1511,7 @@ func (sc *StorageSmartContract) finishAllocation(
 			return common.NewError("fini_alloc_failed",
 				"can't get blobber "+d.BlobberID+": "+err.Error())
 		}
-
+		//nolint:errcheck
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.SavedData += -d.Stats.UsedSize
 			b.Allocated += -d.Size
