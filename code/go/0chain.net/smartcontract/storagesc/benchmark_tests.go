@@ -29,7 +29,7 @@ import (
 	"0chain.net/core/datastore"
 )
 
-const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802" //nolint:unused
 
 type BenchTest struct {
 	name     string

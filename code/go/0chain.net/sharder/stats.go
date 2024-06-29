@@ -219,10 +219,21 @@ func (sc *Chain) WriteBlockSyncStatistics(w http.ResponseWriter, scan HealthChec
 
 // swagger:model ExplorerStats
 type ExplorerStats struct {
+	// Latest finalized round as known to the sharder.
 	LastFinalizedRound     int64   `json:"last_finalized_round"`
+
+	// Number of missing nodes as seen by the sharder.
 	StateHealth            int64   `json:"state_health"`
+
+	// Average size of the block in terms of number of transaction.
 	AverageBlockSize       int     `json:"average_block_size"`
+
+	// How many times health check was invoked for the sharder.
 	PrevInvocationCount    uint64  `json:"pervious_invocation_count"`
+
+	// How long did it take the previous health check invocation to run, in seconds.
 	PrevInvocationScanTime string  `json:"previous_incovcation_scan_time"`
+
+	// Mean sharder health check time.
 	MeanScanBlockStatsTime float64 `json:"mean_scan_block_stats_time"`
 }

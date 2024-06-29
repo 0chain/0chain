@@ -13,6 +13,7 @@ import (
 )
 
 /*BlockSummary - the summary of the block */
+// swagger:model
 type BlockSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField

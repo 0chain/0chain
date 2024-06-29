@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
+// swagger:model AuthorizerAggregate
 type AuthorizerAggregate struct {
 	model.ImmutableModel
 
