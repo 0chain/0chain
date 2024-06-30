@@ -16,7 +16,6 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 	}
 	entity := r.URL.Query().Get("entity")
 	fields := r.URL.Query().Get("fields")
-	preload := r.URL.Query().Get("preload")
 	var table interface{}
 	switch entity {
 	case "blobber":
@@ -31,7 +30,7 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 		table = &event.Validator{}
 	}
 
-	result, err := edb.GetQueryData(preload, fields, table)
+	result, err := edb.GetQueryData(fields, table)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return

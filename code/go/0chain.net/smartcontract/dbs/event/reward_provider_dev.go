@@ -231,10 +231,10 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 	return result, nil
 }
 
-func (edb *EventDb) GetQueryData(preload string, fields string, table interface{}) ([]interface{}, error) {
+func (edb *EventDb) GetQueryData(fields string, table interface{}) ([]interface{}, error) {
 	var result []interface{}
 
-	err := edb.Get().Preload(preload).Select(fields).Model(&table).Find(&result).Error
+	err := edb.Get().Select(fields).Model(&table).Find(&result).Error
 	if err != nil {
 		return nil, err
 	}
