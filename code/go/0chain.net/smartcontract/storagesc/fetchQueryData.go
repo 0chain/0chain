@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"log"
 	"net/http"
 
 	"0chain.net/core/common"
@@ -16,6 +17,9 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 	}
 	entity := r.URL.Query().Get("entity")
 	fields := r.URL.Query().Get("fields")
+	// debugging
+	log.Println("entity: ", entity)
+	log.Println("fields: ", fields)
 	var table interface{}
 	switch entity {
 	case "blobber":
