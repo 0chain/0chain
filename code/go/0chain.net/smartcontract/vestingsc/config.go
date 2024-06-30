@@ -316,6 +316,7 @@ func InitConfig(balances chainstate.StateContextI) error {
 // REST-handler
 //
 
+//nolint:unused
 func (vsc *VestingSmartContract) getConfigHandler(
 	ctx context.Context,
 	params url.Values,
