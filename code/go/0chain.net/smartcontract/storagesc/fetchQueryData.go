@@ -1,11 +1,11 @@
 package storagesc
 
 import (
-	"log"
 	"net/http"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
 )
 
 func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Request) {
@@ -18,8 +18,8 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 	entity := r.URL.Query().Get("entity")
 	fields := r.URL.Query().Get("fields")
 	// debugging
-	log.Println("entity: ", entity)
-	log.Println("fields: ", fields)
+	logging.Logger.Debug(entity)
+	logging.Logger.Debug(fields)
 	var table interface{}
 	switch entity {
 	case "blobber":
