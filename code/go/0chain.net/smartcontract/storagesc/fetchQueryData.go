@@ -39,6 +39,6 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, err)
 		return
 	}
-
+	w.WriteHeader(http.StatusOK)
 	common.Respond(w, r, result, nil)
 }
