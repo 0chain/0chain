@@ -233,7 +233,7 @@ func (edb *EventDb) GetQueryRewards(query string) (QueryReward, error) {
 
 func (edb *EventDb) GetQueryData(fields string, table interface{}) ([]interface{}, error) {
 	var result []interface{}
-
+	fmt.Print("fields: ", fields)
 	err := edb.Get().Model(&table).Find(&result).Error
 	if err != nil {
 		return nil, err
