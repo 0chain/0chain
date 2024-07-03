@@ -1,39 +1,48 @@
 package event
 
 import (
+	"os"
 	"testing"
+	"time"
 
-	"0chain.net/core/common"
+	"0chain.net/core/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestQueryDataForBlobber(t *testing.T) {
-	edb, clean := GetTestEventDB(t)
-	defer clean()
-	ids := setUpBlobbers(t, edb, 10, false)
-	var blobber1, blobber2 Blobber
-	blobber1.ID = ids[0]
-	blobber1.WritePrice = 176
-	blobber1.ReadPrice = 1111
-	blobber1.TotalStake = 23
-	blobber1.NotAvailable = false
-	blobber1.LastHealthCheck = common.Timestamp(123)
-	blobber1.BaseURL = "http://random_blobber_1.com"
+func TestQueryDataForMiner(t *testing.T) {
 
-	blobber2.ID = ids[1]
-	blobber2.WritePrice = 17
-	blobber2.ReadPrice = 1
-	blobber2.TotalStake = 14783
-	blobber2.NotAvailable = false
-	blobber2.LastHealthCheck = common.Timestamp(3333333331)
-	blobber2.BaseURL = "http://random_blobber_2.com"
-
-	require.NoError(t, edb.updateBlobber([]Blobber{blobber1, blobber2}))
-
-	blobbers, err := edb.GetQueryData("id,write_price,read_price,total_stake,not_available,last_health_check,base_url", &Blobber{})
+	access := config.DbAccess{
+		Enabled:         true,
+		Name:            os.Getenv("POSTGRES_DB"),
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 100 * time.Second,
+	}
+	eventDb, err := NewInMemoryEventDb(access, config.DbSettings{})
 	require.NoError(t, err)
-	require.Len(t, blobbers, 2)
-	require.EqualValues(t, blobber1, blobbers[0])
-	require.EqualValues(t, blobber2, blobbers[1])
+	defer eventDb.Close()
+	err = eventDb.Drop()
+	require.NoError(t, err)
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+	config.Configuration().ChainConfig = &TestConfig{conf: &TestConfigData{DbsSettings: config.DbSettings{
+		AggregatePeriod:       10,
+		PartitionKeepCount:    10,
+		PartitionChangePeriod: 100,
+	}}}
+	assert.NoError(t, err, "error while migrating database")
+	_ = createMiners(t, eventDb, 10)
+
+	t.Run("TestQueryDataForMiner", func(t *testing.T) {
+		miners, err := eventDb.GetQueryData("id,host,port", &Miner{})
+		assert.NoError(t, err, "error while fetching data")
+		assert.NotNil(t, miners, "miners should not be nil")
+		assert.Len(t, miners, 10, "miners should have 10 records")
+	})
 
 }
