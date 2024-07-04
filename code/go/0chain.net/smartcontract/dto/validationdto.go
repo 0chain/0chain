@@ -11,3 +11,8 @@ type ValidationDtoNode struct {
 	StakePoolSettings *Settings         `json:"stake_pool_settings"`
 	LastHealthCheck   *common.Timestamp `json:"last_health_check"`
 }
+
+type FixValidatorRequest struct {
+	ValidatorID string
+	BaseUrl     string
+}

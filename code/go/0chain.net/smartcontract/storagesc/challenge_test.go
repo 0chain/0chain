@@ -950,7 +950,7 @@ func TestRollBack(t *testing.T) {
 
 	// new allocation
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -1598,7 +1598,7 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 
 	// new allocation
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -1650,7 +1650,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 
 	// new allocation
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
 
 	// blobbers: stake 10k, balance 40k
 

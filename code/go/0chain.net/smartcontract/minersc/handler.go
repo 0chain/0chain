@@ -109,7 +109,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //	500:
 func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.Request) {
 	poolId := r.URL.Query().Get("pool_id")
-	start, end, err := common2.GetStartEndBlock(r.URL.Query())
+	start, end, _ := common2.GetStartEndBlock(r.URL.Query())
 	limit, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
 	if err != nil {
 		common.Respond(w, r, nil, err)
@@ -455,7 +455,7 @@ func (mrh *MinerRestHandler) getEvents(w http.ResponseWriter, r *http.Request) {
 	var blockNumber = 0
 	var blockNumberString = r.URL.Query().Get("block_number")
 
-	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	pagination, _ := common2.GetOffsetLimitOrderParam(r.URL.Query())
 
 	if len(blockNumberString) > 0 {
 		var err error
