@@ -187,7 +187,7 @@ func (sb *storageNodeBase) CommitChangesTo(e entitywrapper.EntityI) {
 	case *storageNodeV1:
 		*v = storageNodeV1(*sb)
 	case *storageNodeV2:
-		v.ApplyBaseChanges(storageNodeBase(*sb))
+		v.ApplyBaseChanges(*sb)
 	}
 }
 
