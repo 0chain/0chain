@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/rest"
 	"github.com/0chain/common/core/logging"
 )
 
@@ -40,5 +41,7 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	common.Respond(w, r, result, nil)
+	common.Respond(w, r, rest.InterfaceMap{
+		"result": result,
+	}, nil)
 }
