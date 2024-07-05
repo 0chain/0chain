@@ -5,20 +5,37 @@ cmd="build"
 dockerfile="docker.local/build.unit_test/Dockerfile"
 platform=""
 generate_mocks=1
+PACKAGE=""
+TEST_NAME=""
 
 for arg in "$@"
 do
     case $arg in
         -m1|--m1|m1)
-        echo "The build will be performed for Apple M1 chip"
-        cmd="buildx build --platform linux/amd64"
-        dockerfile="docker.local/build.unit_test/Dockerfile.m1"
-        platform="--platform=linux/amd64"
-        shift
+            echo "The build will be performed for Apple M1 chip"
+            cmd="buildx build --platform linux/amd64"
+            dockerfile="docker.local/build.unit_test/Dockerfile.m1"
+            platform="--platform=linux/amd64"
+            shift
         ;;
         --no-mocks)
             generate_mocks=0
-        shift
+            shift
+        ;;
+        --ci)
+            # We need non-interactive mode for CI
+            INTERACTIVE=""
+            echo "Building both general and SC test images"
+            docker $cmd -f $dockerfile . -t zchain_unit_test
+            shift
+        ;;
+        *)
+            if [[ -z "$PACKAGE" ]]; then
+                PACKAGE="$arg"
+            else
+                TEST_NAME="$arg"
+            fi
+            shift
         ;;
     esac
 done
@@ -30,29 +47,30 @@ fi
 
 # Allocate interactive TTY to allow Ctrl-C.
 INTERACTIVE="-it"
-PACKAGE=""
 
-if [[ "$1" == *"--ci"* ]]
-then
-    # We need non-interactive mode for CI
-    INTERACTIVE=""
-    echo "Building both general and SC test images"
-    docker $cmd -f $dockerfile . -t zchain_unit_test
-else
-    PACKAGE="$1"
-
+if [[ -n "$PACKAGE" ]]; then
     echo "Building general test image"
     docker $cmd -f $dockerfile . -t zchain_unit_test
 fi
 
-
 if [[ -n "$PACKAGE" ]]; then
-    # Run tests from a single package.
-    # assume that $PACKAGE looks something like: 0chain.net/chaincore/threshold/bls
-    echo "Running unit tests from $PACKAGE:"
-    docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock zchain_unit_test sh -c "cd /0chain/code/go/$PACKAGE; go test -tags bn256 ./..."
+    if [[ -n "$TEST_NAME" ]]; then
+        # Run a specific test from a single package.
+        echo "Running test $TEST_NAME from $PACKAGE:"
+        docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock zchain_unit_test sh -c "cd /0chain/code/go/$PACKAGE; go test -tags bn256 -run ^$TEST_NAME$ ./..."
+    else
+        # Run all tests from a single package.
+        echo "Running unit tests from $PACKAGE:"
+        docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock zchain_unit_test sh -c "cd /0chain/code/go/$PACKAGE; go test -tags bn256 ./..."
+    fi
 else
-    # Run all tests.
-    echo "Running general unit tests:"
-    docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd)/code:/codecov zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..." 
+    if [[ -n "$TEST_NAME" ]]; then
+        # Run a specific test from all packages.
+        echo "Running test $TEST_NAME from all packages:"
+        docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd)/code:/codecov zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -run ^$TEST_NAME$ -coverprofile=/codecov/coverage.txt -covermode=atomic ./..."
+    else
+        # Run all tests.
+        echo "Running general unit tests:"
+        docker run "$INTERACTIVE" --network="host" -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd)/code:/codecov zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..."
+    fi
 fi
