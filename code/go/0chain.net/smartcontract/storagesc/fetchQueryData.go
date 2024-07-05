@@ -7,6 +7,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/rest"
 	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +41,7 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 		common.Respond(w, r, nil, err)
 		return
 	}
+	logging.Logger.Debug("Result", zap.Any("result", result))
 	w.WriteHeader(http.StatusOK)
 	common.Respond(w, r, rest.InterfaceMap{
 		"result": result,
