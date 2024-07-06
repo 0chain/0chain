@@ -798,7 +798,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 			return 0, fmt.Errorf("can't calculate move tokens to delete: %v", err)
 		}
 
-		err = alloc.moveFromChallengePool(cp, move)
+		err = alloc.mustBase().moveFromChallengePool(cp, move)
 		coin, _ := move.Int64()
 		balances.EmitEvent(event.TypeStats, event.TagFromChallengePool, cp.ID, event.ChallengePoolLock{
 			Client:       alloc.mustBase().Owner,
@@ -821,7 +821,7 @@ func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAll
 		details.Returned = returned
 	}
 
-	if err = cp.save(sc.ID, alloc, balances); err != nil {
+	if err = cp.save(sc.ID, alloc.mustBase(), balances); err != nil {
 		return 0, fmt.Errorf("can't Save challenge pool: %v", err)
 	}
 
@@ -1135,15 +1135,17 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	emitAddWriteMarker(t, commitConnection.WriteMarker, &StorageAllocation{
-		ID: alloc.ID,
+	allocBase := alloc.mustBase()
+
+	emitAddWriteMarker(t, commitConnection.WriteMarker, &storageAllocationBase{
+		ID: allocBase.ID,
 		Stats: &StorageAllocationStats{
-			UsedSize:  alloc.Stats.UsedSize,
-			NumWrites: alloc.Stats.NumWrites,
+			UsedSize:  allocBase.Stats.UsedSize,
+			NumWrites: allocBase.Stats.NumWrites,
 		},
-		MovedToChallenge: alloc.MovedToChallenge,
-		MovedBack:        alloc.MovedBack,
-		WritePool:        alloc.WritePool,
+		MovedToChallenge: allocBase.MovedToChallenge,
+		MovedBack:        allocBase.MovedBack,
+		WritePool:        allocBase.WritePool,
 	}, movedTokens, changeSize, balances)
 
 	blobAllocBytes, err = json.Marshal(blobAlloc.LastWriteMarker)

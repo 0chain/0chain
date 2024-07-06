@@ -70,19 +70,21 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		blobberMap[b.ID] = ba
 	}
 
-	sa := &StorageAllocation{
-		ID:                   alloc.AllocationID,
-		Tx:                   alloc.TransactionID,
-		DataShards:           alloc.DataShards,
-		ParityShards:         alloc.ParityShards,
-		Size:                 alloc.Size,
-		Expiration:           common.Timestamp(alloc.Expiration),
-		Owner:                alloc.Owner,
-		OwnerPublicKey:       alloc.OwnerPublicKey,
-		WritePool:            alloc.WritePool,
-		ThirdPartyExtendable: alloc.ThirdPartyExtendable,
-		FileOptions:          alloc.FileOptions,
-		Stats: &StorageAllocationStats{
+	sa := &StorageAllocation{}
+
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		base.ID = alloc.AllocationID
+		base.Tx = alloc.TransactionID
+		base.DataShards = alloc.DataShards
+		base.ParityShards = alloc.ParityShards
+		base.Size = alloc.Size
+		base.Expiration = common.Timestamp(alloc.Expiration)
+		base.Owner = alloc.Owner
+		base.OwnerPublicKey = alloc.OwnerPublicKey
+		base.WritePool = alloc.WritePool
+		base.ThirdPartyExtendable = alloc.ThirdPartyExtendable
+		base.FileOptions = alloc.FileOptions
+		base.Stats = &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
 			NumReads:                  alloc.NumReads,
@@ -91,19 +93,21 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			SuccessChallenges:         alloc.SuccessfulChallenges,
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
-		},
-		BlobberAllocs:     blobberDetails,
-		BlobberAllocsMap:  blobberMap,
-		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
-		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
-		StartTime:         common.Timestamp(alloc.StartTime),
-		Finalized:         alloc.Finalized,
-		Canceled:          alloc.Cancelled,
-		MovedToChallenge:  alloc.MovedToChallenge,
-		MovedBack:         alloc.MovedBack,
-		MovedToValidators: alloc.MovedToValidators,
-		TimeUnit:          time.Duration(alloc.TimeUnit),
-	}
+		}
+		base.BlobberAllocs = blobberDetails
+		base.BlobberAllocsMap = blobberMap
+		base.ReadPriceRange = PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax}
+		base.WritePriceRange = PriceRange{alloc.WritePriceMin, alloc.WritePriceMax}
+		base.StartTime = common.Timestamp(alloc.StartTime)
+		base.Finalized = alloc.Finalized
+		base.Canceled = alloc.Cancelled
+		base.MovedToChallenge = alloc.MovedToChallenge
+		base.MovedBack = alloc.MovedBack
+		base.MovedToValidators = alloc.MovedToValidators
+		base.TimeUnit = time.Duration(alloc.TimeUnit)
+
+		return nil
+	})
 
 	return &StorageAllocationBlobbers{
 		StorageAllocation: *sa,
@@ -111,7 +115,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}, nil
 }
 
-func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
+func storageAllocationToAllocationTable(sa *storageAllocationBase) *event.Allocation {
 	alloc := &event.Allocation{
 		AllocationID:         sa.ID,
 		TransactionID:        sa.Tx,
@@ -153,7 +157,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
-	alloc := storageAllocationToAllocationTable(sa)
+	alloc := storageAllocationToAllocationTable(sa.mustBase())
 	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil
@@ -204,15 +208,15 @@ func prepareAllocationsResponse(eventDb *event.EventDb, eAllocs []event.Allocati
 }
 
 func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.buildEventBlobberTerms())
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.mustBase().buildEventBlobberTerms())
 }
 
 //nolint:unused
 func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, sa.ID, sa.buildEventBlobberTerms())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, sa.mustBase().ID, sa.mustBase().buildEventBlobberTerms())
 }
 
 //nolint:unused
 func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
-	balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, sa.buildEventBlobberTerms())
+	balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, sa.mustBase().buildEventBlobberTerms())
 }
