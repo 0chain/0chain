@@ -70,7 +70,7 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 		rest.MakeEndpoint(storage+"/getWriteMarkers", common.UserRateLimit(srh.getWriteMarkers)),
 		rest.MakeEndpoint(storage+"/get_validator", common.UserRateLimit(srh.getValidator)),
 		rest.MakeEndpoint(storage+"/validators", common.UserRateLimit(srh.validators)),
-		rest.MakeEndpoint(storage+"/openchallenges", common.UserRateLimit(srh.getOpenChallenges)), 
+		rest.MakeEndpoint(storage+"/openchallenges", common.UserRateLimit(srh.getOpenChallenges)),
 		rest.MakeEndpoint(storage+"/getchallenge", common.UserRateLimit(srh.getChallenge)),
 		rest.MakeEndpoint(storage+"/blobber-challenges", common.UserRateLimit(srh.getBlobberChallenges)),
 		rest.MakeEndpoint(storage+"/getStakePoolStat", common.UserRateLimit(srh.getStakePoolStat)),
@@ -299,13 +299,13 @@ func (nar *allocationBlobbersRequest) decode(b []byte) error {
 // Returns list of all active blobbers that match the allocation request, or an error if not enough blobbers are available.
 // Before the user attempts to create an allocation, they can use this endpoint to get a list of blobbers that match the allocation request. This includes:
 //
-//   * Read and write price ranges
+//   - Read and write price ranges
 //
-//   * Data and parity shards
+//   - Data and parity shards
 //
-//   * Size
+//   - Size
 //
-//   * Restricted status
+//   - Restricted status
 //
 // parameters:
 //
@@ -1002,7 +1002,9 @@ func ToProviderStakePoolStats(provider *event.Provider, delegatePools []event.De
 //	required: true
 //	in: query
 //	type: string
+//
 // +name: offset
+//
 //	description: Pagination offset to specify the starting point of the result set.
 //	in: query
 //	type: string
@@ -1768,20 +1770,20 @@ func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Req
 //
 // parameters:
 //
-//	+name: client
-//	 description: ID of the client for which to get the latest read marker.
-//	 in: query
-//	 type: string
-//   required: true
-//	+name: blobber
-//	 description: blobber ID associated with the read marker.
-//	 in: query
-//	 type: string
-//	 required: true
-//	+name: allocation
-//	 description: Allocation ID associated with the read marker.
-//	 in: query
-//	 type: string
+//		+name: client
+//		 description: ID of the client for which to get the latest read marker.
+//		 in: query
+//		 type: string
+//	  required: true
+//		+name: blobber
+//		 description: blobber ID associated with the read marker.
+//		 in: query
+//		 type: string
+//		 required: true
+//		+name: allocation
+//		 description: Allocation ID associated with the read marker.
+//		 in: query
+//		 type: string
 //
 // responses:
 //
@@ -1893,22 +1895,25 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 	// Pay cancellation charge if removing a blobber.
 	if req.RemoveBlobberId != "" {
-		allocCancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
+		allocCancellationCharge, err := alloc.mustBase().cancellationCharge(conf.CancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
 
 		totalWritePriceBefore := float64(0)
-		for _, blobber := range alloc.BlobberAllocs {
+		for _, blobber := range alloc.mustBase().BlobberAllocs {
 			totalWritePriceBefore += float64(blobber.Terms.WritePrice)
 		}
 
-		removedBlobber := alloc.BlobberAllocsMap[req.RemoveBlobberId]
+		removedBlobber := alloc.mustBase().BlobberAllocsMap[req.RemoveBlobberId]
 
 		blobberCancellationCharge := currency.Coin(float64(allocCancellationCharge) * (float64(removedBlobber.Terms.WritePrice) / totalWritePriceBefore))
 
-		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, blobberCancellationCharge)
+		err = alloc.mustUpdateBase(func(base *storageAllocationBase) error {
+			base.WritePool, err = currency.MinusCoin(alloc.mustBase().WritePool, blobberCancellationCharge)
+			return err
+		})
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1933,7 +1938,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	cp, err := edb.GetChallengePool(alloc.ID)
+	cp, err := edb.GetChallengePool(alloc.mustBase().ID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1967,7 +1972,7 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	_, ok := sa.BlobberAllocsMap[addID]
+	_, ok := sa.mustBase().BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
 	}
@@ -1988,21 +1993,23 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
+	ba := newBlobberAllocation(sa.mustBase().bSize(), sa, addBlobber, conf, now)
 
 	removedIdx := 0
 
+	saBase := sa.mustBase()
+
 	if len(removeID) > 0 {
-		_, ok := sa.BlobberAllocsMap[removeID]
+		_, ok := saBase.BlobberAllocsMap[removeID]
 		if !ok {
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
-		delete(sa.BlobberAllocsMap, removeID)
+		delete(saBase.BlobberAllocsMap, removeID)
 
 		var found bool
-		for i, d := range sa.BlobberAllocs {
+		for i, d := range saBase.BlobberAllocs {
 			if d.BlobberID == removeID {
-				sa.BlobberAllocs[i] = nil
+				saBase.BlobberAllocs[i] = nil
 				found = true
 				removedIdx = i
 				break
@@ -2012,14 +2019,14 @@ func changeBlobbersEventDB(
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
 
-		sa.BlobberAllocs[removedIdx] = ba
-		sa.BlobberAllocsMap[addID] = ba
+		saBase.BlobberAllocs[removedIdx] = ba
+		saBase.BlobberAllocsMap[addID] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
+		saBase.ParityShards++
 
-		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-		sa.BlobberAllocsMap[addID] = ba
+		saBase.BlobberAllocs = append(saBase.BlobberAllocs, ba)
+		saBase.BlobberAllocsMap[addID] = ba
 	}
 
 	return nil
@@ -2028,8 +2035,9 @@ func changeBlobbersEventDB(
 func updateAllocBlobberTerms(
 	edb *event.EventDb,
 	alloc *StorageAllocation) error {
-	bIDs := make([]string, 0, len(alloc.BlobberAllocs))
-	for _, ba := range alloc.BlobberAllocs {
+	allocBase := alloc.mustBase()
+	bIDs := make([]string, 0, len(allocBase.BlobberAllocs))
+	for _, ba := range allocBase.BlobberAllocs {
 		bIDs = append(bIDs, ba.BlobberID)
 	}
 
@@ -2046,8 +2054,8 @@ func updateAllocBlobberTerms(
 		}
 	}
 
-	for i := range alloc.BlobberAllocs {
-		alloc.BlobberAllocs[i].Terms = bTerms[i]
+	for i := range allocBase.BlobberAllocs {
+		allocBase.BlobberAllocs[i].Terms = bTerms[i]
 	}
 
 	return nil
@@ -2200,7 +2208,7 @@ func (srh *StorageRestHandler) getBlobberAllocations(w http.ResponseWriter, r *h
 
 // getErrors swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/allocation storage-sc GetAllocation
 // Get allocation information
-// 
+//
 // Retrieves information about a specific allocation given its id.
 //
 // parameters:
@@ -3141,6 +3149,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3200,6 +3209,7 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3260,6 +3270,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3320,6 +3331,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
@@ -3380,6 +3392,7 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
 //
 // parameters:
+//
 //	+name: round
 //	 description: round number to start from
 //	 in: query
