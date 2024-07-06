@@ -461,7 +461,7 @@ func (sa *storageAllocationBase) buildStakeUpdateEvent() event.Allocation {
 	}
 }
 
-func (sa *storageAllocationBase) saveUpdatedAllocation(
+func (sa *StorageAllocation) saveUpdatedAllocation(
 	blobbers []*StorageNode,
 	balances cstate.StateContextI,
 ) (err error) {
@@ -472,22 +472,22 @@ func (sa *storageAllocationBase) saveUpdatedAllocation(
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 	// Save allocation
-	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.mustBase().GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.ID, sa.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.mustBase().ID, sa.mustBase().buildDbUpdates())
 	return
 }
 
-func (sa *storageAllocationBase) saveUpdatedStakes(balances cstate.StateContextI) (err error) {
+func (sa *StorageAllocation) saveUpdatedStakes(balances cstate.StateContextI) (err error) {
 	// Save allocation
-	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.mustBase().GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStakes, sa.ID, sa.buildStakeUpdateEvent())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStakes, sa.mustBase().ID, sa.mustBase().buildStakeUpdateEvent())
 	return
 }
