@@ -1888,22 +1888,25 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 	// Pay cancellation charge if removing a blobber.
 	if req.RemoveBlobberId != "" {
-		allocCancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
+		allocCancellationCharge, err := alloc.mustBase().cancellationCharge(conf.CancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
 
 		totalWritePriceBefore := float64(0)
-		for _, blobber := range alloc.BlobberAllocs {
+		for _, blobber := range alloc.mustBase().BlobberAllocs {
 			totalWritePriceBefore += float64(blobber.Terms.WritePrice)
 		}
 
-		removedBlobber := alloc.BlobberAllocsMap[req.RemoveBlobberId]
+		removedBlobber := alloc.mustBase().BlobberAllocsMap[req.RemoveBlobberId]
 
 		blobberCancellationCharge := currency.Coin(float64(allocCancellationCharge) * (float64(removedBlobber.Terms.WritePrice) / totalWritePriceBefore))
 
-		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, blobberCancellationCharge)
+		err = alloc.mustUpdateBase(func(base *storageAllocationBase) error {
+			base.WritePool, err = currency.MinusCoin(alloc.mustBase().WritePool, blobberCancellationCharge)
+			return err
+		})
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1928,7 +1931,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	cp, err := edb.GetChallengePool(alloc.ID)
+	cp, err := edb.GetChallengePool(alloc.mustBase().ID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1962,7 +1965,7 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	_, ok := sa.BlobberAllocsMap[addID]
+	_, ok := sa.mustBase().BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
 	}
@@ -1983,21 +1986,23 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
+	ba := newBlobberAllocation(sa.mustBase().bSize(), sa, addBlobber, conf, now)
 
 	removedIdx := 0
 
+	saBase := sa.mustBase()
+
 	if len(removeID) > 0 {
-		_, ok := sa.BlobberAllocsMap[removeID]
+		_, ok := saBase.BlobberAllocsMap[removeID]
 		if !ok {
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
-		delete(sa.BlobberAllocsMap, removeID)
+		delete(saBase.BlobberAllocsMap, removeID)
 
 		var found bool
-		for i, d := range sa.BlobberAllocs {
+		for i, d := range saBase.BlobberAllocs {
 			if d.BlobberID == removeID {
-				sa.BlobberAllocs[i] = nil
+				saBase.BlobberAllocs[i] = nil
 				found = true
 				removedIdx = i
 				break
@@ -2007,14 +2012,14 @@ func changeBlobbersEventDB(
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
 
-		sa.BlobberAllocs[removedIdx] = ba
-		sa.BlobberAllocsMap[addID] = ba
+		saBase.BlobberAllocs[removedIdx] = ba
+		saBase.BlobberAllocsMap[addID] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
+		saBase.ParityShards++
 
-		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-		sa.BlobberAllocsMap[addID] = ba
+		saBase.BlobberAllocs = append(saBase.BlobberAllocs, ba)
+		saBase.BlobberAllocsMap[addID] = ba
 	}
 
 	return nil
@@ -2023,8 +2028,9 @@ func changeBlobbersEventDB(
 func updateAllocBlobberTerms(
 	edb *event.EventDb,
 	alloc *StorageAllocation) error {
-	bIDs := make([]string, 0, len(alloc.BlobberAllocs))
-	for _, ba := range alloc.BlobberAllocs {
+	allocBase := alloc.mustBase()
+	bIDs := make([]string, 0, len(allocBase.BlobberAllocs))
+	for _, ba := range allocBase.BlobberAllocs {
 		bIDs = append(bIDs, ba.BlobberID)
 	}
 
@@ -2041,8 +2047,8 @@ func updateAllocBlobberTerms(
 		}
 	}
 
-	for i := range alloc.BlobberAllocs {
-		alloc.BlobberAllocs[i].Terms = bTerms[i]
+	for i := range allocBase.BlobberAllocs {
+		allocBase.BlobberAllocs[i].Terms = bTerms[i]
 	}
 
 	return nil
@@ -3011,4 +3017,425 @@ func (srh StorageRestHandler) getSearchHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	common.Respond(w, r, nil, common.NewErrInternal("Request failed, searchString isn't a (wallet address)/(block hash)/(txn hash)/(round num)/(content hash)/(file name)"))
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-snapshots storage-sc replicateSnapshots
+// Gets list of global snapshot records
+//
+// > Note: This endpoint is DEPRECATED and will be removed in the next release.
+//
+// parameters:
+//
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//	+name: round
+//	 description: round number to start from
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: []Snapshot
+//	500:
+func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	snapshots, err := edb.ReplicateSnapshots(round, pagination.Limit)
+	if err != nil {
+		err := common.NewErrInternal("cannot get snapshots" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	common.Respond(w, r, snapshots, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate storage-sc replicateBlobberAggregates
+// Gets list of blobber aggregate records
+//
+// > Note: This endpoint is DEPRECATED and will be removed in the next release.
+//
+// parameters:
+//
+//	+name: round
+//	 description: round number to start from
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: BlobberAggregate
+//	500:
+func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	blobbers := []event.BlobberAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "blobber", &blobbers)
+	if err != nil {
+		err := common.NewErrInternal("cannot get blobber aggregates" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(blobbers) == 0 {
+		blobbers = []event.BlobberAggregate{}
+	}
+	common.Respond(w, r, blobbers, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate storage-sc replicateMinerAggregates
+// Gets list of miner aggregate records
+//
+// > Note: This endpoint is DEPRECATED and will be removed in the next release.
+//
+// parameters:
+//
+//	+name: round
+//	 description: round number to start from
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: MinerAggregate
+//	500:
+func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	miners := []event.MinerAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "miner", &miners)
+	if err != nil {
+		err := common.NewErrInternal("cannot get miner aggregates" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(miners) == 0 {
+		miners = []event.MinerAggregate{}
+	}
+	common.Respond(w, r, miners, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate storage-sc replicateSharderAggregates
+// Gets list of sharder aggregate records
+//
+// > Note: This endpoint is DEPRECATED and will be removed in the next release.
+//
+// parameters:
+//
+//	+name: round
+//	 description: round number to start from
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: SharderAggregate
+//	500:
+func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	sharders := []event.SharderAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "sharder", &sharders)
+	if err != nil {
+		err := common.NewErrInternal("cannot get sharder aggregates" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(sharders) == 0 {
+		sharders = []event.SharderAggregate{}
+	}
+	common.Respond(w, r, sharders, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate storage-sc replicateAuthorizerAggregates
+// Gets list of authorizer aggregate records
+//
+// > Note: This endpoint is DEPRECATED and will be removed in the next release.
+//
+// parameters:
+//
+//	+name: round
+//	 description: round number to start from
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: AuthorizerAggregate
+//	500:
+func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	authorizers := []event.AuthorizerAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "authorizer", &authorizers)
+	if err != nil {
+		err := common.NewErrInternal("cannot get authorizer aggregates" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(authorizers) == 0 {
+		authorizers = []event.AuthorizerAggregate{}
+	}
+	common.Respond(w, r, authorizers, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate storage-sc replicateValidatorAggregates
+// Gets list of validator aggregate records
+//
+// > Note: This endpoint is DEPRECATED and will be removed in the next release.
+//
+// parameters:
+//
+//	+name: round
+//	 description: round number to start from
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: ValidatorAggregate
+//	500:
+func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	validators := []event.ValidatorAggregate{}
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "validator", &validators)
+	if err != nil {
+		err := common.NewErrInternal("cannot get validator aggregates" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(validators) == 0 {
+		validators = []event.ValidatorAggregate{}
+	}
+	common.Respond(w, r, validators, nil)
+}
+
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate storage-sc replicateUserAggregates
+// Gets list of user aggregate records
+//
+// > Note: This endpoint is DEPRECATED and will be removed in the next release.
+//
+// parameters:
+//
+//	+name: round
+//	 description: round number to start from
+//	 in: query
+//	 type: string
+//	+name: offset
+//	 description: offset
+//	 in: query
+//	 type: string
+//	+name: limit
+//	 description: limit
+//	 in: query
+//	 type: string
+//	+name: sort
+//	 description: desc or asc
+//	 in: query
+//	 type: string
+//
+// responses:
+//
+//	200: UserAggregate
+//	500:
+func (srh *StorageRestHandler) replicateUserAggregates(w http.ResponseWriter, r *http.Request) {
+	pagination, err := common2.GetOffsetLimitOrderParam(r.URL.Query())
+	if err != nil {
+		common.Respond(w, r, nil, err)
+		return
+	}
+	roundStr := r.URL.Query().Get("round")
+
+	round, err := strconv.ParseInt(roundStr, 10, 64)
+	if err != nil {
+		err := common.NewErrBadRequest("invalid round number" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+
+	edb := srh.GetQueryStateContext().GetEventDB()
+	if edb == nil {
+		common.Respond(w, r, nil, common.NewErrInternal("no db connection"))
+		return
+	}
+	var users []event.UserAggregate
+	err = edb.ReplicateProviderAggregates(round, pagination.Limit, pagination.Offset, "user", &users)
+	if err != nil {
+		err := common.NewErrInternal("cannot get user aggregates" + err.Error())
+		common.Respond(w, r, nil, err)
+		return
+	}
+	if len(users) == 0 {
+		users = []event.UserAggregate{}
+	}
+	common.Respond(w, r, users, nil)
 }
