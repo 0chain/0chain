@@ -471,18 +471,6 @@ func notarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return // doesn't need the not. block
 	}
 
-	//TODO in case there is no previous round create it, since notarization can't be rejected
-	if mc.GetMinerRound(nb.Round-1) == nil {
-		logging.Logger.Error("not. block handler -- no previous round (ignore)",
-			zap.Int64("round", nb.Round), zap.Int64("prev_round", nb.Round-1))
-		return // no previous round
-	}
-
-	//this check is not correct, we won't transit to the new round, but should save notarization block
-	//if mc.isAheadOfSharders(ctx, nb.Round) {
-	//	return
-	//}
-
 	mr := mc.GetMinerRound(nb.Round)
 	if mr != nil {
 		if mr.IsFinalizing() || mr.IsFinalized() {
