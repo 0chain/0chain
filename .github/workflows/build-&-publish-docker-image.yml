@@ -254,58 +254,13 @@ jobs:
           echo "TENDERLY_CREATION_INFO=$(curl -X POST \
            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
            -H "Content-Type: application/json" \
-           -d '{"slug":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}","displayName":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}","description":"","visibility":"TEAM","tags":{"purpose":"development"},"networkConfig":{"networkId":"1","blockNumber":"latest","chainConfig":{"chainId":"1"},"baseFeePerGas":"1"},"explorerConfig":{"enabled":false,"verificationVisibility":"bytecode"},"syncState":false}' \
+           -d '{"slug":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}","displayName":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}","description":"","visibility":"TEAM","tags":{"purpose":"development"},"networkConfig":{"networkId":"1","blockNumber":"18512782","chainConfig":{"chainId":"1"},"baseFeePerGas":"1"},"explorerConfig":{"enabled":false,"verificationVisibility":"bytecode"},"syncState":false}' \
            https://api.tenderly.co/api/v1/account/zus_network/project/project/testnet/container)" >> $GITHUB_ENV
 
       - name: "Parse Tenderly virtual testnet creation transaction result"
         run: |
           echo "TENDERLY_VIRTUAL_TESTNET_ID=$(echo '${{ env.TENDERLY_CREATION_INFO }}' | jq -r '.container.id')" >> $GITHUB_ENV
-
-      - name: "Transfer Bridge ownership in Tenderly fork"
-        run: |
-          curl -X POST \
-              -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "network_id": "1",
-                "transaction_index": null,
-                "from": "0xed8f3170db6d1a71c8fa6d8d73cc2c51db95d5a4",
-                "input": "0xf2fde38b0000000000000000000000008e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97",
-                "to": "0x7700d773022b19622095118fadf46f7b9448be9b",
-                "gas": 8000000,
-                "gas_price": "0",
-                "value": "0",
-                "access_list": [],
-                "generate_access_list": true,
-                "source": "dashboard",
-                "skip_fork_head_update": false,
-                "alias": "",
-                "description": "Transfer ownership to 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97"
-            }' \
-              https://api.tenderly.co/api/v1/account/zus_network/project/project/testnet/${{ env.TENDERLY_VIRTUAL_TESTNET_ID }}/transactions
-
-      - name: "Transfer Authorizers ownership in Tenderly fork"
-        run: |
-          curl -X POST \
-              -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "network_id": "1",
-                "transaction_index": null,
-                "from": "0xed8f3170db6d1a71c8fa6d8d73cc2c51db95d5a4",
-                "input": "0xf2fde38b0000000000000000000000008e25cfd9bd6c0ca67a5522cd920b3c66d39d6e97",
-                "to": "0x481dab4407b9880de0a68dc62e6af611c4949e42",
-                "gas": 8000000,
-                "gas_price": "0",
-                "value": "0",
-                "access_list": [],
-                "generate_access_list": true,
-                "source": "dashboard",
-                "skip_fork_head_update": false,
-                "alias": "",
-                "description": "Transfer ownership to 0x8E25cfd9bd6c0ca67a5522cd920b3c66D39d6E97"
-            }' \
-              https://api.tenderly.co/api/v1/account/zus_network/project/project/testnet/${{ env.TENDERLY_VIRTUAL_TESTNET_ID }}/transactions
+          echo "TENDERLY_VIRTUAL_TESTNET_RPC_ID=$(echo '${{ env.TENDERLY_CREATION_INFO }}' | jq -r '.container.connectivityConfig.endpoints[0].id')" >> $GITHUB_ENV
 
       - name: "Deploy 0Chain"
         uses: 0chain/actions/deploy-0chain@master
@@ -317,10 +272,10 @@ jobs:
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
           SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
-          TENDERLY_VIRTUAL_TESTNET_ID: ${{ env.TENDERLY_VIRTUAL_TESTNET_ID }}
+          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ${{ env.TENDERLY_VIRTUAL_TESTNET_RPC_ID }}
           graphnode_sc: ${{ secrets.GRAPHNODE_SC }}
           graphnode_network: ${{ secrets.GRAPHNODE_NETWORK }}
-          graphnode_ethereum_node_url: https://virtual.mainnet.rpc.tenderly.co/${{ env.TENDERLY_VIRTUAL_TESTNET_ID }}
+          graphnode_ethereum_node_url: https://virtual.mainnet.rpc.tenderly.co/${{ env.TENDERLY_VIRTUAL_TESTNET_RPC_ID }}
 
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
@@ -333,7 +288,7 @@ jobs:
           run_flaky_tests: false
           run_smoke_tests: ${{ github.ref != 'refs/heads/staging' && github.base_ref != 'staging' && github.ref != 'refs/heads/master' && github.base_ref != 'master' }}
           retry_failures: true
-          TENDERLY_VIRTUAL_TESTNET_ID: ${{ env.TENDERLY_VIRTUAL_TESTNET_ID }}
+          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ${{ env.TENDERLY_VIRTUAL_TESTNET_RPC_ID }}
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
