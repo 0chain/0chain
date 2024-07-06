@@ -922,7 +922,7 @@ func (sa *StorageAllocation) payChallengePoolPassPayments(sps []*stakePool, bala
 		return fmt.Errorf("failed to move challenge pool back to write pool: %v", err)
 	}
 
-	if err = cp.save(sc.ID, sa, balances); err != nil {
+	if err = cp.save(sc.ID, sa.mustBase(), balances); err != nil {
 		return fmt.Errorf("failed to save challenge pool: %v", err)
 	}
 
@@ -988,20 +988,20 @@ func (sa *storageAllocationBase) payCancellationCharge(sps []*stakePool, balance
 		return fmt.Errorf("failed to get cancellation charge: %v", err)
 	}
 
-	usedWritePool := sa.mustBase().MovedToChallenge - sa.mustBase().MovedBack
+	usedWritePool := sa.MovedToChallenge - sa.MovedBack
 
 	if usedWritePool < cancellationCharge {
 		cancellationCharge = cancellationCharge - usedWritePool
 
-		if sa.mustBase().WritePool < cancellationCharge {
-			cancellationCharge = sa.mustBase().WritePool
+		if sa.WritePool < cancellationCharge {
+			cancellationCharge = sa.WritePool
 		}
 	} else {
 		return nil
 	}
 
 	totalWritePrice := currency.Coin(0)
-	for _, ba := range sa.mustBase().BlobberAllocs {
+	for _, ba := range sa.BlobberAllocs {
 		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
 		if err != nil {
 			return fmt.Errorf("failed to add write price: %v", err)
@@ -1010,7 +1010,7 @@ func (sa *storageAllocationBase) payCancellationCharge(sps []*stakePool, balance
 
 	totalCancellationChargePaid := currency.Coin(0)
 
-	for i, ba := range sa.mustBase().BlobberAllocs {
+	for i, ba := range sa.BlobberAllocs {
 		blobberCancellationChargePaid, err := ba.payCancellationCharge(sa, sps[i], balances, sc, passRates[i], totalWritePrice, cancellationCharge)
 		if err != nil {
 			return fmt.Errorf("1 error paying cancellation charge: %v", err)
@@ -1022,7 +1022,7 @@ func (sa *storageAllocationBase) payCancellationCharge(sps []*stakePool, balance
 		}
 	}
 
-	sa.mustBase().WritePool, err = currency.MinusCoin(sa.mustBase().WritePool, totalCancellationChargePaid)
+	sa.WritePool, err = currency.MinusCoin(sa.WritePool, totalCancellationChargePaid)
 	if err != nil {
 		return fmt.Errorf("failed to deduct cancellation charges from write pool: %v", err)
 	}
@@ -1031,9 +1031,9 @@ func (sa *storageAllocationBase) payCancellationCharge(sps []*stakePool, balance
 	if err != nil {
 		return fmt.Errorf("failed to convert deduction from write pool to int64: %v", err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.mustBase().ID, event.WritePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, sa.ID, event.WritePoolLock{
 		Client:       t.ClientID,
-		AllocationId: sa.mustBase().ID,
+		AllocationId: sa.ID,
 		Amount:       i,
 	})
 
@@ -1344,12 +1344,12 @@ func (sa *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSma
 			_ = cstate.WithActivation(balances, "artemis", func() error {
 				return nil
 			}, func() error {
-				sa.mustBase().Stats.UsedSize += -d.Stats.UsedSize
+				sa.Stats.UsedSize += -d.Stats.UsedSize
 				return nil
 			})
 
-			sa.mustBase().BlobberAllocs[i] = addedBlobberAllocation
-			sa.mustBase().BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
+			sa.BlobberAllocs[i] = addedBlobberAllocation
+			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
 		}
 	}
@@ -1462,10 +1462,10 @@ func (sa *StorageAllocation) changeBlobbers(
 
 	//nolint:errcheck
 	addedBlobber.mustUpdateBase(func(b *storageNodeBase) error {
-		b.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
+		b.Allocated += sa.mustBase().bSize() // Why increase allocation then check if the free capacity is enough?
 		return nil
 	})
-	afterSize := sa.bSize()
+	afterSize := sa.mustBase().bSize()
 
 	ba := newBlobberAllocation(afterSize, sa, addedBlobber.mustBase(), conf, now)
 
