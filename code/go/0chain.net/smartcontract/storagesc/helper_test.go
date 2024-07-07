@@ -411,7 +411,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	var deco StorageAllocation
 	require.NoError(t, deco.Decode([]byte(resp)))
 
-	return deco.ID, blobs
+	return deco.mustBase().ID, blobs
 }
 
 func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
@@ -501,8 +501,9 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	valids *partitions.Partitions, allocID string,
 	blobber *StorageNode, balances chainState.StateContextI) {
 
-	alloc, err := ssc.getAllocation(allocID, balances)
+	sa, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
+	alloc := sa.mustBase()
 
 	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
@@ -553,7 +554,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	alloc.Stats.OpenChallenges++
 	alloc.Stats.TotalChallenges++
 
-	err = alloc.save(balances, ssc.ID)
+	err = sa.save(balances, ssc.ID)
 	require.NoError(t, err)
 	return
 }

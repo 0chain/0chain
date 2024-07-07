@@ -161,7 +161,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	var challengePoolBalance = int64(700000)
 
-	var allocation = StorageAllocation{
+	var allocation = storageAllocationBase{
 		DataShards:    1,
 		ParityShards:  1,
 		ID:            ownerId,
@@ -300,7 +300,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		writePrice:    0.1,
 	}
 
-	var allocation = StorageAllocation{
+	var allocation = storageAllocationBase{
 		DataShards:    5,
 		ParityShards:  5,
 		ID:            ownerId,
@@ -398,7 +398,7 @@ func TestFinalizeAllocation(t *testing.T) {
 
 func testCancelAllocation(
 	t *testing.T,
-	sAllocation StorageAllocation,
+	sAllocation storageAllocationBase,
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	challengePoolBalance int64,
@@ -422,7 +422,7 @@ func testCancelAllocation(
 	}
 
 	var ssc, txn, input = setupMocksFinishAllocation(
-		t, sAllocation, blobbers, bStakes,
+		t, &sAllocation, blobbers, bStakes,
 		currency.Coin(challengePoolBalance), now, ctx,
 	)
 
@@ -544,10 +544,10 @@ func mockTransferAmount(
 	balances.balances[to] = toBalance
 }
 
-func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, challengePoolBalance int64, now common.Timestamp, challenges [][]int64, ctx *mockStateContext) error {
+func testFinalizeAllocation(t *testing.T, sAllocation storageAllocationBase, blobbers SortedBlobbers, bStakes [][]mockStakePool, challengePoolBalance int64, now common.Timestamp, challenges [][]int64, ctx *mockStateContext) error {
 
 	var ssc, txn, input = setupMocksFinishAllocation(
-		t, sAllocation, blobbers, bStakes,
+		t, &sAllocation, blobbers, bStakes,
 		currency.Coin(challengePoolBalance), now, ctx,
 	)
 
@@ -638,7 +638,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation StorageAllocation, blobber
 	}
 
 	// check that the allocation is deleted from MPT
-	err = ctx.GetTrieNode(sAllocation.GetKey(ADDRESS), &sAllocation)
+	err = ctx.GetTrieNode(sAllocation.GetKey(ADDRESS), &StorageAllocation{})
 	require.Error(t, err, util.ErrValueNotPresent)
 
 	confirmFinalizeAllocation(t, f, sps, cancellationCharges, *scYaml)
@@ -686,7 +686,7 @@ func confirmFinalizeAllocation(
 
 func setupMocksFinishAllocation(
 	t *testing.T,
-	sAllocation StorageAllocation,
+	sAllocation *storageAllocationBase,
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	challengePoolBalance currency.Coin,
@@ -724,8 +724,12 @@ func setupMocksFinishAllocation(
 		},
 	}
 
-	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
+	var sa StorageAllocation
+
+	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sa)
 	require.NoError(t, err)
+
+	sAllocation = sa.mustBase()
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{
@@ -735,7 +739,7 @@ func setupMocksFinishAllocation(
 			},
 		},
 	}
-	require.NoError(t, cPool.save(ssc.ID, &sAllocation, ctx))
+	require.NoError(t, cPool.save(ssc.ID, sAllocation, ctx))
 
 	require.EqualValues(t, len(blobbers), len(bStakes))
 	for i, blobber := range blobbers {
@@ -779,7 +783,7 @@ type formulaeFinalizeAllocation struct {
 	t                    *testing.T
 	scYaml               Config
 	now                  common.Timestamp
-	allocation           StorageAllocation
+	allocation           storageAllocationBase
 	blobbers             SortedBlobbers
 	bStakes              [][]mockStakePool
 	challengePoolBalance int64
@@ -853,12 +857,12 @@ func DeepCopyBlobberAllocsMap(original map[string]*BlobberAllocation) map[string
 	return copyAllocation
 }
 
-func DeepCopyAlloc(original StorageAllocation) StorageAllocation {
-	var copyAllocation StorageAllocation
+func DeepCopyAlloc(original storageAllocationBase) storageAllocationBase {
+	var copyAllocation storageAllocationBase
 	jsonData, _ := json.Marshal(original)
 	err := json.Unmarshal(jsonData, &copyAllocation)
 	if err != nil {
-		return StorageAllocation{}
+		return storageAllocationBase{}
 	}
 	return copyAllocation
 }
