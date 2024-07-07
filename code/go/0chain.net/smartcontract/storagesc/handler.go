@@ -1986,7 +1986,7 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba := newBlobberAllocation(sa.mustBase().bSize(), sa, addBlobber, conf, now)
+	ba := newBlobberAllocation(sa.mustBase().bSize(), sa.mustBase(), addBlobber, conf, now)
 
 	removedIdx := 0
 
