@@ -286,14 +286,6 @@ func setUpMpt(
 	go func() {
 		defer wg.Done()
 		timer := time.Now()
-		storagesc.AddMockSnapshots(eventDb)
-		log.Println("added snapshots\t", time.Since(timer))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		timer := time.Now()
 		validators, validatorPublicKeys, ValidatorPrivateKeys = createKeys(viper.GetInt(benchmark.NumValidators))
 		_ = storagesc.AddMockValidators(validators, validatorPublicKeys, eventDb, balances)
 		log.Println("added validators\t", time.Since(timer))
