@@ -440,6 +440,11 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	return blobberIDs, nil
 }
 
+// swagger:model collectedRewardResponse
+type collectedRewardResponse struct {
+	CollectedReward int64 `json:"collected_reward"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/collected_reward storage-sc GetCollectedReward
 // Get collected reward.
 //
@@ -484,7 +489,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 //
 // responses:
 //
-//	200: challengePoolStat
+//	200: collectedRewardResponse
 //	400:
 func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -583,6 +588,11 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 	common.Respond(w, r, nil, common.NewErrInternal("can't get collected rewards"))
 }
 
+// swagger:model writeMarkerCountResponse
+type WriteMarkerCountResponse struct {
+	Count int64 `json:"count"`
+}
+
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/alloc_write_marker_count storage-sc GetAllocWriteMarkerCount
 // Count of write markers for an allocation.
 //
@@ -598,7 +608,7 @@ func (srh *StorageRestHandler) getCollectedReward(w http.ResponseWriter, r *http
 //
 // responses:
 //
-//	200: challengePoolStat
+//	200: writeMarkerCountResponse
 //	400:
 func (srh *StorageRestHandler) getWriteMarkerCount(w http.ResponseWriter, r *http.Request) {
 	allocationID := r.URL.Query().Get("allocation_id")
@@ -612,8 +622,8 @@ func (srh *StorageRestHandler) getWriteMarkerCount(w http.ResponseWriter, r *htt
 		return
 	}
 	total, err := edb.GetWriteMarkerCount(allocationID)
-	common.Respond(w, r, map[string]int64{
-		"count": total,
+	common.Respond(w, r, WriteMarkerCountResponse{
+		Count: total,
 	}, err)
 }
 
@@ -1645,6 +1655,7 @@ type readMarkersCount struct {
 	ReadMarkersCount int64 `json:"read_markers_count"`
 }
 
+// swagger:model readMarkerResponse
 type ReadMarkerResponse struct {
 	ID            uint
 	CreatedAt     time.Time
@@ -1719,7 +1730,7 @@ func toReadMarkerResponse(rm event.ReadMarker) ReadMarkerResponse {
 //
 // responses:
 //
-//	200: []ReadMarker
+//	200: []readMarkerResponse
 //	500:
 func (srh *StorageRestHandler) getReadMarkers(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -2108,7 +2119,7 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations storage-sc GetExpiredAllocations
 // Get expired allocations.
 //
-// Retrieves a list of expired allocations associated with a specified blobber.
+// Retrieves a list of expired allocations ids associated with a specified blobber.
 //
 // parameters:
 //
@@ -2120,7 +2131,7 @@ func (srh *StorageRestHandler) getAllocations(w http.ResponseWriter, r *http.Req
 //
 // responses:
 //
-//  200: StorageAllocation
+//  200:
 //  500:
 
 func (srh *StorageRestHandler) getExpiredAllocations(w http.ResponseWriter, r *http.Request) {
@@ -2139,7 +2150,7 @@ func (srh *StorageRestHandler) getExpiredAllocations(w http.ResponseWriter, r *h
 	common.Respond(w, r, allocations, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations storage-sc GetBlobberAllocations
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get-blobber-allocations storage-sc GetBlobberAllocations
 // Get blobber allocations.
 //
 // Gets a list of allocation information for allocations hosted on a specific blobber. Supports pagination.
@@ -2213,7 +2224,7 @@ func (srh *StorageRestHandler) getBlobberAllocations(w http.ResponseWriter, r *h
 //
 // responses:
 //
-//	200: StorageAllocation
+//	200: StorageAllocationBlobbers
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Request) {
@@ -2302,6 +2313,7 @@ func (srh *StorageRestHandler) getErrors(w http.ResponseWriter, r *http.Request)
 	common.Respond(w, r, rtv, nil)
 }
 
+// swagger:model writeMarkerResponse
 type WriteMarkerResponse struct {
 	ID            uint
 	CreatedAt     time.Time
@@ -2365,7 +2377,7 @@ func toWriteMarkerResponse(wm event.WriteMarker) WriteMarkerResponse {
 //
 // responses:
 //
-//	200: []WriteMarker
+//	200: []writeMarkerResponse
 //	400:
 //	500:
 func (srh *StorageRestHandler) getWriteMarker(w http.ResponseWriter, r *http.Request) {
@@ -2885,7 +2897,7 @@ func (srh *StorageRestHandler) getBlobber(w http.ResponseWriter, r *http.Request
 //
 // responses:
 //
-//	200: Terms
+//	200: []AllocationBlobberTerm
 //	400:
 //	500:
 func (srh *StorageRestHandler) getAllocBlobberTerms(w http.ResponseWriter, r *http.Request) {
@@ -3075,7 +3087,7 @@ func (srh *StorageRestHandler) replicateSnapshots(w http.ResponseWriter, r *http
 	common.Respond(w, r, snapshots, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate storage-sc replicateBlobberAggregates
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregates storage-sc replicateBlobberAggregates
 // Gets list of blobber aggregate records
 //
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -3135,7 +3147,7 @@ func (srh *StorageRestHandler) replicateBlobberAggregates(w http.ResponseWriter,
 	common.Respond(w, r, blobbers, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate storage-sc replicateMinerAggregates
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregates storage-sc replicateMinerAggregates
 // Gets list of miner aggregate records
 //
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -3194,7 +3206,7 @@ func (srh *StorageRestHandler) replicateMinerAggregates(w http.ResponseWriter, r
 	common.Respond(w, r, miners, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate storage-sc replicateSharderAggregates
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregates storage-sc replicateSharderAggregates
 // Gets list of sharder aggregate records
 //
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -3254,7 +3266,7 @@ func (srh *StorageRestHandler) replicateSharderAggregates(w http.ResponseWriter,
 	common.Respond(w, r, sharders, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate storage-sc replicateAuthorizerAggregates
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregates storage-sc replicateAuthorizerAggregates
 // Gets list of authorizer aggregate records
 //
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -3314,7 +3326,7 @@ func (srh *StorageRestHandler) replicateAuthorizerAggregates(w http.ResponseWrit
 	common.Respond(w, r, authorizers, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate storage-sc replicateValidatorAggregates
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregates storage-sc replicateValidatorAggregates
 // Gets list of validator aggregate records
 //
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.
@@ -3374,7 +3386,7 @@ func (srh *StorageRestHandler) replicateValidatorAggregates(w http.ResponseWrite
 	common.Respond(w, r, validators, nil)
 }
 
-// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate storage-sc replicateUserAggregates
+// swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregates storage-sc replicateUserAggregates
 // Gets list of user aggregate records
 //
 // > Note: This endpoint is DEPRECATED and will be removed in the next release.

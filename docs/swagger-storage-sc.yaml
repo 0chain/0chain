@@ -451,49 +451,41 @@ definitions:
         properties:
             chain_id:
                 type: string
-                x-go-name: ChainID
+                x-go-name: ChainId
+            created_at:
+                format: date-time
+                type: string
+                x-go-name: CreatedAt
             creation_date:
-                $ref: '#/definitions/Timestamp'
+                format: int64
+                type: integer
+                x-go-name: CreationDate
             hash:
                 type: string
                 x-go-name: Hash
-            k:
-                format: int64
+            id:
+                format: uint64
                 type: integer
-                x-go-name: K
-            latest_finalized_magic_block_hash:
+                x-go-name: ID
+            magic_block_hash:
                 type: string
-                x-go-name: LatestFinalizedMagicBlockHash
-            latest_finalized_magic_block_round:
-                format: int64
-                type: integer
-                x-go-name: LatestFinalizedMagicBlockRound
-            magic_block_number:
-                format: int64
-                type: integer
-                x-go-name: MagicBlockNumber
+                x-go-name: MagicBlockHash
+            merkle_tree_root:
+                type: string
+                x-go-name: MerkleTreeRoot
             miner_id:
                 type: string
                 x-go-name: MinerID
-            miners:
-                $ref: '#/definitions/Pool'
-            mpks:
-                $ref: '#/definitions/Mpks'
-            "n":
+            num_txns:
                 format: int64
                 type: integer
-                x-go-name: "N"
+                x-go-name: NumTxns
             prev_hash:
                 type: string
                 x-go-name: PrevHash
-            prev_verification_tickets:
-                items:
-                    $ref: '#/definitions/VerificationTicket'
-                type: array
-                x-go-name: PrevBlockVerificationTickets
-            previous_hash:
+            receipt_merkle_tree_root:
                 type: string
-                x-go-name: PreviousMagicBlockHash
+                x-go-name: ReceiptMerkleTreeRoot
             round:
                 format: int64
                 type: integer
@@ -507,51 +499,27 @@ definitions:
                 type: integer
                 x-go-name: RoundTimeoutCount
             running_txn_count:
-                format: int64
-                type: integer
+                type: string
                 x-go-name: RunningTxnCount
-            sharders:
-                $ref: '#/definitions/Pool'
-            share_or_signs:
-                $ref: '#/definitions/GroupSharesOrSigns'
             signature:
                 type: string
                 x-go-name: Signature
-            starting_round:
-                format: int64
-                type: integer
-                x-go-name: StartingRound
             state_changes_count:
-                description: |-
-                    StateChangesCount represents the state changes number in client state of current block.
-                    this will be used to verify the state changes acquire from remote
                 format: int64
                 type: integer
                 x-go-name: StateChangesCount
             state_hash:
-                $ref: '#/definitions/Key'
-            t:
-                format: int64
-                type: integer
-                x-go-name: T
-            transactions:
-                description: The entire transaction payload to represent full block
-                items:
-                    $ref: '#/definitions/Transaction'
-                type: array
-                x-go-name: Txns
-            verification_tickets:
-                items:
-                    $ref: '#/definitions/VerificationTicket'
-                type: array
-                x-go-name: VerificationTickets
+                type: string
+                x-go-name: StateHash
+            updated_at:
+                format: date-time
+                type: string
+                x-go-name: UpdatedAt
             version:
-                description: Version of the entity
                 type: string
                 x-go-name: Version
-        title: Block - data structure that holds the block data */
         type: object
-        x-go-package: 0chain.net/chaincore/block
+        x-go-package: 0chain.net/smartcontract/dbs/event
     BlockSummary:
         properties:
             creation_date:
@@ -1762,6 +1730,107 @@ definitions:
         title: StorageAllocation request and entity.
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
+    StorageAllocationBlobbers:
+        properties:
+            blobber_details:
+                description: |-
+                    Blobbers not to be used anywhere except /allocation and /allocations table
+                    if Blobbers are getting used in any smart-contract, we should avoid.
+                items:
+                    $ref: '#/definitions/BlobberAllocation'
+                type: array
+                x-go-name: BlobberAllocs
+            blobbers:
+                items:
+                    $ref: '#/definitions/storageNodeResponse'
+                type: array
+                x-go-name: Blobbers
+            canceled:
+                description: |-
+                    Canceled set to true where allocation finalized by cancel_allocation
+                    transaction.
+                type: boolean
+                x-go-name: Canceled
+            data_shards:
+                format: int64
+                type: integer
+                x-go-name: DataShards
+            diverse_blobbers:
+                type: boolean
+                x-go-name: DiverseBlobbers
+            expiration_date:
+                $ref: '#/definitions/Timestamp'
+            file_options:
+                description: |-
+                    FileOptions to define file restrictions on an allocation for third-parties
+                    default 00000000 for all crud operations suggesting only owner has the below listed abilities.
+                    enabling option/s allows any third party to perform certain ops
+                    00000001 - 1  - upload
+                    00000010 - 2  - delete
+                    00000100 - 4  - update
+                    00001000 - 8  - move
+                    00010000 - 16 - copy
+                    00100000 - 32 - rename
+                format: uint16
+                type: integer
+                x-go-name: FileOptions
+            finalized:
+                description: Finalized is true where allocation has been finalized.
+                type: boolean
+                x-go-name: Finalized
+            id:
+                description: |-
+                    ID is unique allocation ID that is equal to hash of transaction with
+                    which the allocation has created.
+                type: string
+                x-go-name: ID
+            moved_back:
+                $ref: '#/definitions/Coin'
+            moved_to_challenge:
+                $ref: '#/definitions/Coin'
+            moved_to_validators:
+                $ref: '#/definitions/Coin'
+            owner_id:
+                type: string
+                x-go-name: Owner
+            owner_public_key:
+                type: string
+                x-go-name: OwnerPublicKey
+            parity_shards:
+                format: int64
+                type: integer
+                x-go-name: ParityShards
+            preferred_blobbers:
+                items:
+                    type: string
+                type: array
+                x-go-name: PreferredBlobbers
+            read_price_range:
+                $ref: '#/definitions/PriceRange'
+            size:
+                format: int64
+                type: integer
+                x-go-name: Size
+            start_time:
+                $ref: '#/definitions/Timestamp'
+            stats:
+                $ref: '#/definitions/StorageAllocationStats'
+            third_party_extendable:
+                description: Flag to determine if anyone can extend this allocation
+                type: boolean
+                x-go-name: ThirdPartyExtendable
+            time_unit:
+                $ref: '#/definitions/Duration'
+            tx:
+                description: Tx keeps hash with which the allocation has created or updated. todo do we need this field?
+                type: string
+                x-go-name: Tx
+            write_pool:
+                $ref: '#/definitions/Coin'
+            write_price_range:
+                $ref: '#/definitions/PriceRange'
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
     StorageAllocationStats:
         properties:
             latest_closed_challenge:
@@ -1902,7 +1971,6 @@ definitions:
         type: integer
         x-go-package: 0chain.net/core/common
     Transaction:
-        description: Transaction model to save the transaction data
         properties:
             chain_id:
                 description: ChainID - the chain id of the transaction
@@ -2303,6 +2371,14 @@ definitions:
                 $ref: '#/definitions/Timestamp'
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
+    collectedRewardResponse:
+        properties:
+            collected_reward:
+                format: int64
+                type: integer
+                x-go-name: CollectedReward
+        type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
     freeStorageAllocationInput:
         properties:
             blobbers:
@@ -2395,6 +2471,60 @@ definitions:
                 type: string
                 x-go-name: Version
         type: object
+        x-go-package: 0chain.net/smartcontract/storagesc
+    readMarkerResponse:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            auth_ticket:
+                type: string
+                x-go-name: AuthTicket
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            block_number:
+                format: int64
+                type: integer
+                x-go-name: BlockNumber
+            client_id:
+                type: string
+                x-go-name: ClientID
+            owner_id:
+                type: string
+                x-go-name: OwnerID
+            payer_id:
+                type: string
+                x-go-name: PayerID
+            read_counter:
+                format: int64
+                type: integer
+                x-go-name: ReadCounter
+            read_size:
+                format: double
+                type: number
+                x-go-name: ReadSize
+            signature:
+                type: string
+                x-go-name: Signature
+            timestamp:
+                format: int64
+                type: integer
+                x-go-name: Timestamp
+            transaction_id:
+                type: string
+                x-go-name: TransactionID
+        type: object
+        x-go-name: ReadMarkerResponse
         x-go-package: 0chain.net/smartcontract/storagesc
     readMarkersCount:
         properties:
@@ -2602,6 +2732,62 @@ definitions:
                 x-go-name: ValidatorID
         type: object
         x-go-package: 0chain.net/smartcontract/storagesc
+    writeMarkerCountResponse:
+        properties:
+            count:
+                format: int64
+                type: integer
+                x-go-name: Count
+        type: object
+        x-go-name: WriteMarkerCountResponse
+        x-go-package: 0chain.net/smartcontract/storagesc
+    writeMarkerResponse:
+        properties:
+            CreatedAt:
+                format: date-time
+                type: string
+            ID:
+                format: uint64
+                type: integer
+            UpdatedAt:
+                format: date-time
+                type: string
+            allocation_id:
+                type: string
+                x-go-name: AllocationID
+            allocation_root:
+                type: string
+                x-go-name: AllocationRoot
+            blobber_id:
+                type: string
+                x-go-name: BlobberID
+            block_number:
+                format: int64
+                type: integer
+                x-go-name: BlockNumber
+            client_id:
+                type: string
+                x-go-name: ClientID
+            previous_allocation_root:
+                type: string
+                x-go-name: PreviousAllocationRoot
+            signature:
+                type: string
+                x-go-name: Signature
+            size:
+                format: int64
+                type: integer
+                x-go-name: Size
+            timestamp:
+                format: int64
+                type: integer
+                x-go-name: Timestamp
+            transaction_id:
+                type: string
+                x-go-name: TransactionID
+        type: object
+        x-go-name: WriteMarkerResponse
+        x-go-package: 0chain.net/smartcontract/storagesc
 info:
     title: 'Storage Smart Contract Public API:'
     version: 0.1.0
@@ -2636,9 +2822,11 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: Terms
+                    description: AllocationBlobberTerm
                     schema:
-                        $ref: '#/definitions/Terms'
+                        items:
+                            $ref: '#/definitions/AllocationBlobberTerm'
+                        type: array
                 "400":
                     description: ""
                 "500":
@@ -2700,9 +2888,9 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: challengePoolStat
+                    description: writeMarkerCountResponse
                     schema:
-                        $ref: '#/definitions/challengePoolStat'
+                        $ref: '#/definitions/writeMarkerCountResponse'
                 "400":
                     description: ""
             summary: Count of write markers for an allocation.
@@ -2720,9 +2908,9 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: StorageAllocation
+                    description: StorageAllocationBlobbers
                     schema:
-                        $ref: '#/definitions/StorageAllocation'
+                        $ref: '#/definitions/StorageAllocationBlobbers'
                 "400":
                     description: ""
                 "500":
@@ -2786,42 +2974,6 @@ paths:
                 "500":
                     description: ""
             summary: Get client allocations.
-            tags:
-                - storage-sc
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-allocations:
-        get:
-            description: Gets a list of allocation information for allocations hosted on a specific blobber. Supports pagination.
-            operationId: GetBlobberAllocations
-            parameters:
-                - description: blobber id of allocations we wish to list
-                  in: query
-                  name: blobber_id
-                  required: true
-                  type: string
-                - description: offset
-                  in: query
-                  name: offset
-                  type: string
-                - description: limit
-                  in: query
-                  name: limit
-                  type: string
-                - description: desc or asc by created date
-                  in: query
-                  name: sort
-                  type: string
-            responses:
-                "200":
-                    description: StorageAllocation
-                    schema:
-                        items:
-                            $ref: '#/definitions/StorageAllocation'
-                        type: array
-                "400":
-                    description: ""
-                "500":
-                    description: ""
-            summary: Get blobber allocations.
             tags:
                 - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/blobber-challenges:
@@ -2956,9 +3108,9 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: challengePoolStat
+                    description: collectedRewardResponse
                     schema:
-                        $ref: '#/definitions/challengePoolStat'
+                        $ref: '#/definitions/collectedRewardResponse'
                 "400":
                     description: ""
             summary: Get collected reward.
@@ -3049,6 +3201,42 @@ paths:
                 "400":
                     description: ""
             summary: Get free allocation blobbers.
+            tags:
+                - storage-sc
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get-blobber-allocations:
+        get:
+            description: Gets a list of allocation information for allocations hosted on a specific blobber. Supports pagination.
+            operationId: GetBlobberAllocations
+            parameters:
+                - description: blobber id of allocations we wish to list
+                  in: query
+                  name: blobber_id
+                  required: true
+                  type: string
+                - description: offset
+                  in: query
+                  name: offset
+                  type: string
+                - description: limit
+                  in: query
+                  name: limit
+                  type: string
+                - description: desc or asc by created date
+                  in: query
+                  name: sort
+                  type: string
+            responses:
+                "200":
+                    description: StorageAllocation
+                    schema:
+                        items:
+                            $ref: '#/definitions/StorageAllocation'
+                        type: array
+                "400":
+                    description: ""
+                "500":
+                    description: ""
+            summary: Get blobber allocations.
             tags:
                 - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/get_blocks:
@@ -3158,7 +3346,7 @@ paths:
                 - storage-sc
     /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/getExpiredAllocations:
         get:
-            description: Retrieves a list of expired allocations associated with a specified blobber.
+            description: Retrieves a list of expired allocations ids associated with a specified blobber.
             operationId: GetExpiredAllocations
             parameters:
                 - description: The identifier of the blobber to retrieve expired allocations for.
@@ -3168,9 +3356,7 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: StorageAllocation
-                    schema:
-                        $ref: '#/definitions/StorageAllocation'
+                    description: ""
                 "500":
                     description: ""
             summary: Get expired allocations.
@@ -3438,17 +3624,17 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: ReadMarker
+                    description: readMarkerResponse
                     schema:
                         items:
-                            $ref: '#/definitions/ReadMarker'
+                            $ref: '#/definitions/readMarkerResponse'
                         type: array
                 "500":
                     description: ""
             summary: Get read markers.
             tags:
                 - storage-sc
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregate:
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-authorizer-aggregates:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
             operationId: replicateAuthorizerAggregates
@@ -3479,7 +3665,7 @@ paths:
             summary: Gets list of authorizer aggregate records
             tags:
                 - storage-sc
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregate:
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-blobber-aggregates:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
             operationId: replicateBlobberAggregates
@@ -3510,7 +3696,7 @@ paths:
             summary: Gets list of blobber aggregate records
             tags:
                 - storage-sc
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregate:
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-miner-aggregates:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
             operationId: replicateMinerAggregates
@@ -3541,7 +3727,7 @@ paths:
             summary: Gets list of miner aggregate records
             tags:
                 - storage-sc
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregate:
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-sharder-aggregates:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
             operationId: replicateSharderAggregates
@@ -3605,7 +3791,7 @@ paths:
             summary: Gets list of global snapshot records
             tags:
                 - storage-sc
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregate:
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-user-aggregates:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
             operationId: replicateUserAggregates
@@ -3636,7 +3822,7 @@ paths:
             summary: Gets list of user aggregate records
             tags:
                 - storage-sc
-    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregate:
+    /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7/replicate-validator-aggregates:
         get:
             description: '> Note: This endpoint is DEPRECATED and will be removed in the next release.'
             operationId: replicateValidatorAggregates
@@ -3836,10 +4022,10 @@ paths:
                   type: string
             responses:
                 "200":
-                    description: WriteMarker
+                    description: writeMarkerResponse
                     schema:
                         items:
-                            $ref: '#/definitions/WriteMarker'
+                            $ref: '#/definitions/writeMarkerResponse'
                         type: array
                 "400":
                     description: ""

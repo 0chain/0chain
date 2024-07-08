@@ -15,6 +15,7 @@ import (
 	"0chain.net/smartcontract/stakepool"
 )
 
+// swagger:model StorageAllocationBlobbers
 type StorageAllocationBlobbers struct {
 	StorageAllocation `json:",inline"`
 	Blobbers          []*storageNodeResponse `json:"blobbers"`

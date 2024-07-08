@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// swagger:model AllocationBlobberTerm
 type AllocationBlobberTerm struct {
 	gorm.Model
 	AllocationID    int64  `json:"alloc_id" gorm:"column:alloc_id; uniqueIndex:idx_alloc_blob,priority:1; not null"` // Foreign Key, priority: lowest first

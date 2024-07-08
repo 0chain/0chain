@@ -1151,7 +1151,7 @@ paths:
             description: |-
                 Get the confirmation of the transaction from the sharders.
                 If content == confirmation, only the confirmation is returned. Otherwise, the confirmation and the latest finalized block are returned.
-            operationId: GetTransactionConfirmationz
+            operationId: GetTransactionConfirmation
             parameters:
                 - description: Transaction hash
                   in: query
