@@ -98,16 +98,6 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func filterEvents(events []Event) []Event {
-	var filteredEvents []Event
-	for _, event := range events {
-		if event.Data != nil {
-			filteredEvents = append(filteredEvents, event)
-		}
-	}
-	return filteredEvents
-}
-
 var doOnce sync.Once
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
