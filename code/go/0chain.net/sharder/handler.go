@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"fmt"
 	"net/http"
@@ -245,6 +246,16 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Finalization Lag Statistics</h3>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
+	fmt.Fprintf(w, "</td></tr>")
+
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Kafka Event Push Latency Statistics (in milliseconds)</h3>")
+	diagnostics.WriteHistogramStatistics(w, c, event.KafkaEventPushLatencyMetric)
+	fmt.Fprintf(w, "</td></tr>")
+
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Finalization To Kafka Event Push Latency Statistics (in milliseconds)</h3>")
+	diagnostics.WriteHistogramStatistics(w, c, event.FinalizationToKafkaLatencyMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
