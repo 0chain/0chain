@@ -504,58 +504,50 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 	var nonRemovedChallenges []*AllocOpenChallenge
 	var removedChallengeIds []string
 
-	switch err {
-	case util.ErrValueNotPresent:
-		return 1, nil
-	case nil:
-		for _, oc := range allocChallenges.OpenChallenges {
-			if oc.BlobberID != d.BlobberID {
-				nonRemovedChallenges = append(nonRemovedChallenges, oc)
-				continue
-			}
-
-			if d.Stats == nil {
-				d.Stats = new(StorageAllocationStats) // make sure
-			}
-
-			var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
-			currentRound := balances.GetBlock().Round
-
-			d.Stats.OpenChallenges--
-			alloc.Stats.OpenChallenges--
-
-			if expire < currentRound {
-				d.Stats.FailedChallenges++
-				alloc.Stats.FailedChallenges++
-
-				err := emitUpdateChallenge(&StorageChallenge{
-					ID:           oc.ID,
-					AllocationID: alloc.ID,
-					BlobberID:    oc.BlobberID,
-				}, false, ChallengeRespondedLate, balances, alloc.Stats)
-				if err != nil {
-					return 0.0, err
-				}
-
-			} else {
-				d.Stats.SuccessChallenges++
-				alloc.Stats.SuccessChallenges++
-
-				err := emitUpdateChallenge(&StorageChallenge{
-					ID:           oc.ID,
-					AllocationID: alloc.ID,
-					BlobberID:    oc.BlobberID,
-				}, true, ChallengeResponded, balances, alloc.Stats)
-				if err != nil {
-					return 0.0, err
-				}
-			}
-
-			removedChallengeIds = append(removedChallengeIds, oc.ID)
+	for _, oc := range allocChallenges.OpenChallenges {
+		if oc.BlobberID != d.BlobberID {
+			nonRemovedChallenges = append(nonRemovedChallenges, oc)
+			continue
 		}
 
-	default:
-		return 0.0, fmt.Errorf("getting allocation challenge: %v", err)
+		if d.Stats == nil {
+			d.Stats = new(StorageAllocationStats) // make sure
+		}
+
+		var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
+		currentRound := balances.GetBlock().Round
+
+		d.Stats.OpenChallenges--
+		alloc.Stats.OpenChallenges--
+
+		if expire < currentRound {
+			d.Stats.FailedChallenges++
+			alloc.Stats.FailedChallenges++
+
+			err := emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: alloc.ID,
+				BlobberID:    oc.BlobberID,
+			}, false, ChallengeRespondedLate, balances, alloc.Stats)
+			if err != nil {
+				return 0.0, err
+			}
+
+		} else {
+			d.Stats.SuccessChallenges++
+			alloc.Stats.SuccessChallenges++
+
+			err := emitUpdateChallenge(&StorageChallenge{
+				ID:           oc.ID,
+				AllocationID: alloc.ID,
+				BlobberID:    oc.BlobberID,
+			}, true, ChallengeResponded, balances, alloc.Stats)
+			if err != nil {
+				return 0.0, err
+			}
+		}
+
+		removedChallengeIds = append(removedChallengeIds, oc.ID)
 	}
 
 	allocChallenges.OpenChallenges = nonRemovedChallenges

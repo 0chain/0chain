@@ -308,11 +308,6 @@ func (sp *StakePool) MintRewards(
 			ProviderID:   providerId,
 		})
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.UserAggregate{
-			CollectedReward: int64(dPool.Reward),
-			UserID:          clientId,
-		})
-
 		delegateReward = dPool.Reward
 		dPool.Reward = 0
 	}
@@ -484,9 +479,6 @@ func (sp *StakePool) DistributeRewardsRandN(
 			return err
 		}
 		spUpdate.DelegateRewards[pool.DelegateID] = reward
-		if err != nil {
-			return err
-		}
 	}
 
 	if valueBalance > 0 {
@@ -669,9 +661,6 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 		spUpdate.DelegateRewards[dp.DelegateID] = reward
-		if err != nil {
-			return err
-		}
 	}
 
 	if valueBalance > 0 {
@@ -892,9 +881,6 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
-	}
-	if err != nil {
-		return "", err
 	}
 	dp, ok := sp.GetPools()[t.ClientID]
 	if !ok {

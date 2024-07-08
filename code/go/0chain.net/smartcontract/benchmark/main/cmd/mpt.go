@@ -673,9 +673,7 @@ func newEventsDb() *event.EventDb {
 		}
 
 	}
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	log.Println("created event database\t", time.Since(timer))
 	return eventDb
 }
