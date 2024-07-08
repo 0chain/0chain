@@ -189,7 +189,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			select {
 			case <-ch:
 				sent++
-				if sent == len(filteredEvents) {
+				if sent == len(events.events) {
 					break L
 				}
 			case <-timeout.Done():
