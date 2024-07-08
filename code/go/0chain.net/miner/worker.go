@@ -130,6 +130,11 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				break
 			}
 
+			if !mc.IsLFBStateReady() {
+				timer = time.NewTimer(4 * time.Second)
+				continue
+			}
+
 			if cround == mc.GetCurrentRound() {
 				r := mc.GetMinerRound(cround)
 
@@ -262,9 +267,10 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 		select {
 		case <-tk.C:
 			mc.syncAllMissingNodes(ctx)
+			mc.SetLFBState(LFBStateReady)
 			// do all missing nodes check and sync every 30 minutes
 			// TODO: move the interval to a config file
-			tk.Reset(30 * time.Minute)
+			// tk.Reset(30 * time.Minute)
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return

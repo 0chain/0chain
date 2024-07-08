@@ -705,7 +705,7 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 	return get.(bool)
 }
 
-//nolint: staticcheck
+// nolint: staticcheck
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	//we don't want to cancel previous notarization too early, previous block should be notarized often
 	var cancel func()
@@ -1587,10 +1587,11 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	mc.RoundTimeoutsCount++
 
 	// get LFMB and LFB from sharders
-	var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
-	if err != nil {
-		logging.Logger.Error("restartRound - ensure lfb", zap.Error(err))
-	}
+	// TODO: add back commented code below after debuging
+	// var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
+	// if err != nil {
+	// 	logging.Logger.Error("restartRound - ensure lfb", zap.Error(err))
+	// }
 
 	var (
 		isAhead = mc.isAheadOfSharders(ctx, rn)
@@ -1609,7 +1610,9 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	//}
 
 	// kick new round from the new LFB from sharders
-	if updated {
+	// TODO: add back after debuging
+	// if updated {
+	if false {
 		if lfb.Round > rn {
 			mc.kickRoundByLFB(ctx, lfb) // and continue
 			//round = mc.GetCurrentRound()

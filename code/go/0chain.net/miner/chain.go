@@ -39,6 +39,12 @@ const (
 )
 
 var (
+	LFBStateNotReady = uint32(0)
+	LFBStateSyncing  = uint32(1)
+	LFBStateReady    = uint32(2)
+)
+
+var (
 	// ErrRoundMismatch - an error object for mismatched round error.
 	ErrRoundMismatch = common.NewError(RoundMismatch, "Current round number"+
 		" of the chain doesn't match the block generation round")
@@ -139,6 +145,7 @@ type Chain struct {
 	roundDkg            round.RoundStorage
 	discoverClients     bool
 	started             uint32
+	lfbState            uint32
 
 	// view change process control
 	viewChangeProcess
@@ -160,6 +167,18 @@ type Chain struct {
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
 	verifyCachedVRFSharesWorker          *common.WithContextFunc
 	generateBlockWorker                  *common.WithContextFunc
+}
+
+func (mc *Chain) LFBState() uint32 {
+	return atomic.LoadUint32(&mc.lfbState)
+}
+
+func (mc *Chain) SetLFBState(state uint32) {
+	atomic.StoreUint32(&mc.lfbState, state)
+}
+
+func (mc *Chain) IsLFBStateReady() bool {
+	return mc.LFBState() == LFBStateReady
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
