@@ -243,12 +243,14 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 			mergeAddBurnTicket(),
 
+			mergeUpdateUserCollectedRewardsEvents(),
 			mergeUserStakeEvents(),
 			mergeUserUnstakeEvents(),
 			mergeUserReadPoolLockEvents(),
 			mergeUserReadPoolUnlockEvents(),
 			mergeUserWritePoolLockEvents(),
 			mergeUserWritePoolUnlockEvents(),
+			mergeUpdateUserPayedFeesEvents(),
 			mergeAuthorizerBurnEvents(),
 			mergeAddBridgeMintEvents(),
 		}
