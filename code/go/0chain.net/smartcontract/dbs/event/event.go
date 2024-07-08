@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/rcrowley/go-metrics"
-	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/node"
 
