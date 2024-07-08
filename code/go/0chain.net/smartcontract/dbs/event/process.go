@@ -297,6 +297,38 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 	return append(mergedEvents, others...), nil
 }
 
+func (edb *EventDb) addEventsWorker(ctx context.Context,
+	getBlockEvents func(round int64) (int64, []Event, error)) {
+	err := edb.managePermanentPartitions(0)
+	if err != nil {
+		logging.Logger.Error("can't manage permanent partitions")
+	}
+	err = edb.managePartitions(0)
+	if err != nil {
+		logging.Logger.Error("can't manage partitions")
+	}
+	go edb.managePartitionsWorker(ctx)
+	go edb.managePermanentPartitionsWorker(ctx)
+
+	for {
+		es := <-edb.eventsChannel
+		func() {
+			var commit bool
+			defer func() {
+				es.done <- commit
+			}()
+
+			err := Work(ctx, es, getBlockEvents)
+			if err != nil {
+				logging.Logger.Error("process events", zap.Error(err))
+				commit = false
+				return
+			}
+			commit = true
+		}()
+	}
+}
+
 func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (int64, []Event, error)) error {
 	logging.Logger.Debug("kafka - publish unpublished events")
 	if !edb.dbConfig.KafkaEnabled {
@@ -356,6 +388,40 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 				edb.mustPushEventsToKafka(es, true)
 			}
 		}
+	}
+
+	return nil
+}
+
+func Work(
+	ctx context.Context,
+	blockEvents BlockEvents,
+	getBlockEvents func(round int64) (int64, []Event, error),
+) error {
+	tx := blockEvents.tx
+
+	doOnce.Do(func() {
+		if err := tx.publishUnPublishedEvents(getBlockEvents); err != nil {
+			logging.Logger.Panic("push unpublished events", zap.Error(err))
+		}
+	})
+
+	tse := time.Now()
+
+	tags, err := tx.WorkEvents(ctx, blockEvents)
+	if err != nil {
+		return err
+	}
+
+	due := time.Since(tse)
+	if due.Milliseconds() > 200 {
+		logging.Logger.Warn("event db work slow",
+			zap.Duration("duration", due),
+			zap.Int("events number", len(blockEvents.events)),
+			zap.Strings("tags", tags),
+			zap.Int64("round", blockEvents.round),
+			zap.String("block", blockEvents.block),
+			zap.Int("block size", blockEvents.blockSize))
 	}
 
 	return nil

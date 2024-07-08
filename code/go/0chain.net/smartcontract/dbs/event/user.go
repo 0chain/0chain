@@ -47,17 +47,6 @@ func (edb *EventDb) updateUserMintNonce(users []User) error {
 	}).Create(&users).Error
 }
 
-func mergeUpdateUserCollectedRewardsEvents() *eventsMergerImpl[UserAggregate] {
-	return newEventsMerger[UserAggregate](TagUpdateUserCollectedRewards, withCollectedRewardsMerged())
-}
-
-func withCollectedRewardsMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *UserAggregate) (*UserAggregate, error) {
-		a.CollectedReward += b.CollectedReward
-		return a, nil
-	})
-}
-
 func mergeUserStakeEvents() *eventsMergerImpl[DelegatePoolLock] {
 	return newEventsMerger[DelegatePoolLock](TagLockStakePool, withTotalStakeMerged())
 }
@@ -99,17 +88,6 @@ func mergeUserWritePoolUnlockEvents() *eventsMergerImpl[WritePoolLock] {
 func withWritePoolMerged() eventMergeMiddleware {
 	return withEventMerge(func(a, b *WritePoolLock) (*WritePoolLock, error) {
 		a.Amount += b.Amount
-		return a, nil
-	})
-}
-
-func mergeUpdateUserPayedFeesEvents() *eventsMergerImpl[UserAggregate] {
-	return newEventsMerger[UserAggregate](TagUpdateUserPayedFees, withPayedFeesMerged())
-}
-
-func withPayedFeesMerged() eventMergeMiddleware {
-	return withEventMerge(func(a, b *UserAggregate) (*UserAggregate, error) {
-		a.PayedFees += b.PayedFees
 		return a, nil
 	})
 }
