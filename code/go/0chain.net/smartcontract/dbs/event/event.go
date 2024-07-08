@@ -183,7 +183,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 					break L
 				}
 			case <-timeout.Done():
-				logging.Logger.Panic(fmt.Sprintf("Timeout to publish event to kafka"))
+				logging.Logger.Panic("Timeout to publish event to kafka")
 			}
 		}
 		if updateColumn {
