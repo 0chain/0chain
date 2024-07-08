@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rcrowley/go-metrics"
+
+	"0chain.net/chaincore/node"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
@@ -18,15 +21,31 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber    int64        `json:"block_number"`
-	TxHash         string       `json:"tx_hash"`
-	Type           EventType    `json:"type"`
-	Tag            EventTag     `json:"tag"`
-	Index          string       `json:"index"`
-	IsPublished    bool         `json:"is_published"`
-	SequenceNumber int64        `json:"sequence_number"`
-	Data           interface{}  `json:"data" gorm:"-"`
-	Version        EventVersion `json:"version" gorm:"-"`
+	BlockNumber              int64        `json:"block_number"`
+	TxHash                   string       `json:"tx_hash"`
+	Type                     EventType    `json:"type"`
+	Tag                      EventTag     `json:"tag"`
+	Index                    string       `json:"index"`
+	IsPublished              bool         `json:"is_published"`
+	EventKey                 string       `json:"event_key" gorm:"-"`
+	SequenceNumber           int64        `json:"sequence_number"`
+	RoundLocalSequenceNumber int64        `json:"round_local_sequence_number" gorm:"-"`
+	Data                     interface{}  `json:"data" gorm:"-"`
+	Version                  EventVersion `json:"version" gorm:"-"`
+}
+
+// FinalizationToKafkaLatencyMetric - a metric which tracks how much time it takes from a block which got finalized to respective event being pushed into kafka
+var FinalizationToKafkaLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+
+// KafkaEventPushLatencyMetric - a metric which tracks how long it takes for an event to be pushed to kafka
+var KafkaEventPushLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+
+func InitMetrics() {
+	FinalizationToKafkaLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+	_ = metrics.Register("finalization_to_kafka_latency", FinalizationToKafkaLatencyMetric)
+
+	KafkaEventPushLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+	_ = metrics.Register("kafka_event_push_latency", KafkaEventPushLatencyMetric)
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -115,21 +134,22 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 	if edb.dbConfig.KafkaEnabled {
 		var (
-			filteredEvents = filterEvents(events.events)
-			broker         = edb.GetKafkaProv()
-			topic          = edb.dbConfig.KafkaTopic
-			eventsMap      = make(map[int64]*Event)
+			//filteredEvents = filterEvents(events.events)
+			broker    = edb.GetKafkaProv()
+			topic     = edb.dbConfig.KafkaTopic
+			eventsMap = make(map[int64]*Event)
 		)
 
 		for i, e := range events.events {
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
-
 		var results []chan int64
-		for _, filteredEvent := range filteredEvents {
+		self := node.Self.Underlying()
+		for _, filteredEvent := range events.events {
 			data := map[string]interface{}{
-				"event": filteredEvent,
-				"round": events.round,
+				"event":  filteredEvent,
+				"round":  events.round,
+				"source": self.ID,
 			}
 			eventJson, err := json.Marshal(data)
 			if err != nil {
@@ -137,9 +157,14 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 
 			ts := time.Now()
-			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
+			key := filteredEvent.EventKey
 			res := broker.PublishToKafka(topic, []byte(key), eventJson)
 			results = append(results, res)
+			if filteredEvent.Tag == TagFinalizeBlock {
+				blockData := filteredEvent.Data.(*Block)
+				finalizationTime := blockData.FinalizationTime
+				FinalizationToKafkaLatencyMetric.Update(time.Since(finalizationTime).Milliseconds()) // update block finalization to kafka push latency metric
+			}
 
 			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
 
@@ -149,6 +174,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 				zap.Int64("round", events.round))
 
 			tm := time.Since(ts)
+			KafkaEventPushLatencyMetric.Update(tm.Milliseconds()) // update kafka latency metric
 			if tm > 100*time.Millisecond {
 				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
 			}

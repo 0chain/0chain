@@ -71,7 +71,6 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) chan i
 			writers[topic] = writer
 		}
 	}
-
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Key:   sarama.ByteEncoder(key),

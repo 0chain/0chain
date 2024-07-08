@@ -129,6 +129,7 @@ func (msc *MinerSmartContract) refreshProvider(
 	return nil, nil
 }
 
+//nolint:unused
 func getStakePool(providerType spenum.Provider, providerID datastore.Key, balances cstate.CommonStateContextI) (
 	sp *stakepool.StakePool, err error) {
 	sp = stakepool.NewStakePool()
