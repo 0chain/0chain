@@ -33,6 +33,22 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 		table = &event.Authorizer{}
 	case "validator":
 		table = &event.Validator{}
+	case "user":
+		table = &event.User{}
+	case "user_snapshot":
+		table = &event.UserSnapshot{}
+	case "miner_snapshot":
+		table = &event.MinerSnapshot{}
+	case "blobber_snapshot":
+		table = &event.BlobberSnapshot{}
+	case "sharder_snapshot":
+		table = &event.SharderSnapshot{}
+	case "validator_snapshot":
+		table = &event.ValidatorSnapshot{}
+	case "authorizer_snapshot":
+		table = &event.AuthorizerSnapshot{}
+	case "provider_rewards":
+		table = &event.ProviderRewards{}
 	}
 
 	result, err := edb.GetQueryData(fields, table)
