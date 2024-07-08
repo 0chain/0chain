@@ -98,16 +98,6 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
-func filterEvents(events []Event) []Event {
-	var filteredEvents []Event
-	for _, event := range events {
-		if event.Data != nil {
-			filteredEvents = append(filteredEvents, event)
-		}
-	}
-	return filteredEvents
-}
-
 var doOnce sync.Once
 
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
@@ -193,7 +183,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 					break L
 				}
 			case <-timeout.Done():
-				logging.Logger.Panic(fmt.Sprintf("Timeout to publish event to kafka"))
+				logging.Logger.Panic("Timeout to publish event to kafka")
 			}
 		}
 		if updateColumn {
@@ -236,17 +226,7 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&BlobberAggregate{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&ChallengePool{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&BlobberSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -267,16 +247,6 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Validator{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&ValidatorAggregate{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&ValidatorSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -311,27 +281,7 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&MinerAggregate{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&MinerSnapshot{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&SharderAggregate{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&SharderSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -351,22 +301,12 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&UserAggregate{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&RewardMint{})
 	if err != nil {
 		return err
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Challenge{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Snapshot{})
 	if err != nil {
 		return err
 	}
@@ -386,16 +326,6 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&AuthorizerSnapshot{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&AuthorizerAggregate{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&BurnTicket{})
 	if err != nil {
 		return err
@@ -407,11 +337,6 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&TransactionErrors{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&UserSnapshot{})
 	if err != nil {
 		return err
 	}

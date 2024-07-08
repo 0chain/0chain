@@ -986,9 +986,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed",
 			"can't get existing allocation: "+err.Error())
 	}
-	if err != nil {
-		return "", err
-	}
 
 	if t.ClientID != alloc.Owner {
 		if !alloc.ThirdPartyExtendable || !request.Extend {
