@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/node"
+
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/logging"
@@ -19,14 +21,17 @@ import (
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber    int64       `json:"block_number"`
-	TxHash         string      `json:"tx_hash"`
-	Type           EventType   `json:"type"`
-	Tag            EventTag    `json:"tag"`
-	Index          string      `json:"index"`
-	IsPublished    bool        `json:"is_published"`
-	SequenceNumber int64       `json:"sequence_number"`
-	Data           interface{} `json:"data" gorm:"-"`
+	BlockNumber              int64        `json:"block_number"`
+	TxHash                   string       `json:"tx_hash"`
+	Type                     EventType    `json:"type"`
+	Tag                      EventTag     `json:"tag"`
+	Index                    string       `json:"index"`
+	IsPublished              bool         `json:"is_published"`
+	EventKey                 string       `json:"event_key" gorm:"-"`
+	SequenceNumber           int64        `json:"sequence_number"`
+	RoundLocalSequenceNumber int64        `json:"round_local_sequence_number" gorm:"-"`
+	Data                     interface{}  `json:"data" gorm:"-"`
+	Version                  EventVersion `json:"version" gorm:"-"`
 }
 
 // FinalizationToKafkaLatencyMetric - a metric which tracks how much time it takes from a block which got finalized to respective event being pushed into kafka
@@ -129,20 +134,21 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 	if edb.dbConfig.KafkaEnabled {
 		var (
-			filteredEvents = filterEvents(events.events)
-			broker         = edb.GetKafkaProv()
-			topic          = edb.dbConfig.KafkaTopic
-			eventsMap      = make(map[int64]*Event)
+			//filteredEvents = filterEvents(events.events)
+			broker    = edb.GetKafkaProv()
+			topic     = edb.dbConfig.KafkaTopic
+			eventsMap = make(map[int64]*Event)
 		)
 
 		for i, e := range events.events {
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
-
-		for _, filteredEvent := range filteredEvents {
+		self := node.Self.Underlying()
+		for _, filteredEvent := range events.events {
 			data := map[string]interface{}{
-				"event": filteredEvent,
-				"round": events.round,
+				"event":  filteredEvent,
+				"round":  events.round,
+				"source": self.ID,
 			}
 			eventJson, err := json.Marshal(data)
 			if err != nil {
@@ -150,7 +156,7 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 
 			ts := time.Now()
-			key := strconv.Itoa(int(filteredEvent.SequenceNumber))
+			key := filteredEvent.EventKey
 			err = broker.PublishToKafka(topic, []byte(key), eventJson)
 			if err != nil {
 				// Panic to break early for debugging, change back to error later

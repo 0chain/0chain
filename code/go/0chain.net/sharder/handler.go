@@ -45,10 +45,18 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 	return c.BlockStateChangeHandler(ctx, r)
 }
 
+// swgger:model
 type ChainInfo struct {
 	LatestFinalizedBlock *block.BlockSummary `json:"latest_finalized_block"`
 }
 
+// swagger:route GET /v1/healthcheck sharder GetHealthCheck
+// Health Check.
+// Retrieve the health check information of the sharder.
+//
+// responses:
+//  200: HealthCheckResponse
+//  400:
 func HealthcheckHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 	return struct {
@@ -70,6 +78,30 @@ func HealthcheckHandler(ctx context.Context, r *http.Request) (interface{}, erro
 }
 
 /*BlockHandler - a handler to respond to block queries */
+// swagger:route GET /v1/block/get sharder GetBlock
+// Get Block.
+// Retrieve needed parts of block information, given either its round or its hash. At least one of them needs to be provided, if both are provided, however, the round will overwrite the hash.
+// If "content" == "full", the response has the full Block in `block` field.
+// If "content" == "header", the response has the BlockSummary in `header` field.
+// If "content" == "merkle_tree", the response has the Merkle Tree of the transactions in the block in `merkle_tree` field.
+//
+// parameters:
+//   +name: block
+//	 in: query
+//	 type: string
+//	 description: Hash of the block to retrieve.
+//   +name: round
+//	 in: query
+//	 type: string
+//	 description: Round of the block to retrieve.
+//   +name: content
+//	 in: query
+//	 type: string
+//	 description: A comma-separated list of parts of the block to retrieve. Possible values are "full" to retrieve the full block, "header" to retrieve summary, "merkle_tree" to retrieve Merkle Tree of the transactions inside the block. Default is "header".
+//
+// responses:
+//  200: BlockResponse
+//  400:
 func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	roundData := r.FormValue("round")
 	hash := r.FormValue("block")
@@ -124,6 +156,19 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 }
 
 /*MagicBlockHandler - a handler to respond to magic block queries */
+// swagger:route GET /v1/block/magic/get sharder GetMagicBlock
+// Get Magic Block.
+// Retrieve the magic block given its number.
+//
+// parameters:
+//   +name: magic_block_number
+//	 in: query
+//	 type: string
+//	 description: Number of the magic block to retrieve.
+//
+// responses:
+//  200: Block
+//  400:
 func MagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	magicBlockNumber := r.FormValue("magic_block_number")
 	sc := GetSharderChain()
@@ -264,8 +309,9 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 }
 
 //
-// swagger:route GET /v1/sharder/get/stats sharderstats
-// a handler to get sharder stats
+// swagger:route GET /v1/sharder/get/stats sharder GetSharderStats
+// Get Sharder Stats.
+// Retrieve the sharder stats.
 //
 // responses:
 //  200: ExplorerStats
