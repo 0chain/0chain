@@ -67,6 +67,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 
 	logging.Logger.Debug("get_block_state_changes - apply took",
 		zap.Int64("round", b.Round),
+		zap.Any("state status", b.GetStateStatus()),
 		zap.Duration("duration", time.Since(ts)))
 	return nil
 }
