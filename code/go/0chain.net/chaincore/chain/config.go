@@ -604,6 +604,7 @@ func (c *ConfigImpl) FromViper() error {
 	conf.DbsEvents.KafkaPassword = viper.GetString("server_chain.kafka.password")
 	conf.DbsEvents.KafkaWriteTimeout = viper.GetDuration("kafka.write_timeout")
 	conf.DbsEvents.KafkaTriggerRound = viper.GetInt64("kafka.trigger_round")
+	conf.DbsEvents.KafkaPanicRound = viper.GetInt64("kafka.panic_round")
 	conf.DbsSettings.Debug = viper.GetBool("server_chain.dbs.settings.debug")
 	conf.DbsSettings.AggregatePeriod = viper.GetInt64("server_chain.dbs.settings.aggregate_period")
 	conf.DbsSettings.PartitionChangePeriod = viper.GetInt64("server_chain.dbs.settings.partition_change_period")
