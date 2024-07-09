@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"bytes"
 	"container/ring"
 	"context"
 	"encoding/json"
@@ -14,7 +15,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/cache"
 	"0chain.net/core/config"
+	"0chain.net/core/util/orderbuffer"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -103,6 +106,11 @@ type updateLFMBWithReply struct {
 	clone *block.Block
 	reply chan struct{}
 }
+
+var (
+	ErrNoPreviousBlock = errors.New("previous block does not exist")
+	ErrNoPreviousState = common.NewError("previous block state is not computed", "")
+)
 
 /*Chain - data structure that holds the chain data*/
 type Chain struct {
@@ -221,6 +229,419 @@ type Chain struct {
 	OnBlockAdded func(b *block.Block)
 
 	stateCache *statecache.StateCache
+
+	blockBuffer      *orderbuffer.OrderBuffer
+	processingBlocks *cache.LRU[string, struct{}]
+	pbMutex          sync.RWMutex
+}
+
+func (c *Chain) PushToBlockProcessor(b *block.Block) error {
+	c.blockBuffer.Add(b.Round, b)
+	return nil
+}
+
+func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
+	blocks := make([]*block.Block, reqNum)
+	wg := sync.WaitGroup{}
+	for i := int64(0); i < reqNum; i++ {
+		wg.Add(1)
+		go func(idx int64) {
+			defer wg.Done()
+			r := startRound + idx + 1
+			var cancel func()
+			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+			defer cancel()
+			b, err := c.GetNotarizedBlockFromSharders(cctx, "", r)
+			if err != nil {
+				// fetch from miners
+				b, err = c.GetNotarizedBlock(cctx, "", r)
+				if err != nil {
+					logging.Logger.Error("request block failed",
+						zap.Int64("round", r),
+						zap.Error(err))
+					return
+				}
+			}
+
+			blocks[idx] = b
+		}(i)
+	}
+	wg.Wait()
+
+	for _, b := range blocks {
+		if b == nil {
+			// return if block is not acquired, break here as we will redo the sync process from the missed one later
+			return
+		}
+
+		if err := c.PushToBlockProcessor(b); err != nil {
+			logging.Logger.Debug("requested block, but failed to pushed to process channel",
+				zap.Int64("round", b.Round), zap.Error(err))
+		}
+	}
+}
+
+func (c *Chain) BlockWorker(ctx context.Context) {
+	const stuckDuration = 3 * time.Second
+	var (
+		endRound int64
+		syncing  bool
+		// syncTimer  time.Time
+		timingSync bool
+
+		syncBlocksTimer  = time.NewTimer(7 * time.Second)
+		aheadN           = int64(config.GetLFBTicketAhead())
+		maxRequestBlocks = aheadN
+
+		// triggered after sync process is started
+		stuckCheckTimer = time.NewTimer(10 * time.Second)
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
+			return
+		case <-stuckCheckTimer.C:
+			logging.Logger.Debug("process block, detected stuck, trigger sync",
+				zap.Int64("round", c.GetCurrentRound()),
+				zap.Int64("lfb", c.GetLatestFinalizedBlock().Round))
+			stuckCheckTimer.Reset(stuckDuration)
+			// trigger sync
+			syncBlocksTimer.Reset(0)
+		case <-syncBlocksTimer.C:
+			// reset sync timer to 1 minute
+			syncBlocksTimer.Reset(time.Minute)
+
+			var (
+				lfbTk = c.GetLatestLFBTicket(ctx)
+				lfb   = c.GetLatestFinalizedBlock()
+			)
+
+			cr := c.GetCurrentRound()
+			if cr < lfb.Round {
+				c.SetCurrentRound(lfb.Round)
+				cr = lfb.Round
+			}
+
+			if lfb.Round+aheadN <= cr {
+				logging.Logger.Debug("process block, synced to lfb+ahead, start to force finalize rounds",
+					zap.Int64("current round", cr),
+					zap.Int64("lfb", lfb.Round),
+					zap.Int64("lfb+ahead", lfb.Round+aheadN))
+
+				for rn := lfb.Round + 1; rn <= cr; rn++ {
+					if r := c.GetRound(rn); r != nil {
+						c.FinalizeRound(c.GetRound(rn))
+					}
+				}
+				continue
+			}
+
+			endRound = lfbTk.Round + aheadN
+
+			if endRound <= cr || lfb.Round >= lfbTk.Round {
+				if timingSync {
+					// syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
+					timingSync = false
+				}
+
+				logging.Logger.Debug("process block, synced already, continue...")
+				continue
+			}
+
+			logging.Logger.Debug("process block, sync triggered",
+				zap.Int64("lfb", lfb.Round),
+				zap.Int64("lfb ticket", lfbTk.Round),
+				zap.Int64("current round", cr),
+				zap.Int64("end round", endRound))
+
+			// trunc to send maxRequestBlocks each time
+			reqNum := endRound - cr
+			if reqNum > maxRequestBlocks {
+				reqNum = maxRequestBlocks
+			}
+
+			endRound = cr + reqNum
+			syncing = true
+			if !timingSync {
+				timingSync = true
+				// syncTimer = time.Now()
+			}
+
+			logging.Logger.Debug("process block, sync blocks",
+				zap.Int64("start round", cr+1),
+				zap.Int64("end round", cr+reqNum+1))
+			go c.requestBlocks(ctx, cr, reqNum)
+		default:
+			cr := c.GetCurrentRound()
+			lfb := c.GetLatestFinalizedBlock()
+			bItem, ok := c.blockBuffer.First()
+			if !ok {
+				// no block in buffer to process
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
+			b := bItem.Data.(*block.Block)
+
+			logging.Logger.Debug("process block, received block",
+				zap.Int64("block round", b.Round))
+			stuckCheckTimer.Reset(stuckDuration)
+			if b.Round > lfb.Round+aheadN {
+				// trigger sync process to pull the latest blocks when
+				// current round is > lfb.Round + aheadN to break the stuck if any.
+				if !syncing {
+					syncBlocksTimer.Reset(0)
+				}
+
+				// avoid the skipping logs when syncing blocks
+				if b.Round <= lfb.Round+2*aheadN {
+					logging.Logger.Debug("process block skip",
+						zap.Int64("block round", b.Round),
+						zap.Int64("current round", cr),
+						zap.Int64("lfb", lfb.Round),
+						zap.Bool("syncing", syncing))
+				}
+
+				continue
+			}
+
+			c.blockBuffer.Pop()
+			if err := c.processBlock(ctx, b); err != nil {
+				logging.Logger.Error("process block failed",
+					zap.Error(err),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("prev block", b.PrevHash))
+
+				var pb *block.Block
+				if err == ErrNoPreviousBlock {
+					// fetch the previous block
+					pb, _ = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+				} else if ErrNoPreviousState.Is(err) {
+					// get the previous block from local
+					pb, _ = c.GetBlock(ctx, b.PrevHash)
+				} else {
+					continue
+				}
+
+				if pb == nil {
+					continue
+				}
+
+				// process previous block
+				if err := c.processBlock(ctx, pb); err != nil {
+					logging.Logger.Error("process block, handle previous block failed",
+						zap.Int64("round", pb.Round),
+						zap.String("block", pb.Hash),
+						zap.Error(err))
+					continue
+				}
+
+				// process this block again
+				if err := c.processBlock(ctx, b); err != nil {
+					logging.Logger.Error("process block, failed after getting previous block",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					continue
+				}
+			}
+
+			lfbTk := c.GetLatestLFBTicket(ctx)
+			lfb = c.GetLatestFinalizedBlock()
+			logging.Logger.Debug("process block successfully",
+				zap.Int64("round", b.Round),
+				zap.Int64("lfb round", lfb.Round),
+				zap.Int64("lfb ticket round", lfbTk.Round))
+
+			if b.Round >= lfb.Round+aheadN || b.Round >= endRound {
+				syncing = false
+				if b.Round < lfbTk.Round {
+					logging.Logger.Debug("process block, hit end, trigger sync",
+						zap.Int64("round", b.Round),
+						zap.Int64("end round", endRound),
+						zap.Int64("current round", cr))
+					syncBlocksTimer.Reset(0)
+				}
+			}
+		}
+	}
+}
+
+func (c *Chain) cacheProcessingBlock(hash string) bool {
+	c.pbMutex.Lock()
+	_, err := c.processingBlocks.Get(hash)
+	switch err {
+	case cache.ErrKeyNotFound:
+		if err := c.processingBlocks.Add(hash, struct{}{}); err != nil {
+			logging.Logger.Warn("cache process block failed",
+				zap.String("block", hash),
+				zap.Error(err))
+			c.pbMutex.Unlock()
+			return false
+		}
+		c.pbMutex.Unlock()
+		return true
+	default:
+	}
+	c.pbMutex.Unlock()
+	return false
+}
+
+func (c *Chain) removeProcessingBlock(hash string) {
+	c.pbMutex.Lock()
+	c.processingBlocks.Remove(hash)
+	c.pbMutex.Unlock()
+}
+
+func (c *Chain) GetProcessingBlock(hash string) (interface{}, error) {
+	c.pbMutex.RLock()
+	defer c.pbMutex.RUnlock()
+	return c.processingBlocks.Get(hash)
+}
+
+func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
+	if !c.cacheProcessingBlock(b.Hash) {
+		logging.Logger.Debug("process block, being processed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash))
+		return nil
+	}
+
+	logging.Logger.Debug("process notarized block",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash))
+
+	ts := time.Now()
+	defer func() {
+		c.removeProcessingBlock(b.Hash)
+		logging.Logger.Debug("process notarized block end",
+			zap.Int64("round", b.Round),
+			zap.Duration("duration", time.Since(ts)))
+	}()
+	var er = c.GetRound(b.Round)
+	if er == nil {
+		var r = round.NewRound(b.Round)
+		er, _ = c.AddRound(r).(*round.Round)
+		if b.GetRoundRandomSeed() == 0 {
+			logging.Logger.Error("process block - block has no seed",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			return fmt.Errorf("block has no seed")
+		}
+		c.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
+	}
+
+	// pull related magic block if missing
+	var err error
+	// if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
+	// 	logging.Logger.Error("pulling related magic block", zap.Error(err),
+	// 		zap.Int64("round", b.Round),
+	// 		zap.String("block", b.Hash),
+	// 		zap.Int64("related mbr", b.LatestFinalizedMagicBlockRound))
+	// 	return fmt.Errorf("could not pull related magic block, err: %v", err)
+	// }
+
+	if err = b.Validate(ctx); err != nil {
+		logging.Logger.Error("block validation", zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash), zap.Error(err))
+		return fmt.Errorf("validate block failed, err: %v", err)
+	}
+
+	err = c.VerifyBlockNotarization(ctx, b)
+	if err != nil {
+		logging.Logger.Error("notarization verification failed",
+			zap.Error(err),
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash))
+		return fmt.Errorf("verify block notarization failed, err: %v", err)
+	}
+
+	//TODO remove it since verify block adds this block to round
+	b, _ = c.AddNotarizedBlockToRound(er, b)
+	c.SetRoundRank(er, b)
+	logging.Logger.Info("received notarized block", zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("client_state", util.ToHex(b.ClientStateHash)))
+	return c.AddNotarizedBlock(ctx, er, b)
+}
+
+func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) error {
+
+	r.AddNotarizedBlock(b)
+
+	// if c.BlocksToSharder == chain.FINALIZED {
+	// 	nb := r.GetNotarizedBlocks()
+	// 	if len(nb) > 0 {
+	// 		logging.Logger.Error("*** different blocks for the same round ***",
+	// 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+	// 			zap.String("existing_block", nb[0].Hash))
+	// 	}
+	// }
+
+	pb, _ := c.GetBlock(ctx, b.PrevHash)
+	if pb == nil {
+		return ErrNoPreviousBlock
+	}
+
+	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
+		return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
+			pb.Round, pb.Hash, pb, pb.GetStateStatus())
+	}
+
+	errC := make(chan error)
+	doneC := make(chan struct{})
+	t := time.Now()
+	tc := math.Max(float64(time.Duration(len(b.Txns))*50*time.Millisecond), float64(3*time.Second))
+	cctx, cancel := context.WithTimeout(ctx, time.Duration(tc))
+	defer cancel()
+	go func(ctx context.Context) {
+		defer close(doneC)
+		if b.ClientState != nil {
+			// check if the block's client state is correct
+			if !bytes.Equal(b.ClientStateHash, b.ClientState.GetRoot()) {
+				select {
+				case errC <- errors.New("AddNotarizedBlock block client state does not match"):
+				default:
+				}
+				return
+			}
+		} else {
+			logging.Logger.Debug("AddNotarizedBlock client state is nil", zap.Int64("round", b.Round))
+		}
+
+		if err := c.ComputeState(ctx, b); err != nil {
+			select {
+			case errC <- err:
+			default:
+			}
+			return
+		}
+	}(cctx)
+
+	select {
+	case <-doneC:
+		logging.Logger.Debug("AddNotarizedBlock compute state successfully",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Duration("duration", time.Since(t)))
+		// force update the block to sync the block state in sharders.blocks store
+		c.SetBlock(b)
+	case err := <-errC:
+		logging.Logger.Error("AddNotarizedBlock failed to compute state",
+			zap.Int64("round", b.Round),
+			zap.Error(err))
+		if node.Self.IsSharder() {
+			return err
+		}
+	}
+
+	c.SetCurrentRound(r.GetRoundNumber())
+	c.UpdateNodeState(b)
+
+	go c.FinalizeRound(r)
+	return nil
 }
 
 type stateNodeStat struct {
@@ -574,6 +995,8 @@ func Provider() datastore.Entity {
 	c.notarizedBlockVerifyC = make(map[string]chan struct{})
 	c.nbvcMutex = &sync.Mutex{}
 	c.blockSyncC = make(map[string]chan chan *block.Block)
+	c.blockBuffer = orderbuffer.New(100)
+	c.processingBlocks = cache.NewLRUCache[string, struct{}](1000)
 	c.bscMutex = &sync.Mutex{}
 
 	c.computeBlockStateC = make(chan struct{}, 1)

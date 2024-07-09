@@ -24,9 +24,10 @@ const minerScMinerHealthCheck = "miner_health_check"
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
 	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
-	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
+	go mc.MessageWorker(ctx)            // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
+	go mc.BlockWorker(ctx)              // 4) sync blocks when stuck
 
 	go mc.SyncLFBStateWorker(ctx)
 
@@ -39,8 +40,8 @@ func SetupWorkers(ctx context.Context) {
 	go mc.SyncAllMissingNodesWorker(ctx)
 }
 
-/*BlockWorker - a job that does all the work related to blocks in each round */
-func (mc *Chain) BlockWorker(ctx context.Context) {
+/*MessageWorker - a job that does all the work related to blocks in each round */
+func (mc *Chain) MessageWorker(ctx context.Context) {
 	var protocol Protocol = mc
 
 	for {

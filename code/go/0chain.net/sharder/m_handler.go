@@ -33,7 +33,7 @@ type Chainer interface {
 	ForceFinalizeRound()
 }
 
-//AcceptMessage - implement the node.MessageFilterI interface
+// AcceptMessage - implement the node.MessageFilterI interface
 func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 	switch entityName {
 	case "block":
@@ -125,9 +125,7 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 // RejectNotarizedBlock returns true if the sharder is being processed or
 // the block is already notarized
 func (sc *Chain) RejectNotarizedBlock(hash string) bool {
-	sc.pbMutex.RLock()
-	_, err := sc.processingBlocks.Get(hash)
-	sc.pbMutex.RUnlock()
+	_, err := sc.GetProcessingBlock(hash)
 	switch err {
 	case cache.ErrKeyNotFound:
 		_, err := sc.GetBlock(context.Background(), hash)
@@ -148,31 +146,31 @@ func (sc *Chain) RejectNotarizedBlock(hash string) bool {
 	}
 }
 
-func (sc *Chain) cacheProcessingBlock(hash string) bool {
-	sc.pbMutex.Lock()
-	_, err := sc.processingBlocks.Get(hash)
-	switch err {
-	case cache.ErrKeyNotFound:
-		if err := sc.processingBlocks.Add(hash, struct{}{}); err != nil {
-			Logger.Warn("cache process block failed",
-				zap.String("block", hash),
-				zap.Error(err))
-			sc.pbMutex.Unlock()
-			return false
-		}
-		sc.pbMutex.Unlock()
-		return true
-	default:
-	}
-	sc.pbMutex.Unlock()
-	return false
-}
+// func (sc *Chain) cacheProcessingBlock(hash string) bool {
+// 	sc.pbMutex.Lock()
+// 	_, err := sc.processingBlocks.Get(hash)
+// 	switch err {
+// 	case cache.ErrKeyNotFound:
+// 		if err := sc.processingBlocks.Add(hash, struct{}{}); err != nil {
+// 			Logger.Warn("cache process block failed",
+// 				zap.String("block", hash),
+// 				zap.Error(err))
+// 			sc.pbMutex.Unlock()
+// 			return false
+// 		}
+// 		sc.pbMutex.Unlock()
+// 		return true
+// 	default:
+// 	}
+// 	sc.pbMutex.Unlock()
+// 	return false
+// }
 
-func (sc *Chain) removeProcessingBlock(hash string) {
-	sc.pbMutex.Lock()
-	sc.processingBlocks.Remove(hash)
-	sc.pbMutex.Unlock()
-}
+// func (sc *Chain) removeProcessingBlock(hash string) {
+// 	sc.pbMutex.Lock()
+// 	sc.processingBlocks.Remove(hash)
+// 	sc.pbMutex.Unlock()
+// }
 
 /*
 

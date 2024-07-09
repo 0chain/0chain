@@ -13,7 +13,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/core/util/waitgroup"
-	"github.com/0chain/common/core/util"
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/sharder/blockstore"
@@ -231,70 +230,70 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 	return // everything is done
 }
 
-func (sc *Chain) processBlock(ctx context.Context, b *block.Block) error {
-	if !sc.cacheProcessingBlock(b.Hash) {
-		Logger.Debug("process block, being processed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash))
-		return nil
-	}
+// func (sc *Chain) processBlock(ctx context.Context, b *block.Block) error {
+// 	if !sc.cacheProcessingBlock(b.Hash) {
+// 		Logger.Debug("process block, being processed",
+// 			zap.Int64("round", b.Round),
+// 			zap.String("block", b.Hash))
+// 		return nil
+// 	}
 
-	Logger.Debug("process notarized block",
-		zap.Int64("round", b.Round),
-		zap.String("block", b.Hash))
+// 	Logger.Debug("process notarized block",
+// 		zap.Int64("round", b.Round),
+// 		zap.String("block", b.Hash))
 
-	ts := time.Now()
-	defer func() {
-		sc.removeProcessingBlock(b.Hash)
-		Logger.Debug("process notarized block end",
-			zap.Int64("round", b.Round),
-			zap.Duration("duration", time.Since(ts)))
-	}()
-	var er = sc.GetRound(b.Round)
-	if er == nil {
-		var r = round.NewRound(b.Round)
-		er, _ = sc.AddRound(r).(*round.Round)
-		if b.GetRoundRandomSeed() == 0 {
-			Logger.Error("process block - block has no seed",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash))
-			return fmt.Errorf("block has no seed")
-		}
-		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
-	}
+// 	ts := time.Now()
+// 	defer func() {
+// 		sc.removeProcessingBlock(b.Hash)
+// 		Logger.Debug("process notarized block end",
+// 			zap.Int64("round", b.Round),
+// 			zap.Duration("duration", time.Since(ts)))
+// 	}()
+// 	var er = sc.GetRound(b.Round)
+// 	if er == nil {
+// 		var r = round.NewRound(b.Round)
+// 		er, _ = sc.AddRound(r).(*round.Round)
+// 		if b.GetRoundRandomSeed() == 0 {
+// 			Logger.Error("process block - block has no seed",
+// 				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+// 			return fmt.Errorf("block has no seed")
+// 		}
+// 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
+// 	}
 
-	// pull related magic block if missing
-	var err error
-	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
-		Logger.Error("pulling related magic block", zap.Error(err),
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int64("related mbr", b.LatestFinalizedMagicBlockRound))
-		return fmt.Errorf("could not pull related magic block, err: %v", err)
-	}
+// 	// pull related magic block if missing
+// 	var err error
+// 	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
+// 		Logger.Error("pulling related magic block", zap.Error(err),
+// 			zap.Int64("round", b.Round),
+// 			zap.String("block", b.Hash),
+// 			zap.Int64("related mbr", b.LatestFinalizedMagicBlockRound))
+// 		return fmt.Errorf("could not pull related magic block, err: %v", err)
+// 	}
 
-	if err = b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Int64("round", b.Round),
-			zap.String("hash", b.Hash), zap.Error(err))
-		return fmt.Errorf("validate block failed, err: %v", err)
-	}
+// 	if err = b.Validate(ctx); err != nil {
+// 		Logger.Error("block validation", zap.Int64("round", b.Round),
+// 			zap.String("hash", b.Hash), zap.Error(err))
+// 		return fmt.Errorf("validate block failed, err: %v", err)
+// 	}
 
-	err = sc.VerifyBlockNotarization(ctx, b)
-	if err != nil {
-		Logger.Error("notarization verification failed",
-			zap.Error(err),
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash))
-		return fmt.Errorf("verify block notarization failed, err: %v", err)
-	}
+// 	err = sc.VerifyBlockNotarization(ctx, b)
+// 	if err != nil {
+// 		Logger.Error("notarization verification failed",
+// 			zap.Error(err),
+// 			zap.Int64("round", b.Round),
+// 			zap.String("block", b.Hash))
+// 		return fmt.Errorf("verify block notarization failed, err: %v", err)
+// 	}
 
-	//TODO remove it since verify block adds this block to round
-	b, _ = sc.AddNotarizedBlockToRound(er, b)
-	sc.SetRoundRank(er, b)
-	Logger.Info("received notarized block", zap.Int64("round", b.Round),
-		zap.String("block", b.Hash),
-		zap.String("client_state", util.ToHex(b.ClientStateHash)))
-	return sc.AddNotarizedBlock(ctx, er, b)
-}
+// 	//TODO remove it since verify block adds this block to round
+// 	b, _ = sc.AddNotarizedBlockToRound(er, b)
+// 	sc.SetRoundRank(er, b)
+// 	Logger.Info("received notarized block", zap.Int64("round", b.Round),
+// 		zap.String("block", b.Hash),
+// 		zap.String("client_state", util.ToHex(b.ClientStateHash)))
+// 	return sc.AddNotarizedBlock(ctx, er, b)
+// }
 
 func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRange int64, scan HealthCheckScan) *round.Round {
 	bss := sc.BlockSyncStats
