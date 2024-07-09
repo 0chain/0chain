@@ -471,6 +471,12 @@ func (r *Round) SetFinalizing() bool {
 	return true
 }
 
+func (r *Round) SetFinalized() {
+	r.mutex.Lock()
+	r.setFinalizingPhase(RoundStateFinalized)
+	r.mutex.Unlock()
+}
+
 // ResetFinalizeStateIfNotFinalized reset finalizing state if it's not finalized yet,
 // otherwise do nothing. This is for protecting the finalized round get reset
 func (r *Round) ResetFinalizingStateIfNotFinalized() {
