@@ -713,7 +713,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	// Save allocation
-	_, err = balances.InsertTrieNode(alloc.mustBase().GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't Save allocation: %v", err)
@@ -1124,7 +1124,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	// Save allocation object
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(sc.ID), sa)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving allocation object: %v", err)

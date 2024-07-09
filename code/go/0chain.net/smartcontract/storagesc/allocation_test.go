@@ -881,7 +881,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 		return nil
 	})
 
-	_, err = balances.InsertTrieNode(alloc.mustBase().GetKey(ssc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	require.NoError(t, err)
 	var got *StorageAllocation
 	got, err = ssc.getAllocation(allocID, balances)
@@ -2204,7 +2204,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}
@@ -2365,7 +2365,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	alloc.BlobberAllocsMap[nb.id].ChallengePoolIntegralValue = 0
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}
@@ -2472,7 +2472,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc.BlobberAllocsMap[nb2.id].LatestFinalizedChallCreatedAt = common.Timestamp(tp)
 
 	alloc.BlobberAllocsMap[nb2.id].ChallengePoolIntegralValue = 0
-	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}
@@ -2616,7 +2616,7 @@ func Test_finalize_allocation(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}
@@ -2803,7 +2803,7 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}

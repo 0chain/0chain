@@ -133,7 +133,7 @@ func addMockAllocation(
 		}
 	}
 
-	if _, err := balances.InsertTrieNode(saBase.GetKey(ADDRESS), sa); err != nil {
+	if _, err := balances.InsertTrieNode(sa.GetKey(ADDRESS), sa); err != nil {
 		log.Fatal(err)
 	}
 

@@ -297,7 +297,7 @@ func testCommitBlobberRead(
 		base = storageAllocation
 		return nil
 	})
-	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), &sa)
+	_, err = ctx.InsertTrieNode(sa.GetKey(ssc.ID), &sa)
 	require.NoError(t, err)
 
 	blobber := &StorageNode{}

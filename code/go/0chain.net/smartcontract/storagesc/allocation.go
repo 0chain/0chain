@@ -36,10 +36,8 @@ func (sn *NewAllocationTxnOutput) Decode(input []byte) error {
 // getAllocation by ID
 func (sc *StorageSmartContract) getAllocation(allocID string,
 	balances chainstate.StateContextI) (alloc *StorageAllocation, err error) {
-
 	alloc = new(StorageAllocation)
-	alloc.mustBase().ID = allocID
-	err = balances.GetTrieNode(alloc.mustBase().GetKey(sc.ID), alloc)
+	err = balances.GetTrieNode(GetAllocKey(sc.ID, allocID), alloc)
 	if err != nil {
 		return nil, err
 	}
@@ -50,17 +48,17 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
 	ta := &StorageAllocation{}
-	err := balances.GetTrieNode(alloc.mustBase().GetKey(sc.ID), ta)
+	err := balances.GetTrieNode(alloc.GetKey(sc.ID), ta)
 	if err == nil {
 		return "", common.NewErrorf("add_allocation_failed",
-			"allocation id already used in trie: %v", alloc.mustBase().GetKey(sc.ID))
+			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
 	if err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("add_allocation_failed",
 			"unexpected error: %v", err)
 	}
 
-	_, err = balances.InsertTrieNode(alloc.mustBase().GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
@@ -99,8 +97,11 @@ type newAllocationRequest struct {
 }
 
 // storageAllocation from the request
-func (nar *newAllocationRequest) storageAllocation(conf *Config, now common.Timestamp) (sa *StorageAllocation) {
+func (nar *newAllocationRequest) storageAllocation(conf *Config, now common.Timestamp) *StorageAllocation {
+	sa := &StorageAllocation{}
+
 	allocV2 := &storageAllocationV2{
+		Version:              storageAllocationV2Version,
 		DataShards:           nar.DataShards,
 		ParityShards:         nar.ParityShards,
 		Size:                 nar.Size,
@@ -113,10 +114,9 @@ func (nar *newAllocationRequest) storageAllocation(conf *Config, now common.Time
 		ThirdPartyExtendable: nar.ThirdPartyExtendable,
 		FileOptions:          nar.FileOptions,
 	}
-	sa = new(StorageAllocation)
 	sa.SetEntity(allocV2)
 
-	return
+	return sa
 }
 
 func (nar *newAllocationRequest) validate(conf *Config) error {
@@ -1294,21 +1294,21 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
-	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(req.AllocationID, balances)
+	var sa *StorageAllocation
+	sa, err = sc.getAllocation(req.AllocationID, balances)
 
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
-	allocBase := alloc.mustBase()
+	alloc := sa.mustBase()
 
-	if allocBase.Owner != t.ClientID {
+	if alloc.Owner != t.ClientID {
 		return "", common.NewError("alloc_cancel_failed",
 			"only owner can cancel an allocation")
 	}
 
-	if allocBase.Expiration < t.CreationDate {
+	if alloc.Expiration < t.CreationDate {
 		return "", common.NewError("alloc_cancel_failed",
 			"trying to cancel expired allocation")
 	}
@@ -1318,14 +1318,14 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("can't get config", err.Error())
 	}
 	var passRates []float64
-	passRates, err = sc.settleOpenChallengesAndGetPassRates(allocBase, balances.GetBlock().Round, conf.MaxChallengeCompletionRounds, balances)
+	passRates, err = sc.settleOpenChallengesAndGetPassRates(alloc, balances.GetBlock().Round, conf.MaxChallengeCompletionRounds, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
 
-	sps := make([]*stakePool, 0, len(allocBase.BlobberAllocs))
-	for _, d := range allocBase.BlobberAllocs {
+	sps := make([]*stakePool, 0, len(alloc.BlobberAllocs))
+	for _, d := range alloc.BlobberAllocs {
 		var sp *stakePool
 		if sp, err = sc.getStakePool(spenum.Blobber, d.BlobberID, balances); err != nil {
 			return "", common.NewError("fini_alloc_failed",
@@ -1338,20 +1338,20 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		sps = append(sps, sp)
 	}
 
-	err = sc.finishAllocation(t, allocBase, passRates, sps, balances, conf)
+	err = sc.finishAllocation(t, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
-	allocBase.Expiration = t.CreationDate
-	allocBase.Finalized, allocBase.Canceled = true, true
+	alloc.Expiration = t.CreationDate
+	alloc.Finalized, alloc.Canceled = true, true
 
-	_, err = balances.DeleteTrieNode(allocBase.GetKey(sc.ID))
+	_, err = balances.DeleteTrieNode(sa.GetKey(sc.ID))
 	if err != nil {
 		return "", common.NewErrorf("alloc_cancel_failed", "could not delete allocation: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, allocBase.ID, allocBase.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
 
 	return "canceled", nil
 }
@@ -1373,7 +1373,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		return "", err
 	}
 
-	_, err = balances.DeleteTrieNode(alloc.mustBase().GetKey(sc.ID))
+	_, err = balances.DeleteTrieNode(alloc.GetKey(sc.ID))
 	if err != nil {
 		return "", common.NewErrorf("fini_alloc_failed", "could not delete allocation: %v", err)
 	}
@@ -1588,7 +1588,7 @@ func (sc *StorageSmartContract) resetAllocationStats(t *transaction.Transaction,
 	totalAllocationUsedSize := (totalBlobberAllocationUsedSize * int64(alloc.mustBase().DataShards)) / (int64(alloc.mustBase().DataShards + alloc.mustBase().ParityShards))
 	alloc.mustBase().Stats.UsedSize = totalAllocationUsedSize
 
-	if _, err := balances.InsertTrieNode(alloc.mustBase().GetKey(sc.ID), alloc); err != nil {
+	if _, err := balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc); err != nil {
 		return "", common.NewError("reset_allocation_stats_failed", err.Error())
 	}
 
