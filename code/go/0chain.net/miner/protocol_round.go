@@ -1922,6 +1922,9 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 		lfb.SetStateStatus(0)
 	}
 
+	logging.Logger.Info("start protocoal on LFB - set lfb", zap.Int64("round", lfb.Round),
+		zap.Any("status", lfb.GetStateStatus()))
+
 	mc.SetLatestFinalizedBlock(ctx, lfb)
 	logging.Logger.Info("start protocoal on LFB - set lfb",
 		zap.Int64("round", lfb.Round))

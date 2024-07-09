@@ -1479,6 +1479,9 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
 			c.MergeVerificationTickets(eb, b.GetVerificationTickets())
+			if b.IsStateComputed() {
+				eb.SetStateStatus(b.GetBlockState())
+			}
 		}
 		return eb
 	}
