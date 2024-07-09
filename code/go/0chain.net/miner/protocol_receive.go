@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -490,7 +491,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 
 func (mc *Chain) ProgressOnNotarization(notRound *Round) {
 	curNumber := mc.GetCurrentRound()
-	if curNumber <= notRound.Number {
+	if curNumber <= notRound.Number && int(notRound.Number-curNumber) <= config.GetLFBTicketAhead() {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", notRound.Number+1))
 		//notRound.CancelVerification()
