@@ -482,6 +482,8 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				lastRound.stateHash = bs.ClientStateHash
 				lastRound.tm = time.Now()
 				continue
+			} else {
+				logging.Logger.Debug("BC is not moving perhaps...")
 			}
 		case <-tk.C:
 			// last round could be 0 when miners or sharders start
@@ -496,6 +498,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			// time since the last finalized round arrived
 			ts := time.Since(lastRound.tm)
 			if ts <= c.bcStuckTimeThreshold {
+				logging.Logger.Debug("last round tm < threashold...")
 				continue
 			}
 
