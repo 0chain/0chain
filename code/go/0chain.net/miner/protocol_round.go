@@ -1919,6 +1919,10 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {
+		logging.Logger.Error("start protocol on LFB - init block state failed",
+			zap.Int64("round", lfb.Round),
+			zap.String("block", lfb.Hash),
+			zap.Error(err))
 		lfb.SetStateStatus(0)
 	}
 

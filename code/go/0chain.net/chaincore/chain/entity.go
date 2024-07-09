@@ -2076,9 +2076,11 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 					zap.Error(err))
 			case err := <-errC:
 				logging.Logger.Error("init block state failed", zap.Error(err))
+				return err
 			case <-doneC:
 				logging.Logger.Info("init block state by synching block state from network successfully",
 					zap.Int64("round", b.Round), zap.Any("state status", b.GetStateStatus()))
+				return nil
 			}
 		}
 		return

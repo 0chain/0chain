@@ -605,7 +605,7 @@ func (b *Block) IsStateComputed() bool {
 func (b *Block) SetStateStatus(status int8) {
 	b.stateStatusMutex.Lock()
 	defer b.stateStatusMutex.Unlock()
-	logging.Logger.Debug("SetStateStatus",
+	logging.Logger.Warn("SetStateStatus",
 		zap.Int8("status", status),
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash))
