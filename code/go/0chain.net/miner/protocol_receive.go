@@ -446,7 +446,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	mc.AddNotarizedBlockToRound(r, b)
 
 	// TODO: remove below after debug
-	// mc.ProgressOnNotarization(r)
+	mc.ProgressOnNotarization(r)
 
 	// // update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)
 	// lfb := mc.GetLatestFinalizedBlock()
