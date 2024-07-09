@@ -134,7 +134,8 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 
 	var (
 		ahead = config.GetLFBTicketAhead()
-		tk    = mc.GetLatestLFBTicket(ctx)
+		// tk    = mc.GetLatestLFBTicket(ctx)
+		tk = mc.GetLatestFinalizedBlock()
 	)
 
 	if tk == nil {
