@@ -213,6 +213,9 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 		logging.Logger.Debug("startNextRound - not ready to finalize previous round",
 			zap.Int64("round", rn-1),
 			zap.Any("state", pr.FinalizeState()))
+	} else {
+		logging.Logger.Debug("startNextRound - previous round is nil",
+			zap.Int64("round", rn-1))
 	}
 
 	var (
