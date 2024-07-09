@@ -492,6 +492,9 @@ func (r *Round) ResetFinalizingStateIfNotFinalized() {
 func (r *Round) ResetFinalizingState() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+	logging.Logger.Debug("reset finalizing state",
+		zap.Int64("round", r.Number),
+		zap.String("block", r.BlockHash))
 	r.setFinalizingPhase(NotFinalized)
 }
 

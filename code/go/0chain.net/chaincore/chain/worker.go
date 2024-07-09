@@ -373,7 +373,9 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 	prevBlockHash := pr.GetBlockHash()
 	if prevBlockHash == "" || !pr.IsFinalized() {
 		logging.Logger.Error("finalize block - previous round not finalized",
-			zap.Int64("round", fb.Round))
+			zap.Int64("round", fb.Round),
+			zap.String("prev block", prevBlockHash),
+			zap.Any("prev stat", pr.FinalizingState()))
 		return errors.New("previous round not finalized")
 	}
 
