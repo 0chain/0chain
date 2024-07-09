@@ -473,6 +473,7 @@ func (r *Round) SetFinalizing() bool {
 
 func (r *Round) SetFinalized() {
 	r.mutex.Lock()
+	logging.Logger.Debug("Set round as finalized", zap.Int64("round", r.Number))
 	r.setFinalizingPhase(RoundStateFinalized)
 	r.mutex.Unlock()
 }
@@ -516,6 +517,12 @@ func (r *Round) IsFinalized() bool {
 
 func (r *Round) isFinalized() bool {
 	return r.getFinalizingState() == RoundStateFinalized || r.GetRoundNumber() == 0
+}
+
+func (r *Round) FinalizeState() FinalizingState {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.finalizingState
 }
 
 /*Provider - entity provider for client object */

@@ -209,6 +209,10 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	if pr != nil && !pr.IsFinalizing() && !pr.IsFinalized() {
 		mc.finalizeRound(ctx, pr) // finalize the previous round
+	} else {
+		logging.Logger.Debug("startNextRound - not ready to finalize previous round",
+			zap.Int64("round", rn-1),
+			zap.Any("state", pr.FinalizeState()))
 	}
 
 	var (
