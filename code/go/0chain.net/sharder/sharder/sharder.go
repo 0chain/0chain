@@ -145,6 +145,7 @@ func main() {
 
 	// TODO: put it in a better place
 	go sc.StartLFMBWorker(ctx)
+	registerInConductor(node.Self.Underlying().GetKey())
 
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock, initStates)
 
@@ -190,8 +191,6 @@ func main() {
 		zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Int("set_index", selfNode.SetIndex),
 		zap.String("id", selfNode.GetKey()))
-
-	registerInConductor(node.Self.Underlying().GetKey())
 
 	var server *http.Server
 	if config.Development() {

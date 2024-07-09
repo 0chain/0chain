@@ -155,6 +155,7 @@ func main() {
 	// TODO: put it in a better place
 	go mc.StartLFMBWorker(ctx)
 
+	registerInConductor(node.Self.Underlying().GetKey())
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
 
@@ -210,8 +211,6 @@ func main() {
 	logging.Logger.Info("Starting miner", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
 	logging.Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	logging.Logger.Info("Self identity", zap.Int("set_index", node.Self.Underlying().SetIndex), zap.String("id", node.Self.Underlying().GetKey()))
-
-	registerInConductor(node.Self.Underlying().GetKey())
 
 	var server *http.Server
 	var profServer *http.Server

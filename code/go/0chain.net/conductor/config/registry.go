@@ -101,6 +101,11 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		return waitSharderKeep(ex, val, tm)
 	})
+	// hardfork management
+	register("initial_hardfork", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return initialHardfork(ex, val)
+	})
 
 	// control nodes behavior / misbehavior
 

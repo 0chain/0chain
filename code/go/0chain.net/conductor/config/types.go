@@ -40,6 +40,12 @@ func (n *LockNotarizationAndSendNextRoundVRF) Decode(val interface{}) error {
 	return mapstructure.Decode(val, n)
 }
 
+// Hardfork represents the hardfork directive state.
+type Hardfork struct {
+	Name  string `json:"name" yaml:"name" mapstructure:"name"`
+	Round int64  `json:"round" yaml:"round" mapstructure:"round"`
+}
+
 // BlobberList represents the blobber_list directive state.
 type BlobberList struct {
 	ReturnError       bool   `json:"return_error" yaml:"return_error" mapstructure:"return_error"`

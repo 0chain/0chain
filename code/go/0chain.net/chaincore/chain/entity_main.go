@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
+	cstate "0chain.net/chaincore/chain/state"
 )
 
 //IsRoundGenerator - is this miner a generator for this round
@@ -30,4 +31,9 @@ func (c *Chain) DeleteRoundsBelow(roundNumber int64) {
 
 func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	return c.chainHasTransaction(ctx, b, txn)
+}
+
+
+func initialStateCT(_ cstate.CommonStateContextI) error {
+	return nil
 }

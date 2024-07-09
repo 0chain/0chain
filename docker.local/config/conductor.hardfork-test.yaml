@@ -1,0 +1,33 @@
+# Test hardfork directives
+
+enable:
+  - "Apply hardfork"
+
+# sets of test cases
+sets:
+  - name: "Apply hardfork"
+    tests:
+      - "verify hardfork"
+
+# test cases
+tests:
+  - name: "verify hardfork"
+    flow:
+      - magic_block_config: config/b0magicBlock_4_miners_2_sharders.json
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - initial_hardfork : 
+          name : 'apollo'
+          round : 1
+      - wait_add:
+          sharders: ['sharder-1','sharder-2']
+          miners: ['miner-1', 'miner-2', 'miner-3','miner-4']
+          start: true
+      - sleep : "3m"
+      - command:
+          name: "verify_hardfork"
+          params:
+            names : "apollo"
+            rounds : 1
+
+    
