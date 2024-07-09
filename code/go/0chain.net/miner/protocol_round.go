@@ -1925,6 +1925,7 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	mc.SetLatestFinalizedBlock(ctx, lfb)
 	logging.Logger.Info("start protocoal on LFB - set lfb",
 		zap.Int64("round", lfb.Round))
+	mc.notifyFullStateSync()
 	return mc.GetMinerRound(lfb.Round)
 }
 

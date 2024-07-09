@@ -262,21 +262,34 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 
 func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 	// start in a second, repeat every 30 minutes
-	tk := time.NewTicker(time.Second)
+	tk := time.NewTimer(time.Second)
 	for {
 		select {
 		case <-tk.C:
+			mc.SetLFBState(LFBStateSyncing)
 			mc.syncAllMissingNodes(ctx)
 			mc.SetLFBState(LFBStateReady)
-			// do all missing nodes check and sync every 30 minutes
-			// TODO: move the interval to a config file
-			// tk.Reset(30 * time.Minute)
-			return
+		// do all missing nodes check and sync every 30 minutes
+		// TODO: move the interval to a config file
+		// tk.Reset(30 * time.Minute)
+		// return
+		case <-mc.doFullStateSync:
+			logging.Logger.Debug("Start full state sync...")
+			mc.SetLFBState(LFBStateSyncing)
+			mc.syncAllMissingNodes(ctx)
+			mc.SetLFBState(LFBStateReady)
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return
 		}
 	}
+}
+
+func (mc *Chain) notifyFullStateSync() {
+	go func() {
+		logging.Logger.Debug("Notify full state sync...")
+		mc.doFullStateSync <- struct{}{}
+	}()
 }
 
 func (mc *Chain) syncAllMissingNodes(ctx context.Context) {

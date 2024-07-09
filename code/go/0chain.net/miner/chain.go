@@ -70,6 +70,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.ChainConfig = c.ChainConfig
 
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
+	minerChain.doFullStateSync = make(chan struct{}, 1)
 	minerChain.muDKG = &sync.RWMutex{}
 	minerChain.roundDkg = round.NewRoundStartingStorage()
 	c.SetFetchedNotarizedBlockHandler(minerChain)
@@ -146,6 +147,7 @@ type Chain struct {
 	discoverClients     bool
 	started             uint32
 	lfbState            uint32
+	doFullStateSync     chan struct{}
 
 	// view change process control
 	viewChangeProcess
