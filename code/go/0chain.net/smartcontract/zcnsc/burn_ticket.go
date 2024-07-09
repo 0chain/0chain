@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/common/core/currency"
 )
 
+// swagger:model BurnTicket
 type BurnTicket struct {
 	EthereumAddress string        `json:"ethereum_address"`
 	Hash            string        `json:"hash"`

@@ -62,6 +62,8 @@ func (edb *EventDb) ProcessEvents(
 	for i := range es {
 		localCounter++
 		es[i].SequenceNumber = int64(latestGlobalCounter) + int64(localCounter)
+		es[i].RoundLocalSequenceNumber = int64(localCounter)
+		es[i].EventKey = fmt.Sprintf("%v:%v", round, int64(localCounter))
 	}
 
 	pdu := time.Since(ts)
@@ -297,7 +299,6 @@ func mergeEvents(round int64, block string, events []Event) ([]Event, error) {
 
 func (edb *EventDb) addEventsWorker(ctx context.Context,
 	getBlockEvents func(round int64) (int64, []Event, error)) {
-	var gs *Snapshot
 	err := edb.managePermanentPartitions(0)
 	if err != nil {
 		logging.Logger.Error("can't manage permanent partitions")
@@ -317,16 +318,13 @@ func (edb *EventDb) addEventsWorker(ctx context.Context,
 				es.done <- commit
 			}()
 
-			s, err := Work(ctx, gs, es, getBlockEvents)
+			err := Work(ctx, es, getBlockEvents)
 			if err != nil {
 				logging.Logger.Error("process events", zap.Error(err))
 				commit = false
 				return
 			}
 			commit = true
-			if s != nil {
-				gs = s
-			}
 		}()
 	}
 }
@@ -397,10 +395,9 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 
 func Work(
 	ctx context.Context,
-	gSnapshot *Snapshot,
 	blockEvents BlockEvents,
 	getBlockEvents func(round int64) (int64, []Event, error),
-) (*Snapshot, error) {
+) error {
 	tx := blockEvents.tx
 
 	doOnce.Do(func() {
@@ -413,17 +410,7 @@ func Work(
 
 	tags, err := tx.WorkEvents(ctx, blockEvents)
 	if err != nil {
-		return nil, err
-	}
-
-	gSnapshot, err = tx.WorkAggregates(gSnapshot, blockEvents)
-	if err != nil {
-		logging.Logger.Error("snapshot could not be processed",
-			zap.Int64("round", blockEvents.round),
-			zap.String("block", blockEvents.block),
-			zap.Int("block size", blockEvents.blockSize),
-			zap.Error(err),
-		)
+		return err
 	}
 
 	due := time.Since(tse)
@@ -437,7 +424,7 @@ func Work(
 			zap.Int("block size", blockEvents.blockSize))
 	}
 
-	return gSnapshot, nil
+	return nil
 }
 
 func isEDBConnectionLost(edb *EventDb) bool {
@@ -497,31 +484,6 @@ func (edb *EventDb) WorkEvents(
 	}
 
 	return tags, nil
-}
-
-func (edb *EventDb) WorkAggregates(
-	gSnapshot *Snapshot,
-	blockEvents BlockEvents,
-) (*Snapshot, error) {
-	var err error
-	gSnapshot, err = updateSnapshots(gSnapshot, blockEvents, edb)
-	if err != nil {
-		logging.Logger.Error("snapshot could not be processed",
-			zap.Int64("round", blockEvents.round),
-			zap.String("block", blockEvents.block),
-			zap.Int("block size", blockEvents.blockSize),
-			zap.Error(err),
-		)
-		return nil, err
-	}
-	err = edb.updateUserAggregates(&blockEvents)
-	if err != nil {
-		logging.Logger.Error("user aggregate could not be processed",
-			zap.Error(err),
-		)
-		return nil, err
-	}
-	return gSnapshot, nil
 }
 
 func (edb *EventDb) ManagePermanentPartitions(round int64) error {
@@ -661,25 +623,6 @@ func (edb *EventDb) dropPartitions(current int64) error {
 	return nil
 }
 
-func updateSnapshots(gs *Snapshot, es BlockEvents, tx *EventDb) (*Snapshot, error) {
-	if gs != nil {
-		return tx.updateHistoricData(es, gs)
-	}
-
-	if es.round == 0 {
-		return tx.updateHistoricData(es, &Snapshot{Round: 0})
-	}
-
-	g, err := tx.GetGlobal()
-	if err != nil {
-		logging.Logger.Warn(fmt.Sprintf("can't load snapshot for round: %d, err: %v", es.round, err))
-		return tx.updateHistoricData(es, &Snapshot{Round: es.round})
-	}
-	gs = &g
-
-	return tx.updateHistoricData(es, gs)
-}
-
 func (edb *EventDb) processEvent(event Event, tags []string, round int64, block string, blockSize int) ([]string, error) {
 	var err error = nil
 	switch event.Type {
@@ -740,57 +683,6 @@ func (edb *EventDb) processEvent(event Event, tags []string, round int64, block 
 		return tags, err
 	}
 	return tags, nil
-}
-
-func (edb *EventDb) updateHistoricData(e BlockEvents, s *Snapshot) (*Snapshot, error) {
-	round := e.round
-	var events []Event
-	for _, ev := range e.events { //filter out round events
-		if ev.Type == TypeStats || (ev.Type == TypeChain && ev.Tag == TagFinalizeBlock) {
-			events = append(events, ev)
-		}
-	}
-	if len(events) == 0 {
-		return s, nil
-	}
-
-	providers, err := edb.BuildChangedProvidersMapFromEvents(events)
-	if err != nil {
-		logging.Logger.Error("error building changed providers map", zap.Error(err))
-		return s, err
-	}
-
-	s.Round = round
-
-	err = edb.UpdateSnapshotFromEvents(s, events)
-	if err != nil {
-		logging.Logger.Error("error updating snapshot", zap.Error(err))
-		return s, err
-	}
-
-	err = edb.UpdateSnapshotFromProviders(s, providers)
-	if err != nil {
-		logging.Logger.Error("error updating snapshot from providers", zap.Error(err))
-		return s, err
-	}
-
-	if err := edb.addSnapshot(*s); err != nil {
-		logging.Logger.Error(fmt.Sprintf("saving snapshot %v for round %v", s, round), zap.Error(err))
-	}
-
-	err = edb.CreateNewProviderAggregates(providers, round)
-	if err != nil {
-		logging.Logger.Error("error creating new provider aggregates", zap.Error(err))
-		return s, err
-	}
-
-	err = edb.CreateNewProviderSnapshots(providers, round)
-	if err != nil {
-		logging.Logger.Error("error creating new provider snapshots", zap.Error(err))
-		return s, err
-	}
-
-	return s, nil
 }
 
 func (edb *EventDb) addStat(event Event) (err error) {

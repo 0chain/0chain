@@ -41,8 +41,7 @@ func (et DbTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) error {
 	if err != nil {
 		return err
 	}
-	var gs *event.Snapshot
-	_, err = event.Work(et.ctx, gs, be,
+	err = event.Work(et.ctx, be,
 		func(round int64) (int64, []event.Event, error) { return round, []event.Event{}, nil })
 	if err != nil {
 		return err
@@ -78,17 +77,12 @@ func (et DbAggregateTest) Run(sCtx state.TimedQueryStateContext, _ *testing.B) e
 	if len(et.events) == 0 {
 		return nil
 	}
-	be, _, err := sCtx.GetEventDB().MergeEvents(
+	_, _, err := sCtx.GetEventDB().MergeEvents(
 		et.events,
 		et.events[0].BlockNumber,
 		"mock block hash"+et.name,
 		et.blockSize,
 	)
-	if err != nil {
-		return err
-	}
-	var gs *event.Snapshot
-	_, err = sCtx.GetEventDB().WorkAggregates(gs, be)
 	if err != nil {
 		return err
 	}

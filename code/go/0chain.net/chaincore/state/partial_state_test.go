@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
@@ -20,6 +21,7 @@ import (
 )
 
 func init() {
+	fmt.Println("init logging")
 	logging.InitLogging("testing", "")
 
 	setupPartialStateDBMocks()
