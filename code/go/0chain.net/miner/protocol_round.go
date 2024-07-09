@@ -133,28 +133,50 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	// check the current ticket
 
 	var (
-		ahead = config.GetLFBTicketAhead()
-		// tk    = mc.GetLatestLFBTicket(ctx)
-		tk = mc.GetLatestFinalizedBlock()
+		ahead   = config.GetLFBTicketAhead()
+		tk      = mc.GetLatestLFBTicket(ctx)
+		lfb     = mc.GetLatestFinalizedBlock()
+		tkRound int64
 	)
 
-	if tk == nil {
+	if tk == nil || lfb == nil {
 		logging.Logger.Debug("[wait not ahead] [1] context is done or restart round")
 		return false // context is done, can't wait anymore
 	}
 
-	if round+1 <= tk.Round+int64(ahead) {
+	if tk.Round > lfb.Round {
+		tkRound = lfb.Round
+	} else {
+		tkRound = tk.Round
+	}
+
+	if round+1 <= tkRound+int64(ahead) {
 		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on",
 			zap.Int64("round", round),
-			zap.Int64("lfb tk round", tk.Round))
+			zap.Int64("lfb tk round", tkRound))
 		return true // not ahead, can move on
 	}
 
 	// wait in loop
+	// tkr := time.NewTicker(100 * time.Millisecond)
 	for {
 		select {
+		// case <-tkr.C:
+		// 	lfb = mc.GetLatestFinalizedBlock()
+		// 	if round+1 <= tk.Round+int64(ahead) {
+		// 		logging.Logger.Debug("[wait not ahead] [3] not ahead, can move on")
+		// 		return true // not ahead, can move on
+		// 	}
+		// 	logging.Logger.Debug("[wait not ahead] [4] still ahead, can't move on")
 		case ntk := <-tksubq: // the ntk can't be nil
-			if round+1 <= ntk.Round+int64(ahead) {
+			lfb = mc.GetLatestFinalizedBlock()
+			if ntk.Round > lfb.Round { // ntk is ahead, use lfb
+				tkRound = lfb.Round
+			} else {
+				tkRound = ntk.Round // lfb is ahead, use ntk?
+			}
+
+			if round+1 <= tkRound+int64(ahead) {
 				logging.Logger.Debug("[wait not ahead] [3] not ahead, can move on")
 				return true // not ahead, can move on
 			}
