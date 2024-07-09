@@ -320,6 +320,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", err
 	}
 
+	alloc := sa.mustBase()
+
 	for _, b := range blobberNodes {
 		bcm := b.mustBase()
 		_, err = balances.InsertTrieNode(b.GetKey(), b)
@@ -331,7 +333,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 			return "", fmt.Errorf("can't Save blobber: %v", err)
 		}
 
-		if err := spMap[bcm.ID].addOffer(sa.mustBase().BlobberAllocsMap[bcm.ID].Offer()); err != nil {
+		if err := spMap[bcm.ID].addOffer(alloc.BlobberAllocsMap[bcm.ID].Offer()); err != nil {
 			logging.Logger.Error("new_allocation_request_failed: error adding offer to blobber",
 				zap.String("txn", txn.Hash),
 				zap.String("blobber", bcm.ID),
@@ -351,19 +353,19 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	// create write pool and lock tokens
-	if err := sa.mustBase().addToWritePool(txn, balances, transfer); err != nil {
+	if err := alloc.addToWritePool(txn, balances, transfer); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding to allocation write pool",
 			zap.String("txn", txn.Hash),
 			zap.Error(err))
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	if err := sa.mustBase().checkFunding(); err != nil {
+	if err := alloc.checkFunding(); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 	m.tick("create_write_pool")
 
-	if err = sc.createChallengePool(txn, sa.mustBase(), balances, conf); err != nil {
+	if err = sc.createChallengePool(txn, alloc, balances, conf); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
 			zap.String("txn", txn.Hash),
 			zap.Error(err))
@@ -371,6 +373,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("create_challenge_pool")
 
+	sa.mustUpdateBase(func(sab *storageAllocationBase) error {
+		alloc.deepCopy(sab)
+		return nil
+	})
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
 			zap.String("txn", txn.Hash),
@@ -442,9 +448,9 @@ func setupNewAllocation(
 	for _, b := range blobberNodes {
 		bAlloc := newBlobberAllocation(bSize, saBase, b.mustBase(), conf, now)
 		saBase.BlobberAllocs = append(saBase.BlobberAllocs, bAlloc)
+		saBase.BlobberAllocsMap[b.mustBase().ID] = bAlloc
 		//nolint:errcheck
 		b.mustUpdateBase(func(snb *storageNodeBase) error {
-			saBase.BlobberAllocsMap[snb.ID] = bAlloc
 			snb.Allocated += bSize
 			return nil
 		})
