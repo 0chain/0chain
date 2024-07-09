@@ -271,6 +271,7 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 			// do all missing nodes check and sync every 30 minutes
 			// TODO: move the interval to a config file
 			// tk.Reset(30 * time.Minute)
+			return
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return
