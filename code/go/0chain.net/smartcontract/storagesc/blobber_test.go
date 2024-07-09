@@ -200,6 +200,7 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 // - delete
 // - challenge passed
 func Test_flow_reward(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -1563,6 +1564,7 @@ func (req *LoopRequest) flushEventsListFromBalances(t *testing.T) {
 }
 
 func TestCommitBlobberConnection(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)

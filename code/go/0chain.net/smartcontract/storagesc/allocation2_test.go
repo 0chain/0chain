@@ -240,9 +240,11 @@ func TestCancelAllocationRequest(t *testing.T) {
 	}
 
 	sa.mustUpdateBase(func(base *storageAllocationBase) error {
-		base.BlobberAllocs = allocation.BlobberAllocs
+		allocation.deepCopy(base)
 		return nil
 	})
+
+	allocation = *sa.mustBase()
 
 	t.Run("cancel allocation", func(t *testing.T) {
 		err := testCancelAllocation(t, sa, *blobbers, blobberStakePools,
@@ -391,6 +393,13 @@ func TestFinalizeAllocation(t *testing.T) {
 		}
 	}
 	var challengePoolBalance = int64(7000000)
+
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		allocation.deepCopy(base)
+		return nil
+	})
+
+	allocation = sa.mustBase()
 
 	t.Run("finalize allocation", func(t *testing.T) {
 		err := testFinalizeAllocation(t, sa, *blobbers, blobberStakePools, challengePoolBalance, allocation.Expiration, challenges, ctx)
