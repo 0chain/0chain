@@ -777,7 +777,7 @@ func (sc *StorageSmartContract) processChallengeFailed(
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
 
 	// save allocation object
-	_, err = balances.InsertTrieNode(cab.alloc.mustBase().GetKey(sc.ID), cab.alloc)
+	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}

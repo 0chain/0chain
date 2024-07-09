@@ -1002,7 +1002,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			alloc.Stats = new(StorageAllocationStats)
 		}
 		alloc.Stats.OpenChallenges = 50 // just a non-zero number
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), sa)
+		_, err = balances.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 		require.NoError(t, err)
 
 		tp += exp // expire the allocation
@@ -1102,7 +1102,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		ba.ChallengePoolIntegralValue = 0
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}

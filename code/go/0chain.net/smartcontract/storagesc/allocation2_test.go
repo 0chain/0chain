@@ -161,7 +161,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	var challengePoolBalance = int64(700000)
 
-	var allocation = storageAllocationBase{
+	var allocV2 = storageAllocationV2{
 		DataShards:    1,
 		ParityShards:  1,
 		ID:            ownerId,
@@ -175,6 +175,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 		WritePool:        400000000,
 		MovedToChallenge: 40000000,
 	}
+	var sa StorageAllocation
+	sa.SetEntity(&allocV2)
+	allocation := *sa.mustBase()
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
 	var writePrice = blobberYaml.writePrice
@@ -236,15 +239,20 @@ func TestCancelAllocationRequest(t *testing.T) {
 		}
 	}
 
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		base.BlobberAllocs = allocation.BlobberAllocs
+		return nil
+	})
+
 	t.Run("cancel allocation", func(t *testing.T) {
-		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools,
+		err := testCancelAllocation(t, sa, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
 		require.NoError(t, err)
 	})
 
 	t.Run(ErrNotOwner, func(t *testing.T) {
-		var allocationNotOwner = allocation
-		allocationNotOwner.Owner = "someone else"
+		var allocationNotOwner = sa
+		allocationNotOwner.mustBase().Owner = "someone else"
 
 		err := testCancelAllocation(t, allocationNotOwner, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
@@ -254,8 +262,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 	})
 
 	t.Run(ErrExpired, func(t *testing.T) {
-		var allocationExpired = allocation
-		allocationExpired.Expiration = now - 1
+		var allocationExpired = sa
+		allocationExpired.mustBase().Expiration = now - 1
 
 		err := testCancelAllocation(t, allocationExpired, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
@@ -300,7 +308,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		writePrice:    0.1,
 	}
 
-	var allocation = storageAllocationBase{
+	var allocV2 = storageAllocationV2{
 		DataShards:    5,
 		ParityShards:  5,
 		ID:            ownerId,
@@ -315,6 +323,10 @@ func TestFinalizeAllocation(t *testing.T) {
 		WritePool:        400000000000,
 		MovedToChallenge: 400000000,
 	}
+	var sa StorageAllocation
+	sa.SetEntity(&allocV2)
+	allocation := sa.mustBase()
+
 	var blobbers = new(SortedBlobbers)
 	var stake = 100.0
 	var writePrice = blobberYaml.writePrice
@@ -381,13 +393,13 @@ func TestFinalizeAllocation(t *testing.T) {
 	var challengePoolBalance = int64(7000000)
 
 	t.Run("finalize allocation", func(t *testing.T) {
-		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, challengePoolBalance, allocation.Expiration, challenges, ctx)
+		err := testFinalizeAllocation(t, sa, *blobbers, blobberStakePools, challengePoolBalance, allocation.Expiration, challenges, ctx)
 		require.NoError(t, err)
 	})
 
 	t.Run(ErrFinalizedTooSoon, func(t *testing.T) {
-		var allocationExpired = allocation
-		allocationExpired.Expiration = now - toSeconds(0) + 1
+		var allocationExpired = sa
+		allocationExpired.mustBase().Expiration = now - toSeconds(0) + 1
 
 		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, challengePoolBalance, now, challenges, ctx)
 		require.Error(t, err)
@@ -398,7 +410,7 @@ func TestFinalizeAllocation(t *testing.T) {
 
 func testCancelAllocation(
 	t *testing.T,
-	sAllocation storageAllocationBase,
+	sa StorageAllocation,
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	challengePoolBalance int64,
@@ -406,6 +418,7 @@ func testCancelAllocation(
 	ctx *mockStateContext,
 	now common.Timestamp,
 ) error {
+	sAllocation := sa.mustBase()
 
 	scYaml, err := getConfig(ctx)
 	require.NoError(t, err)
@@ -413,7 +426,7 @@ func testCancelAllocation(
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
 		scYaml:               *scYaml,
-		allocation:           sAllocation,
+		allocation:           *sAllocation,
 		blobbers:             blobbers,
 		bStakes:              bStakes,
 		challengePoolBalance: challengePoolBalance,
@@ -422,7 +435,7 @@ func testCancelAllocation(
 	}
 
 	var ssc, txn, input = setupMocksFinishAllocation(
-		t, &sAllocation, blobbers, bStakes,
+		t, &sa, blobbers, bStakes,
 		currency.Coin(challengePoolBalance), now, ctx,
 	)
 
@@ -484,6 +497,8 @@ func testCancelAllocation(
 
 	totalWritePrice := currency.Coin(0)
 
+	f.allocation = *sa.mustBase()
+
 	for _, ba := range f.allocation.BlobberAllocs {
 		totalWritePrice, err = currency.AddCoin(totalWritePrice, ba.Terms.WritePrice)
 	}
@@ -544,10 +559,10 @@ func mockTransferAmount(
 	balances.balances[to] = toBalance
 }
 
-func testFinalizeAllocation(t *testing.T, sAllocation storageAllocationBase, blobbers SortedBlobbers, bStakes [][]mockStakePool, challengePoolBalance int64, now common.Timestamp, challenges [][]int64, ctx *mockStateContext) error {
-
+func testFinalizeAllocation(t *testing.T, sa StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, challengePoolBalance int64, now common.Timestamp, challenges [][]int64, ctx *mockStateContext) error {
+	sAllocation := sa.mustBase()
 	var ssc, txn, input = setupMocksFinishAllocation(
-		t, &sAllocation, blobbers, bStakes,
+		t, &sa, blobbers, bStakes,
 		currency.Coin(challengePoolBalance), now, ctx,
 	)
 
@@ -557,7 +572,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation storageAllocationBase, blo
 	var f = formulaeFinalizeAllocation{
 		t:                    t,
 		scYaml:               *scYaml,
-		allocation:           sAllocation,
+		allocation:           *sAllocation,
 		blobbers:             blobbers,
 		bStakes:              bStakes,
 		challengePoolBalance: challengePoolBalance,
@@ -638,7 +653,7 @@ func testFinalizeAllocation(t *testing.T, sAllocation storageAllocationBase, blo
 	}
 
 	// check that the allocation is deleted from MPT
-	err = ctx.GetTrieNode(sAllocation.GetKey(ADDRESS), &StorageAllocation{})
+	err = ctx.GetTrieNode(sa.GetKey(ADDRESS), &StorageAllocation{})
 	require.Error(t, err, util.ErrValueNotPresent)
 
 	confirmFinalizeAllocation(t, f, sps, cancellationCharges, *scYaml)
@@ -686,13 +701,14 @@ func confirmFinalizeAllocation(
 
 func setupMocksFinishAllocation(
 	t *testing.T,
-	sAllocation *storageAllocationBase,
+	sa *StorageAllocation,
 	blobbers SortedBlobbers,
 	bStakes [][]mockStakePool,
 	challengePoolBalance currency.Coin,
 	now common.Timestamp,
 	ctx *mockStateContext,
 ) (*StorageSmartContract, *transaction.Transaction, []byte) {
+	sAllocation := sa.mustBase()
 	var err error
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
@@ -724,12 +740,8 @@ func setupMocksFinishAllocation(
 		},
 	}
 
-	var sa StorageAllocation
-
-	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sa)
+	_, err = ctx.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 	require.NoError(t, err)
-
-	sAllocation = sa.mustBase()
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{

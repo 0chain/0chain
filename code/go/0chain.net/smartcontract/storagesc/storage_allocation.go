@@ -265,7 +265,33 @@ func (sa2 *storageAllocationV2) InitVersion() {
 }
 
 func (sa2 *storageAllocationV2) GetBase() entitywrapper.EntityBaseI {
-	return nil
+	return &storageAllocationBase{
+		ID:                   sa2.ID,
+		Tx:                   sa2.Tx,
+		DataShards:           sa2.DataShards,
+		ParityShards:         sa2.ParityShards,
+		Size:                 sa2.Size,
+		Expiration:           sa2.Expiration,
+		Owner:                sa2.Owner,
+		OwnerPublicKey:       sa2.OwnerPublicKey,
+		Stats:                sa2.Stats,
+		DiverseBlobbers:      sa2.DiverseBlobbers,
+		PreferredBlobbers:    sa2.PreferredBlobbers,
+		BlobberAllocs:        sa2.BlobberAllocs,
+		BlobberAllocsMap:     sa2.BlobberAllocsMap,
+		ThirdPartyExtendable: sa2.ThirdPartyExtendable,
+		FileOptions:          sa2.FileOptions,
+		WritePool:            sa2.WritePool,
+		ReadPriceRange:       sa2.ReadPriceRange,
+		WritePriceRange:      sa2.WritePriceRange,
+		StartTime:            sa2.StartTime,
+		Finalized:            sa2.Finalized,
+		Canceled:             sa2.Canceled,
+		MovedToChallenge:     sa2.MovedToChallenge,
+		MovedBack:            sa2.MovedBack,
+		MovedToValidators:    sa2.MovedToValidators,
+		TimeUnit:             sa2.TimeUnit,
+	}
 }
 
 func (sa2 *storageAllocationV2) MigrateFrom(e entitywrapper.EntityI) error {
@@ -392,8 +418,12 @@ func (sa *storageAllocationBase) durationInTimeUnits(dur common.Timestamp, timeU
 	return float64(dur.Duration()) / float64(timeUnit), nil
 }
 
-func (sa *storageAllocationBase) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sa.ID)
+func (sa *StorageAllocation) GetKey(globalKey string) datastore.Key {
+	return globalKey + sa.mustBase().ID
+}
+
+func GetAllocKey(globalKey, allocID string) datastore.Key {
+	return globalKey + allocID
 }
 
 func (sa *storageAllocationBase) buildEventBlobberTerms() []event.AllocationBlobberTerm {
@@ -472,7 +502,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		emitUpdateBlobberAllocatedSavedHealth(b, balances)
 	}
 	// Save allocation
-	_, err = balances.InsertTrieNode(sa.mustBase().GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}
@@ -483,7 +513,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 
 func (sa *StorageAllocation) saveUpdatedStakes(balances cstate.StateContextI) (err error) {
 	// Save allocation
-	_, err = balances.InsertTrieNode(sa.mustBase().GetKey(ADDRESS), sa)
+	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
 		return
 	}

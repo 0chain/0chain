@@ -1487,7 +1487,7 @@ func (sa *storageAllocationBase) changeBlobbers(
 }
 
 func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) error {
-	_, err := state.InsertTrieNode(sa.mustBase().GetKey(scAddress), sa)
+	_, err := state.InsertTrieNode(sa.GetKey(scAddress), sa)
 	return err
 }
 

@@ -296,7 +296,7 @@ func TestAddChallenge(t *testing.T) {
 
 			// assert the allocation is saved to MPT
 			var sa StorageAllocation
-			err = args.balances.GetTrieNode(alloc.GetKey(ssc.ID), &sa)
+			err = args.balances.GetTrieNode(sa.GetKey(ssc.ID), &sa)
 			require.NoError(t, err)
 			alloc = sa.mustBase()
 
@@ -2007,7 +2007,7 @@ func setupChallengeMocks(
 			ID: storageScId,
 		},
 	}
-	_, err = ctx.InsertTrieNode(allocation.GetKey(ADDRESS), sa)
+	_, err = ctx.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{

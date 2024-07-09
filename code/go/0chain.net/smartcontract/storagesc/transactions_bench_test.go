@@ -243,7 +243,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), sa)
+		_, err = balances.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 		require.NoError(b, err)
 	}
 
@@ -376,7 +376,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), sa)
+		_, err = balances.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 		require.NoError(b, err)
 	}
 
