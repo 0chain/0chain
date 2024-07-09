@@ -25,7 +25,7 @@ func (srh *StorageRestHandler) getQueryData(w http.ResponseWriter, r *http.Reque
 	switch entity {
 	case "blobber":
 		table = &event.Blobber{}
-	case "Sharder":
+	case "sharder":
 		table = &event.Sharder{}
 	case "miner":
 		table = &event.Miner{}
