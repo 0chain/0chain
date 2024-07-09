@@ -438,13 +438,13 @@ func setupNewAllocation(
 	logging.Logger.Debug("new_allocation_request", zap.Int64("size", bSize), zap.Strings("blobbers", bi))
 	m.tick("validate_blobbers")
 
-	sa.mustBase().BlobberAllocsMap = make(map[string]*BlobberAllocation, len(blobberNodes))
+	saBase.BlobberAllocsMap = make(map[string]*BlobberAllocation, len(blobberNodes))
 	for _, b := range blobberNodes {
 		bAlloc := newBlobberAllocation(bSize, saBase, b.mustBase(), conf, now)
-		sa.mustBase().BlobberAllocs = append(sa.mustBase().BlobberAllocs, bAlloc)
+		saBase.BlobberAllocs = append(saBase.BlobberAllocs, bAlloc)
 		//nolint:errcheck
 		b.mustUpdateBase(func(snb *storageNodeBase) error {
-			sa.mustBase().BlobberAllocsMap[snb.ID] = bAlloc
+			saBase.BlobberAllocsMap[snb.ID] = bAlloc
 			snb.Allocated += bSize
 			return nil
 		})
@@ -452,12 +452,18 @@ func setupNewAllocation(
 	m.tick("add_offer")
 
 	if request.FileOptionsChanged {
-		sa.mustBase().FileOptions = request.FileOptions
+		saBase.FileOptions = request.FileOptions
 	} else {
-		sa.mustBase().FileOptions = 63
+		saBase.FileOptions = 63
 	}
 
-	sa.mustBase().StartTime = now
+	saBase.StartTime = now
+
+	sa.mustUpdateBase(func(sab *storageAllocationBase) error {
+		saBase.deepCopy(sab)
+		return nil
+	})
+
 	return sa, blobberNodes, nil
 }
 

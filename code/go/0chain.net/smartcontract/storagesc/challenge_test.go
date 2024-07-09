@@ -40,6 +40,7 @@ const (
 )
 
 func TestAddChallenge(t *testing.T) {
+
 	type challengeAdd struct {
 		blobberID string
 		ts        common.Timestamp
@@ -333,6 +334,7 @@ func TestAddChallenge(t *testing.T) {
 }
 
 func TestBlobberReward(t *testing.T) {
+
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = currency.Coin(73000000)
 	var challengePoolBalance = currency.Coin(730000000000)

@@ -68,6 +68,7 @@ var (
 )
 
 func TestCommitBlobberRead(t *testing.T) {
+
 	var lastRead = mockReadMarker{
 		readCounter: 0,
 		timestamp:   0,
@@ -275,7 +276,9 @@ func testCommitBlobberRead(
 
 	_, err = ctx.InsertTrieNode(readConnection.GetKey(ssc.ID), lastReadConnection)
 	require.NoError(t, err)
-	var storageAllocation = &storageAllocationBase{
+
+	var sa = &StorageAllocation{}
+	sa.SetEntity(&storageAllocationV2{
 		ID:         allocationId,
 		StartTime:  allocation.startTime,
 		Expiration: allocation.expiration,
@@ -290,14 +293,9 @@ func testCommitBlobberRead(
 		},
 		Owner: client.id,
 		Stats: &StorageAllocationStats{},
-	}
-
-	var sa StorageAllocation
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
-		base = storageAllocation
-		return nil
 	})
-	_, err = ctx.InsertTrieNode(sa.GetKey(ssc.ID), &sa)
+
+	_, err = ctx.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 	require.NoError(t, err)
 
 	blobber := &StorageNode{}

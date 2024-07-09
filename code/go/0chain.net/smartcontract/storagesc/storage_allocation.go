@@ -305,24 +305,48 @@ func (sa2 *storageAllocationV2) MigrateFrom(e entitywrapper.EntityI) error {
 }
 
 func (sa2 *storageAllocationV2) ApplyBaseChanges(sab storageAllocationBase) {
-
+	sa2.ID = sab.ID
+	sa2.Tx = sab.Tx
+	sa2.DataShards = sab.DataShards
+	sa2.ParityShards = sab.ParityShards
+	sa2.Size = sab.Size
+	sa2.Expiration = sab.Expiration
+	sa2.Owner = sab.Owner
+	sa2.OwnerPublicKey = sab.OwnerPublicKey
+	sa2.Stats = sab.Stats
+	sa2.DiverseBlobbers = sab.DiverseBlobbers
+	sa2.PreferredBlobbers = sab.PreferredBlobbers
+	sa2.BlobberAllocs = sab.BlobberAllocs
+	sa2.BlobberAllocsMap = sab.BlobberAllocsMap
+	sa2.ThirdPartyExtendable = sab.ThirdPartyExtendable
+	sa2.FileOptions = sab.FileOptions
+	sa2.WritePool = sab.WritePool
+	sa2.ReadPriceRange = sab.ReadPriceRange
+	sa2.WritePriceRange = sab.WritePriceRange
+	sa2.StartTime = sab.StartTime
+	sa2.Finalized = sab.Finalized
+	sa2.Canceled = sab.Canceled
+	sa2.MovedToChallenge = sab.MovedToChallenge
+	sa2.MovedBack = sab.MovedBack
+	sa2.MovedToValidators = sab.MovedToValidators
+	sa2.TimeUnit = sab.TimeUnit
 }
 
-func (sa *storageAllocationBase) checkFunding() error {
-	allocCost, err := sa.cost()
+func (sab *storageAllocationBase) checkFunding() error {
+	allocCost, err := sab.cost()
 	if err != nil {
 		return fmt.Errorf("failed to get allocation cost: %v", err)
 	}
 
-	if sa.WritePool < allocCost {
+	if sab.WritePool < allocCost {
 		return fmt.Errorf("not enough tokens to honor the allocation cost %v < %v",
-			sa.WritePool, allocCost)
+			sab.WritePool, allocCost)
 	}
 
 	return nil
 }
 
-func (sa *storageAllocationBase) addToWritePool(
+func (sab *storageAllocationBase) addToWritePool(
 	txn *transaction.Transaction,
 	balances cstate.StateContextI,
 	transfer *Transfer,
@@ -334,28 +358,28 @@ func (sa *storageAllocationBase) addToWritePool(
 	if value == 0 {
 		return nil
 	}
-	if writePool, err := currency.AddCoin(sa.WritePool, value); err != nil {
+	if writePool, err := currency.AddCoin(sab.WritePool, value); err != nil {
 		return err
 	} else {
-		sa.WritePool = writePool
+		sab.WritePool = writePool
 	}
 
 	i, err := txn.Value.Int64()
 	if err != nil {
 		return err
 	}
-	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sa.ID, event.WritePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, sab.ID, event.WritePoolLock{
 		Client:       txn.ClientID,
-		AllocationId: sa.ID,
+		AllocationId: sab.ID,
 		Amount:       i,
 		IsMint:       transfer.isMint,
 	})
 	return nil
 }
 
-func (sa *storageAllocationBase) cost() (currency.Coin, error) {
+func (sab *storageAllocationBase) cost() (currency.Coin, error) {
 	var cost currency.Coin
-	for _, ba := range sa.BlobberAllocs {
+	for _, ba := range sab.BlobberAllocs {
 		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 		if err != nil {
 			return 0, err
@@ -368,15 +392,15 @@ func (sa *storageAllocationBase) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
-func (sa *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Coin, error) {
-	rdtu, err := sa.restDurationInTimeUnits(now, sa.TimeUnit)
+func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Coin, error) {
+	rdtu, err := sab.restDurationInTimeUnits(now, sab.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
 
 	}
 
 	var cost currency.Coin
-	for _, ba := range sa.BlobberAllocs {
+	for _, ba := range sab.BlobberAllocs {
 		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 		if err != nil {
 			return 0, err
@@ -397,21 +421,21 @@ func (sa *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Coi
 
 // The restDurationInTimeUnits return rest duration of the allocation in time
 // units as a float64 value.
-func (sa *storageAllocationBase) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) (float64, error) {
-	if sa.Expiration < now {
+func (sab *storageAllocationBase) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) (float64, error) {
+	if sab.Expiration < now {
 		logging.Logger.Error("rest duration time overflow, timestamp is beyond alloc expiration",
 			zap.Int64("now", int64(now)),
-			zap.Int64("alloc expiration", int64(sa.Expiration)))
+			zap.Int64("alloc expiration", int64(sab.Expiration)))
 		return 0, errors.New("rest duration time overflow, timestamp is beyond alloc expiration")
 	}
-	logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sa.Expiration)), zap.Int64("now", int64(now)), zap.Float64("timeUnit", float64(timeUnit)), zap.Int64("rest", int64(sa.Expiration-now)))
-	return sa.durationInTimeUnits(sa.Expiration-now, timeUnit)
+	logging.Logger.Info("rest_duration", zap.Int64("expiration", int64(sab.Expiration)), zap.Int64("now", int64(now)), zap.Float64("timeUnit", float64(timeUnit)), zap.Int64("rest", int64(sab.Expiration-now)))
+	return sab.durationInTimeUnits(sab.Expiration-now, timeUnit)
 }
 
 // The durationInTimeUnits returns given duration (represented as
 // common.Timestamp) as duration in time units (float point value) for
 // this allocation (time units for the moment of the allocation creation).
-func (sa *storageAllocationBase) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) (float64, error) {
+func (sab *storageAllocationBase) durationInTimeUnits(dur common.Timestamp, timeUnit time.Duration) (float64, error) {
 	if dur < 0 {
 		return 0, errors.New("negative duration")
 	}
@@ -426,11 +450,11 @@ func GetAllocKey(globalKey, allocID string) datastore.Key {
 	return globalKey + allocID
 }
 
-func (sa *storageAllocationBase) buildEventBlobberTerms() []event.AllocationBlobberTerm {
-	bTerms := make([]event.AllocationBlobberTerm, 0, len(sa.BlobberAllocs))
-	for i, b := range sa.BlobberAllocs {
+func (sab *storageAllocationBase) buildEventBlobberTerms() []event.AllocationBlobberTerm {
+	bTerms := make([]event.AllocationBlobberTerm, 0, len(sab.BlobberAllocs))
+	for i, b := range sab.BlobberAllocs {
 		bTerms = append(bTerms, event.AllocationBlobberTerm{
-			AllocationIdHash: sa.ID,
+			AllocationIdHash: sab.ID,
 			BlobberID:        b.BlobberID,
 			ReadPrice:        int64(b.Terms.ReadPrice),
 			WritePrice:       int64(b.Terms.WritePrice),
@@ -441,53 +465,53 @@ func (sa *storageAllocationBase) buildEventBlobberTerms() []event.AllocationBlob
 	return bTerms
 }
 
-func (sa *storageAllocationBase) buildDbUpdates() event.Allocation {
+func (sab *storageAllocationBase) buildDbUpdates() event.Allocation {
 	eAlloc := event.Allocation{
-		AllocationID:         sa.ID,
-		TransactionID:        sa.Tx,
-		DataShards:           sa.DataShards,
-		ParityShards:         sa.ParityShards,
-		Size:                 sa.Size,
-		Expiration:           int64(sa.Expiration),
-		Owner:                sa.Owner,
-		OwnerPublicKey:       sa.OwnerPublicKey,
-		ReadPriceMin:         sa.ReadPriceRange.Min,
-		ReadPriceMax:         sa.ReadPriceRange.Max,
-		WritePriceMin:        sa.WritePriceRange.Min,
-		WritePriceMax:        sa.WritePriceRange.Max,
-		StartTime:            int64(sa.StartTime),
-		Finalized:            sa.Finalized,
-		Cancelled:            sa.Canceled,
-		UsedSize:             sa.Stats.UsedSize,
-		MovedToChallenge:     sa.MovedToChallenge,
-		MovedBack:            sa.MovedBack,
-		MovedToValidators:    sa.MovedToValidators,
-		TimeUnit:             int64(sa.TimeUnit),
-		WritePool:            sa.WritePool,
-		ThirdPartyExtendable: sa.ThirdPartyExtendable,
-		FileOptions:          sa.FileOptions,
+		AllocationID:         sab.ID,
+		TransactionID:        sab.Tx,
+		DataShards:           sab.DataShards,
+		ParityShards:         sab.ParityShards,
+		Size:                 sab.Size,
+		Expiration:           int64(sab.Expiration),
+		Owner:                sab.Owner,
+		OwnerPublicKey:       sab.OwnerPublicKey,
+		ReadPriceMin:         sab.ReadPriceRange.Min,
+		ReadPriceMax:         sab.ReadPriceRange.Max,
+		WritePriceMin:        sab.WritePriceRange.Min,
+		WritePriceMax:        sab.WritePriceRange.Max,
+		StartTime:            int64(sab.StartTime),
+		Finalized:            sab.Finalized,
+		Cancelled:            sab.Canceled,
+		UsedSize:             sab.Stats.UsedSize,
+		MovedToChallenge:     sab.MovedToChallenge,
+		MovedBack:            sab.MovedBack,
+		MovedToValidators:    sab.MovedToValidators,
+		TimeUnit:             int64(sab.TimeUnit),
+		WritePool:            sab.WritePool,
+		ThirdPartyExtendable: sab.ThirdPartyExtendable,
+		FileOptions:          sab.FileOptions,
 	}
 
-	if sa.Stats != nil {
-		eAlloc.NumWrites = sa.Stats.NumWrites
-		eAlloc.NumReads = sa.Stats.NumReads
-		eAlloc.TotalChallenges = sa.Stats.TotalChallenges
-		eAlloc.OpenChallenges = sa.Stats.OpenChallenges
-		eAlloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
-		eAlloc.FailedChallenges = sa.Stats.FailedChallenges
-		eAlloc.LatestClosedChallengeTxn = sa.Stats.LastestClosedChallengeTxn
+	if sab.Stats != nil {
+		eAlloc.NumWrites = sab.Stats.NumWrites
+		eAlloc.NumReads = sab.Stats.NumReads
+		eAlloc.TotalChallenges = sab.Stats.TotalChallenges
+		eAlloc.OpenChallenges = sab.Stats.OpenChallenges
+		eAlloc.SuccessfulChallenges = sab.Stats.SuccessChallenges
+		eAlloc.FailedChallenges = sab.Stats.FailedChallenges
+		eAlloc.LatestClosedChallengeTxn = sab.Stats.LastestClosedChallengeTxn
 	}
 
 	return eAlloc
 }
 
-func (sa *storageAllocationBase) buildStakeUpdateEvent() event.Allocation {
+func (sab *storageAllocationBase) buildStakeUpdateEvent() event.Allocation {
 	return event.Allocation{
-		AllocationID:      sa.ID,
-		WritePool:         sa.WritePool,
-		MovedToChallenge:  sa.MovedToChallenge,
-		MovedBack:         sa.MovedBack,
-		MovedToValidators: sa.MovedToValidators,
+		AllocationID:      sab.ID,
+		WritePool:         sab.WritePool,
+		MovedToChallenge:  sab.MovedToChallenge,
+		MovedBack:         sab.MovedBack,
+		MovedToValidators: sab.MovedToValidators,
 	}
 }
 
@@ -520,4 +544,32 @@ func (sa *StorageAllocation) saveUpdatedStakes(balances cstate.StateContextI) (e
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationStakes, sa.mustBase().ID, sa.mustBase().buildStakeUpdateEvent())
 	return
+}
+
+func (sab *storageAllocationBase) deepCopy(input *storageAllocationBase) {
+	input.ID = sab.ID
+	input.Tx = sab.Tx
+	input.DataShards = sab.DataShards
+	input.ParityShards = sab.ParityShards
+	input.Size = sab.Size
+	input.Expiration = sab.Expiration
+	input.Owner = sab.Owner
+	input.OwnerPublicKey = sab.OwnerPublicKey
+	input.Stats = sab.Stats
+	input.DiverseBlobbers = sab.DiverseBlobbers
+	input.PreferredBlobbers = sab.PreferredBlobbers
+	input.BlobberAllocs = sab.BlobberAllocs
+	input.BlobberAllocsMap = sab.BlobberAllocsMap
+	input.ThirdPartyExtendable = sab.ThirdPartyExtendable
+	input.FileOptions = sab.FileOptions
+	input.WritePool = sab.WritePool
+	input.ReadPriceRange = sab.ReadPriceRange
+	input.WritePriceRange = sab.WritePriceRange
+	input.StartTime = sab.StartTime
+	input.Finalized = sab.Finalized
+	input.Canceled = sab.Canceled
+	input.MovedToChallenge = sab.MovedToChallenge
+	input.MovedBack = sab.MovedBack
+	input.MovedToValidators = sab.MovedToValidators
+	input.TimeUnit = sab.TimeUnit
 }

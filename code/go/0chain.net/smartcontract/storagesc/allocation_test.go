@@ -856,12 +856,13 @@ func TestExtendAllocation(t *testing.T) {
 }
 
 func TestStorageSmartContract_getAllocation(t *testing.T) {
+
 	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
-		alloc    *StorageAllocation
-		err      error
+
+		err error
 	)
 	if _, err = ssc.getAllocation(allocID, balances); err == nil {
 		t.Fatal("missing error")
@@ -870,18 +871,19 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 		t.Fatal("unexpected error:", err)
 	}
 
-	alloc.mustUpdateBase(func(base *storageAllocationBase) error {
-		base.ID = allocID
-		base.DataShards = 1
-		base.ParityShards = 1
-		base.Size = 1024
-		base.Expiration = 1050
-		base.Owner = clientID
-		base.OwnerPublicKey = clientPk
-		return nil
+	alloc := StorageAllocation{}
+
+	alloc.SetEntity(&storageAllocationV2{
+		ID:             allocID,
+		DataShards:     1,
+		ParityShards:   1,
+		Size:           1024,
+		Expiration:     1050,
+		Owner:          clientID,
+		OwnerPublicKey: clientPk,
 	})
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), &alloc)
 	require.NoError(t, err)
 	var got *StorageAllocation
 	got, err = ssc.getAllocation(allocID, balances)
@@ -1170,6 +1172,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 
 	t.Run("Blobbers provided are restricted blobbers", func(t *testing.T) {
+
 		wallet := newClient(1000*x10, balances)
 		b0Wallet := newClient(1000*x10, balances)
 		b1Wallet := newClient(1000*x10, balances)
@@ -1249,6 +1252,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 8. not enough tokens
 	t.Run("not enough tokens to honor the min lock demand (0 < 270)", func(t *testing.T) {
+
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 		nar.Owner = clientID
@@ -1298,6 +1302,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 	// 9. no tokens to lock (client balance check)
 	t.Run("Blobbers provided are not enough to honour the allocation no pools", func(t *testing.T) {
+
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 		nar.Owner = clientID
@@ -1350,6 +1355,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 	// 10. ok
 	t.Run("ok", func(t *testing.T) {
+
 		wallet := newClient(1000*x10, balances)
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
@@ -1714,6 +1720,7 @@ func Test_updateAllocationRequest_getNewBlobbersSize(t *testing.T) {
 }
 
 func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
+
 	const allocTxHash, clientID, pubKey = "a5f4c3d2_tx_hex", "client_hex",
 		"pub_key_hex"
 
@@ -1737,9 +1744,9 @@ func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
 	assert.Len(t, blobbers, 2)
 }
 
-func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
+func (sa *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 	cp = new(StorageAllocation)
-	require.NoError(t, cp.Decode(mustEncode(t, alloc)))
+	require.NoError(t, cp.Decode(mustEncode(t, sa)))
 	return
 }
 
@@ -1912,6 +1919,7 @@ func compareAllocationData(t *testing.T, beforeAlloc, afterAlloc storageAllocati
 }
 
 func TestUpdateAllocationRequest(t *testing.T) {
+
 	// Tests :
 	// 1. Update single operation and check the stats and tag events
 	// 2. Update all operations at once and check the stats and events at the end
@@ -2154,6 +2162,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
+
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
@@ -2564,6 +2573,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 // - finalize allocation
 func Test_finalize_allocation(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -2748,6 +2758,7 @@ func Test_finalize_allocation(t *testing.T) {
 }
 
 func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
