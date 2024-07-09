@@ -1148,7 +1148,15 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 
 func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *Round, beforeStartNextRound func()) {
 	r.SetPhase(round.Complete)
-	var rn = r.GetRoundNumber()
+	var (
+		rn = r.GetRoundNumber()
+		pr = mc.GetMinerRound(rn - 1)
+	)
+
+	if pr != nil && !pr.IsFinalizing() && !pr.IsFinalized() {
+		mc.finalizeRound(ctx, pr) // finalize the previous round
+	}
+
 	if !mc.waitNotAhead(ctx, rn) {
 		logging.Logger.Debug("start next round not ahead -- terminated",
 			zap.Int64("round", rn))
