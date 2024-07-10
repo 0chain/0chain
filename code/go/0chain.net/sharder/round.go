@@ -7,8 +7,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 // RoundSummaries -
@@ -95,22 +93,22 @@ func (mrf SharderRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 }
 
 /*StoreRound - persists given round to ememory(rocksdb)*/
-func (sc *Chain) StoreRound(r *round.Round) error {
-	logging.Logger.Warn("store round", zap.Int64("round", r.GetRoundNumber()))
-	roundEntityMetadata := r.GetEntityMetadata()
-	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
-	defer ememorystore.Close(rctx)
-	err := r.Write(rctx)
-	if err != nil {
-		return err
-	}
-	con := ememorystore.GetEntityCon(rctx, roundEntityMetadata)
-	err = con.Commit()
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// func (sc *Chain) StoreRound(r *round.Round) error {
+// 	logging.Logger.Warn("store round", zap.Int64("round", r.GetRoundNumber()))
+// 	roundEntityMetadata := r.GetEntityMetadata()
+// 	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
+// 	defer ememorystore.Close(rctx)
+// 	err := r.Write(rctx)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	con := ememorystore.GetEntityCon(rctx, roundEntityMetadata)
+// 	err = con.Commit()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (sc *Chain) StoreRoundNoCommit(r *round.Round) (func() error, error) {
 	roundEntityMetadata := r.GetEntityMetadata()
