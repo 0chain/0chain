@@ -133,18 +133,23 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if r.IsFinalized() {
 		return // round already finalized
 	}
-	// The SetFinalizing is not condition check it changes round state.
-	if !r.SetFinalizing() {
-		logging.Logger.Debug("finalize_round: already finalizing",
-			zap.Int64("round", r.GetRoundNumber()))
-	}
-
 	if r.GetHeaviestNotarizedBlock() == nil {
 		logging.Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
 		go c.GetHeaviestNotarizedBlock(context.Background(), r)
-		r.ResetFinalizingStateIfNotFinalized()
+		// r.ResetFinalizingStateIfNotFinalized()
 		time.Sleep(FINALIZATION_TIME)
+	}
+
+	if r.GetHeaviestNotarizedBlock() == nil {
+		logging.Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
+		return
+	}
+
+	// The SetFinalizing is not condition check it changes round state.
+	if !r.SetFinalizing() {
+		logging.Logger.Debug("finalize_round: already finalizing",
+			zap.Int64("round", r.GetRoundNumber()))
 	}
 
 	logging.Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
