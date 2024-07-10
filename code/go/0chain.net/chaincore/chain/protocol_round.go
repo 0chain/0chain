@@ -143,6 +143,7 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 		logging.Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
 		go c.GetHeaviestNotarizedBlock(context.Background(), r)
+		r.ResetFinalizingStateIfNotFinalized()
 		time.Sleep(FINALIZATION_TIME)
 	}
 
