@@ -1329,26 +1329,28 @@ func (sc *StorageSmartContract) genChal(
 	return nil
 }
 
-func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
+func (sc *StorageSmartContract) addChallenge(sa *StorageAllocation,
 	challenge *StorageChallenge,
 	allocChallenges *AllocationChallenges,
 	challInfo *StorageChallengeResponse,
 	conf *Config,
 	balances cstate.StateContextI,
 ) error {
+	alloc := sa.mustBase()
+
 	if challenge.BlobberID == "" {
 		return common.NewError("add_challenge",
 			"no blobber to add challenge to")
 	}
 
-	blobAlloc, ok := alloc.mustBase().BlobberAllocsMap[challenge.BlobberID]
+	blobAlloc, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
 	if !ok {
 		return common.NewError("add_challenge",
 			"no blobber Allocation to add challenge to")
 	}
 
 	// remove expired challenges
-	lenExpired, err := alloc.mustBase().removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances, sc)
+	lenExpired, err := alloc.removeExpiredChallenges(allocChallenges, conf.MaxChallengeCompletionRounds, balances, sc)
 	if err != nil {
 		return common.NewErrorf("add_challenge",
 			"error removing expired challenges: %v", err)
@@ -1371,20 +1373,22 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			"error storing challenge: %v", err)
 	}
 
-	alloc.mustBase().Stats.OpenChallenges++
-	alloc.mustBase().Stats.TotalChallenges++
+	alloc.Stats.OpenChallenges++
+	alloc.Stats.TotalChallenges++
 	blobAlloc.Stats.OpenChallenges++
 	blobAlloc.Stats.TotalChallenges++
 
-	if err := alloc.save(balances, sc.ID); err != nil {
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+	if err := sa.save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",
 			"error storing allocation: %v", err)
 	}
 
-	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
-
 	beforeEmitAddChallenge(challInfo)
-	return emitAddChallenge(challInfo, lenExpired, balances, alloc.mustBase().Stats)
+	return emitAddChallenge(challInfo, lenExpired, balances, alloc.Stats)
 }
 
 func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionRounds int64) bool {
