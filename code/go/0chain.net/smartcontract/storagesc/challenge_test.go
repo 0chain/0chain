@@ -99,18 +99,16 @@ func TestAddChallenge(t *testing.T) {
 			allocChallenges.AllocationID = allocID
 		}
 
-		alloc := &storageAllocationBase{
+		sa := &StorageAllocation{}
+		sa.SetEntity(&storageAllocationV2{
 			ID:            allocID,
 			BlobberAllocs: make([]*BlobberAllocation, 0, len(p.challengesTS)),
 
 			BlobberAllocsMap: make(map[string]*BlobberAllocation),
 			Stats:            &StorageAllocationStats{},
-		}
-		var sa *StorageAllocation
-		sa.mustUpdateBase(func(ab *storageAllocationBase) error {
-			ab = alloc
-			return nil
 		})
+
+		alloc := sa.mustBase()
 
 		for _, bts := range p.challengesTS {
 			bid := bts.blobberID
@@ -1957,19 +1955,17 @@ func setupChallengeMocks(
 	require.Len(t, validatorStakes, len(validators))
 
 	var err error
-	var allocation = &storageAllocationBase{
+
+	var sa = &StorageAllocation{}
+	sa.SetEntity(&storageAllocationV2{
 		ID:         "alice",
 		Owner:      "owin",
 		Expiration: thisExpires,
 		TimeUnit:   scYaml.TimeUnit,
 		WritePool:  currency.Coin(wpBalance),
-	}
-
-	var sa = &StorageAllocation{}
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
-		base = allocation
-		return nil
 	})
+
+	allocation := sa.mustBase()
 
 	var details = &BlobberAllocation{
 		BlobberID:                  blobberId,
