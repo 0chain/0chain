@@ -594,9 +594,17 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 		return ErrNoPreviousBlock
 	}
 
-	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
-		return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
-			pb.Round, pb.Hash, pb, pb.GetStateStatus())
+	// TODO: add back after debuging
+	if node.Self.IsSharder() {
+		if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
+			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
+				pb.Round, pb.Hash, pb, pb.GetStateStatus())
+		}
+	} else {
+		if pb.ClientState == nil || pb.IsStateComputed() {
+			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
+				pb.Round, pb.Hash, pb, pb.GetStateStatus())
+		}
 	}
 
 	errC := make(chan error)
