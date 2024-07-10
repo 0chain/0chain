@@ -1123,6 +1123,10 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 	}
 
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
 	// Save allocation object
 	_, err = balances.InsertTrieNode(sa.GetKey(sc.ID), sa)
 	if err != nil {

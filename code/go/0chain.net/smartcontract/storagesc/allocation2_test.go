@@ -253,25 +253,44 @@ func TestCancelAllocationRequest(t *testing.T) {
 	})
 
 	t.Run(ErrNotOwner, func(t *testing.T) {
+		prevOwner := sa.mustBase().Owner
 		var allocationNotOwner = sa
-		allocationNotOwner.mustBase().Owner = "someone else"
+		allocationNotOwner.mustUpdateBase(func(base *storageAllocationBase) error {
+			base.Owner = "someone else"
+			return nil
+		})
 
 		err := testCancelAllocation(t, allocationNotOwner, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
 		require.True(t, strings.Contains(err.Error(), ErrNotOwner))
+
+		allocationNotOwner.mustUpdateBase(func(base *storageAllocationBase) error {
+			base.Owner = prevOwner
+			return nil
+		})
+
 	})
 
 	t.Run(ErrExpired, func(t *testing.T) {
+		prevExpiration := sa.mustBase().Expiration
 		var allocationExpired = sa
-		allocationExpired.mustBase().Expiration = now - 1
+		allocationExpired.mustUpdateBase(func(base *storageAllocationBase) error {
+			base.Expiration = now - 1
+			return nil
+		})
 
 		err := testCancelAllocation(t, allocationExpired, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
 		require.True(t, strings.Contains(err.Error(), ErrExpired))
+
+		allocationExpired.mustUpdateBase(func(base *storageAllocationBase) error {
+			base.Expiration = prevExpiration
+			return nil
+		})
 	})
 }
 
@@ -408,7 +427,10 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	t.Run(ErrFinalizedTooSoon, func(t *testing.T) {
 		var allocationExpired = sa
-		allocationExpired.mustBase().Expiration = now - toSeconds(0) + 1
+		allocationExpired.mustUpdateBase(func(base *storageAllocationBase) error {
+			base.Expiration = now - toSeconds(0) + 1
+			return nil
+		})
 
 		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, challengePoolBalance, now, challenges, ctx)
 		require.Error(t, err)

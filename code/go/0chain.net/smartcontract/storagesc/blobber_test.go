@@ -1098,10 +1098,14 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	alloc := sa.mustBase()
 
 	for _, ba := range alloc.BlobberAllocs {
-
 		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
+
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
 
 	_, err = balances.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 	if err != nil {
