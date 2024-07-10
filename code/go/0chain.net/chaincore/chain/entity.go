@@ -351,24 +351,23 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
-			r := c.GetRound(cr)
-			cb := r.GetHeaviestNotarizedBlock()
-			if cb == nil {
-				logging.Logger.Debug("process block, current heaviest notarized block is nil", zap.Int64("current round", cr))
-			} else {
-				if cb.ClientState == nil {
-					logging.Logger.Warn("process block, current heaviest notarized block client state is nil",
-						zap.Int64("current round", cr),
-						zap.String("block", cb.Hash))
-				}
-			}
+			// r := c.GetRound(cr)
+			// cb := r.GetHeaviestNotarizedBlock()
+			// if cb == nil {
+			// 	logging.Logger.Debug("process block, current heaviest notarized block is nil", zap.Int64("current round", cr))
+			// } else {
+			// 	if cb.ClientState == nil {
+			// 		logging.Logger.Warn("process block, current heaviest notarized block client state is nil",
+			// 			zap.Int64("current round", cr),
+			// 			zap.String("block", cb.Hash))
+			// 	}
+			// }
 
 			logging.Logger.Debug("process block, sync triggered",
 				zap.Int64("lfb", lfb.Round),
 				zap.Int64("lfb ticket", lfbTk.Round),
 				zap.Int64("current round", cr),
-				zap.Int64("end round", endRound),
-				zap.Bool("current block client is not nil"))
+				zap.Int64("end round", endRound))
 
 			// trunc to send maxRequestBlocks each time
 			reqNum := endRound - cr
