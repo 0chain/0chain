@@ -141,13 +141,18 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 
 				if r != nil {
 					if r.IsFinalized() || r.IsFinalizing() {
+						logging.Logger.Info("round worker: round is finalized or finalizing, check next round",
+							zap.Int64("round", cround))
+
 						// check next round
 						nr := mc.GetRound(cround + 1)
 						if nr != nil {
 							roundTimeoutProcess(ctx, protocol, cround+1)
+						} else {
+							logging.Logger.Info("round worker: next round is nil", zap.Int64("next round", cround+1))
 						}
 					} else {
-						logging.Logger.Info("round timeout",
+						logging.Logger.Info("round worker: round timeout",
 							zap.Int64("round", r.Number),
 							zap.Int64("current round", cround),
 							zap.Int("VRF_shares", len(r.GetVRFShares())),
@@ -160,17 +165,18 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 					// set current round to latest finalized block
 					lfbr := mc.GetLatestFinalizedBlock().Round
 					mc.SetCurrentRound(lfbr)
-					logging.Logger.Debug("Round timeout, nil miner round, set current round to lfb round",
+					logging.Logger.Debug("round worker: Round timeout, nil miner round, set current round to lfb round",
 						zap.Int64("nil round", cround),
 						zap.Int64("lfb round", lfbr))
 				}
 			} else {
+				logging.Logger.Info("round worker: reset round timeout count", zap.Int64("round", cround))
 				cround = mc.GetCurrentRound()
 				mc.ResetRoundTimeoutCount()
 			}
 		}
 		var next = mc.GetNextRoundTimeoutTime(ctx)
-		logging.Logger.Info("got_timeout", zap.Int("next", next))
+		logging.Logger.Info("round worker: got_timeout", zap.Int("next", next))
 		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
 	}
 }
