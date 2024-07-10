@@ -139,9 +139,9 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	// if panic happens. If we do it in goroutine the same as above, as long as round and block
 	// summary is saved successfully, even other process panic, restarting the sharder would
 	// consider this block as LFB, but those data didn't get saved previously will be lost.
-	// if err := sc.StoreRound(fr.(*round.Round)); err != nil {
-	// 	Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
-	// }
+	if err := sc.StoreRound(fr.(*round.Round)); err != nil {
+		Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
+	}
 
 	//nolint:errcheck
 	notifyConductor(b)

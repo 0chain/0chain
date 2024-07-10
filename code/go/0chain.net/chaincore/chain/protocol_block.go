@@ -8,7 +8,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
 	"0chain.net/core/datastore"
@@ -445,14 +444,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	var fbPersisted bool
 	wg.Run("finalize block - update finalized block", fb.Round, func() error {
 		bsh.UpdateFinalizedBlock(ctx, fb) //
-
-		// Persist LFB, do this after all above succeed to make sure the LFB will not be set
-		// if panic happens. If we do it in goroutine the same as above, as long as round and block
-		// summary is saved successfully, even other process panic, restarting the sharder would
-		// consider this block as LFB, but those data didn't get saved previously will be lost.
-		if err := c.StoreRound(fr.(*round.Round)); err != nil {
-			logging.Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
-		}
 		fbPersisted = true
 		return nil
 	})
