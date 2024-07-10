@@ -295,6 +295,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 
 		// triggered after sync process is started
 		stuckCheckTimer = time.NewTimer(10 * time.Second)
+		plfb            = c.GetLatestFinalizedBlock()
 	)
 
 	for {
@@ -376,6 +377,14 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 		default:
 			cr := c.GetCurrentRound()
 			lfb := c.GetLatestFinalizedBlock()
+			if !node.Self.IsSharder() {
+				if lfb.Round > plfb.Round {
+					plfb = lfb
+					stuckCheckTimer.Reset(10 * time.Second)
+					continue
+				}
+			}
+
 			bItem, ok := c.blockBuffer.First()
 			if !ok {
 				// no block in buffer to process
