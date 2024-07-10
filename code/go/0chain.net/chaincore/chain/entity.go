@@ -608,17 +608,24 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 
 	// TODO: add back after debuging
-	if node.Self.IsSharder() {
-		if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
-			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
-				pb.Round, pb.Hash, pb, pb.GetStateStatus())
+	// if node.Self.IsSharder() {
+	if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
+		// if pb.ClientState == nil {
+		if err := c.GetBlockStateChange(pb); err != nil {
+			return fmt.Errorf("failed to sync block state changes: %d, err: %v", pb.Round, err)
 		}
-	} else {
-		if pb.ClientState == nil || pb.IsStateComputed() {
-			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
-				pb.Round, pb.Hash, pb, pb.GetStateStatus())
-		}
+		// }
+		// else {
+		// 	return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
+		// 		pb.Round, pb.Hash, pb, pb.GetStateStatus())
+		// }
 	}
+	// } else {
+	// 	if pb.ClientState == nil || pb.IsStateComputed() {
+	// 		return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
+	// 			pb.Round, pb.Hash, pb, pb.GetStateStatus())
+	// 	}
+	// }
 
 	errC := make(chan error)
 	doneC := make(chan struct{})
