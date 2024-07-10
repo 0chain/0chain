@@ -644,6 +644,23 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 	return nil
 }
 
+func (c *Chain) StoreRound(r *round.Round) error {
+	logging.Logger.Debug("store round", zap.Int64("round", r.GetRoundNumber()))
+	roundEntityMetadata := r.GetEntityMetadata()
+	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
+	defer ememorystore.Close(rctx)
+	err := r.Write(rctx)
+	if err != nil {
+		return err
+	}
+	con := ememorystore.GetEntityCon(rctx, roundEntityMetadata)
+	err = con.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type stateNodeStat struct {
 	count int64
 	lock  sync.RWMutex
