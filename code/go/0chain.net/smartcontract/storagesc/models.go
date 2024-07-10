@@ -1150,7 +1150,7 @@ func (sab *storageAllocationBase) cancellationCharge(cancellationFraction float6
 	return currency.MultFloat64(cost, cancellationFraction)
 }
 
-func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, now common.Timestamp) (currency.Coin, error) {
+func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, now common.Timestamp) (currency.Coin, error) {
 	var (
 		costOfAllocAfterUpdate currency.Coin
 		tokensRequiredToLock   currency.Coin
@@ -1158,18 +1158,18 @@ func (sa *StorageAllocation) requiredTokensForUpdateAllocation(cpBalance currenc
 	)
 
 	if extend {
-		costOfAllocAfterUpdate, err = sa.mustBase().cost()
+		costOfAllocAfterUpdate, err = sa.cost()
 		if err != nil {
 			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 		}
 	} else {
-		costOfAllocAfterUpdate, err = sa.mustBase().costForRDTU(now)
+		costOfAllocAfterUpdate, err = sa.costForRDTU(now)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
 		}
 	}
 
-	totalWritePool := sa.mustBase().WritePool + cpBalance
+	totalWritePool := sa.WritePool + cpBalance
 
 	if totalWritePool < costOfAllocAfterUpdate {
 		tokensRequiredToLock = costOfAllocAfterUpdate - totalWritePool

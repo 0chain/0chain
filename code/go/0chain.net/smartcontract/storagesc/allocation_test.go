@@ -1738,7 +1738,7 @@ func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
 	require.NoError(t, err)
 
 	var blobbers []*StorageNode
-	blobbers, err = ssc.getAllocationBlobbers(alloc, balances)
+	blobbers, err = ssc.getAllocationBlobbers(alloc.mustBase(), balances)
 	require.NoError(t, err)
 
 	assert.Len(t, blobbers, 2)
@@ -2257,7 +2257,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	alloc = sa.mustBase()
 
-	require.EqualValues(t, alloc, &deco)
+	require.EqualValues(t, alloc, deco.mustBase())
 
 	assert.Equal(t, cp.mustBase().Size*2, alloc.Size)
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
@@ -2515,7 +2515,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	alloc = sa.mustBase()
 
-	require.EqualValues(t, alloc, &deco)
+	require.EqualValues(t, alloc, deco.mustBase())
 
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
 
@@ -2554,7 +2554,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc = sa.mustBase()
 	require.EqualValues(t, alloc.Owner, otherClient.id)
 	require.EqualValues(t, alloc.OwnerPublicKey, otherClient.pk)
-	require.EqualValues(t, alloc, &deco)
+	require.EqualValues(t, alloc, deco.mustBase())
 
 	//
 	// reduce
@@ -2744,7 +2744,7 @@ func Test_finalize_allocation(t *testing.T) {
 	balances.setTransaction(t, tx)
 
 	tx.CreationDate = alloc.Expiration + 10
-	sa, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
+	resp, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
 	require.NoError(t, err)
 
 	// check out all the balances
@@ -2754,7 +2754,8 @@ func Test_finalize_allocation(t *testing.T) {
 
 	tp += 720
 
-	assert.True(t, alloc.Finalized)
+	_, err = ssc.getAllocation(allocID, balances)
+	require.Error(t, err)
 }
 
 func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {

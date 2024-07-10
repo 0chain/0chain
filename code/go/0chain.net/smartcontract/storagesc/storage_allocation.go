@@ -37,7 +37,23 @@ func (sa *StorageAllocation) TypeName() string {
 }
 
 func (sa *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
-	return sa.UnmarshalMsgType(data, sa.TypeName())
+	d := &StorageAllocationDecode{}
+	o, err := d.UnmarshalMsgType(data, sa.TypeName())
+	if err != nil {
+		return nil, err
+	}
+
+	*sa = StorageAllocation(*d)
+
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		base.BlobberAllocsMap = make(map[string]*BlobberAllocation)
+		for _, blobberAllocation := range base.BlobberAllocs {
+			base.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
+		}
+		return nil
+	})
+
+	return o, nil
 }
 
 func (sa *StorageAllocation) UnmarshalJSON(data []byte) error {
@@ -86,6 +102,14 @@ func (sa *StorageAllocation) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
+
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		base.BlobberAllocsMap = make(map[string]*BlobberAllocation)
+		for _, blobberAllocation := range base.BlobberAllocs {
+			base.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
+		}
+		return nil
+	})
 	return nil
 }
 
