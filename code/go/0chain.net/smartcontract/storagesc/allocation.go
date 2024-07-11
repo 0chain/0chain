@@ -514,6 +514,7 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 }
 
 // validate request
+// @audit-info how can we make indivisual requests to remove a blobber ??
 func (uar *updateAllocationRequest) validate(
 	conf *Config,
 	alloc *StorageAllocation,
