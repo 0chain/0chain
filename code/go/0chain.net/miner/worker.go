@@ -37,7 +37,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.MinerHealthCheck(ctx)
 	go mc.NotarizationProcessWorker(ctx)
 	go mc.BlockVerifyWorkers(ctx)
-	go mc.SyncAllMissingNodesWorker(ctx)
+	// go mc.SyncAllMissingNodesWorker(ctx)
 }
 
 /*MessageWorker - a job that does all the work related to blocks in each round */
@@ -131,10 +131,10 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				break
 			}
 
-			if !mc.IsLFBStateReady() {
-				timer = time.NewTimer(4 * time.Second)
-				continue
-			}
+			// if !mc.IsLFBStateReady() {
+			// 	timer = time.NewTimer(4 * time.Second)
+			// 	continue
+			// }
 
 			if cround == mc.GetCurrentRound() {
 				r := mc.GetMinerRound(cround)
