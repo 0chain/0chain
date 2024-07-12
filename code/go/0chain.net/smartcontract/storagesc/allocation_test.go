@@ -2222,6 +2222,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterRemoveAlloc)
 		})
 	*/
+
 	t.Run("Missing client_id should fail", func(t *testing.T) {
 		_, err := ssc.updateAllocationRequestInternal(
 			&transaction.Transaction{ClientID: ""},
@@ -2333,7 +2334,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
 			allocID        = beforeAlloc.ID
 		)
-
 		var uar updateAllocationRequest
 		uar.ID = allocID
 		uar.FileOptions = 1
@@ -2356,6 +2356,23 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.Tx = afterAlloc.Tx
 		expectedAlloc.FileOptions = uar.FileOptions
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
+	})
+
+	t.Run("No changes specified should fail", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID        = beforeAlloc.ID
+		)
+
+		var uar updateAllocationRequest
+		uar.ID = allocID
+
+		_, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "update allocation changes nothing")
 	})
 
 }
