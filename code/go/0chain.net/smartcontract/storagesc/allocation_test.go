@@ -2358,6 +2358,38 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
 
+	t.Run("Set third-party extendable flag should succeed", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID        = beforeAlloc.ID
+		)
+
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.SetThirdPartyExtendable = true
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+		assert.True(t, afterAlloc.ThirdPartyExtendable, "Third-party extendable flag should be set")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAlloc.Tx
+		expectedAlloc.ThirdPartyExtendable = afterAlloc.ThirdPartyExtendable
+		compareAllocationData(t, *expectedAlloc, *afterAlloc)
+	})
+
 	t.Run("No changes specified should fail", func(t *testing.T) {
 		var (
 			tp     = int64(10)
