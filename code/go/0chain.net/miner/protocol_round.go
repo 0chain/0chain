@@ -1939,10 +1939,17 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 func StartProtocol(ctx context.Context, gb *block.Block) {
 
 	var (
-		mc  = GetMinerChain()
-		lfb = getLatestBlockFromSharders(ctx)
-		mr  *Round
+		mc = GetMinerChain()
+		// lfb = getLatestBlockFromSharders(ctx)
+		mr *Round
 	)
+
+	if err := mc.LoadLatestBlocksFromStore(ctx); err != nil {
+		logging.Logger.Error(fmt.Sprintf("can't load latest blocks from store, err: %v", err))
+		// return
+	}
+
+	lfb := mc.GetLatestFinalizedBlock()
 	if lfb != nil {
 		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {

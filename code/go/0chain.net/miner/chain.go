@@ -271,6 +271,52 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 }
 
+// LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
+// to corresponding fields of the sharder's Chain.
+func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
+	// var bl *blocksLoaded
+	lfbr, err := mc.LoadLFBRound()
+	if err != nil {
+		return fmt.Errorf("load_lfb - could not load lfb from state DB, err: %v", err)
+	}
+
+	logging.Logger.Debug("load_lfb - load from stateDB",
+		zap.Int64("round", lfbr.Round),
+		zap.String("block", lfbr.Hash))
+
+	// fetch from sharders
+	b, err := mc.GetNotarizedBlockFromSharders(ctx, lfbr.Hash, lfbr.Round)
+	if err != nil {
+		return fmt.Errorf("load_lfb - could not fetch block from sharders, round: %d, err: %v", lfbr.Round, err)
+	}
+
+	b.SetStateStatus(block.StateSuccessful)
+	if err = mc.InitBlockState(b); err != nil {
+		b.SetStateStatus(0)
+		logging.Logger.Error("load_lfb -- can't initialize stored block state",
+			zap.Error(err))
+		return fmt.Errorf("can't init block state: %v", err) // fatal
+	}
+
+	r := mc.GetRound(b.Round)
+	if r == nil {
+		r = round.NewRound(b.Round)
+	}
+
+	mc.SetLatestFinalizedBlock(ctx, b)
+
+	// c.SetRandomSeed(r, b.GetRoundRandomSeed())
+	// r.Finalize(b)
+	// c.SetLatestFinalizedBlock(b)
+
+	logging.Logger.Info("load_lfb setup LFB from store",
+		zap.String("block", b.Hash),
+		zap.Int64("round", b.Round),
+		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
+
+	return nil
+}
+
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), transactionMetadataProvider)

@@ -255,14 +255,23 @@ func main() {
 	initN2NHandlers(mc)
 
 	initWorkers(ctx)
+
 	// load previous MB and related DKG if any. Don't load the latest, since
 	// it can be promoted (not finalized).
 	mc.LoadMagicBlocksAndDKG(ctx)
+
+	// if err := mc.LoadLatestBlocksFromStore(ctx); err != nil {
+	// 	logging.Logger.Error(fmt.Sprintf("can't load latest blocks from store, err: %v", err))
+	// 	// return
+	// }
 
 	if err = mc.WaitForActiveSharders(ctx); err != nil {
 		logging.Logger.Error("failed to wait sharders", zap.Error(err))
 	}
 
+	// TODO: all update latest magic block from sharders should be adjusted when VC is enabled
+	// this is because miners will now start from the LFB it stopped, so would not start immediately
+	// from the LFB from sharders, therefore, the latest magic block from sharders would be incorrect
 	if err = mc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
 		logging.Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
 	}
