@@ -2325,6 +2325,39 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.Contains(t, err.Error(), "allocation can't be reduced")
 	})
 
+	t.Run("Change file options should succeed", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID        = beforeAlloc.ID
+		)
+
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.FileOptions = 1
+		uar.FileOptionsChanged = true
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+		assert.Equal(t, uar.FileOptions, afterAlloc.FileOptions, "File options should be updated")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAlloc.Tx
+		expectedAlloc.FileOptions = uar.FileOptions
+		compareAllocationData(t, *expectedAlloc, *afterAlloc)
+	})
+
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
