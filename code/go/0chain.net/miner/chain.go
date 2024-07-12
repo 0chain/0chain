@@ -312,7 +312,7 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 	logging.Logger.Info("load_lfb setup LFB from store",
 		zap.String("block", b.Hash),
 		zap.Int64("round", b.Round),
-		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
+		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
 	return nil
 }
