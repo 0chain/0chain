@@ -336,7 +336,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 						c.FinalizeRound(c.GetRound(rn))
 					}
 				}
-				continue
+				// continue
 			}
 
 			endRound = lfbTk.Round + aheadN
