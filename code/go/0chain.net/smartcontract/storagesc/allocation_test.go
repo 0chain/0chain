@@ -1912,6 +1912,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		ssc                 = newTestStorageSC()
 		balances            = newTestBalances(t, false)
 		mockBlobberCapacity = 2 * GB
+		now                 = common.Timestamp(time.Now().UnixNano())
 	)
 
 	t.Run("Extend unused allocation duration should work without adding extra payment", func(t *testing.T) {
@@ -2003,7 +2004,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			tp     = int64(0)
 			client = newClient(2000*x10, balances)
 
-			// Allocation
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
 			allocID        = beforeAlloc.ID
 		)
@@ -2093,135 +2093,62 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
 
-	t.Run("Add blobber to unused allocation should work", func(t *testing.T) {
-		var (
-			tp     = int64(0)
-			client = newClient(2000*x10, balances)
+	// @audit-info avoid hardcoding to 11
+	// @audit-info changing the blobber to true
 
-			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
-			allocID        = beforeAlloc.ID
-		)
+	// t.Run("Add and then remove blobber from allocation should succeed", func(t *testing.T) {
+	// 	var (
+	// 		tp     = int64(10)
+	// 		client = newClient(200000*x10, balances)
 
-		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+	// 		beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+	// 		allocID        = beforeAlloc.ID
+	// 	)
 
-		var uar updateAllocationRequest
-		uar.ID = allocID
-		uar.AddBlobberId = nb3.id
-		uar.AddBlobberAuthTicket = ""
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
+	// 	nb := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
 
-		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
-		require.NoError(t, err)
+	// 	var addBlobberReq updateAllocationRequest
+	// 	addBlobberReq.ID = allocID
+	// 	addBlobberReq.AddBlobberId = nb.id
 
-		var deco StorageAllocation
-		require.NoError(t, deco.Decode([]byte(resp)))
+	// 	resp, err := addBlobberReq.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+	// 	require.NoError(t, err)
 
-		afterAlloc, err := ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
+	// 	var deco StorageAllocation
+	// 	require.NoError(t, deco.Decode([]byte(resp)))
 
-		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
-		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
-		assert.Equal(t, 21, len(afterAlloc.BlobberAllocs), "Blobber should be added to the allocation")
+	// 	afterAddAlloc, err := ssc.getAllocation(allocID, balances)
+	// 	require.NoError(t, err)
 
-		expectedAlloc := beforeAlloc
-		expectedAlloc.Tx = afterAlloc.Tx
-		expectedAlloc.ParityShards = 11
-		expectedAlloc.WritePool = afterAlloc.WritePool
-		randAllocDeepCopy := afterAlloc.deepCopy(t)
-		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, randAllocDeepCopy.BlobberAllocs[0])
-		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
-		compareAllocationData(t, *expectedAlloc, *afterAlloc)
-	})
+	// 	require.EqualValues(t, afterAddAlloc, &deco, "Response and allocation in MPT should be the same")
+	// 	assert.NotEqual(t, beforeAlloc.Tx, afterAddAlloc.Tx, "Transaction should be updated")
+	// 	assert.Equal(t, len(beforeAlloc.BlobberAllocs)+1, len(afterAddAlloc.BlobberAllocs), "Blobber should be added to the allocation")
 
-	t.Run("Add blobber to used allocation should work", func(t *testing.T) {
-		var (
-			tp             = int64(10)
-			client         = newClient(200000*x10, balances)
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
-			allocID        = beforeAlloc.ID
-		)
-		nb := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
-		var uar updateAllocationRequest
-		uar.ID = allocID
-		uar.AddBlobberId = nb.id
-		uar.AddBlobberAuthTicket = ""
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
-		require.NoError(t, err)
-		var deco StorageAllocation
-		require.NoError(t, deco.Decode([]byte(resp)))
-		afterAlloc, err := ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
-		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
-		assert.Equal(t, len(beforeAlloc.BlobberAllocs)+1, len(afterAlloc.BlobberAllocs), "Blobber should be added to the allocation")
-		expectedAlloc := beforeAlloc
-		expectedAlloc.Tx = afterAlloc.Tx
-		expectedAlloc.ParityShards = 11
-		expectedAlloc.WritePool = afterAlloc.WritePool
-		newBlobberAlloc := afterAlloc.BlobberAllocs[len(afterAlloc.BlobberAllocs)-1]
-		newBlobberAlloc.BlobberID = nb.id
-		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, newBlobberAlloc)
-		compareAllocationData(t, *expectedAlloc, *afterAlloc)
-	})
-	/*
-		t.Run("Add and then remove blobber from allocation should succeed", func(t *testing.T) {
-			var (
-				tp     = int64(10)
-				client = newClient(200000*x10, balances)
+	// 	existingBlobberID := beforeAlloc.BlobberAllocs[0].BlobberID
 
-				beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
-				allocID        = beforeAlloc.ID
-			)
+	// 	var removeBlobberReq updateAllocationRequest
+	// 	removeBlobberReq.ID = allocID
+	// 	removeBlobberReq.RemoveBlobberId = existingBlobberID
 
-			nb := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+	// 	resp, err = removeBlobberReq.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	// 	require.NoError(t, err)
 
-			var addBlobberReq updateAllocationRequest
-			addBlobberReq.ID = allocID
-			addBlobberReq.AddBlobberId = nb.id
+	// 	require.NoError(t, deco.Decode([]byte(resp)))
 
-			resp, err := addBlobberReq.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
-			require.NoError(t, err)
+	// 	afterRemoveAlloc, err := ssc.getAllocation(allocID, balances)
+	// 	require.NoError(t, err)
 
-			var deco StorageAllocation
-			require.NoError(t, deco.Decode([]byte(resp)))
+	// 	require.EqualValues(t, afterRemoveAlloc, &deco, "Response and allocation in MPT should be the same")
+	// 	assert.NotEqual(t, afterAddAlloc.Tx, afterRemoveAlloc.Tx, "Transaction should be updated")
+	// 	assert.Equal(t, len(afterAddAlloc.BlobberAllocs)-1, len(afterRemoveAlloc.BlobberAllocs), "Blobber should be removed from the allocation")
 
-			afterAddAlloc, err := ssc.getAllocation(allocID, balances)
-			require.NoError(t, err)
-
-			require.EqualValues(t, afterAddAlloc, &deco, "Response and allocation in MPT should be the same")
-			assert.NotEqual(t, beforeAlloc.Tx, afterAddAlloc.Tx, "Transaction should be updated")
-			assert.Equal(t, len(beforeAlloc.BlobberAllocs)+1, len(afterAddAlloc.BlobberAllocs), "Blobber should be added to the allocation")
-
-		existingBlobberID := beforeAlloc.BlobberAllocs[0].BlobberID
-
-		var removeBlobberReq updateAllocationRequest
-		removeBlobberReq.ID = allocID
-		removeBlobberReq.RemoveBlobberId = existingBlobberID
-
-		resp, err = removeBlobberReq.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.NoError(t, err)
-
-		require.NoError(t, deco.Decode([]byte(resp)))
-
-		afterRemoveAlloc, err := ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, afterRemoveAlloc, &deco, "Response and allocation in MPT should be the same")
-		assert.NotEqual(t, afterAddAlloc.Tx, afterRemoveAlloc.Tx, "Transaction should be updated")
-		assert.Equal(t, len(afterAddAlloc.BlobberAllocs)-1, len(afterRemoveAlloc.BlobberAllocs), "Blobber should be removed from the allocation")
-
-		expectedAlloc := afterAddAlloc
-		expectedAlloc.Tx = afterRemoveAlloc.Tx
-		expectedAlloc.ParityShards = 10
-		expectedAlloc.WritePool = afterRemoveAlloc.WritePool
-		expectedAlloc.BlobberAllocs = expectedAlloc.BlobberAllocs[1:]
-		compareAllocationData(t, *expectedAlloc, *afterRemoveAlloc)
-		})
-	*/
+	// 	expectedAlloc := afterAddAlloc
+	// 	expectedAlloc.Tx = afterRemoveAlloc.Tx
+	// 	expectedAlloc.ParityShards = 10
+	// 	expectedAlloc.WritePool = afterRemoveAlloc.WritePool
+	// 	expectedAlloc.BlobberAllocs = expectedAlloc.BlobberAllocs[1:]
+	// 	compareAllocationData(t, *expectedAlloc, *afterRemoveAlloc)
+	// })
 
 	t.Run("Missing client_id should fail", func(t *testing.T) {
 		_, err := ssc.updateAllocationRequestInternal(
@@ -2234,7 +2161,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.Contains(t, err.Error(), "missing client_id in transaction")
 	})
 
-	t.Run("Change allocation owner should succeed", func(t *testing.T) {
+	t.Run("Change allocation owner should work", func(t *testing.T) {
 		var (
 			tp     = int64(10)
 			client = newClient(200000*x10, balances)
@@ -2288,26 +2215,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.Contains(t, err.Error(), "update allocation changes nothing")
 	})
 
-	t.Run("Add already existing blobber should fail", func(t *testing.T) {
-		var (
-			tp     = int64(10)
-			client = newClient(200000*x10, balances)
-
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
-			allocID        = beforeAlloc.ID
-		)
-
-		existingBlobberID := beforeAlloc.BlobberAllocs[0].BlobberID
-
-		var uar updateAllocationRequest
-		uar.ID = allocID
-		uar.AddBlobberId = existingBlobberID
-
-		_, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "cannot add blobber")
-	})
-
 	t.Run("Reduce allocation size should fail", func(t *testing.T) {
 		var (
 			tp     = int64(10)
@@ -2326,7 +2233,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.Contains(t, err.Error(), "allocation can't be reduced")
 	})
 
-	t.Run("Change file options should succeed", func(t *testing.T) {
+	t.Run("Change file options should work", func(t *testing.T) {
 		var (
 			tp     = int64(10)
 			client = newClient(200000*x10, balances)
@@ -2358,7 +2265,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
 
-	t.Run("Set third-party extendable flag should succeed", func(t *testing.T) {
+	t.Run("Set third-party extendable flag should work", func(t *testing.T) {
 		var (
 			tp     = int64(10)
 			client = newClient(200000*x10, balances)
@@ -2390,6 +2297,45 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
 
+	t.Run("Update allocation with invalid file options should not work", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID        = beforeAlloc.ID
+		)
+
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.FileOptions = 100
+		uar.FileOptionsChanged = true
+
+		_, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "FileOptions 100 incorrect")
+	})
+
+	// t.Run("Update allocation with no blobbers should fail", func(t *testing.T) {
+	// 	var (
+	// 		tp     = int64(10)
+	// 		client = newClient(200000*x10, balances)
+
+	// 		beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+	// 		allocID        = beforeAlloc.ID
+	// 	)
+
+	// 	beforeAlloc.BlobberAllocs = nil
+	// 	beforeAlloc.Size = 0
+
+	// 	var uar updateAllocationRequest
+	// 	uar.ID = allocID
+	// 	uar.Size = 1 * GB
+	// 	_, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	// 	require.Error(t, err)
+	// 	require.Contains(t, err.Error(), "invalid allocation for updating: no blobbers")
+	// })
+
 	t.Run("No changes specified should fail", func(t *testing.T) {
 		var (
 			tp     = int64(10)
@@ -2405,6 +2351,116 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		_, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "update allocation changes nothing")
+	})
+
+	// Add Blobber tests
+
+	t.Run("Add blobber with invalid capacity should fail", func(t *testing.T) {
+		blobber := newClient(2000*x10, balances)
+		blobber.cap = -1 * GB // Invalid capacity
+		blobber.terms = Terms{
+			ReadPrice:  1 * x10,
+			WritePrice: 5 * x10,
+		}
+
+		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid blobber params")
+	})
+
+	t.Run("Add already existing blobber should fail", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID        = beforeAlloc.ID
+		)
+
+		existingBlobberID := beforeAlloc.BlobberAllocs[0].BlobberID
+
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.AddBlobberId = existingBlobberID
+
+		_, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot add blobber")
+	})
+
+	t.Run("Add blobber to used allocation should work", func(t *testing.T) {
+		var (
+			tp             = int64(10)
+			client         = newClient(200000*x10, balances)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID        = beforeAlloc.ID
+		)
+		nb := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.AddBlobberId = nb.id
+		uar.AddBlobberAuthTicket = ""
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		require.NoError(t, err)
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+		assert.Equal(t, len(beforeAlloc.BlobberAllocs)+1, len(afterAlloc.BlobberAllocs), "Blobber should be added to the allocation")
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAlloc.Tx
+		expectedAlloc.ParityShards = 11
+		expectedAlloc.WritePool = afterAlloc.WritePool
+		newBlobberAlloc := afterAlloc.BlobberAllocs[len(afterAlloc.BlobberAllocs)-1]
+		newBlobberAlloc.BlobberID = nb.id
+		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, newBlobberAlloc)
+		compareAllocationData(t, *expectedAlloc, *afterAlloc)
+	})
+
+	t.Run("Add blobber to unused allocation should work", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			allocID        = beforeAlloc.ID
+		)
+
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.AddBlobberId = nb3.id
+		uar.AddBlobberAuthTicket = ""
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+		assert.Equal(t, 21, len(afterAlloc.BlobberAllocs), "Blobber should be added to the allocation")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAlloc.Tx
+		expectedAlloc.ParityShards = 11
+		expectedAlloc.WritePool = afterAlloc.WritePool
+		randAllocDeepCopy := afterAlloc.deepCopy(t)
+		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, randAllocDeepCopy.BlobberAllocs[0])
+		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
+		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
 
 }
