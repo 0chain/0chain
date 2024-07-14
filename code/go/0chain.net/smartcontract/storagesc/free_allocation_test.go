@@ -246,7 +246,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 	for i := 0; i < mockNumBlobbers; i++ {
 		blob[i] = strconv.Itoa(i)
 		mockBlobber := &StorageNode{}
-		mockBlobber.SetEntity(&storageNodeV2{
+		mockBlobber.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              blob[i],
 				ProviderType:    spenum.Blobber,

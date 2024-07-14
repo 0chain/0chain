@@ -2596,7 +2596,8 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
 
-	IsRestricted bool `json:"is_restricted"`
+	IsRestricted    bool `json:"is_restricted"`
+	IsSpecialStatus bool `json:"is_special_status"`
 }
 
 func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
@@ -2619,16 +2620,20 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		NotAvailable:            b.NotAvailable,
 	}
 
-	sv2, ok := sn.Entity().(*storageNodeV2)
-	if ok && sv2.IsRestricted != nil {
-		sr.IsRestricted = *sv2.IsRestricted
+	if b.IsRestricted != nil {
+		sr.IsRestricted = *b.IsRestricted
+	}
+
+	sv3, ok := sn.Entity().(*storageNodeV3)
+	if ok && sv3.IsSpecialStatus != nil {
+		sr.IsSpecialStatus = *sv3.IsSpecialStatus
 	}
 
 	return sr
 }
 
-func storageNodeResponseToStorageNodeV1(snr storageNodeResponse) *storageNodeV1 {
-	return &storageNodeV1{
+func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {
+	return &storageNodeV2{
 		Provider: provider.Provider{
 			ID:              snr.ID,
 			ProviderType:    spenum.Blobber,
@@ -2636,6 +2641,7 @@ func storageNodeResponseToStorageNodeV1(snr storageNodeResponse) *storageNodeV1 
 			HasBeenKilled:   snr.IsKilled,
 			HasBeenShutDown: snr.IsShutdown,
 		},
+		Version:                 "v2",
 		BaseURL:                 snr.BaseURL,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
@@ -2647,11 +2653,12 @@ func storageNodeResponseToStorageNodeV1(snr storageNodeResponse) *storageNodeV1 
 		StakePoolSettings:       snr.StakePoolSettings,
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            &snr.IsRestricted,
 	}
 }
 
-func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {
-	return &storageNodeV2{
+func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 {
+	return &storageNodeV3{
 		Provider: provider.Provider{
 			ID:              snr.ID,
 			ProviderType:    spenum.Blobber,
@@ -2671,6 +2678,7 @@ func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
 		IsRestricted:            &snr.IsRestricted,
+		IsSpecialStatus:         &snr.IsSpecialStatus,
 	}
 }
 

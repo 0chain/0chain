@@ -172,7 +172,7 @@ func (_ *StorageSmartContract) killValidator(
 	// delete the validator from MPT if its stake pools is empty
 	if len(sp.GetPools()) == 0 {
 		// remove the validator from MPT
-		_, err := balances.DeleteTrieNode(validator.GetKey(""))
+		_, err := balances.DeleteTrieNode(validator.GetKey())
 		if err != nil {
 			return "", common.NewErrorf("kill_validator_failed", "deleting validator: %v", err)
 		}
@@ -184,7 +184,7 @@ func (_ *StorageSmartContract) killValidator(
 		return "", nil
 	}
 
-	_, err = balances.InsertTrieNode(validator.GetKey(""), validator)
+	_, err = balances.InsertTrieNode(validator.GetKey(), validator)
 	if err != nil {
 		return "", common.NewError("kill_validator_failed", "saving validator: "+err.Error())
 	}

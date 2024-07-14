@@ -98,7 +98,7 @@ func getValidatorURL(id string) string {
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn := &StorageNode{}
-	sne := &storageNodeV2{
+	sne := &storageNodeV3{
 		IsRestricted: new(bool),
 	}
 	sne.ID = c.id
@@ -111,8 +111,8 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sne.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
 	sne.StakePoolSettings.DelegateWallet = c.id
 	sn.SetEntity(sne)
-	sn.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
-		b := e.(*storageNodeV2)
+	sn.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+		b := e.(*storageNodeV3)
 		b.IsRestricted = c.isRestricted
 		return nil
 	})
@@ -164,7 +164,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
 	blobber := &StorageNode{}
-	b := &storageNodeV2{
+	b := &storageNodeV3{
 		Provider: provider.Provider{
 			ID:           c.id,
 			ProviderType: spenum.Blobber,

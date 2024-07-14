@@ -63,14 +63,8 @@ func (z *config) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Cost"
 	o = append(o, 0xa4, 0x43, 0x6f, 0x73, 0x74)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Cost)))
-	keys_za0001 := make([]string, 0, len(z.Cost))
-	for k := range z.Cost {
-		keys_za0001 = append(keys_za0001, k)
-	}
-	msgp.Sort(keys_za0001)
-	for _, k := range keys_za0001 {
-		za0002 := z.Cost[k]
-		o = msgp.AppendString(o, k)
+	for za0001, za0002 := range z.Cost {
+		o = msgp.AppendString(o, za0001)
 		o = msgp.AppendInt(o, za0002)
 	}
 	return

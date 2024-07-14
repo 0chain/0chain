@@ -76,7 +76,7 @@ func TestSelectBlobbers(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		sn := &StorageNode{}
-		sn.SetEntity(&storageNodeV2{
+		sn.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              mockBlobberId + strconv.Itoa(index),
 				ProviderType:    spenum.Blobber,
@@ -403,7 +403,7 @@ func TestChangeBlobbers(t *testing.T) {
 			}
 
 			blobber := &StorageNode{}
-			blobber.SetEntity(&storageNodeV2{
+			blobber.SetEntity(&storageNodeV3{
 				Provider: provider.Provider{
 					ID:              ba.BlobberID,
 					ProviderType:    spenum.Blobber,
@@ -665,7 +665,7 @@ func TestExtendAllocation(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		sn := &StorageNode{}
-		sn.SetEntity(&storageNodeV2{
+		sn.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              mockBlobberId + strconv.Itoa(index),
 				ProviderType:    spenum.Blobber,
@@ -990,11 +990,14 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 		}
 	}
 
+	isSpecialStatus := new(bool)
+	*isSpecialStatus = false
+
 	all = new(StorageNodes)
 
 	for i := 1; i <= numBlobbers; i++ {
 		sn := &StorageNode{}
-		sn.SetEntity(&storageNodeV2{
+		sn.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              "b" + strconv.Itoa(i),
 				ProviderType:    spenum.Blobber,
@@ -1007,10 +1010,11 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
-			Capacity:     50 * GB, // 50 GB
-			Allocated:    5 * GB,  //  5 GB
-			NotAvailable: notAvailable,
-			IsRestricted: &isRestricted,
+			Capacity:        50 * GB, // 50 GB
+			Allocated:       5 * GB,  //  5 GB
+			NotAvailable:    notAvailable,
+			IsRestricted:    &isRestricted,
+			IsSpecialStatus: isSpecialStatus,
 		})
 		all.Nodes = append(all.Nodes, sn)
 	}
@@ -1439,8 +1443,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		ab = append(ab, loaded1)
 		require.NoError(t, err)
 		for i, sbn := range allBlobbers.Nodes {
-			sbnEntity := sbn.Entity().(*storageNodeV2)
-			abEntitity := ab[i].Entity().(*storageNodeV2)
+			sbnEntity := sbn.Entity().(*storageNodeV3)
+			abEntitity := ab[i].Entity().(*storageNodeV3)
 
 			assert.Equal(t, *sbnEntity, *abEntitity)
 		}
