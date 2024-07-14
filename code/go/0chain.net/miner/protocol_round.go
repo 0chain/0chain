@@ -231,21 +231,23 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 	mc.SetCurrentRound(er.GetRoundNumber())
 	mc.finalizeRound(ctx, r) // finalize the notarized block round
 
-	if er != mr && mc.isStarted() && er.HasRandomSeed() {
-		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
-			zap.Int64("er_round", er.GetRoundNumber()),
-			zap.Int64("rrs", r.GetRandomSeed()),
-			zap.Bool("is_started", mc.isStarted()))
-		return er
-	}
-
 	if r.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
 		mc.addMyVRFShare(ctx, r, er)
+		// TODO: check the vrf share cache?
+		// mc.verifyCachedVRFShares(ctx, )
 	} else {
 		logging.Logger.Info("StartNextRound no VRFShares sent -- "+
 			"current round has no random seed",
 			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", rn))
+	}
+
+	if er != mr && mc.isStarted() && er.HasRandomSeed() {
+		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
+			zap.Int64("er_round", er.GetRoundNumber()),
+			zap.Int64("rrs", er.GetRandomSeed()),
+			zap.Bool("is_started", mc.isStarted()))
+		// return er
 	}
 
 	return er
@@ -1483,6 +1485,28 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 		go mc.SendVRFShare(context.Background(), r.VrfShare().Clone())
 		logging.Logger.Info("Sent vrf shares in handle NoProgress")
 	} else {
+		// check vrf share cache
+		// r.vrfSharesCache.getAll()
+		// mr.vrfSharesCache
+		// var (
+		// 	// rn  = r.GetRoundNumber()
+		// 	dkg = mc.GetDKG(rn)
+		// )
+
+		// msg, err := mc.GetBlsMessageForRound(r.Round)
+		// if err != nil {
+		// 	logging.Logger.Warn("handleNoProgress - failed to get bls message", zap.Any("round", rn))
+		// 	// return false
+		// } else {
+		// 	blsThreshold := dkg.T
+		// 	mc.verifyCachedVRFShares(ctx, msg, r, dkg)
+		// 	if mc.ThresholdNumBLSSigReceived(ctx, r, blsThreshold) {
+		// 		go mc.sendVRFShare(ctx, r.VrfShare().Clone())
+		// 		mc.TryProposeBlock(common.GetRootContext(), r)
+		// 		mc.StartVerification(common.GetRootContext(), r)
+		// 	}
+		// }
+
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
 	}
 
