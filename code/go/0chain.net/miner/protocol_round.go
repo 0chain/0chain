@@ -158,16 +158,16 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	}
 
 	// wait in loop
-	// tkr := time.NewTicker(100 * time.Millisecond)
+	tkr := time.NewTicker(100 * time.Millisecond)
 	for {
 		select {
-		// case <-tkr.C:
-		// 	lfb = mc.GetLatestFinalizedBlock()
-		// 	if round+1 <= tk.Round+int64(ahead) {
-		// 		logging.Logger.Debug("[wait not ahead] [3] not ahead, can move on")
-		// 		return true // not ahead, can move on
-		// 	}
-		// 	logging.Logger.Debug("[wait not ahead] [4] still ahead, can't move on")
+		case <-tkr.C:
+			if round+1 <= tkRound+int64(ahead) {
+				logging.Logger.Debug("[wait not ahead] [3*] not ahead, can move on")
+				return true // not ahead, can move on
+			}
+			logging.Logger.Debug("[wait not ahead] [4*] still ahead, can't move on")
+
 		case ntk := <-tksubq: // the ntk can't be nil
 			lfb = mc.GetLatestFinalizedBlock()
 			if ntk.Round > lfb.Round { // ntk is ahead, use lfb
