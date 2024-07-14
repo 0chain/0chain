@@ -238,10 +238,16 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
+	actErr := cstate.WithActivation(balances, "electra",
 		func() error {
 			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
+				b.IsRestricted = updateBlobber.IsRestricted
+				return nil
+			})
+		}, func() error {
+			return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+				b := e.(*storageNodeV3)
 				b.IsRestricted = updateBlobber.IsRestricted
 				return nil
 			})
@@ -375,17 +381,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	blobber := &StorageNode{}
 
-	beforeArtemis := func() error {
-		b := storageNodeV1{}
-		if err := json.Unmarshal(input, &b); err != nil {
-			return common.NewError("add_or_update_blobber_failed",
-				"malformed request: "+err.Error())
-		}
-		blobber.SetEntity(&b)
-		return nil
-	}
-
-	afterArtemis := func() error {
+	beforeElectra := func() error {
 		b := storageNodeV2{}
 		if err := json.Unmarshal(input, &b); err != nil {
 			return common.NewError("add_or_update_blobber_failed",
@@ -395,7 +391,18 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return nil
 	}
 
-	err = state.WithActivation(balances, "artemis", beforeArtemis, afterArtemis)
+	afterElectra := func() error {
+		b := storageNodeV3{}
+		if err := json.Unmarshal(input, &b); err != nil {
+			return common.NewError("add_or_update_blobber_failed",
+				"malformed request: "+err.Error())
+		}
+
+		blobber.SetEntity(&b)
+		return nil
+	}
+
+	err = state.WithActivation(balances, "electra", beforeElectra, afterElectra)
 	if err != nil {
 		return "", err
 	}

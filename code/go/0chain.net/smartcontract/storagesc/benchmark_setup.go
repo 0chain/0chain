@@ -392,7 +392,7 @@ func AddMockBlobbers(
 		id := getMockBlobberId(i)
 		const mockUsedData = 1000
 		blobber := &StorageNode{}
-		blobber.SetEntity(&storageNodeV2{
+		blobber.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              id,
 				ProviderType:    spenum.Blobber,
@@ -478,10 +478,6 @@ func AddMockValidators(
 	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*ValidationNode {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
-
 	valParts, err := partitions.CreateIfNotExists(balances, ALL_VALIDATORS_KEY, allValidatorsPartitionSize)
 	if err != nil {
 		panic(err)
@@ -503,7 +499,7 @@ func AddMockValidators(
 			PublicKey:         publicKeys[i],
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
-		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
+		_, err := balances.InsertTrieNode(validator.GetKey(), validator)
 		if err != nil {
 			panic(err)
 		}

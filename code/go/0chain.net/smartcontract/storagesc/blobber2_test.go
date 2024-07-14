@@ -299,7 +299,7 @@ func testCommitBlobberRead(
 	require.NoError(t, err)
 
 	blobber := &StorageNode{}
-	blobber.SetEntity(&storageNodeV2{
+	blobber.SetEntity(&storageNodeV3{
 		Provider: provider.Provider{
 			ID:           blobberId,
 			ProviderType: spenum.Blobber,

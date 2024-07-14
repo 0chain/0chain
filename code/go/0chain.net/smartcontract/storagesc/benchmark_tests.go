@@ -357,7 +357,7 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				b := &StorageNode{}
-				bv2 := &storageNodeV2{
+				bv2 := &storageNodeV3{
 					Provider: provider.Provider{
 						ProviderType: spenum.Blobber,
 					},
@@ -436,7 +436,7 @@ func BenchmarkTests(
 				stake := currency.Coin(viper.GetInt64(bk.StorageMaxStake) * 1e10)
 				totalStake := stake * currency.Coin(viper.GetInt(bk.NumBlobberDelegates))
 				b := &StorageNode{}
-				b.SetEntity(&storageNodeV2{
+				b.SetEntity(&storageNodeV3{
 					Provider: provider.Provider{
 						ID:           getMockBlobberId(0),
 						ProviderType: spenum.Blobber,

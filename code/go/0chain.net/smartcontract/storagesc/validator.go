@@ -63,7 +63,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			return "", err
 		}
 
-		_, err = balances.InsertTrieNode(newValidatorObject.GetKey(sc.ID), newValidatorObject)
+		_, err = balances.InsertTrieNode(newValidatorObject.GetKey(), newValidatorObject)
 		if err != nil {
 			return "", err
 		}
@@ -142,7 +142,7 @@ func getValidator(
 	balances state.CommonStateContextI,
 ) (*ValidationNode, error) {
 	validator := newValidator(validatorID)
-	err := balances.GetTrieNode(validator.GetKey(ADDRESS), validator)
+	err := balances.GetTrieNode(validator.GetKey(), validator)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (sc *StorageSmartContract) updateValidatorSettings(txn *transaction.Transac
 	}
 
 	// save validator
-	_, err = balances.InsertTrieNode(existingValidator.GetKey(sc.ID), existingValidator)
+	_, err = balances.InsertTrieNode(existingValidator.GetKey(), existingValidator)
 	if err != nil {
 		return "", common.NewError("update_validator_settings_failed",
 			"saving validator: "+err.Error())
@@ -336,7 +336,7 @@ func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
 
 	emitValidatorHealthCheck(validator, downtime, balances)
 
-	_, err = balances.InsertTrieNode(validator.GetKey(sc.ID), validator)
+	_, err = balances.InsertTrieNode(validator.GetKey(), validator)
 
 	if err != nil {
 		return "", common.NewError("validator_health_check_failed",
