@@ -698,6 +698,10 @@ func TestCompleteRewardFlow(t *testing.T) {
 					err = allocChallenges.Save(balances, ssc.ID)
 					require.NoError(t, err)
 
+					sa.mustUpdateBase(func(base *storageAllocationBase) error {
+						alloc.deepCopy(base)
+						return nil
+					})
 					err = sa.save(balances, ssc.ID)
 					require.NoError(t, err)
 
@@ -811,6 +815,10 @@ func TestCompleteRewardFlow(t *testing.T) {
 				err = allocChallenges.Save(balances, ssc.ID)
 				require.NoError(t, err)
 
+				sa.mustUpdateBase(func(base *storageAllocationBase) error {
+					alloc.deepCopy(base)
+					return nil
+				})
 				err = sa.save(balances, ssc.ID)
 				require.NoError(t, err)
 			}
@@ -1602,6 +1610,10 @@ func preparePopulateGenerateChallenge(t *testing.T, ssc *StorageSmartContract, b
 
 		alloc.Stats.UsedSize = 1 * GB
 
+		sa.mustUpdateBase(func(base *storageAllocationBase) error {
+			alloc.deepCopy(base)
+			return nil
+		})
 		err = sa.save(balances, ADDRESS)
 		require.NoError(t, err)
 	}
@@ -2005,6 +2017,11 @@ func setupChallengeMocks(
 			ID: storageScId,
 		},
 	}
+
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		allocation.deepCopy(base)
+		return nil
+	})
 	_, err = ctx.InsertTrieNode(sa.GetKey(ADDRESS), sa)
 
 	var cPool = challengePool{

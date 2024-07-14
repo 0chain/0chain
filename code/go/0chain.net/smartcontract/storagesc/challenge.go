@@ -390,6 +390,11 @@ func (sc *StorageSmartContract) blobberPenalty(
 		return fmt.Errorf("can't Save allocation's challenge pool: %v", err)
 	}
 
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+
 	return
 }
 
