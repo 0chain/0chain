@@ -180,7 +180,10 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 				logging.Logger.Debug("[wait not ahead] [3] not ahead, can move on")
 				return true // not ahead, can move on
 			}
-			logging.Logger.Debug("[wait not ahead] [4] still ahead, can't move on")
+			logging.Logger.Debug("[wait not ahead] [4] still ahead, can't move on",
+				zap.Int64("current round", round),
+				zap.Int64("ntk round", ntk.Round),
+				zap.Int64("lfb round", lfb.Round))
 		case <-rrsubq:
 			logging.Logger.Debug("[wait not ahead] [5] restart round triggered")
 			return // false, shouldn't move on
@@ -201,6 +204,7 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 // Creates the next round, if next round exists and has RRS returns existent.
 // If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
+	// TODO: should not set back
 
 	var (
 		rn = r.GetRoundNumber()
@@ -209,13 +213,14 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	if pr != nil && !pr.IsFinalizing() && !pr.IsFinalized() {
 		mc.finalizeRound(ctx, pr) // finalize the previous round
-	} else if pr != nil {
-		logging.Logger.Debug("startNextRound - not ready to finalize previous round",
-			zap.Int64("round", rn-1),
-			zap.Any("state", pr.FinalizeState()))
-	} else {
-		logging.Logger.Debug("startNextRound - previous round is nil",
-			zap.Int64("round", rn-1))
+		// } else if pr != nil {
+		// logging.Logger.Debug("startNextRound - not ready to finalize previous round",
+		// 	zap.Int64("round", rn-1),
+		// 	zap.Any("state", pr.FinalizeState()))
+
+		// } else {
+		// 	logging.Logger.Debug("startNextRound - previous round is nil",
+		// 		zap.Int64("round", rn-1))
 	}
 
 	var (
@@ -223,8 +228,8 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 		mr = mc.CreateRound(nr)
 		er = mc.AddRound(mr).(*Round)
 	)
-
 	mc.SetCurrentRound(er.GetRoundNumber())
+	mc.finalizeRound(ctx, r) // finalize the notarized block round
 
 	if er != mr && mc.isStarted() && er.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
