@@ -2355,19 +2355,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 	// Add Blobber tests
 
-	t.Run("Add blobber with invalid capacity should fail", func(t *testing.T) {
-		blobber := newClient(2000*x10, balances)
-		blobber.cap = -1 * GB // Invalid capacity
-		blobber.terms = Terms{
-			ReadPrice:  1 * x10,
-			WritePrice: 5 * x10,
-		}
-
-		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid blobber params")
-	})
-
 	t.Run("Add already existing blobber should fail", func(t *testing.T) {
 		var (
 			tp     = int64(10)
@@ -2461,6 +2448,44 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, randAllocDeepCopy.BlobberAllocs[0])
 		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
+	})
+
+	t.Run("Add blobber with missing capacity should fail", func(t *testing.T) {
+		blobber := newClient(2000*x10, balances)
+		blobber.terms = Terms{
+			ReadPrice:  1 * x10,
+			WritePrice: 5 * x10,
+		}
+
+		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid blobber params")
+	})
+
+	// @audit-info is read price being 0 valid or not ??
+	t.Run("Add blobber with invalid terms should fail", func(t *testing.T) {
+		blobber := newClient(2000*x10, balances)
+		blobber.cap = 2 * GB
+		blobber.terms = Terms{
+			ReadPrice:  0,
+			WritePrice: 5 * x10,
+		}
+
+		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid blobber params")
+	})
+
+	t.Run("Add blobber with valid params should succeed", func(t *testing.T) {
+		blobber := newClient(2000*x10, balances)
+		blobber.cap = 2 * GB
+		blobber.terms = Terms{
+			ReadPrice:  1 * x10,
+			WritePrice: 5 * x10,
+		}
+
+		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
+		require.NoError(t, err)
 	})
 
 }
