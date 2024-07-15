@@ -226,6 +226,14 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 	mc.SetCurrentRound(er.GetRoundNumber())
 	mc.finalizeRound(ctx, r) // finalize the notarized block round
 
+	if er != mr && mc.isStarted() && er.HasRandomSeed() {
+		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
+			zap.Int64("er_round", er.GetRoundNumber()),
+			zap.Int64("rrs", er.GetRandomSeed()),
+			zap.Bool("is_started", mc.isStarted()))
+		return er
+	}
+
 	if r.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
 		mc.addMyVRFShare(ctx, r, er)
@@ -233,13 +241,6 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 		logging.Logger.Info("StartNextRound no VRFShares sent -- "+
 			"current round has no random seed",
 			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", rn))
-	}
-
-	if er != mr && mc.isStarted() && er.HasRandomSeed() {
-		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
-			zap.Int64("er_round", er.GetRoundNumber()),
-			zap.Int64("rrs", er.GetRandomSeed()),
-			zap.Bool("is_started", mc.isStarted()))
 	}
 
 	return er
