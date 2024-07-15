@@ -38,7 +38,6 @@ func (z ApprovedMinter) Msgsize() (s int) {
 func (z StateContext) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 0
-	_ = z
 	o = append(o, 0x80)
 	return
 }

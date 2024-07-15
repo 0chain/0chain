@@ -20,14 +20,20 @@ func (z *poolDecode) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "NodesMap"
 	o = append(o, 0xa8, 0x4e, 0x6f, 0x64, 0x65, 0x73, 0x4d, 0x61, 0x70)
 	o = msgp.AppendMapHeader(o, uint32(len(z.NodesMap)))
-	for za0001, za0002 := range z.NodesMap {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z.NodesMap))
+	for k := range z.NodesMap {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.NodesMap[k]
+		o = msgp.AppendString(o, k)
 		if za0002 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0002.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "NodesMap", za0001)
+				err = msgp.WrapError(err, "NodesMap", k)
 				return
 			}
 		}
