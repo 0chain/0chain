@@ -146,7 +146,6 @@ type Chain struct {
 	roundDkg            round.RoundStorage
 	discoverClients     bool
 	started             uint32
-	lfbState            uint32
 	doFullStateSync     chan struct{}
 
 	// view change process control
@@ -169,18 +168,6 @@ type Chain struct {
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
 	verifyCachedVRFSharesWorker          *common.WithContextFunc
 	generateBlockWorker                  *common.WithContextFunc
-}
-
-func (mc *Chain) LFBState() uint32 {
-	return atomic.LoadUint32(&mc.lfbState)
-}
-
-func (mc *Chain) SetLFBState(state uint32) {
-	atomic.StoreUint32(&mc.lfbState, state)
-}
-
-func (mc *Chain) IsLFBStateReady() bool {
-	return mc.LFBState() == LFBStateReady
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {

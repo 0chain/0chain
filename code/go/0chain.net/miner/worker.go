@@ -131,11 +131,6 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				break
 			}
 
-			// if !mc.IsLFBStateReady() {
-			// 	timer = time.NewTimer(4 * time.Second)
-			// 	continue
-			// }
-
 			if cround == mc.GetCurrentRound() {
 				r := mc.GetMinerRound(cround)
 
@@ -170,7 +165,6 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						zap.Int64("lfb round", lfbr))
 				}
 			} else {
-				logging.Logger.Info("round worker: reset round timeout count", zap.Int64("round", cround))
 				cround = mc.GetCurrentRound()
 				mc.ResetRoundTimeoutCount()
 			}
@@ -273,18 +267,14 @@ func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
 	for {
 		select {
 		case <-tk.C:
-			mc.SetLFBState(LFBStateSyncing)
 			mc.syncAllMissingNodes(ctx)
-			mc.SetLFBState(LFBStateReady)
 		// do all missing nodes check and sync every 30 minutes
 		// TODO: move the interval to a config file
 		// tk.Reset(30 * time.Minute)
 		// return
 		case <-mc.doFullStateSync:
 			logging.Logger.Debug("Start full state sync...")
-			mc.SetLFBState(LFBStateSyncing)
 			mc.syncAllMissingNodes(ctx)
-			mc.SetLFBState(LFBStateReady)
 		case <-ctx.Done():
 			logging.Logger.Debug("Sync all missing nodes worker exit!")
 			return

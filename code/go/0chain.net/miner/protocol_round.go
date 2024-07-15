@@ -162,6 +162,11 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	for {
 		select {
 		case <-tkr.C:
+			lfb = mc.GetLatestFinalizedBlock()
+			if lfb.Round > tkRound {
+				tkRound = lfb.Round
+			}
+
 			if round+1 <= tkRound+int64(ahead) {
 				logging.Logger.Debug("[wait not ahead] [3*] not ahead, can move on")
 				return true // not ahead, can move on
