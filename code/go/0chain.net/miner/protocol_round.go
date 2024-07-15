@@ -234,7 +234,7 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 		return er
 	}
 
-	if r.HasRandomSeed() {
+	if r.HasRandomSeed() && er.VrfShare() == nil {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
 		mc.addMyVRFShare(ctx, r, er)
 	} else {
