@@ -575,23 +575,25 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	// move tokens to blobber's stake pool from client's read pool
-	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
+	var sa *StorageAllocation
+	sa, err = sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related allocation: %v", err)
 	}
 
-	if commitRead.ReadMarker.Timestamp < alloc.mustBase().StartTime {
+	alloc := sa.mustBase()
+
+	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_blobber_read",
 			"early reading, allocation not started yet")
-	} else if commitRead.ReadMarker.Timestamp > alloc.mustBase().Expiration {
+	} else if commitRead.ReadMarker.Timestamp > alloc.Expiration {
 		return "", common.NewError("commit_blobber_read",
 			"late reading, allocation expired")
 	}
 
 	var details *BlobberAllocation
-	for _, d := range alloc.mustBase().BlobberAllocs {
+	for _, d := range alloc.BlobberAllocs {
 		if d.BlobberID == commitRead.ReadMarker.BlobberID {
 			details = d
 			break
@@ -638,7 +640,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	details.Stats.NumReads++
-	alloc.mustBase().Stats.NumReads++
+	alloc.Stats.NumReads++
 
 	resp, err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
 		commitRead.ReadMarker.BlobberID, sp, value, balances)
@@ -719,8 +721,13 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't Save blobber: %v", err)
 	}
 
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+
 	// Save allocation
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(sa.GetKey(sc.ID), sa)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't Save allocation: %v", err)
@@ -732,7 +739,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker", err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.mustBase().ID, alloc.mustBase().buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates())
 
 	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
 	if err != nil {

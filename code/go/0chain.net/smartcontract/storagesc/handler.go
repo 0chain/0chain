@@ -2715,6 +2715,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
 		IsRestricted:             blobber.IsRestricted,
+		IsSpecialStatus:          blobber.IsSpecialStatus,
 	}
 }
 

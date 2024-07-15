@@ -56,6 +56,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 				MaxNumDelegates:    b.NumDelegates,
 				ServiceChargeRatio: b.ServiceCharge,
 			},
+			IsRestricted:    b.IsRestricted,
+			IsSpecialStatus: b.IsSpecialStatus,
 		})
 
 		terms := blobberTermsMap[b.ID]
@@ -71,20 +73,19 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}
 
 	sa := &StorageAllocation{}
-
-	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
-		base.ID = alloc.AllocationID
-		base.Tx = alloc.TransactionID
-		base.DataShards = alloc.DataShards
-		base.ParityShards = alloc.ParityShards
-		base.Size = alloc.Size
-		base.Expiration = common.Timestamp(alloc.Expiration)
-		base.Owner = alloc.Owner
-		base.OwnerPublicKey = alloc.OwnerPublicKey
-		base.WritePool = alloc.WritePool
-		base.ThirdPartyExtendable = alloc.ThirdPartyExtendable
-		base.FileOptions = alloc.FileOptions
-		base.Stats = &StorageAllocationStats{
+	sa.SetEntity(&storageAllocationV2{
+		ID:                   alloc.AllocationID,
+		Tx:                   alloc.TransactionID,
+		DataShards:           alloc.DataShards,
+		ParityShards:         alloc.ParityShards,
+		Size:                 alloc.Size,
+		Expiration:           common.Timestamp(alloc.Expiration),
+		Owner:                alloc.Owner,
+		OwnerPublicKey:       alloc.OwnerPublicKey,
+		WritePool:            alloc.WritePool,
+		ThirdPartyExtendable: alloc.ThirdPartyExtendable,
+		FileOptions:          alloc.FileOptions,
+		Stats: &StorageAllocationStats{
 			UsedSize:                  alloc.UsedSize,
 			NumWrites:                 alloc.NumWrites,
 			NumReads:                  alloc.NumReads,
@@ -93,20 +94,19 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			SuccessChallenges:         alloc.SuccessfulChallenges,
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
-		}
-		base.BlobberAllocs = blobberDetails
-		base.BlobberAllocsMap = blobberMap
-		base.ReadPriceRange = PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax}
-		base.WritePriceRange = PriceRange{alloc.WritePriceMin, alloc.WritePriceMax}
-		base.StartTime = common.Timestamp(alloc.StartTime)
-		base.Finalized = alloc.Finalized
-		base.Canceled = alloc.Cancelled
-		base.MovedToChallenge = alloc.MovedToChallenge
-		base.MovedBack = alloc.MovedBack
-		base.MovedToValidators = alloc.MovedToValidators
-		base.TimeUnit = time.Duration(alloc.TimeUnit)
-
-		return nil
+		},
+		BlobberAllocs:     blobberDetails,
+		BlobberAllocsMap:  blobberMap,
+		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
+		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
+		StartTime:         common.Timestamp(alloc.StartTime),
+		Finalized:         alloc.Finalized,
+		Canceled:          alloc.Cancelled,
+		MovedToChallenge:  alloc.MovedToChallenge,
+		MovedBack:         alloc.MovedBack,
+		MovedToValidators: alloc.MovedToValidators,
+		TimeUnit:          time.Duration(alloc.TimeUnit),
+		IsSpecialStatus:   &alloc.IsSpecialStatus,
 	})
 
 	return &StorageAllocationBlobbers{
@@ -115,49 +115,54 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}, nil
 }
 
-func storageAllocationToAllocationTable(sa *storageAllocationBase) *event.Allocation {
+func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
+	sab := sa.mustBase()
 	alloc := &event.Allocation{
-		AllocationID:         sa.ID,
-		TransactionID:        sa.Tx,
-		DataShards:           sa.DataShards,
-		ParityShards:         sa.ParityShards,
-		Size:                 sa.Size,
-		Expiration:           int64(sa.Expiration),
-		Terms:                sa.buildEventBlobberTerms(),
-		Owner:                sa.Owner,
-		OwnerPublicKey:       sa.OwnerPublicKey,
-		ReadPriceMin:         sa.ReadPriceRange.Min,
-		ReadPriceMax:         sa.ReadPriceRange.Max,
-		WritePriceMin:        sa.WritePriceRange.Min,
-		WritePriceMax:        sa.WritePriceRange.Max,
-		StartTime:            int64(sa.StartTime),
-		Finalized:            sa.Finalized,
-		Cancelled:            sa.Canceled,
-		UsedSize:             sa.Stats.UsedSize,
-		MovedToChallenge:     sa.MovedToChallenge,
-		MovedBack:            sa.MovedBack,
-		MovedToValidators:    sa.MovedToValidators,
-		TimeUnit:             int64(sa.TimeUnit),
-		WritePool:            sa.WritePool,
-		ThirdPartyExtendable: sa.ThirdPartyExtendable,
-		FileOptions:          sa.FileOptions,
+		AllocationID:         sab.ID,
+		TransactionID:        sab.Tx,
+		DataShards:           sab.DataShards,
+		ParityShards:         sab.ParityShards,
+		Size:                 sab.Size,
+		Expiration:           int64(sab.Expiration),
+		Terms:                sab.buildEventBlobberTerms(),
+		Owner:                sab.Owner,
+		OwnerPublicKey:       sab.OwnerPublicKey,
+		ReadPriceMin:         sab.ReadPriceRange.Min,
+		ReadPriceMax:         sab.ReadPriceRange.Max,
+		WritePriceMin:        sab.WritePriceRange.Min,
+		WritePriceMax:        sab.WritePriceRange.Max,
+		StartTime:            int64(sab.StartTime),
+		Finalized:            sab.Finalized,
+		Cancelled:            sab.Canceled,
+		UsedSize:             sab.Stats.UsedSize,
+		MovedToChallenge:     sab.MovedToChallenge,
+		MovedBack:            sab.MovedBack,
+		MovedToValidators:    sab.MovedToValidators,
+		TimeUnit:             int64(sab.TimeUnit),
+		WritePool:            sab.WritePool,
+		ThirdPartyExtendable: sab.ThirdPartyExtendable,
+		FileOptions:          sab.FileOptions,
 	}
 
-	if sa.Stats != nil {
-		alloc.NumWrites = sa.Stats.NumWrites
-		alloc.NumReads = sa.Stats.NumReads
-		alloc.TotalChallenges = sa.Stats.TotalChallenges
-		alloc.OpenChallenges = sa.Stats.OpenChallenges
-		alloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
-		alloc.FailedChallenges = sa.Stats.FailedChallenges
-		alloc.LatestClosedChallengeTxn = sa.Stats.LastestClosedChallengeTxn
+	if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil {
+		alloc.IsSpecialStatus = *v2.IsSpecialStatus
+	}
+
+	if sab.Stats != nil {
+		alloc.NumWrites = sab.Stats.NumWrites
+		alloc.NumReads = sab.Stats.NumReads
+		alloc.TotalChallenges = sab.Stats.TotalChallenges
+		alloc.OpenChallenges = sab.Stats.OpenChallenges
+		alloc.SuccessfulChallenges = sab.Stats.SuccessChallenges
+		alloc.FailedChallenges = sab.Stats.FailedChallenges
+		alloc.LatestClosedChallengeTxn = sab.Stats.LastestClosedChallengeTxn
 	}
 
 	return alloc
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
-	alloc := storageAllocationToAllocationTable(sa.mustBase())
+	alloc := storageAllocationToAllocationTable(sa)
 	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil

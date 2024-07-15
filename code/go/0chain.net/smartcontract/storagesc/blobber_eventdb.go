@@ -30,11 +30,12 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 			LastHealthCheck: b.LastHealthCheck,
 			TotalStake:      staked,
 		},
-		OffersTotal: sp.TotalOffers,
+		OffersTotal:  sp.TotalOffers,
+		IsRestricted: *b.IsRestricted,
 	}
 
-	if v2, ok := sn.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
-		data.IsRestricted = *v2.IsRestricted
+	if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsSpecialStatus != nil {
+		data.IsSpecialStatus = *v3.IsSpecialStatus
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, b.ID, data)
@@ -57,6 +58,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		Allocated:    b.Allocated,
 		SavedData:    b.SavedData,
 		NotAvailable: false,
+		IsRestricted: *b.IsRestricted,
 		Provider: event.Provider{
 			ID:              b.ID,
 			DelegateWallet:  b.StakePoolSettings.DelegateWallet,
@@ -76,9 +78,9 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		CreationRound: balances.GetBlock().Round,
 	}
 
-	if v2, ok := sn.Entity().(*storageNodeV2); ok {
-		if v2.IsRestricted != nil {
-			data.IsRestricted = *v2.IsRestricted
+	if v3, ok := sn.Entity().(*storageNodeV3); ok {
+		if v3.IsSpecialStatus != nil {
+			data.IsSpecialStatus = *v3.IsSpecialStatus
 		}
 	}
 

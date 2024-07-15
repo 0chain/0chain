@@ -275,7 +275,7 @@ type storageAllocationV2 struct {
 	TimeUnit time.Duration `json:"time_unit"`
 
 	Version         string `json:"version" msg:"version"`
-	IsSpecialStatus bool   `json:"is_special_status"`
+	IsSpecialStatus *bool  `json:"is_special_status"`
 }
 
 const storageAllocationV2Version = "v2"
@@ -489,7 +489,8 @@ func (sab *storageAllocationBase) buildEventBlobberTerms() []event.AllocationBlo
 	return bTerms
 }
 
-func (sab *storageAllocationBase) buildDbUpdates() event.Allocation {
+func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
+	sab := sa.mustBase()
 	eAlloc := event.Allocation{
 		AllocationID:         sab.ID,
 		TransactionID:        sab.Tx,
@@ -514,6 +515,10 @@ func (sab *storageAllocationBase) buildDbUpdates() event.Allocation {
 		WritePool:            sab.WritePool,
 		ThirdPartyExtendable: sab.ThirdPartyExtendable,
 		FileOptions:          sab.FileOptions,
+	}
+
+	if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsSpecialStatus != nil {
+		eAlloc.IsSpecialStatus = *v2.IsSpecialStatus
 	}
 
 	if sab.Stats != nil {
@@ -555,7 +560,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.mustBase().ID, sa.mustBase().buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.mustBase().ID, sa.buildDbUpdates())
 	return
 }
 
