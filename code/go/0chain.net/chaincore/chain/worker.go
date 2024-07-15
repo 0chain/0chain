@@ -336,15 +336,24 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				zap.String("prev block", fb.PrevHash))
 
 			if err := c.GetBlockStateChange(fb); err != nil {
-				logging.Logger.Error("finalize block failed, compute state failed",
+				logging.Logger.Warn("finalize block failed to sync state from remote, try to compute state",
 					zap.Int64("round", fb.Round),
 					zap.Error(err))
-				return fmt.Errorf("sync state changes failed: %v", err)
-			}
 
-			logging.Logger.Debug("finalize block - sync state success",
-				zap.Int64("round", fb.Round),
-				zap.String("block", fb.Hash))
+				if err := c.ComputeState(ctx, fb); err != nil {
+					logging.Logger.Error("finalize block - compute state failed",
+						zap.Int64("round", fb.Round),
+						zap.Error(err))
+					return err
+				}
+				logging.Logger.Debug("finalize block - compute state success",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash))
+			} else {
+				logging.Logger.Debug("finalize block - sync state success",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash))
+			}
 		}
 	}
 
