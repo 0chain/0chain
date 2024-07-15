@@ -33,7 +33,6 @@ type RoundI interface {
 	Finalize(b *block.Block)
 	IsFinalizing() bool
 	SetFinalizing() bool
-	// FinalizingState() FinalizingState
 	ResetFinalizingState()
 	ResetFinalizingStateIfNotFinalized()
 	FinalizeState() FinalizingState

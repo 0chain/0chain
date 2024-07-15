@@ -92,24 +92,6 @@ func (mrf SharderRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 	return mr
 }
 
-/*StoreRound - persists given round to ememory(rocksdb)*/
-// func (sc *Chain) StoreRound(r *round.Round) error {
-// 	logging.Logger.Warn("store round", zap.Int64("round", r.GetRoundNumber()))
-// 	roundEntityMetadata := r.GetEntityMetadata()
-// 	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
-// 	defer ememorystore.Close(rctx)
-// 	err := r.Write(rctx)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	con := ememorystore.GetEntityCon(rctx, roundEntityMetadata)
-// 	err = con.Commit()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
 func (sc *Chain) StoreRoundNoCommit(r *round.Round) (func() error, error) {
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)

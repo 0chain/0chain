@@ -445,47 +445,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	}
 
 	mc.AddNotarizedBlockToRound(r, b)
-
-	// TODO: remove below after debug
 	mc.ProgressOnNotarization(r)
-
-	// // update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)
-	// lfb := mc.GetLatestFinalizedBlock()
-	// if lfb == nil {
-	// 	return nil
-	// }
-
-	// if lfbTK := mc.GetLatestLFBTicket(ctx); lfbTK != nil && lfbTK.Round-lfb.Round >= int64(mc.PruneStateBelowCount()/3) {
-	// 	if b.Round >= lfbTK.Round {
-	// 		// try to get LFB ticket block from local
-	// 		lfb, err := mc.GetBlock(ctx, lfbTK.LFBHash)
-	// 		if err != nil {
-	// 			// acquire from sharder
-	// 			logging.Logger.Debug("process notarization - ensure LFB from sharder",
-	// 				zap.Int64("round", b.Round),
-	// 				zap.Int64("LFB ticket round", lfbTK.Round),
-	// 				zap.String("LFB ticket block", lfbTK.LFBHash))
-	// 			_, err := mc.ensureLatestFinalizedBlock(ctx)
-	// 			return err
-	// 		}
-	// 		logging.Logger.Debug("process notarization - update LFB, round > tk round",
-	// 			zap.Int64("round", b.Round),
-	// 			zap.Int64("lfb round", lfb.Round),
-	// 			zap.Int64("LFB ticket round", lfbTK.Round),
-	// 			zap.String("LFB ticket block", lfbTK.LFBHash))
-	// 		mc.SetLatestFinalizedBlock(ctx, lfb)
-	// 		return nil
-	// 	}
-
-	// 	logging.Logger.Debug("process notarization - update LFB, round <= tk round",
-	// 		zap.Int64("round", b.Round),
-	// 		zap.Int64("lfb round", lfb.Round),
-	// 		zap.Int64("LFB ticket round", lfbTK.Round),
-	// 		zap.String("LFB ticket block", lfbTK.LFBHash))
-	// 	_, err := mc.ensureLatestFinalizedBlock(ctx)
-	// 	return err
-	// }
-
 	return nil
 }
 
@@ -494,15 +454,8 @@ func (mc *Chain) ProgressOnNotarization(notRound *Round) {
 	if curNumber <= notRound.Number && int(notRound.Number-curNumber) <= config.GetLFBTicketAhead() {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", notRound.Number+1))
-		//notRound.CancelVerification()
-		//notRound.TryCancelBlockGeneration()
 		//TODO implement round centric context, that is cancelled when transition to the next happens
 		curRound := mc.GetMinerRound(curNumber)
-		// if curNumber < notRound.Number {
-		// 	// set current round to avoid set current round back
-		// 	mc.SetCurrentRound(notRound.Number)
-		// }
-
 		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
 
 		if curRound != nil {

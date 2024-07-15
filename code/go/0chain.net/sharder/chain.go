@@ -34,7 +34,6 @@ var sharderChain = &Chain{}
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
 	sharderChain.blockChannel = make(chan *block.Block, 1)
-	// sharderChain.blockBuffer = orderbuffer.New(100)
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache[string, *block.Block](blockCacheSize)
@@ -45,7 +44,6 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetAfterFetcher(sharderChain)
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
-	// sharderChain.processingBlocks = cache.NewLRUCache[string, struct{}](1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -64,22 +62,7 @@ type Chain struct {
 	BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
-
-	// processingBlocks *cache.LRU[string, struct{}]
-	// pbMutex sync.RWMutex
 }
-
-// PushToBlockProcessor pushs the block to processor,
-// func (sc *Chain) PushToBlockProcessor(b *block.Block) error {
-// 	sc.blockBuffer.Add(b.Round, b)
-// 	return nil
-// 	// select {
-// 	// case sc.blockChannel <- b:
-// 	// 	return nil
-// 	// case <-time.After(3 * time.Second):
-// 	// 	return errors.New("push to block processor timeout")
-// 	// }
-// }
 
 /*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */
 func (sc *Chain) GetRoundChannel() chan *round.Round {

@@ -209,8 +209,6 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 // Creates the next round, if next round exists and has RRS returns existent.
 // If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
-	// TODO: should not set back
-
 	var (
 		rn = r.GetRoundNumber()
 		pr = mc.GetMinerRound(rn - 1)
@@ -218,14 +216,6 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 
 	if pr != nil && !pr.IsFinalizing() && !pr.IsFinalized() {
 		mc.finalizeRound(ctx, pr) // finalize the previous round
-		// } else if pr != nil {
-		// logging.Logger.Debug("startNextRound - not ready to finalize previous round",
-		// 	zap.Int64("round", rn-1),
-		// 	zap.Any("state", pr.FinalizeState()))
-
-		// } else {
-		// 	logging.Logger.Debug("startNextRound - previous round is nil",
-		// 		zap.Int64("round", rn-1))
 	}
 
 	var (
@@ -239,8 +229,6 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 	if r.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
 		mc.addMyVRFShare(ctx, r, er)
-		// TODO: check the vrf share cache?
-		// mc.verifyCachedVRFShares(ctx, )
 	} else {
 		logging.Logger.Info("StartNextRound no VRFShares sent -- "+
 			"current round has no random seed",
@@ -252,7 +240,6 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 			zap.Int64("er_round", er.GetRoundNumber()),
 			zap.Int64("rrs", er.GetRandomSeed()),
 			zap.Bool("is_started", mc.isStarted()))
-		// return er
 	}
 
 	return er
@@ -1490,28 +1477,6 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 		go mc.SendVRFShare(context.Background(), r.VrfShare().Clone())
 		logging.Logger.Info("Sent vrf shares in handle NoProgress")
 	} else {
-		// check vrf share cache
-		// r.vrfSharesCache.getAll()
-		// mr.vrfSharesCache
-		// var (
-		// 	// rn  = r.GetRoundNumber()
-		// 	dkg = mc.GetDKG(rn)
-		// )
-
-		// msg, err := mc.GetBlsMessageForRound(r.Round)
-		// if err != nil {
-		// 	logging.Logger.Warn("handleNoProgress - failed to get bls message", zap.Any("round", rn))
-		// 	// return false
-		// } else {
-		// 	blsThreshold := dkg.T
-		// 	mc.verifyCachedVRFShares(ctx, msg, r, dkg)
-		// 	if mc.ThresholdNumBLSSigReceived(ctx, r, blsThreshold) {
-		// 		go mc.sendVRFShare(ctx, r.VrfShare().Clone())
-		// 		mc.TryProposeBlock(common.GetRootContext(), r)
-		// 		mc.StartVerification(common.GetRootContext(), r)
-		// 	}
-		// }
-
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
 	}
 
@@ -1659,37 +1624,12 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	mc.RoundTimeoutsCount++
 
 	// get LFMB and LFB from sharders
-	// TODO: add back commented code below after debuging
-	// var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
-	// if err != nil {
-	// 	logging.Logger.Error("restartRound - ensure lfb", zap.Error(err))
-	// }
-
 	var (
 		isAhead = mc.isAheadOfSharders(ctx, rn)
 		lfb     = mc.GetLatestFinalizedBlock()
 	)
 
-	// initialize rrs for lfb round
-	//if lfb.Round > 0 {
-	//	lfbr := mc.GetMinerRound(lfb.Round)
-	//	if lfbr == nil {
-	//		lfbr = mc.AddRound(mc.CreateRound(round.NewRound(lfb.Round))).(*Round)
-	//	}
-	//	if lfb.RoundRandomSeed != 0 && lfbr.RandomSeed != lfb.RoundRandomSeed {
-	//		lfbr.SetRandomSeedForNotarizedBlock(lfb.RoundRandomSeed, 0)
-	//	}
-	//}
-
-	// kick new round from the new LFB from sharders
-	// TODO: add back after debuging
-	// if updated {
-	if false {
-		if lfb.Round > rn {
-			mc.kickRoundByLFB(ctx, lfb) // and continue
-			//round = mc.GetCurrentRound()
-		}
-	} else if isAhead {
+	if isAhead {
 		mc.kickSharders(ctx) // not updated, resend latest HNB we know for this round
 	}
 
@@ -1966,7 +1906,6 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	mc.SetLatestFinalizedBlock(ctx, lfb)
 	logging.Logger.Info("start protocoal on LFB - set lfb",
 		zap.Int64("round", lfb.Round))
-	mc.notifyFullStateSync()
 	return mc.GetMinerRound(lfb.Round)
 }
 
@@ -1974,7 +1913,6 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 
 	var (
 		mc = GetMinerChain()
-		// lfb = getLatestBlockFromSharders(ctx)
 		mr *Round
 	)
 

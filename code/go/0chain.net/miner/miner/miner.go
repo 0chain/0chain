@@ -260,11 +260,6 @@ func main() {
 	// it can be promoted (not finalized).
 	mc.LoadMagicBlocksAndDKG(ctx)
 
-	// if err := mc.LoadLatestBlocksFromStore(ctx); err != nil {
-	// 	logging.Logger.Error(fmt.Sprintf("can't load latest blocks from store, err: %v", err))
-	// 	// return
-	// }
-
 	if err = mc.WaitForActiveSharders(ctx); err != nil {
 		logging.Logger.Error("failed to wait sharders", zap.Error(err))
 	}
