@@ -27,12 +27,13 @@ type Blobber struct {
 	ReadPrice  currency.Coin `json:"read_price"`
 	WritePrice currency.Coin `json:"write_price"`
 
-	Capacity     int64 `json:"capacity"`   // total blobber capacity
-	Allocated    int64 `json:"allocated"`  // allocated capacity
-	SavedData    int64 `json:"saved_data"` // total of files saved on blobber
-	ReadData     int64 `json:"read_data"`
-	NotAvailable bool  `json:"not_available"`
-	IsRestricted bool  `json:"is_restricted"`
+	Capacity        int64 `json:"capacity"`   // total blobber capacity
+	Allocated       int64 `json:"allocated"`  // allocated capacity
+	SavedData       int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData        int64 `json:"read_data"`
+	NotAvailable    bool  `json:"not_available"`
+	IsRestricted    bool  `json:"is_restricted"`
+	IsSpecialStatus bool  `json:"is_special_status"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	// todo update
