@@ -2232,6 +2232,9 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
 	}
+
+	logging.Logger.Info("Jayash0", zap.Any("allocation", allocation))
+
 	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
 		logging.Logger.Error("unable to create allocation response",
@@ -2240,6 +2243,8 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't convert to storageAllocationBlobbers"))
 		return
 	}
+
+	logging.Logger.Info("Jayash4", zap.Any("sa", sa))
 
 	common.Respond(w, r, sa, nil)
 }
