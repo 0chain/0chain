@@ -660,79 +660,79 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return lfb
 	}
 
-	// maxSyncDepth := int64(config.GetLFBTicketAhead())
-	// syncNum := maxSyncDepth
-	// if lfb != nil {
-	// 	syncNum = b.Round - lfb.Round
-	// 	// sync lfb if its state is not computed
-	// 	if syncNum > 0 && syncNum < maxSyncDepth && !lfb.IsStateComputed() {
-	// 		syncNum++
-	// 	}
+	maxSyncDepth := int64(config.GetLFBTicketAhead())
+	syncNum := maxSyncDepth
+	if lfb != nil {
+		syncNum = b.Round - lfb.Round
+		// sync lfb if its state is not computed
+		if syncNum > 0 && syncNum < maxSyncDepth && !lfb.IsStateComputed() {
+			syncNum++
+		}
 
-	// 	if syncNum > maxSyncDepth {
-	// 		syncNum = maxSyncDepth
-	// 	}
-	// }
+		if syncNum > maxSyncDepth {
+			syncNum = maxSyncDepth
+		}
+	}
 
-	// // The round is equal or less than lfb, get state changes
-	// // of one block previous
-	// if syncNum <= 0 {
-	// 	//blocks := c.SyncPreviousBlocks(ctx, b, 1, false)
-	// 	//will load partial state here
-	// 	pb = c.SyncPreviousBlocks(ctx, b, 1)
-	// 	if pb == nil {
-	// 		logging.Logger.Error("get_previous_block - could not fetch block",
-	// 			zap.Int64("round", b.Round-1),
-	// 			zap.Int64("lfb_round", lfb.Round))
-	// 		return nil
-	// 	}
+	// The round is equal or less than lfb, get state changes
+	// of one block previous
+	if syncNum <= 0 {
+		//blocks := c.SyncPreviousBlocks(ctx, b, 1, false)
+		//will load partial state here
+		pb = c.SyncPreviousBlocks(ctx, b, 1)
+		if pb == nil {
+			logging.Logger.Error("get_previous_block - could not fetch block",
+				zap.Int64("round", b.Round-1),
+				zap.Int64("lfb_round", lfb.Round))
+			return nil
+		}
 
-	// 	b.SetPreviousBlock(pb)
-	// 	logging.Logger.Info("get_previous_block - sync successfully",
-	// 		zap.Int("sync num", 1),
-	// 		zap.Int64("round", b.Round),
-	// 		zap.String("block", b.Hash),
-	// 		zap.Int64("previous round", b.PrevBlock.Round),
-	// 		zap.String("previous block", b.PrevHash))
-	// 	return pb
-	// }
+		b.SetPreviousBlock(pb)
+		logging.Logger.Info("get_previous_block - sync successfully",
+			zap.Int("sync num", 1),
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int64("previous round", b.PrevBlock.Round),
+			zap.String("previous block", b.PrevHash))
+		return pb
+	}
 
-	// pb = c.SyncPreviousBlocks(ctx, b, syncNum)
-	// if pb == nil {
-	// 	return nil
-	// }
+	pb = c.SyncPreviousBlocks(ctx, b, syncNum)
+	if pb == nil {
+		return nil
+	}
 
-	// if !pb.IsStateComputed() {
-	// 	logging.Logger.Error("get_previous_block - could not get state computed previous block",
-	// 		zap.Int64("round", b.Round),
-	// 		zap.Int64("previous_round", pb.Round),
-	// 		zap.String("previous_block", pb.Hash))
-	// 	return nil
-	// }
+	if !pb.IsStateComputed() {
+		logging.Logger.Error("get_previous_block - could not get state computed previous block",
+			zap.Int64("round", b.Round),
+			zap.Int64("previous_round", pb.Round),
+			zap.String("previous_block", pb.Hash))
+		return nil
+	}
 
-	// if pb.Hash != b.PrevHash {
-	// 	logging.Logger.Error("get_previous_block - got previous block with different hash",
-	// 		zap.Int64("round", b.Round),
-	// 		zap.String("block", b.Hash),
-	// 		zap.String("block.PrevHash", b.PrevHash),
-	// 		zap.String("prev hash", pb.Hash))
-	// 	return nil
-	// }
+	if pb.Hash != b.PrevHash {
+		logging.Logger.Error("get_previous_block - got previous block with different hash",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("block.PrevHash", b.PrevHash),
+			zap.String("prev hash", pb.Hash))
+		return nil
+	}
 
-	// b.SetPreviousBlock(pb)
+	b.SetPreviousBlock(pb)
 
-	// logging.Logger.Info("get_previous_block - sync successfully",
-	// 	zap.Int64("round", b.Round),
-	// 	zap.String("block", b.Hash),
-	// 	zap.Int64("previous round", b.PrevBlock.Round),
-	// 	zap.String("previous block", b.PrevHash))
-
-	// return pb
-	logging.Logger.Error("get_previous_block - previous block state not computed",
-		zap.String("prev block", b.PrevHash),
+	logging.Logger.Info("get_previous_block - sync successfully",
 		zap.Int64("round", b.Round),
-		zap.String("block", b.Hash))
-	return nil
+		zap.String("block", b.Hash),
+		zap.Int64("previous round", b.PrevBlock.Round),
+		zap.String("previous block", b.PrevHash))
+
+	return pb
+	// logging.Logger.Error("get_previous_block - previous block state not computed",
+	// 	zap.String("prev block", b.PrevHash),
+	// 	zap.Int64("round", b.Round),
+	// 	zap.String("block", b.Hash))
+	// return nil
 }
 
 func (c *Chain) registerBlockSync(blockHash string, replyC chan *block.Block) (notifyAndClean func(*block.Block), ok bool) {
