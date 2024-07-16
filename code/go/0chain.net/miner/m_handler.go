@@ -72,19 +72,25 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 				nil,
 			),
 		),
-		"/v1/_m2m/block/verify": node.ToN2NReceiveEntityHandler(
-			memorystore.WithConnectionEntityJSONHandler(
-				VerifyBlockHandler,
-				datastore.GetEntityMetadata("block")),
-			nil,
+		"/v1/_m2m/block/verify": node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				memorystore.WithConnectionEntityJSONHandler(
+					VerifyBlockHandler,
+					datastore.GetEntityMetadata("block")),
+				nil,
+			),
 		),
-		blockNotarizationPattern: node.ToN2NReceiveEntityHandler(
-			NotarizationReceiptHandler,
-			nil,
+		blockNotarizationPattern: node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				NotarizationReceiptHandler,
+				nil,
+			),
 		),
-		"/v1/_m2m/block/notarized_block": node.ToN2NReceiveEntityHandler(
-			NotarizedBlockHandler,
-			nil,
+		"/v1/_m2m/block/notarized_block": node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				NotarizedBlockHandler,
+				nil,
+			),
 		),
 	}
 
