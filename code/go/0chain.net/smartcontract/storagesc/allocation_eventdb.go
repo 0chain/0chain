@@ -2,6 +2,8 @@ package storagesc
 
 import (
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/chaincore/transaction"
@@ -25,7 +27,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
 	blobberTermsMap := make(map[string]Terms)
-	blobberMap := make(map[string]*BlobberAllocation)
 
 	for _, t := range alloc.Terms {
 		blobberIDs = append(blobberIDs, t.BlobberID)
@@ -35,10 +36,14 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		}
 	}
 
+	logging.Logger.Info("Jayash1", zap.Any("blobberIDs", blobberIDs))
+
 	blobbers, err := eventDb.GetBlobbersFromIDs(blobberIDs)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
+
+	logging.Logger.Info("Jayash2", zap.Any("blobbers", blobbers))
 
 	blobberSize := bSize(alloc.Size, alloc.DataShards)
 
@@ -69,8 +74,9 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			Terms:        terms,
 		}
 		blobberDetails = append(blobberDetails, ba)
-		blobberMap[b.ID] = ba
 	}
+
+	logging.Logger.Info("Jayash2.1", zap.Any("blobbers", blobbers), zap.Any("blobberDetails", blobberDetails), zap.Any("storageNodes", storageNodes))
 
 	sa := &StorageAllocation{}
 	sa.SetEntity(&storageAllocationV2{
@@ -96,7 +102,6 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
 		BlobberAllocs:     blobberDetails,
-		BlobberAllocsMap:  blobberMap,
 		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
 		StartTime:         common.Timestamp(alloc.StartTime),
@@ -109,10 +114,16 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		IsSpecialStatus:   &alloc.IsSpecialStatus,
 	})
 
-	return &StorageAllocationBlobbers{
+	logging.Logger.Info("Jayash3", zap.Any("sa", sa))
+
+	res := &StorageAllocationBlobbers{
 		StorageAllocation: *sa,
 		Blobbers:          storageNodes,
-	}, nil
+	}
+
+	logging.Logger.Info("Jayash3.1", zap.Any("res", res), zap.Any("storagenodes", storageNodes))
+
+	return res, nil
 }
 
 func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
