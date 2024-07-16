@@ -19,8 +19,8 @@ import (
 )
 
 type StorageAllocationBlobbers struct {
-	StorageAllocation `json:",inline"`
-	Blobbers          []*storageNodeResponse `json:"blobbers"`
+	storageAllocationV2 `json:",inline"`
+	Blobbers            []*storageNodeResponse `json:"blobbers"`
 }
 
 func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
@@ -79,8 +79,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	logging.Logger.Info("Jayash2.1", zap.Any("blobbers", blobbers), zap.Any("blobberDetails", blobberDetails), zap.Any("storageNodes", storageNodes))
 
-	sa := &StorageAllocation{}
-	sa.SetEntity(&storageAllocationV2{
+	sa := storageAllocationV2{
 		ID:                   alloc.AllocationID,
 		Tx:                   alloc.TransactionID,
 		DataShards:           alloc.DataShards,
@@ -113,13 +112,13 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
 		IsSpecialStatus:   &alloc.IsSpecialStatus,
-	})
+	}
 
 	logging.Logger.Info("Jayash3", zap.Any("sa", sa))
 
 	res := &StorageAllocationBlobbers{
-		StorageAllocation: *sa,
-		Blobbers:          storageNodes,
+		storageAllocationV2: sa,
+		Blobbers:            storageNodes,
 	}
 
 	logging.Logger.Info("Jayash3.1", zap.Any("res", res), zap.Any("storagenodes", storageNodes))
