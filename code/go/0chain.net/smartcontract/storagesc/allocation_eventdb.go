@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -122,6 +123,14 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	}
 
 	logging.Logger.Info("Jayash3.1", zap.Any("res", res), zap.Any("storagenodes", storageNodes))
+
+	jsonData, err := json.Marshal(res)
+	if err != nil {
+		logging.Logger.Error("Failed to marshal res to JSON", zap.Error(err))
+		return nil, err
+	}
+
+	logging.Logger.Info("Jayash3.1.1", zap.String("resJSON", string(jsonData)))
 
 	return res, nil
 }
