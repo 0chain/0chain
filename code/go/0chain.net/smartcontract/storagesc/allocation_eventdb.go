@@ -23,7 +23,7 @@ type StorageAllocationBlobbers struct {
 	Blobbers            []*storageNodeResponse `json:"blobbers"`
 }
 
-func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocationBlobbers, error) {
+func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb *event.EventDb) (*StorageAllocation, *StorageAllocationBlobbers, error) {
 	storageNodes := make([]*storageNodeResponse, 0)
 	blobberDetails := make([]*BlobberAllocation, 0)
 	blobberIDs := make([]string, 0)
@@ -41,7 +41,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	blobbers, err := eventDb.GetBlobbersFromIDs(blobberIDs)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
+		return nil, nil, fmt.Errorf("error retrieving blobbers from db: %v", err)
 	}
 
 	logging.Logger.Info("Jayash2", zap.Any("blobbers", blobbers))
@@ -79,7 +79,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	logging.Logger.Info("Jayash2.1", zap.Any("blobbers", blobbers), zap.Any("blobberDetails", blobberDetails), zap.Any("storageNodes", storageNodes))
 
-	sa := storageAllocationV2{
+	saV2 := &storageAllocationV2{
 		ID:                   alloc.AllocationID,
 		Tx:                   alloc.TransactionID,
 		DataShards:           alloc.DataShards,
@@ -113,11 +113,13 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		TimeUnit:          time.Duration(alloc.TimeUnit),
 		IsSpecialStatus:   &alloc.IsSpecialStatus,
 	}
+	sa := &StorageAllocation{}
+	sa.SetEntity(saV2)
 
 	logging.Logger.Info("Jayash3", zap.Any("sa", sa))
 
 	res := &StorageAllocationBlobbers{
-		storageAllocationV2: sa,
+		storageAllocationV2: *saV2,
 		Blobbers:            storageNodes,
 	}
 
@@ -126,12 +128,12 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	jsonData, err := json.Marshal(res)
 	if err != nil {
 		logging.Logger.Error("Failed to marshal res to JSON", zap.Error(err))
-		return nil, err
+		return nil, nil, err
 	}
 
 	logging.Logger.Info("Jayash3.1.1", zap.String("resJSON", string(jsonData)))
 
-	return res, nil
+	return sa, res, nil
 }
 
 func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
@@ -197,7 +199,7 @@ func getClientAllocationsFromDb(clientID string, eventDb *event.EventDb, limit c
 	}
 
 	for _, alloc := range allocs {
-		sa, err := allocationTableToStorageAllocationBlobbers(&alloc, eventDb)
+		_, sa, err := allocationTableToStorageAllocationBlobbers(&alloc, eventDb)
 		if err != nil {
 			return nil, err
 		}
@@ -220,7 +222,7 @@ func getExpiredAllocationsFromDb(blobberID string, eventDb *event.EventDb) ([]st
 func prepareAllocationsResponse(eventDb *event.EventDb, eAllocs []event.Allocation) ([]*StorageAllocationBlobbers, error) {
 	sas := make([]*StorageAllocationBlobbers, 0, len(eAllocs))
 	for _, eAlloc := range eAllocs {
-		sa, err := allocationTableToStorageAllocationBlobbers(&eAlloc, eventDb)
+		_, sa, err := allocationTableToStorageAllocationBlobbers(&eAlloc, eventDb)
 		if err != nil {
 			return nil, err
 		}

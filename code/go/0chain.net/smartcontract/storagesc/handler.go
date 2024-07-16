@@ -1880,7 +1880,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		eAlloc.Expiration = common.ToTime(now).Add(conf.TimeUnit).Unix() // new expiration
 	}
 
-	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
+	alloc, _, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1914,7 +1914,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	}
 
 	if req.Extend {
-		if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
+		if err := updateAllocBlobberTerms(edb, alloc); err != nil {
 			common.Respond(w, r, nil, err)
 			return
 		}
@@ -1922,7 +1922,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 	if err = changeBlobbersEventDB(
 		edb,
-		&alloc.StorageAllocation,
+		alloc,
 		conf,
 		req.AddBlobberId,
 		req.RemoveBlobberId,
@@ -2235,7 +2235,7 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 
 	logging.Logger.Info("Jayash0", zap.Any("allocation", allocation))
 
-	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
+	_, sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
 		logging.Logger.Error("unable to create allocation response",
 			zap.String("allocation", allocationID),
