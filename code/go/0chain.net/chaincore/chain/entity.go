@@ -612,6 +612,14 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 	if pb.ClientState == nil || !pb.IsStateComputed() {
 		// if pb.ClientState == nil {
 		if err := c.GetBlockStateChange(pb); err != nil {
+			logging.Logger.Warn("add notarized block - sync previous block state failed, try compute it",
+				zap.Int64("round", pb.Round),
+				zap.String("block", pb.Hash),
+				zap.String("prev block", pb.PrevHash),
+				zap.Error(err))
+
+			c.ComputeState(ctx, pb)
+
 			return fmt.Errorf("failed to sync block state changes: %d, err: %v", pb.Round, err)
 		}
 		// }
@@ -669,9 +677,9 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 		logging.Logger.Error("AddNotarizedBlock failed to compute state",
 			zap.Int64("round", b.Round),
 			zap.Error(err))
-		if node.Self.IsSharder() {
-			return err
-		}
+		// if node.Self.IsSharder() {
+		return err
+		// }
 	}
 
 	c.SetCurrentRound(r.GetRoundNumber())
