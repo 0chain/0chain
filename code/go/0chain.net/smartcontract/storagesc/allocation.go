@@ -94,27 +94,49 @@ type newAllocationRequest struct {
 	ThirdPartyExtendable bool       `json:"third_party_extendable"`
 	FileOptionsChanged   bool       `json:"file_options_changed"`
 	FileOptions          uint16     `json:"file_options"`
+
+	IsSpecialStatus bool `json:"is_special_status"`
 }
 
 // storageAllocation from the request
-func (nar *newAllocationRequest) storageAllocation(conf *Config, now common.Timestamp) *StorageAllocation {
+func (nar *newAllocationRequest) storageAllocation(balances chainstate.StateContextI, conf *Config, now common.Timestamp) *StorageAllocation {
 	sa := &StorageAllocation{}
 
-	allocV2 := &storageAllocationV2{
-		Version:              storageAllocationV2Version,
-		DataShards:           nar.DataShards,
-		ParityShards:         nar.ParityShards,
-		Size:                 nar.Size,
-		Expiration:           common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()),
-		Owner:                nar.Owner,
-		OwnerPublicKey:       nar.OwnerPublicKey,
-		PreferredBlobbers:    nar.Blobbers,
-		ReadPriceRange:       nar.ReadPriceRange,
-		WritePriceRange:      nar.WritePriceRange,
-		ThirdPartyExtendable: nar.ThirdPartyExtendable,
-		FileOptions:          nar.FileOptions,
-	}
-	sa.SetEntity(allocV2)
+	_ = chainstate.WithActivation(balances, "electra", func() error {
+		alloc := &storageAllocationV1{
+			DataShards:           nar.DataShards,
+			ParityShards:         nar.ParityShards,
+			Size:                 nar.Size,
+			Expiration:           common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()),
+			Owner:                nar.Owner,
+			OwnerPublicKey:       nar.OwnerPublicKey,
+			PreferredBlobbers:    nar.Blobbers,
+			ReadPriceRange:       nar.ReadPriceRange,
+			WritePriceRange:      nar.WritePriceRange,
+			ThirdPartyExtendable: nar.ThirdPartyExtendable,
+			FileOptions:          nar.FileOptions,
+		}
+		sa.SetEntity(alloc)
+		return nil
+	}, func() error {
+		allocV2 := &storageAllocationV2{
+			Version:              storageAllocationV2Version,
+			DataShards:           nar.DataShards,
+			ParityShards:         nar.ParityShards,
+			Size:                 nar.Size,
+			Expiration:           common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()),
+			Owner:                nar.Owner,
+			OwnerPublicKey:       nar.OwnerPublicKey,
+			PreferredBlobbers:    nar.Blobbers,
+			ReadPriceRange:       nar.ReadPriceRange,
+			WritePriceRange:      nar.WritePriceRange,
+			ThirdPartyExtendable: nar.ThirdPartyExtendable,
+			FileOptions:          nar.FileOptions,
+			IsSpecialStatus:      &nar.IsSpecialStatus,
+		}
+		sa.SetEntity(allocV2)
+		return nil
+	})
 
 	return sa
 }
@@ -288,7 +310,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.String("t_hash", txn.Hash), zap.Strings("blobbers", request.Blobbers), zap.Any("amount", txn.Value))
-	_ = request.storageAllocation(conf, txn.CreationDate) // (set fields, ignore expiration)
+	_ = request.storageAllocation(balances, conf, txn.CreationDate) // (set fields, ignore expiration)
 	spMap, err := getStakePoolsByIDs(request.Blobbers, spenum.Blobber, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "getting stake pools: %v", err)
@@ -365,13 +387,32 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("create_write_pool")
 
-	if err = sc.createChallengePool(txn, alloc, balances, conf); err != nil {
-		logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
-			zap.String("txn", txn.Hash),
-			zap.Error(err))
-		return "", common.NewError("allocation_creation_failed", err.Error())
+	actErr = chainstate.WithActivation(balances, "electra",
+		func() error {
+			if err = sc.createChallengePool(txn, alloc, balances, conf); err != nil {
+				logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
+					zap.String("txn", txn.Hash),
+					zap.Error(err))
+				return common.NewError("allocation_creation_failed", err.Error())
+			}
+			m.tick("create_challenge_pool")
+			return nil
+		}, func() error {
+			if !request.IsSpecialStatus {
+				if err = sc.createChallengePool(txn, alloc, balances, conf); err != nil {
+					logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
+						zap.String("txn", txn.Hash),
+						zap.Error(err))
+					return common.NewError("allocation_creation_failed", err.Error())
+				}
+				m.tick("create_challenge_pool")
+				return nil
+			}
+			return nil
+		})
+	if actErr != nil {
+		return "", actErr
 	}
-	m.tick("create_challenge_pool")
 
 	sa.mustUpdateBase(func(sab *storageAllocationBase) error {
 		alloc.deepCopy(sab)
@@ -422,7 +463,7 @@ func setupNewAllocation(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.Strings("blobbers", request.Blobbers))
-	sa := request.storageAllocation(conf, now) // (set fields, ignore expiration)
+	sa := request.storageAllocation(balances, conf, now) // (set fields, ignore expiration)
 	m.tick("fetch_pools")
 
 	saBase := sa.mustBase()
@@ -430,7 +471,7 @@ func setupNewAllocation(
 	saBase.ID = allocId
 	saBase.Tx = allocId
 
-	blobberNodes, bSize, err := validateBlobbers(balances, common.ToTime(now), saBase, blobbers, request.BlobberAuthTickets, conf)
+	blobberNodes, bSize, err := validateBlobbers(request, balances, common.ToTime(now), saBase, blobbers, request.BlobberAuthTickets, conf)
 	if err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error validating blobbers",
 			zap.Error(err))
@@ -486,6 +527,7 @@ func (t *Timings) tick(name string) {
 }
 
 func validateBlobbers(
+	request newAllocationRequest,
 	balances chainstate.StateContextI,
 	creationDate time.Time,
 	sa *storageAllocationBase,
@@ -499,7 +541,7 @@ func validateBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = sa.bSize()
-	var list, errs = sa.validateEachBlobber(balances, blobbers, blobberAuthTickets, common.Timestamp(creationDate.Unix()), conf)
+	var list, errs = sa.validateEachBlobber(request, balances, blobbers, blobberAuthTickets, common.Timestamp(creationDate.Unix()), conf)
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation: " + strings.Join(errs, ", "))
