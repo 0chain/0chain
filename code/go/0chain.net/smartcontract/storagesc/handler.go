@@ -2671,6 +2671,7 @@ func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 
 			HasBeenKilled:   snr.IsKilled,
 			HasBeenShutDown: snr.IsShutdown,
 		},
+		Version:                 "v3",
 		BaseURL:                 snr.BaseURL,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
