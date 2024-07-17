@@ -917,7 +917,7 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	balances := newTestBalances(t, false)
 	conf := setConfig(t, balances)
 	now := common.Timestamp(time.Now().Unix())
-	var sa = nar.storageAllocation(conf, now)
+	var sa = nar.storageAllocation(balances, conf, now)
 	alloc := sa.mustBase()
 	require.Equal(t, alloc.DataShards, nar.DataShards)
 	require.Equal(t, alloc.ParityShards, nar.ParityShards)

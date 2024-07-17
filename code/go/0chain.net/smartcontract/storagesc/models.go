@@ -1557,6 +1557,7 @@ List:
 
 // validateEachBlobber (this is a copy paste version of filterBlobbers with minute modification for verifications)
 func (sab *storageAllocationBase) validateEachBlobber(
+	request newAllocationRequest,
 	balances cstate.StateContextI,
 	blobbers []*storageNodeResponse,
 	blobberAuthTickets []string,
@@ -1577,6 +1578,14 @@ func (sab *storageAllocationBase) validateEachBlobber(
 		}
 
 		electraHardfork := func() error {
+			if request.IsSpecialStatus && !b.IsSpecialStatus {
+				errs = append(errs, fmt.Sprintf("blobber %s is not special status", b.ID))
+				return nil
+			} else if !request.IsSpecialStatus && b.IsSpecialStatus {
+				errs = append(errs, fmt.Sprintf("blobber %s is special status", b.ID))
+				return nil
+			}
+
 			snr := storageNodeResponseToStorageNodeV3(*b)
 			sn.SetEntity(snr)
 			return nil

@@ -877,6 +877,17 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"can't get allocation: "+err.Error())
 	}
 
+	actErr := cstate.WithActivation(balances, "electra", func() error { return nil }, func() error {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+			return common.NewError("commit_connection_failed",
+				"commit connection not allowed for enterprise special status allocation")
+		}
+		return nil
+	})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	alloc := sa.mustBase()
 
 	if alloc.Owner != commitMarkerBase.ClientID {
@@ -992,7 +1003,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	actErr := cstate.WithActivation(balances, "athena", func() error { return nil },
+	actErr = cstate.WithActivation(balances, "athena", func() error { return nil },
 		func() error {
 			if blobber.IsKilled() || blobber.IsShutDown() {
 				return common.NewError("commit_connection_failed",
