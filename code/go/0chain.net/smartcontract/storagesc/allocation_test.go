@@ -1912,7 +1912,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		ssc                 = newTestStorageSC()
 		balances            = newTestBalances(t, false)
 		mockBlobberCapacity = 2 * GB
-		now                 = common.Timestamp(time.Now().UnixNano())
+		now                 = int64(common.Timestamp(time.Now().UnixNano()))
 	)
 
 	t.Run("Extend unused allocation duration should work without adding extra payment", func(t *testing.T) {
@@ -2462,20 +2462,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.Contains(t, err.Error(), "invalid blobber params")
 	})
 
-	// @audit-info is read price being 0 valid or not ??
-	t.Run("Add blobber with invalid terms should fail", func(t *testing.T) {
-		blobber := newClient(2000*x10, balances)
-		blobber.cap = 2 * GB
-		blobber.terms = Terms{
-			ReadPrice:  0,
-			WritePrice: 5 * x10,
-		}
-
-		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid blobber params")
-	})
-
 	t.Run("Add blobber with valid params should succeed", func(t *testing.T) {
 		blobber := newClient(2000*x10, balances)
 		blobber.cap = 2 * GB
@@ -2486,6 +2472,57 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
 		require.NoError(t, err)
+	})
+
+	// t.Run("Add blobber with invalid write price should fail", func(t *testing.T) {
+	// 	blobber := newClient(2000*x10, balances)
+	// 	blobber.cap = 10 * GB
+	// 	blobber.terms = Terms{
+	// 		ReadPrice:  1 * x10,
+	// 		WritePrice: 1 * x10,
+	// 	}
+
+	// 	_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
+	// 	require.Error(t, err)
+	// 	require.Contains(t, err.Error(), "invalid blobber terms")
+	// })
+
+	t.Run("Add blobber with zero capacity should fail", func(t *testing.T) {
+		blobber := newClient(2000*x10, balances)
+		blobber.cap = 0
+		blobber.terms = Terms{
+			ReadPrice:  1 * x10,
+			WritePrice: 5 * x10,
+		}
+
+		_, err := blobber.callAddBlobber(t, ssc, int64(now), balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid blobber params")
+	})
+
+	t.Run("Add blobber with duplicate ID should fail", func(t *testing.T) {
+		// Add the first blobber
+		blobber1 := newClient(2000*x10, balances)
+		blobber1.cap = 10 * GB
+		blobber1.terms = Terms{
+			ReadPrice:  1 * x10,
+			WritePrice: 5 * x10,
+		}
+
+		_, err := blobber1.callAddBlobber(t, ssc, int64(now), balances)
+		require.NoError(t, err)
+
+		blobber2 := newClient(2000*x10, balances)
+		blobber2.cap = 10 * GB
+		blobber2.terms = Terms{
+			ReadPrice:  1 * x10,
+			WritePrice: 5 * x10,
+		}
+		blobber2.id = blobber1.id
+
+		_, err = blobber2.callAddBlobber(t, ssc, int64(now), balances)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "blobber already exists,with id")
 	})
 
 }

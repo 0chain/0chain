@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/core/util/entitywrapper"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/core/util/entitywrapper"
 
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
