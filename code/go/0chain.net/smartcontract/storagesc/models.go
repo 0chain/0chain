@@ -1188,7 +1188,7 @@ func bSize(size int64, dataShards int) int64 {
 	return int64(math.Ceil(float64(size) / float64(dataShards)))
 }
 
-func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, clientID string, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) error {
+func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSmartContract, balances chainstate.StateContextI, txn *transaction.Transaction, addedBlobberAllocation *BlobberAllocation, now common.Timestamp, isEnterpriseBlobber bool) error {
 	_, ok := sab.BlobberAllocsMap[blobberID]
 	if !ok {
 		return fmt.Errorf("cannot find blobber %s in allocation", blobberID)
@@ -1293,12 +1293,35 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
 			}
 
-			if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
-				return fmt.Errorf("error paying challenge pool pass payments: %v", err)
-			}
+			actErr = cstate.WithActivation(balances, "electra", func() (e error) {
+				if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
+					return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+				}
 
-			if err = sab.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
-				return fmt.Errorf("3 error paying cancellation charge: %v", err)
+				if err = sab.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, txn.ClientID, d); err != nil {
+					return fmt.Errorf("3 error paying cancellation charge: %v", err)
+				}
+				return nil
+			}, func() (e error) {
+				if isEnterpriseBlobber {
+					cost, err := sab.payCostForRdtuForReplaceEnterpriseBlobber(txn, blobberID, balances)
+					logging.Logger.Info("payCostForRdtuForReplaceEnterpriseBlobber", zap.Any("cost", cost), zap.Any("err", err))
+					if err != nil {
+						return err
+					}
+				} else {
+					if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
+						return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+					}
+
+					if err = sab.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, txn.ClientID, d); err != nil {
+						return fmt.Errorf("3 error paying cancellation charge: %v", err)
+					}
+				}
+				return nil
+			})
+			if actErr != nil {
+				return actErr
 			}
 
 			actErr = cstate.WithActivation(balances, "demeter", func() (e error) { return },
@@ -1355,9 +1378,9 @@ func replaceBlobber(
 	blobberID string,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
-	clientID string,
-	addedBlobber *StorageNode, addedBlobberAllocation *BlobberAllocation, now common.Timestamp) ([]*StorageNode, error) {
-	if err := sa.replaceBlobber(blobberID, sc, balances, clientID, addedBlobberAllocation, now); err != nil {
+	txn *transaction.Transaction,
+	addedBlobber *StorageNode, addedBlobberAllocation *BlobberAllocation, now common.Timestamp, isEnterpriseBlobber bool) ([]*StorageNode, error) {
+	if err := sa.replaceBlobber(blobberID, sc, balances, txn, addedBlobberAllocation, now, isEnterpriseBlobber); err != nil {
 		return nil, err
 	}
 
@@ -1397,7 +1420,8 @@ func (sab *storageAllocationBase) changeBlobbers(
 	now common.Timestamp,
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
-	clientID string,
+	txn *transaction.Transaction,
+	isEnterpriseBlobber bool,
 ) ([]*StorageNode, error) {
 	var err error
 
@@ -1477,7 +1501,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 	ba := newBlobberAllocation(afterSize, sab, addedBlobber.mustBase(), conf, now)
 
 	if len(removeId) > 0 {
-		if blobbers, err = replaceBlobber(sab, blobbers, removeId, balances, sc, clientID, addedBlobber, ba, now); err != nil {
+		if blobbers, err = replaceBlobber(sab, blobbers, removeId, balances, sc, txn, addedBlobber, ba, now, isEnterpriseBlobber); err != nil {
 			return nil, err
 		}
 	} else {

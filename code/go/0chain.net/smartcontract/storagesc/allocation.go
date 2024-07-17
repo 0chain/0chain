@@ -860,11 +860,30 @@ func (sc *StorageSmartContract) adjustChallengePool(
 func (sc *StorageSmartContract) extendAllocation(
 	txn *transaction.Transaction,
 	conf *Config,
+	sa *StorageAllocation,
 	alloc *storageAllocationBase,
 	blobbers []*StorageNode,
 	req *updateAllocationRequest,
 	balances chainstate.StateContextI,
 ) (err error) {
+	// Settle payments for enterprise blobber allocation
+	actErr := chainstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+			cost, err := alloc.payCostForRdtuForEnterpriseAllocation(txn, balances)
+			if err != nil {
+				return fmt.Errorf("can't get cost for RDTU: %v", err)
+			}
+
+			logging.Logger.Info("extendAllocation: cost for RDTU", zap.Any("cost", cost))
+		}
+		return nil
+	})
+	if actErr != nil {
+		return actErr
+	}
+
 	var (
 		diff = req.getBlobbersSizeDiff(alloc) // size difference
 		size = req.getNewBlobbersSize(alloc)  // blobber size
@@ -957,12 +976,28 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 	}
 
-	// add more tokens to related challenge pool, or move some tokens back
-	var remainingDuration = alloc.Expiration - txn.CreationDate
-	err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
-	if err != nil {
-		return common.NewErrorf("allocation_extending_failed", "%v", err)
+	// No challenge pool for enterprise blobber
+	actErr = chainstate.WithActivation(balances, "electra", func() error {
+		var remainingDuration = alloc.Expiration - txn.CreationDate
+		err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
+		if err != nil {
+			return common.NewErrorf("allocation_extending_failed", "%v", err)
+		}
+		return nil
+	}, func() error {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+			var remainingDuration = alloc.Expiration - txn.CreationDate
+			err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
+			if err != nil {
+				return common.NewErrorf("allocation_extending_failed", "%v", err)
+			}
+		}
+		return nil
+	})
+	if actErr != nil {
+		return actErr
 	}
+
 	return nil
 }
 
@@ -1060,7 +1095,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
 	if t.ClientID != alloc.Owner /* Third-party actions */ {
-		err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, conf, sa, alloc, blobbers, &request, balances)
 		if err != nil {
 			return "", err
 		}
@@ -1070,8 +1105,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		alloc.Tx = t.Hash
 
 		if len(request.AddBlobberId) > 0 {
+			isEnterpriseAllocation := false
+			chainstate.WithActivation(balances, "electra", func() error {
+				return nil
+			}, func() error {
+				if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+					isEnterpriseAllocation = true
+				}
+				return nil
+			})
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.AddBlobberAuthTicket, request.RemoveBlobberId, t.CreationDate, balances, sc, t.ClientID,
+				conf, blobbers, request.AddBlobberId, request.AddBlobberAuthTicket, request.RemoveBlobberId, t.CreationDate, balances, sc, t, isEnterpriseAllocation,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1086,7 +1130,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		// if size or expiration increased, then we use new terms
 		// otherwise, we use the same terms
 		if request.Extend {
-			err = sc.extendAllocation(t, conf, alloc, blobbers, &request, balances)
+			err = sc.extendAllocation(t, conf, sa, alloc, blobbers, &request, balances)
 			if err != nil {
 				return "", err
 			}
