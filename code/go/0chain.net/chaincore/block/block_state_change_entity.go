@@ -29,6 +29,7 @@ func NewBlockStateChange(b *Block) (*StateChange, error) {
 	bsc.Hash, changes, _, bsc.StartRoot = b.ClientState.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	bsc.DeadNodes = make([]util.Node, len(changes))
+	logging.Logger.Debug("new block state change", zap.String("block", b.Hash), zap.Int("changes", len(changes)))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
 		bsc.DeadNodes[idx] = change.Old
