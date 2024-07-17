@@ -240,12 +240,17 @@ func (ps *PartialState) UnmarshalPartialStateJSON(obj map[string]interface{}) er
 	}
 
 	deadNodesI, ok := obj["dead_nodes"]
-	if ok {
-		// do nothing as miners not updated may not have dead nodes field
+	if !ok {
+		// do nothing as miners/sharders not updated may not have dead nodes field
 		return nil
 	}
 
-	deadNodes := deadNodesI.([]interface{})
+	deadNodes, ok := deadNodesI.([]interface{})
+	if !ok {
+		logging.Logger.Error("unmarshal json - invalid dead nodes", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+
 	ps.DeadNodes = make([]util.Node, len(deadNodes))
 	for idx, nd := range deadNodes {
 		node, ok := nd.(string)
@@ -307,6 +312,37 @@ func (ps *PartialState) UnmarshalPartialStateMsgpack(obj map[string]interface{})
 	} else {
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
+	}
+
+	deadNodesI, ok := obj["dead_nodes"]
+	if !ok {
+		// do nothing as miners/sharders not updated may not have dead nodes field
+		return nil
+	}
+
+	deadNodes, ok := deadNodesI.([]interface{})
+	if !ok {
+		logging.Logger.Error("unmarshal json - invalid dead nodes", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+
+	ps.DeadNodes = make([]util.Node, len(deadNodes))
+	for idx, nd := range deadNodes {
+		node, ok := nd.([]byte)
+		if !ok {
+			logging.Logger.Error("unmarshal json - invalid node",
+				zap.Int("idx", idx),
+				zap.Any("node", nd),
+				zap.Any("obj", obj))
+			return common.ErrInvalidData
+		}
+
+		var err error
+		ps.DeadNodes[idx], err = util.CreateNode(bytes.NewBuffer(node))
+		if err != nil {
+			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+			return err
+		}
 	}
 	return nil
 }
