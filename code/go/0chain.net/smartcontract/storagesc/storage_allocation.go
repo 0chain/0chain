@@ -443,6 +443,75 @@ func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Co
 	return cost, nil
 }
 
+func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *transaction.Transaction, balances cstate.StateContextI) (currency.Coin, error) {
+	rdtu, err := sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
+
+	}
+
+	var cost currency.Coin
+	for _, ba := range sab.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+		if err != nil {
+			return 0, err
+		}
+
+		c, err = currency.MultFloat64(c, rdtu)
+		if err != nil {
+			return 0, err
+		}
+
+		transfer := NewTokenTransfer(c, t.ClientID, ba.BlobberID, false)
+		_, err = transfer.transfer(balances)
+		if err != nil {
+			return 0, err
+		}
+
+		cost, err = currency.AddCoin(cost, c)
+		if err != nil {
+			return 0, err
+		}
+
+	}
+	return cost, nil
+}
+
+func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *transaction.Transaction, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
+	rdtu, err := sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
+
+	}
+
+	var cost currency.Coin
+	for _, ba := range sab.BlobberAllocs {
+		if ba.BlobberID == blobberID {
+			c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
+			if err != nil {
+				return 0, err
+			}
+
+			c, err = currency.MultFloat64(c, rdtu)
+			if err != nil {
+				return 0, err
+			}
+
+			transfer := NewTokenTransfer(c, t.ClientID, ba.BlobberID, false)
+			_, err = transfer.transfer(balances)
+			if err != nil {
+				return 0, err
+			}
+
+			cost, err = currency.AddCoin(cost, c)
+			if err != nil {
+				return 0, err
+			}
+		}
+	}
+	return cost, nil
+}
+
 // The restDurationInTimeUnits return rest duration of the allocation in time
 // units as a float64 value.
 func (sab *storageAllocationBase) restDurationInTimeUnits(now common.Timestamp, timeUnit time.Duration) (float64, error) {
