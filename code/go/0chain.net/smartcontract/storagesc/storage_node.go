@@ -201,6 +201,7 @@ func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 		StakePoolSettings:       sn2.StakePoolSettings,
 		RewardRound:             sn2.RewardRound,
 		NotAvailable:            sn2.NotAvailable,
+		IsRestricted:            sn2.IsRestricted,
 	}
 }
 
