@@ -31,6 +31,7 @@ type PartialState struct {
 	Version   string      `json:"version"`
 	StartRoot util.Key    `json:"start"`
 	Nodes     []util.Node `json:"-" msgpack:"-"`
+	DeadNodes []util.Node `json:"-" msgpack:"-"`
 	mndb      *util.MemoryNodeDB
 	root      util.Node
 }
@@ -308,10 +309,16 @@ func (ps *PartialState) setMarshalFields(data map[string]interface{}) map[string
 	data["root"] = util.ToHex(ps.Hash)
 	data["version"] = ps.Version
 	nodes := make([][]byte, len(ps.Nodes))
+	deadNodes := make([][]byte, len(ps.DeadNodes))
 	for idx, nd := range ps.Nodes {
 		nodes[idx] = nd.Encode()
 	}
+
+	for idx, nd := range ps.DeadNodes {
+		deadNodes[idx] = nd.Encode()
+	}
 	data["nodes"] = nodes
+	data["dead_nodes"] = deadNodes
 	return data
 }
 
@@ -328,4 +335,8 @@ func (ps *PartialState) SaveState(ctx context.Context, stateDB util.NodeDB) erro
 // GetNodeDB returns the node db containing all the changes
 func (ps *PartialState) GetNodeDB() util.NodeDB {
 	return ps.mndb
+}
+
+func (ps *PartialState) GetDeadNodes() []util.Node {
+	return ps.DeadNodes
 }
