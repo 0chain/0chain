@@ -238,6 +238,35 @@ func (ps *PartialState) UnmarshalPartialStateJSON(obj map[string]interface{}) er
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
+
+	deadNodesI, ok := obj["dead_nodes"]
+	if ok {
+		// do nothing as miners not updated may not have dead nodes field
+		return nil
+	}
+
+	deadNodes := deadNodesI.([]interface{})
+	ps.DeadNodes = make([]util.Node, len(deadNodes))
+	for idx, nd := range deadNodes {
+		node, ok := nd.(string)
+		if !ok {
+			logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.String("node", node), zap.Any("obj", obj))
+			return common.ErrInvalidData
+		}
+
+		buf, err := base64.StdEncoding.DecodeString(node)
+		if err != nil {
+			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+			return err
+		}
+
+		ps.DeadNodes[idx], err = util.CreateNode(bytes.NewBuffer(buf))
+		if err != nil {
+			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+			return err
+		}
+	}
+
 	return nil
 }
 
