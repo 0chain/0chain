@@ -380,6 +380,9 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 	}
 
 	var numberOfBlobbers = request.DataShards + request.ParityShards
+	// conf.MaxBlobbersPerAllocation = int(NumberOfSettings)
+	logging.Logger.Info("blobber max" + string(conf.MaxBlobbersPerAllocation))
+
 	if numberOfBlobbers > conf.MaxBlobbersPerAllocation {
 		return nil, common.NewErrorf("allocation_creation_failed",
 			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
