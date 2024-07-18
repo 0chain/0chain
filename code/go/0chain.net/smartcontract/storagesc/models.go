@@ -1275,25 +1275,12 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 					"error removing offer: "+err.Error())
 			}
 
-			actErr = cstate.WithActivation(balances, "demeter", func() (e error) {
-				actErr = cstate.WithActivation(balances, "athena", func() (e error) { return },
-					func() (e error) {
-						return sp.Save(spenum.Blobber, d.BlobberID, balances)
-					})
-				return actErr
-			}, func() (e error) {
-				return nil
-			})
-			if actErr != nil {
-				return actErr
-			}
-
-			cp, err := sc.getChallengePool(sab.ID, balances)
-			if err != nil {
-				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
-			}
-
 			actErr = cstate.WithActivation(balances, "electra", func() (e error) {
+				cp, err := sc.getChallengePool(sab.ID, balances)
+				if err != nil {
+					return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
+				}
+
 				if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
 					return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 				}
@@ -1310,6 +1297,11 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 						return err
 					}
 				} else {
+					cp, err := sc.getChallengePool(sab.ID, balances)
+					if err != nil {
+						return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
+					}
+
 					if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
 						return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 					}
