@@ -327,7 +327,7 @@ func (nar *allocationBlobbersRequest) decode(b []byte) error {
 func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 
-	limit, err := common2.GetOffsetLimitOrderParam(q)
+	_, err := common2.GetOffsetLimitOrderParam(q)
 	if err != nil {
 		common.Respond(w, r, nil, err)
 		return
