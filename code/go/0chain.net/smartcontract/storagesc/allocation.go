@@ -1438,7 +1438,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		sps = append(sps, sp)
 	}
 
-	err = sc.finishAllocation(t, alloc, passRates, sps, balances, conf)
+	err = sc.finishAllocation(t, sa, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
@@ -1551,7 +1551,7 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 		sps = append(sps, sp)
 	}
 
-	err = sc.finishAllocation(t, alloc, passRates, sps, balances, conf)
+	err = sc.finishAllocation(t, sa, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return nil, common.NewError("fini_alloc_failed", err.Error())
 	}
@@ -1569,24 +1569,43 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 
 func (sc *StorageSmartContract) finishAllocation(
 	t *transaction.Transaction,
+	sa *StorageAllocation,
 	alloc *storageAllocationBase,
 	passRates []float64,
 	sps []*stakePool,
 	balances chainstate.StateContextI,
 	conf *Config,
 ) (err error) {
-
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
-	if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc, t.CreationDate); err != nil {
-		return fmt.Errorf("error paying challenge pool pass payments: %v", err)
-	}
+	isSpecialStatus := false
+	_ = chainstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+			isSpecialStatus = true
+		}
+		return nil
+	})
 
-	if err = alloc.payCancellationCharge(sps, balances, passRates, conf, sc, t); err != nil {
-		return fmt.Errorf("4 error paying cancellation charge: %v", err)
+	if !isSpecialStatus {
+		if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc, t.CreationDate); err != nil {
+			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+		}
+
+		if err = alloc.payCancellationCharge(sps, balances, passRates, conf, sc, t); err != nil {
+			return fmt.Errorf("4 error paying cancellation charge: %v", err)
+		}
+	} else {
+		var cost currency.Coin
+		if cost, err = alloc.payCostForRdtuForEnterpriseAllocation(t, balances); err != nil {
+			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+		}
+
+		logging.Logger.Info("finishAllocation: cost for RDTU", zap.Any("cost", cost))
 	}
 
 	for i, d := range alloc.BlobberAllocs {
@@ -1614,30 +1633,23 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 
-		err = chainstate.WithActivation(balances, "apollo", func() error { return nil }, func() error {
-			blobberStake, err := sps[i].stake()
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't get stake of "+d.BlobberID+": "+err.Error())
-			}
-
-			b := blobber.mustBase()
-			sd, err := maths.ConvertToUint64(b.SavedData)
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't convert saved data of "+d.BlobberID+": "+err.Error())
-			}
-
-			err = PartitionsChallengeReadyBlobberUpdate(balances, b.ID, blobberStake, sd)
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't update blobber "+d.BlobberID+": "+err.Error())
-			}
-
-			return nil
-		})
+		blobberStake, err := sps[i].stake()
 		if err != nil {
-			return err
+			return common.NewError("fini_alloc_failed",
+				"can't get stake of "+d.BlobberID+": "+err.Error())
+		}
+
+		b := blobber.mustBase()
+		sd, err := maths.ConvertToUint64(b.SavedData)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't convert saved data of "+d.BlobberID+": "+err.Error())
+		}
+
+		err = PartitionsChallengeReadyBlobberUpdate(balances, b.ID, blobberStake, sd)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't update blobber "+d.BlobberID+": "+err.Error())
 		}
 
 		// Update saved data on events_db
