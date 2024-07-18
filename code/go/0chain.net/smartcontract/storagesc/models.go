@@ -1442,7 +1442,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 			return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV3)
 
-				if b.IsRestricted != nil && *b.IsRestricted {
+				if (b.IsSpecialStatus != nil && *b.IsSpecialStatus) || (b.IsRestricted != nil && *b.IsRestricted) {
 					success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
 					if err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
@@ -1588,8 +1588,15 @@ func (sab *storageAllocationBase) validateEachBlobber(
 			continue
 		}
 
+		_ = cstate.WithActivation(balances, "electra", func() error {
+			b.IsSpecialStatus = false
+			return nil
+		}, func() error {
+			return nil
+		})
+
 		snBase := sn.mustBase()
-		if snBase.IsRestricted != nil && *snBase.IsRestricted {
+		if (b.IsSpecialStatus) || (snBase.IsRestricted != nil && *snBase.IsRestricted) {
 			success, err := verifyBlobberAuthTicket(balances, sab.Owner, blobberAuthTickets[i], sn.mustBase().PublicKey)
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("blobber %s auth ticket verification failed: %v", b.ID, err.Error()))
