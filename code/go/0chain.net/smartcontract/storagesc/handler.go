@@ -363,7 +363,7 @@ func (srh *StorageRestHandler) getAllocationBlobbers(w http.ResponseWriter, r *h
 		healthCheckPeriod = conf.HealthCheckPeriod
 	}
 
-	blobberIDs, err := getBlobbersForRequest(request, edb, balances, limit, healthCheckPeriod, force)
+	blobberIDs, err := getBlobbersForRequest(request, edb, balances, common2.Pagination{Limit: 40}, healthCheckPeriod, force)
 	if err != nil {
 		common.Respond(w, r, "", err)
 		return
