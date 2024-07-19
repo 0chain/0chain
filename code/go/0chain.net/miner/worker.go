@@ -141,17 +141,6 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 							roundTimeoutProcess(ctx, protocol, cround+1)
 						} else {
 							logging.Logger.Info("round worker: next round is nil", zap.Int64("next round", cround+1))
-
-							// check
-							lfb := mc.GetLatestFinalizedBlock()
-							lfbTk := mc.GetLatestLFBTicket(ctx)
-							if lfb.Round < lfbTk.Round {
-								logging.Logger.Info("round worker: LFB < latest lfb ticket round, notify block sync",
-									zap.Int64("lfb round", lfb.Round),
-									zap.Int64("lfb ticket round", lfbTk.Round),
-									zap.Int64("current round", cround))
-								mc.NotifyBlockSync()
-							}
 						}
 					} else {
 						logging.Logger.Info("round worker: round timeout",
@@ -163,13 +152,24 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 							zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
 						roundTimeoutProcess(ctx, protocol, cround)
 					}
+
+					lfb := mc.GetLatestFinalizedBlock()
+					lfbTk := mc.GetLatestLFBTicket(ctx)
+					if lfb.Round < lfbTk.Round {
+						logging.Logger.Info("round worker: LFB < latest lfb ticket round, notify block sync",
+							zap.Int64("lfb round", lfb.Round),
+							zap.Int64("lfb ticket round", lfbTk.Round),
+							zap.Int64("current round", cround))
+						mc.NotifyBlockSync()
+					}
 				} else {
 					// set current round to latest finalized block
-					lfbr := mc.GetLatestFinalizedBlock().Round
-					mc.SetCurrentRound(lfbr)
-					logging.Logger.Debug("round worker: Round timeout, nil miner round, set current round to lfb round",
-						zap.Int64("nil round", cround),
-						zap.Int64("lfb round", lfbr))
+					// lfbr := mc.GetLatestFinalizedBlock().Round
+					// mc.SetCurrentRound(lfbr)
+					// logging.Logger.Debug("round worker: Round timeout, nil miner round, set current round to lfb round",
+					// 	zap.Int64("nil round", cround),
+					// 	zap.Int64("lfb round", lfbr))
+					logging.Logger.Warn("round worker: Round timeout, nil miner round", zap.Int64("nil round", cround))
 				}
 			} else {
 				cround = mc.GetCurrentRound()
