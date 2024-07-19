@@ -2094,10 +2094,10 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	}
 }
 
-func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, client *Client, tp int64, balances *testBalances, mockBlobberCapacity int, zeroStats bool) (alloc *storageAllocationBase, blobbers []*Client) {
+func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, client *Client, tp int64, balances *testBalances, zeroStats, isRestricted, isSpecialAllocation bool) (alloc *storageAllocationBase, blobbers []*Client) {
 	var err error
 
-	allocID, blobbers := addAllocation(t, ssc, client, tp, 10*GB, 200*GB, 5000*x10, 100*x10, 20, balances, true, false, false)
+	allocID, blobbers := addAllocation(t, ssc, client, tp, 10*GB, 200*GB, 5000*x10, 100*x10, 20, balances, true, isRestricted, isSpecialAllocation)
 	sa, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
@@ -2158,9 +2158,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 	// 2. Update all operations at once and check the stats and events at the end
 
 	var (
-		ssc                 = newTestStorageSC()
-		balances            = newTestBalances(t, false)
-		mockBlobberCapacity = 2 * GB
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
 	)
 
 	t.Run("Extend unused allocation duration should work without adding extra payment", func(t *testing.T) {
@@ -2169,7 +2168,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2203,7 +2202,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2213,6 +2212,9 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		uar.Extend = true
 		tp += int64(360 * time.Hour / 1e9)
 		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 50*x10, tp, ssc, balances)
 		require.NoError(t, err)
 
 		var deco StorageAllocation
@@ -2237,7 +2239,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(200000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2283,13 +2285,50 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
+	t.Run("Extend used allocation duration should work with extra payment equal to period of half of time unit", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
+			allocID        = beforeAlloc.ID
+		)
+
+		// extend
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.Extend = true
+		tp += int64(360 * time.Hour / 1e9)
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 50*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.mustBase().Tx, "Transaction should be updated")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.mustBase().Expiration, "Allocation expiration should be increased")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAlloc.mustBase().Tx
+		expectedAlloc.Expiration = afterAlloc.mustBase().Expiration
+		compareAllocationData(t, *expectedAlloc, *afterAlloc.mustBase())
+	})
+
 	t.Run("Upgrade size in unused allocation should work", func(t *testing.T) {
 		var (
 			tp     = int64(0)
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2333,7 +2372,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(200000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2388,7 +2427,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
