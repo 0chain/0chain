@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"math"
 	"strconv"
 	"testing"
@@ -1331,7 +1332,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.IsSpecialStatus = true
 
 		var tempTxn transaction.Transaction
-		tempTxn.Hash = txHash
+		tempTxn.Hash = uuid.New().String()
 		tempTxn.Value = 10000
 		tempTxn.ClientID = wallet.id
 		tempTxn.CreationDate = toSeconds(2 * time.Hour)
@@ -1412,7 +1413,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		nar.IsSpecialStatus = true
 
 		var tempTxn transaction.Transaction
-		tempTxn.Hash = txHash
+		tempTxn.Hash = uuid.New().String()
 		tempTxn.Value = 10000
 		tempTxn.ClientID = wallet.id
 		tempTxn.CreationDate = toSeconds(2 * time.Hour)
