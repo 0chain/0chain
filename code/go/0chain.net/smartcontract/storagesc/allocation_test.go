@@ -2508,6 +2508,77 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		}
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
+
+	t.Run("Extend size in a 50% used allocation where half of blobbers changed their price to 1.5x and rest changes to 0.5x", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			beforeAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			allocID               = beforeAlloc.ID
+		)
+
+		require.Equal(t, 0, int(beforeAlloc.WritePool), "Write pool should be zero")
+
+		// for _, blobberAlloc := range beforeAlloc.BlobberAllocs {
+		// 	blobberAlloc.Stats.UsedSize = beforeAlloc.Size / 2
+		// }
+
+		half := len(blobbers) / 2
+		for i, blobberClient := range blobbers {
+			blobber, err := ssc.getBlobber(blobberClient.id, balances)
+			err = balances.GetTrieNode(blobberKey(blobberClient.id), blobber)
+			require.NoError(t, err)
+
+			if i < half {
+				blobberClient.terms.WritePrice = blobberClient.terms.WritePrice * 3 / 2
+			} else {
+				blobberClient.terms.WritePrice = blobberClient.terms.WritePrice / 2
+			}
+
+			_, err = updateBlobber(t, blobber, 0, tp, ssc, balances)
+			require.NoError(t, err)
+		}
+
+		var uar updateAllocationRequest
+		uar.ID = allocID
+
+		uar.Size = 10 * GB
+		tp += int64(360 * time.Hour / 1e9)
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+		resp, err = uar.callUpdateAllocReq(t, client.id, 100*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.Tx, "Transaction should be updated")
+		require.Equal(t, 50*x10, int(afterAlloc.WritePool), "Write pool should be updated")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.Expiration, "Allocation expiration should be increased")
+
+		_, err = ssc.getChallengePool(allocID, balances)
+		require.NoError(t, err)
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAlloc.Tx
+		expectedAlloc.Expiration = afterAlloc.Expiration
+		expectedAlloc.WritePool = afterAlloc.WritePool
+		expectedAlloc.Size = afterAlloc.Size
+		expectedAlloc.Stats.UsedSize = afterAlloc.Stats.UsedSize
+		expectedAlloc.MovedToChallenge = afterAlloc.MovedToChallenge
+		for _, ba := range expectedAlloc.BlobberAllocs {
+			ba.ChallengePoolIntegralValue += ba.ChallengePoolIntegralValue / 2
+			ba.Size += uar.Size / int64(afterAlloc.DataShards)
+		}
+		compareAllocationData(t, *expectedAlloc, *afterAlloc)
+	})
+
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
