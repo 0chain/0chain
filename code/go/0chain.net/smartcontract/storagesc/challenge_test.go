@@ -971,7 +971,7 @@ func TestRollBack(t *testing.T) {
 
 	// new allocation
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	var sa *StorageAllocation
 	sa, err = ssc.getAllocation(allocID, balances)
@@ -1528,7 +1528,7 @@ func preparePopulateGenerateChallenge(t *testing.T, ssc *StorageSmartContract, b
 	var blobbers []*Client
 
 	for i := 0; i < 10; i++ {
-		b := addBlobber(t, ssc, 100*GB, 1, avgTerms, 500000*x10, balances)
+		b := addBlobber(t, ssc, 100*GB, 1, avgTerms, 500000*x10, balances, false, false)
 		blobbers = append(blobbers, b)
 
 		err := PartitionsChallengeReadyBlobberAddOrUpdate(balances, b.id, stake, used)
@@ -1633,7 +1633,7 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 
 	// new allocation
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -1686,7 +1686,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 
 	// new allocation
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 

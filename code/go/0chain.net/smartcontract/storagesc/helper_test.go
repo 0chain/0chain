@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/core/util/entitywrapper"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -57,9 +56,10 @@ type Client struct {
 	scheme encryption.SignatureScheme // pk/sk
 
 	// blobber
-	terms        Terms
-	cap          int64
-	isRestricted *bool
+	terms           Terms
+	cap             int64
+	isRestricted    bool
+	isSpecialStatus bool
 
 	// user or blobber
 	balance currency.Coin
@@ -99,7 +99,8 @@ func getValidatorURL(id string) string {
 func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn := &StorageNode{}
 	sne := &storageNodeV3{
-		IsRestricted: new(bool),
+		IsRestricted:    new(bool),
+		IsSpecialStatus: new(bool),
 	}
 	sne.ID = c.id
 	sne.BaseURL = getBlobberURL(c.id)
@@ -110,12 +111,9 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sne.StakePoolSettings.MaxNumDelegates = 100
 	sne.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
 	sne.StakePoolSettings.DelegateWallet = c.id
+	*sne.IsRestricted = c.isRestricted
+	*sne.IsSpecialStatus = c.isSpecialStatus
 	sn.SetEntity(sne)
-	sn.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
-		b := e.(*storageNodeV3)
-		b.IsRestricted = c.isRestricted
-		return nil
-	})
 
 	return mustEncode(t, &sn)
 }
@@ -249,7 +247,7 @@ func healthCheckValidator(t testing.TB, validator *ValidationNode, value currenc
 
 // addBlobber to SC
 func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
-	terms Terms, balance currency.Coin, balances chainState.StateContextI) (
+	terms Terms, balance currency.Coin, balances chainState.StateContextI, isRestricted, isSpecialStatus bool) (
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -260,6 +258,9 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	blob.cap = cap
 	blob.balance = balance
 	blob.scheme = scheme
+
+	blob.isRestricted = isRestricted
+	blob.isSpecialStatus = isSpecialStatus
 
 	blob.pk = scheme.GetPublicKey()
 	blob.id = encryption.Hash(blob.pk)
@@ -354,7 +355,7 @@ var avgTerms = Terms{
 
 // add allocation and 20 blobbers
 func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
-	now, allocSize, blobberCapacity int64, blobberBalance, lockTokens currency.Coin, nblobs int, balances chainState.StateContextI, preStakeTokens bool) (
+	now, allocSize, blobberCapacity int64, blobberBalance, lockTokens currency.Coin, nblobs int, balances chainState.StateContextI, preStakeTokens, isRestricted, isSpecialAllocation bool) (
 	allocID string, blobs []*Client) {
 
 	if nblobs <= 0 {
@@ -383,6 +384,8 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 
+	nar.IsSpecialStatus = isSpecialAllocation
+
 	if allocSize == 0 {
 		nar.Size = 1 * GB // 20 GB
 	} else {
@@ -390,7 +393,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	}
 
 	for i := 0; i < nblobs; i++ {
-		var b = addBlobber(t, ssc, blobberCapacity, now, avgTerms, blobberBalance, balances)
+		var b = addBlobber(t, ssc, blobberCapacity, now, avgTerms, blobberBalance, balances, isRestricted, isSpecialAllocation)
 		nar.Blobbers = append(nar.Blobbers, b.id)
 		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
 		blobs = append(blobs, b)
