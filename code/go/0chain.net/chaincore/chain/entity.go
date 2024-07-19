@@ -233,6 +233,7 @@ type Chain struct {
 	blockBuffer      *orderbuffer.OrderBuffer
 	processingBlocks *cache.LRU[string, struct{}]
 	pbMutex          sync.RWMutex
+	notifySyncBlockC chan struct{}
 }
 
 func (c *Chain) PushToBlockProcessor(b *block.Block) error {
@@ -281,6 +282,13 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 	}
 }
 
+func (c *Chain) NotifyBlockSync() {
+	select {
+	case c.notifySyncBlockC <- struct{}{}:
+	default:
+	}
+}
+
 func (c *Chain) BlockWorker(ctx context.Context) {
 	const stuckDuration = 3 * time.Second
 	var (
@@ -303,6 +311,13 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
+		case <-c.notifySyncBlockC:
+			if syncing {
+				continue
+			}
+			logging.Logger.Debug("process block, received notify block sync request")
+			stuckCheckTimer.Reset(stuckDuration)
+			syncBlocksTimer.Reset(0)
 		case <-stuckCheckTimer.C:
 			logging.Logger.Debug("process block, detected stuck, trigger sync",
 				zap.Int64("round", c.GetCurrentRound()),
@@ -1063,6 +1078,7 @@ func Provider() datastore.Entity {
 	c.bscMutex = &sync.Mutex{}
 
 	c.computeBlockStateC = make(chan struct{}, 1)
+	c.notifySyncBlockC = make(chan struct{}, 1)
 	return c
 }
 
