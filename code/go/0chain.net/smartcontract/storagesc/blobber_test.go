@@ -37,7 +37,7 @@ func TestUpdateBlobberSettings(t *testing.T) {
 	)
 	setConfig(t, balances)
 	var (
-		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 		b, err = ssc.getBlobber(blob.id, balances)
 	)
 	require.NoError(t, err)
@@ -152,8 +152,7 @@ func TestAddBlobber(t *testing.T) {
 	var blob = newClient(0, balances)
 	blob.terms = avgTerms
 	blob.cap = 2 * GB
-	blob.isRestricted = new(bool)
-	*blob.isRestricted = true
+	blob.isRestricted = true
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
 	require.NoError(t, err)
@@ -215,7 +214,7 @@ func Test_flow_reward(t *testing.T) {
 	conf := setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -662,7 +661,7 @@ func Test_flow_penalty(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -870,7 +869,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	sa, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
@@ -1091,7 +1090,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	sa, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
@@ -1290,7 +1289,7 @@ func TestBlobberHealthCheck(t *testing.T) {
 	setConfig(t, balances)
 
 	var (
-		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 		b, err = ssc.getBlobber(blob.id, balances)
 	)
 	require.NoError(t, err)
@@ -1313,7 +1312,7 @@ func TestOnlyAdd(t *testing.T) {
 	setConfig(t, balances)
 
 	var (
-		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 		b, err = ssc.getBlobber(blob.id, balances)
 	)
 	require.NoError(t, err)
@@ -1581,7 +1580,7 @@ func TestCommitBlobberConnection(t *testing.T) {
 
 	tp += 100
 
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
