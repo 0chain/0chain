@@ -103,6 +103,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 		IsSpecialStatus: new(bool),
 	}
 	sne.ID = c.id
+	sne.PublicKey = c.pk
 	sne.BaseURL = getBlobberURL(c.id)
 	sne.Terms = c.terms
 	sne.Capacity = c.cap
@@ -151,6 +152,7 @@ func (c *Client) callAddBlobber(t testing.TB, ssc *StorageSmartContract,
 	txVal, err := currency.Float64ToCoin(float64(c.terms.WritePrice) * sizeInGB(c.cap))
 	require.NoError(t, err)
 	var tx = newTransaction(c.id, ADDRESS, txVal, now)
+	tx.PublicKey = c.pk
 	balances.(*testBalances).setTransaction(t, tx)
 	var input = c.addBlobRequest(t)
 	return ssc.addBlobber(tx, input, balances)
@@ -395,7 +397,15 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	for i := 0; i < nblobs; i++ {
 		var b = addBlobber(t, ssc, blobberCapacity, now, avgTerms, blobberBalance, balances, isRestricted, isSpecialAllocation)
 		nar.Blobbers = append(nar.Blobbers, b.id)
-		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
+
+		if isRestricted || isSpecialAllocation {
+			blobberAuthTicket, err := b.scheme.Sign(client.id)
+			require.NoError(t, err)
+			nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, blobberAuthTicket)
+		} else {
+			nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
+		}
+
 		blobs = append(blobs, b)
 	}
 

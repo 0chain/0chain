@@ -468,6 +468,11 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 			return 0, err
 		}
 
+		sab.WritePool, err = currency.MinusCoin(sab.WritePool, c)
+		if err != nil {
+			return 0, err
+		}
+
 		cost, err = currency.AddCoin(cost, c)
 		if err != nil {
 			return 0, err

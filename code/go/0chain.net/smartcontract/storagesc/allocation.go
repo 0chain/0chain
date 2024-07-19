@@ -1122,17 +1122,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		alloc.Tx = t.Hash
 
 		if len(request.AddBlobberId) > 0 {
-			isEnterpriseAllocation := false
-			chainstate.WithActivation(balances, "electra", func() error {
-				return nil
-			}, func() error {
-				if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
-					isEnterpriseAllocation = true
-				}
-				return nil
-			})
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.AddBlobberAuthTicket, request.RemoveBlobberId, t.CreationDate, balances, sc, t, isEnterpriseAllocation,
+				conf, blobbers, request.AddBlobberId, request.AddBlobberAuthTicket, request.RemoveBlobberId, t.CreationDate, balances, sc, t, isSpecialStatus,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())
@@ -1179,12 +1170,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 	}
 
-	cp, err := sc.getChallengePool(alloc.ID, balances)
-	if err != nil {
-		return "", common.NewError("allocation_updating_failed", err.Error())
+	var cpBalance currency.Coin
+	if !isSpecialStatus {
+		cp, err := sc.getChallengePool(alloc.ID, balances)
+		if err != nil {
+			return "", common.NewError("allocation_updating_failed", err.Error())
+		}
+
+		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cp.Balance, request.Extend, t.CreationDate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cpBalance, request.Extend, t.CreationDate)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
