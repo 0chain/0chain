@@ -374,13 +374,15 @@ func (ps *PartialState) setMarshalFields(data map[string]interface{}) map[string
 	data["root"] = util.ToHex(ps.Hash)
 	data["version"] = ps.Version
 	nodes := make([][]byte, len(ps.Nodes))
-	deadNodes := make([][]byte, len(ps.DeadNodes))
+	deadNodes := make([][]byte, 0, len(ps.DeadNodes))
 	for idx, nd := range ps.Nodes {
 		nodes[idx] = nd.Encode()
 	}
 
-	for idx, nd := range ps.DeadNodes {
-		deadNodes[idx] = nd.Encode()
+	for _, nd := range ps.DeadNodes {
+		if nd != nil {
+			deadNodes = append(deadNodes, nd.Encode())
+		}
 	}
 	data["nodes"] = nodes
 	data["dead_nodes"] = deadNodes
