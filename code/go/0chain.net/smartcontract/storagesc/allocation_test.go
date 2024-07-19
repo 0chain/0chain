@@ -2196,7 +2196,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAlloc.mustBase())
 	})
 
-	t.Run("Extend unused allocation duration should work with extra payment equal to period of half of time unit", func(t *testing.T) {
+	t.Run("Enterprise : Extend unused allocation duration should work with extra payment equal to period of half of time unit", func(t *testing.T) {
 		var (
 			tp     = int64(0)
 			client = newClient(2000*x10, balances)
@@ -2285,43 +2285,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
-	t.Run("Extend used allocation duration should work with extra payment equal to period of half of time unit", func(t *testing.T) {
-		var (
-			tp     = int64(0)
-			client = newClient(2000*x10, balances)
-
-			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
-			allocID        = beforeAlloc.ID
-		)
-
-		// extend
-		var uar updateAllocationRequest
-		uar.ID = allocID
-		uar.Extend = true
-		tp += int64(360 * time.Hour / 1e9)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
-
-		resp, err = uar.callUpdateAllocReq(t, client.id, 50*x10, tp, ssc, balances)
-		require.NoError(t, err)
-
-		var deco StorageAllocation
-		require.NoError(t, deco.Decode([]byte(resp)))
-
-		afterAlloc, err := ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
-		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.mustBase().Tx, "Transaction should be updated")
-		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.mustBase().Expiration, "Allocation expiration should be increased")
-
-		expectedAlloc := beforeAlloc
-		expectedAlloc.Tx = afterAlloc.mustBase().Tx
-		expectedAlloc.Expiration = afterAlloc.mustBase().Expiration
-		compareAllocationData(t, *expectedAlloc, *afterAlloc.mustBase())
-	})
-
 	t.Run("Upgrade size in unused allocation should work", func(t *testing.T) {
 		var (
 			tp     = int64(0)
@@ -2338,6 +2301,52 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		uar.Size = 10 * GB
 		tp += int64(360 * time.Hour / 1e9)
 		resp, err := uar.callUpdateAllocReq(t, client.id, 100*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+
+		assert.Equal(t, int64(20*GB), afterAllocBase.Size, "Allocation size should be increased")
+		require.Equal(t, 200*x10, int(afterAllocBase.WritePool), "Write pool should be updated")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.Expiration = afterAllocBase.Expiration
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		expectedAlloc.Size = afterAllocBase.Size
+		for _, ba := range expectedAlloc.BlobberAllocs {
+			ba.Size += uar.Size / int64(afterAllocBase.DataShards)
+		}
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
+	})
+
+	t.Run("Enterprise : Upgrade size in unused allocation should work", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
+			allocID        = beforeAlloc.ID
+		)
+
+		// upgrade
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.Size = 10 * GB
+		tp += int64(360 * time.Hour / 1e9)
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+		resp, err = uar.callUpdateAllocReq(t, client.id, 150*x10, tp, ssc, balances) // 50 is paid as reward and new alloc cost is 200 with 50 already in WP.
 		require.NoError(t, err)
 
 		var deco StorageAllocation
@@ -2465,6 +2474,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
+
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
