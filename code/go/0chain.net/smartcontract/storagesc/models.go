@@ -1570,11 +1570,9 @@ func (sab *storageAllocationBase) validateEachBlobber(
 
 		electraHardfork := func() error {
 			if request.IsSpecialStatus && !b.IsSpecialStatus {
-				errs = append(errs, fmt.Sprintf("blobber %s is not special status", b.ID))
-				return nil
+				return fmt.Errorf("blobber %s is not special status", b.ID)
 			} else if !request.IsSpecialStatus && b.IsSpecialStatus {
-				errs = append(errs, fmt.Sprintf("blobber %s is special status", b.ID))
-				return nil
+				return fmt.Errorf("blobber %s is special status", b.ID)
 			}
 
 			snr := storageNodeResponseToStorageNodeV3(*b)
