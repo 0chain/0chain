@@ -197,6 +197,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 				ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 				WritePrice: zcnToBalance(writePrice),
 			},
+			SavedData: 1 * GB,
 		})
 
 		writePrice *= 0.9
@@ -243,8 +244,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 		allocation.deepCopy(base)
 		return nil
 	})
-
-	allocation = *sa.mustBase()
 
 	t.Run("cancel allocation", func(t *testing.T) {
 		err := testCancelAllocation(t, sa, *blobbers, blobberStakePools,
@@ -368,6 +367,7 @@ func TestFinalizeAllocation(t *testing.T) {
 				ReadPrice:  zcnToBalance(blobberYaml.readPrice),
 				WritePrice: zcnToBalance(writePrice),
 			},
+			SavedData: 1 * GB,
 		})
 
 		writePrice *= 0.9

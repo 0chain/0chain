@@ -615,7 +615,10 @@ func TestChangeBlobbers(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			blobbers, addID, removeID, sc, sa, now, balances := setup(tt.args)
-			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, "", removeID, now, balances, sc, clientId)
+			_, err := sa.changeBlobbers(&Config{TimeUnit: confTimeUnit}, blobbers, addID, "", removeID, now, balances, sc, &transaction.Transaction{
+				ClientID:     clientId,
+				CreationDate: now,
+			}, false)
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errMsg, err.Error())
@@ -691,8 +694,19 @@ func TestExtendAllocation(t *testing.T) {
 		chainState.StateContextI,
 	) {
 		var balances = &mocks.StateContextI{}
-		var ssc = StorageSmartContract{
 
+		h := chainState.NewHardFork("electra", 0)
+		balances.On("GetTrieNode", h.GetKey(),
+			mock.MatchedBy(func(s *chainState.HardFork) bool {
+				s = h
+				return true
+			})).Return(nil).Twice()
+
+		mockBlock := &block.Block{}
+		mockBlock.Round = 0
+		balances.On("GetBlock").Return(mockBlock).Twice()
+
+		var ssc = StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = transaction.Transaction{
@@ -836,6 +850,7 @@ func TestExtendAllocation(t *testing.T) {
 			err := ssc.extendAllocation(
 				txn,
 				conf,
+				false,
 				sa,
 				aBlobbers,
 				&tt.args.request,
@@ -852,6 +867,38 @@ func TestExtendAllocation(t *testing.T) {
 				//mock.AssertExpectationsForObjects(t, balances)
 			}
 		})
+	}
+}
+
+func enableHardForks(t *testing.T, tb chainState.StateContextI) {
+	h := chainState.NewHardFork("apollo", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("ares", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("artemis", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("athena", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("demeter", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("electra", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
 	}
 }
 

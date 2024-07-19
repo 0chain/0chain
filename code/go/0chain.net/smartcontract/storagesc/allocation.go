@@ -860,7 +860,7 @@ func (sc *StorageSmartContract) adjustChallengePool(
 func (sc *StorageSmartContract) extendAllocation(
 	txn *transaction.Transaction,
 	conf *Config,
-	sa *StorageAllocation,
+	isSpecialStatus bool,
 	alloc *storageAllocationBase,
 	blobbers []*StorageNode,
 	req *updateAllocationRequest,
@@ -870,7 +870,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	actErr := chainstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+		if isSpecialStatus {
 			cost, err := alloc.payCostForRdtuForEnterpriseAllocation(txn, balances)
 			if err != nil {
 				return fmt.Errorf("can't get cost for RDTU: %v", err)
@@ -985,12 +985,19 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+		if isSpecialStatus {
 			var remainingDuration = alloc.Expiration - txn.CreationDate
 			err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
 			if err != nil {
 				return common.NewErrorf("allocation_extending_failed", "%v", err)
 			}
+		} else {
+			var remainingDuration = alloc.Expiration - txn.CreationDate
+			err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
+			if err != nil {
+				return common.NewErrorf("allocation_extending_failed", "%v", err)
+			}
+			return nil
 		}
 		return nil
 	})
@@ -1092,10 +1099,20 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			err.Error())
 	}
 
+	isSpecialStatus := false
+	_ = chainstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+			isSpecialStatus = true
+		}
+		return nil
+	})
+
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
 	if t.ClientID != alloc.Owner /* Third-party actions */ {
-		err = sc.extendAllocation(t, conf, sa, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, conf, isSpecialStatus, alloc, blobbers, &request, balances)
 		if err != nil {
 			return "", err
 		}
@@ -1130,7 +1147,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		// if size or expiration increased, then we use new terms
 		// otherwise, we use the same terms
 		if request.Extend {
-			err = sc.extendAllocation(t, conf, sa, alloc, blobbers, &request, balances)
+			err = sc.extendAllocation(t, conf, isSpecialStatus, alloc, blobbers, &request, balances)
 			if err != nil {
 				return "", err
 			}
@@ -1173,7 +1190,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	if t.Value < tokensRequiredToLock {
-		actErr := chainstate.WithActivation(balances, "demeter", func() error {
+		actErr = chainstate.WithActivation(balances, "demeter", func() error {
 			return common.NewError("allocation_updating_failed",
 				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock))
 		}, func() error {
@@ -1438,7 +1455,17 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		sps = append(sps, sp)
 	}
 
-	err = sc.finishAllocation(t, sa, alloc, passRates, sps, balances, conf)
+	isSpecialStatus := false
+	_ = chainstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+			isSpecialStatus = true
+		}
+		return nil
+	})
+
+	err = sc.finishAllocation(t, isSpecialStatus, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
@@ -1551,7 +1578,17 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 		sps = append(sps, sp)
 	}
 
-	err = sc.finishAllocation(t, sa, alloc, passRates, sps, balances, conf)
+	isSpecialStatus := false
+	_ = chainstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+			isSpecialStatus = true
+		}
+		return nil
+	})
+
+	err = sc.finishAllocation(t, isSpecialStatus, alloc, passRates, sps, balances, conf)
 	if err != nil {
 		return nil, common.NewError("fini_alloc_failed", err.Error())
 	}
@@ -1569,7 +1606,7 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 
 func (sc *StorageSmartContract) finishAllocation(
 	t *transaction.Transaction,
-	sa *StorageAllocation,
+	isSpecialStatus bool,
 	alloc *storageAllocationBase,
 	passRates []float64,
 	sps []*stakePool,
@@ -1581,17 +1618,14 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", alloc.ID, err)
 	}
 
-	isSpecialStatus := false
-	_ = chainstate.WithActivation(balances, "electra", func() error {
-		return nil
-	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
-			isSpecialStatus = true
+	if isSpecialStatus {
+		var cost currency.Coin
+		if cost, err = alloc.payCostForRdtuForEnterpriseAllocation(t, balances); err != nil {
+			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 		}
-		return nil
-	})
 
-	if !isSpecialStatus {
+		logging.Logger.Info("finishAllocation: cost for RDTU", zap.Any("cost", cost))
+	} else {
 		if err = alloc.payChallengePoolPassPayments(sps, balances, cp, passRates, conf, sc, t.CreationDate); err != nil {
 			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 		}
@@ -1599,13 +1633,6 @@ func (sc *StorageSmartContract) finishAllocation(
 		if err = alloc.payCancellationCharge(sps, balances, passRates, conf, sc, t); err != nil {
 			return fmt.Errorf("4 error paying cancellation charge: %v", err)
 		}
-	} else {
-		var cost currency.Coin
-		if cost, err = alloc.payCostForRdtuForEnterpriseAllocation(t, balances); err != nil {
-			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
-		}
-
-		logging.Logger.Info("finishAllocation: cost for RDTU", zap.Any("cost", cost))
 	}
 
 	for i, d := range alloc.BlobberAllocs {
