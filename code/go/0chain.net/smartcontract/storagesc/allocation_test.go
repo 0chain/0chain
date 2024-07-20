@@ -2475,6 +2475,75 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
+	t.Run("Enterprise : Add blobber to unused allocation should work without extra payment", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
+			allocID        = beforeAlloc.ID
+		)
+
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
+
+		// add blobber
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.AddBlobberId = nb3.id
+		uar.AddBlobberAuthTicket = ""
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		expectedErr := common.NewError("allocation_updating_failed", fmt.Sprintf("blobber %s is not special status", nb3.id))
+		require.ErrorIs(t, expectedErr, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		expectedErr = common.NewError("allocation_updating_failed", fmt.Sprintf("blobber %s is not special status", nb3.id))
+		require.ErrorIs(t, expectedErr, err)
+
+		blobber3, err := ssc.getBlobber(nb3.id, balances)
+		require.NoError(t, err)
+		blobber3.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+			b := e.(*storageNodeV3)
+			b.IsSpecialStatus = new(bool)
+			*b.IsSpecialStatus = true
+			return nil
+		})
+		_, err = balances.InsertTrieNode(blobber3.GetKey(), blobber3)
+		require.NoError(t, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		expectedErr = common.NewError("allocation_updating_failed", fmt.Sprintf("blobber %s auth ticket verification failed: invalid_auth_ticket: empty auth ticket", nb3.id))
+		require.ErrorIs(t, expectedErr, err)
+
+		b3AuthTicket, err := nb3.scheme.Sign(client.id)
+		require.NoError(t, err)
+		uar.AddBlobberAuthTicket = b3AuthTicket
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+		assert.Equal(t, 21, len(afterAllocBase.BlobberAllocs), "Blobber should be added to the allocation")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.ParityShards = 11
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		randAllocDeepCopy := afterAlloc.deepCopy(t)
+		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, randAllocDeepCopy.mustBase().BlobberAllocs[0])
+		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
+	})
+
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {

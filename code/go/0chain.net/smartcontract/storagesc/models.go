@@ -1442,6 +1442,12 @@ func (sab *storageAllocationBase) changeBlobbers(
 			return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV3)
 
+				if isEnterpriseBlobber {
+					if b.IsSpecialStatus == nil || !*b.IsSpecialStatus {
+						return fmt.Errorf("blobber %s is not special status", b.ID)
+					}
+				}
+
 				if (b.IsSpecialStatus != nil && *b.IsSpecialStatus) || (b.IsRestricted != nil && *b.IsRestricted) {
 					success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
 					if err != nil {
