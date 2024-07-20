@@ -407,23 +407,23 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				zap.Int64("end round", cr+reqNum+1))
 			go c.requestBlocks(ctx, cr, reqNum)
 		default:
+			cr := c.GetCurrentRound()
+			lfb := c.GetLatestFinalizedBlock()
 			bItem, ok := c.blockBuffer.First()
 			if !ok {
 				// no block in buffer to process
+				if !node.Self.IsSharder() {
+					if lfb.Round > plfb.Round {
+						plfb = lfb
+						stuckCheckTimer.Reset(10 * time.Second)
+						// continue
+					}
+				}
 				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 
-			cr := c.GetCurrentRound()
-			lfb := c.GetLatestFinalizedBlock()
-			// if !node.Self.IsSharder() {
-			// 	if lfb.Round > plfb.Round {
-			// 		plfb = lfb
-			// 		stuckCheckTimer.Reset(10 * time.Second)
-			// 		continue
-			// 	}
-			// }
-
+			stuckCheckTimer.Reset(10 * time.Second)
 			b := bItem.Data.(*block.Block)
 
 			logging.Logger.Debug("process block, received block",
