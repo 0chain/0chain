@@ -111,7 +111,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sne.LastHealthCheck = 0
 	sne.StakePoolSettings.MaxNumDelegates = 100
 	sne.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
-	sne.StakePoolSettings.DelegateWallet = c.id
+	sne.StakePoolSettings.DelegateWallet = "rand_delegate_wallet"
 	*sne.IsRestricted = c.isRestricted
 	*sne.IsSpecialStatus = c.isSpecialStatus
 	sn.SetEntity(sne)
@@ -196,7 +196,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int
 
 	var (
 		input = blob.Encode()
-		tx    = newTransaction(blob.Id(), ADDRESS, value, now)
+		tx    = newTransaction("rand_delegate_wallet", ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	return ssc.updateBlobberSettings(tx, input, balances)
