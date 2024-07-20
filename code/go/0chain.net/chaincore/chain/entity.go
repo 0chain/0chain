@@ -426,7 +426,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			}
 			c.blockBuffer.Pop()
 
-			stuckCheckTimer.Reset(10 * time.Second)
+			// stuckCheckTimer.Reset(10 * time.Second)
 			b := bItem.Data.(*block.Block)
 
 			logging.Logger.Debug("process block, received block",
@@ -679,11 +679,17 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 		}
 
 		if err := c.ComputeState(ctx, b); err != nil {
-			select {
-			case errC <- err:
-			default:
+			if err := c.GetBlockStateChange(b); err != nil {
+				logging.Logger.Warn("add notarized block - sync block state failed",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("prev block", b.PrevHash),
+					zap.Error(err))
+				select {
+				case errC <- fmt.Errorf("failed to sync block state changes: %d, err: %v", b.Round, err):
+				default:
+				}
 			}
-			return
 		}
 	}(cctx)
 
