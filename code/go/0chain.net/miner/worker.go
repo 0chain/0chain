@@ -122,6 +122,11 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+		case nr := <-mc.GetNotifyMoveToNextRoundC():
+			logging.Logger.Debug("notify move to next round",
+				zap.Int64("round", nr.GetRoundNumber()),
+				zap.Int64("next round", nr.GetRoundNumber()+1))
+			mc.ProgressOnNotarization(nr.(*Round))
 		case <-timer.C:
 			if !mc.isStarted() {
 				break

@@ -230,10 +230,15 @@ type Chain struct {
 
 	stateCache *statecache.StateCache
 
-	blockBuffer      *orderbuffer.OrderBuffer
-	processingBlocks *cache.LRU[string, struct{}]
-	pbMutex          sync.RWMutex
-	notifySyncBlockC chan struct{}
+	blockBuffer            *orderbuffer.OrderBuffer
+	processingBlocks       *cache.LRU[string, struct{}]
+	pbMutex                sync.RWMutex
+	notifySyncBlockC       chan struct{}
+	notifyMoveToNextRoundC chan round.RoundI
+}
+
+func (c *Chain) GetNotifyMoveToNextRoundC() chan round.RoundI {
+	return c.notifyMoveToNextRoundC
 }
 
 func (c *Chain) PushToBlockProcessor(b *block.Block) error {
@@ -700,8 +705,20 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 	c.SetCurrentRound(r.GetRoundNumber())
 	c.UpdateNodeState(b)
 
+	// TODO: notarization to move to next round
+	if !node.Self.IsSharder() {
+		c.notifyMoveToNextRound(r)
+	}
+
 	go c.FinalizeRound(r)
 	return nil
+}
+
+func (c *Chain) notifyMoveToNextRound(r round.RoundI) {
+	select {
+	case c.notifyMoveToNextRoundC <- r:
+	default:
+	}
 }
 
 func (c *Chain) StoreRound(r *round.Round) error {
@@ -1078,6 +1095,7 @@ func Provider() datastore.Entity {
 
 	c.computeBlockStateC = make(chan struct{}, 1)
 	c.notifySyncBlockC = make(chan struct{}, 1)
+	c.notifyMoveToNextRoundC = make(chan *round.Round, 1)
 	return c
 }
 
