@@ -1146,7 +1146,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	return true
 }
 
-func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *round.Round, beforeStartNextRound func()) {
+func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *Round, beforeStartNextRound func()) {
 	r.SetPhase(round.Complete)
 	var (
 		rn = r.GetRoundNumber()
