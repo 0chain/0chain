@@ -419,6 +419,8 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 						// continue
 					}
 				}
+				// see no block in buffer to process
+				syncing = false
 				time.Sleep(100 * time.Millisecond)
 				continue
 			}
