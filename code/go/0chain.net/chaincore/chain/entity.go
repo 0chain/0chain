@@ -1095,7 +1095,7 @@ func Provider() datastore.Entity {
 
 	c.computeBlockStateC = make(chan struct{}, 1)
 	c.notifySyncBlockC = make(chan struct{}, 1)
-	c.notifyMoveToNextRoundC = make(chan *round.Round, 1)
+	c.notifyMoveToNextRoundC = make(chan round.RoundI, 1)
 	return c
 }
 
