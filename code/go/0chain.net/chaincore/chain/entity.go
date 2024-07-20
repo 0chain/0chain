@@ -424,6 +424,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				time.Sleep(100 * time.Millisecond)
 				continue
 			}
+			c.blockBuffer.Pop()
 
 			stuckCheckTimer.Reset(10 * time.Second)
 			b := bItem.Data.(*block.Block)
@@ -490,7 +491,6 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					continue
 				}
 			}
-			c.blockBuffer.Pop()
 
 			lfbTk := c.GetLatestLFBTicket(ctx)
 			lfb = c.GetLatestFinalizedBlock()
