@@ -123,10 +123,13 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case nr := <-mc.GetNotifyMoveToNextRoundC():
+			roundNum := nr.GetRoundNumber()
 			logging.Logger.Debug("notify move to next round",
-				zap.Int64("round", nr.GetRoundNumber()),
-				zap.Int64("next round", nr.GetRoundNumber()+1))
-			mc.ProgressOnNotarization(nr.(*Round))
+				zap.Int64("round", roundNum),
+				zap.Int64("next round", roundNum+1))
+			if mr := mc.GetMinerRound(nr.GetRoundNumber()); mr != nil {
+				mc.ProgressOnNotarization(mr)
+			}
 		case <-timer.C:
 			if !mc.isStarted() {
 				break
