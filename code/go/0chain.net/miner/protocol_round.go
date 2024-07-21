@@ -690,7 +690,7 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 			if err != nil {
 				return false
 			}
-			return get.(bool)
+			return get
 		case <-ctx.Done():
 			{
 				return false
@@ -702,10 +702,10 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 	if err != nil {
 		return false
 	}
-	return get.(bool)
+	return get
 }
 
-//nolint: staticcheck
+// nolint: staticcheck
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	//we don't want to cancel previous notarization too early, previous block should be notarized often
 	var cancel func()

@@ -45,7 +45,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 			return nil, err
 		}
 	} else {
-		ts = t.(*transaction.TransactionSummary)
+		ts = t
 	}
 	confirmation := new(transaction.Confirmation)
 	confirmation.Version = "1.0"
@@ -78,7 +78,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 			return confirmation, nil
 		}
 	} else {
-		b = bc.(*block.Block)
+		b = bc
 		confirmation.Round = b.Round
 		confirmation.MinerID = b.MinerID
 		confirmation.RoundRandomSeed = b.GetRoundRandomSeed()
