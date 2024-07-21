@@ -1601,6 +1601,7 @@ func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
 }
 
 func (mc *Chain) restartRound(ctx context.Context, rn int64) {
+	BumpLFBTicket(ctx, mc)
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
 	mc.IncrementRoundTimeoutCount()
