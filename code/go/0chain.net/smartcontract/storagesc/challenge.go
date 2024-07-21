@@ -640,7 +640,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
-		//nolint:errcheck 
+		//nolint:errcheck
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.RewardRound = RewardRound{
 				StartRound: rewardRound,
@@ -1109,7 +1109,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				return nil
 			}, func() error {
 				if cstate.ErrValueNotPresent(err) {
-					err = validators.Remove(balances, validator.Id())
+					err = validators.Remove(balances, randValidator.Id)
 					if err != nil {
 						return common.NewError("add_challenge",
 							"error removing validator from partition: "+err.Error())
