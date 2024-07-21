@@ -168,6 +168,10 @@ func main() {
 		selfNode.Type = node.NodeTypeSharder
 		selfNode.Path = path
 		selfNode.Description = description
+	} else {
+		if initStateErr != nil {
+			Logger.Panic("Failed to read initialStates", zap.Error(initStateErr))
+		}
 	}
 	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")

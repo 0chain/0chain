@@ -1,10 +1,10 @@
 package block
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"fmt"
+
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/0chain/common/core/util"
-	"time"
 )
 
 func blockToBlockEvent(block *Block) *event.Block {
@@ -26,7 +26,6 @@ func blockToBlockEvent(block *Block) *event.Block {
 		StateChangesCount:     block.StateChangesCount,
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
-		FinalizationTime:      time.Now(),
 	}
 }
 
@@ -38,6 +37,5 @@ func CreateFinalizeBlockEvent(block *Block) event.Event {
 		Tag:         event.TagFinalizeBlock,
 		Index:       block.Hash,
 		Data:        blockToBlockEvent(block),
-		Version:     event.Version1,
 	}
 }

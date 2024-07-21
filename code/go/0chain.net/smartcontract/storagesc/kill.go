@@ -147,15 +147,6 @@ func (_ *StorageSmartContract) killValidator(
 				}
 			}
 
-			actErr := cstate.WithActivation(balances, "demeter", func() error {
-				return nil
-			}, func() error {
-				return validatorPartitions.Save(balances)
-			})
-			if actErr != nil {
-				return nil, nil, actErr
-			}
-
 			sp, err = getStakePoolAdapter(validator.Type(), validator.Id(), balances)
 			if err != nil {
 				return nil, nil, err

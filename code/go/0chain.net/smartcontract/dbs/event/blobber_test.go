@@ -20,11 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	MB                   = KB * 1024
-	GB                   = MB * 1024
-	testBlobberSavedData = 1000
-)
+const testBlobberSavedData = 1000
 
 func init() {
 	logging.Logger = zap.NewNop()

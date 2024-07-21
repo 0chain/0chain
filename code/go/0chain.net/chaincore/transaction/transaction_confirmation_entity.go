@@ -6,7 +6,7 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
-//swagger:model Confirmation - a data structure that provides the confirmation that a transaction is included into the block chain
+/*Confirmation - a data structure that provides the confirmation that a transaction is included into the block chain */
 type Confirmation struct {
 	Version           string       `json:"version"`
 	Hash              string       `json:"hash"`

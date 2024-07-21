@@ -54,7 +54,6 @@ type Allocations struct {
 	List SortedList
 }
 
-//nolint:unused
 func (a *Allocations) has(id string) (ok bool) {
 	_, ok = a.List.getIndex(id)
 	return // false
@@ -504,50 +503,58 @@ func (d *BlobberAllocation) removeBlobberPassRates(alloc *StorageAllocation, max
 	var nonRemovedChallenges []*AllocOpenChallenge
 	var removedChallengeIds []string
 
-	for _, oc := range allocChallenges.OpenChallenges {
-		if oc.BlobberID != d.BlobberID {
-			nonRemovedChallenges = append(nonRemovedChallenges, oc)
-			continue
-		}
-
-		if d.Stats == nil {
-			d.Stats = new(StorageAllocationStats) // make sure
-		}
-
-		var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
-		currentRound := balances.GetBlock().Round
-
-		d.Stats.OpenChallenges--
-		alloc.Stats.OpenChallenges--
-
-		if expire < currentRound {
-			d.Stats.FailedChallenges++
-			alloc.Stats.FailedChallenges++
-
-			err := emitUpdateChallenge(&StorageChallenge{
-				ID:           oc.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    oc.BlobberID,
-			}, false, ChallengeRespondedLate, balances, alloc.Stats)
-			if err != nil {
-				return 0.0, err
+	switch err {
+	case util.ErrValueNotPresent:
+		return 1, nil
+	case nil:
+		for _, oc := range allocChallenges.OpenChallenges {
+			if oc.BlobberID != d.BlobberID {
+				nonRemovedChallenges = append(nonRemovedChallenges, oc)
+				continue
 			}
 
-		} else {
-			d.Stats.SuccessChallenges++
-			alloc.Stats.SuccessChallenges++
-
-			err := emitUpdateChallenge(&StorageChallenge{
-				ID:           oc.ID,
-				AllocationID: alloc.ID,
-				BlobberID:    oc.BlobberID,
-			}, true, ChallengeResponded, balances, alloc.Stats)
-			if err != nil {
-				return 0.0, err
+			if d.Stats == nil {
+				d.Stats = new(StorageAllocationStats) // make sure
 			}
+
+			var expire = oc.RoundCreatedAt + maxChallengeCompletionRounds
+			currentRound := balances.GetBlock().Round
+
+			d.Stats.OpenChallenges--
+			alloc.Stats.OpenChallenges--
+
+			if expire < currentRound {
+				d.Stats.FailedChallenges++
+				alloc.Stats.FailedChallenges++
+
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, false, ChallengeRespondedLate, balances, alloc.Stats)
+				if err != nil {
+					return 0.0, err
+				}
+
+			} else {
+				d.Stats.SuccessChallenges++
+				alloc.Stats.SuccessChallenges++
+
+				err := emitUpdateChallenge(&StorageChallenge{
+					ID:           oc.ID,
+					AllocationID: alloc.ID,
+					BlobberID:    oc.BlobberID,
+				}, true, ChallengeResponded, balances, alloc.Stats)
+				if err != nil {
+					return 0.0, err
+				}
+			}
+
+			removedChallengeIds = append(removedChallengeIds, oc.ID)
 		}
 
-		removedChallengeIds = append(removedChallengeIds, oc.ID)
+	default:
+		return 0.0, fmt.Errorf("getting allocation challenge: %v", err)
 	}
 
 	allocChallenges.OpenChallenges = nonRemovedChallenges
@@ -721,9 +728,9 @@ func (d *BlobberAllocation) challengePenaltyOnFinalization(conf *Config, alloc *
 
 func (d *BlobberAllocation) payCancellationCharge(alloc *StorageAllocation, sp *stakePool, balances chainstate.StateContextI, sc *StorageSmartContract, passRate float64, totalWritePrice, cancellationCharge currency.Coin) (currency.Coin, error) {
 	blobberWritePriceWeight := float64(d.Terms.WritePrice) / float64(totalWritePrice)
-	reward, _ := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight * passRate)
+	reward, err := currency.Float64ToCoin(float64(cancellationCharge) * blobberWritePriceWeight * passRate)
 
-	err := sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
+	err = sp.DistributeRewards(reward, d.BlobberID, spenum.Blobber, spenum.CancellationChargeReward, balances, alloc.ID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to distribute rewards, blobber: %s, err: %v", d.BlobberID, err)
 	}
@@ -1272,7 +1279,6 @@ func (sa *StorageAllocation) costForRDTU(now common.Timestamp) (currency.Coin, e
 	return cost, nil
 }
 
-//nolint:unused
 func (ba *BlobberAllocation) cost() (currency.Coin, error) {
 	cost, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 	if err != nil {
@@ -1374,12 +1380,6 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 						cp, e = sc.getChallengePool(sa.ID, balances)
 						if e != nil {
 							e = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
-
-							if demeterActErr := cstate.WithActivation(balances, "demeter", func() (e error) { return }, func() error {
-								return e
-							}); demeterActErr != nil {
-								return demeterActErr
-							}
 						}
 
 						e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
@@ -1428,15 +1428,10 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"error removing offer: "+err.Error())
 			}
 
-			actErr = cstate.WithActivation(balances, "demeter", func() (e error) {
-				actErr = cstate.WithActivation(balances, "athena", func() (e error) { return },
-					func() (e error) {
-						return sp.Save(spenum.Blobber, d.BlobberID, balances)
-					})
-				return actErr
-			}, func() (e error) {
-				return nil
-			})
+			actErr = cstate.WithActivation(balances, "athena", func() (e error) { return },
+				func() (e error) {
+					return sp.Save(spenum.Blobber, d.BlobberID, balances)
+				})
 			if actErr != nil {
 				return actErr
 			}
@@ -1454,21 +1449,12 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
-			actErr = cstate.WithActivation(balances, "demeter", func() (e error) { return },
-				func() (e error) {
-					return sp.Save(spenum.Blobber, d.BlobberID, balances)
-				})
-			if actErr != nil {
-				return actErr
-			}
-
 			blobber, err := sc.getBlobber(d.BlobberID, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"can't get blobber "+d.BlobberID+": "+err.Error())
 			}
 
-			//nolint:errcheck
 			blobber.mustUpdateBase(func(b *storageNodeBase) error {
 				b.SavedData += -d.Stats.UsedSize
 				b.Allocated += -d.Size
@@ -1605,7 +1591,6 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, actErr
 	}
 
-	//nolint:errcheck
 	addedBlobber.mustUpdateBase(func(b *storageNodeBase) error {
 		b.Allocated += sa.bSize() // Why increase allocation then check if the free capacity is enough?
 		return nil
@@ -1646,12 +1631,10 @@ func (sa *StorageAllocation) save(state cstate.StateContextI, scAddress string) 
 
 type StorageAllocationDecode StorageAllocation
 
-//nolint:unused
 type filterBlobberFunc func(blobber *StorageNode) (kick bool, err error)
 
 type filterValidatorFunc func(validator *ValidationNode) (kick bool, err error)
 
-//nolint:unused
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
 	filtered []*StorageNode, err error) {

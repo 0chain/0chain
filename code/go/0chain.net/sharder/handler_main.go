@@ -18,27 +18,6 @@ func SetupHandlers() {
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */
-// swagger:route GET /v1/transaction/get/confirmation sharder GetTransactionConfirmationz
-// Get transaction confirmation.
-// Get the confirmation of the transaction from the sharders.
-// If content == confirmation, only the confirmation is returned. Otherwise, the confirmation and the latest finalized block are returned.
-//
-// parameters:
-//    +name: hash
-//      in: query
-//      required: true
-//      type: string
-//      description: Transaction hash
-//    +name: content
-//      in: query
-//      required: false
-//      type: string
-//      description: confirmation or error
-//      default: confirmation
-//
-// responses:
-//    200: ConfirmationResponse
-//    400:
 func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	hash := r.FormValue("hash")
 	if hash == "" {

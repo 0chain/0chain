@@ -202,18 +202,17 @@ type DbAccess struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
 
-	MaxIdleConns        int           `json:"max_idle_conns"`
-	MaxOpenConns        int           `json:"max_open_conns"`
-	ConnMaxLifetime     time.Duration `json:"conn_max_lifetime"`
-	Slowtablespace      string        `json:"slowtablespace"`
-	KafkaEnabled        bool
-	KafkaHost           string
-	KafkaTopic          string
-	KafkaTopicPartition int // doesnt work correctly. this value gets overridden at kafka broker.
-	KafkaUsername       string
-	KafkaPassword       string
-	KafkaWriteTimeout   time.Duration
-	KafkaTriggerRound   int64
+	MaxIdleConns      int           `json:"max_idle_conns"`
+	MaxOpenConns      int           `json:"max_open_conns"`
+	ConnMaxLifetime   time.Duration `json:"conn_max_lifetime"`
+	Slowtablespace    string        `json:"slowtablespace"`
+	KafkaEnabled      bool
+	KafkaHost         string
+	KafkaTopic        string
+	KafkaUsername     string
+	KafkaPassword     string
+	KafkaWriteTimeout time.Duration
+	KafkaTriggerRound int64
 }
 
 type DbSettings struct {

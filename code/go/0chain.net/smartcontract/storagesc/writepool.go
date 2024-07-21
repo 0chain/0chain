@@ -29,12 +29,10 @@ func (lr *lockRequest) decode(input []byte) (err error) {
 	return // ok
 }
 
-//nolint:unused
 type unlockRequest struct {
 	AllocationID string `json:"allocation_id"`
 }
 
-//nolint:unused
 func (ur *unlockRequest) decode(input []byte) error {
 	return json.Unmarshal(input, ur)
 }

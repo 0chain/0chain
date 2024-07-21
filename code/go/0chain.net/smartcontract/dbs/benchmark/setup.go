@@ -156,6 +156,26 @@ func AddMockUsers(
 	if res := eventDb.Store.Get().Create(&users); res.Error != nil {
 		log.Fatal(res.Error)
 	}
+	andMockUserSnapshots(users, eventDb)
+}
+
+func andMockUserSnapshots(users []event.User, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
+	var aggregates []event.UserAggregate
+	for _, user := range users {
+		aggregate := event.UserAggregate{
+			Round:  viper.GetInt64(benchmark.NumBlocks) - 1,
+			UserID: user.UserID,
+		}
+		aggregates = append(aggregates, aggregate)
+	}
+
+	res := edb.Store.Get().Create(&aggregates)
+	if res.Error != nil {
+		log.Fatal(res.Error)
+	}
 }
 
 func GetMockBlockHash(blockNumber int64) string {

@@ -56,8 +56,6 @@ func (tb *testBalances) GetTransfers() []*state.Transfer              { return n
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)   {}
 func (tb *testBalances) GetEventDB() *event.EventDb                   { return nil }
-func (tb *testBalances) EmitEventWithVersion(eventVersion event.EventVersion, eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...cstate.Appender) {
-}
 func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, interface{}, ...cstate.Appender) {
 }
 func (tb *testBalances) EmitError(error)                             {}

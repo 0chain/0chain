@@ -75,7 +75,6 @@ func (sn *StorageNode) IsActive(now common.Timestamp, healthCheckPeriod time.Dur
 
 // implement provider.AbstractProvider interface
 func (sn *StorageNode) Kill() {
-	//nolint:errcheck
 	sn.mustUpdateBase(func(b *storageNodeBase) error {
 		b.Kill()
 		return nil
@@ -103,7 +102,6 @@ func (sn *StorageNode) Type() spenum.Provider {
 
 // implement provider.AbstractProvider interface
 func (sn *StorageNode) ShutDown() {
-	//nolint:errcheck
 	sn.mustUpdateBase(func(b *storageNodeBase) error {
 		b.ShutDown()
 		return nil

@@ -22,18 +22,18 @@ const (
 )
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
-	newValidatorObject := newValidator("")
-	err := newValidatorObject.Decode(input) // json.Unmarshal(input, &newValidatorObject)
+	newValidator := newValidator("")
+	err := newValidator.Decode(input) // json.Unmarshal(input, &newValidator)
 	if err != nil {
 		return "", err
 	}
-	newValidatorObject.ID = t.ClientID
-	newValidatorObject.PublicKey = t.PublicKey
-	newValidatorObject.ProviderType = spenum.Validator
-	newValidatorObject.LastHealthCheck = t.CreationDate
+	newValidator.ID = t.ClientID
+	newValidator.PublicKey = t.PublicKey
+	newValidator.ProviderType = spenum.Validator
+	newValidator.LastHealthCheck = t.CreationDate
 
 	// Check delegate wallet and operational wallet are not the same
-	if err := commonsc.ValidateDelegateWallet(newValidatorObject.PublicKey, newValidatorObject.StakePoolSettings.DelegateWallet); err != nil {
+	if err := commonsc.ValidateDelegateWallet(newValidator.PublicKey, newValidator.StakePoolSettings.DelegateWallet); err != nil {
 		return "", err
 	}
 
@@ -53,7 +53,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			balances,
 			&ValidationPartitionNode{
 				Id:  t.ClientID,
-				Url: newValidatorObject.BaseURL,
+				Url: newValidator.BaseURL,
 			})
 		if err != nil {
 			return "", err
@@ -63,35 +63,9 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			return "", err
 		}
 
-		_, err = balances.InsertTrieNode(newValidatorObject.GetKey(sc.ID), newValidatorObject)
+		_, err = balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
 		if err != nil {
 			return "", err
-		}
-
-		actErr := state.WithActivation(balances, "demeter", func() error {
-			return nil
-		}, func() error {
-			has, err := sc.hasValidatorUrl(newValidatorObject.BaseURL, balances)
-			if err != nil {
-				return fmt.Errorf("could not check validator url: %v", err)
-			}
-
-			if has {
-				return fmt.Errorf("invalid validator, url: %s already used", newValidatorObject.BaseURL)
-			}
-
-			// Save url
-			if newValidatorObject.BaseURL != "" {
-				_, err = balances.InsertTrieNode(newValidatorObject.GetUrlKey(sc.ID), &datastore.NOIDField{})
-				if err != nil {
-					return common.NewError("add_or_update_validator_failed",
-						"saving blobber url: "+err.Error())
-				}
-			}
-			return nil
-		})
-		if actErr != nil {
-			return "", actErr
 		}
 
 		sc.statIncr(statAddValidator)
@@ -110,7 +84,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
 	sp, err = sc.getOrCreateStakePool(conf, spenum.Validator, t.ClientID,
-		newValidatorObject.StakePoolSettings, balances)
+		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
@@ -120,11 +94,11 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			"saving stake pool error: "+err.Error())
 	}
 
-	if err = newValidatorObject.emitAddOrOverwrite(sp, balances); err != nil {
+	if err = newValidator.emitAddOrOverwrite(sp, balances); err != nil {
 		return "", common.NewErrorf("add_validator_failed", "emmiting Validation node failed: %v", err.Error())
 	}
 
-	buff := newValidatorObject.Encode()
+	buff := newValidator.Encode()
 	return string(buff), nil
 }
 
@@ -341,38 +315,6 @@ func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("validator_health_check_failed",
 			"can't Save validator: "+err.Error())
-	}
-
-	return string(validator.Encode()), nil
-}
-
-func (sc *StorageSmartContract) fixValidatorBaseUrl(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
-	var req dto.FixValidatorRequest
-	err := json.Unmarshal(input, &req)
-	if err != nil {
-		return "", common.NewError("fix_validator_failed", "invalid request")
-	}
-
-	validator, err := sc.getValidator(req.ValidatorID, balances)
-	if err != nil {
-		return "", common.NewError("fix_validator_failed", "validator not found")
-	}
-
-	has, err := sc.hasValidatorUrl(validator.BaseURL, balances)
-	if err != nil {
-		return "", common.NewError("fix_validator_failed", "could not check validator url")
-	}
-
-	if has {
-		return "", common.NewError("fix_validator_failed", "invalid validator, url already used")
-	}
-
-	// Save url
-	if validator.BaseURL != "" {
-		_, err = balances.InsertTrieNode(validator.GetUrlKey(sc.ID), &datastore.NOIDField{})
-		if err != nil {
-			return "", common.NewError("fix_validator_failed", "saving blobber url: "+err.Error())
-		}
 	}
 
 	return string(validator.Encode()), nil

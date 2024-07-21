@@ -35,7 +35,6 @@ func (frm *freeStorageMarker) decode(b []byte) error {
 	return json.Unmarshal(b, frm)
 }
 
-// swagger:model freeStorageAllocationInput
 type freeStorageAllocationInput struct {
 	RecipientPublicKey string   `json:"recipient_public_key"`
 	Marker             string   `json:"marker"`

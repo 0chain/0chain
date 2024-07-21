@@ -113,6 +113,9 @@ func (gn *GlobalNode) UpdateConfig(cfg *config.StringMap) (err error) {
 				return fmt.Errorf("key %s, unable to convert %v to currency.Coin", key, value)
 			}
 			gn.MaxFee = currency.Coin(amount)
+			if err != nil {
+				return err
+			}
 		case OwnerID:
 			gn.OwnerId = value
 		case Cost:

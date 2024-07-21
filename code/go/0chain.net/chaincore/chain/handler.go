@@ -162,12 +162,6 @@ func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 	return datastore.GetEntityHandler(ctx, r, chainEntityMetadata, "id")
 }
 
-// swagger:route GET /v1/block/get/fee_stats miner sharder GetBlockFeeStats
-// Get block fee stats.
-// Returns the fee statistics for the transactions of the LFB (latest finalized block). No parameters needed.
-//
-// responses:
-//   200: BlockFeeStatsResponse
 func LatestBlockFeeStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return GetServerChain().FeeStats, nil
 }
@@ -225,13 +219,6 @@ func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error
 }
 
 /*RecentFinalizedBlockHandler - provide the latest finalized block by this miner */
-// swagger:route GET /v1/block/get/recent_finalized miner sharder GetRecentFinalizedBlock
-// Get recent finalized blocks.
-// Returns a list of the 10 most recent finalized blocks. No parameters needed.
-//
-// responses:
-//   200: []BlockSummary
-//   400:
 func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	fbs := make([]*block.BlockSummary, 0, 10)
 	for i, b := 0, GetServerChain().GetLatestFinalizedBlock(); i < 10 && b != nil; i, b = i+1, b.PrevBlock {
@@ -1231,13 +1218,6 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 /*InfoHandler - handler to get the information of the chain */
-// swagger:route GET /v1/diagnostics/get/info miner sharder GetDiagnosticsInfo
-// Get latest block and round metrics cached in the miner.
-// Returns the latest block/round information known to the node. No parameters needed.
-//
-// Responses:
-//   200: InfoResponse
-
 func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	idx := 0
 	chainInfo := chainMetrics.GetAll()
@@ -1374,19 +1354,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-// swagger:route POST /v1/transaction/put miner PutTransaction
-// Put Transaction.
-// Put a transaction to the transaction pool.
-// Transaction size cannot exceed the max payload size which is a global configuration of the chain.
-//
-// Consumes:
-//    - application/json
-//
-// responses:
-//
-//	200: Transaction
-//	400:
-//	500:
+/*PutTransaction - for validation of transactions using chain level parameters */
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
@@ -2071,15 +2039,6 @@ func SetupSharderHandlers(c Chainer) {
 	setupHandlers(handlersMap(c))
 }
 
-// swagger:route GET /v1/estimate_txn_fee miner sharder GetTxnFees
-// Estimate transaction fees
-// Returns an on-chain calculation of the fee based on the provided txn data (in SAS which is the indivisible unit of ZCN coin, 1 ZCN = 10^10 SAS). Txn data is provided in the body of the request.
-//
-// Consumes:
-// - application/json
-//
-// responses:
-//   200: TxnFeeResponse
 func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	txData, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -2116,13 +2075,6 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 		"fee": uint64(fee),
 	}, nil
 }
-
-// swagger:route GET /v1/fees_table miner sharder GetTxnFeesTable
-// Get transaction fees table
-// Returns the transaction fees table based on the latest finalized block.
-//
-// responses:
-//   200: FeesTableResponse
 func FeesTableHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 	c := GetServerChain()

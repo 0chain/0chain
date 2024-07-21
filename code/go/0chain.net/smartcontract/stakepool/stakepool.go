@@ -452,7 +452,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	}
 
 	valueBalance := valueLeft
-	stake, pools, err := sp.getRandStakePools(balances, seed, randN)
+	stake, pools, err := sp.getRandStakePools(seed, randN)
 	if err != nil {
 		return err
 	}
@@ -484,6 +484,9 @@ func (sp *StakePool) DistributeRewardsRandN(
 			return err
 		}
 		spUpdate.DelegateRewards[pool.DelegateID] = reward
+		if err != nil {
+			return err
+		}
 	}
 
 	if valueBalance > 0 {
@@ -498,7 +501,7 @@ func (sp *StakePool) DistributeRewardsRandN(
 	return nil
 }
 
-func (sp *StakePool) getRandPools(balances cstate.StateContextI, seed int64, n int) []*DelegatePool {
+func (sp *StakePool) getRandPools(seed int64, n int) []*DelegatePool {
 	if len(sp.Pools) == 0 {
 		return nil
 	}
@@ -517,16 +520,9 @@ func (sp *StakePool) getRandPools(balances cstate.StateContextI, seed int64, n i
 		return pls
 	}
 
-	var plsIdxs []int
-	var selected []*DelegatePool
-
-	_ = cstate.WithActivation(balances, "demeter", func() error {
-		plsIdxs = rand.New(rand.NewSource(seed)).Perm(n)
-		return nil
-	}, func() error {
-		plsIdxs = rand.New(rand.NewSource(seed)).Perm(len(sp.Pools))[:n]
-		return nil
-	})
+	// get random N from pools N
+	plsIdxs := rand.New(rand.NewSource(seed)).Perm(n)
+	selected := make([]*DelegatePool, 0, n)
 
 	for _, idx := range plsIdxs {
 		selected = append(selected, pls[idx])
@@ -535,8 +531,8 @@ func (sp *StakePool) getRandPools(balances cstate.StateContextI, seed int64, n i
 	return selected
 }
 
-func (sp *StakePool) getRandStakePools(balances cstate.StateContextI, seed int64, n int) (currency.Coin, []*DelegatePool, error) {
-	pools := sp.getRandPools(balances, seed, n)
+func (sp *StakePool) getRandStakePools(seed int64, n int) (currency.Coin, []*DelegatePool, error) {
+	pools := sp.getRandPools(seed, n)
 	if len(pools) == 0 {
 		return 0, nil, nil
 	}
@@ -666,6 +662,9 @@ func (sp *StakePool) DistributeRewards(
 			return err
 		}
 		spUpdate.DelegateRewards[dp.DelegateID] = reward
+		if err != nil {
+			return err
+		}
 	}
 
 	if valueBalance > 0 {
@@ -886,6 +885,9 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
+	}
+	if err != nil {
+		return "", err
 	}
 	dp, ok := sp.GetPools()[t.ClientID]
 	if !ok {

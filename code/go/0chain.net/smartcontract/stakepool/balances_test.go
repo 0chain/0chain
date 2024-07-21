@@ -41,11 +41,7 @@ type testBalances struct {
 	skipMerge bool      // don't merge for now
 }
 
-func scConfigKey(scKey string) datastore.Key {
-	return scKey + encryption.Hash("storagesc_config")
-}
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
-
 	tb = &testBalances{
 		balances: make(map[datastore.Key]currency.Coin),
 		tree:     make(map[datastore.Key]util.MPTSerializable),
@@ -59,35 +55,6 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	if mpts {
 		tb.mpts = newMptStore(t)
 	}
-
-	h := cstate.NewHardFork("apollo", 0)
-	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
-		t.Fatal(err)
-	}
-
-	h = cstate.NewHardFork("ares", 0)
-	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
-		t.Fatal(err)
-	}
-
-	h = cstate.NewHardFork("artemis", 0)
-	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
-		t.Fatal(err)
-	}
-
-	h = cstate.NewHardFork("athena", 0)
-	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
-		t.Fatal(err)
-	}
-
-	h = cstate.NewHardFork("demeter", 0)
-	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
-		t.Fatal(err)
-	}
-
-	bk := &block.Block{}
-	bk.Round = 2
-	tb.setBlock(t, bk)
 
 	return
 }
@@ -107,11 +74,6 @@ func (tb *testBalances) GetTransaction() *transaction.Transaction {
 }
 
 // stubs
-
-func (tb *testBalances) setBlock(t testing.TB, block *block.Block) {
-	tb.block = block
-}
-
 func (tb *testBalances) GetBlock() *block.Block                      { return &block.Block{} }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI          { return nil }
 func (tb *testBalances) Validate() error                             { return nil }
@@ -125,9 +87,6 @@ func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)  {}
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer { return nil }
 func (tb *testBalances) GetEventDB() *event.EventDb                  { return nil }
 func (tb *testBalances) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...cstate.Appender) {
-	tb.EmitEventWithVersion(event.Version1, eventType, tag, index, data, appenders...)
-}
-func (tb *testBalances) EmitEventWithVersion(eventVersion event.EventVersion, eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...cstate.Appender) {
 	tb.RWMutex.Lock()
 	defer tb.RWMutex.Unlock()
 	e := event.Event{

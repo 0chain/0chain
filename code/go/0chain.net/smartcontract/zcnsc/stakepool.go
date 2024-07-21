@@ -44,7 +44,6 @@ func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContex
 }
 
 // empty a delegate pool if possible, call update before the empty
-//nolint:unused
 func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI) (bool, error) {
 	var dp, ok = sp.Pools[clientID]
 	if !ok {

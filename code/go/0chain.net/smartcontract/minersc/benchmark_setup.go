@@ -24,7 +24,6 @@ var mockRewardType = spenum.BlockRewardMiner
 
 func AddMockGlobalNode(balances cstate.StateContextI) {
 	var gn GlobalNode
-	//nolint:errcheck
 	gn.readConfig()
 	_, err := balances.InsertTrieNode(GlobalNodeKey, &gn)
 	if err != nil {
@@ -189,6 +188,7 @@ func AddMockMiners(
 		if err := eventDb.Store.Get().Create(&dps).Error; err != nil {
 			log.Fatal(err)
 		}
+		addMockMinersSnapshots(miners, eventDb)
 	}
 
 	return nodes, publickKeys
@@ -336,9 +336,60 @@ func AddMockSharders(
 		if err := eventDb.Store.Get().Create(&dps).Error; err != nil {
 			log.Fatal(err)
 		}
+		addMockSharderSnapshots(sharders, eventDb)
 	}
 
 	return nodes, publickKeys
+}
+
+func addMockMinersSnapshots(miners []event.Miner, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
+	var aggregates []event.MinerAggregate
+	for _, miner := range miners {
+		for i := benchmark.GetOldestAggregateRound(); i < viper.GetInt64(benchmark.NumBlocks); i++ {
+			aggregate := event.MinerAggregate{
+				Round:         i,
+				MinerID:       miner.ID,
+				Fees:          miner.Fees,
+				TotalStake:    miner.TotalStake,
+				TotalRewards:  miner.Rewards.TotalRewards,
+				ServiceCharge: miner.ServiceCharge,
+			}
+			aggregates = append(aggregates, aggregate)
+		}
+	}
+
+	res := edb.Store.Get().Create(&aggregates)
+	if res.Error != nil {
+		log.Fatal(res.Error)
+	}
+}
+
+func addMockSharderSnapshots(sharders []event.Sharder, edb *event.EventDb) {
+	if edb == nil {
+		return
+	}
+	var aggregates []event.SharderAggregate
+	for _, sharder := range sharders {
+		for i := benchmark.GetOldestAggregateRound(); i < viper.GetInt64(benchmark.NumBlocks); i++ {
+			aggregate := event.SharderAggregate{
+				SharderID:     sharder.ID,
+				Round:         int64(i),
+				Fees:          sharder.Fees,
+				TotalStake:    sharder.TotalStake,
+				TotalRewards:  sharder.Rewards.TotalRewards,
+				ServiceCharge: sharder.ServiceCharge,
+			}
+			aggregates = append(aggregates, aggregate)
+		}
+	}
+
+	res := edb.Store.Get().Create(&aggregates)
+	if res.Error != nil {
+		log.Fatal(res.Error)
+	}
 }
 
 func SetUpNodes(

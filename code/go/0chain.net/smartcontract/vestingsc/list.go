@@ -143,7 +143,6 @@ func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
 // REST-handlers
 //
 
-//nolint:unused
 func (vsc *VestingSmartContract) getClientPoolsHandler(ctx context.Context,
 	params url.Values, balances chainstate.CommonStateContextI) (
 	resp interface{}, err error) {

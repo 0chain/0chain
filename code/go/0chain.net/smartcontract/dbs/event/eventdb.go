@@ -38,13 +38,13 @@ func NewEventDbWithoutWorker(config config.DbAccess, settings config.DbSettings)
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store:                  db,
-		dbConfig:               config,
-		eventsCounter:          *atomic.NewUint64(0),
-		eventsChannel:          make(chan BlockEvents, 1),
-		partitionChan:          make(chan int64, 100),
-		permanentPartitionChan: make(chan int64, 100),
-		settings:               settings,
+		Store:         db,
+		dbConfig:      config,
+    eventsCounter: *atomic.NewUint64(0),
+		eventsChannel: make(chan BlockEvents, 1),
+		partitionChan: make(chan int64, 100),
+    permanentPartitionChan: make(chan int64, 100),
+		settings:      settings,
 	}
 
 	if config.KafkaEnabled {
@@ -87,13 +87,13 @@ func NewInMemoryEventDb(config config.DbAccess, settings config.DbSettings) (*Ev
 
 type EventDb struct {
 	dbs.Store
-	dbConfig               config.DbAccess   // depends on the sharder, change on restart
-	settings               config.DbSettings // the same across all sharders, needs to mirror blockchain
-	eventsChannel          chan BlockEvents
-	eventsCounter          atomic.Uint64
-	kafka                  queueProvider.KafkaProviderI
-	partitionChan          chan int64
-	permanentPartitionChan chan int64
+	dbConfig      config.DbAccess   // depends on the sharder, change on restart
+	settings      config.DbSettings // the same across all sharders, needs to mirror blockchain
+	eventsChannel chan BlockEvents
+	eventsCounter atomic.Uint64
+	kafka         queueProvider.KafkaProviderI
+	partitionChan chan int64
+  permanentPartitionChan chan int64
 }
 
 func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
@@ -119,12 +119,12 @@ func (edb *EventDb) Begin(ctx context.Context) (*EventDb, error) {
 			Store: edb,
 			tx:    tx,
 		},
-		dbConfig:               edb.dbConfig,
-		settings:               edb.settings,
-		kafka:                  kafka,
-		eventsChannel:          edb.eventsChannel,
+		dbConfig: edb.dbConfig,
+		settings: edb.settings,
+		kafka:    kafka,
+    eventsChannel:          edb.eventsChannel,
 		partitionChan:          edb.partitionChan,
-		permanentPartitionChan: edb.permanentPartitionChan,
+    permanentPartitionChan: edb.permanentPartitionChan,
 	}
 	return &edbTx, nil
 }
@@ -145,23 +145,22 @@ func (edb *EventDb) Rollback() error {
 
 func (edb *EventDb) Clone(dbName string, pdb *postgresql.PostgresDB) (*EventDb, error) {
 	cloneConfig := config.DbAccess{
-		Enabled:             true,
-		Name:                dbName,
-		User:                edb.dbConfig.User,
-		Password:            edb.dbConfig.Password,
-		Host:                edb.dbConfig.Host,
-		Port:                edb.dbConfig.Port,
-		MaxIdleConns:        edb.dbConfig.MaxIdleConns,
-		MaxOpenConns:        edb.dbConfig.MaxOpenConns,
-		ConnMaxLifetime:     edb.dbConfig.ConnMaxLifetime,
-		Slowtablespace:      edb.dbConfig.Slowtablespace,
-		KafkaEnabled:        edb.dbConfig.KafkaEnabled,
-		KafkaHost:           edb.dbConfig.KafkaHost,
-		KafkaUsername:       edb.dbConfig.KafkaUsername,
-		KafkaPassword:       edb.dbConfig.KafkaPassword,
-		KafkaTopic:          edb.dbConfig.KafkaTopic,
-		KafkaTopicPartition: edb.dbConfig.KafkaTopicPartition,
-		KafkaWriteTimeout:   edb.dbConfig.KafkaWriteTimeout,
+		Enabled:           true,
+		Name:              dbName,
+		User:              edb.dbConfig.User,
+		Password:          edb.dbConfig.Password,
+		Host:              edb.dbConfig.Host,
+		Port:              edb.dbConfig.Port,
+		MaxIdleConns:      edb.dbConfig.MaxIdleConns,
+		MaxOpenConns:      edb.dbConfig.MaxOpenConns,
+		ConnMaxLifetime:   edb.dbConfig.ConnMaxLifetime,
+		Slowtablespace:    edb.dbConfig.Slowtablespace,
+		KafkaEnabled:      edb.dbConfig.KafkaEnabled,
+		KafkaHost:         edb.dbConfig.KafkaHost,
+		KafkaUsername:     edb.dbConfig.KafkaUsername,
+		KafkaPassword:     edb.dbConfig.KafkaPassword,
+		KafkaTopic:        edb.dbConfig.KafkaTopic,
+		KafkaWriteTimeout: edb.dbConfig.KafkaWriteTimeout,
 	}
 	clone, err := pdb.Clone(cloneConfig, dbName, edb.dbConfig.Name)
 	if err != nil {
@@ -237,6 +236,7 @@ func (edb *EventDb) AutoMigrate() error {
 		&Event{},
 		&Blobber{},
 		&User{},
+		&UserAggregate{},
 		&BurnTicket{},
 		&Transaction{},
 		&WriteMarker{},
@@ -251,6 +251,17 @@ func (edb *EventDb) AutoMigrate() error {
 		&RewardMint{},
 		&Authorizer{},
 		&Challenge{},
+		&Snapshot{},
+		&BlobberSnapshot{},
+		&BlobberAggregate{},
+		&MinerSnapshot{},
+		&MinerAggregate{},
+		&SharderSnapshot{},
+		&SharderAggregate{},
+		&AuthorizerSnapshot{},
+		&AuthorizerAggregate{},
+		&ValidatorSnapshot{},
+		&ValidatorAggregate{},
 		&AllocationBlobberTerm{},
 		&ProviderRewards{},
 		&ChallengePool{},

@@ -469,6 +469,9 @@ func getConfiguredConfig() (conf *Config, err error) {
 		return nil, err
 	}
 	conf.BlockReward.TriggerPeriod = scc.GetInt64(pfx + "block_reward.trigger_period")
+	if err != nil {
+		return nil, err
+	}
 	conf.BlockReward.Gamma.Alpha = scc.GetFloat64(pfx + "block_reward.gamma.alpha")
 	conf.BlockReward.Gamma.A = scc.GetFloat64(pfx + "block_reward.gamma.a")
 	conf.BlockReward.Gamma.B = scc.GetFloat64(pfx + "block_reward.gamma.b")
@@ -507,11 +510,6 @@ func (ssc *StorageSmartContract) getConfig(
 		return nil, err
 	}
 	return conf, nil
-}
-
-func (ssc *StorageSmartContract) saveConfig(balances chainState.StateContextI, conf *Config) error {
-	_, err := balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-	return err
 }
 
 // getReadPoolConfig

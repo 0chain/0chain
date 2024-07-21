@@ -19,7 +19,6 @@ import (
 	"go.uber.org/zap"
 )
 
-//nolint:unused
 func doesMinerExist(pkey datastore.Key,
 	balances cstate.CommonStateContextI) (bool, error) {
 

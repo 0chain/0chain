@@ -776,14 +776,6 @@ func (ssc *StorageSmartContract) updateSettings(
 		return "", common.NewError("update_settings", err.Error())
 	}
 
-	if err := cstate.WithActivation(balances, "demeter", func() error {
-		return nil
-	}, func() error {
-		return ssc.saveConfig(balances, conf)
-	}); err != nil {
-		return "", err
-	}
-
 	return "", nil
 }
 

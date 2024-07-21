@@ -17,25 +17,16 @@ import (
 //go:generate msgp -io=false -tests=false -v
 
 // State - state that needs consensus within the blockchain.
-// swagger:model
 type State struct {
 	/* Note: origin is way to parallelize state pruning with state saving. That is, when a leaf node is deleted and added later, but the pruning logic of
 	marking the nodes by origin is complete and before the sweeping the nodes to delete, the same leaf node comes back, it gets deleted. However, by
 	having the origin (round in the blockchain) part of the state ensures that the same logical leaf has a new hash and avoid this issue. We are getting
 	parallelism without explicit locks with this approach.
 	*/
-
-	// Latest transaction run by the client wallet.
 	TxnHash      string        `json:"txn" msgpack:"-"`
 	TxnHashBytes []byte        `json:"-" msgpack:"t"`
-
-	// Latest round when the latest txn happened.
 	Round        int64         `json:"round" msgpack:"r"`
-
-	// Amount of coins in the client wallet, in SAS (1 ZCN = 10^10 SAS).
 	Balance      currency.Coin `json:"balance" msgpack:"b"`
-
-	// Latest nonce used by the client wallet.
 	Nonce        int64         `json:"nonce" msgpack:"n"`
 }
 

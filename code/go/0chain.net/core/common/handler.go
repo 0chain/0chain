@@ -92,7 +92,6 @@ func errorAny(w http.ResponseWriter, status int, msg string) {
 	http.Error(w, httpMsg, status)
 }
 
-//nolint:unused
 func getContext(r *http.Request) (context.Context, error) {
 	ctx := r.Context()
 	return ctx, nil

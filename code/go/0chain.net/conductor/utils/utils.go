@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -105,7 +106,7 @@ func HttpGet(url string, headers map[string]string) ([]byte, error) {
 }
 
 func CopyDir(src string, dst string) error {
-    entries, err := os.ReadDir(src)
+    entries, err := ioutil.ReadDir(src)
     if err != nil {
         return err
     }

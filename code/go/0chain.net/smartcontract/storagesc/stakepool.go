@@ -14,7 +14,6 @@ import (
 	"0chain.net/smartcontract/stakepool"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/util"
@@ -368,7 +367,6 @@ type stakePoolRequest struct {
 	ProviderID   string          `json:"provider_id,omitempty"`
 }
 
-//nolint:unused
 func (spr *stakePoolRequest) decode(p []byte) (err error) {
 	if err = json.Unmarshal(p, spr); err != nil {
 		return
@@ -393,11 +391,6 @@ func (_ *StorageSmartContract) refreshProvider(
 	providerType spenum.Provider, providerID string, balances chainstate.StateContextI,
 ) (s stakepool.AbstractStakePool, err error) {
 	sp, err := getStakePool(providerType, providerID, balances)
-	if demeterActErr := cstate.WithActivation(balances, "demeter", func() (e error) { return }, func() error {
-		return err
-	}); demeterActErr != nil {
-		return nil, demeterActErr
-	}
 
 	if providerType == spenum.Blobber {
 		spBalance, err := sp.stake()

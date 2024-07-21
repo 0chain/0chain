@@ -11,7 +11,6 @@ import (
 
 //go:generate msgp -io=false -tests=false -unexported=true -v
 
-//nolint:unused
 func fundedPoolsKey(scKey, clientID string) datastore.Key {
 	return datastore.Key(scKey + ":fundedpools:" + clientID)
 }
@@ -26,7 +25,6 @@ func (fp *fundedPools) Encode() []byte {
 	return b
 }
 
-//nolint:unused
 func (ssc *StorageSmartContract) addToFundedPools(
 	clientId, poolId string,
 	balances cstate.StateContextI,
@@ -40,7 +38,6 @@ func (ssc *StorageSmartContract) addToFundedPools(
 	return err
 }
 
-//nolint:unused
 func (ssc *StorageSmartContract) isFundedPool(
 	clientId, poolId string,
 	balances cstate.StateContextI,
@@ -62,7 +59,6 @@ func (fp *fundedPools) Decode(p []byte) error {
 }
 
 // getReadPool of current client
-//nolint:unused
 func (ssc *StorageSmartContract) getFundedPools(
 	clientID datastore.Key,
 	balances cstate.StateContextI,

@@ -59,6 +59,12 @@ type ProviderAggregate interface {
 	SetTotalRewards(value currency.Coin)
 }
 
+func recalculateProviderFields(curr, result ProviderAggregate) {
+	result.SetTotalStake(curr.GetTotalStake())
+	result.SetServiceCharge(curr.GetServiceCharge())
+	result.SetTotalRewards(curr.GetTotalRewards())
+}
+
 func (p *Provider) GetID() string {
 	return p.ID
 }

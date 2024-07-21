@@ -1,7 +1,7 @@
 package sharder
 
 import (
-	"os"
+	"io/ioutil"
 	"testing"
 
 	"0chain.net/chaincore/transaction"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestStoreTransactions(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "txnsummarydb")
+	tmpDir, err := ioutil.TempDir("", "txnsummarydb")
 	require.NoError(t, err)
 
 	txnStore, err := ememorystore.CreateDBWithMergeOperator(tmpDir, ememorystore.NewCounterMergeOperator("hash", "txns_count"))

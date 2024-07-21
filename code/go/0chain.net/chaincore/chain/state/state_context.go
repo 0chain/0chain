@@ -108,7 +108,6 @@ type StateContextI interface {
 	GetSignatureScheme() encryption.SignatureScheme
 	GetLatestFinalizedBlock() *block.Block
 	EmitEvent(eventType event.EventType, eventTag event.EventTag, index string, data interface{}, appender ...Appender)
-	EmitEventWithVersion(eventVersion event.EventVersion, eventType event.EventType, eventTag event.EventTag, index string, data interface{}, appender ...Appender)
 	EmitError(error)
 	GetEvents() []event.Event // cannot use in smart contracts or REST endpoints
 	GetMissingNodeKeys() []util.Key
@@ -230,10 +229,6 @@ func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
 }
 
 func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...Appender) {
-	sc.EmitEventWithVersion(event.Version1, eventType, tag, index, data, appenders...)
-}
-
-func (sc *StateContext) EmitEventWithVersion(eventVersion event.EventVersion, eventType event.EventType, tag event.EventTag, index string, data interface{}, appenders ...Appender) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	if index == "" {
@@ -242,9 +237,6 @@ func (sc *StateContext) EmitEventWithVersion(eventVersion event.EventVersion, ev
 			zap.Any("tag", tag),
 			zap.Any("data", data))
 	}
-	if len(eventVersion) == 0 || eventVersion == "0" {
-		eventVersion = event.Version1
-	}
 	e := event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
@@ -252,7 +244,6 @@ func (sc *StateContext) EmitEventWithVersion(eventVersion event.EventVersion, ev
 		Tag:         tag,
 		Index:       index,
 		Data:        data,
-		Version:     eventVersion,
 	}
 	if len(appenders) != 0 {
 		sc.events = appenders[0](sc.events, e)
@@ -493,11 +484,6 @@ func (sc *StateContext) Cache() *statecache.TransactionCache {
 // ErrInvalidState checks if the error is an invalid state error
 func ErrInvalidState(err error) bool {
 	return err != nil && strings.Contains(err.Error(), util.ErrNodeNotFound.Error())
-}
-
-// ErrInvalidState checks if the error is an invalid state error
-func ErrValueNotPresent(err error) bool {
-	return err != nil && strings.Contains(err.Error(), util.ErrValueNotPresent.Error())
 }
 
 type errorIndex struct {

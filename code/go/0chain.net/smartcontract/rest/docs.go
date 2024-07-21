@@ -1,6 +1,6 @@
-//  Sharder Smart Contract API:
-//   version: 0.1.0
-//   title: Sharder Smart Contract API
+//  0chain API:
+//   version: 0.0.1
+//   title: 0chain API
 //  Schemes: http, https
 //  BasePath: /
 //  Produces:

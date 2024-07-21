@@ -640,7 +640,6 @@ func (sc *StorageSmartContract) processChallengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
-		//nolint:errcheck 
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.RewardRound = RewardRound{
 				StartRound: rewardRound,
@@ -870,7 +869,6 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			challengeBlobbers[i], challengeBlobbers[j] = challengeBlobbers[j], challengeBlobbers[i]
 		})
 
-		//nolint:all
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
@@ -1101,43 +1099,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 		validator, err := getValidator(randValidator.Id, balances)
 		if err != nil {
-			actErr = cstate.WithActivation(balances, "demeter", func() error {
-				if cstate.ErrInvalidState(err) {
-					return common.NewError("add_challenge",
-						err.Error())
-				}
-				return nil
-			}, func() error {
-				if cstate.ErrValueNotPresent(err) {
-					err = validators.Remove(balances, validator.Id())
-					if err != nil {
-						return common.NewError("add_challenge",
-							"error removing validator from partition: "+err.Error())
-					}
-					return validators.Save(balances)
-				}
-				return nil
-			})
-			if actErr != nil {
-				return nil, actErr
+			if cstate.ErrInvalidState(err) {
+				return nil, common.NewError("add_challenge",
+					err.Error())
 			}
-
 			continue
-		}
-
-		actErr = cstate.WithActivation(balances, "demeter", func() error { return nil }, func() error {
-			if validator.IsKilled() || validator.IsShutDown() {
-				err = validators.Remove(balances, validator.Id())
-				if err != nil {
-					return common.NewError("add_challenge",
-						"error removing validator from partition: "+err.Error())
-				}
-				return validators.Save(balances)
-			}
-			return nil
-		})
-		if actErr != nil {
-			return nil, actErr
 		}
 
 		kick, err := filterValidator(validator)

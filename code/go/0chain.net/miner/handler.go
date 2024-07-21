@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"fmt"
 	"net/http"
@@ -31,13 +30,12 @@ func SetupHandlers() {
 	))
 }
 
-// swagger:route GET /v1/chain/get/stats miner GetChainStats
-// Get chain stats.
-// Retrieves the statistics related to the chain progress. No parameters needed.
+// swagger:route GET /v1/chain/get/stats chainstatus
+// a handler to provide block statistics
 //
 // responses:
 //  200: ChainStats
-//  500:
+//  500: Internal Server Error
 
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain
@@ -87,11 +85,6 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>Finalization Lag Statistics</h3>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
-	fmt.Fprintf(w, "</td></tr>")
-
-	fmt.Fprintf(w, "</td><td valign='top'>")
-	fmt.Fprintf(w, "<h3>Kafka Event Push Latency Statistics (in milliseconds)</h3>")
-	diagnostics.WriteHistogramStatistics(w, c, event.KafkaEventPushLatencyMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
@@ -147,12 +140,6 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-// swagger:route GET /v1/miner/get/stats miner GetMinerStats
-// Get Miner Stats.
-// Retrieves the statistics related to the miner progress. No parameters needed.
-//
-// responses:
-//   200: ExploreStats
 func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain
 	var total int64

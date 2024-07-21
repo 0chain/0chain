@@ -216,7 +216,6 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	return ns, nil
 }
 
-//nolint:unused
 func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
 	nsRequestor := StateNodesRequestor
 	params := &url.Values{}
