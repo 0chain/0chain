@@ -266,7 +266,15 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 	// fetch from sharders
 	b, err := mc.GetNotarizedBlockFromSharders(ctx, lfbr.Hash, lfbr.Round)
 	if err != nil {
-		return fmt.Errorf("load_lfb - could not fetch block from sharders, round: %d, err: %v", lfbr.Round, err)
+		logging.Logger.Error("load_lfb - could not fetch block from sharders, try fetch from miners",
+			zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
+		// try fetch from miners
+		b, err = mc.GetNotarizedBlockFromMiners(ctx, lfbr.Hash, lfbr.Round, true)
+		if err != nil {
+			logging.Logger.Error("load_lfb - could not fetch block from miners",
+				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
+			return fmt.Errorf("load_lfb - could not fetch block from miners, round: %d, err: %v", lfbr.Round, err)
+		}
 	}
 
 	b.SetStateStatus(block.StateSuccessful)
