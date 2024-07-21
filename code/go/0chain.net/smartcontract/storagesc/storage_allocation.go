@@ -274,8 +274,8 @@ type storageAllocationV2 struct {
 	// be changed for this allocation anymore. Even using expire allocation.
 	TimeUnit time.Duration `json:"time_unit"`
 
-	Version         string `json:"version" msg:"version"`
-	IsSpecialStatus *bool  `json:"is_special_status"`
+	Version      string `json:"version" msg:"version"`
+	IsEnterprise *bool  `json:"is_enterprise"`
 }
 
 const storageAllocationV2Version = "v2"
@@ -591,8 +591,8 @@ func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 		FileOptions:          sab.FileOptions,
 	}
 
-	if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsSpecialStatus != nil {
-		eAlloc.IsSpecialStatus = *v2.IsSpecialStatus
+	if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsEnterprise != nil {
+		eAlloc.IsEnterprise = *v2.IsEnterprise
 	}
 
 	if sab.Stats != nil {

@@ -62,8 +62,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 				MaxNumDelegates:    b.NumDelegates,
 				ServiceChargeRatio: b.ServiceCharge,
 			},
-			IsRestricted:    b.IsRestricted,
-			IsSpecialStatus: b.IsSpecialStatus,
+			IsRestricted: b.IsRestricted,
+			IsEnterprise: b.IsEnterprise,
 		})
 
 		terms := blobberTermsMap[b.ID]
@@ -111,7 +111,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 		MovedBack:         alloc.MovedBack,
 		MovedToValidators: alloc.MovedToValidators,
 		TimeUnit:          time.Duration(alloc.TimeUnit),
-		IsSpecialStatus:   &alloc.IsSpecialStatus,
+		IsEnterprise:      &alloc.IsEnterprise,
 	}
 	sa := &StorageAllocation{}
 	sa.SetEntity(saV2)
@@ -165,8 +165,8 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		FileOptions:          sab.FileOptions,
 	}
 
-	if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil {
-		alloc.IsSpecialStatus = *v2.IsSpecialStatus
+	if v2 := sa.Entity().(*storageAllocationV2); v2.IsEnterprise != nil {
+		alloc.IsEnterprise = *v2.IsEnterprise
 	}
 
 	if sab.Stats != nil {

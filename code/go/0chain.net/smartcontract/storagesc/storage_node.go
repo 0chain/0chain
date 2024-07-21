@@ -240,7 +240,7 @@ type storageNodeV3 struct {
 	RewardRound       RewardRound        `json:"reward_round"`
 	NotAvailable      bool               `json:"not_available"`
 	IsRestricted      *bool              `json:"is_restricted,omitempty"`
-	IsSpecialStatus   *bool              `json:"is_special_status"`
+	IsEnterprise      *bool              `json:"is_enterprise"`
 }
 
 const storageNodeV3Version = "v3"
