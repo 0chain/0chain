@@ -278,7 +278,7 @@ func (z *storageNodeV3) MarshalMsg(b []byte) (o []byte, err error) {
 		o = msgp.AppendBool(o, *z.IsRestricted)
 	}
 	// string "IsEnterprise"
-	o = append(o, 0xaf, 0x49, 0x73, 0x53, 0x70, 0x65, 0x63, 0x69, 0x61, 0x6c, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73)
+	o = append(o, 0xac, 0x49, 0x73, 0x45, 0x6e, 0x74, 0x65, 0x72, 0x70, 0x72, 0x69, 0x73, 0x65)
 	if z.IsEnterprise == nil {
 		o = msgp.AppendNil(o)
 	} else {
@@ -437,7 +437,7 @@ func (z *storageNodeV3) Msgsize() (s int) {
 	} else {
 		s += msgp.BoolSize
 	}
-	s += 16
+	s += 13
 	if z.IsEnterprise == nil {
 		s += msgp.NilSize
 	} else {
