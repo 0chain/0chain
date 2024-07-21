@@ -1913,6 +1913,18 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	return mc.GetMinerRound(lfb.Round)
 }
 
+func BumpLFBTicket(ctx context.Context, mc *Chain) {
+	list := mc.GetLatestFinalizedBlockFromSharder(ctx)
+	if len(list) == 0 {
+		logging.Logger.Debug("ensure_lfb - no new lfb received")
+		return // no LFB given
+	}
+
+	rcvd := list[0].Block // the highest received LFB
+	// received latest finalized block is one around ahead of local latest finalized block
+	mc.bumpLFBTicket(ctx, rcvd)
+}
+
 func StartProtocol(ctx context.Context, gb *block.Block) {
 
 	var (
@@ -1924,6 +1936,8 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		logging.Logger.Error(fmt.Sprintf("can't load latest blocks from store, err: %v", err))
 		// return
 	}
+
+	BumpLFBTicket(ctx, mc)
 
 	lfb := mc.GetLatestFinalizedBlock()
 	if lfb != nil {
