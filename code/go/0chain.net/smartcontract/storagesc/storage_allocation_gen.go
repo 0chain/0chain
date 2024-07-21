@@ -519,7 +519,7 @@ func (z *storageAllocationV2) MarshalMsg(b []byte) (o []byte, err error) {
 	o = append(o, 0xa7, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e)
 	o = msgp.AppendString(o, z.Version)
 	// string "IsEnterprise"
-	o = append(o, 0xaf, 0x49, 0x73, 0x53, 0x70, 0x65, 0x63, 0x69, 0x61, 0x6c, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73)
+	o = append(o, 0xac, 0x49, 0x73, 0x45, 0x6e, 0x74, 0x65, 0x72, 0x70, 0x72, 0x69, 0x73, 0x65)
 	if z.IsEnterprise == nil {
 		o = msgp.AppendNil(o)
 	} else {
@@ -793,7 +793,7 @@ func (z *storageAllocationV2) Msgsize() (s int) {
 			s += z.BlobberAllocs[za0002].Msgsize()
 		}
 	}
-	s += 21 + msgp.BoolSize + 12 + msgp.Uint16Size + 10 + z.WritePool.Msgsize() + 15 + z.ReadPriceRange.Msgsize() + 16 + z.WritePriceRange.Msgsize() + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize + 8 + msgp.StringPrefixSize + len(z.Version) + 16
+	s += 21 + msgp.BoolSize + 12 + msgp.Uint16Size + 10 + z.WritePool.Msgsize() + 15 + z.ReadPriceRange.Msgsize() + 16 + z.WritePriceRange.Msgsize() + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize + 8 + msgp.StringPrefixSize + len(z.Version) + 13
 	if z.IsEnterprise == nil {
 		s += msgp.NilSize
 	} else {
