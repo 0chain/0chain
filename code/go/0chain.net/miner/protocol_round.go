@@ -163,8 +163,11 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 		select {
 		case <-tkr.C:
 			lfb = mc.GetLatestFinalizedBlock()
-			if lfb.Round > tkRound {
+			tk = mc.GetLatestLFBTicket(ctx)
+			if tk.Round > lfb.Round {
 				tkRound = lfb.Round
+			} else {
+				tkRound = tk.Round
 			}
 
 			if round+1 <= tkRound+int64(ahead) {
