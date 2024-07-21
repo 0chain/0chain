@@ -1443,12 +1443,12 @@ func (sab *storageAllocationBase) changeBlobbers(
 				b := e.(*storageNodeV3)
 
 				if isEnterpriseBlobber {
-					if b.IsSpecialStatus == nil || !*b.IsSpecialStatus {
-						return fmt.Errorf("blobber %s is not special status", b.ID)
+					if b.IsEnterprise == nil || !*b.IsEnterprise {
+						return fmt.Errorf("blobber %s is not enterprise", b.ID)
 					}
 				}
 
-				if (b.IsSpecialStatus != nil && *b.IsSpecialStatus) || (b.IsRestricted != nil && *b.IsRestricted) {
+				if (b.IsEnterprise != nil && *b.IsEnterprise) || (b.IsRestricted != nil && *b.IsRestricted) {
 					success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
 					if err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
@@ -1575,10 +1575,10 @@ func (sab *storageAllocationBase) validateEachBlobber(
 		}
 
 		electraHardfork := func() error {
-			if request.IsSpecialStatus && !b.IsSpecialStatus {
-				return fmt.Errorf("blobber %s is not special status", b.ID)
-			} else if !request.IsSpecialStatus && b.IsSpecialStatus {
-				return fmt.Errorf("blobber %s is special status", b.ID)
+			if request.IsEnterprise && !b.IsEnterprise {
+				return fmt.Errorf("blobber %s is not enterprise", b.ID)
+			} else if !request.IsEnterprise && b.IsEnterprise {
+				return fmt.Errorf("blobber %s is enterprise", b.ID)
 			}
 
 			snr := storageNodeResponseToStorageNodeV3(*b)
@@ -1593,14 +1593,14 @@ func (sab *storageAllocationBase) validateEachBlobber(
 		}
 
 		_ = cstate.WithActivation(balances, "electra", func() error {
-			b.IsSpecialStatus = false
+			b.IsEnterprise = false
 			return nil
 		}, func() error {
 			return nil
 		})
 
 		snBase := sn.mustBase()
-		if (b.IsSpecialStatus) || (snBase.IsRestricted != nil && *snBase.IsRestricted) {
+		if (b.IsEnterprise) || (snBase.IsRestricted != nil && *snBase.IsRestricted) {
 			success, err := verifyBlobberAuthTicket(balances, sab.Owner, blobberAuthTickets[i], sn.mustBase().PublicKey)
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("blobber %s auth ticket verification failed: %v", b.ID, err.Error()))

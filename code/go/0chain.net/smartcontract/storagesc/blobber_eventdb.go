@@ -34,8 +34,8 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		IsRestricted: b.IsRestricted != nil && *b.IsRestricted,
 	}
 
-	if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsSpecialStatus != nil {
-		data.IsSpecialStatus = *v3.IsSpecialStatus
+	if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
+		data.IsEnterprise = *v3.IsEnterprise
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, b.ID, data)
@@ -79,8 +79,8 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	if v3, ok := sn.Entity().(*storageNodeV3); ok {
-		if v3.IsSpecialStatus != nil {
-			data.IsSpecialStatus = *v3.IsSpecialStatus
+		if v3.IsEnterprise != nil {
+			data.IsEnterprise = *v3.IsEnterprise
 		}
 	}
 

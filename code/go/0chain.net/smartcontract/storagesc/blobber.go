@@ -878,9 +878,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	actErr := cstate.WithActivation(balances, "electra", func() error { return nil }, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2.IsSpecialStatus != nil && *v2.IsSpecialStatus {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsEnterprise != nil && *v2.IsEnterprise {
 			return common.NewError("commit_connection_failed",
-				"commit connection not allowed for enterprise special status allocation")
+				"commit connection not allowed for enterprise enterprise allocation")
 		}
 		return nil
 	})

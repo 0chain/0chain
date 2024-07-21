@@ -2601,8 +2601,8 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
 
-	IsRestricted    bool `json:"is_restricted"`
-	IsSpecialStatus bool `json:"is_special_status"`
+	IsRestricted bool `json:"is_restricted"`
+	IsEnterprise bool `json:"is_enterprise"`
 }
 
 func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
@@ -2630,8 +2630,8 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 	}
 
 	sv3, ok := sn.Entity().(*storageNodeV3)
-	if ok && sv3.IsSpecialStatus != nil {
-		sr.IsSpecialStatus = *sv3.IsSpecialStatus
+	if ok && sv3.IsEnterprise != nil {
+		sr.IsEnterprise = *sv3.IsEnterprise
 	}
 
 	return sr
@@ -2684,7 +2684,7 @@ func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
 		IsRestricted:            &snr.IsRestricted,
-		IsSpecialStatus:         &snr.IsSpecialStatus,
+		IsEnterprise:            &snr.IsEnterprise,
 	}
 }
 
@@ -2721,7 +2721,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
 		IsRestricted:             blobber.IsRestricted,
-		IsSpecialStatus:          blobber.IsSpecialStatus,
+		IsEnterprise:             blobber.IsEnterprise,
 	}
 }
 
