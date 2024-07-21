@@ -665,9 +665,8 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return lfb
 	}
 
-	// maxSyncDepth := int64(config.GetLFBTicketAhead())
-	// TODO: debug get one previous block
-	maxSyncDepth := int64(1)
+	maxSyncDepth := int64(config.GetLFBTicketAhead())
+	// maxSyncDepth := int64(1)
 	syncNum := maxSyncDepth
 	if lfb != nil {
 		syncNum = b.Round - lfb.Round
