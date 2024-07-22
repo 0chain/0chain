@@ -18,10 +18,13 @@ func SetupM2SReceivers() {
 	sc := GetSharderChain()
 	options := &node.ReceiveOptions{}
 	options.MessageFilter = sc
-	http.HandleFunc("/v1/_m2s/block/finalized", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(FinalizedBlockHandler(sc), options)))
-	http.HandleFunc("/v1/_m2s/block/notarized", common.N2NRateLimit(node.RejectDuplicateNotarizedBlockHandler(
-		sc, node.ToN2NReceiveEntityHandler(NotarizedBlockHandler(sc), options))))
-	http.HandleFunc("/v1/_m2s/block/notarized/kick", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler(sc), nil)))
+	http.HandleFunc("/v1/_m2s/block/finalized", common.N2NRateLimit(node.StopOnBlockSyncingHandler(sc,
+		node.ToN2NReceiveEntityHandler(FinalizedBlockHandler(sc), options))))
+	http.HandleFunc("/v1/_m2s/block/notarized", common.N2NRateLimit(node.StopOnBlockSyncingHandler(sc,
+		node.RejectDuplicateNotarizedBlockHandler(
+			sc, node.ToN2NReceiveEntityHandler(NotarizedBlockHandler(sc), options)))))
+	http.HandleFunc("/v1/_m2s/block/notarized/kick", common.N2NRateLimit(node.StopOnBlockSyncingHandler(sc,
+		node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler(sc), nil))))
 }
 
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
