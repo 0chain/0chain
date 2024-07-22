@@ -1128,6 +1128,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 		actErr = cstate.WithActivation(balances, "demeter", func() error { return nil }, func() error {
 			if validator.IsKilled() || validator.IsShutDown() {
+				logging.Logger.Info("Jayash", zap.String("validator_id", randValidator.Id), zap.Any("error", err), zap.Any("validator", validator))
 				err = validators.Remove(balances, validator.Id())
 				if err != nil {
 					return common.NewError("add_challenge",
