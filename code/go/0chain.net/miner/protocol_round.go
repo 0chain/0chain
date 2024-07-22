@@ -175,6 +175,9 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 				return true // not ahead, can move on
 			}
 			logging.Logger.Debug("[wait not ahead] [4*] still ahead, can't move on")
+			if tk.Round < lfb.Round {
+				BumpLFBTicket(ctx, mc)
+			}
 
 		case ntk := <-tksubq: // the ntk can't be nil
 			lfb = mc.GetLatestFinalizedBlock()
