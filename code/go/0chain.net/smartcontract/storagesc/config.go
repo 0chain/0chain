@@ -111,7 +111,7 @@ type Config struct {
 
 	// MaxReadPrice allowed for a blobber.
 	MaxReadPrice currency.Coin `json:"max_read_price"`
-	// MaxWrtiePrice
+	// MaxWritePrice
 	MaxWritePrice currency.Coin `json:"max_write_price"`
 	MinWritePrice currency.Coin `json:"min_write_price"`
 	MaxFileSize   int64         `json:"max_file_size"`

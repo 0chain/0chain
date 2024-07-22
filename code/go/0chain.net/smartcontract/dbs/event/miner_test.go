@@ -119,7 +119,7 @@ func TestMinersBatchUpdate(t *testing.T) {
 		// controls the node setting. If the DelegateWallet hasn't been provided,
 		// then node ID used (for genesis nodes, for example).
 		DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
-		// ServiceChange is % that miner node grabs where it's generator.
+		// ServiceCharge is % that miner node grabs where it's generator.
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
@@ -306,7 +306,7 @@ func TestMiners(t *testing.T) {
 		// controls the node setting. If the DelegateWallet hasn't been provided,
 		// then node ID used (for genesis nodes, for example).
 		DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
-		// ServiceChange is % that miner node grabs where it's generator.
+		// ServiceCharge is % that miner node grabs where it's generator.
 		ServiceCharge float64 `json:"service_charge"` // %
 		// NumberOfDelegates is max allowed number of delegate pools.
 		NumberOfDelegates int `json:"number_of_delegates"`
