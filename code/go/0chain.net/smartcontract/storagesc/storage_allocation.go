@@ -563,7 +563,7 @@ func (sab *storageAllocationBase) buildEventBlobberTerms() []event.AllocationBlo
 	return bTerms
 }
 
-func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
+func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event.Allocation {
 	sab := sa.mustBase()
 	eAlloc := event.Allocation{
 		AllocationID:         sab.ID,
@@ -590,6 +590,15 @@ func (sa *StorageAllocation) buildDbUpdates() event.Allocation {
 		ThirdPartyExtendable: sab.ThirdPartyExtendable,
 		FileOptions:          sab.FileOptions,
 	}
+
+	_ = cstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsEnterprise != nil {
+			eAlloc.IsEnterprise = *v2.IsEnterprise
+		}
+		return nil
+	})
 
 	if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsEnterprise != nil {
 		eAlloc.IsEnterprise = *v2.IsEnterprise
@@ -634,7 +643,7 @@ func (sa *StorageAllocation) saveUpdatedAllocation(
 		return
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.mustBase().ID, sa.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, sa.mustBase().ID, sa.buildDbUpdates(balances))
 	return
 }
 
