@@ -93,7 +93,7 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(
-	alloc *StorageAllocation,
+	alloc *storageAllocationBase,
 	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
@@ -107,7 +107,7 @@ func (sc *StorageSmartContract) blobberReward(
 
 	// time of this challenge
 	challengeCompletedTime := blobAlloc.LatestFinalizedChallCreatedAt
-	if challengeCompletedTime > alloc.mustBase().Expiration {
+	if challengeCompletedTime > alloc.Expiration {
 		return errors.New("late challenge response")
 	}
 
@@ -118,22 +118,22 @@ func (sc *StorageSmartContract) blobberReward(
 		return errors.New("old challenge response on blobber rewarding")
 	}
 
-	if challengeCompletedTime > alloc.mustBase().Expiration {
+	if challengeCompletedTime > alloc.Expiration {
 		return errors.New("late challenge response")
 	}
 
 	// pool
 	var cp *challengePool
-	if cp, err = sc.getChallengePool(alloc.mustBase().ID, balances); err != nil {
+	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	rdtu, err := alloc.mustBase().restDurationInTimeUnits(latestFinalizedChallTime, conf.TimeUnit)
+	rdtu, err := alloc.restDurationInTimeUnits(latestFinalizedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
 
-	dtu, err := alloc.mustBase().durationInTimeUnits(challengeCompletedTime-latestFinalizedChallTime, conf.TimeUnit)
+	dtu, err := alloc.durationInTimeUnits(challengeCompletedTime-latestFinalizedChallTime, conf.TimeUnit)
 	if err != nil {
 		return fmt.Errorf("blobber reward failed: %v", err)
 	}
@@ -184,11 +184,11 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
 
-	moveToValidators, err := currency.AddCoin(alloc.mustBase().MovedToValidators, validatorsReward)
+	moveToValidators, err := currency.AddCoin(alloc.MovedToValidators, validatorsReward)
 	if err != nil {
 		return err
 	}
-	alloc.mustBase().MovedToValidators = moveToValidators
+	alloc.MovedToValidators = moveToValidators
 
 	// Save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
@@ -200,12 +200,8 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't save sake pool: %v", err)
 	}
 
-	if err = cp.save(sc.ID, alloc.mustBase(), balances); err != nil {
+	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
-	}
-
-	if err = alloc.saveUpdatedStakes(balances); err != nil {
-		return fmt.Errorf("can't save allocation: %v", err)
 	}
 
 	return nil
@@ -250,7 +246,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 
 // move tokens from challenge pool back to write pool
 func (sc *StorageSmartContract) blobberPenalty(
-	sa *StorageAllocation,
+	alloc *storageAllocationBase,
 	latestSuccessfulChallTime common.Timestamp,
 	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
@@ -266,8 +262,6 @@ func (sc *StorageSmartContract) blobberPenalty(
 	if conf, err = sc.getConfig(balances, true); err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
-
-	alloc := sa.mustBase()
 
 	// pools
 	var cp *challengePool
@@ -381,19 +375,9 @@ func (sc *StorageSmartContract) blobberPenalty(
 		}
 	}
 
-	if err = sa.saveUpdatedStakes(balances); err != nil {
-		return common.NewError("blobber_penalty_failed",
-			"saving allocation pools: "+err.Error())
-	}
-
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't Save allocation's challenge pool: %v", err)
 	}
-
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
-		alloc.deepCopy(base)
-		return nil
-	})
 
 	return
 }
@@ -716,7 +700,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 
 	if cab.latestFinalizedChallTime > cab.latestSuccessfulChallTime {
 		err = sc.blobberPenalty(
-			cab.alloc, cab.latestSuccessfulChallTime, cab.latestFinalizedChallTime, cab.blobAlloc, validators,
+			alloc, cab.latestSuccessfulChallTime, cab.latestFinalizedChallTime, cab.blobAlloc, validators,
 			balances,
 			cab.challenge.AllocationID,
 		)
@@ -726,7 +710,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 	}
 
 	err = sc.blobberReward(
-		cab.alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
+		alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
 		validators,
 		balances,
 		cab.challenge.AllocationID,
@@ -735,8 +719,12 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	// save allocation object
-	if err := cab.alloc.save(balances, sc.ID); err != nil {
+	_ = cab.alloc.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+
+	if err = cab.alloc.saveUpdatedStakes(balances); err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
