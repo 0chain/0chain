@@ -1879,12 +1879,13 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	err = ssc.blobberPenalty(allocation, 0, previous, details, validators, ctx, allocationId)
+	alloc := allocation.mustBase()
+	err = ssc.blobberPenalty(alloc, 0, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}
 
-	newCP, err := ssc.getChallengePool(allocation.mustBase().ID, ctx)
+	newCP, err := ssc.getChallengePool(alloc.ID, ctx)
 	require.NoError(t, err)
 
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
@@ -1894,6 +1895,11 @@ func testBlobberPenalty(
 	require.NoError(t, err)
 
 	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, false)
+
+	allocation.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
 	return nil
 }
 
@@ -1933,12 +1939,13 @@ func testBlobberReward(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(allocation, previous, details, validators, ctx, allocationId)
+	alloc := allocation.mustBase()
+	err = ssc.blobberReward(alloc, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}
 
-	newCP, err := ssc.getChallengePool(allocation.mustBase().ID, ctx)
+	newCP, err := ssc.getChallengePool(alloc.ID, ctx)
 	require.NoError(t, err)
 
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
@@ -1948,6 +1955,11 @@ func testBlobberReward(
 	require.NoError(t, err)
 
 	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber)
+
+	allocation.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
 	return nil
 }
 
