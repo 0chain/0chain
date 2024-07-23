@@ -325,7 +325,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		if err != nil {
 			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", bcm.ID, err)
 		}
-		snr := StoragNodeToStorageNodeResponse(*blobbers[i])
+		snr := StoragNodeToStorageNodeResponse(balances, *blobbers[i])
 		snr.TotalOffers = spMap[bcm.ID].TotalOffers
 		snr.TotalStake = stake
 		stakedCapacity, err := spMap[bcm.ID].stakedCapacity(bcm.Terms.WritePrice)
