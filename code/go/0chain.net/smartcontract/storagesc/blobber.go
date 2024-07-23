@@ -739,7 +739,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker", err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates(balances))
 
 	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
 	if err != nil {

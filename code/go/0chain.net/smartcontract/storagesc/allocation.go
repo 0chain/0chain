@@ -1483,7 +1483,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return nil
 	})
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates(balances))
 
 	return "canceled", nil
 }
@@ -1599,7 +1599,7 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 		alloc.deepCopy(base)
 		return nil
 	})
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates(balances))
 
 	return sa, nil
 }
