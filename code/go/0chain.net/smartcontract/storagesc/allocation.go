@@ -1187,7 +1187,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	actErr = chainstate.WithActivation(balances, "electra", func() error {
-		if t.Value > tokensRequiredToLock {
+		if t.Value < tokensRequiredToLock {
 			return common.NewError("allocation_updating_failed",
 				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock+t.Value))
 		}
