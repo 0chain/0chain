@@ -136,7 +136,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	return sa, res, nil
 }
 
-func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation {
+func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *StorageAllocation) *event.Allocation {
 	sab := sa.mustBase()
 	alloc := &event.Allocation{
 		AllocationID:         sab.ID,
@@ -165,9 +165,14 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 		FileOptions:          sab.FileOptions,
 	}
 
-	if v2 := sa.Entity().(*storageAllocationV2); v2.IsEnterprise != nil {
-		alloc.IsEnterprise = *v2.IsEnterprise
-	}
+	_ = cstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2 := sa.Entity().(*storageAllocationV2); v2.IsEnterprise != nil {
+			alloc.IsEnterprise = *v2.IsEnterprise
+		}
+		return nil
+	})
 
 	if sab.Stats != nil {
 		alloc.NumWrites = sab.Stats.NumWrites
@@ -183,7 +188,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) *event.Allocation
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
-	alloc := storageAllocationToAllocationTable(sa)
+	alloc := storageAllocationToAllocationTable(balances, sa)
 	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 
 	return nil
