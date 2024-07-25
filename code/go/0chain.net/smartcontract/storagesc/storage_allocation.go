@@ -600,10 +600,6 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event
 		return nil
 	})
 
-	if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsEnterprise != nil {
-		eAlloc.IsEnterprise = *v2.IsEnterprise
-	}
-
 	if sab.Stats != nil {
 		eAlloc.NumWrites = sab.Stats.NumWrites
 		eAlloc.NumReads = sab.Stats.NumReads
