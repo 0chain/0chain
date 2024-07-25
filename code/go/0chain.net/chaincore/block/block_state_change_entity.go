@@ -28,11 +28,8 @@ func NewBlockStateChange(b *Block) (*StateChange, error) {
 	var changes []*util.NodeChange
 	bsc.Hash, changes, _, bsc.StartRoot = b.ClientState.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
-	bsc.DeadNodes = make([]util.Node, len(changes))
-	logging.Logger.Debug("new block state change", zap.String("block", b.Hash), zap.Int("changes", len(changes)))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
-		bsc.DeadNodes[idx] = change.Old
 	}
 
 	if err := bsc.ComputeProperties(); err != nil {
@@ -89,14 +86,14 @@ func (sc *StateChange) GetChanges() []*util.NodeChange {
 	return changes
 }
 
-// MarshalJSON - implement Marshaler interface
+//MarshalJSON - implement Marshaler interface
 func (sc *StateChange) MarshalJSON() ([]byte, error) {
 	var data = make(map[string]interface{})
 	data["block"] = sc.Block
 	return sc.MarshalPartialStateJSON(data)
 }
 
-// UnmarshalJSON - implement Unmarshaler interface
+//UnmarshalJSON - implement Unmarshaler interface
 func (sc *StateChange) UnmarshalJSON(data []byte) error {
 	var obj map[string]interface{}
 	err := json.Unmarshal(data, &obj)

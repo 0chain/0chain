@@ -31,7 +31,6 @@ type PartialState struct {
 	Version   string      `json:"version"`
 	StartRoot util.Key    `json:"start"`
 	Nodes     []util.Node `json:"-" msgpack:"-"`
-	DeadNodes []util.Node `json:"-" msgpack:"-"`
 	mndb      *util.MemoryNodeDB
 	root      util.Node
 }
@@ -238,40 +237,6 @@ func (ps *PartialState) UnmarshalPartialStateJSON(obj map[string]interface{}) er
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
-
-	deadNodesI, ok := obj["dead_nodes"]
-	if !ok {
-		// do nothing as miners/sharders not updated may not have dead nodes field
-		return nil
-	}
-
-	deadNodes, ok := deadNodesI.([]interface{})
-	if !ok {
-		logging.Logger.Error("unmarshal json - invalid dead nodes", zap.Any("obj", obj))
-		return common.ErrInvalidData
-	}
-
-	ps.DeadNodes = make([]util.Node, len(deadNodes))
-	for idx, nd := range deadNodes {
-		node, ok := nd.(string)
-		if !ok {
-			logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.String("node", node), zap.Any("obj", obj))
-			return common.ErrInvalidData
-		}
-
-		buf, err := base64.StdEncoding.DecodeString(node)
-		if err != nil {
-			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
-			return err
-		}
-
-		ps.DeadNodes[idx], err = util.CreateNode(bytes.NewBuffer(buf))
-		if err != nil {
-			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -313,37 +278,6 @@ func (ps *PartialState) UnmarshalPartialStateMsgpack(obj map[string]interface{})
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
-
-	deadNodesI, ok := obj["dead_nodes"]
-	if !ok {
-		// do nothing as miners/sharders not updated may not have dead nodes field
-		return nil
-	}
-
-	deadNodes, ok := deadNodesI.([]interface{})
-	if !ok {
-		logging.Logger.Error("unmarshal json - invalid dead nodes", zap.Any("obj", obj))
-		return common.ErrInvalidData
-	}
-
-	ps.DeadNodes = make([]util.Node, len(deadNodes))
-	for idx, nd := range deadNodes {
-		node, ok := nd.([]byte)
-		if !ok {
-			logging.Logger.Error("unmarshal json - invalid node",
-				zap.Int("idx", idx),
-				zap.Any("node", nd),
-				zap.Any("obj", obj))
-			return common.ErrInvalidData
-		}
-
-		var err error
-		ps.DeadNodes[idx], err = util.CreateNode(bytes.NewBuffer(node))
-		if err != nil {
-			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
-			return err
-		}
-	}
 	return nil
 }
 
@@ -374,18 +308,10 @@ func (ps *PartialState) setMarshalFields(data map[string]interface{}) map[string
 	data["root"] = util.ToHex(ps.Hash)
 	data["version"] = ps.Version
 	nodes := make([][]byte, len(ps.Nodes))
-	deadNodes := make([][]byte, 0, len(ps.DeadNodes))
 	for idx, nd := range ps.Nodes {
 		nodes[idx] = nd.Encode()
 	}
-
-	for _, nd := range ps.DeadNodes {
-		if nd != nil {
-			deadNodes = append(deadNodes, nd.Encode())
-		}
-	}
 	data["nodes"] = nodes
-	data["dead_nodes"] = deadNodes
 	return data
 }
 
@@ -402,8 +328,4 @@ func (ps *PartialState) SaveState(ctx context.Context, stateDB util.NodeDB) erro
 // GetNodeDB returns the node db containing all the changes
 func (ps *PartialState) GetNodeDB() util.NodeDB {
 	return ps.mndb
-}
-
-func (ps *PartialState) GetDeadNodes() []util.Node {
-	return ps.DeadNodes
 }
