@@ -382,11 +382,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.String("block", fb.Hash),
 				zap.Error(er))
 		}
-
-		logging.Logger.Debug("finalize block - record dead nodes",
-			zap.Int64("round", fb.Round),
-			zap.String("block", fb.Hash),
-			zap.Int("num dead nodes", len(deletedNode)))
 		// do not return err, we don't want to see the dead nodes removing failure stop the finalizing process
 		return nil
 	})
