@@ -1112,6 +1112,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return state.ErrMalformedPartialState
 	}
 
+	//
 	err := clientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
 		logging.Logger.Error("apply block state changes - error merging",
