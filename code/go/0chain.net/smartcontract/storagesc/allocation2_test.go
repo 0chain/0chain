@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/util/entitywrapper"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -418,10 +419,21 @@ func TestFinalizeAllocation(t *testing.T) {
 		return nil
 	})
 
-	allocation = sa.mustBase()
-
 	t.Run("finalize allocation", func(t *testing.T) {
 		err := testFinalizeAllocation(t, sa, *blobbers, blobberStakePools, challengePoolBalance, allocation.Expiration, challenges, ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("finalize enterprise allocation", func(t *testing.T) {
+		var enterpriseAllocation = sa
+		enterpriseAllocation.Update(&storageAllocationV2{}, func(e entitywrapper.EntityI) error {
+			b := e.(*storageAllocationV2)
+			b.IsEnterprise = new(bool)
+			*b.IsEnterprise = true
+			return nil
+		})
+
+		err := testFinalizeAllocation(t, enterpriseAllocation, *blobbers, blobberStakePools, challengePoolBalance, now, challenges, ctx)
 		require.NoError(t, err)
 	})
 
