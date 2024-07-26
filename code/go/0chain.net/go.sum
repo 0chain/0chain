@@ -38,6 +38,8 @@ cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3f
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/0chain/common v1.13.1-0.20240619040111-99779eb0e812 h1:Vx8phSmTVzIjaG383IUyraMm1A6+68WcuNynOe6YJPA=
 github.com/0chain/common v1.13.1-0.20240619040111-99779eb0e812/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
+github.com/0chain/common v1.13.1-0.20240717061404-724fe8011a7c h1:dUne+gFXqRN/mEe/8NjPKzjXHCP+CrBRuKU/Xd9R+A4=
+github.com/0chain/common v1.13.1-0.20240717061404-724fe8011a7c/go.mod h1:YQiHd2yA/gIo7BuHL3aW0oGzO+SIwhfsKMiUNprPISo=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
 github.com/0chain/gosdk v1.16.0 h1:3CKuU9i9d+X2/htJOIyxNwviKG5H/lp+q8ogzCgnoQI=
