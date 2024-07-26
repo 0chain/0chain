@@ -563,6 +563,7 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 	}()
 	var er = c.GetRound(b.Round)
 	if er == nil {
+		c.createRoundIfNotExist()
 		er = c.RoundF.CreateRoundF(b.Round)
 		if b.GetRoundRandomSeed() == 0 {
 			logging.Logger.Error("process block - block has no seed",
@@ -570,6 +571,7 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 			return fmt.Errorf("block has no seed")
 		}
 		c.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
+		c.AddRound(er)
 	}
 
 	// pull related magic block if missing
