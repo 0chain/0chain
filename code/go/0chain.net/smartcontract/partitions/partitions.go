@@ -616,6 +616,8 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 		partIndex := elementIdx / p.PartitionSize
 		elementIdxInPart := elementIdx % p.PartitionSize
 
+		logging.Logger.Info("Jayash debug random item", zap.Int("elementIdx", elementIdx), zap.Int("partIndex", partIndex), zap.Int("elementIdxInPart", elementIdxInPart), zap.Int("requiredCount", requiredCount))
+
 		for requiredCount != 0 {
 			part, err := p.getPartition(balances, partIndex)
 			if err != nil {
@@ -638,7 +640,11 @@ func (p *Partitions) GetRandomItems(balances state.StateContextI, r *rand.Rand, 
 					partIndex++
 				}
 				elementIdxInPart = 0
+
+				logging.Logger.Info("Jayash debug random item", zap.Int("elementIdxInPart", elementIdxInPart),
+					zap.Int("partIndex", partIndex), zap.Int("part length", part.length()), zap.Int("requiredCount", requiredCount), zap.Int("totalElements", totalElements))
 			} else {
+				logging.Logger.Info("else Jayash debug random item", zap.Int("elementIdxInPart", elementIdxInPart), zap.Int("elementIdxInPart+requiredCount", elementIdxInPart+requiredCount))
 				res, err = part.itemRange(elementIdxInPart, elementIdxInPart+requiredCount)
 				if err != nil {
 					return err
