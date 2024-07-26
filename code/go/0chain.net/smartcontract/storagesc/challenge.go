@@ -1101,6 +1101,9 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		if randValidator.Id == blobberID {
 			continue
 		}
+
+		logging.Logger.Info("1 Jayash randValidator", zap.Any("randValidator", randValidator))
+
 		validator, err := getValidator(randValidator.Id, balances)
 		if err != nil {
 			actErr = cstate.WithActivation(balances, "demeter", func() error {
@@ -1110,9 +1113,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				}
 				return nil
 			}, func() error {
+				logging.Logger.Info("1.1 Jayash validator err", zap.Any("validator", randValidator.Id), zap.Any("err", err))
 				if cstate.ErrValueNotPresent(err) {
 					err = validators.Remove(balances, randValidator.Id)
 					if err != nil {
+						logging.Logger.Info("1.1.1 Jayash remove", zap.Any("validator", randValidator.Id), zap.Any("err", err)
 						return common.NewError("add_challenge",
 							"error removing validator from partition: "+err.Error())
 					}
@@ -1129,6 +1134,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 
 		actErr = cstate.WithActivation(balances, "demeter", func() error { return nil }, func() error {
 			if validator.IsKilled() || validator.IsShutDown() {
+				logging.Logger.Info("2 Jayash validator err", zap.Any("validator", randValidator.Id))
 				err = validators.Remove(balances, validator.Id())
 				if err != nil {
 					return common.NewError("add_challenge",

@@ -410,25 +410,37 @@ func (p *Partitions) Update(state state.StateContextI, key string,
 }
 
 func (p *Partitions) Remove(state state.StateContextI, id string) error {
+	logging.Logger.Info("1 Jayash Remove", zap.String("id", id), zap.Any("locations", p.locations))
 	_, idx, ok := p.Last.find(id)
 	if ok {
 		return p.removeFromLast(state, idx)
 	}
+
+	logging.Logger.Info("2 Jayash Remove", zap.String("id", id), zap.Int("idx", idx), zap.Bool("ok", ok))
 
 	loc, ok, err := p.getItemPartIndex(state, id)
 	if err != nil {
 		return err
 	}
 
+	logging.Logger.Info("3 Jayash Remove", zap.String("id", id), zap.Int("loc", loc), zap.Bool("ok", ok))
+
 	if !ok {
+		logging.Logger.Info("4 Jayash Remove", zap.String("id", id))
 		return common.NewError(ErrItemNotFoundCode, id)
 	}
+
+	logging.Logger.Info("5 Jayash Remove", zap.String("id", id))
 
 	if err := p.removeItem(state, id, loc); err != nil {
 		return err
 	}
 
+	logging.Logger.Info("6 Jayash Remove", zap.String("id", id), zap.Int("loc", loc))
+
 	p.loadLocations(loc)
+
+	logging.Logger.Info("7 Jayash Remove", zap.String("id", id), zap.Int("loc", loc), zap.Any("locations", p.locations))
 	return p.removeItemLoc(state, id)
 }
 
