@@ -1117,7 +1117,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 				if cstate.ErrValueNotPresent(err) {
 					err = validators.Remove(balances, randValidator.Id)
 					if err != nil {
-						logging.Logger.Info("1.1.1 Jayash remove", zap.Any("validator", randValidator.Id), zap.Any("err", err)
+						logging.Logger.Info("1.1.1 Jayash remove", zap.Any("validator", randValidator.Id), zap.Any("err", err))
 						return common.NewError("add_challenge",
 							"error removing validator from partition: "+err.Error())
 					}
