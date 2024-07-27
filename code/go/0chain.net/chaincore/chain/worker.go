@@ -336,15 +336,24 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				zap.String("prev block", fb.PrevHash))
 
 			if err := c.GetBlockStateChange(fb); err != nil {
-				logging.Logger.Error("finalize block failed, compute state failed",
+				logging.Logger.Warn("finalize block failed to sync state from remote, try to compute state",
 					zap.Int64("round", fb.Round),
 					zap.Error(err))
-				return fmt.Errorf("sync state changes failed: %v", err)
-			}
 
-			logging.Logger.Debug("finalize block - sync state success",
-				zap.Int64("round", fb.Round),
-				zap.String("block", fb.Hash))
+				if err := c.ComputeState(ctx, fb); err != nil {
+					logging.Logger.Error("finalize block - compute state failed",
+						zap.Int64("round", fb.Round),
+						zap.Error(err))
+					return err
+				}
+				logging.Logger.Debug("finalize block - compute state success",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash))
+			} else {
+				logging.Logger.Debug("finalize block - sync state success",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash))
+			}
 		}
 	}
 
@@ -361,32 +370,34 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 	}
 
-	if isSharder {
-		// get previous finalized block
-		pr := c.GetRound(fb.Round - 1)
-		if pr == nil {
-			logging.Logger.Error("finalize block - previous round not found",
-				zap.Int64("round", fb.Round))
-			return errors.New("previous round is missing")
-		}
-
-		prevBlockHash := pr.GetBlockHash()
-		if prevBlockHash == "" || !pr.IsFinalized() {
-			logging.Logger.Error("finalize block - previous round not finalized",
-				zap.Int64("round", fb.Round))
-			return errors.New("previous round not finalized")
-		}
-
-		if fb.PrevHash != prevBlockHash {
-			logging.Logger.Error("finalize block - could not connect to lfb",
-				zap.Int64("round", fb.Round),
-				zap.String("block", fb.Hash),
-				zap.String("prev block", fb.PrevHash),
-				zap.String("finalized previous block", prevBlockHash))
-			return errors.New("could not connect to lfb")
-		}
-
+	// if isSharder {
+	// get previous finalized block
+	pr := c.GetRound(fb.Round - 1)
+	if pr == nil {
+		logging.Logger.Error("finalize block - previous round not found",
+			zap.Int64("round", fb.Round))
+		return errors.New("previous round is missing")
 	}
+
+	prevBlockHash := pr.GetBlockHash()
+	if prevBlockHash == "" || !pr.IsFinalized() {
+		logging.Logger.Error("finalize block - previous round not finalized",
+			zap.Int64("round", fb.Round),
+			zap.String("prev block", prevBlockHash),
+			zap.Any("prev stat", pr.FinalizeState()))
+		return errors.New("previous round not finalized")
+	}
+
+	if fb.PrevHash != prevBlockHash {
+		logging.Logger.Error("finalize block - could not connect to lfb",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
+			zap.String("prev block", fb.PrevHash),
+			zap.String("finalized previous block", prevBlockHash))
+		return errors.New("could not connect to lfb")
+	}
+
+	// }
 	// finalize
 	if err := c.finalizeBlock(ctx, fb, bsh); err != nil {
 		return err
@@ -482,6 +493,8 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				lastRound.stateHash = bs.ClientStateHash
 				lastRound.tm = time.Now()
 				continue
+			} else {
+				logging.Logger.Debug("BC is not moving perhaps...")
 			}
 		case <-tk.C:
 			// last round could be 0 when miners or sharders start
@@ -496,6 +509,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			// time since the last finalized round arrived
 			ts := time.Since(lastRound.tm)
 			if ts <= c.bcStuckTimeThreshold {
+				logging.Logger.Debug("last round tm < threashold...")
 				continue
 			}
 

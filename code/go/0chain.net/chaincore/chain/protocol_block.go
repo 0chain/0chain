@@ -666,6 +666,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	}
 
 	maxSyncDepth := int64(config.GetLFBTicketAhead())
+	// maxSyncDepth := int64(1)
 	syncNum := maxSyncDepth
 	if lfb != nil {
 		syncNum = b.Round - lfb.Round
@@ -733,6 +734,11 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		zap.String("previous block", b.PrevHash))
 
 	return pb
+	// logging.Logger.Error("get_previous_block - previous block state not computed",
+	// 	zap.String("prev block", b.PrevHash),
+	// 	zap.Int64("round", b.Round),
+	// 	zap.String("block", b.Hash))
+	// return nil
 }
 
 func (c *Chain) registerBlockSync(blockHash string, replyC chan *block.Block) (notifyAndClean func(*block.Block), ok bool) {
