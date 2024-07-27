@@ -5,6 +5,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -443,7 +444,7 @@ func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Co
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *transaction.Transaction, balances cstate.StateContextI) (currency.Coin, error) {
+func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *transaction.Transaction, sps []*stakePool, balances cstate.StateContextI) (currency.Coin, error) {
 	rdtu, err := sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
@@ -451,7 +452,7 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 	}
 
 	var cost currency.Coin
-	for _, ba := range sab.BlobberAllocs {
+	for i, ba := range sab.BlobberAllocs {
 		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size))
 		if err != nil {
 			return 0, err
@@ -462,8 +463,8 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 			return 0, err
 		}
 
-		transfer := NewTokenTransfer(c, t.ClientID, ba.BlobberID, false)
-		_, err = transfer.transfer(balances)
+		sp := sps[i]
+		err = sp.DistributeRewards(c, ba.BlobberID, spenum.Blobber, spenum.EnterpriseBlobberReward, balances, sab.ID)
 		if err != nil {
 			return 0, err
 		}

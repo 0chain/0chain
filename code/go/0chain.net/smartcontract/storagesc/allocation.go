@@ -871,9 +871,25 @@ func (sc *StorageSmartContract) extendAllocation(
 		return nil
 	}, func() error {
 		if isEnterprise {
-			cost, err := alloc.payCostForRdtuForEnterpriseAllocation(txn, balances)
+			var sps []*stakePool
+			for _, ba := range alloc.BlobberAllocs {
+				sp, err := sc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
+				if err != nil {
+					return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID, err)
+				}
+				sps = append(sps, sp)
+			}
+
+			cost, err := alloc.payCostForRdtuForEnterpriseAllocation(txn, sps, balances)
 			if err != nil {
 				return fmt.Errorf("can't get cost for RDTU: %v", err)
+			}
+
+			for i, sp := range sps {
+				err = sp.Save(spenum.Blobber, alloc.BlobberAllocs[i].BlobberID, balances)
+				if err != nil {
+					return fmt.Errorf("can't save stake pool of %s: %v", alloc.BlobberAllocs[i].BlobberID, err)
+				}
 			}
 
 			logging.Logger.Info("extendAllocation: cost for RDTU", zap.Any("cost", cost))
@@ -1620,7 +1636,7 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	if isEnterprise {
 		var cost currency.Coin
-		if cost, err = alloc.payCostForRdtuForEnterpriseAllocation(t, balances); err != nil {
+		if cost, err = alloc.payCostForRdtuForEnterpriseAllocation(t, sps, balances); err != nil {
 			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
 		}
 

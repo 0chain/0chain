@@ -78,6 +78,7 @@ const (
 	ChallengePassReward
 	ChallengeSlashPenalty
 	CancellationChargeReward
+	EnterpriseBlobberReward
 	NumOfRewards
 )
 
@@ -94,6 +95,7 @@ func initRewardString() {
 	rewardString[ChallengeSlashPenalty] = "challenge_slash"
 	rewardString[CancellationChargeReward] = "cancellation_charge"
 	rewardString[NumOfRewards] = "invalid"
+	rewardString[EnterpriseBlobberReward] = "enterprise_blobber_reward"
 }
 
 func (r Reward) String() string {
