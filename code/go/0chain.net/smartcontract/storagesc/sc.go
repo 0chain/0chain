@@ -271,21 +271,29 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "commit_settings_changes":
 		resp, err = sc.commitSettingChanges(t, input, balances)
 
+	case "reset_blobber_stats":
+		resp, err = sc.resetBlobberStats(t, input, balances)
+
+	case "reset_allocation_stats":
+		resp, err = sc.resetAllocationStats(t, input, balances)
+
 	default:
 		logging.Logger.Info("Storage function name", zap.String("function", funcName))
-		processedChanges := false
-		actErr := chainstate.WithActivation(balances, "ares", func() error {
-			logging.Logger.Info("Before ares", zap.String("function", funcName))
+
+		actErr := chainstate.WithActivation(balances, "demeter", func() error {
 			return nil
 		}, func() error {
-			if funcName == "reset_blobber_stats" {
-				_ = chainstate.WithActivation(balances, "athena", func() error {
-					return nil
-				}, func() error {
-					processedChanges = true
-					return nil
-				})
-				resp, err = sc.resetBlobberStats(t, input, balances)
+			var conf *Config
+			if conf, err = sc.getConfig(balances, true); err != nil {
+				return nil
+			}
+
+			if t.ClientID != conf.OwnerId {
+				return nil
+			}
+
+			if funcName == "repair_validator_partitions" {
+				resp, err = sc.repairValidatorPartitions(t, input, balances)
 				return err
 			}
 			return nil
@@ -299,23 +307,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		}, func() error {
 			if funcName == "fix_validator" {
 				resp, err = sc.fixValidatorBaseUrl(t, input, balances)
-				return err
-			}
-			return nil
-		})
-		if actErr != nil || resp != "" {
-			return resp, actErr
-		}
-
-		if processedChanges {
-			return
-		}
-
-		actErr = chainstate.WithActivation(balances, "artemis", func() error {
-			return nil
-		}, func() error {
-			if funcName == "reset_allocation_stats" {
-				resp, err = sc.resetAllocationStats(t, input, balances)
 				return err
 			}
 			return nil

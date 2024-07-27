@@ -1,10 +1,9 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"fmt"
-
-	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/provider"
 
@@ -376,4 +375,18 @@ func (sc *StorageSmartContract) fixValidatorBaseUrl(t *transaction.Transaction, 
 	}
 
 	return string(validator.Encode()), nil
+}
+
+func (sc *StorageSmartContract) repairValidatorPartitions(t *transaction.Transaction, input []byte, balances state.StateContextI) (string, error) {
+	validatorPartitions, err := getValidatorsList(balances)
+	if err != nil {
+		return "", common.NewError("fix_validator_failed", "Failed to get validator list")
+	}
+
+	err = validatorPartitions.RepairValidatorPartitions(balances)
+	if err != nil {
+		return "", common.NewError("fix_validator_failed", "Failed to repair validator partitions : "+err.Error())
+	}
+
+	return "partition fix success", nil
 }
