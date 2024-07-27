@@ -84,6 +84,24 @@ func newClient(balance currency.Coin, balances chainState.StateContextI) (
 	return
 }
 
+func newClientWithBalance(balance currency.Coin, balances chainState.StateContextI) (
+	client *Client) {
+
+	var scheme = encryption.NewBLS0ChainScheme()
+	scheme.GenerateKeys() //nolint
+
+	client = new(Client)
+	client.balance = balance
+	client.scheme = scheme
+
+	client.pk = scheme.GetPublicKey()
+	pub := bls.PublicKey{}
+	pub.DeserializeHexStr(client.pk)
+	client.id = encryption.Hash(pub.Serialize())
+
+	return
+}
+
 func getBlobberURL(id string) string {
 	return "http://" + id + ":9081/api/v1"
 }

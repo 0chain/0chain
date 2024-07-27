@@ -444,11 +444,15 @@ func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Co
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *transaction.Transaction, sps []*stakePool, balances cstate.StateContextI) (currency.Coin, error) {
-	rdtu, err := sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
+func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *transaction.Transaction, sps []*stakePool, balances cstate.StateContextI, fullDuration bool) (currency.Coin, error) {
+	var rdtu float64
+	var err error
+	if !fullDuration {
+		rdtu, err = sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
 
+		}
 	}
 
 	var cost currency.Coin
@@ -458,9 +462,11 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 			return 0, err
 		}
 
-		c, err = currency.MultFloat64(c, rdtu)
-		if err != nil {
-			return 0, err
+		if !fullDuration {
+			c, err = currency.MultFloat64(c, rdtu)
+			if err != nil {
+				return 0, err
+			}
 		}
 
 		sp := sps[i]
@@ -468,6 +474,11 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 		if err != nil {
 			return 0, err
 		}
+
+		//if c > sab.WritePool { // Adding this to manage if something goes wrong in cost calculation
+		//	logging.Logger.Error("cost is greater than write pool for enterprise allocation", zap.Any("cost", c), zap.Any("write_pool", sab.WritePool))
+		//	c = sab.WritePool
+		//}
 
 		sab.WritePool, err = currency.MinusCoin(sab.WritePool, c)
 		if err != nil {
