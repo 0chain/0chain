@@ -7,7 +7,7 @@ import (
 
 //go:generate msgp -v -io=false -tests=false -unexported=true
 
-var allValidatorsPartitionSize = 50
+var allValidatorsPartitionSize = 7
 
 func getValidatorsList(state state.StateContextI) (*partitions.Partitions, error) {
 	return partitions.GetPartitions(state, ALL_VALIDATORS_KEY)
