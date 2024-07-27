@@ -2153,7 +2153,7 @@ func compareAllocationData(t *testing.T, beforeAlloc, afterAlloc storageAllocati
 	assert.JSONEq(t, beforeAllocString, afterAllocString, "Allocation data should be same")
 }
 
-func checkStakesRewardsAre0(beforeAlloc *storageAllocationBase, ssc *StorageSmartContract, t *testing.T, balances *testBalances) {
+func checkStakesRewardsAre0ForAlloc(beforeAlloc *storageAllocationBase, ssc *StorageSmartContract, t *testing.T, balances *testBalances) {
 	for _, ba := range beforeAlloc.BlobberAllocs {
 		sp, err := ssc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
 		require.NoError(t, err)
@@ -2168,6 +2168,21 @@ func checkStakesRewardsAre0(beforeAlloc *storageAllocationBase, ssc *StorageSmar
 		}
 		require.Equal(t, 0, int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 	}
+}
+
+func checkStakesRewardsAre0ForBlobber(blobberID string, ssc *StorageSmartContract, t *testing.T, balances *testBalances) {
+	sp, err := ssc.getStakePool(spenum.Blobber, blobberID, balances)
+	require.NoError(t, err)
+
+	require.Equal(t, 0, int(sp.Reward), "30% service charge to blobber should be updated")
+	require.Len(t, sp.Pools, 1, "Single delegate pool")
+	// get key of the delegate pool
+	var dpKey string
+	for k := range sp.Pools {
+		dpKey = k
+		break
+	}
+	require.Equal(t, 0, int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 }
 
 func TestUpdateAllocationRequest(t *testing.T) {
@@ -2423,7 +2438,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			allocID        = beforeAlloc.ID
 		)
 
-		checkStakesRewardsAre0(beforeAlloc, ssc, t, balances)
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
 		// extend
 		var uar updateAllocationRequest
@@ -2477,7 +2492,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
-		checkStakesRewardsAre0(beforeAlloc, ssc, t, balances)
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
 		// extend
 		var uar updateAllocationRequest
@@ -2549,7 +2564,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
-		checkStakesRewardsAre0(beforeAlloc, ssc, t, balances)
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
 		// upgrade
 		var uar updateAllocationRequest
@@ -2612,7 +2627,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
-		checkStakesRewardsAre0(beforeAlloc, ssc, t, balances)
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
 		// upgrade
 		var uar updateAllocationRequest
@@ -2693,9 +2708,11 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
-		checkStakesRewardsAre0(beforeAlloc, ssc, t, balances)
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
 		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
+
+		checkStakesRewardsAre0ForBlobber(nb3.id, ssc, t, balances)
 
 		// add blobber
 		var uar updateAllocationRequest
@@ -2753,6 +2770,20 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			require.Equal(t, 0, int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 		}
 
+		// Added blobber should not get any rewards
+		sp, err := ssc.getStakePool(spenum.Blobber, nb3.id, balances)
+		require.NoError(t, err)
+
+		require.Equal(t, 0, int(sp.Reward), "30% service charge to blobber should be updated")
+		require.Len(t, sp.Pools, 1, "Single delegate pool")
+		// get key of the delegate pool
+		var dpKey string
+		for k := range sp.Pools {
+			dpKey = k
+			break
+		}
+		require.Equal(t, 0, int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+
 		afterAllocBase := afterAlloc.mustBase()
 
 		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
@@ -2779,9 +2810,10 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
-		checkStakesRewardsAre0(beforeAlloc, ssc, t, balances)
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
 		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, true, false)
+		checkStakesRewardsAre0ForBlobber(nb3.id, ssc, t, balances)
 
 		// add blobber
 		var uar updateAllocationRequest
@@ -2849,6 +2881,19 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			break
 		}
 		require.Equal(t, int(3.5*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+
+		// Added blobber should not get any rewards
+		sp, err = ssc.getStakePool(spenum.Blobber, nb3.id, balances)
+		require.NoError(t, err)
+
+		require.Equal(t, 0, int(sp.Reward), "30% service charge to blobber should be updated")
+		require.Len(t, sp.Pools, 1, "Single delegate pool")
+		// get key of the delegate pool
+		for k := range sp.Pools {
+			dpKey = k
+			break
+		}
+		require.Equal(t, 0, int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 
 		afterAllocBase := afterAlloc.mustBase()
 
