@@ -1272,7 +1272,7 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				return nil
 			}, func() (e error) {
 				if isEnterpriseBlobber {
-					cost, err := sab.payCostForRdtuForReplaceEnterpriseBlobber(txn, blobberID, balances)
+					cost, err := sab.payCostForRdtuForReplaceEnterpriseBlobber(txn, sp, blobberID, balances)
 					logging.Logger.Info("payCostForRdtuForReplaceEnterpriseBlobber", zap.Any("cost", cost), zap.Any("err", err))
 					if err != nil {
 						return err

@@ -483,7 +483,7 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *transaction.Transaction, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
+func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *transaction.Transaction, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
 	rdtu, err := sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
@@ -503,8 +503,7 @@ func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *t
 				return 0, err
 			}
 
-			transfer := NewTokenTransfer(c, t.ClientID, ba.BlobberID, false)
-			_, err = transfer.transfer(balances)
+			err = sp.DistributeRewards(c, ba.BlobberID, spenum.Blobber, spenum.EnterpriseBlobberReward, balances, sab.ID)
 			if err != nil {
 				return 0, err
 			}
