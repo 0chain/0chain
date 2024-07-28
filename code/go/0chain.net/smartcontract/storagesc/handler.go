@@ -2632,8 +2632,8 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 	_ = cstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
-			sr.IsEnterprise = *v3.IsEnterprise
+		if v3, ok := sn.Entity().(*storageNodeV3); ok {
+			sr.IsEnterprise = v3.IsEnterprise
 		}
 		return nil
 	})
@@ -2688,7 +2688,7 @@ func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
 		IsRestricted:            &snr.IsRestricted,
-		IsEnterprise:            &snr.IsEnterprise,
+		IsEnterprise:            snr.IsEnterprise,
 	}
 }
 
