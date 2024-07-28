@@ -807,8 +807,13 @@ type partitionsDecode Partitions
 func (p *Partitions) RepairValidatorPartitions(balances state.StateContextI) error {
 	logging.Logger.Info("Jayash ", zap.Int("Last.Loc", p.Last.Loc), zap.Any("len", len(p.Partitions)))
 
-	for _, pp := range p.Partitions {
+	for i := 0; i <= p.Last.Loc; i++ {
+		pp, err := p.getPartition(balances, i)
+		if err != nil {
+			return err
+		}
 		logging.Logger.Info("1 Jayash ", zap.Any("pp", *pp), zap.Any("pp", pp))
+
 		for _, v := range pp.Items {
 			logging.Logger.Info("2 Jayash ", zap.Any("v", v), zap.Any("v.ID", v.ID))
 			kid := p.getLocKey(v.ID)
