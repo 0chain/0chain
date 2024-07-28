@@ -407,8 +407,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return nil
 	}
 
-	logging.Logger.Info("Jayash3", zap.Any("blobber", blobber.mustBase()))
-
 	err = state.WithActivation(balances, "electra", beforeElectra, afterElectra)
 	if err != nil {
 		return "", err
