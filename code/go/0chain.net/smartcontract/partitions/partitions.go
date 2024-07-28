@@ -805,13 +805,18 @@ func (p *Partitions) Msgsize() int {
 type partitionsDecode Partitions
 
 func (p *Partitions) RepairValidatorPartitions(balances state.StateContextI) error {
+	logging.Logger.Info("Jayash ", zap.Int("Last.Loc", p.Last.Loc), zap.Any("len", len(p.Partitions)))
+
 	for _, pp := range p.Partitions {
+		logging.Logger.Info("1 Jayash ", zap.Any("pp", *pp), zap.Any("pp", pp))
 		for _, v := range pp.Items {
+			logging.Logger.Info("2 Jayash ", zap.Any("v", v), zap.Any("v.ID", v.ID))
 			kid := p.getLocKey(v.ID)
 			var pl util.MPTSerializable
 			if err := balances.GetTrieNode(kid, pl); err != nil {
+				logging.Logger.Info("3 Jayash ", zap.Any("kid", kid), zap.Any("pl", pl), zap.Any("err", err))
 				if err == util.ErrValueNotPresent {
-					logging.Logger.Error("item location not found",
+					logging.Logger.Error("Jayash item location not found",
 						zap.String("kid", kid),
 						zap.String("id", v.ID),
 						zap.Int64("round", balances.GetBlock().Round),
@@ -819,20 +824,22 @@ func (p *Partitions) RepairValidatorPartitions(balances state.StateContextI) err
 						zap.Error(err),
 					)
 
-					err := p.saveItemLoc(balances, v.ID, pp.Loc)
-					if err != nil {
-						logging.Logger.Error("save item location failed",
+					err2 := p.saveItemLoc(balances, v.ID, pp.Loc)
+					if err2 != nil {
+						logging.Logger.Error("Jayash save item location failed",
 							zap.String("kid", kid),
 							zap.String("id", v.ID),
 							zap.Int64("round", balances.GetBlock().Round),
 							zap.String("block", balances.GetBlock().Hash),
-							zap.Error(err),
+							zap.Error(err2),
 						)
 
-						return fmt.Errorf("save item location failed: %v", err)
+						return fmt.Errorf("save item location failed: %v", err2)
 					}
 				}
 			}
+
+			logging.Logger.Info("4 Jayash ", zap.Any("kid", kid), zap.Any("pl", pl))
 		}
 	}
 
