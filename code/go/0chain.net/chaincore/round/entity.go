@@ -471,6 +471,13 @@ func (r *Round) SetFinalizing() bool {
 	return true
 }
 
+func (r *Round) SetFinalized() {
+	r.mutex.Lock()
+	logging.Logger.Debug("Set round as finalized", zap.Int64("round", r.Number))
+	r.setFinalizingPhase(RoundStateFinalized)
+	r.mutex.Unlock()
+}
+
 // ResetFinalizeStateIfNotFinalized reset finalizing state if it's not finalized yet,
 // otherwise do nothing. This is for protecting the finalized round get reset
 func (r *Round) ResetFinalizingStateIfNotFinalized() {
@@ -485,6 +492,9 @@ func (r *Round) ResetFinalizingStateIfNotFinalized() {
 func (r *Round) ResetFinalizingState() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+	logging.Logger.Debug("reset finalizing state",
+		zap.Int64("round", r.Number),
+		zap.String("block", r.BlockHash))
 	r.setFinalizingPhase(NotFinalized)
 }
 
@@ -510,6 +520,12 @@ func (r *Round) IsFinalized() bool {
 
 func (r *Round) isFinalized() bool {
 	return r.getFinalizingState() == RoundStateFinalized || r.GetRoundNumber() == 0
+}
+
+func (r *Round) FinalizeState() FinalizingState {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.finalizingState
 }
 
 /*Provider - entity provider for client object */
