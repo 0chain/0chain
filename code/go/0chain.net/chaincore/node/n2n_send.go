@@ -337,8 +337,13 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				if ok && ue.Unwrap() != context.Canceled {
 					receiver.AddSendErrors(1)
 					receiver.AddErrorCount(1)
-					logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()), zap.String("to", receiver.GetPseudoName()), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()), zap.Error(err))
 				}
+				logging.N2n.Error("sending", zap.String("from", selfNode.GetPseudoName()),
+					zap.String("to", receiver.GetPseudoName()),
+					zap.String("handler", uri),
+					zap.Duration("duration", time.Since(ts)),
+					zap.String("entity", entity.GetEntityMetadata().GetName()),
+					zap.String("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
 

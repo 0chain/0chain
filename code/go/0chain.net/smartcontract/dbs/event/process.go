@@ -127,12 +127,15 @@ func (edb *EventDb) ProcessEvents(
 		}
 
 		if !commit {
-			err := txRollback()
-			if err != nil {
-				return nil, 0, err
+			rerr := txRollback()
+			if rerr != nil {
+				logging.Logger.Error("process events failed, rollback failed",
+					zap.Int64("round", event.round),
+					zap.String("block", event.block),
+					zap.Error(err))
 			}
 
-			return nil, 0, err
+			return nil, 0, errors.New("process events failed")
 		}
 
 		var opt ProcessEventsOptions
