@@ -817,8 +817,8 @@ func (p *Partitions) RepairValidatorPartitions(balances state.StateContextI) err
 		for _, v := range pp.Items {
 			logging.Logger.Info("2 Jayash ", zap.Any("v", v), zap.Any("v.ID", v.ID))
 			kid := p.getLocKey(v.ID)
-			var pl util.MPTSerializable
-			if err := balances.GetTrieNode(kid, pl); err != nil {
+			var pl location
+			if err := balances.GetTrieNode(kid, &pl); err != nil {
 				logging.Logger.Info("3 Jayash ", zap.Any("kid", kid), zap.Any("pl", pl), zap.Any("err", err))
 				if err == util.ErrValueNotPresent {
 					logging.Logger.Error("Jayash item location not found",
