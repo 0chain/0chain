@@ -1047,10 +1047,9 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 	all = new(StorageNodes)
 
 	for i := 1; i <= numBlobbers; i++ {
-		isEnterprise := new(bool)
-		*isEnterprise = false
+		isEnterprise := false
 		if len(isEnterprisees) > 0 {
-			*isEnterprise = isEnterprisees[i-1]
+			isEnterprise = isEnterprisees[i-1]
 		}
 
 		sn := &StorageNode{}
@@ -1692,8 +1691,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		_ = b1.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV3)
-			b.IsEnterprise = new(bool)
-			*b.IsEnterprise = true
+			b.IsEnterprise = true
 			return nil
 		})
 		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
@@ -2731,8 +2729,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 		blobber3.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV3)
-			b.IsEnterprise = new(bool)
-			*b.IsEnterprise = true
+			b.IsEnterprise = true
 			return nil
 		})
 		_, err = balances.InsertTrieNode(blobber3.GetKey(), blobber3)
@@ -2829,8 +2826,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 		blobber3.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV3)
-			b.IsEnterprise = new(bool)
-			*b.IsEnterprise = true
+			b.IsEnterprise = true
 			return nil
 		})
 		_, err = balances.InsertTrieNode(blobber3.GetKey(), blobber3)

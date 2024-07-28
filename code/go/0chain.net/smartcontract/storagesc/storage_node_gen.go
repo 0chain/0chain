@@ -279,11 +279,7 @@ func (z *storageNodeV3) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "IsEnterprise"
 	o = append(o, 0xac, 0x49, 0x73, 0x45, 0x6e, 0x74, 0x65, 0x72, 0x70, 0x72, 0x69, 0x73, 0x65)
-	if z.IsEnterprise == nil {
-		o = msgp.AppendNil(o)
-	} else {
-		o = msgp.AppendBool(o, *z.IsEnterprise)
-	}
+	o = msgp.AppendBool(o, z.IsEnterprise)
 	return
 }
 
@@ -401,21 +397,10 @@ func (z *storageNodeV3) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 			}
 		case "IsEnterprise":
-			if msgp.IsNil(bts) {
-				bts, err = msgp.ReadNilBytes(bts)
-				if err != nil {
-					return
-				}
-				z.IsEnterprise = nil
-			} else {
-				if z.IsEnterprise == nil {
-					z.IsEnterprise = new(bool)
-				}
-				*z.IsEnterprise, bts, err = msgp.ReadBoolBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "IsEnterprise")
-					return
-				}
+			z.IsEnterprise, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "IsEnterprise")
+				return
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -437,11 +422,6 @@ func (z *storageNodeV3) Msgsize() (s int) {
 	} else {
 		s += msgp.BoolSize
 	}
-	s += 13
-	if z.IsEnterprise == nil {
-		s += msgp.NilSize
-	} else {
-		s += msgp.BoolSize
-	}
+	s += 13 + msgp.BoolSize
 	return
 }
