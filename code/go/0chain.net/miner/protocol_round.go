@@ -133,31 +133,68 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	// check the current ticket
 
 	var (
-		ahead = config.GetLFBTicketAhead()
-		tk    = mc.GetLatestLFBTicket(ctx)
+		ahead   = config.GetLFBTicketAhead()
+		tk      = mc.GetLatestLFBTicket(ctx)
+		lfb     = mc.GetLatestFinalizedBlock()
+		tkRound int64
 	)
 
-	if tk == nil {
+	if tk == nil || lfb == nil {
 		logging.Logger.Debug("[wait not ahead] [1] context is done or restart round")
 		return false // context is done, can't wait anymore
 	}
 
-	if round+1 <= tk.Round+int64(ahead) {
+	if tk.Round > lfb.Round {
+		tkRound = lfb.Round
+	} else {
+		tkRound = tk.Round
+	}
+
+	if round+1 <= tkRound+int64(ahead) {
 		logging.Logger.Debug("[wait not ahead] [2] not ahead, can move on",
 			zap.Int64("round", round),
-			zap.Int64("lfb tk round", tk.Round))
+			zap.Int64("lfb tk round", tkRound))
 		return true // not ahead, can move on
 	}
 
 	// wait in loop
+	tkr := time.NewTicker(100 * time.Millisecond)
 	for {
 		select {
+		case <-tkr.C:
+			lfb = mc.GetLatestFinalizedBlock()
+			tk = mc.GetLatestLFBTicket(ctx)
+			if tk.Round > lfb.Round {
+				tkRound = lfb.Round
+			} else {
+				tkRound = tk.Round
+			}
+
+			if round+1 <= tkRound+int64(ahead) {
+				logging.Logger.Debug("[wait not ahead] [3*] not ahead, can move on")
+				return true // not ahead, can move on
+			}
+			logging.Logger.Debug("[wait not ahead] [4*] still ahead, can't move on")
+			if tk.Round < lfb.Round {
+				BumpLFBTicket(ctx, mc)
+			}
+
 		case ntk := <-tksubq: // the ntk can't be nil
-			if round+1 <= ntk.Round+int64(ahead) {
+			lfb = mc.GetLatestFinalizedBlock()
+			if ntk.Round > lfb.Round { // ntk is ahead, use lfb
+				tkRound = lfb.Round
+			} else {
+				tkRound = ntk.Round // lfb is ahead, use ntk?
+			}
+
+			if round+1 <= tkRound+int64(ahead) {
 				logging.Logger.Debug("[wait not ahead] [3] not ahead, can move on")
 				return true // not ahead, can move on
 			}
-			logging.Logger.Debug("[wait not ahead] [4] still ahead, can't move on")
+			logging.Logger.Debug("[wait not ahead] [4] still ahead, can't move on",
+				zap.Int64("current round", round),
+				zap.Int64("ntk round", ntk.Round),
+				zap.Int64("lfb round", lfb.Round))
 		case <-rrsubq:
 			logging.Logger.Debug("[wait not ahead] [5] restart round triggered")
 			return // false, shouldn't move on
@@ -178,7 +215,6 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 // Creates the next round, if next round exists and has RRS returns existent.
 // If RRS is not present, starts VRF phase for this round
 func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
-
 	var (
 		rn = r.GetRoundNumber()
 		pr = mc.GetMinerRound(rn - 1)
@@ -193,18 +229,18 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 		mr = mc.CreateRound(nr)
 		er = mc.AddRound(mr).(*Round)
 	)
-
 	mc.SetCurrentRound(er.GetRoundNumber())
+	mc.finalizeRound(ctx, r) // finalize the notarized block round
 
 	if er != mr && mc.isStarted() && er.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
 			zap.Int64("er_round", er.GetRoundNumber()),
-			zap.Int64("rrs", r.GetRandomSeed()),
+			zap.Int64("rrs", er.GetRandomSeed()),
 			zap.Bool("is_started", mc.isStarted()))
 		return er
 	}
 
-	if r.HasRandomSeed() {
+	if r.HasRandomSeed() && er.VrfShare() == nil {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
 		mc.addMyVRFShare(ctx, r, er)
 	} else {
@@ -1118,7 +1154,15 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 
 func (mc *Chain) moveToNextRoundNotAheadImpl(ctx context.Context, r *Round, beforeStartNextRound func()) {
 	r.SetPhase(round.Complete)
-	var rn = r.GetRoundNumber()
+	var (
+		rn = r.GetRoundNumber()
+		pr = mc.GetMinerRound(rn - 1)
+	)
+
+	if pr != nil && !pr.IsFinalizing() && !pr.IsFinalized() {
+		mc.finalizeRound(ctx, pr) // finalize the previous round
+	}
+
 	if !mc.waitNotAhead(ctx, rn) {
 		logging.Logger.Debug("start next round not ahead -- terminated",
 			zap.Int64("round", rn))
@@ -1560,6 +1604,7 @@ func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
 }
 
 func (mc *Chain) restartRound(ctx context.Context, rn int64) {
+	BumpLFBTicket(ctx, mc)
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
 	mc.IncrementRoundTimeoutCount()
@@ -1587,34 +1632,12 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	mc.RoundTimeoutsCount++
 
 	// get LFMB and LFB from sharders
-	var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
-	if err != nil {
-		logging.Logger.Error("restartRound - ensure lfb", zap.Error(err))
-	}
-
 	var (
 		isAhead = mc.isAheadOfSharders(ctx, rn)
 		lfb     = mc.GetLatestFinalizedBlock()
 	)
 
-	// initialize rrs for lfb round
-	//if lfb.Round > 0 {
-	//	lfbr := mc.GetMinerRound(lfb.Round)
-	//	if lfbr == nil {
-	//		lfbr = mc.AddRound(mc.CreateRound(round.NewRound(lfb.Round))).(*Round)
-	//	}
-	//	if lfb.RoundRandomSeed != 0 && lfbr.RandomSeed != lfb.RoundRandomSeed {
-	//		lfbr.SetRandomSeedForNotarizedBlock(lfb.RoundRandomSeed, 0)
-	//	}
-	//}
-
-	// kick new round from the new LFB from sharders
-	if updated {
-		if lfb.Round > rn {
-			mc.kickRoundByLFB(ctx, lfb) // and continue
-			//round = mc.GetCurrentRound()
-		}
-	} else if isAhead {
+	if isAhead {
 		mc.kickSharders(ctx) // not updated, resend latest HNB we know for this round
 	}
 
@@ -1878,8 +1901,15 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {
+		logging.Logger.Error("start protocol on LFB - init block state failed",
+			zap.Int64("round", lfb.Round),
+			zap.String("block", lfb.Hash),
+			zap.Error(err))
 		lfb.SetStateStatus(0)
 	}
+
+	logging.Logger.Info("start protocoal on LFB - set lfb", zap.Int64("round", lfb.Round),
+		zap.Any("status", lfb.GetStateStatus()))
 
 	mc.SetLatestFinalizedBlock(ctx, lfb)
 	logging.Logger.Info("start protocoal on LFB - set lfb",
@@ -1887,13 +1917,33 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	return mc.GetMinerRound(lfb.Round)
 }
 
+func BumpLFBTicket(ctx context.Context, mc *Chain) {
+	list := mc.GetLatestFinalizedBlockFromSharder(ctx)
+	if len(list) == 0 {
+		logging.Logger.Debug("ensure_lfb - no new lfb received")
+		return // no LFB given
+	}
+
+	rcvd := list[0].Block // the highest received LFB
+	// received latest finalized block is one around ahead of local latest finalized block
+	mc.bumpLFBTicket(ctx, rcvd)
+}
+
 func StartProtocol(ctx context.Context, gb *block.Block) {
 
 	var (
-		mc  = GetMinerChain()
-		lfb = getLatestBlockFromSharders(ctx)
-		mr  *Round
+		mc = GetMinerChain()
+		mr *Round
 	)
+
+	if err := mc.LoadLatestBlocksFromStore(ctx); err != nil {
+		logging.Logger.Error(fmt.Sprintf("can't load latest blocks from store, err: %v", err))
+		// return
+	}
+
+	BumpLFBTicket(ctx, mc)
+
+	lfb := mc.GetLatestFinalizedBlock()
 	if lfb != nil {
 		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {

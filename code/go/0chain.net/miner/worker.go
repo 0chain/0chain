@@ -2,8 +2,6 @@ package miner
 
 import (
 	"context"
-	"os"
-	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -15,7 +13,6 @@ import (
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
-	"github.com/0chain/common/core/util"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
@@ -24,9 +21,10 @@ const minerScMinerHealthCheck = "miner_health_check"
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
 	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
-	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
+	go mc.MessageWorker(ctx)            // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
+	go mc.BlockWorker(ctx)              // 4) sync blocks when stuck
 
 	go mc.SyncLFBStateWorker(ctx)
 
@@ -36,11 +34,10 @@ func SetupWorkers(ctx context.Context) {
 	go mc.MinerHealthCheck(ctx)
 	go mc.NotarizationProcessWorker(ctx)
 	go mc.BlockVerifyWorkers(ctx)
-	go mc.SyncAllMissingNodesWorker(ctx)
 }
 
-/*BlockWorker - a job that does all the work related to blocks in each round */
-func (mc *Chain) BlockWorker(ctx context.Context) {
+/*MessageWorker - a job that does all the work related to blocks in each round */
+func (mc *Chain) MessageWorker(ctx context.Context) {
 	var protocol Protocol = mc
 
 	for {
@@ -138,6 +135,14 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+		case nr := <-mc.GetNotifyMoveToNextRoundC():
+			roundNum := nr.GetRoundNumber()
+			logging.Logger.Debug("notify move to next round",
+				zap.Int64("round", roundNum),
+				zap.Int64("next round", roundNum+1))
+			if mr := mc.GetMinerRound(nr.GetRoundNumber()); mr != nil {
+				mc.ProgressOnNotarization(mr)
+			}
 		case <-timer.C:
 			if !mc.isStarted() {
 				break
@@ -148,13 +153,18 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 
 				if r != nil {
 					if r.IsFinalized() || r.IsFinalizing() {
+						logging.Logger.Info("round worker: round is finalized or finalizing, check next round",
+							zap.Int64("round", cround))
+
 						// check next round
 						nr := mc.GetRound(cround + 1)
 						if nr != nil {
 							roundTimeoutProcess(ctx, protocol, cround+1)
+						} else {
+							logging.Logger.Info("round worker: next round is nil", zap.Int64("next round", cround+1))
 						}
 					} else {
-						logging.Logger.Info("round timeout",
+						logging.Logger.Info("round worker: round timeout",
 							zap.Int64("round", r.Number),
 							zap.Int64("current round", cround),
 							zap.Int("VRF_shares", len(r.GetVRFShares())),
@@ -163,13 +173,24 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 							zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
 						roundTimeoutProcess(ctx, protocol, cround)
 					}
+
+					lfb := mc.GetLatestFinalizedBlock()
+					lfbTk := mc.GetLatestLFBTicket(ctx)
+					if lfb.Round < lfbTk.Round {
+						logging.Logger.Info("round worker: LFB < latest lfb ticket round, notify block sync",
+							zap.Int64("lfb round", lfb.Round),
+							zap.Int64("lfb ticket round", lfbTk.Round),
+							zap.Int64("current round", cround))
+						mc.NotifyBlockSync()
+					}
 				} else {
 					// set current round to latest finalized block
-					lfbr := mc.GetLatestFinalizedBlock().Round
-					mc.SetCurrentRound(lfbr)
-					logging.Logger.Debug("Round timeout, nil miner round, set current round to lfb round",
-						zap.Int64("nil round", cround),
-						zap.Int64("lfb round", lfbr))
+					// lfbr := mc.GetLatestFinalizedBlock().Round
+					// mc.SetCurrentRound(lfbr)
+					// logging.Logger.Debug("round worker: Round timeout, nil miner round, set current round to lfb round",
+					// 	zap.Int64("nil round", cround),
+					// 	zap.Int64("lfb round", lfbr))
+					logging.Logger.Warn("round worker: Round timeout, nil miner round", zap.Int64("nil round", cround))
 				}
 			} else {
 				cround = mc.GetCurrentRound()
@@ -177,7 +198,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			}
 		}
 		var next = mc.GetNextRoundTimeoutTime(ctx)
-		logging.Logger.Info("got_timeout", zap.Int("next", next))
+		logging.Logger.Info("round worker: got_timeout", zap.Int("next", next))
 		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
 	}
 }
@@ -266,113 +287,4 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)
 	}
-}
-
-func (mc *Chain) SyncAllMissingNodesWorker(ctx context.Context) {
-	// start in a second, repeat every 30 minutes
-	tk := time.NewTicker(time.Second)
-	for {
-		select {
-		case <-tk.C:
-			mc.syncAllMissingNodes(ctx)
-			// do all missing nodes check and sync every 30 minutes
-			// TODO: move the interval to a config file
-			tk.Reset(30 * time.Minute)
-		case <-ctx.Done():
-			logging.Logger.Debug("Sync all missing nodes worker exit!")
-			return
-		}
-	}
-}
-
-func (mc *Chain) syncAllMissingNodes(ctx context.Context) {
-	// get LFB first
-	var (
-		lfb = mc.GetLatestFinalizedBlock()
-		tk  = time.NewTicker(time.Second)
-	)
-
-	for {
-		if lfb == nil || lfb.ClientState == nil {
-			time.Sleep(10 * time.Second)
-			lfb = mc.GetLatestFinalizedBlock()
-			continue
-		}
-
-		logging.Logger.Debug("sync all missing nodes - start from LFB", zap.Int64("round", lfb.Round))
-		break
-	}
-
-	var (
-		missingNodes []util.Key
-	)
-
-	// get all missing nodes from LFB
-	for {
-		logging.Logger.Debug("sync all missing nodes - loading all missing nodes...")
-		var err error
-		start := time.Now()
-		missingNodes, err = lfb.ClientState.GetAllMissingNodes()
-		if err != nil {
-			logging.Logger.Error("sync all missing nodes - get all missing nodes failed", zap.Error(err))
-			time.Sleep(3 * time.Second)
-			continue
-		}
-
-		// Record the number of missing nodes and the time it took to acquire them
-		mc.MissingNodesStat.Counter.Inc(int64(len(missingNodes)))
-		mc.MissingNodesStat.Timer.UpdateSince(start)
-		node.Self.Underlying().Info.SetStateMissingNodes(int64(len(missingNodes)))
-
-		logging.Logger.Debug("sync all missing nodes - finish load all missing nodes",
-			zap.Int("num", len(missingNodes)))
-
-		mns := make([]string, 0, len(missingNodes))
-		for _, n := range missingNodes {
-			mns = append(mns, util.ToHex(n))
-		}
-		mn := strings.Join(mns, "\n")
-		err = os.WriteFile("/tmp/missing_nodes.txt", []byte(mn), 0644)
-		if err != nil {
-			logging.Logger.Error("sync all missing nodes - write missing nodes to file failed", zap.Error(err))
-		} else {
-			logging.Logger.Debug("sync all missing nodes - write missing nodes to file")
-		}
-		break
-	}
-
-	var (
-		batchSize = 100
-		batchs    = len(missingNodes) / batchSize
-		start     = time.Now()
-	)
-
-	for idx := 1; idx <= batchs; idx++ {
-		<-tk.C
-		// pull missing nodes
-		start := (idx - 1) * batchSize
-		end := idx * batchSize
-		wc := make(chan struct{}, 1)
-		mc.SyncMissingNodes(lfb.Round, missingNodes[start:end], wc)
-		<-wc
-		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
-			zap.Int("num", batchSize),
-			zap.Int("remaining", len(missingNodes)-end))
-
-		node.Self.Underlying().Info.SetStateMissingNodes(int64(len(missingNodes) - end))
-		tk.Reset(2 * time.Second)
-	}
-
-	mc.MissingNodesStat.SyncTimer.UpdateSince(start)
-
-	mod := len(missingNodes) % batchSize
-	if mod > 0 {
-		wc := make(chan struct{}, 1)
-		mc.SyncMissingNodes(lfb.Round, missingNodes[batchs*batchSize:], wc)
-		<-wc
-		logging.Logger.Debug("sync all missing nodes - pull missing nodes",
-			zap.Int("num", mod))
-	}
-
-	logging.Logger.Debug("sync all missing nodes - done")
 }
