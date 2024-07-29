@@ -399,7 +399,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			return common.NewError("add_or_update_blobber_failed",
 				"malformed request: "+err.Error())
 		}
-
 		blobber.SetEntity(&b)
 		return nil
 	}
@@ -433,9 +432,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
 	}
-
-	bb, _ := getBlobber(blobber.mustBase().ID, balances)
-	fmt.Println(bb)
 
 	// Save url
 	if blobber.mustBase().BaseURL != "" {
