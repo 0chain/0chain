@@ -151,6 +151,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	setConfig(t, ctx)
 
+	enableHardForks(t, ctx)
+
 	scYaml, err := getConfig(ctx)
 	require.NoError(t, err)
 
@@ -163,18 +165,19 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var challengePoolBalance = int64(700000)
 
 	var allocV2 = storageAllocationV2{
-		DataShards:    1,
-		ParityShards:  1,
+		DataShards:    5,
+		ParityShards:  5,
 		ID:            ownerId,
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
-		Expiration:    now * 3,
+		Expiration:    now + common.Timestamp(scYaml.TimeUnit/1e9),
 		Stats: &StorageAllocationStats{
 			UsedSize: 1073741824,
 		},
-		Size:             4560,
-		WritePool:        400000000,
+		Size:             5 * GB,
+		WritePool:        4e10,
 		MovedToChallenge: 40000000,
+		TimeUnit:         scYaml.TimeUnit,
 	}
 	var sa StorageAllocation
 	sa.SetEntity(&allocV2)
@@ -252,6 +255,19 @@ func TestCancelAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("Cancel Enterprise allocation", func(t *testing.T) {
+		var enterpriseAllocation = sa
+		enterpriseAllocation.Update(&storageAllocationV2{}, func(e entitywrapper.EntityI) error {
+			b := e.(*storageAllocationV2)
+			b.IsEnterprise = new(bool)
+			*b.IsEnterprise = true
+			return nil
+		})
+
+		err := testCancelEnterpriseAllocation(t, enterpriseAllocation, *blobbers, blobberStakePools, now+common.Timestamp(360*time.Hour/1e9), ctx)
+		require.NoError(t, err)
+	})
+
 	t.Run(ErrNotOwner, func(t *testing.T) {
 		prevOwner := sa.mustBase().Owner
 		var allocationNotOwner = sa
@@ -292,6 +308,38 @@ func TestCancelAllocationRequest(t *testing.T) {
 			return nil
 		})
 	})
+}
+
+func testCancelEnterpriseAllocation(t *testing.T, sa StorageAllocation, blobbers SortedBlobbers, bStakes [][]mockStakePool, now common.Timestamp, ctx *mockStateContext) error {
+	var ssc, txn, input = setupMocksFinishEnterpriseAllocation(
+		t, &sa, blobbers, bStakes,
+		now, ctx,
+	)
+
+	beforeTransfer := len(ctx.GetTransfers())
+
+	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
+	if err != nil {
+		return err
+	}
+
+	require.EqualValues(t, "canceled", resp)
+	require.NoError(t, err)
+
+	var sps []*stakePool
+	for _, blobber := range blobbers {
+		sp, err := ssc.getStakePool(spenum.Blobber, blobber.Id(), ctx)
+		require.NoError(t, err)
+		sps = append(sps, sp)
+	}
+
+	// check that the allocation is deleted from MPT
+	err = ctx.GetTrieNode(sa.GetKey(ADDRESS), &StorageAllocation{})
+	require.Error(t, err, util.ErrValueNotPresent)
+
+	confirmFinalizeEnterpriseAllocation(t, sps, ctx, beforeTransfer, 0.5) // half the time used
+
+	return nil
 }
 
 func testCancelAllocation(
@@ -487,7 +535,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		ID:            ownerId,
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
-		Expiration:    now - 180,
+		Expiration:    now + common.Timestamp(scYaml.TimeUnit),
 		Stats: &StorageAllocationStats{
 			UsedSize:       205,
 			OpenChallenges: 3,
@@ -587,7 +635,6 @@ func TestFinalizeAllocation(t *testing.T) {
 
 		err := testFinalizeEnterpriseAllocation(t, enterpriseAllocation, *blobbers, blobberStakePools, enterpriseAllocation.mustBase().Expiration, ctx)
 		require.NoError(t, err)
-
 	})
 
 	t.Run(ErrFinalizedTooSoon, func(t *testing.T) {
@@ -771,7 +818,7 @@ func testFinalizeEnterpriseAllocation(t *testing.T, sa StorageAllocation, blobbe
 	err = ctx.GetTrieNode(sa.GetKey(ADDRESS), &StorageAllocation{})
 	require.Error(t, err, util.ErrValueNotPresent)
 
-	confirmFinalizeEnterpriseAllocation(t, sps, ctx, beforeTransfer)
+	confirmFinalizeEnterpriseAllocation(t, sps, ctx, beforeTransfer, 1) // full time used
 
 	return nil
 }
@@ -781,10 +828,16 @@ func confirmFinalizeEnterpriseAllocation(
 	sps []*stakePool,
 	balances cstate.StateContextI,
 	beforeTransfers int,
+	usedPercentage float64,
 ) {
+
+	totalFinishAllocReward := int64(0)
+
 	for _, sp := range sps {
 		totalReward := float64(sp.Reward)/sp.Settings.ServiceChargeRatio - float64(sp.Reward)
-		require.Equal(t, int64(0.03*x10), int64(sp.Reward))
+		require.Equal(t, int64(0.03*x10*usedPercentage), int64(sp.Reward))
+
+		totalFinishAllocReward += int64(float64(sp.Reward) / sp.Settings.ServiceChargeRatio)
 
 		totalBalance := float64(0)
 		for _, pool := range sp.Pools {
@@ -792,14 +845,14 @@ func confirmFinalizeEnterpriseAllocation(
 		}
 
 		for _, pool := range sp.Pools {
-			require.InEpsilon(t, int64((totalReward*float64(pool.Balance))/totalBalance), int64(pool.Reward), 0.5, "Distribution is not fair")
+			require.InEpsilon(t, int64((totalReward*float64(pool.Balance))/totalBalance), int64(pool.Reward), 0.05, "Distribution is not fair")
 		}
 	}
 
 	transafers := balances.GetTransfers()
 	require.Len(t, transafers, beforeTransfers+1)
 	transfer := transafers[len(transafers)-1]
-	require.Equal(t, 3*x10, int(transfer.Amount))
+	require.Equal(t, 4*x10-totalFinishAllocReward, int64(transfer.Amount))
 }
 
 func setupMocksFinishAllocation(

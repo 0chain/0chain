@@ -444,14 +444,21 @@ func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Co
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *transaction.Transaction, sps []*stakePool, balances cstate.StateContextI, fullDuration bool) (currency.Coin, error) {
+func (sab *storageAllocationBase) usedDurationInTimeunit(now common.Timestamp, timeUnit time.Duration) (float64, error) {
+	usedTime := sab.Expiration - now
+	if usedTime < 0 {
+		return 0, errors.New("negative duration")
+	}
+	return 1 - float64(usedTime.Duration())/float64(timeUnit), nil
+}
+
+func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transaction.Transaction, conf *Config, sps []*stakePool, balances cstate.StateContextI) (currency.Coin, error) {
 	var rdtu float64
 	var err error
-	if !fullDuration {
-		rdtu, err = sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
+	if sab.Expiration > t.CreationDate {
+		rdtu, err = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
-
+			return 0, fmt.Errorf("failed to get used duration in time units: %v", err)
 		}
 	}
 
@@ -462,7 +469,7 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 			return 0, err
 		}
 
-		if !fullDuration {
+		if sab.Expiration > t.CreationDate {
 			c, err = currency.MultFloat64(c, rdtu)
 			if err != nil {
 				return 0, err
@@ -475,10 +482,10 @@ func (sab *storageAllocationBase) payCostForRdtuForEnterpriseAllocation(t *trans
 			return 0, err
 		}
 
-		//if c > sab.WritePool { // Adding this to manage if something goes wrong in cost calculation
-		//	logging.Logger.Error("cost is greater than write pool for enterprise allocation", zap.Any("cost", c), zap.Any("write_pool", sab.WritePool))
-		//	c = sab.WritePool
-		//}
+		if c > sab.WritePool { // To leave small margin to avoid panic
+			logging.Logger.Error("cost is greater than write pool for enterprise allocation", zap.Any("cost", c), zap.Any("write_pool", sab.WritePool))
+			c = sab.WritePool
+		}
 
 		sab.WritePool, err = currency.MinusCoin(sab.WritePool, c)
 		if err != nil {
