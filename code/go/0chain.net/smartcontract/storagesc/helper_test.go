@@ -118,6 +118,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn := &StorageNode{}
 	sne := &storageNodeV3{
 		IsRestricted: new(bool),
+		IsEnterprise: new(bool),
 	}
 	sne.ID = c.id
 	sne.PublicKey = c.pk
@@ -130,7 +131,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sne.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
 	sne.StakePoolSettings.DelegateWallet = "rand_delegate_wallet"
 	*sne.IsRestricted = c.isRestricted
-	sne.IsEnterprise = c.isEnterprise
+	*sne.IsEnterprise = c.isEnterprise
 	sn.SetEntity(sne)
 
 	return mustEncode(t, &sn)

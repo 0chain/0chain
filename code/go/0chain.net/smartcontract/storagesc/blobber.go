@@ -389,9 +389,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			return common.NewError("add_or_update_blobber_failed",
 				"malformed request: "+err.Error())
 		}
-
-		logging.Logger.Info("Jayash1", zap.Any("blobber", b), zap.Any("input", string(input)))
-
 		blobber.SetEntity(&b)
 		return nil
 	}
@@ -402,8 +399,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			return common.NewError("add_or_update_blobber_failed",
 				"malformed request: "+err.Error())
 		}
-
-		logging.Logger.Info("Jayash2", zap.Any("blobber", b), zap.Any("input", string(input)))
 
 		blobber.SetEntity(&b)
 		return nil
