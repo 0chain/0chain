@@ -379,6 +379,8 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
+	logging.Logger.Info("Jayash", zap.Any("input", string(input)))
+
 	blobber := &StorageNode{}
 
 	beforeElectra := func() error {
@@ -436,6 +438,9 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
 	}
+
+	bb, _ := getBlobber(blobber.mustBase().ID, balances)
+	fmt.Println(bb)
 
 	// Save url
 	if blobber.mustBase().BaseURL != "" {
