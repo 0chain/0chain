@@ -153,6 +153,7 @@ func TestAddBlobber(t *testing.T) {
 	blob.terms = avgTerms
 	blob.cap = 2 * GB
 	blob.isRestricted = true
+	blob.isEnterprise = true
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
 	require.NoError(t, err)
