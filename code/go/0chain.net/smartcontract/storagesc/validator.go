@@ -1,10 +1,9 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dto"
 	"encoding/json"
 	"fmt"
-
-	"0chain.net/smartcontract/dto"
 
 	"0chain.net/smartcontract/provider"
 

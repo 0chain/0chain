@@ -1387,3 +1387,43 @@ func (sc *StorageSmartContract) addChallenge(sa *StorageAllocation,
 func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionRounds int64) bool {
 	return roundCreatedAt+maxChallengeCompletionRounds < currentRound
 }
+
+func (sc *StorageSmartContract) repairPartitions(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+	var partitionName string
+	if err := json.Unmarshal(input, &partitionName); err != nil {
+		return "", common.NewError("repair_partitions", "error unmarshalling input: "+err.Error())
+	}
+
+	if partitionName == ALL_VALIDATORS_KEY {
+		validatorPartitions, err := getValidatorsList(balances)
+		if err != nil {
+			return "", common.NewError("fix_validator_failed", "Failed to get validator list")
+		}
+
+		if err = validatorPartitions.RepairPartitionLoc(balances); err != nil {
+			return "", common.NewError("fix_validator_failed", "Failed to repair validator partitions : "+err.Error())
+		}
+	} else if partitionName == ALL_CHALLENGE_READY_BLOBBERS_KEY {
+		challengeReadyParts, _, err := partitionsChallengeReadyBlobbers(balances)
+		if err != nil {
+			return "", common.NewErrorf("generate_challenge",
+				"error getting the blobber challenge list: %v", err)
+		}
+
+		if err = challengeReadyParts.RepairPartitionLoc(balances); err != nil {
+			return "", common.NewError("fix_challenge_failed", "Failed to repair challenge ready partitions : "+err.Error())
+		}
+	} else {
+		blobberAllocParts, err := partitionsBlobberAllocations(partitionName, balances)
+		if err != nil {
+			return "", common.NewErrorf("generate_challenge",
+				"error getting blobber_challenge_allocation list: %v", err)
+		}
+
+		if err = blobberAllocParts.RepairPartitionLoc(balances); err != nil {
+			return "", common.NewError("fix_blobber_alloc_failed", "Failed to repair blobber allocation partitions : "+err.Error())
+		}
+	}
+
+	return "partition fix success", nil
+}

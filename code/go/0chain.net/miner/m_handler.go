@@ -62,9 +62,11 @@ const (
 
 func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
 	reqRespHandlerfMap := map[string]common.ReqRespHandlerf{
-		vrfsShareRoundM2MV1Pattern: node.ToN2NReceiveEntityHandler(
-			VRFShareHandler,
-			nil,
+		vrfsShareRoundM2MV1Pattern: node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				VRFShareHandler,
+				nil,
+			),
 		),
 		"/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
 			node.ToN2NReceiveEntityHandler(
@@ -72,19 +74,25 @@ func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.
 				nil,
 			),
 		),
-		"/v1/_m2m/block/verify": node.ToN2NReceiveEntityHandler(
-			memorystore.WithConnectionEntityJSONHandler(
-				VerifyBlockHandler,
-				datastore.GetEntityMetadata("block")),
-			nil,
+		"/v1/_m2m/block/verify": node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				memorystore.WithConnectionEntityJSONHandler(
+					VerifyBlockHandler,
+					datastore.GetEntityMetadata("block")),
+				nil,
+			),
 		),
-		blockNotarizationPattern: node.ToN2NReceiveEntityHandler(
-			NotarizationReceiptHandler,
-			nil,
+		blockNotarizationPattern: node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				NotarizationReceiptHandler,
+				nil,
+			),
 		),
-		"/v1/_m2m/block/notarized_block": node.ToN2NReceiveEntityHandler(
-			NotarizedBlockHandler,
-			nil,
+		"/v1/_m2m/block/notarized_block": node.StopOnBlockSyncingHandler(c,
+			node.ToN2NReceiveEntityHandler(
+				NotarizedBlockHandler,
+				nil,
+			),
 		),
 	}
 
@@ -470,18 +478,6 @@ func notarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	if nb.Round <= lfb.Round {
 		return // doesn't need the not. block
 	}
-
-	//TODO in case there is no previous round create it, since notarization can't be rejected
-	if mc.GetMinerRound(nb.Round-1) == nil {
-		logging.Logger.Error("not. block handler -- no previous round (ignore)",
-			zap.Int64("round", nb.Round), zap.Int64("prev_round", nb.Round-1))
-		return // no previous round
-	}
-
-	//this check is not correct, we won't transit to the new round, but should save notarization block
-	//if mc.isAheadOfSharders(ctx, nb.Round) {
-	//	return
-	//}
 
 	mr := mc.GetMinerRound(nb.Round)
 	if mr != nil {
