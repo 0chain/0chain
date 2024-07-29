@@ -879,7 +879,7 @@ func (sc *StorageSmartContract) extendAllocation(
 				sps = append(sps, sp)
 			}
 
-			cost, err := alloc.payCostForRdtuForEnterpriseAllocation(txn, sps, balances, false)
+			cost, err := alloc.payCostForDtuForEnterpriseAllocation(txn, conf, sps, balances)
 			if err != nil {
 				return fmt.Errorf("can't get cost for RDTU: %v", err)
 			}
@@ -1630,7 +1630,7 @@ func (sc *StorageSmartContract) finishAllocation(
 ) (err error) {
 	if isEnterprise {
 		var cost currency.Coin
-		if cost, err = alloc.payCostForRdtuForEnterpriseAllocation(t, sps, balances, true); err != nil {
+		if cost, err = alloc.payCostForDtuForEnterpriseAllocation(t, conf, sps, balances); err != nil {
 			return fmt.Errorf("error paying enterprise blobber rewards : %v", err)
 		}
 
