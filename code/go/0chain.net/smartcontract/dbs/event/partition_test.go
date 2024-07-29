@@ -21,7 +21,7 @@ FROM pg_inherits
     JOIN pg_class child             ON pg_inherits.inhrelid   = child.oid
     JOIN pg_namespace nmsp_parent   ON nmsp_parent.oid  = parent.relnamespace
     JOIN pg_namespace nmsp_child    ON nmsp_child.oid   = child.relnamespace
-WHERE parent.relname='blobber_aggregates'`
+WHERE parent.relname='events'`
 
 func TestPartitionCreate(t *testing.T) {
 	logging.InitLogging("development", "")
@@ -36,18 +36,18 @@ func TestPartitionCreate(t *testing.T) {
 
 	db, f := GetTestEventDB(t)
 	defer f()
-	err := db.addPartition(11, "blobber_aggregates")
+	err := db.addPartition(11, "events")
 	require.NoError(t, err)
-	err = db.addPartition(101, "blobber_aggregates")
+	err = db.addPartition(101, "events")
 	require.NoError(t, err)
-	err = db.addPartition(201, "blobber_aggregates")
+	err = db.addPartition(201, "events")
 	require.NoError(t, err)
 
 	var partitions []string
 	db.Store.Get().Raw(req).Scan(&partitions)
 	require.Equal(t, 13, len(partitions))
 
-	err = db.dropPartition(201, "blobber_aggregates")
+	err = db.dropPartition(201, "events")
 	require.NoError(t, err)
 
 	db.Store.Get().Raw(req).Scan(&partitions)
