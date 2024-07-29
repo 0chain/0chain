@@ -292,8 +292,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 				return nil
 			}
 
-			if funcName == "repair_validator_partitions" {
-				resp, err = sc.repairValidatorPartitions(t, input, balances)
+			if funcName == "repair_partitions" {
+				resp, err = sc.repairPartitions(t, input, balances)
 				return err
 			}
 			return nil

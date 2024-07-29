@@ -804,7 +804,7 @@ func (p *Partitions) Msgsize() int {
 
 type partitionsDecode Partitions
 
-func (p *Partitions) RepairValidatorPartitions(balances state.StateContextI) error {
+func (p *Partitions) RepairPartitionLoc(balances state.StateContextI) error {
 	for i := 0; i < p.Last.Loc; i++ {
 		pp, err := p.getPartition(balances, i)
 		if err != nil {
