@@ -149,23 +149,64 @@ func TestAddBlobber(t *testing.T) {
 
 	setConfig(t, balances)
 
-	var blob = newClient(0, balances)
-	blob.terms = avgTerms
-	blob.cap = 2 * GB
-	blob.isRestricted = true
-	blob.isEnterprise = true
+	t.Run("Register normal blobber", func(t *testing.T) {
+		var blob = newClient(0, balances)
+		blob.terms = avgTerms
+		blob.cap = 2 * GB
 
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
+		_, err = blob.callAddBlobber(t, ssc, tp, balances)
+		require.NoError(t, err)
 
-	blobber, err := getBlobber(blob.id, balances)
-	require.NoError(t, err)
-	require.NotNil(t, blobber)
+		blobber, err := getBlobber(blob.id, balances)
+		require.NoError(t, err)
+		require.NotNil(t, blobber)
 
-	require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
-	require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
-	require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
+		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
+		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, false, *blobber.mustBase().IsRestricted)
+	})
 
+	t.Run("Register restricted blobber", func(t *testing.T) {
+		var blob = newClient(0, balances)
+		blob.terms = avgTerms
+		blob.cap = 2 * GB
+		blob.isRestricted = true
+
+		_, err = blob.callAddBlobber(t, ssc, tp, balances)
+		require.NoError(t, err)
+
+		blobber, err := getBlobber(blob.id, balances)
+		require.NoError(t, err)
+		require.NotNil(t, blobber)
+
+		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
+		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
+		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, true, *blobber.mustBase().IsRestricted)
+	})
+
+	t.Run("Register Enterprise blobber", func(t *testing.T) {
+		var blob = newClient(0, balances)
+		blob.terms = avgTerms
+		blob.cap = 2 * GB
+		blob.isEnterprise = true
+
+		_, err = blob.callAddBlobber(t, ssc, tp, balances)
+		require.NoError(t, err)
+
+		blobber, err := getBlobber(blob.id, balances)
+		require.NoError(t, err)
+		require.NotNil(t, blobber)
+
+		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
+		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
+		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, false, *blobber.mustBase().IsRestricted)
+
+		blobberV3 := blobber.Entity().(*storageNodeV3)
+		require.Equal(t, true, *blobberV3.IsEnterprise)
+	})
 }
 
 func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
