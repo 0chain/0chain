@@ -352,6 +352,7 @@ func testCancelAllocation(
 	ctx *mockStateContext,
 	now common.Timestamp,
 ) error {
+
 	sAllocation := sa.mustBase()
 
 	scYaml, err := getConfig(ctx)
@@ -417,7 +418,7 @@ func testCancelAllocation(
 	var cancellationCharges []int64
 	totalCancellationCharge, _ := sAllocation.cancellationCharge(0.2)
 
-	usedWritePool := sAllocation.MovedToChallenge - 661111
+	usedWritePool := sAllocation.MovedToChallenge - 699990
 
 	if usedWritePool < totalCancellationCharge {
 		totalCancellationCharge = totalCancellationCharge - usedWritePool
@@ -462,7 +463,7 @@ func testCancelAllocation(
 
 	// get alloc owner client balance to see if refund was made
 	amt, _ := ctx.GetClientBalance(sAllocation.Owner)
-	require.Equal(t, currency.Coin(130165279), amt)
+	require.Equal(t, currency.Coin(39426417193), amt)
 	return nil
 }
 
@@ -535,7 +536,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		ID:            ownerId,
 		BlobberAllocs: []*BlobberAllocation{},
 		Owner:         ownerId,
-		Expiration:    now + common.Timestamp(scYaml.TimeUnit),
+		Expiration:    now + common.Timestamp(scYaml.TimeUnit/1e9),
 		Stats: &StorageAllocationStats{
 			UsedSize:       205,
 			OpenChallenges: 3,
