@@ -86,6 +86,8 @@ func TestNewBlockStateChange(t *testing.T) {
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
 	}
+	bsc.DeadNodes = make([]util.Node, 0, 1)
+	bsc.DeadNodes = append(bsc.DeadNodes, nil)
 
 	err = bsc.ComputeProperties()
 	require.NoError(t, err)
