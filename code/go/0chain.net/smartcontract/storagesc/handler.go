@@ -2022,6 +2022,11 @@ func changeBlobbersEventDB(
 		saBase.BlobberAllocsMap[addID] = ba
 	}
 
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		saBase.deepCopy(base)
+		return nil
+	})
+
 	return nil
 }
 
