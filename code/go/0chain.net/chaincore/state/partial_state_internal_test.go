@@ -27,6 +27,7 @@ func TestPartialState_SaveState(t *testing.T) {
 		Version   string
 		StartRoot util.Key
 		Nodes     []util.Node
+		DeadNodes []util.Node `json:"-" msgpack:"-"`
 		mndb      *util.MemoryNodeDB
 		root      util.Node
 	}
