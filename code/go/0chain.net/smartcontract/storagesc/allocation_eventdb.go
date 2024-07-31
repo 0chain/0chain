@@ -79,6 +79,11 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 
 	logging.Logger.Info("Jayash2.1", zap.Any("blobbers", blobbers), zap.Any("blobberDetails", blobberDetails), zap.Any("storageNodes", storageNodes))
 
+	blobberAllocsMap := make(map[string]*BlobberAllocation)
+	for _, ba := range blobberDetails {
+		blobberAllocsMap[ba.BlobberID] = ba
+	}
+
 	saV2 := &storageAllocationV2{
 		ID:                   alloc.AllocationID,
 		Tx:                   alloc.TransactionID,
@@ -102,6 +107,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
 		BlobberAllocs:     blobberDetails,
+		BlobberAllocsMap:  blobberAllocsMap,
 		ReadPriceRange:    PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:   PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
 		StartTime:         common.Timestamp(alloc.StartTime),
