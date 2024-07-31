@@ -1957,6 +1957,8 @@ func changeBlobbersEventDB(
 	conf *Config,
 	addID, removeID string,
 	now common.Timestamp) error {
+	saBase := sa.mustBase()
+
 	if len(addID) == 0 {
 		if len(removeID) > 0 {
 			return fmt.Errorf("could not remove blobber without adding a new one")
@@ -1965,7 +1967,7 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	_, ok := sa.mustBase().BlobberAllocsMap[addID]
+	_, ok := saBase.BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
 	}
@@ -1986,11 +1988,9 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba := newBlobberAllocation(sa.mustBase().bSize(), sa.mustBase(), addBlobber, conf, now)
+	ba := newBlobberAllocation(saBase.bSize(), saBase, addBlobber, conf, now)
 
 	removedIdx := 0
-
-	saBase := sa.mustBase()
 
 	if len(removeID) > 0 {
 		_, ok := saBase.BlobberAllocsMap[removeID]
