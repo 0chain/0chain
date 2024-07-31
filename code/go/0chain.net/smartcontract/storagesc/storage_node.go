@@ -20,8 +20,9 @@ import (
 func init() {
 	entitywrapper.RegisterWrapper(&StorageNode{},
 		map[string]entitywrapper.EntityI{
-			"v2": &storageNodeV2{},
-			"v3": &storageNodeV3{},
+			entitywrapper.DefaultOriginVersion: &storageNodeV2{},
+			"v2":                               &storageNodeV2{},
+			"v3":                               &storageNodeV3{},
 		})
 }
 
