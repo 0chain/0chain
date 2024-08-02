@@ -610,26 +610,20 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) error {
 
 	r.AddNotarizedBlock(b)
-
-	// if c.BlocksToSharder == chain.FINALIZED {
-	// 	nb := r.GetNotarizedBlocks()
-	// 	if len(nb) > 0 {
-	// 		logging.Logger.Error("*** different blocks for the same round ***",
-	// 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-	// 			zap.String("existing_block", nb[0].Hash))
-	// 	}
-	// }
-
 	pb, _ := c.GetBlock(ctx, b.PrevHash)
 	if pb == nil {
 		return ErrNoPreviousBlock
 	}
 
 	isSharder := node.Self.IsSharder()
+	if isSharder {
+		if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
+			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
+				pb.Round, pb.Hash, pb, pb.GetStateStatus())
+		}
+	}
 
-	// TODO: add back after debuging
 	if pb.ClientState == nil || !pb.IsStateComputed() {
-		// if pb.ClientState == nil {
 		if err := c.ComputeState(ctx, pb); err != nil {
 			if isSharder {
 				return fmt.Errorf("failed to compute state of block %d: %v", pb.Round, err)
