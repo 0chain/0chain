@@ -1002,11 +1002,7 @@ func (sc *StorageSmartContract) extendAllocation(
 		return nil
 	}, func() error {
 		if isEnterprise {
-			var remainingDuration = alloc.Expiration - txn.CreationDate
-			err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
-			if err != nil {
-				return common.NewErrorf("allocation_extending_failed", "%v", err)
-			}
+			return nil
 		} else {
 			var remainingDuration = alloc.Expiration - txn.CreationDate
 			err = sc.adjustChallengePool(alloc, originalRemainingDuration, remainingDuration, originalTerms, conf.TimeUnit, balances)
@@ -1119,7 +1115,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	_ = chainstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2.IsEnterprise != nil && *v2.IsEnterprise {
+		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 			isEnterprise = true
 		}
 		return nil
@@ -1474,7 +1470,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	_ = chainstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2.IsEnterprise != nil && *v2.IsEnterprise {
+		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 			isEnterprise = true
 		}
 		return nil
@@ -1597,7 +1593,7 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 	_ = chainstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2.IsEnterprise != nil && *v2.IsEnterprise {
+		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 			isEnterprise = true
 		}
 		return nil
