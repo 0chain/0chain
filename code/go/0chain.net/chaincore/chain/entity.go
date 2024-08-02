@@ -621,16 +621,16 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
 				pb.Round, pb.Hash, pb, pb.GetStateStatus())
 		}
-	}
+	} else {
+		if pb.ClientState == nil || !pb.IsStateComputed() {
+			if err := c.ComputeState(ctx, pb); err != nil {
+				if isSharder {
+					return fmt.Errorf("failed to compute state of block %d: %v", pb.Round, err)
+				}
 
-	if pb.ClientState == nil || !pb.IsStateComputed() {
-		if err := c.ComputeState(ctx, pb); err != nil {
-			if isSharder {
-				return fmt.Errorf("failed to compute state of block %d: %v", pb.Round, err)
-			}
-
-			if err := c.GetBlockStateChange(pb); err != nil {
-				return fmt.Errorf("failed to sync block state changes: %d, err: %v", pb.Round, err)
+				if err := c.GetBlockStateChange(pb); err != nil {
+					return fmt.Errorf("failed to sync block state changes: %d, err: %v", pb.Round, err)
+				}
 			}
 		}
 	}
