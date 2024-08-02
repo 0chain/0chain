@@ -75,7 +75,7 @@ func (wgs *WaitGroupSync) Wait() error {
 	}
 }
 
-// ErrIsPanic checks whethe the error is a panic err
+// ErrIsPanic checks whether the error is a panic err
 func ErrIsPanic(err error) bool {
 	cerr, ok := err.(*common.Error)
 	if !ok {

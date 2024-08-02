@@ -504,7 +504,7 @@ An example, that can be used with the preset ids, can be found at
 ## Benchmarks
 Benchmark 0chain smart-contract endpoints.
 
-Runs testing.Benchmark on each 0chain endpoint. The blockchain database used in these tests is constructed from the parameters in the benchmark.yaml. file. Smartcontracts do not (or should not) access tha chain so a populated MPT database is enough to give a realistic benchmark.
+Runs testing.Benchmark on each 0chain endpoint. The blockchain database used in these tests is constructed from the parameters in the benchmark.yaml. file. Smartcontracts do not (or should not) access the chain so a populated MPT database is enough to give a realistic benchmark.
 
 More info in [read.me](code/go/0chain.net/smartcontract/benchmark/main/readme.md)
 

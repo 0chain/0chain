@@ -58,7 +58,7 @@ func (mc *MemoryDBChunk) Trim() {
 	mc.Buffer = mc.Buffer[:mc.Length]
 }
 
-/*MemoryDBChunkProvider - a merory db chunk provider */
+/*MemoryDBChunkProvider - a memory db chunk provider */
 type MemoryDBChunkProvider struct {
 }
 

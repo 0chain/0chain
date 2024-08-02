@@ -209,7 +209,7 @@ type DbAccess struct {
 	KafkaEnabled        bool
 	KafkaHost           string
 	KafkaTopic          string
-	KafkaTopicPartition int // doesnt work correctly. this value gets overridden at kafka broker.
+	KafkaTopicPartition int // doesn't work correctly. this value gets overridden at kafka broker.
 	KafkaUsername       string
 	KafkaPassword       string
 	KafkaWriteTimeout   time.Duration
