@@ -237,7 +237,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 		var sa *StorageAllocation
 		sa, err = ssc.getAllocation(allocID, balances)
 		require.NoError(b, err)
-		alloc := sa.mustBase()
+
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
 		for _, d := range alloc.BlobberAllocs {
@@ -370,7 +370,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		var sa *StorageAllocation
 		sa, err = ssc.getAllocation(allocID, balances)
 		require.NoError(b, err)
-		alloc := sa.mustBase()
+
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
 		for _, d := range alloc.BlobberAllocs {
