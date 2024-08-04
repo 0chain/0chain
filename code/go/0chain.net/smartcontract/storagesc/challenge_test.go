@@ -40,7 +40,6 @@ const (
 )
 
 func TestAddChallenge(t *testing.T) {
-
 	type challengeAdd struct {
 		blobberID string
 		ts        common.Timestamp
@@ -99,16 +98,13 @@ func TestAddChallenge(t *testing.T) {
 			allocChallenges.AllocationID = allocID
 		}
 
-		sa := &StorageAllocation{}
-		sa.SetEntity(&storageAllocationV2{
+		alloc := &StorageAllocation{
 			ID:            allocID,
 			BlobberAllocs: make([]*BlobberAllocation, 0, len(p.challengesTS)),
 
 			BlobberAllocsMap: make(map[string]*BlobberAllocation),
 			Stats:            &StorageAllocationStats{},
-		})
-
-		alloc := sa.mustBase()
+		}
 
 		for _, bts := range p.challengesTS {
 			bid := bts.blobberID
@@ -144,12 +140,12 @@ func TestAddChallenge(t *testing.T) {
 			var conf = &Config{
 				MaxChallengeCompletionRounds: p.cct,
 			}
-			err = ssc.addChallenge(sa, c, allocChallenges, challInfo, conf, balances)
+			err = ssc.addChallenge(alloc, c, allocChallenges, challInfo, conf, balances)
 			require.NoError(t, err)
 		}
 
 		return ssc, args{
-			alloc:           sa,
+			alloc:           alloc,
 			allocChallenges: allocChallenges,
 			balances:        balances,
 		}
@@ -268,10 +264,8 @@ func TestAddChallenge(t *testing.T) {
 			es := args.balances.GetEvents()
 			initESLen := len(es)
 
-			alloc := args.alloc.mustBase()
-
 			// add new challenge
-			c, challInfo := newChallenge(alloc.ID, tt.parameters.add.blobberID, tt.parameters.add.ts)
+			c, challInfo := newChallenge(args.alloc.ID, tt.parameters.add.blobberID, tt.parameters.add.ts)
 			var conf = &Config{
 				MaxChallengeCompletionRounds: tt.parameters.cct,
 			}
@@ -294,10 +288,9 @@ func TestAddChallenge(t *testing.T) {
 			require.EqualValues(t, *c, challenge)
 
 			// assert the allocation is saved to MPT
-			var sa StorageAllocation
-			err = args.balances.GetTrieNode(sa.GetKey(ssc.ID), &sa)
+			var alloc StorageAllocation
+			err = args.balances.GetTrieNode(args.alloc.GetKey(ssc.ID), &alloc)
 			require.NoError(t, err)
-			alloc = sa.mustBase()
 
 			// assert the open challenge stats is updated
 			ba, ok := alloc.BlobberAllocsMap[challenge.BlobberID]
@@ -307,7 +300,7 @@ func TestAddChallenge(t *testing.T) {
 
 			// assert the AllocationChallenges that stores open challenges is saved
 			var ac AllocationChallenges
-			ac.AllocationID = alloc.ID
+			ac.AllocationID = args.alloc.ID
 			err = args.balances.GetTrieNode(ac.GetKey(ssc.ID), &ac)
 			require.NoError(t, err)
 
@@ -332,7 +325,6 @@ func TestAddChallenge(t *testing.T) {
 }
 
 func TestBlobberReward(t *testing.T) {
-
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = currency.Coin(73000000)
 	var challengePoolBalance = currency.Coin(730000000000)
@@ -569,9 +561,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ssc, balances, tp, sa, blobberClients, valids, validators, blobbers, client := prepareAllocChallengesForCompleteRewardFlow(t, 10)
-
-			alloc := sa.mustBase()
+			ssc, balances, tp, alloc, blobberClients, valids, validators, blobbers, client := prepareAllocChallengesForCompleteRewardFlow(t, 10)
 
 			totalExpectedReward := int64(0)
 			totalPaidReward := int64(0)
@@ -630,9 +620,8 @@ func TestCompleteRewardFlow(t *testing.T) {
 
 					// Setting allocations details
 
-					sa, err = ssc.getAllocation(alloc.ID, balances)
+					alloc, err = ssc.getAllocation(alloc.ID, balances)
 					require.NoError(t, err)
-					alloc = sa.mustBase()
 
 					blobberAlloc := alloc.BlobberAllocs[idx]
 
@@ -698,11 +687,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 					err = allocChallenges.Save(balances, ssc.ID)
 					require.NoError(t, err)
 
-					sa.mustUpdateBase(func(base *storageAllocationBase) error {
-						alloc.deepCopy(base)
-						return nil
-					})
-					err = sa.save(balances, ssc.ID)
+					err = alloc.save(balances, ssc.ID)
 					require.NoError(t, err)
 
 					genChall(t, ssc, challengeGenerationTime, challengeRoundCreatedAt, challID, 0, validators, alloc.ID, blobber, balances)
@@ -791,9 +776,8 @@ func TestCompleteRewardFlow(t *testing.T) {
 					collectedBlobberReward = blobberSP.Reward
 				}
 
-				sa, err = ssc.getAllocation(alloc.ID, balances)
+				alloc, err = ssc.getAllocation(alloc.ID, balances)
 				require.NoError(t, err)
-				alloc = sa.mustBase()
 
 				//bk.Round += 200000
 				//balances.setBlock(t, bk)
@@ -815,11 +799,7 @@ func TestCompleteRewardFlow(t *testing.T) {
 				err = allocChallenges.Save(balances, ssc.ID)
 				require.NoError(t, err)
 
-				sa.mustUpdateBase(func(base *storageAllocationBase) error {
-					alloc.deepCopy(base)
-					return nil
-				})
-				err = sa.save(balances, ssc.ID)
+				err = alloc.save(balances, ssc.ID)
 				require.NoError(t, err)
 			}
 
@@ -838,9 +818,8 @@ func TestCompleteRewardFlow(t *testing.T) {
 			require.NoError(t, err)
 			var tx = newTransaction(client.id, ssc.ID, 0, int64(alloc.Expiration)+2)
 			balances.setTransaction(t, tx)
-			sa, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
+			alloc, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
 			require.NoError(t, err)
-			alloc = sa.mustBase()
 
 			_, err = ssc.getChallengePool(alloc.ID, balances)
 			require.Error(t, err, "challenge pool should be deleted")
@@ -973,10 +952,9 @@ func TestRollBack(t *testing.T) {
 	tp += 1000
 	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
-	var sa *StorageAllocation
-	sa, err = ssc.getAllocation(allocID, balances)
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc := sa.mustBase()
 
 	blobberClient := testGetBlobber(blobs, alloc, 0)
 	require.NotNil(t, blobberClient)
@@ -989,9 +967,8 @@ func TestRollBack(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 4882812500, int(cp.Balance))
 
-	sa, err = ssc.getAllocation(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc = sa.mustBase()
 	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
 	wpBalance = alloc.WritePool
 
@@ -1001,9 +978,8 @@ func TestRollBack(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, int(cp.Balance))
 
-	sa, err = ssc.getAllocation(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc = sa.mustBase()
 	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
 	wpBalance = alloc.WritePool
 
@@ -1013,9 +989,8 @@ func TestRollBack(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 4882812500, int(cp.Balance))
 
-	sa, err = ssc.getAllocation(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc = sa.mustBase()
 	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
 	wpBalance = alloc.WritePool
 
@@ -1025,9 +1000,8 @@ func TestRollBack(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 0, int(cp.Balance))
 
-	sa, err = ssc.getAllocation(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc = sa.mustBase()
 	require.Equal(t, wpBalance+4882812500, alloc.WritePool)
 	wpBalance = alloc.WritePool
 
@@ -1037,9 +1011,8 @@ func TestRollBack(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 4882812500, int(cp.Balance))
 
-	sa, err = ssc.getAllocation(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc = sa.mustBase()
 	require.Equal(t, wpBalance-4882812500, alloc.WritePool)
 	wpBalance = alloc.WritePool
 }
@@ -1177,8 +1150,7 @@ func TestVerifyChallenge(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ssc, balances, tp, sa, b3, valids, validators, blobber, _, _ := prepareAllocChallenges(t, 10)
-			alloc := sa.mustBase()
+			ssc, balances, tp, alloc, b3, valids, validators, blobber, _, _ := prepareAllocChallenges(t, 10)
 			step := (int64(alloc.Expiration) - tp) / 10
 			tp += step / 2
 
@@ -1291,8 +1263,7 @@ func TestVerifyChallenge(t *testing.T) {
 }
 
 func TestVerifyChallengeOldChallenge(t *testing.T) {
-	ssc, balances, tp, sa, b3, valids, validators, blobber, blobbers, _ := prepareAllocChallenges(t, 10)
-	alloc := sa.mustBase()
+	ssc, balances, tp, alloc, b3, valids, validators, blobber, blobbers, _ := prepareAllocChallenges(t, 10)
 	step := (int64(alloc.Expiration) - tp) / 10
 
 	t.Run("verify challenge first time", func(t *testing.T) {
@@ -1401,8 +1372,7 @@ func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 }
 
 func TestVerifyChallengeRunMultipleTimes(t *testing.T) {
-	ssc, balances, tp, sa, b3, valids, validators, blobber, _, _ := prepareAllocChallenges(t, 10)
-	alloc := sa.mustBase()
+	ssc, balances, tp, alloc, b3, valids, validators, blobber, _, _ := prepareAllocChallenges(t, 10)
 	step := (int64(alloc.Expiration) - tp) / 10
 	tp += step / 2
 
@@ -1576,9 +1546,8 @@ func preparePopulateGenerateChallenge(t *testing.T, ssc *StorageSmartContract, b
 		var deco StorageAllocation
 		require.NoError(t, deco.Decode([]byte(resp)))
 
-		sa, err := ssc.getAllocation(deco.mustBase().ID, balances)
+		alloc, err := ssc.getAllocation(deco.ID, balances)
 		require.NoError(t, err)
-		alloc := sa.mustBase()
 
 		for _, b := range alloc.BlobberAllocs {
 			b.Stats.UsedSize = int64(1 * GB / data)
@@ -1610,11 +1579,7 @@ func preparePopulateGenerateChallenge(t *testing.T, ssc *StorageSmartContract, b
 
 		alloc.Stats.UsedSize = 1 * GB
 
-		sa.mustUpdateBase(func(base *storageAllocationBase) error {
-			alloc.deepCopy(base)
-			return nil
-		})
-		err = sa.save(balances, ADDRESS)
+		err = alloc.save(balances, ADDRESS)
 		require.NoError(t, err)
 	}
 }
@@ -1637,10 +1602,9 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 
 	// blobbers: stake 10k, balance 40k
 
-	var sa *StorageAllocation
-	sa, err = ssc.getAllocation(allocID, balances)
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc := sa.mustBase()
 
 	var blobbers []*StorageNode
 	var blobberClients []*Client
@@ -1660,7 +1624,7 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 	// add 10 validators
 	valids, tp := testAddValidators(t, balances, ssc, validatorsNum, tp)
 
-	sa, err = ssc.getAllocation(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	// load validators
@@ -1668,7 +1632,7 @@ func prepareAllocChallengesForCompleteRewardFlow(t *testing.T, validatorsNum int
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	return ssc, balances, tp, sa, blobberClients, valids, validators, blobbers, client
+	return ssc, balances, tp, alloc, blobberClients, valids, validators, blobbers, client
 }
 
 func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContract, *testBalances, int64,
@@ -1690,10 +1654,9 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 
 	// blobbers: stake 10k, balance 40k
 
-	var sa *StorageAllocation
-	sa, err = ssc.getAllocation(allocID, balances)
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc := sa.mustBase()
 
 	b1 := testGetBlobber(blobs, alloc, 0)
 	require.NotNil(t, b1)
@@ -1723,9 +1686,8 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	// write 100MB
 	_, tp = testCommitWrite(t, balances, client, allocID, allocRoot, 100*1024*1024, tp, b3.id, ssc, "")
 
-	sa, err = ssc.getAllocation(allocID, balances)
+	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc = sa.mustBase()
 
 	// load validators
 	validators, err := getValidatorsList(balances)
@@ -1735,7 +1697,7 @@ func prepareAllocChallenges(t *testing.T, validatorsNum int) (*StorageSmartContr
 	var blobber *StorageNode
 	blobber, err = ssc.getBlobber(b3.id, balances)
 	require.NoError(t, err)
-	return ssc, balances, tp, sa, b3, valids, validators, blobber, blobs, client
+	return ssc, balances, tp, alloc, b3, valids, validators, blobber, blobs, client
 }
 
 func testAddValidators(t *testing.T, balances *testBalances, ssc *StorageSmartContract, num int, tp int64) ([]*Client, int64) {
@@ -1747,7 +1709,7 @@ func testAddValidators(t *testing.T, balances *testBalances, ssc *StorageSmartCo
 	return valids, tp
 }
 
-func testGetBlobber(blobs []*Client, alloc *storageAllocationBase, i int) *Client {
+func testGetBlobber(blobs []*Client, alloc *StorageAllocation, i int) *Client {
 	var bc *Client
 	for _, b := range blobs {
 		if b.id == alloc.BlobberAllocs[i].BlobberID {
@@ -1759,7 +1721,7 @@ func testGetBlobber(blobs []*Client, alloc *storageAllocationBase, i int) *Clien
 }
 
 func testCommitRead(t *testing.T, balances *testBalances, client, reader *Client,
-	alloc *storageAllocationBase, blobberID string, ssc *StorageSmartContract, tp int64) int64 {
+	alloc *StorageAllocation, blobberID string, ssc *StorageSmartContract, tp int64) int64 {
 	tp += 1000
 	var rm ReadConnection
 	rm.ReadMarker = &ReadMarker{
@@ -1879,13 +1841,12 @@ func testBlobberPenalty(
 	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, size)
 
-	alloc := allocation.mustBase()
-	err = ssc.blobberPenalty(alloc, 0, previous, details, validators, ctx, allocationId)
+	err = ssc.blobberPenalty(allocation, 0, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
 	}
 
-	newCP, err := ssc.getChallengePool(alloc.ID, ctx)
+	newCP, err := ssc.getChallengePool(allocation.ID, ctx)
 	require.NoError(t, err)
 
 	newVSp, err := ssc.validatorsStakePools(validators, ctx)
@@ -1895,11 +1856,6 @@ func testBlobberPenalty(
 	require.NoError(t, err)
 
 	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, false)
-
-	allocation.mustUpdateBase(func(base *storageAllocationBase) error {
-		alloc.deepCopy(base)
-		return nil
-	})
 	return nil
 }
 
@@ -1936,10 +1892,9 @@ func testBlobberReward(
 		now:                        now,
 	}
 
-	var ssc, allocation, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
+	var ssc, alloc, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	alloc := allocation.mustBase()
 	err = ssc.blobberReward(alloc, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
@@ -1955,11 +1910,6 @@ func testBlobberReward(
 	require.NoError(t, err)
 
 	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber)
-
-	allocation.mustUpdateBase(func(base *storageAllocationBase) error {
-		alloc.deepCopy(base)
-		return nil
-	})
 	return nil
 }
 
@@ -1979,17 +1929,13 @@ func setupChallengeMocks(
 	require.Len(t, validatorStakes, len(validators))
 
 	var err error
-
-	var sa = &StorageAllocation{}
-	sa.SetEntity(&storageAllocationV2{
+	var allocation = &StorageAllocation{
 		ID:         "alice",
 		Owner:      "owin",
 		Expiration: thisExpires,
 		TimeUnit:   scYaml.TimeUnit,
 		WritePool:  currency.Coin(wpBalance),
-	})
-
-	allocation := sa.mustBase()
+	}
 
 	var details = &BlobberAllocation{
 		BlobberID:                  blobberId,
@@ -2029,12 +1975,7 @@ func setupChallengeMocks(
 			ID: storageScId,
 		},
 	}
-
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
-		allocation.deepCopy(base)
-		return nil
-	})
-	_, err = ctx.InsertTrieNode(sa.GetKey(ADDRESS), sa)
+	_, err = ctx.InsertTrieNode(allocation.GetKey(ADDRESS), allocation)
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{
@@ -2077,7 +2018,7 @@ func setupChallengeMocks(
 	_, err = ctx.InsertTrieNode(scConfigKey(ADDRESS), &scYaml)
 	require.NoError(t, err)
 
-	return ssc, sa, details, ctx
+	return ssc, allocation, details, ctx
 }
 
 type formulaeBlobberReward struct {
