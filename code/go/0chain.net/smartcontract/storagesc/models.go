@@ -1705,12 +1705,21 @@ func (sa *StorageAllocation) validateEachBlobber(
 		errs     = make([]string, 0, len(blobbers))
 		filtered = make([]*StorageNode, 0, len(blobbers))
 	)
-	for _, b := range blobbers {
+	for i, b := range blobbers {
 		sn := StorageNode{}
 
 		beforeHardfork := func() error {
 			snr := storageNodeResponseToStorageNodeV2(*b)
 			sn.SetEntity(snr)
+			if *snr.IsRestricted {
+				success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
+				if err != nil {
+					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+				} else if !success {
+					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+				}
+			}
+
 			return nil
 		}
 

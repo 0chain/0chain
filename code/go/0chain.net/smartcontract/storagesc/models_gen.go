@@ -1125,6 +1125,463 @@ func (z *RewardRound) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *StorageAllocationDecode) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 24
+	// string "ID"
+	o = append(o, 0xde, 0x0, 0x18, 0xa2, 0x49, 0x44)
+	o = msgp.AppendString(o, z.ID)
+	// string "Tx"
+	o = append(o, 0xa2, 0x54, 0x78)
+	o = msgp.AppendString(o, z.Tx)
+	// string "DataShards"
+	o = append(o, 0xaa, 0x44, 0x61, 0x74, 0x61, 0x53, 0x68, 0x61, 0x72, 0x64, 0x73)
+	o = msgp.AppendInt(o, z.DataShards)
+	// string "ParityShards"
+	o = append(o, 0xac, 0x50, 0x61, 0x72, 0x69, 0x74, 0x79, 0x53, 0x68, 0x61, 0x72, 0x64, 0x73)
+	o = msgp.AppendInt(o, z.ParityShards)
+	// string "Size"
+	o = append(o, 0xa4, 0x53, 0x69, 0x7a, 0x65)
+	o = msgp.AppendInt64(o, z.Size)
+	// string "Expiration"
+	o = append(o, 0xaa, 0x45, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e)
+	o, err = z.Expiration.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Expiration")
+		return
+	}
+	// string "Owner"
+	o = append(o, 0xa5, 0x4f, 0x77, 0x6e, 0x65, 0x72)
+	o = msgp.AppendString(o, z.Owner)
+	// string "OwnerPublicKey"
+	o = append(o, 0xae, 0x4f, 0x77, 0x6e, 0x65, 0x72, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79)
+	o = msgp.AppendString(o, z.OwnerPublicKey)
+	// string "Stats"
+	o = append(o, 0xa5, 0x53, 0x74, 0x61, 0x74, 0x73)
+	if z.Stats == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.Stats.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "Stats")
+			return
+		}
+	}
+	// string "DiverseBlobbers"
+	o = append(o, 0xaf, 0x44, 0x69, 0x76, 0x65, 0x72, 0x73, 0x65, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x73)
+	o = msgp.AppendBool(o, z.DiverseBlobbers)
+	// string "PreferredBlobbers"
+	o = append(o, 0xb1, 0x50, 0x72, 0x65, 0x66, 0x65, 0x72, 0x72, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.PreferredBlobbers)))
+	for za0001 := range z.PreferredBlobbers {
+		o = msgp.AppendString(o, z.PreferredBlobbers[za0001])
+	}
+	// string "BlobberAllocs"
+	o = append(o, 0xad, 0x42, 0x6c, 0x6f, 0x62, 0x62, 0x65, 0x72, 0x41, 0x6c, 0x6c, 0x6f, 0x63, 0x73)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.BlobberAllocs)))
+	for za0002 := range z.BlobberAllocs {
+		if z.BlobberAllocs[za0002] == nil {
+			o = msgp.AppendNil(o)
+		} else {
+			o, err = z.BlobberAllocs[za0002].MarshalMsg(o)
+			if err != nil {
+				err = msgp.WrapError(err, "BlobberAllocs", za0002)
+				return
+			}
+		}
+	}
+	// string "ThirdPartyExtendable"
+	o = append(o, 0xb4, 0x54, 0x68, 0x69, 0x72, 0x64, 0x50, 0x61, 0x72, 0x74, 0x79, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x61, 0x62, 0x6c, 0x65)
+	o = msgp.AppendBool(o, z.ThirdPartyExtendable)
+	// string "FileOptions"
+	o = append(o, 0xab, 0x46, 0x69, 0x6c, 0x65, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73)
+	o = msgp.AppendUint16(o, z.FileOptions)
+	// string "WritePool"
+	o = append(o, 0xa9, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50, 0x6f, 0x6f, 0x6c)
+	o, err = z.WritePool.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "WritePool")
+		return
+	}
+	// string "ReadPriceRange"
+	o = append(o, 0xae, 0x52, 0x65, 0x61, 0x64, 0x50, 0x72, 0x69, 0x63, 0x65, 0x52, 0x61, 0x6e, 0x67, 0x65)
+	// map header, size 2
+	// string "Min"
+	o = append(o, 0x82, 0xa3, 0x4d, 0x69, 0x6e)
+	o, err = z.ReadPriceRange.Min.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "ReadPriceRange", "Min")
+		return
+	}
+	// string "Max"
+	o = append(o, 0xa3, 0x4d, 0x61, 0x78)
+	o, err = z.ReadPriceRange.Max.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "ReadPriceRange", "Max")
+		return
+	}
+	// string "WritePriceRange"
+	o = append(o, 0xaf, 0x57, 0x72, 0x69, 0x74, 0x65, 0x50, 0x72, 0x69, 0x63, 0x65, 0x52, 0x61, 0x6e, 0x67, 0x65)
+	// map header, size 2
+	// string "Min"
+	o = append(o, 0x82, 0xa3, 0x4d, 0x69, 0x6e)
+	o, err = z.WritePriceRange.Min.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "WritePriceRange", "Min")
+		return
+	}
+	// string "Max"
+	o = append(o, 0xa3, 0x4d, 0x61, 0x78)
+	o, err = z.WritePriceRange.Max.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "WritePriceRange", "Max")
+		return
+	}
+	// string "StartTime"
+	o = append(o, 0xa9, 0x53, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69, 0x6d, 0x65)
+	o, err = z.StartTime.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "StartTime")
+		return
+	}
+	// string "Finalized"
+	o = append(o, 0xa9, 0x46, 0x69, 0x6e, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64)
+	o = msgp.AppendBool(o, z.Finalized)
+	// string "Canceled"
+	o = append(o, 0xa8, 0x43, 0x61, 0x6e, 0x63, 0x65, 0x6c, 0x65, 0x64)
+	o = msgp.AppendBool(o, z.Canceled)
+	// string "MovedToChallenge"
+	o = append(o, 0xb0, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x54, 0x6f, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65)
+	o, err = z.MovedToChallenge.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MovedToChallenge")
+		return
+	}
+	// string "MovedBack"
+	o = append(o, 0xa9, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x42, 0x61, 0x63, 0x6b)
+	o, err = z.MovedBack.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MovedBack")
+		return
+	}
+	// string "MovedToValidators"
+	o = append(o, 0xb1, 0x4d, 0x6f, 0x76, 0x65, 0x64, 0x54, 0x6f, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73)
+	o, err = z.MovedToValidators.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MovedToValidators")
+		return
+	}
+	// string "TimeUnit"
+	o = append(o, 0xa8, 0x54, 0x69, 0x6d, 0x65, 0x55, 0x6e, 0x69, 0x74)
+	o = msgp.AppendDuration(o, z.TimeUnit)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *StorageAllocationDecode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "ID":
+			z.ID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ID")
+				return
+			}
+		case "Tx":
+			z.Tx, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Tx")
+				return
+			}
+		case "DataShards":
+			z.DataShards, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "DataShards")
+				return
+			}
+		case "ParityShards":
+			z.ParityShards, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ParityShards")
+				return
+			}
+		case "Size":
+			z.Size, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Size")
+				return
+			}
+		case "Expiration":
+			bts, err = z.Expiration.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Expiration")
+				return
+			}
+		case "Owner":
+			z.Owner, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Owner")
+				return
+			}
+		case "OwnerPublicKey":
+			z.OwnerPublicKey, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "OwnerPublicKey")
+				return
+			}
+		case "Stats":
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.Stats = nil
+			} else {
+				if z.Stats == nil {
+					z.Stats = new(StorageAllocationStats)
+				}
+				bts, err = z.Stats.UnmarshalMsg(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Stats")
+					return
+				}
+			}
+		case "DiverseBlobbers":
+			z.DiverseBlobbers, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "DiverseBlobbers")
+				return
+			}
+		case "PreferredBlobbers":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "PreferredBlobbers")
+				return
+			}
+			if cap(z.PreferredBlobbers) >= int(zb0002) {
+				z.PreferredBlobbers = (z.PreferredBlobbers)[:zb0002]
+			} else {
+				z.PreferredBlobbers = make([]string, zb0002)
+			}
+			for za0001 := range z.PreferredBlobbers {
+				z.PreferredBlobbers[za0001], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "PreferredBlobbers", za0001)
+					return
+				}
+			}
+		case "BlobberAllocs":
+			var zb0003 uint32
+			zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "BlobberAllocs")
+				return
+			}
+			if cap(z.BlobberAllocs) >= int(zb0003) {
+				z.BlobberAllocs = (z.BlobberAllocs)[:zb0003]
+			} else {
+				z.BlobberAllocs = make([]*BlobberAllocation, zb0003)
+			}
+			for za0002 := range z.BlobberAllocs {
+				if msgp.IsNil(bts) {
+					bts, err = msgp.ReadNilBytes(bts)
+					if err != nil {
+						return
+					}
+					z.BlobberAllocs[za0002] = nil
+				} else {
+					if z.BlobberAllocs[za0002] == nil {
+						z.BlobberAllocs[za0002] = new(BlobberAllocation)
+					}
+					bts, err = z.BlobberAllocs[za0002].UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "BlobberAllocs", za0002)
+						return
+					}
+				}
+			}
+		case "ThirdPartyExtendable":
+			z.ThirdPartyExtendable, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ThirdPartyExtendable")
+				return
+			}
+		case "FileOptions":
+			z.FileOptions, bts, err = msgp.ReadUint16Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "FileOptions")
+				return
+			}
+		case "WritePool":
+			bts, err = z.WritePool.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "WritePool")
+				return
+			}
+		case "ReadPriceRange":
+			var zb0004 uint32
+			zb0004, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ReadPriceRange")
+				return
+			}
+			for zb0004 > 0 {
+				zb0004--
+				field, bts, err = msgp.ReadMapKeyZC(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "ReadPriceRange")
+					return
+				}
+				switch msgp.UnsafeString(field) {
+				case "Min":
+					bts, err = z.ReadPriceRange.Min.UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "ReadPriceRange", "Min")
+						return
+					}
+				case "Max":
+					bts, err = z.ReadPriceRange.Max.UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "ReadPriceRange", "Max")
+						return
+					}
+				default:
+					bts, err = msgp.Skip(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "ReadPriceRange")
+						return
+					}
+				}
+			}
+		case "WritePriceRange":
+			var zb0005 uint32
+			zb0005, bts, err = msgp.ReadMapHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "WritePriceRange")
+				return
+			}
+			for zb0005 > 0 {
+				zb0005--
+				field, bts, err = msgp.ReadMapKeyZC(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "WritePriceRange")
+					return
+				}
+				switch msgp.UnsafeString(field) {
+				case "Min":
+					bts, err = z.WritePriceRange.Min.UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "WritePriceRange", "Min")
+						return
+					}
+				case "Max":
+					bts, err = z.WritePriceRange.Max.UnmarshalMsg(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "WritePriceRange", "Max")
+						return
+					}
+				default:
+					bts, err = msgp.Skip(bts)
+					if err != nil {
+						err = msgp.WrapError(err, "WritePriceRange")
+						return
+					}
+				}
+			}
+		case "StartTime":
+			bts, err = z.StartTime.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "StartTime")
+				return
+			}
+		case "Finalized":
+			z.Finalized, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Finalized")
+				return
+			}
+		case "Canceled":
+			z.Canceled, bts, err = msgp.ReadBoolBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Canceled")
+				return
+			}
+		case "MovedToChallenge":
+			bts, err = z.MovedToChallenge.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MovedToChallenge")
+				return
+			}
+		case "MovedBack":
+			bts, err = z.MovedBack.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MovedBack")
+				return
+			}
+		case "MovedToValidators":
+			bts, err = z.MovedToValidators.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MovedToValidators")
+				return
+			}
+		case "TimeUnit":
+			z.TimeUnit, bts, err = msgp.ReadDurationBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "TimeUnit")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *StorageAllocationDecode) Msgsize() (s int) {
+	s = 3 + 3 + msgp.StringPrefixSize + len(z.ID) + 3 + msgp.StringPrefixSize + len(z.Tx) + 11 + msgp.IntSize + 13 + msgp.IntSize + 5 + msgp.Int64Size + 11 + z.Expiration.Msgsize() + 6 + msgp.StringPrefixSize + len(z.Owner) + 15 + msgp.StringPrefixSize + len(z.OwnerPublicKey) + 6
+	if z.Stats == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.Stats.Msgsize()
+	}
+	s += 16 + msgp.BoolSize + 18 + msgp.ArrayHeaderSize
+	for za0001 := range z.PreferredBlobbers {
+		s += msgp.StringPrefixSize + len(z.PreferredBlobbers[za0001])
+	}
+	s += 14 + msgp.ArrayHeaderSize
+	for za0002 := range z.BlobberAllocs {
+		if z.BlobberAllocs[za0002] == nil {
+			s += msgp.NilSize
+		} else {
+			s += z.BlobberAllocs[za0002].Msgsize()
+		}
+	}
+	s += 21 + msgp.BoolSize + 12 + msgp.Uint16Size + 10 + z.WritePool.Msgsize() + 15 + 1 + 4 + z.ReadPriceRange.Min.Msgsize() + 4 + z.ReadPriceRange.Max.Msgsize() + 16 + 1 + 4 + z.WritePriceRange.Min.Msgsize() + 4 + z.WritePriceRange.Max.Msgsize() + 10 + z.StartTime.Msgsize() + 10 + msgp.BoolSize + 9 + msgp.BoolSize + 17 + z.MovedToChallenge.Msgsize() + 10 + z.MovedBack.Msgsize() + 18 + z.MovedToValidators.Msgsize() + 9 + msgp.DurationSize
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z *StorageAllocationStats) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 8
