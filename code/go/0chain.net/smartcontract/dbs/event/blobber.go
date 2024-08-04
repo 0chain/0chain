@@ -177,8 +177,6 @@ func (edb *EventDb) GetBlobbersFromIDs(ids []string) ([]Blobber, error) {
 		return nil, err
 	}
 
-	logging.Logger.Info("Jayash blobbers", zap.Any("Ids", ids), zap.Any("Blobbers", blobbers))
-
 	resultBlobbers := make([]Blobber, 0, len(ids))
 
 	for _, id := range ids {

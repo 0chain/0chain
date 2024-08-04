@@ -47,8 +47,6 @@ type Allocation struct {
 	ThirdPartyExtendable     bool          `json:"third_party_extendable"`
 	FileOptions              uint16        `json:"file_options"`
 
-	IsEnterprise bool `json:"is_enterprise"`
-
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:ID"`
@@ -160,7 +158,6 @@ func (edb *EventDb) updateAllocations(allocs []Allocation) error {
 		"latest_closed_challenge_txn",
 		"third_party_extendable",
 		"file_options",
-		"is_enterprise",
 	}
 
 	columns, err := Columnize(allocs)
