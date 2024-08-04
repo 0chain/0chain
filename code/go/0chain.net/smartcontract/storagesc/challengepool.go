@@ -65,7 +65,7 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 }
 
 // save the challenge pool
-func (cp *challengePool) save(sscKey string, alloc *storageAllocationBase, balances cstate.StateContextI) (err error) {
+func (cp *challengePool) save(sscKey string, alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
 	cpKey := challengePoolKey(sscKey, alloc.ID)
 	r, err := balances.InsertTrieNode(cpKey, cp)
 	logging.Logger.Debug("after Save challenge pool", zap.String("root", util.ToHex([]byte(r))))
@@ -76,7 +76,7 @@ func (cp *challengePool) save(sscKey string, alloc *storageAllocationBase, balan
 	return
 }
 
-func emitChallengePoolEvent(id string, balance currency.Coin, alloc *storageAllocationBase, balances cstate.StateContextI) {
+func emitChallengePoolEvent(id string, balance currency.Coin, alloc *StorageAllocation, balances cstate.StateContextI) {
 	data := event.ChallengePool{
 		ID:           id,
 		AllocationID: alloc.ID,
@@ -210,7 +210,7 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 
 // create, fill and Save challenge pool for new allocation
 func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
-	alloc *storageAllocationBase, balances cstate.StateContextI, conf *Config) (err error) {
+	alloc *StorageAllocation, balances cstate.StateContextI, conf *Config) (err error) {
 
 	// create related challenge_pool expires with the allocation + challenge
 	// completion time
@@ -231,7 +231,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	return
 }
 
-func (ssc *StorageSmartContract) deleteChallengePool(alloc *storageAllocationBase, balances cstate.StateContextI) (err error) {
+func (ssc *StorageSmartContract) deleteChallengePool(alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
 	if _, err = balances.DeleteTrieNode(challengePoolKey(ssc.ID, alloc.ID)); err != nil {
 		return fmt.Errorf("can't delete challenge pool: %v", err)
 	}
