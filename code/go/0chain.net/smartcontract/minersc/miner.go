@@ -180,7 +180,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	cloneMB.Mpks.Delete(mn.ID)
 	cloneMB.ShareOrSigns.Delete(mn.ID)
 
-	cloneMB.PreviousMagicBlockHash = lfmb.Hash
+	cloneMB.PreviousMagicBlockHash = lfmb.MagicBlock.Hash
 	cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
 	cloneMB.StartingRound = balances.GetBlock().Round
 	dkgMiners := NewDKGMinerNodes()
