@@ -374,6 +374,7 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 	}
 
 	np.Nodes = make([]*Node, 0, len(d.NodesMap))
+	np.NodesMap = make(map[string]*Node, len(d.NodesMap))
 	for k := range d.NodesMap {
 		n := d.NodesMap[k]
 		if n.SigScheme == nil {
@@ -382,6 +383,7 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 			}
 		}
 		np.Nodes = append(np.Nodes, n)
+		np.NodesMap[k] = n
 	}
 
 	np.computeNodePositions()
