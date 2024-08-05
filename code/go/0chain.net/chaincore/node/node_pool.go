@@ -110,6 +110,7 @@ func (np *Pool) Delete(key string) {
 
 	np.Nodes[idx] = np.Nodes[len(np.Nodes)-1]
 	np.Nodes = np.Nodes[:len(np.Nodes)-1]
+	np.computeNodePositions()
 	// TODO: remove from global nodes map
 }
 
