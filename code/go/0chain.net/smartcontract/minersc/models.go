@@ -970,6 +970,8 @@ func getDKGMinersList(state cstate.CommonStateContextI) (*DKGMinerNodes, error) 
 			return nil, err
 		}
 
+		logging.Logger.Debug("VC: no dkg miners list found, create one")
+
 		return NewDKGMinerNodes(), nil
 	}
 
@@ -1130,6 +1132,7 @@ func getNodesList(
 
 // quick fix: localhost check + duplicate check
 // TODO: remove this after more robust challenge based node addtion/health_check is added
+//
 //nolint:unused
 func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
 	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)

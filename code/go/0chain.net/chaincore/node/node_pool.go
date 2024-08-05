@@ -96,6 +96,23 @@ func (np *Pool) AddNode(node *Node) error {
 	return nil
 }
 
+func (np *Pool) Delete(key string) {
+	np.mmx.Lock()
+	defer np.mmx.Unlock()
+	delete(np.NodesMap, key)
+	var idx int
+	for i, n := range np.Nodes {
+		if n.GetKey() == key {
+			idx = i
+			break
+		}
+	}
+
+	np.Nodes[idx] = np.Nodes[len(np.Nodes)-1]
+	np.Nodes = np.Nodes[:len(np.Nodes)-1]
+	// TODO: remove from global nodes map
+}
+
 /*GetNode - given node id, get the node object or nil */
 func (np *Pool) GetNode(id string) *Node {
 	np.mmx.RLock()

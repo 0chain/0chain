@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"0chain.net/smartcontract/dto"
@@ -138,14 +137,14 @@ func (msc *MinerSmartContract) DeleteMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	actErr := cstate.WithActivation(balances, "ares", func() error {
-		return nil
-	}, func() error {
-		return errors.New("delete miner is disabled")
-	})
-	if actErr != nil {
-		return "", actErr
-	}
+	// actErr := cstate.WithActivation(balances, "ares", func() error {
+	// 	return nil
+	// }, func() error {
+	// 	return errors.New("delete miner is disabled")
+	// })
+	// if actErr != nil {
+	// 	return "", actErr
+	// }
 
 	var err error
 	var deleteMiner = NewMinerNode()
@@ -174,7 +173,38 @@ func (msc *MinerSmartContract) DeleteMiner(
 		return "", common.NewError("delete_miner", err.Error())
 	}
 
-	return "", nil
+	lfmb := balances.GetLastestFinalizedMagicBlock()
+	cloneMB := lfmb.MagicBlock.Clone()
+	cloneMB.Miners.Delete(mn.ID)
+	cloneMB.Mpks.Delete(mn.ID)
+	cloneMB.ShareOrSigns.Delete(mn.ID)
+
+	cloneMB.PreviousMagicBlockHash = lfmb.Hash
+	cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
+	cloneMB.StartingRound = balances.GetBlock().Round
+	dkgMiners := NewDKGMinerNodes()
+	dkgMiners.calculateTKN(gn, cloneMB.Miners.Size())
+	cloneMB.T = dkgMiners.T
+	cloneMB.K = dkgMiners.K
+	cloneMB.N = dkgMiners.N
+	logging.Logger.Debug("delete miner, new TKN:",
+		zap.Int("T", cloneMB.T),
+		zap.Int("K", cloneMB.K),
+		zap.Int("N", cloneMB.N))
+
+	cloneMB.Hash = cloneMB.GetHash()
+
+	// msc.createMagicBlock()
+	if err := updateMagicBlock(balances, cloneMB); err != nil {
+		return "", common.NewError("delete_miner could not update magic block", err.Error())
+	}
+
+	gn.ViewChange = cloneMB.StartingRound
+	if err := gn.save(balances); err != nil {
+		return "", common.NewError("delete_miner could not save global node", err.Error())
+	}
+
+	return "delete miner successfully", nil
 }
 
 func (msc *MinerSmartContract) deleteNode(
@@ -182,7 +212,7 @@ func (msc *MinerSmartContract) deleteNode(
 	deleteNode *MinerNode,
 	balances cstate.StateContextI,
 ) (*MinerNode, error) {
-	var err error
+	// var err error
 	deleteNode.Delete = true
 	var nodeType spenum.Provider
 	switch deleteNode.NodeType {
@@ -198,10 +228,10 @@ func (msc *MinerSmartContract) deleteNode(
 		zap.String("node type", nodeType.String()),
 		zap.String("id", deleteNode.ID))
 
-	err = saveDeleteNodeID(balances, nodeType, deleteNode.ID)
-	if err != nil {
-		return nil, err
-	}
+	// err = saveDeleteNodeID(balances, nodeType, deleteNode.ID)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	orderedPoolIds := deleteNode.OrderedPoolIds()
 	for _, key := range orderedPoolIds {
@@ -221,9 +251,9 @@ func (msc *MinerSmartContract) deleteNode(
 		}
 	}
 
-	if err = deleteNode.save(balances); err != nil {
-		return nil, fmt.Errorf("saving node %v", err.Error())
-	}
+	// if err = deleteNode.save(balances); err != nil {
+	// 	return nil, fmt.Errorf("saving node %v", err.Error())
+	// }
 
 	return deleteNode, nil
 }
@@ -231,6 +261,7 @@ func (msc *MinerSmartContract) deleteNode(
 func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
+		logging.Logger.Error("could not get phase node", zap.Error(err))
 		return
 	}
 	if pn.Phase == Unknown {
@@ -240,8 +271,10 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 	if pn.Phase != Wait {
 		var dkgMiners *DKGMinerNodes
 		if dkgMiners, err = getDKGMinersList(balances); err != nil {
+			logging.Logger.Error("delete_miner_from_view_change: Error in getting list from the DB", zap.Error(err))
 			return
 		}
+
 		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
 			delete(dkgMiners.SimpleNodes, mn.ID)
 			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)

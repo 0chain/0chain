@@ -914,6 +914,9 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 	// (deny VC leaving for at least 1 miner and 1 sharder of previous set)
 	gn.PrevMagicBlock = magicBlock
 
+	logging.Logger.Debug("SetMagicBlock",
+		zap.String("hash", magicBlock.Hash),
+		zap.Int64("starting round", magicBlock.StartingRound))
 	balances.SetMagicBlock(magicBlock)
 	return nil
 }
