@@ -1006,11 +1006,13 @@ func getMagicBlock(state cstate.CommonStateContextI) (*block.MagicBlock, error) 
 	if err != nil {
 		return nil, err
 	}
+	logging.Logger.Debug("get magic block", zap.Any("magic block", magicBlock))
 
 	return magicBlock, nil
 }
 
 func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) error {
+	logging.Logger.Debug("save magic block", zap.Any("magic block", magicBlock))
 	_, err := state.InsertTrieNode(MagicBlockKey, magicBlock)
 	return err
 }

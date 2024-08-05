@@ -188,12 +188,12 @@ func (msc *MinerSmartContract) DeleteMiner(
 	cloneMB.T = dkgMiners.T
 	cloneMB.K = dkgMiners.K
 	cloneMB.N = dkgMiners.N
+	cloneMB.Hash = cloneMB.GetHash()
 	logging.Logger.Debug("delete miner, new TKN:",
 		zap.Int("T", cloneMB.T),
 		zap.Int("K", cloneMB.K),
-		zap.Int("N", cloneMB.N))
-
-	cloneMB.Hash = cloneMB.GetHash()
+		zap.Int("N", cloneMB.N),
+		zap.Int("MB miner size", cloneMB.Miners.Size()))
 
 	// msc.createMagicBlock()
 	if err := updateMagicBlock(balances, cloneMB); err != nil {
