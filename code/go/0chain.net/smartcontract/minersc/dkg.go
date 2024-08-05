@@ -916,7 +916,8 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 
 	logging.Logger.Debug("SetMagicBlock",
 		zap.String("hash", magicBlock.Hash),
-		zap.Int64("starting round", magicBlock.StartingRound))
+		zap.Int64("starting round", magicBlock.StartingRound),
+		zap.Int("miners num", magicBlock.Miners.Size()))
 	balances.SetMagicBlock(magicBlock)
 	return nil
 }
