@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/util/orderbuffer"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"github.com/linxGnu/grocksdb"
@@ -36,7 +34,6 @@ var sharderChain = &Chain{}
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
 	sharderChain.blockChannel = make(chan *block.Block, 1)
-	sharderChain.blockBuffer = orderbuffer.New(100)
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache[string, *block.Block](blockCacheSize)
@@ -47,7 +44,6 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetAfterFetcher(sharderChain)
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
-	sharderChain.processingBlocks = cache.NewLRUCache[string, struct{}](1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -59,28 +55,13 @@ func GetSharderChain() *Chain {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	*chain.Chain
-	blockChannel   chan *block.Block
-	blockBuffer    *orderbuffer.OrderBuffer
+	blockChannel chan *block.Block
+	// blockBuffer    *orderbuffer.OrderBuffer
 	RoundChannel   chan *round.Round
 	BlockCache     *cache.LRU[string, *block.Block]
 	BlockTxnCache  *cache.LRU[string, *transaction.TransactionSummary]
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
-
-	processingBlocks *cache.LRU[string, struct{}]
-	pbMutex          sync.RWMutex
-}
-
-// PushToBlockProcessor pushs the block to processor,
-func (sc *Chain) PushToBlockProcessor(b *block.Block) error {
-	sc.blockBuffer.Add(b.Round, b)
-	return nil
-	// select {
-	// case sc.blockChannel <- b:
-	// 	return nil
-	// case <-time.After(3 * time.Second):
-	// 	return errors.New("push to block processor timeout")
-	// }
 }
 
 /*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */

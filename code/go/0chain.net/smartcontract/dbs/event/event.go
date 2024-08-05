@@ -1,22 +1,51 @@
 package event
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/rcrowley/go-metrics"
+
+	"0chain.net/chaincore/node"
 
 	"0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs/model"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"gorm.io/gorm/clause"
 )
 
 type Event struct {
 	model.ImmutableModel
-	BlockNumber int64       `json:"block_number"`
-	TxHash      string      `json:"tx_hash"`
-	Type        EventType   `json:"type"`
-	Tag         EventTag    `json:"tag"`
-	Index       string      `json:"index"`
-	Data        interface{} `json:"data" gorm:"-"`
+	BlockNumber              int64        `json:"block_number"`
+	TxHash                   string       `json:"tx_hash"`
+	Type                     EventType    `json:"type"`
+	Tag                      EventTag     `json:"tag"`
+	Index                    string       `json:"index"`
+	IsPublished              bool         `json:"is_published"`
+	EventKey                 string       `json:"event_key" gorm:"-"`
+	SequenceNumber           int64        `json:"sequence_number"`
+	RoundLocalSequenceNumber int64        `json:"round_local_sequence_number" gorm:"-"`
+	Data                     interface{}  `json:"data" gorm:"-"`
+	Version                  EventVersion `json:"version" gorm:"-"`
+}
+
+// FinalizationToKafkaLatencyMetric - a metric which tracks how much time it takes from a block which got finalized to respective event being pushed into kafka
+var FinalizationToKafkaLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+
+// KafkaEventPushLatencyMetric - a metric which tracks how long it takes for an event to be pushed to kafka
+var KafkaEventPushLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+
+func InitMetrics() {
+	FinalizationToKafkaLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+	_ = metrics.Register("finalization_to_kafka_latency", FinalizationToKafkaLatencyMetric)
+
+	KafkaEventPushLatencyMetric = metrics.NewHistogram(metrics.NewUniformSample(20000))
+	_ = metrics.Register("kafka_event_push_latency", KafkaEventPushLatencyMetric)
 }
 
 func (edb *EventDb) FindEvents(ctx context.Context, search Event, p common.Pagination) ([]Event, error) {
@@ -69,12 +98,121 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 	return events, result.Error
 }
 
+var doOnce sync.Once
+
 func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
-	if edb.Store != nil && len(events.events) > 0 {
-		return edb.Store.Get().WithContext(ctx).Create(&events.events).Error
+	logging.Logger.Debug("addEvents: adding events", zap.Any("events", events.events))
+	if len(events.events) == 0 {
+		return nil
+	}
+
+	if events.round >= edb.Config().KafkaTriggerRound {
+		edb.mustPushEventsToKafka(&events, false)
+	}
+
+	if err := edb.Store.Get().WithContext(ctx).Create(&events.events).Error; err != nil {
+		return err
 	}
 
 	return nil
+}
+
+func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool) {
+	if edb.Store == nil {
+		logging.Logger.Panic("event database is nil")
+	}
+
+	if edb.dbConfig.KafkaEnabled {
+		var (
+			//filteredEvents = filterEvents(events.events)
+			broker    = edb.GetKafkaProv()
+			topic     = edb.dbConfig.KafkaTopic
+			eventsMap = make(map[int64]*Event)
+		)
+
+		for i, e := range events.events {
+			eventsMap[e.SequenceNumber] = &events.events[i]
+		}
+		var results []chan int64
+		self := node.Self.Underlying()
+		for _, filteredEvent := range events.events {
+			data := map[string]interface{}{
+				"event":  filteredEvent,
+				"round":  events.round,
+				"source": self.ID,
+			}
+			eventJson, err := json.Marshal(data)
+			if err != nil {
+				logging.Logger.Panic(fmt.Sprintf("Failed to get marshal event: %v", err))
+			}
+
+			ts := time.Now()
+			key := filteredEvent.EventKey
+			res := broker.PublishToKafka(topic, []byte(key), eventJson)
+			results = append(results, res)
+			if filteredEvent.Tag == TagFinalizeBlock {
+				blockData := filteredEvent.Data.(*Block)
+				finalizationTime := blockData.FinalizationTime
+				FinalizationToKafkaLatencyMetric.Update(time.Since(finalizationTime).Milliseconds()) // update block finalization to kafka push latency metric
+			}
+
+			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
+
+			logging.Logger.Debug("Pushed event to kafka",
+				zap.String("event", filteredEvent.Tag.String()),
+				zap.Int64("seq", filteredEvent.SequenceNumber),
+				zap.Int64("round", events.round))
+
+			tm := time.Since(ts)
+			KafkaEventPushLatencyMetric.Update(tm.Milliseconds()) // update kafka latency metric
+			if tm > 100*time.Millisecond {
+				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
+			}
+		}
+
+		//wait for all responses
+		timeout, cancelFunc := context.WithTimeout(context.Background(), 50*time.Second)
+		defer cancelFunc()
+		sent := 0
+	L:
+		for _, ch := range results {
+			select {
+			case <-ch:
+				sent++
+				if sent == len(events.events) {
+					break L
+				}
+			case <-timeout.Done():
+				logging.Logger.Panic("Timeout to publish event to kafka")
+			}
+		}
+		if updateColumn {
+			// updates the events as published
+			if err := edb.setEventPublished(events.round); err != nil {
+				logging.Logger.Panic(fmt.Sprintf("Failed to update event as published: %v", err))
+			}
+		}
+	}
+}
+
+func (edb *EventDb) setEventPublished(round int64) error {
+	return edb.Store.Get().Model(&Event{}).Where("block_number = ?", round).Update("is_published", true).Error
+}
+
+func (edb *EventDb) getLastPublishedRound() (int64, error) {
+	var event Event
+	if err := edb.Store.Get().Model(&Event{}).Where("is_published = ?", true).Order("sequence_number desc").First(&event).Error; err != nil {
+		return 0, err
+	}
+	return event.BlockNumber, nil
+}
+
+func (edb *EventDb) getLatestFinalizedBlock() (int64, error) {
+	var block Block
+	if err := edb.Store.Get().Model(&Block{}).Order("round desc").First(&block).Error; err != nil {
+		return 0, err
+	}
+	return block.Round, nil
 }
 
 func (edb *EventDb) Drop() error {
@@ -88,17 +226,7 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&BlobberAggregate{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&ChallengePool{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&BlobberSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -119,16 +247,6 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Validator{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&ValidatorAggregate{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&ValidatorSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -163,27 +281,7 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&MinerAggregate{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&MinerSnapshot{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&Sharder{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&SharderAggregate{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&SharderSnapshot{})
 	if err != nil {
 		return err
 	}
@@ -203,22 +301,12 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&UserAggregate{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&RewardMint{})
 	if err != nil {
 		return err
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&Challenge{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&Snapshot{})
 	if err != nil {
 		return err
 	}
@@ -238,16 +326,6 @@ func (edb *EventDb) Drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&AuthorizerSnapshot{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&AuthorizerAggregate{})
-	if err != nil {
-		return err
-	}
-
 	err = edb.Store.Get().Migrator().DropTable(&BurnTicket{})
 	if err != nil {
 		return err
@@ -259,11 +337,6 @@ func (edb *EventDb) Drop() error {
 	}
 
 	err = edb.Store.Get().Migrator().DropTable(&TransactionErrors{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().Migrator().DropTable(&UserSnapshot{})
 	if err != nil {
 		return err
 	}

@@ -59,12 +59,6 @@ type ProviderAggregate interface {
 	SetTotalRewards(value currency.Coin)
 }
 
-func recalculateProviderFields(curr, result ProviderAggregate) {
-	result.SetTotalStake(curr.GetTotalStake())
-	result.SetServiceCharge(curr.GetServiceCharge())
-	result.SetTotalRewards(curr.GetTotalRewards())
-}
-
 func (p *Provider) GetID() string {
 	return p.ID
 }
@@ -111,16 +105,6 @@ func (edb *EventDb) updateProvidersHealthCheck(updates []dbs.DbHealthCheck, tabl
 	return CreateBuilder(table, "id", ids).
 		AddUpdate("downtime", downtime, table+".downtime + t.downtime").
 		AddUpdate("last_health_check", lastHealthCheck).Exec(edb).Error
-}
-
-func (edb *EventDb) ReplicateProviderAggregates(round int64, limit int, offset int, provider string, scanInto interface{}) error {
-	query := fmt.Sprintf("SELECT * FROM %v_aggregates WHERE round >= %v ORDER BY round, %v_id ASC LIMIT %v OFFSET %v", provider, round, provider, limit, offset)
-	result := edb.Store.Get().
-		Raw(query).Scan(scanInto)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
 }
 
 func (edb *EventDb) BuildChangedProvidersMapFromEvents(events []Event) (ProvidersMap, error) {

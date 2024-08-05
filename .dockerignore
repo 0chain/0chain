@@ -2,4 +2,5 @@
 awsnet
 docker.local/miner*
 docker.local/sharder*
+docker.local/kafka
 docker.local/conductor.backup_logs

@@ -25,12 +25,13 @@ var (
 	ErrPartialStateNilNodes = errors.New("partial state has no nodes")
 )
 
-//PartialState - an entity to exchange partial state
+// PartialState - an entity to exchange partial state
 type PartialState struct {
 	Hash      util.Key    `json:"root"`
 	Version   string      `json:"version"`
 	StartRoot util.Key    `json:"start"`
 	Nodes     []util.Node `json:"-" msgpack:"-"`
+	DeadNodes []util.Node `json:"-" msgpack:"-"`
 	mndb      *util.MemoryNodeDB
 	root      util.Node
 }
@@ -95,7 +96,7 @@ func SetupPartialState(store datastore.Store) {
 	datastore.RegisterEntityMetadata("partial_state", partialStateEntityMetadata)
 }
 
-//NewNodeDB - create a node db from the changes
+// NewNodeDB - create a node db from the changes
 func (ps *PartialState) newNodeDB() (*util.MemoryNodeDB, error) {
 	mndb := util.NewMemoryNodeDB()
 	for _, n := range ps.Nodes {
@@ -160,7 +161,7 @@ func (ps *PartialState) GetRoot() util.Node {
 	return ps.root
 }
 
-//MarshalJSON - implement Marshaler interface
+// MarshalJSON - implement Marshaler interface
 func (ps *PartialState) MarshalJSON() ([]byte, error) {
 	var data = make(map[string]interface{})
 	return ps.MarshalPartialStateJSON(data)
@@ -171,7 +172,7 @@ func (ps *PartialState) MarshalMsgpack() ([]byte, error) {
 	return ps.MarshalPartialStateMsgpack(data)
 }
 
-//UnmarshalJSON - implement Unmarshaler interface
+// UnmarshalJSON - implement Unmarshaler interface
 func (ps *PartialState) UnmarshalJSON(data []byte) error {
 	var obj map[string]interface{}
 	err := json.Unmarshal(data, &obj)
@@ -193,7 +194,7 @@ func (ps *PartialState) UnmarshalMsgpack(data []byte) error {
 	return ps.UnmarshalPartialStateMsgpack(obj)
 }
 
-//UnmarshalPartialStateJSON - unmarshal the partial state
+// UnmarshalPartialStateJSON - unmarshal the partial state
 func (ps *PartialState) UnmarshalPartialStateJSON(obj map[string]interface{}) error {
 	if root, ok := obj["root"]; ok {
 		switch rootImpl := root.(type) {
@@ -237,10 +238,44 @@ func (ps *PartialState) UnmarshalPartialStateJSON(obj map[string]interface{}) er
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
+
+	deadNodesI, ok := obj["dead_nodes"]
+	if !ok {
+		// do nothing as miners/sharders not updated may not have dead nodes field
+		return nil
+	}
+
+	deadNodes, ok := deadNodesI.([]interface{})
+	if !ok {
+		logging.Logger.Error("unmarshal json - invalid dead nodes", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+
+	ps.DeadNodes = make([]util.Node, len(deadNodes))
+	for idx, nd := range deadNodes {
+		node, ok := nd.(string)
+		if !ok {
+			logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.String("node", node), zap.Any("obj", obj))
+			return common.ErrInvalidData
+		}
+
+		buf, err := base64.StdEncoding.DecodeString(node)
+		if err != nil {
+			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+			return err
+		}
+
+		ps.DeadNodes[idx], err = util.CreateNode(bytes.NewBuffer(buf))
+		if err != nil {
+			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+			return err
+		}
+	}
+
 	return nil
 }
 
-//UnmarshalPartialStateMsgpack - unmarshal the partial state
+// UnmarshalPartialStateMsgpack - unmarshal the partial state
 func (ps *PartialState) UnmarshalPartialStateMsgpack(obj map[string]interface{}) error {
 	if root, ok := obj["root"]; ok {
 		switch rootImpl := root.(type) {
@@ -278,10 +313,41 @@ func (ps *PartialState) UnmarshalPartialStateMsgpack(obj map[string]interface{})
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
+
+	deadNodesI, ok := obj["dead_nodes"]
+	if !ok {
+		// do nothing as miners/sharders not updated may not have dead nodes field
+		return nil
+	}
+
+	deadNodes, ok := deadNodesI.([]interface{})
+	if !ok {
+		logging.Logger.Error("unmarshal json - invalid dead nodes", zap.Any("obj", obj))
+		return common.ErrInvalidData
+	}
+
+	ps.DeadNodes = make([]util.Node, len(deadNodes))
+	for idx, nd := range deadNodes {
+		node, ok := nd.([]byte)
+		if !ok {
+			logging.Logger.Error("unmarshal json - invalid node",
+				zap.Int("idx", idx),
+				zap.Any("node", nd),
+				zap.Any("obj", obj))
+			return common.ErrInvalidData
+		}
+
+		var err error
+		ps.DeadNodes[idx], err = util.CreateNode(bytes.NewBuffer(node))
+		if err != nil {
+			logging.Logger.Error("unmarshal json - state change", zap.Error(err))
+			return err
+		}
+	}
 	return nil
 }
 
-//MarshalPartialStateJSON - martal the partial state
+// MarshalPartialStateJSON - martal the partial state
 func (ps *PartialState) MarshalPartialStateJSON(data map[string]interface{}) ([]byte, error) {
 	data = ps.setMarshalFields(data)
 	b, err := json.Marshal(data)
@@ -308,19 +374,27 @@ func (ps *PartialState) setMarshalFields(data map[string]interface{}) map[string
 	data["root"] = util.ToHex(ps.Hash)
 	data["version"] = ps.Version
 	nodes := make([][]byte, len(ps.Nodes))
+	deadNodes := make([][]byte, 0, len(ps.DeadNodes))
 	for idx, nd := range ps.Nodes {
 		nodes[idx] = nd.Encode()
 	}
+
+	for _, nd := range ps.DeadNodes {
+		if nd != nil {
+			deadNodes = append(deadNodes, nd.Encode())
+		}
+	}
 	data["nodes"] = nodes
+	data["dead_nodes"] = deadNodes
 	return data
 }
 
-//AddNode - add node to the partial state
+// AddNode - add node to the partial state
 func (ps *PartialState) AddNode(node util.Node) {
 	ps.Nodes = append(ps.Nodes, node)
 }
 
-//SaveState - save the partial state into another state db
+// SaveState - save the partial state into another state db
 func (ps *PartialState) SaveState(ctx context.Context, stateDB util.NodeDB) error {
 	return util.MergeState(ctx, ps.mndb, stateDB)
 }
@@ -328,4 +402,8 @@ func (ps *PartialState) SaveState(ctx context.Context, stateDB util.NodeDB) erro
 // GetNodeDB returns the node db containing all the changes
 func (ps *PartialState) GetNodeDB() util.NodeDB {
 	return ps.mndb
+}
+
+func (ps *PartialState) GetDeadNodes() []util.Node {
+	return ps.DeadNodes
 }

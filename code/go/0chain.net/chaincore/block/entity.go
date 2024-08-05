@@ -140,6 +140,7 @@ func (u *UnverifiedBlockBody) Clone() *UnverifiedBlockBody {
 }
 
 /*Block - data structure that holds the block data */
+// swagger:model
 type Block struct {
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
@@ -1111,7 +1112,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return state.ErrMalformedPartialState
 	}
 
-	err := clientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
+	err := clientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes(), bsc.GetDeadNodes())
 	if err != nil {
 		logging.Logger.Error("apply block state changes - error merging",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))

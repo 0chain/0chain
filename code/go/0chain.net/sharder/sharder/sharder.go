@@ -20,6 +20,7 @@ import (
 	"0chain.net/core/config"
 	"0chain.net/rest"
 	"0chain.net/sharder/blockstore"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -167,10 +168,6 @@ func main() {
 		selfNode.Type = node.NodeTypeSharder
 		selfNode.Path = path
 		selfNode.Description = description
-	} else {
-		if initStateErr != nil {
-			Logger.Panic("Failed to read initialStates", zap.Error(initStateErr))
-		}
 	}
 	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
@@ -262,6 +259,7 @@ func main() {
 	<-shutdown
 	time.Sleep(2 * time.Second)
 	logging.Logger.Info("0chain miner shut down gracefully")
+
 }
 
 func initScheme(signatureScheme encryption.SignatureScheme, reader io.Reader) {
@@ -403,9 +401,13 @@ func initEntities(workdir string) {
 	round.SetupRoundSummaryDB(workdir)
 	block.SetupBlockSummaryDB(workdir)
 	block.SetupMagicBlockMapDB(workdir)
+	block.SetupBlockEventDB(workdir)
+
 	transaction.SetupTxnSummaryDB(workdir)
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
+	block.SetupBlockEventEntity(ememoryStorage)
+
 	block.SetupStateChange(memoryStorage)
 	state.SetupPartialState(memoryStorage)
 	state.SetupStateNodes(memoryStorage)

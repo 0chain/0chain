@@ -115,7 +115,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 			// call the addAllocation to create and stake n blobbers, the resulting
 			// allocation will not be used
 			tp += 1
-			addAllocation(b, ssc, client, tp, n, balances)
+			addAllocation(b, ssc, client, tp, 0, 0, 0, 0, n, balances, false)
 
 			conf.MinAllocSize = 1 * KB
 			mustSave(b, scConfigKey(ADDRESS), conf, balances)
@@ -193,7 +193,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 	b.Log("add 1k blobbers")
 	tp += 1
 	balances.skipMerge = true // don't merge transactions for now
-	_, blobs = addAllocation(b, ssc, client, tp, 1000, balances)
+	_, blobs = addAllocation(b, ssc, client, tp, 0, 0, 0, 0, 1000, balances, false)
 
 	// 2. and 1000 corresponding validators
 	b.Log("add 1k corresponding validators")
@@ -319,7 +319,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 	b.Log("add 1k blobbers")
 	tp += 1
 	balances.skipMerge = true // don't merge transactions for now
-	_, blobs = addAllocation(b, ssc, client, tp, 1000, balances)
+	_, blobs = addAllocation(b, ssc, client, tp, 0, 0, 0, 0, 1000, balances, false)
 
 	// 2. and 1000 corresponding validators
 	b.Log("add 1k corresponding validators")

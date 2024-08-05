@@ -35,15 +35,17 @@ func init() {
 func SetupClientDB() {
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
 }
+//go:generate msgp -io=false -tests=false -v
 
 // Client - data structure that holds the client data
 //
-//go:generate msgp -io=false -tests=false -v
+// swagger:model
 type Client struct {
 	datastore.CollectionMemberField `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	datastore.IDField               `yaml:",inline"`
 	datastore.VersionField          `yaml:"-"`
 	datastore.CreationDateField     `yaml:"-"`
+	// The public key of the client
 	PublicKey                       string                     `yaml:"public_key" json:"public_key"`
 	PublicKeyBytes                  []byte                     `json:"-" msgpack:"-" msg:"-" yaml:"-"`
 	sigSchemeType                   string                     `yaml:"-"`

@@ -371,55 +371,6 @@ func BenchmarkRestTests(
 				Endpoint: srh.getAllocBlobberTerms,
 			},
 			{
-				FuncName: "replicate-snapshots",
-				Params: map[string]string{
-					"round": "5",
-				},
-				Endpoint: srh.replicateSnapshots,
-			},
-			{
-				FuncName: "replicate-blobber-aggregate",
-				Params: map[string]string{
-					"round": "5",
-				},
-				Endpoint: srh.replicateBlobberAggregates,
-			},
-			{
-				FuncName: "replicate-miner-aggregate",
-				Params: map[string]string{
-					"round": "5",
-				},
-				Endpoint: srh.replicateMinerAggregates,
-			},
-			{
-				FuncName: "replicate-sharder-aggregate",
-				Params: map[string]string{
-					"round": "5",
-				},
-				Endpoint: srh.replicateSharderAggregates,
-			},
-			{
-				FuncName: "replicate-authorizer-aggregate",
-				Params: map[string]string{
-					"round": "5",
-				},
-				Endpoint: srh.replicateAuthorizerAggregates,
-			},
-			{
-				FuncName: "replicate-validator-aggregate",
-				Params: map[string]string{
-					"round": "5",
-				},
-				Endpoint: srh.replicateValidatorAggregates,
-			},
-			{
-				FuncName: "replicate-user-aggregate",
-				Params: map[string]string{
-					"round": "5",
-				},
-				Endpoint: srh.replicateUserAggregates,
-			},
-			{
 				FuncName: "get-blobber-allocations",
 				Params: map[string]string{
 					"blobber_id":    getMockBlobberId(0),

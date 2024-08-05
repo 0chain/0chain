@@ -55,13 +55,14 @@ func (wm *WriteMarker) mustBase() *writeMarkerBase {
 	return b
 }
 
+//nolint:unused
 func (wm *WriteMarker) mustUpdateBase(f func(base *writeMarkerBase) error) error {
 	return wm.UpdateBase(func(eb entitywrapper.EntityBaseI) error {
 		b, ok := eb.(*writeMarkerBase)
 		if !ok {
 			logging.Logger.Panic("invalid write marker base type")
 		}
-
+		//nolint:errcheck
 		f(b)
 		return nil
 	})

@@ -640,6 +640,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 				"can't add to ongoing partition list "+err.Error())
 		}
 
+		//nolint:errcheck
 		blobber.mustUpdateBase(func(b *storageNodeBase) error {
 			b.RewardRound = RewardRound{
 				StartRound: rewardRound,
@@ -869,6 +870,7 @@ func selectRandomBlobber(selection challengeBlobberSelection, challengeBlobbersP
 			challengeBlobbers[i], challengeBlobbers[j] = challengeBlobbers[j], challengeBlobbers[i]
 		})
 
+		//nolint:all
 		var blobbersSelected = make([]ChallengeReadyBlobber, 0, maxBlobbersSelect)
 		if len(challengeBlobbers) <= maxBlobbersSelect {
 			blobbersSelected = challengeBlobbers
@@ -1099,11 +1101,43 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 		validator, err := getValidator(randValidator.Id, balances)
 		if err != nil {
-			if cstate.ErrInvalidState(err) {
-				return nil, common.NewError("add_challenge",
-					err.Error())
+			actErr = cstate.WithActivation(balances, "demeter", func() error {
+				if cstate.ErrInvalidState(err) {
+					return common.NewError("add_challenge",
+						err.Error())
+				}
+				return nil
+			}, func() error {
+				if cstate.ErrValueNotPresent(err) {
+					err = validators.Remove(balances, randValidator.Id)
+					if err != nil {
+						return common.NewError("add_challenge",
+							"error removing validator from partition: "+err.Error())
+					}
+					return validators.Save(balances)
+				}
+				return nil
+			})
+			if actErr != nil {
+				return nil, actErr
 			}
+
 			continue
+		}
+
+		actErr = cstate.WithActivation(balances, "demeter", func() error { return nil }, func() error {
+			if validator.IsKilled() || validator.IsShutDown() {
+				err = validators.Remove(balances, validator.Id())
+				if err != nil {
+					return common.NewError("add_challenge",
+						"error removing validator from partition: "+err.Error())
+				}
+				return validators.Save(balances)
+			}
+			return nil
+		})
+		if actErr != nil {
+			return nil, actErr
 		}
 
 		kick, err := filterValidator(validator)
@@ -1350,4 +1384,44 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 
 func isChallengeExpired(currentRound, roundCreatedAt, maxChallengeCompletionRounds int64) bool {
 	return roundCreatedAt+maxChallengeCompletionRounds < currentRound
+}
+
+func (sc *StorageSmartContract) repairPartitions(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+	var partitionName string
+	if err := json.Unmarshal(input, &partitionName); err != nil {
+		return "", common.NewError("repair_partitions", "error unmarshalling input: "+err.Error())
+	}
+
+	if partitionName == ALL_VALIDATORS_KEY {
+		validatorPartitions, err := getValidatorsList(balances)
+		if err != nil {
+			return "", common.NewError("fix_validator_failed", "Failed to get validator list")
+		}
+
+		if err = validatorPartitions.RepairPartitionLoc(balances); err != nil {
+			return "", common.NewError("fix_validator_failed", "Failed to repair validator partitions : "+err.Error())
+		}
+	} else if partitionName == ALL_CHALLENGE_READY_BLOBBERS_KEY {
+		challengeReadyParts, _, err := partitionsChallengeReadyBlobbers(balances)
+		if err != nil {
+			return "", common.NewErrorf("generate_challenge",
+				"error getting the blobber challenge list: %v", err)
+		}
+
+		if err = challengeReadyParts.RepairPartitionLoc(balances); err != nil {
+			return "", common.NewError("fix_challenge_failed", "Failed to repair challenge ready partitions : "+err.Error())
+		}
+	} else {
+		blobberAllocParts, err := partitionsBlobberAllocations(partitionName, balances)
+		if err != nil {
+			return "", common.NewErrorf("generate_challenge",
+				"error getting blobber_challenge_allocation list: %v", err)
+		}
+
+		if err = blobberAllocParts.RepairPartitionLoc(balances); err != nil {
+			return "", common.NewError("fix_blobber_alloc_failed", "Failed to repair blobber allocation partitions : "+err.Error())
+		}
+	}
+
+	return "partition fix success", nil
 }

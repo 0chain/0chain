@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"errors"
 	"net/url"
@@ -48,8 +49,11 @@ func init() {
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
 	StartToFinalizeTxnTypeTimer = make(map[string]metrics.Timer)
+
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
 	_ = metrics.Register("finalization_lag", FinalizationLagMetric)
+
+	event.InitMetrics()
 }
 
 // ComputeFinalizedBlock iterates through all previous blocks of notarized block on round r until finds single notarized block on the round,
@@ -133,17 +137,23 @@ func (c *Chain) FinalizeRoundImpl(r round.RoundI) {
 	if r.IsFinalized() {
 		return // round already finalized
 	}
-	// The SetFinalizing is not condition check it changes round state.
-	if !r.SetFinalizing() {
-		logging.Logger.Debug("finalize_round: already finalizing",
-			zap.Int64("round", r.GetRoundNumber()))
-	}
-
 	if r.GetHeaviestNotarizedBlock() == nil {
 		logging.Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
 		go c.GetHeaviestNotarizedBlock(context.Background(), r)
+		// r.ResetFinalizingStateIfNotFinalized()
 		time.Sleep(FINALIZATION_TIME)
+	}
+
+	if r.GetHeaviestNotarizedBlock() == nil {
+		logging.Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
+		return
+	}
+
+	// The SetFinalizing is not condition check it changes round state.
+	if !r.SetFinalizing() {
+		logging.Logger.Debug("finalize_round: already finalizing",
+			zap.Int64("round", r.GetRoundNumber()))
 	}
 
 	logging.Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
