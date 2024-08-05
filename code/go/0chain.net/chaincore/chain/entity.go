@@ -610,49 +610,30 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) error {
 
 	r.AddNotarizedBlock(b)
-
-	// if c.BlocksToSharder == chain.FINALIZED {
-	// 	nb := r.GetNotarizedBlocks()
-	// 	if len(nb) > 0 {
-	// 		logging.Logger.Error("*** different blocks for the same round ***",
-	// 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-	// 			zap.String("existing_block", nb[0].Hash))
-	// 	}
-	// }
-
 	pb, _ := c.GetBlock(ctx, b.PrevHash)
 	if pb == nil {
 		return ErrNoPreviousBlock
 	}
 
-	// TODO: add back after debuging
-	// if node.Self.IsSharder() {
-	// if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
-	if pb.ClientState == nil || !pb.IsStateComputed() {
-		// if pb.ClientState == nil {
-		if err := c.ComputeState(ctx, pb); err != nil {
-			// return fmt.Errorf("failed to compute state of block %d: %v", pb.Round, err)
-			if err := c.GetBlockStateChange(pb); err != nil {
-				logging.Logger.Warn("add notarized block - sync previous block state failed, try compute it",
-					zap.Int64("round", pb.Round),
-					zap.String("block", pb.Hash),
-					zap.String("prev block", pb.PrevHash),
-					zap.Error(err))
-				return fmt.Errorf("failed to sync block state changes: %d, err: %v", pb.Round, err)
+	isSharder := node.Self.IsSharder()
+	if isSharder {
+		if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
+			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
+				pb.Round, pb.Hash, pb, pb.GetStateStatus())
+		}
+	} else {
+		if pb.ClientState == nil || !pb.IsStateComputed() {
+			if err := c.ComputeState(ctx, pb); err != nil {
+				if isSharder {
+					return fmt.Errorf("failed to compute state of block %d: %v", pb.Round, err)
+				}
+
+				if err := c.GetBlockStateChange(pb); err != nil {
+					return fmt.Errorf("failed to sync block state changes: %d, err: %v", pb.Round, err)
+				}
 			}
 		}
-		// }
-		// else {
-		// 	return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
-		// 		pb.Round, pb.Hash, pb, pb.GetStateStatus())
-		// }
 	}
-	// } else {
-	// 	if pb.ClientState == nil || pb.IsStateComputed() {
-	// 		return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
-	// 			pb.Round, pb.Hash, pb, pb.GetStateStatus())
-	// 	}
-	// }
 
 	errC := make(chan error)
 	doneC := make(chan struct{})
@@ -676,16 +657,25 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 		}
 
 		if err := c.ComputeState(ctx, b); err != nil {
+			if isSharder {
+				select {
+				case errC <- fmt.Errorf("failed to execute block %d, err: %v", b.Round, err):
+				default:
+				}
+				return
+			}
+
 			if err := c.GetBlockStateChange(b); err != nil {
 				logging.Logger.Warn("add notarized block - sync block state failed",
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.String("prev block", b.PrevHash),
 					zap.Error(err))
-				select {
-				case errC <- fmt.Errorf("failed to sync block state changes: %d, err: %v", b.Round, err):
-				default:
-				}
+			}
+
+			select {
+			case errC <- fmt.Errorf("failed to sync block state changes: %d, err: %v", b.Round, err):
+			default:
 			}
 		}
 	}(cctx)
