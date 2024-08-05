@@ -174,7 +174,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	}
 
 	lfmb := balances.GetLastestFinalizedMagicBlock()
-	fmt.Println("delete miner, magic block:", lfmb.MagicBlock)
+	logging.Logger.Debug("delete miner, magic block:", zap.Any("magic block", lfmb.MagicBlock))
 	cloneMB := lfmb.MagicBlock.Clone()
 	cloneMB.Miners.Delete(mn.ID)
 	cloneMB.Mpks.Delete(mn.ID)
