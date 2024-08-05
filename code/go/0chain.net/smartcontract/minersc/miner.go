@@ -200,6 +200,13 @@ func (msc *MinerSmartContract) DeleteMiner(
 		return "", common.NewError("delete_miner could not update magic block", err.Error())
 	}
 
+	debugMB, err := getMagicBlock(balances)
+	if err != nil {
+		return "", common.NewError("delete_miner could not get magic block", err.Error())
+	}
+
+	logging.Logger.Debug("delete miner, get magic block:", zap.Any("miner size", debugMB.Miners.Size()))
+
 	gn.ViewChange = cloneMB.StartingRound
 	if err := gn.save(balances); err != nil {
 		return "", common.NewError("delete_miner could not save global node", err.Error())
