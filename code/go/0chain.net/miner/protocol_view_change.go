@@ -581,10 +581,9 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 
 // NextViewChangeOfBlock returns next view change value based on given block.
 func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
-
-	if !mc.ChainConfig.IsViewChangeEnabled() {
-		return lfb.LatestFinalizedMagicBlockRound, nil
-	}
+	// if !mc.ChainConfig.IsViewChangeEnabled() {
+	// 	return lfb.LatestFinalizedMagicBlockRound, nil
+	// }
 
 	// miner SC global node is not created yet, but firs block creates it
 	if lfb.Round < 1 {

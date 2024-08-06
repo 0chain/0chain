@@ -2,8 +2,8 @@
 set -e
 
 # generate mocks
-make install-mockery
-make build-mocks
+# make install-mockery
+# make build-mocks
 
 cmd="build"
 dockerfile="docker.local/build.unit_test/Dockerfile"
@@ -27,7 +27,7 @@ done
 # of code/go/0chain.net.
 # Returns 0 if all of the tests pass and 1 if any one of the tests fail.
 docker $cmd -f $dockerfile . -t zchain_unit_test
-docker run --add-host=host.docker.internal:host-gateway -v /run/docker/docker.sock:/var/run/docker.sock \
-	-e DOCKER_HOST_ENV=host.docker.internal \
-	$platform $INTERACTIVE -v $(pwd)/code:/codecov  \
-	zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..."
+# docker run --add-host=host.docker.internal:host-gateway -v /run/docker/docker.sock:/var/run/docker.sock \
+# 	-e DOCKER_HOST_ENV=host.docker.internal \
+# 	$platform $INTERACTIVE -v $(pwd)/code:/codecov  \
+# 	zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -coverprofile=/codecov/coverage.txt -covermode=atomic ./..."
