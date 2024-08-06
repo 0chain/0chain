@@ -174,7 +174,6 @@ func (msc *MinerSmartContract) DeleteMiner(
 	}
 
 	lfmb := balances.GetLastestFinalizedMagicBlock()
-	logging.Logger.Debug("delete miner, magic block:", zap.Any("magic block", lfmb.MagicBlock))
 	cloneMB := lfmb.MagicBlock.Clone()
 	cloneMB.Miners.Delete(mn.ID)
 	cloneMB.Mpks.Delete(mn.ID)
@@ -182,7 +181,8 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	cloneMB.PreviousMagicBlockHash = lfmb.MagicBlock.Hash
 	cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
-	cloneMB.StartingRound = balances.GetBlock().Round
+	cloneMB.StartingRound = lfmb.StartingRound + PhaseRounds[Wait]
+
 	dkgMiners := NewDKGMinerNodes()
 	dkgMiners.calculateTKN(gn, cloneMB.Miners.Size())
 	cloneMB.T = dkgMiners.T
@@ -193,6 +193,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 		zap.Int("T", cloneMB.T),
 		zap.Int("K", cloneMB.K),
 		zap.Int("N", cloneMB.N),
+		zap.Int64("next vc", cloneMB.StartingRound),
 		zap.Int("MB miner size", cloneMB.Miners.Size()))
 
 	// msc.createMagicBlock()
