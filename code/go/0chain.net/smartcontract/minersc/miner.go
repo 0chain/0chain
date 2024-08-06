@@ -181,7 +181,8 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	cloneMB.PreviousMagicBlockHash = lfmb.MagicBlock.Hash
 	cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
-	cloneMB.StartingRound = lfmb.StartingRound + PhaseRounds[Wait]
+	nvcPeriod := PhaseRounds[Wait]
+	cloneMB.StartingRound = ((balances.GetBlock().Round)/nvcPeriod + 1) * nvcPeriod
 
 	dkgMiners := NewDKGMinerNodes()
 	dkgMiners.calculateTKN(gn, cloneMB.Miners.Size())
