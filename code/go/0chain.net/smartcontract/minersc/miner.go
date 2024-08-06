@@ -139,7 +139,6 @@ func (msc *MinerSmartContract) DeleteMiner(
 ) (string, error) {
 	// actErr := cstate.WithActivation(balances, "ares", func() error {
 	// 	return nil
-	// }, func() error {
 	// 	return errors.New("delete miner is disabled")
 	// })
 	// if actErr != nil {

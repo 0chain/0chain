@@ -363,6 +363,8 @@ func main() {
 		}()
 		if mc.ChainConfig.IsViewChangeEnabled() {
 			go mc.DKGProcess(ctx)
+		} else {
+			go mc.ManualViewChangeProcess(ctx)
 		}
 	}
 

@@ -18,6 +18,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/config"
 	"0chain.net/core/util/orderbuffer"
+	"0chain.net/miner"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -2363,6 +2364,17 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	c.SetMagicBlock(newMagicBlock)
+	if node.Self.IsSharder() {
+		return nil
+	}
+
+	if err := miner.StoreMagicBlock(common.GetRootContext(), newMagicBlock); err != nil {
+		logging.Logger.Error("failed to store magic block",
+			zap.String("hash", newMagicBlock.Hash),
+			zap.Int64("round", newMagicBlock.StartingRound),
+			zap.Error(err))
+	}
+
 	return nil
 }
 

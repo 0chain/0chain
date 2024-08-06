@@ -132,6 +132,7 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+	setMagicBlock                 func(mb *block.MagicBlock) error
 }
 
 type GetNow func() common.Timestamp

@@ -80,6 +80,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.notarizationBlockProcessMap = make(map[string]struct{})
 	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
 	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
+	minerChain.manualViewChangeC = make(chan *ViewChangeEvent, 1)
 	minerChain.validateTxnsWithContext = common.NewWithContextFunc(1)
 	minerChain.notarizingBlocksTasks = make(map[string]chan struct{})
 	minerChain.notarizingBlocksResults = cache.NewLRUCache[string, bool](1000)
@@ -142,6 +143,7 @@ type Chain struct {
 
 	// view change process control
 	viewChangeProcess
+	manualViewChangeC chan *ViewChangeEvent // TODO: process the StoreDKG and magic block to DB
 
 	// restart round event (rre)
 	subRestartRoundEventChannel          chan chan struct{} // subscribe for rre
@@ -160,6 +162,10 @@ type Chain struct {
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
 	verifyCachedVRFSharesWorker          *common.WithContextFunc
 	generateBlockWorker                  *common.WithContextFunc
+}
+
+type ViewChangeEvent struct {
+	MagicBlock *block.MagicBlock
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {

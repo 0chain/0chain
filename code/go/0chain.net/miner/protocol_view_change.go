@@ -86,6 +86,21 @@ func (vcp *viewChangeProcess) init(mc *Chain) {
 	vcp.mpks = block.NewMpks()
 }
 
+func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case vce := <-mc.manualViewChangeC:
+			if vce == nil {
+				continue
+			}
+
+			mc.SetDKGSFromStore(ctx, vce.MagicBlock)
+		}
+	}
+}
+
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
 	// DKG process constants
