@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/core/maths"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+
+	"0chain.net/core/maths"
 
 	"0chain.net/smartcontract/dbs/event"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -299,7 +300,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		if err != nil {
 			return "", common.NewErrorf("allocation_creation_failed", "cannot total stake pool for blobber %s: %v", bcm.ID, err)
 		}
-		snr := StoragNodeToStorageNodeResponse(balances, *blobbers[i])
+		snr, err := StoragNodeToStorageNodeResponse(balances, *blobbers[i])
+		if err != nil {
+			return "", err
+		}
 		snr.TotalOffers = spMap[bcm.ID].TotalOffers
 		snr.TotalStake = stake
 		stakedCapacity, err := spMap[bcm.ID].stakedCapacity(bcm.Terms.WritePrice)

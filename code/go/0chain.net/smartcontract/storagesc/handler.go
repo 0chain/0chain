@@ -2594,7 +2594,7 @@ type storageNodeResponse struct {
 	IsEnterprise bool `json:"is_enterprise"`
 }
 
-func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) storageNodeResponse {
+func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {
 	b := sn.mustBase()
 	sr := storageNodeResponse{
 		ID:                      b.ID,
@@ -2618,7 +2618,7 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 		sr.IsRestricted = *b.IsRestricted
 	}
 
-	_ = cstate.WithActivation(balances, "electra", func() error {
+	err := cstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
 		if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
@@ -2627,7 +2627,11 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 		return nil
 	})
 
-	return sr
+	if err != nil {
+		return storageNodeResponse{}, err
+	}
+
+	return sr, nil
 }
 
 func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {
