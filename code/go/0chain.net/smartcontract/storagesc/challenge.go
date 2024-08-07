@@ -204,6 +204,17 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
+	if err = cstate.WithActivation(balances, "electra", func() error {
+		if er := alloc.saveUpdatedStakes(balances); er != nil {
+			return fmt.Errorf("can't save allocation: %v", er)
+		}
+		return nil
+	}, func() error {
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -373,6 +384,18 @@ func (sc *StorageSmartContract) blobberPenalty(
 		if err = sp.Save(spenum.Blobber, blobAlloc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't Save blobber's stake pool: %v", err)
 		}
+	}
+
+	if err = cstate.WithActivation(balances, "electra", func() error {
+		if er := alloc.saveUpdatedStakes(balances); er != nil {
+			return common.NewError("blobber_penalty_failed",
+				"saving allocation pools: "+er.Error())
+		}
+		return nil
+	}, func() error {
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
