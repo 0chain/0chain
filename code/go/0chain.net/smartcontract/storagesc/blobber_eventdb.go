@@ -86,9 +86,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	if err = cstate.WithActivation(balances, "electra", func() error {
-		if v2, ok := sn.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
-			data.IsRestricted = *v2.IsRestricted
-		}
 		return nil
 	}, func() error {
 		if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
