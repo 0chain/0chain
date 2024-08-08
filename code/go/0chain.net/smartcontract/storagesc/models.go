@@ -1584,10 +1584,25 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
+	actErr := cstate.WithActivation(balances, "electra",
 		func() error {
 			return addedBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
+
+				if b.IsRestricted != nil && *b.IsRestricted {
+					success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
+					if err != nil {
+						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+					} else if !success {
+						return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+					}
+				}
+
+				return nil
+			})
+		}, func() error {
+			return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+				b := e.(*storageNodeV3)
 
 				if b.IsRestricted != nil && *b.IsRestricted {
 					success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
