@@ -739,8 +739,18 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	if err = cab.alloc.saveUpdatedStakes(balances); err != nil {
-		return "", common.NewError("challenge_reward_error", err.Error())
+	if err = cstate.WithActivation(balances, "electra", func() error {
+		if err := cab.alloc.save(balances, sc.ID); err != nil {
+			return common.NewError("challenge_reward_error", err.Error())
+		}
+		return nil
+	}, func() error {
+		if err = cab.alloc.saveUpdatedStakes(balances); err != nil {
+			return common.NewError("challenge_reward_error", err.Error())
+		}
+		return nil
+	}); err != nil {
+		return "", err
 	}
 
 	// Clean up challenge on MPT
