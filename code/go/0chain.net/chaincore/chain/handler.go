@@ -167,8 +167,7 @@ func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 // Returns the fee statistics for the transactions of the LFB (latest finalized block). No parameters needed.
 //
 // responses:
-//
-//	200: BlockFeeStatsResponse
+//   200: BlockFeeStatsResponse
 func LatestBlockFeeStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return GetServerChain().FeeStats, nil
 }
@@ -1381,7 +1380,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 // Transaction size cannot exceed the max payload size which is a global configuration of the chain.
 //
 // Consumes:
-//   - application/json
+//    - application/json
 //
 // responses:
 //
@@ -1396,10 +1395,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	err := txn.Validate(ctx)
 	if err != nil {
-		logging.Logger.Error("put transaction error",
-			zap.String("hash", txn.Hash),
-			zap.Any("txn", txn),
-			zap.Error(err))
+		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
 	}
 
@@ -2083,8 +2079,7 @@ func SetupSharderHandlers(c Chainer) {
 // - application/json
 //
 // responses:
-//
-//	200: TxnFeeResponse
+//   200: TxnFeeResponse
 func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	txData, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -2127,8 +2122,7 @@ func SuggestedFeeHandler(ctx context.Context, r *http.Request) (interface{}, err
 // Returns the transaction fees table based on the latest finalized block.
 //
 // responses:
-//
-//	200: FeesTableResponse
+//   200: FeesTableResponse
 func FeesTableHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 	c := GetServerChain()

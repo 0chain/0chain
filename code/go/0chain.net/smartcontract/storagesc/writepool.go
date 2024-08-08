@@ -82,13 +82,16 @@ func (ssc *StorageSmartContract) writePoolLock(
 			"cannot find allocation pools for "+lr.AllocationID+": "+err.Error())
 	}
 
-	if allocation.Finalized || allocation.Canceled {
+	if allocation.mustBase().Finalized || allocation.mustBase().Canceled {
 		return "", common.NewError("write_pool_lock_failed",
 			"can't lock tokens with a finalized or cancelled allocation")
 
 	}
 
-	allocation.WritePool, err = currency.AddCoin(allocation.WritePool, txn.Value)
+	err = allocation.mustUpdateBase(func(ab *storageAllocationBase) error {
+		ab.WritePool, err = currency.AddCoin(ab.WritePool, txn.Value)
+		return err
+	})
 	if err != nil {
 		return "", common.NewError("write_pool_lock_failed", fmt.Sprintf("write pool token overflow: %v", err))
 	}
@@ -98,9 +101,9 @@ func (ssc *StorageSmartContract) writePoolLock(
 		return "", common.NewError("write_pool_lock_failed", fmt.Sprintf("invalid lock value: %v", err))
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, allocation.ID, event.WritePoolLock{
+	balances.EmitEvent(event.TypeStats, event.TagLockWritePool, allocation.mustBase().ID, event.WritePoolLock{
 		Client:       txn.ClientID,
-		AllocationId: allocation.ID,
+		AllocationId: allocation.mustBase().ID,
 		Amount:       i,
 	})
 

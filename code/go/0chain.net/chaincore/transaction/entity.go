@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -52,12 +51,12 @@ func SetupTransactionDB(redisTxnsHost string, redisTxnsPort int) {
 
 // swagger:model Transaction - transaction data
 type Transaction struct {
-
+	
 	// Hash of the transaction
 	datastore.HashIDField
 
 	datastore.CollectionMemberField `json:"-" msgpack:"-"`
-
+	
 	// Version of the transaction
 	//
 	// required: true
@@ -69,7 +68,7 @@ type Transaction struct {
 	// ClientID of the client issuing the transaction
 	//
 	// required: true
-	ClientID string `json:"client_id" msgpack:"cid,omitempty"`
+	ClientID  string `json:"client_id" msgpack:"cid,omitempty"`
 
 	// Public key of the client issuing the transaction
 	//
@@ -79,50 +78,50 @@ type Transaction struct {
 	// ToClientID - the client id of the recipient, the other party in the transaction. It can be a client id or the address of a smart contract
 	//
 	// required: true
-	ToClientID string `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
+	ToClientID      string           `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 
 	// ChainID - the chain id of the transaction
 	//
 	// required: true
-	ChainID string `json:"chain_id,omitempty" msgpack:"chid"`
+	ChainID         string           `json:"chain_id,omitempty" msgpack:"chid"`
 
 	// TransactionData - the data associated with the transaction
 	//
 	// required: true
-	TransactionData string `json:"transaction_data" msgpack:"d"`
+	TransactionData string           `json:"transaction_data" msgpack:"d"`
 
 	// Value - a numeric value associated with this transaction. Its role is determined by the smart contract function
 	//
 	// required: true
-	Value currency.Coin `json:"transaction_value" msgpack:"v"`
+	Value           currency.Coin    `json:"transaction_value" msgpack:"v"`
 
 	// Signature - Issuer signature of the transaction
 	//
 	// required: true
-	Signature string `json:"signature" msgpack:"s"`
-
+	Signature       string           `json:"signature" msgpack:"s"`
+	
 	// CreationDate - the time when the transaction was created
 	//
 	// required: true
-	CreationDate common.Timestamp `json:"creation_date" msgpack:"ts"`
+	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
 
 	// Fee - the fee associated with the transaction
 	//
 	// required: true
-	Fee currency.Coin `json:"transaction_fee" msgpack:"f"`
-
+	Fee             currency.Coin    `json:"transaction_fee" msgpack:"f"`
+	
 	// Nonce - the nonce associated with the transaction
 	//
 	// required: true
-	Nonce int64 `json:"transaction_nonce" msgpack:"n"`
+	Nonce           int64            `json:"transaction_nonce" msgpack:"n"`
 
-	// TransactionType - the type of the transaction.
+	// TransactionType - the type of the transaction. 
 	//	Possible values are:
 	//		- 0: TxnTypeSend - A transaction to send tokens to another account, state is maintained by account.
 	//		- 10: TxnTypeData - A transaction to just store a piece of data on the block chain.
 	//		- 1000: TxnTypeSmartContract - A smart contract transaction type.
 	// required: true
-	TransactionType int `json:"transaction_type" msgpack:"tt"`
+	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 
 	// TransactionOutput - the output of the transaction
 	//
@@ -132,12 +131,12 @@ type Transaction struct {
 	// OutputHash - the hash of the transaction output
 	//
 	// required: true
-	OutputHash string `json:"txn_output_hash" msgpack:"oh"`
+	OutputHash        string `json:"txn_output_hash" msgpack:"oh"`
 
 	// Status - the status of the transaction
 	//
 	// required: true
-	Status int `json:"transaction_status" msgpack:"sot"`
+	Status            int    `json:"transaction_status" msgpack:"sot"`
 }
 
 type FeeStats struct {
@@ -371,11 +370,10 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 	}
 	correctSignature, err := sigScheme.Verify(t.Signature, t.Hash)
 	if err != nil {
-		// return err
-		return common.NewErrorf("invalid_signature", "err: %v, sig scheme: %v", err, reflect.TypeOf(sigScheme))
+		return err
 	}
 	if !correctSignature {
-		return common.NewErrorf("invalid_signature", "Invalid Signature, sig scheme: %v", reflect.TypeOf(sigScheme))
+		return common.NewError("invalid_signature", "Invalid Signature")
 	}
 	return nil
 }
