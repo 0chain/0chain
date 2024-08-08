@@ -2282,7 +2282,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	require.EqualValues(t, alloc, deco)
+	require.EqualValues(t, *alloc, deco)
 
 	assert.Equal(t, cp.Size*2, alloc.Size)
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
@@ -2534,7 +2534,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	require.EqualValues(t, alloc, deco)
+	require.EqualValues(t, *alloc, deco)
 
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
 
@@ -2572,7 +2572,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.Owner, otherClient.id)
 	require.EqualValues(t, alloc.OwnerPublicKey, otherClient.pk)
-	require.EqualValues(t, alloc, deco)
+	require.EqualValues(t, *alloc, deco)
 
 	//
 	// reduce

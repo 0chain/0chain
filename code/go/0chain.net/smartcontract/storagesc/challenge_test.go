@@ -1895,6 +1895,8 @@ func testBlobberReward(
 	var ssc, alloc, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators,
 		validatorStakes, wpBalance, challengePoolIntegralValue, challengePoolBalance, thisChallange, thisExpires, now, 0)
 
+	enableHardForks(t, ctx)
+
 	err = ssc.blobberReward(alloc, previous, details, validators, ctx, allocationId)
 	if err != nil {
 		return err
@@ -1955,9 +1957,11 @@ func setupChallengeMocks(
 		ToClientID:   storageScId,
 		CreationDate: now,
 	}
+	bk := &block.Block{}
+	bk.Round = 1
 	var ctx = &mockStateContext{
 		StateContext: *cstate.NewStateContext(
-			nil,
+			bk,
 			&util.MerklePatriciaTrie{},
 			txn,
 			nil,
@@ -1970,6 +1974,7 @@ func setupChallengeMocks(
 		clientBalance: zcnToBalance(3),
 		store:         make(map[datastore.Key]util.MPTSerializable),
 	}
+
 	var ssc = &StorageSmartContract{
 		&sci.SmartContract{
 			ID: storageScId,
