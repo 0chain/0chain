@@ -51,7 +51,7 @@ func TestNewAllocationRequest_validate(t *testing.T) {
 func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	var (
-		alloc StorageAllocation
+		alloc storageAllocationBase
 		list  []*StorageNode
 		now   common.Timestamp = 150
 		size  int64            = 230

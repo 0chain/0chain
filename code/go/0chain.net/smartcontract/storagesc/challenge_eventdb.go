@@ -132,7 +132,7 @@ func emitUpdateChallenge(
 	return nil
 }
 
-func emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc *StorageAllocation, blobbersSettledChallengesCount []int64, balances cstate.StateContextI) {
+func emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc *storageAllocationBase, blobbersSettledChallengesCount []int64, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
 		AllocationID:         alloc.ID,
 		OpenChallenges:       alloc.Stats.OpenChallenges,
@@ -151,7 +151,7 @@ func emitUpdateAllocationAndBlobberStatsOnAllocFinalization(alloc *StorageAlloca
 	}
 }
 
-func emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc *StorageAllocation, blobberID string, blobbersSettledChallengesCount int64, balances cstate.StateContextI) {
+func emitUpdateAllocationAndBlobberStatsOnBlobberRemoval(alloc *storageAllocationBase, blobberID string, blobbersSettledChallengesCount int64, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenge, alloc.ID, event.Allocation{
 		AllocationID:         alloc.ID,
 		OpenChallenges:       alloc.Stats.OpenChallenges,
