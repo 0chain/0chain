@@ -296,6 +296,7 @@ func TestPartialState_UnmarshalJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ps.DeadNodes = []util.Node{}
 
 	type fields struct {
 		Hash    util.Key
@@ -467,6 +468,7 @@ func TestPartialState_MarshalJSON(t *testing.T) {
 		Nodes: []util.Node{
 			util.NewValueNode(),
 		},
+		DeadNodes: []util.Node{},
 	}
 	ps.SetKey(encryption.Hash("data"))
 
@@ -476,6 +478,7 @@ func TestPartialState_MarshalJSON(t *testing.T) {
 		"nodes": [][]byte{
 			ps.Nodes[0].Encode(),
 		},
+		"dead_nodes": [][]byte{},
 	}
 
 	blob, err := json.Marshal(mapPS)
@@ -484,9 +487,10 @@ func TestPartialState_MarshalJSON(t *testing.T) {
 	}
 
 	type fields struct {
-		Hash    util.Key
-		Version string
-		Nodes   []util.Node
+		Hash      util.Key
+		Version   string
+		Nodes     []util.Node
+		DeadNodes []util.Node
 	}
 	tests := []struct {
 		name    string
@@ -497,9 +501,10 @@ func TestPartialState_MarshalJSON(t *testing.T) {
 		{
 			name: "OK",
 			fields: fields{
-				Hash:    ps.Hash,
-				Version: ps.Version,
-				Nodes:   ps.Nodes,
+				Hash:      ps.Hash,
+				Version:   ps.Version,
+				Nodes:     ps.Nodes,
+				DeadNodes: ps.DeadNodes,
 			},
 			want:    blob,
 			wantErr: false,
@@ -511,9 +516,10 @@ func TestPartialState_MarshalJSON(t *testing.T) {
 			t.Parallel()
 
 			ps := &PartialState{
-				Hash:    tt.fields.Hash,
-				Version: tt.fields.Version,
-				Nodes:   tt.fields.Nodes,
+				Hash:      tt.fields.Hash,
+				Version:   tt.fields.Version,
+				Nodes:     tt.fields.Nodes,
+				DeadNodes: tt.fields.DeadNodes,
 			}
 
 			got, err := ps.MarshalJSON()
