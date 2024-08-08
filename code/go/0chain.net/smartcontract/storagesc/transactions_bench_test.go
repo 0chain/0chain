@@ -228,22 +228,22 @@ func Benchmark_generateChallenges(b *testing.B) {
 		var deco StorageAllocation
 		require.NoError(b, deco.Decode([]byte(resp)))
 
-		allocs = append(allocs, deco.mustBase().ID)
+		allocs = append(allocs, deco.ID)
 	}
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
 	for _, allocID := range allocs {
-		var sa *StorageAllocation
-		sa, err = ssc.getAllocation(allocID, balances)
+		var alloc *StorageAllocation
+		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(b, err)
-		alloc := sa.mustBase()
+
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
 		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(sa.GetKey(ssc.ID), sa)
+		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
 	}
 
@@ -361,22 +361,22 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		var deco StorageAllocation
 		require.NoError(b, deco.Decode([]byte(resp)))
 
-		allocs = append(allocs, deco.mustBase().ID)
+		allocs = append(allocs, deco.ID)
 	}
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
 	for _, allocID := range allocs {
-		var sa *StorageAllocation
-		sa, err = ssc.getAllocation(allocID, balances)
+		var alloc *StorageAllocation
+		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(b, err)
-		alloc := sa.mustBase()
+
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
 		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(sa.GetKey(ssc.ID), sa)
+		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(b, err)
 	}
 
@@ -417,7 +417,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.NoError(b, err)
 
 				// 6.3 keep for the benchmark
-				blobberID = alloc.mustBase().BlobberAllocs[rand.Intn(len(alloc.mustBase().BlobberAllocs))].BlobberID
+				blobberID = alloc.BlobberAllocs[rand.Intn(len(alloc.BlobberAllocs))].BlobberID
 
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
