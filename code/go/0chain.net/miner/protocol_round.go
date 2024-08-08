@@ -1577,24 +1577,6 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 	}
 }
 
-func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
-
-	var (
-		sr = round.NewRound(lfb.Round)
-		mr = mc.CreateRound(sr)
-	)
-
-	if !mc.ensureState(ctx, lfb) { //nolint: staticcheck
-		// ignore state error
-	}
-
-	mr, _ = mc.AddRound(mr).(*Round)
-	mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
-	mc.AddBlock(lfb)
-	//it is not necessary to check next round is ahead, since we are processing lfb and we are not ahead
-	mc.StartNextRound(ctx, mr)
-}
-
 func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
 	var mr = mc.GetMinerRound(rn)
 	if mr == nil {
