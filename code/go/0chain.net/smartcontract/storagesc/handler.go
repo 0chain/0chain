@@ -1880,32 +1880,30 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		eAlloc.Expiration = common.ToTime(now).Add(conf.TimeUnit).Unix() // new expiration
 	}
 
-	alloc, _, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
+	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
-	allocBase := alloc.mustBase()
-
 	// Pay cancellation charge if removing a blobber.
 	if req.RemoveBlobberId != "" {
-		allocCancellationCharge, err := allocBase.cancellationCharge(conf.CancellationCharge)
+		allocCancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
 
 		totalWritePriceBefore := float64(0)
-		for _, blobber := range allocBase.BlobberAllocs {
+		for _, blobber := range alloc.BlobberAllocs {
 			totalWritePriceBefore += float64(blobber.Terms.WritePrice)
 		}
 
-		removedBlobber := allocBase.BlobberAllocsMap[req.RemoveBlobberId]
+		removedBlobber := alloc.BlobberAllocsMap[req.RemoveBlobberId]
 
 		blobberCancellationCharge := currency.Coin(float64(allocCancellationCharge) * (float64(removedBlobber.Terms.WritePrice) / totalWritePriceBefore))
 
-		allocBase.WritePool, err = currency.MinusCoin(allocBase.WritePool, blobberCancellationCharge)
+		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, blobberCancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1913,7 +1911,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	}
 
 	if req.Extend {
-		if err := updateAllocBlobberTerms(edb, allocBase); err != nil {
+		if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
 			common.Respond(w, r, nil, err)
 			return
 		}
@@ -1921,7 +1919,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 	if err = changeBlobbersEventDB(
 		edb,
-		allocBase,
+		&alloc.StorageAllocation,
 		conf,
 		req.AddBlobberId,
 		req.RemoveBlobberId,
@@ -1930,13 +1928,13 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	cp, err := edb.GetChallengePool(allocBase.ID)
+	cp, err := edb.GetChallengePool(alloc.ID)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
-	tokensRequiredToLockZCN, err := allocBase.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, common.Timestamp(time.Now().Unix()))
+	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, common.Timestamp(time.Now().Unix()))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1952,11 +1950,10 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 func changeBlobbersEventDB(
 	edb *event.EventDb,
-	saBase *storageAllocationBase,
+	sa *StorageAllocation,
 	conf *Config,
 	addID, removeID string,
 	now common.Timestamp) error {
-
 	if len(addID) == 0 {
 		if len(removeID) > 0 {
 			return fmt.Errorf("could not remove blobber without adding a new one")
@@ -1965,7 +1962,7 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	_, ok := saBase.BlobberAllocsMap[addID]
+	_, ok := sa.BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
 	}
@@ -1986,21 +1983,21 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba := newBlobberAllocation(saBase.bSize(), saBase, addBlobber, conf, now)
+	ba := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
 
 	removedIdx := 0
 
 	if len(removeID) > 0 {
-		_, ok := saBase.BlobberAllocsMap[removeID]
+		_, ok := sa.BlobberAllocsMap[removeID]
 		if !ok {
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
-		delete(saBase.BlobberAllocsMap, removeID)
+		delete(sa.BlobberAllocsMap, removeID)
 
 		var found bool
-		for i, d := range saBase.BlobberAllocs {
+		for i, d := range sa.BlobberAllocs {
 			if d.BlobberID == removeID {
-				saBase.BlobberAllocs[i] = nil
+				sa.BlobberAllocs[i] = nil
 				found = true
 				removedIdx = i
 				break
@@ -2010,14 +2007,14 @@ func changeBlobbersEventDB(
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
 
-		saBase.BlobberAllocs[removedIdx] = ba
-		saBase.BlobberAllocsMap[addID] = ba
+		sa.BlobberAllocs[removedIdx] = ba
+		sa.BlobberAllocsMap[addID] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
-		saBase.ParityShards++
+		sa.ParityShards++
 
-		saBase.BlobberAllocs = append(saBase.BlobberAllocs, ba)
-		saBase.BlobberAllocsMap[addID] = ba
+		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
+		sa.BlobberAllocsMap[addID] = ba
 	}
 
 	return nil
@@ -2025,9 +2022,9 @@ func changeBlobbersEventDB(
 
 func updateAllocBlobberTerms(
 	edb *event.EventDb,
-	allocBase *storageAllocationBase) error {
-	bIDs := make([]string, 0, len(allocBase.BlobberAllocs))
-	for _, ba := range allocBase.BlobberAllocs {
+	alloc *StorageAllocation) error {
+	bIDs := make([]string, 0, len(alloc.BlobberAllocs))
+	for _, ba := range alloc.BlobberAllocs {
 		bIDs = append(bIDs, ba.BlobberID)
 	}
 
@@ -2044,8 +2041,8 @@ func updateAllocBlobberTerms(
 		}
 	}
 
-	for i := range allocBase.BlobberAllocs {
-		allocBase.BlobberAllocs[i].Terms = bTerms[i]
+	for i := range alloc.BlobberAllocs {
+		alloc.BlobberAllocs[i].Terms = bTerms[i]
 	}
 
 	return nil
@@ -2229,10 +2226,7 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
 	}
-
-	logging.Logger.Info("Jayash0", zap.Any("allocation", allocation))
-
-	_, sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
+	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
 		logging.Logger.Error("unable to create allocation response",
 			zap.String("allocation", allocationID),
@@ -2240,8 +2234,6 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't convert to storageAllocationBlobbers"))
 		return
 	}
-
-	logging.Logger.Info("Jayash4", zap.Any("sa", sa))
 
 	common.Respond(w, r, sa, nil)
 }
@@ -2602,7 +2594,7 @@ type storageNodeResponse struct {
 	IsEnterprise bool `json:"is_enterprise"`
 }
 
-func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) storageNodeResponse {
+func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {
 	b := sn.mustBase()
 	sr := storageNodeResponse{
 		ID:                      b.ID,
@@ -2626,7 +2618,7 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 		sr.IsRestricted = *b.IsRestricted
 	}
 
-	_ = cstate.WithActivation(balances, "electra", func() error {
+	err := cstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
 		if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
@@ -2635,7 +2627,11 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 		return nil
 	})
 
-	return sr
+	if err != nil {
+		return storageNodeResponse{}, err
+	}
+
+	return sr, nil
 }
 
 func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {

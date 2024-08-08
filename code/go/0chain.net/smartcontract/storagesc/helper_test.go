@@ -404,8 +404,6 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 
-	nar.IsEnterprise = IsEnterpriseAllocation
-
 	if allocSize == 0 {
 		nar.Size = 1 * GB // 20 GB
 	} else {
@@ -442,7 +440,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	var deco StorageAllocation
 	require.NoError(t, deco.Decode([]byte(resp)))
 
-	return deco.mustBase().ID, blobs
+	return deco.ID, blobs
 }
 
 func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
@@ -532,9 +530,8 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	valids *partitions.Partitions, allocID string,
 	blobber *StorageNode, balances chainState.StateContextI) {
 
-	sa, err := ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-	alloc := sa.mustBase()
 
 	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
@@ -585,7 +582,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	alloc.Stats.OpenChallenges++
 	alloc.Stats.TotalChallenges++
 
-	err = sa.save(balances, ssc.ID)
+	err = alloc.save(balances, ssc.ID)
 	require.NoError(t, err)
 	return
 }

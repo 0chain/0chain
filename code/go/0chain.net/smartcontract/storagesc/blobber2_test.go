@@ -277,8 +277,7 @@ func testCommitBlobberRead(
 	_, err = ctx.InsertTrieNode(readConnection.GetKey(ssc.ID), lastReadConnection)
 	require.NoError(t, err)
 
-	var sa = &StorageAllocation{}
-	sa.SetEntity(&storageAllocationV2{
+	var sa = &StorageAllocation{
 		ID:         allocationId,
 		StartTime:  allocation.startTime,
 		Expiration: allocation.expiration,
@@ -293,7 +292,7 @@ func testCommitBlobberRead(
 		},
 		Owner: client.id,
 		Stats: &StorageAllocationStats{},
-	})
+	}
 
 	_, err = ctx.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 	require.NoError(t, err)
