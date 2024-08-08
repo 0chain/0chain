@@ -689,20 +689,6 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	return mc.deleteTxns(modifiedTxns)
 }
 
-func getLatestBlockFromSharders(ctx context.Context) *block.Block {
-	mc := GetMinerChain()
-	mb := mc.GetCurrentMagicBlock()
-	mb.Sharders.OneTimeStatusMonitor(ctx, mb.StartingRound)
-	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
-	if len(lfBlocks) > 0 {
-		logging.Logger.Info("bc-1 latest finalized Block",
-			zap.Int64("lfb_round", lfBlocks[0].Round))
-		return lfBlocks[0].Block
-	}
-	logging.Logger.Info("bc-1 sharders returned no lfb.")
-	return nil
-}
-
 // NotarizedBlockFetched - handler to process fetched notarized block
 func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 	// mc.SendNotarization(ctx, b)

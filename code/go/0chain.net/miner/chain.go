@@ -285,16 +285,7 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		return fmt.Errorf("can't init block state: %v", err) // fatal
 	}
 
-	r := mc.GetRound(b.Round)
-	if r == nil {
-		r = round.NewRound(b.Round)
-	}
-
 	mc.SetLatestFinalizedBlock(ctx, b)
-
-	// c.SetRandomSeed(r, b.GetRoundRandomSeed())
-	// r.Finalize(b)
-	// c.SetLatestFinalizedBlock(b)
 
 	logging.Logger.Info("load_lfb setup LFB from store",
 		zap.String("block", b.Hash),
