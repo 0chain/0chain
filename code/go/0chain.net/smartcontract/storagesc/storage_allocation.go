@@ -609,6 +609,15 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event
 		FileOptions:          sab.FileOptions,
 	}
 
+	_ = cstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v2, ok := sa.Entity().(*storageAllocationV2); ok && v2.IsEnterprise != nil {
+			eAlloc.IsEnterprise = *v2.IsEnterprise
+		}
+		return nil
+	})
+
 	if sab.Stats != nil {
 		eAlloc.NumWrites = sab.Stats.NumWrites
 		eAlloc.NumReads = sab.Stats.NumReads

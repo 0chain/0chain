@@ -1256,17 +1256,25 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 					"error removing offer: "+err.Error())
 			}
 
-			cp, err := sc.getChallengePool(sab.ID, balances)
-			if err != nil {
-				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
-			}
+			if isEnterpriseBlobber {
+				cost, err := sab.payCostForRdtuForReplaceEnterpriseBlobber(txn, sp, blobberID, balances)
+				logging.Logger.Info("payCostForRdtuForReplaceEnterpriseBlobber", zap.Any("cost", cost), zap.Any("err", err))
+				if err != nil {
+					return err
+				}
+			} else {
+				cp, err := sc.getChallengePool(sab.ID, balances)
+				if err != nil {
+					return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
+				}
 
-			if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
-				return fmt.Errorf("error paying challenge pool pass payments: %v", err)
-			}
+				if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
+					return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+				}
 
-			if err = sab.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, txn.ClientID, d); err != nil {
-				return fmt.Errorf("3 error paying cancellation charge: %v", err)
+				if err = sab.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, txn.ClientID, d); err != nil {
+					return fmt.Errorf("3 error paying cancellation charge: %v", err)
+				}
 			}
 
 			actErr := cstate.WithActivation(balances, "demeter", func() (e error) { return },
@@ -1294,7 +1302,6 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 			// Update saved data on events_db
 			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
-			// Updating AllocationStats
 			_ = cstate.WithActivation(balances, "artemis", func() error {
 				return nil
 			}, func() error {
@@ -1541,6 +1548,11 @@ func (sab *storageAllocationBase) validateEachBlobber(
 		sn := StorageNode{}
 
 		snr := storageNodeResponseToStorageNodeV2(*b)
+		if request.IsEnterprise && !b.IsEnterprise {
+			errs = append(errs, fmt.Errorf("blobber %s is not enterprise", b.ID).Error())
+		} else if !request.IsEnterprise && b.IsEnterprise {
+			errs = append(errs, fmt.Errorf("blobber %s is enterprise", b.ID).Error())
+		}
 		sn.SetEntity(snr)
 
 		snBase := sn.mustBase()
