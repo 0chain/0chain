@@ -1543,16 +1543,29 @@ func (sab *storageAllocationBase) validateEachBlobber(
 	for i, b := range blobbers {
 		sn := StorageNode{}
 
-		if request.IsEnterprise && !b.IsEnterprise {
-			errs = append(errs, fmt.Errorf("blobber %s is not enterprise", b.ID).Error())
-			continue
-		} else if !request.IsEnterprise && b.IsEnterprise {
-			errs = append(errs, fmt.Errorf("blobber %s is enterprise", b.ID).Error())
-			continue
+		beforeHardfork := func() error {
+			snr := storageNodeResponseToStorageNodeV2(*b)
+			sn.SetEntity(snr)
+			return nil
 		}
 
-		snr := storageNodeResponseToStorageNodeV3(*b)
-		sn.SetEntity(snr)
+		electraHardfork := func() error {
+			if request.IsEnterprise && !b.IsEnterprise {
+				return fmt.Errorf("blobber %s is not enterprise", b.ID)
+			} else if !request.IsEnterprise && b.IsEnterprise {
+				return fmt.Errorf("blobber %s is enterprise", b.ID)
+			}
+
+			snr := storageNodeResponseToStorageNodeV3(*b)
+			sn.SetEntity(snr)
+			return nil
+		}
+
+		actErr := cstate.WithActivation(balances, "electra", beforeHardfork, electraHardfork)
+		if actErr != nil {
+			errs = append(errs, actErr.Error())
+			continue
+		}
 
 		snBase := sn.mustBase()
 		if (b.IsEnterprise) || (snBase.IsRestricted != nil && *snBase.IsRestricted) {
