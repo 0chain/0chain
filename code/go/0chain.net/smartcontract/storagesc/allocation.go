@@ -399,10 +399,14 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("create_challenge_pool")
 
-	sa.mustUpdateBase(func(sab *storageAllocationBase) error {
+	if err := sa.mustUpdateBase(func(sab *storageAllocationBase) error {
 		alloc.deepCopy(sab)
 		return nil
-	})
+	}); err != nil {
+		logging.Logger.Error("new_allocation_request_failed: error updating storage allocation", zap.Error(err))
+		return "", common.NewErrorf("allocation_creation_failed", "updating storage allocation: %v", err)
+	}
+
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
 			zap.String("txn", txn.Hash),
@@ -1123,7 +1127,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
-	actErr = chainstate.WithActivation(balances, "electra", func() error {
+	if actErr = chainstate.WithActivation(balances, "electra", func() error {
 		if t.Value < tokensRequiredToLock {
 			return common.NewError("allocation_updating_failed",
 				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock+t.Value))
@@ -1135,8 +1139,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 				fmt.Sprintf("not enough tokens to cover update allocation cost (locked : %d < required : %d)", t.Value, tokensRequiredToLock+t.Value))
 		}
 		return nil
-	})
-	if actErr != nil {
+	}); actErr != nil {
 		return "", actErr
 	}
 

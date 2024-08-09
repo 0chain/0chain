@@ -238,7 +238,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	actErr := cstate.WithActivation(balances, "electra",
+	if actErr := cstate.WithActivation(balances, "electra",
 		func() error {
 			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
@@ -251,8 +251,7 @@ func (sc *StorageSmartContract) updateBlobber(
 				b.IsRestricted = updateBlobber.IsRestricted
 				return nil
 			})
-		})
-	if actErr != nil {
+		}); actErr != nil {
 		return fmt.Errorf("error with activation: %v", actErr)
 	}
 

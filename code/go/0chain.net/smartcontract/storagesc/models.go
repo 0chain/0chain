@@ -1293,12 +1293,6 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				return actErr
 			}
 
-			blobber, err = sc.getBlobber(d.BlobberID, balances)
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't get blobber "+d.BlobberID+": "+err.Error())
-			}
-
 			//nolint:errcheck
 			blobber.mustUpdateBase(func(b *storageNodeBase) error {
 				b.SavedData += -d.Stats.UsedSize
@@ -1536,7 +1530,7 @@ func (sab *storageAllocationBase) validateEachBlobber(
 	for i, b := range blobbers {
 		sn := StorageNode{}
 
-		snr := storageNodeResponseToStorageNodeV2(*b)
+		snr := storageNodeResponseToStorageNodeV3(*b)
 		sn.SetEntity(snr)
 
 		snBase := sn.mustBase()
