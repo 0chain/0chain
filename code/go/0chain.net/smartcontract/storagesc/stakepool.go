@@ -39,19 +39,12 @@ func validateStakePoolSettings(
 		return errors.New("num_delegates <= 0")
 	}
 
-	beforeFunc := func() (e error) {
-		return
+	if sps.MaxNumDelegates > conf.MaxDelegates {
+		return fmt.Errorf("num_delegates (%d) is greater than"+
+			" max allowed by SC (%d)", sps.MaxNumDelegates, conf.MaxDelegates)
 	}
 
-	afterFunc := func() (e error) {
-		if sps.MaxNumDelegates > conf.MaxDelegates {
-			return fmt.Errorf("num_delegates (%d) is greater than"+
-				" max allowed by SC (%d)", sps.MaxNumDelegates, conf.MaxDelegates)
-		}
-		return
-	}
-
-	return chainstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
+	return nil
 }
 
 // stake pool of a blobber
@@ -427,18 +420,6 @@ func (ssc *StorageSmartContract) stakePoolUnlock(
 	t *transaction.Transaction,
 	input []byte,
 	balances chainstate.StateContextI,
-) (resp string, err error) {
-
-	beforeFunc := func() (e error) {
-		resp, e = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter)
-		return e
-	}
-
-	afterFunc := func() (e error) {
-		resp, e = stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
-		return e
-	}
-
-	actErr := chainstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
-	return resp, actErr
+) (string, error) {
+	return stakepool.StakePoolUnlock(t, input, balances, ssc.getStakePoolAdapter, ssc.refreshProvider)
 }

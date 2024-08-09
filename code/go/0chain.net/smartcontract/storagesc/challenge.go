@@ -922,69 +922,45 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	conf *Config,
 ) (*challengeOutput, error) {
 	r := rand.New(rand.NewSource(seed))
-	blobberSelection := challengeBlobberSelection(0) // challengeBlobberSelection(r.Intn(2))
 
 	var (
 		blobberID string
 		err       error
 	)
 
-	beforeHardFork1 := func() (e error) {
-		blobberID, e = selectBlobberForChallenge(blobberSelection, challengeBlobbersPartition, r, balances, conf)
-		if e != nil {
-			e = common.NewError("add_challenge", e.Error())
-		}
-		return e
-	}
-
-	afterHardFork1 := func() (e error) {
-		// select blobber to challenge
-		blobberID, e = partsWeight.pick(balances, r)
-		if e != nil {
-			e = common.NewError("add_challenge", e.Error())
-		}
-		return e
-	}
-
-	actErr := cstate.WithActivation(balances, "apollo", beforeHardFork1, afterHardFork1)
-	if actErr != nil {
-		return nil, actErr
+	// select blobber to challenge
+	blobberID, err = partsWeight.pick(balances, r)
+	if err != nil {
+		return nil, common.NewError("add_challenge", err.Error())
 	}
 
 	blobProcessedCount := 0
-	actErr = cstate.WithActivation(balances, "athena", func() error { return nil }, func() error {
 
-		blobber, err := sc.getBlobber(blobberID, balances)
+	blobber, err := sc.getBlobber(blobberID, balances)
+	if err != nil {
+		return nil, common.NewError("add_challenge", err.Error())
+	}
+
+	for blobber.IsKilled() || blobber.IsShutDown() {
+		err := partitionsChallengeReadyBlobbersRemove(balances, blobberID)
 		if err != nil {
-			return common.NewError("add_challenge", err.Error())
+			return nil, common.NewError("add_challenge", err.Error())
 		}
 
-		for blobber.IsKilled() || blobber.IsShutDown() {
-			err := partitionsChallengeReadyBlobbersRemove(balances, blobberID)
-			if err != nil {
-				return common.NewError("add_challenge", err.Error())
-			}
+		if blobProcessedCount > 10 {
+			return nil, nil
+		}
+		blobProcessedCount++
 
-			if blobProcessedCount > 10 {
-				return nil
-			}
-			blobProcessedCount++
-
-			blobberID, err = partsWeight.pick(balances, r)
-			if err != nil {
-				return common.NewError("add_challenge", err.Error())
-			}
-
-			blobber, err = sc.getBlobber(blobberID, balances)
-			if err != nil {
-				return common.NewError("add_challenge", err.Error())
-			}
+		blobberID, err = partsWeight.pick(balances, r)
+		if err != nil {
+			return nil, common.NewError("add_challenge", err.Error())
 		}
 
-		return nil
-	})
-	if actErr != nil {
-		return nil, actErr
+		blobber, err = sc.getBlobber(blobberID, balances)
+		if err != nil {
+			return nil, common.NewError("add_challenge", err.Error())
+		}
 	}
 
 	if blobProcessedCount > 10 {
@@ -1109,7 +1085,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		}
 		validator, err := getValidator(randValidator.Id, balances)
 		if err != nil {
-			actErr = cstate.WithActivation(balances, "demeter", func() error {
+			actErr := cstate.WithActivation(balances, "demeter", func() error {
 				if cstate.ErrInvalidState(err) {
 					return common.NewError("add_challenge",
 						err.Error())
@@ -1133,7 +1109,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
-		actErr = cstate.WithActivation(balances, "demeter", func() error { return nil }, func() error {
+		actErr := cstate.WithActivation(balances, "demeter", func() error { return nil }, func() error {
 			if validator.IsKilled() || validator.IsShutDown() {
 				err = validators.Remove(balances, validator.Id())
 				if err != nil {
