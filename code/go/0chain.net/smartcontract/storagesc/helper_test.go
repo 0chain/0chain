@@ -404,7 +404,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 
-	nar.IsEnterprise = IsEnterpriseAllocation
+	//nar.IsEnterprise = IsEnterpriseAllocation
 
 	if allocSize == 0 {
 		nar.Size = 1 * GB // 20 GB

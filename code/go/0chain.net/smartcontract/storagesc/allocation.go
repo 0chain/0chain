@@ -448,7 +448,7 @@ func setupNewAllocation(
 	}
 
 	logging.Logger.Debug("new_allocation_request", zap.Strings("blobbers", request.Blobbers))
-	sa, _ := request.storageAllocation(balances, conf, now) // (set fields, ignore expiration)
+	sa, err := request.storageAllocation(balances, conf, now) // (set fields, ignore expiration)
 	if err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error creating storage allocation",
 			zap.Error(err))

@@ -34,6 +34,17 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		IsRestricted: b.IsRestricted != nil && *b.IsRestricted,
 	}
 
+	if err = cstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
+			data.IsEnterprise = *v3.IsEnterprise
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, b.ID, data)
 	return nil
 }
@@ -72,6 +83,17 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		OffersTotal: sp.TotalOffers,
 
 		CreationRound: balances.GetBlock().Round,
+	}
+
+	if err = cstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
+			data.IsEnterprise = *v3.IsEnterprise
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, b.ID, data)
