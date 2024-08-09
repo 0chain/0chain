@@ -1293,7 +1293,6 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				}
 			}
 
-
 			actErr = cstate.WithActivation(balances, "demeter", func() (e error) { return },
 				func() (e error) {
 					return sp.Save(spenum.Blobber, d.BlobberID, balances)
@@ -1545,12 +1544,15 @@ func (sab *storageAllocationBase) validateEachBlobber(
 	for i, b := range blobbers {
 		sn := StorageNode{}
 
-		snr := storageNodeResponseToStorageNodeV2(*b)
 		if request.IsEnterprise && !b.IsEnterprise {
 			errs = append(errs, fmt.Errorf("blobber %s is not enterprise", b.ID).Error())
+			continue
 		} else if !request.IsEnterprise && b.IsEnterprise {
 			errs = append(errs, fmt.Errorf("blobber %s is enterprise", b.ID).Error())
+			continue
 		}
+
+		snr := storageNodeResponseToStorageNodeV3(*b)
 		sn.SetEntity(snr)
 
 		snBase := sn.mustBase()
