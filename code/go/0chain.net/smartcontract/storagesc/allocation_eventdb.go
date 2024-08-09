@@ -118,7 +118,7 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 	return sa, res, nil
 }
 
-func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *StorageAllocation) *event.Allocation {
+func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *StorageAllocation) (*event.Allocation, error) {
 	sab := sa.mustBase()
 	alloc := &event.Allocation{
 		AllocationID:         sab.ID,
@@ -147,7 +147,7 @@ func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *Stora
 		FileOptions:          sab.FileOptions,
 	}
 
-	_ = cstate.WithActivation(balances, "electra", func() error {
+	if actErr := cstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
 		if sa.Entity().GetVersion() == "v2" {
@@ -156,7 +156,9 @@ func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *Stora
 			}
 		}
 		return nil
-	})
+	}); actErr != nil {
+		return nil, actErr
+	}
 
 	if sab.Stats != nil {
 		alloc.NumWrites = sab.Stats.NumWrites
@@ -168,13 +170,16 @@ func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *Stora
 		alloc.LatestClosedChallengeTxn = sab.Stats.LastestClosedChallengeTxn
 	}
 
-	return alloc
+	return alloc, nil
 }
 
 func (sa *StorageAllocation) emitAdd(balances cstate.StateContextI) error {
-	alloc := storageAllocationToAllocationTable(balances, sa)
-	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
+	alloc, err := storageAllocationToAllocationTable(balances, sa)
+	if err != nil {
+		return err
+	}
 
+	balances.EmitEvent(event.TypeStats, event.TagAddAllocation, alloc.AllocationID, alloc)
 	return nil
 }
 

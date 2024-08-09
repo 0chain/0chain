@@ -581,7 +581,7 @@ func (sab *storageAllocationBase) buildEventBlobberTerms() []event.AllocationBlo
 	return bTerms
 }
 
-func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event.Allocation {
+func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) (event.Allocation, error) {
 	sab := sa.mustBase()
 	eAlloc := event.Allocation{
 		AllocationID:         sab.ID,
@@ -609,7 +609,7 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event
 		FileOptions:          sab.FileOptions,
 	}
 
-	_ = cstate.WithActivation(balances, "electra", func() error {
+	if actErr := cstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
 		if sa.Entity().GetVersion() == "v2" {
@@ -618,7 +618,9 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event
 			}
 		}
 		return nil
-	})
+	}); actErr != nil {
+		return eAlloc, actErr
+	}
 
 	if sab.Stats != nil {
 		eAlloc.NumWrites = sab.Stats.NumWrites
@@ -630,7 +632,7 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event
 		eAlloc.LatestClosedChallengeTxn = sab.Stats.LastestClosedChallengeTxn
 	}
 
-	return eAlloc
+	return eAlloc, nil
 }
 
 func (sab *storageAllocationBase) buildStakeUpdateEvent() event.Allocation {

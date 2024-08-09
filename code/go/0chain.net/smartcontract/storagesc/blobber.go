@@ -238,7 +238,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	actErr := cstate.WithActivation(balances, "electra",
+	if actErr := cstate.WithActivation(balances, "electra",
 		func() error {
 			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
@@ -251,8 +251,7 @@ func (sc *StorageSmartContract) updateBlobber(
 				b.IsRestricted = updateBlobber.IsRestricted
 				return nil
 			})
-		})
-	if actErr != nil {
+		}); actErr != nil {
 		return fmt.Errorf("error with activation: %v", actErr)
 	}
 
@@ -876,7 +875,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"can't get allocation: "+err.Error())
 	}
 
-	actErr := cstate.WithActivation(balances, "electra", func() error { return nil }, func() error {
+	if actErr := cstate.WithActivation(balances, "electra", func() error { return nil }, func() error {
 		if sa.Entity().GetVersion() == "v2" {
 			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 				return common.NewError("commit_connection_failed",
@@ -884,8 +883,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			}
 		}
 		return nil
-	})
-	if actErr != nil {
+	}); actErr != nil {
 		return "", actErr
 	}
 
