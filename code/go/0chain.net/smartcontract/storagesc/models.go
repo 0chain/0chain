@@ -1217,7 +1217,7 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				var cp *challengePool
 				cp, e = sc.getChallengePool(sab.ID, balances)
 				if e != nil {
-					e = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
+					e = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, e)
 
 					if demeterActErr := cstate.WithActivation(balances, "demeter", func() (e error) { return }, func() error {
 						return e
@@ -1692,8 +1692,6 @@ func (sab *storageAllocationBase) IsValidFinalizer(id string) bool {
 	}
 	return false // unknown
 }
-
-
 
 // removeExpiredChallenges removes all expired challenges from the allocation,
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.
