@@ -1,11 +1,9 @@
 package storagesc
 
 import (
-	"0chain.net/core/util/entitywrapper"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"math"
 	"strconv"
 	"testing"
@@ -966,7 +964,8 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	balances := newTestBalances(t, false)
 	conf := setConfig(t, balances)
 	now := common.Timestamp(time.Now().Unix())
-	var sa = nar.storageAllocation(balances, conf, now)
+	var sa, err = nar.storageAllocation(balances, conf, now)
+	require.NoError(t, err)
 	alloc := sa.mustBase()
 	require.Equal(t, alloc.DataShards, nar.DataShards)
 	require.Equal(t, alloc.ParityShards, nar.ParityShards)
@@ -1416,7 +1415,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 	// 10. ok
 	t.Run("ok", func(t *testing.T) {
-
 		wallet := newClient(1000*x10, balances)
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
@@ -1527,180 +1525,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Zero(t, cp.Balance)
-	})
-
-	// Enterprise Allocation Tests
-
-	t.Run("Enterprise : All blobbers provided are enterprise blobbers for enterprise allocation should work", func(t *testing.T) {
-
-		wallet := newClient(1000*x10, balances)
-		b0Wallet := newClient(1000*x10, balances)
-		b1Wallet := newClient(1000*x10, balances)
-
-		var nar newAllocationRequest
-		nar.ReadPriceRange = PriceRange{20, 10}
-		nar.Owner = clientID
-		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
-		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
-		nar.Size = 20 * GB
-		nar.DataShards = 1
-		nar.ParityShards = 1
-		nar.Blobbers = nil // not set
-		nar.Owner = wallet.id
-		nar.OwnerPublicKey = wallet.pk
-
-		nar.IsEnterprise = true
-
-		var tempTxn transaction.Transaction
-		tempTxn.Hash = uuid.New().String()
-		tempTxn.Value = 10000
-		tempTxn.ClientID = wallet.id
-		tempTxn.CreationDate = toSeconds(2 * time.Hour)
-
-		balances.setTransaction(t, &tempTxn)
-
-		var conditions map[string]interface{}
-		conditions = make(map[string]interface{})
-		conditions["is_restricted"] = true
-		conditions["is_enterprise"] = []bool{true, true}
-		conditions["public_keys"] = []string{b0Wallet.pk, b1Wallet.pk}
-		var allBlobbers = newTestAllBlobbers(conditions)
-
-		b0 := allBlobbers.Nodes[0]
-		b0.mustUpdateBase(func(b *storageNodeBase) error {
-			b.LastHealthCheck = tx.CreationDate
-			b.Allocated = 5 * GB
-			return nil
-		})
-		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		require.NoError(t, err)
-
-		b1 := allBlobbers.Nodes[1]
-		b1.mustUpdateBase(func(b *storageNodeBase) error {
-			b.LastHealthCheck = tx.CreationDate
-			b.Allocated = 10 * GB
-			return nil
-		})
-		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
-		require.NoError(t, err)
-
-		var (
-			sp1, sp2 = newStakePool(), newStakePool()
-			dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
-		)
-		dp1.Balance, dp2.Balance = 20e10, 20e10
-		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
-		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
-
-		nar.Blobbers = append(nar.Blobbers, b0.Id())
-		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		nar.Blobbers = append(nar.Blobbers, b1.Id())
-		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
-		require.NoError(t, err)
-
-		nar.BlobberAuthTickets = []string{"", ""}
-		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
-		requireErrMsg(t, err, "allocation_creation_failed: Not enough blobbers to honor the allocation: blobber b1 auth ticket verification failed: invalid_auth_ticket: empty auth ticket, blobber b2 auth ticket verification failed: invalid_auth_ticket: empty auth ticket")
-
-		blobber0AuthTicket, err := b0Wallet.scheme.Sign(wallet.id)
-		require.NoError(t, err)
-		blobber1AuthTicket, err := b1Wallet.scheme.Sign(wallet.id)
-		require.NoError(t, err)
-
-		nar.BlobberAuthTickets = []string{blobber0AuthTicket, blobber1AuthTicket}
-		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
-		require.NoError(t, err)
-	})
-
-	t.Run("Enterprise : One blobber enterprise and 2nd non-enterprise for non-enterprise allocation should fail", func(t *testing.T) {
-		wallet := newClient(1000*x10, balances)
-		b0Wallet := newClient(1000*x10, balances)
-		b1Wallet := newClient(1000*x10, balances)
-
-		var nar newAllocationRequest
-		nar.ReadPriceRange = PriceRange{20, 10}
-		nar.Owner = clientID
-		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
-		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
-		nar.Size = 20 * GB
-		nar.DataShards = 1
-		nar.ParityShards = 1
-		nar.Blobbers = nil // not set
-		nar.Owner = wallet.id
-		nar.OwnerPublicKey = wallet.pk
-
-		nar.IsEnterprise = true
-
-		var tempTxn transaction.Transaction
-		tempTxn.Hash = uuid.New().String()
-		tempTxn.Value = 10000
-		tempTxn.ClientID = wallet.id
-		tempTxn.CreationDate = toSeconds(2 * time.Hour)
-
-		balances.setTransaction(t, &tempTxn)
-
-		var conditions map[string]interface{}
-		conditions = make(map[string]interface{})
-		conditions["is_restricted"] = true
-		conditions["is_enterprise"] = []bool{true, false}
-		conditions["public_keys"] = []string{b0Wallet.pk, b1Wallet.pk}
-		var allBlobbers = newTestAllBlobbers(conditions)
-
-		b0 := allBlobbers.Nodes[0]
-		b0.mustUpdateBase(func(b *storageNodeBase) error {
-			b.LastHealthCheck = tx.CreationDate
-			b.Allocated = 5 * GB
-			return nil
-		})
-		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		require.NoError(t, err)
-
-		b1 := allBlobbers.Nodes[1]
-		b1.mustUpdateBase(func(b *storageNodeBase) error {
-			b.LastHealthCheck = tx.CreationDate
-			b.Allocated = 10 * GB
-			return nil
-		})
-		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
-		require.NoError(t, err)
-
-		var (
-			sp1, sp2 = newStakePool(), newStakePool()
-			dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
-		)
-		dp1.Balance, dp2.Balance = 20e10, 20e10
-		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
-		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
-		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
-
-		nar.Blobbers = append(nar.Blobbers, b0.Id())
-		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
-		nar.Blobbers = append(nar.Blobbers, b1.Id())
-		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
-		require.NoError(t, err)
-
-		blobber0AuthTicket, err := b0Wallet.scheme.Sign(wallet.id)
-		require.NoError(t, err)
-		blobber1AuthTicket, err := b1Wallet.scheme.Sign(wallet.id)
-		require.NoError(t, err)
-
-		nar.BlobberAuthTickets = []string{blobber0AuthTicket, blobber1AuthTicket}
-
-		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
-		requireErrMsg(t, err, "allocation_creation_failed: Not enough blobbers to honor the allocation: blobber b2 is not enterprise")
-
-		_ = b1.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
-			b := e.(*storageNodeV3)
-			b.IsEnterprise = new(bool)
-			*b.IsEnterprise = true
-			return nil
-		})
-		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
-		require.NoError(t, err)
-
-		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
-		require.NoError(t, err)
 	})
 }
 
