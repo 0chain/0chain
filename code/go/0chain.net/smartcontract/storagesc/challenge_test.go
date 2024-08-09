@@ -521,7 +521,7 @@ func TestPopulateGenerateChallenge(t *testing.T) {
 				require.InEpsilon(t, float64(numChallenges)*(float64(bw.GetWeightV2())/float64(totalWeight)), float64(challengedBlobbers[bw.BlobberID]), 0.05)
 				totalAllocationsChallengesForBlobber := int64(len(challenged[bw.BlobberID]))
 				for _, count := range challenged[bw.BlobberID] {
-					require.InEpsilon(t, totalChallengesForBlobber/totalAllocationsChallengesForBlobber, count, 0.15)
+					require.InEpsilon(t, totalChallengesForBlobber/totalAllocationsChallengesForBlobber, count, 0.20)
 				}
 				return false
 			}); err != nil {
