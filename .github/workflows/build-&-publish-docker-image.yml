@@ -267,7 +267,7 @@ jobs:
         with:
           miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          repo_snapshots_branch: feature/enterprise-blobbers
+          repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
@@ -280,7 +280,7 @@ jobs:
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@mixed/sharder-images
         with:
-          repo_snapshots_branch: feature/enterprise-blobbers
+          repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
           network: ${{ env.NETWORK_URL }}
           svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
           deploy_report_page: false
