@@ -270,23 +270,27 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_creation_failed", "invalid request: "+err.Error())
 	}
 
+	actErr := chainstate.WithActivation(balances, "electra", func() error {
+		request.IsEnterprise = false
+		return nil
+	}, func() error {
+		return nil
+	})
+	if actErr != nil {
+		return "", actErr
+	}
+
 	if request.Owner == "" {
 		request.Owner = txn.ClientID
 		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	actErr := chainstate.WithActivation(balances, "artemis", func() error { return nil }, func() error {
-		if len(request.BlobberAuthTickets) < len(request.Blobbers) {
-			return common.NewErrorf("allocation_creation_failed", "blobber_auth_tickets are less than blobbers")
-		}
+	if len(request.BlobberAuthTickets) < len(request.Blobbers) {
+		return "", common.NewErrorf("allocation_creation_failed", "blobber_auth_tickets are less than blobbers")
+	}
 
-		if len(request.BlobberAuthTickets) > len(request.Blobbers) {
-			request.BlobberAuthTickets = request.BlobberAuthTickets[:len(request.Blobbers)]
-		}
-		return nil
-	})
-	if actErr != nil {
-		return "", actErr
+	if len(request.BlobberAuthTickets) > len(request.Blobbers) {
+		request.BlobberAuthTickets = request.BlobberAuthTickets[:len(request.Blobbers)]
 	}
 
 	blobbers, err := getBlobbersByIDs(request.Blobbers, balances)
@@ -390,31 +394,14 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 	m.tick("create_write_pool")
 
-	actErr = chainstate.WithActivation(balances, "electra",
-		func() error {
-			if err = sc.createChallengePool(txn, alloc, balances, conf); err != nil {
-				logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
-					zap.String("txn", txn.Hash),
-					zap.Error(err))
-				return common.NewError("allocation_creation_failed", err.Error())
-			}
-			m.tick("create_challenge_pool")
-			return nil
-		}, func() error {
-			if !request.IsEnterprise {
-				if err = sc.createChallengePool(txn, alloc, balances, conf); err != nil {
-					logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
-						zap.String("txn", txn.Hash),
-						zap.Error(err))
-					return common.NewError("allocation_creation_failed", err.Error())
-				}
-				m.tick("create_challenge_pool")
-				return nil
-			}
-			return nil
-		})
-	if actErr != nil {
-		return "", actErr
+	if !request.IsEnterprise {
+		if err = sc.createChallengePool(txn, alloc, balances, conf); err != nil {
+			logging.Logger.Error("new_allocation_request_failed: error creating challenge pool",
+				zap.String("txn", txn.Hash),
+				zap.Error(err))
+			return "", common.NewError("allocation_creation_failed", err.Error())
+		}
+		m.tick("create_challenge_pool")
 	}
 
 	sa.mustUpdateBase(func(sab *storageAllocationBase) error {
@@ -1065,14 +1052,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	isEnterprise := false
-	_ = chainstate.WithActivation(balances, "electra", func() error {
-		return nil
-	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
-			isEnterprise = true
-		}
-		return nil
-	})
 
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
@@ -1169,10 +1148,12 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// lock tokens if this transaction provides them
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	if err := sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
-	})
+	}); err != nil {
+		return "", common.NewError("allocation_updating_failed", err.Error())
+	}
 
 	err = sa.saveUpdatedAllocation(blobbers, balances)
 	if err != nil {
