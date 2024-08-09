@@ -166,38 +166,7 @@ func (msc *MinerSmartContract) DeleteSharder(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	actErr := cstate.WithActivation(balances, "ares", func() error {
-		return nil
-	}, func() error {
-		return errors.New("delete sharder is disabled")
-	})
-	if actErr != nil {
-		return "", actErr
-	}
-
-	var err error
-	var deleteSharder = NewMinerNode()
-	if err = deleteSharder.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delete_sharder",
-			"decoding request: %v", err)
-	}
-
-	var sn *MinerNode
-	sn, err = msc.getSharderNode(deleteSharder.ID, balances)
-	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
-
-	updatedSn, err := msc.deleteNode(gn, sn, balances)
-	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
-
-	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
-
-	return "", nil
+	return "", errors.New("delete sharder is disabled")
 }
 
 func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {

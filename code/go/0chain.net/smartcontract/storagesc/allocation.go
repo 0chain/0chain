@@ -250,18 +250,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	actErr := chainstate.WithActivation(balances, "artemis", func() error { return nil }, func() error {
-		if len(request.BlobberAuthTickets) < len(request.Blobbers) {
-			return common.NewErrorf("allocation_creation_failed", "blobber_auth_tickets are less than blobbers")
-		}
+	if len(request.BlobberAuthTickets) < len(request.Blobbers) {
+		return "", common.NewErrorf("allocation_creation_failed", "blobber_auth_tickets are less than blobbers")
+	}
 
-		if len(request.BlobberAuthTickets) > len(request.Blobbers) {
-			request.BlobberAuthTickets = request.BlobberAuthTickets[:len(request.Blobbers)]
-		}
-		return nil
-	})
-	if actErr != nil {
-		return "", actErr
+	if len(request.BlobberAuthTickets) > len(request.Blobbers) {
+		request.BlobberAuthTickets = request.BlobberAuthTickets[:len(request.Blobbers)]
 	}
 
 	blobbers, err := getBlobbersByIDs(request.Blobbers, balances)

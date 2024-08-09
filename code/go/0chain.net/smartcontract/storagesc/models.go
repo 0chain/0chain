@@ -1471,14 +1471,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 		// Update saved data on events_db
 		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
-		// Updating AllocationStats
-		_ = cstate.WithActivation(balances, "artemis", func() error {
-			return nil
-		}, func() error {
-			sa.Stats.UsedSize += -d.Stats.UsedSize
-			return nil
-		})
-
+		sa.Stats.UsedSize += -d.Stats.UsedSize
 		sa.BlobberAllocs[i] = addedBlobberAllocation
 		sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 		break
@@ -1499,12 +1492,10 @@ func replaceBlobber(
 		return nil, err
 	}
 
-	var removedBlobber *StorageNode
 	var found bool
 	for i, d := range blobbers {
 		dd := d.mustBase()
 		if dd.ID == blobberID {
-			removedBlobber = blobbers[i]
 			blobbers[i] = addedBlobber
 			found = true
 			break
@@ -1512,17 +1503,6 @@ func replaceBlobber(
 	}
 	if !found {
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
-	}
-
-	actErr := cstate.WithActivation(balances, "ares", func() error {
-		rbb := removedBlobber.mustBase()
-		if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-			return fmt.Errorf("saving blobber %v, error: %v", rbb.ID, err)
-		}
-		return nil
-	}, func() error { return nil })
-	if actErr != nil {
-		return nil, actErr
 	}
 
 	return blobbers, nil
@@ -1569,25 +1549,20 @@ func (sa *StorageAllocation) changeBlobbers(
 		return nil, err
 	}
 
-	actErr := cstate.WithActivation(balances, "artemis", func() (e error) { return },
-		func() error {
-			return addedBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
-				b := e.(*storageNodeV2)
+	if err := addedBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
+		b := e.(*storageNodeV2)
 
-				if b.IsRestricted != nil && *b.IsRestricted {
-					success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
-					if err != nil {
-						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
-					} else if !success {
-						return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
-					}
-				}
-
-				return nil
-			})
-		})
-	if actErr != nil {
-		return nil, actErr
+		if b.IsRestricted != nil && *b.IsRestricted {
+			success, err := verifyBlobberAuthTicket(balances, sa.Owner, authTicket, b.PublicKey)
+			if err != nil {
+				return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+			} else if !success {
+				return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	//nolint:errcheck
@@ -1692,61 +1667,16 @@ func (sa *StorageAllocation) validateEachBlobber(
 	)
 	for i, b := range blobbers {
 		sn := StorageNode{}
-		beforeArtemisFork := func() error {
-			sn1 := storageNodeResponseToStorageNodeV1(*b)
-			sn.SetEntity(sn1)
-			err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
+
+		snr := storageNodeResponseToStorageNodeV2(*b)
+		sn.SetEntity(snr)
+		if *snr.IsRestricted {
+			success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
 			if err != nil {
-				logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
-				return err
+				errs = append(errs, fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error()).Error())
+			} else if !success {
+				errs = append(errs, fmt.Errorf("blobber %s auth ticket verification failed", b.ID).Error())
 			}
-			return nil
-		}
-
-		artemisFork := func() error {
-			snr := storageNodeResponseToStorageNodeV2(*b)
-			sn.SetEntity(snr)
-			if *snr.IsRestricted {
-				success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
-				if err != nil {
-					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
-				} else if !success {
-					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
-				}
-			}
-
-			return nil
-		}
-
-		athenaFork := func() error {
-			snr := storageNodeResponseToStorageNodeV2(*b)
-			sn.SetEntity(snr)
-			if *snr.IsRestricted {
-				success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
-				if err != nil {
-					return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
-				} else if !success {
-					return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
-				}
-			}
-
-			err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
-			if err != nil {
-				logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
-				return err
-			}
-			return nil
-		}
-
-		actErr := cstate.WithActivation(balances, "athena", func() error {
-			return cstate.WithActivation(balances, "artemis",
-				beforeArtemisFork,
-				artemisFork,
-			)
-		}, athenaFork)
-		if actErr != nil {
-			errs = append(errs, actErr.Error())
-			continue
 		}
 
 		filtered = append(filtered, &sn)

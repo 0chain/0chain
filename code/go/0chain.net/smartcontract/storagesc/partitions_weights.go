@@ -201,17 +201,9 @@ func (bp *blobberWeightPartitionsWrap) remove(balances state.StateContextI, blob
 	// reduce the weight of the replace item's partition
 	bp.partWeights.Parts[removeLocs.Replace].Weight -= int(repBw.GetWeightV2())
 
-	actErr := state.WithActivation(balances, "artemis", func() error {
-		return nil
-	}, func() error {
-		if bp.partWeights.Parts[removeLocs.Replace].Weight == 0 {
-			// remove the last part weight, as 0 weight could only happen when it's last part
-			bp.partWeights.Parts = bp.partWeights.Parts[:len(bp.partWeights.Parts)-1]
-		}
-		return nil
-	})
-	if actErr != nil {
-		return actErr
+	if bp.partWeights.Parts[removeLocs.Replace].Weight == 0 {
+		// remove the last part weight, as 0 weight could only happen when it's last part
+		bp.partWeights.Parts = bp.partWeights.Parts[:len(bp.partWeights.Parts)-1]
 	}
 
 	// apply the difference to the removed item's partition
