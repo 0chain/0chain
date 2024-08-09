@@ -1422,7 +1422,13 @@ func (sab *storageAllocationBase) changeBlobbers(
 			return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV3)
 
-				if b.IsRestricted != nil && *b.IsRestricted {
+				if isEnterpriseBlobber {
+					if b.IsEnterprise == nil || !*b.IsEnterprise {
+						return fmt.Errorf("blobber %s is not enterprise", b.ID)
+					}
+				}
+
+				if (b.IsEnterprise != nil && *b.IsEnterprise) || (b.IsRestricted != nil && *b.IsRestricted) {
 					success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
 					if err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())

@@ -440,13 +440,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewErrorf(errCode,
 			"can't get related allocation: %v", err)
 	}
-	alloc := sa.mustBase()
 
-	if t.CreationDate > alloc.Expiration {
+	if t.CreationDate > sa.mustBase().Expiration {
 		return "", common.NewError(errCode, "allocation is finalized")
 	}
 
-	blobAlloc, ok := alloc.BlobberAllocsMap[t.ClientID]
+	blobAlloc, ok := sa.mustBase().BlobberAllocsMap[t.ClientID]
 	if !ok {
 		return "", common.NewError(errCode, "blobber is not part of the allocation")
 	}
@@ -775,12 +774,6 @@ func (sc *StorageSmartContract) processChallengeFailed(
 		alloc.deepCopy(base)
 		return nil
 	})
-	if err != nil {
-		return "", common.NewError("challenge_reward_error", err.Error())
-	}
-
-	// save allocation object
-	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
 	if err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
