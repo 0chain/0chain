@@ -53,28 +53,17 @@ func Kill(
 		return err
 	}
 
-	actErr := cstate.WithActivation(balances, "apollo", func() (e error) {
-		if p.IsShutDown() {
-			return fmt.Errorf("already shutdown")
-		}
-		if p.IsKilled() {
-			return fmt.Errorf("already killed")
-		}
-		return nil
-	}, func() (e error) {
-		if p.IsKilled() || p.IsShutDown() {
-			if refreshProvider != nil {
-				e = refreshProvider(req)
-				if e != nil {
-					return e
-				}
+	if p.IsKilled() || p.IsShutDown() {
+		if refreshProvider != nil {
+			err = refreshProvider(req)
+			if err != nil {
+				return err
 			}
-			e = AlreadyKilledError
 		}
-		return e
-	})
-	if actErr != nil {
-		return actErr
+		err = AlreadyKilledError
+	}
+	if err != nil {
+		return err
 	}
 
 	p.Kill()

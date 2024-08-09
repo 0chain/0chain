@@ -12,22 +12,9 @@ import (
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	beforeFunc := func() (e error) {
-		resp, e = stakepool.StakePoolLock(t, input, balances,
-			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter)
-		return e
-	}
-
-	afterFunc := func() (e error) {
-		resp, e = stakepool.StakePoolLock(t, input, balances,
-			stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
-		return e
-	}
-
-	actErr := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
-	return resp, actErr
+	string, error) {
+	return stakepool.StakePoolLock(t, input, balances,
+		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
 }
 
 // getStakePool of given blobber
@@ -66,20 +53,8 @@ func (_ *MinerSmartContract) getStakePoolAdapter(pType spenum.Provider, provider
 
 func (msc *MinerSmartContract) deleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
-	balances cstate.StateContextI) (resp string, err error) {
-
-	beforeFunc := func() (e error) {
-		resp, e = stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter)
-		return e
-	}
-
-	afterFunc := func() (e error) {
-		resp, e = stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter, msc.refreshProvider)
-		return e
-	}
-
-	actErr := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
-	return resp, actErr
+	balances cstate.StateContextI) (string, error) {
+	return stakepool.StakePoolUnlock(t, inputData, balances, msc.getStakePoolAdapter, msc.refreshProvider)
 }
 
 // getStakePool of given blobber
