@@ -204,15 +204,8 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
-	if err = cstate.WithActivation(balances, "electra", func() error {
-		if er := alloc.saveUpdatedStakes(balances); er != nil {
-			return fmt.Errorf("can't save allocation: %v", er)
-		}
-		return nil
-	}, func() error {
-		return nil
-	}); err != nil {
-		return err
+	if err = alloc.saveUpdatedStakes(balances); err != nil {
+		return fmt.Errorf("can't save allocation: %v", err)
 	}
 
 	return nil
@@ -386,16 +379,9 @@ func (sc *StorageSmartContract) blobberPenalty(
 		}
 	}
 
-	if err = cstate.WithActivation(balances, "electra", func() error {
-		if er := alloc.saveUpdatedStakes(balances); er != nil {
-			return common.NewError("blobber_penalty_failed",
-				"saving allocation pools: "+er.Error())
-		}
-		return nil
-	}, func() error {
-		return nil
-	}); err != nil {
-		return err
+	if err = alloc.saveUpdatedStakes(balances); err != nil {
+		return common.NewError("blobber_penalty_failed",
+			"saving allocation pools: "+err.Error())
 	}
 
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
@@ -739,18 +725,9 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	if err = cstate.WithActivation(balances, "electra", func() error {
-		if err := cab.alloc.save(balances, sc.ID); err != nil {
-			return common.NewError("challenge_reward_error", err.Error())
-		}
-		return nil
-	}, func() error {
-		if err = cab.alloc.saveUpdatedStakes(balances); err != nil {
-			return common.NewError("challenge_reward_error", err.Error())
-		}
-		return nil
-	}); err != nil {
-		return "", err
+	// save allocation object
+	if err := cab.alloc.save(balances, sc.ID); err != nil {
+		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
 	// Clean up challenge on MPT
