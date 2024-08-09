@@ -1530,7 +1530,7 @@ func (sab *storageAllocationBase) validateEachBlobber(
 	for i, b := range blobbers {
 		sn := StorageNode{}
 
-		snr := storageNodeResponseToStorageNodeV3(*b)
+		snr := storageNodeResponseToStorageNodeV2(*b)
 		sn.SetEntity(snr)
 
 		snBase := sn.mustBase()
