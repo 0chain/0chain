@@ -1356,45 +1356,33 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 	for i, d := range sa.BlobberAllocs {
 		if d.BlobberID == blobberID {
 			blobberIsKilled := false
-			var getBlobberError error
-			actErr := cstate.WithActivation(balances, "apollo", func() (e error) { return },
-				func() (e error) {
-					blobber, e := sc.getBlobber(d.BlobberID, balances)
-					if e != nil {
-						getBlobberError = e
-						return
-					}
-
-					bb := blobber.mustBase()
-
-					if bb.IsKilled() || bb.IsShutDown() {
-						blobberIsKilled = true
-
-						var cp *challengePool
-						cp, e = sc.getChallengePool(sa.ID, balances)
-						if e != nil {
-							e = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
-
-							if demeterActErr := cstate.WithActivation(balances, "demeter", func() (e error) { return }, func() error {
-								return e
-							}); demeterActErr != nil {
-								return demeterActErr
-							}
-						}
-
-						e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
-						if e != nil {
-							e = fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
-						}
-					}
-					return e
-				})
-			if actErr != nil {
-				return actErr
-			}
-			if getBlobberError != nil {
+			blobber, e := sc.getBlobber(d.BlobberID, balances)
+			if e != nil {
 				return common.NewError("remove_blobber_failed",
 					"can't get blobber "+d.BlobberID+": "+err.Error())
+			}
+
+			bb := blobber.mustBase()
+
+			if bb.IsKilled() || bb.IsShutDown() {
+				blobberIsKilled = true
+
+				var cp *challengePool
+				cp, e = sc.getChallengePool(sa.ID, balances)
+				if e != nil {
+					e = fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, e)
+
+					if demeterActErr := cstate.WithActivation(balances, "demeter", func() (e error) { return }, func() error {
+						return e
+					}); demeterActErr != nil {
+						return demeterActErr
+					}
+				}
+
+				e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
+				if e != nil {
+					return fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
+				}
 			}
 
 			if d.Stats.UsedSize > 0 {
@@ -1428,12 +1416,8 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 					"error removing offer: "+err.Error())
 			}
 
-			actErr = cstate.WithActivation(balances, "demeter", func() (e error) {
-				actErr = cstate.WithActivation(balances, "athena", func() (e error) { return },
-					func() (e error) {
-						return sp.Save(spenum.Blobber, d.BlobberID, balances)
-					})
-				return actErr
+			actErr := cstate.WithActivation(balances, "demeter", func() (e error) {
+				return sp.Save(spenum.Blobber, d.BlobberID, balances)
 			}, func() (e error) {
 				return nil
 			})
@@ -1462,7 +1446,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 				return actErr
 			}
 
-			blobber, err := sc.getBlobber(d.BlobberID, balances)
+			blobber, err = sc.getBlobber(d.BlobberID, balances)
 			if err != nil {
 				return common.NewError("fini_alloc_failed",
 					"can't get blobber "+d.BlobberID+": "+err.Error())
@@ -1485,14 +1469,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			// Update saved data on events_db
 			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
-			// Updating AllocationStats
-			_ = cstate.WithActivation(balances, "artemis", func() error {
-				return nil
-			}, func() error {
-				sa.Stats.UsedSize += -d.Stats.UsedSize
-				return nil
-			})
-
+			sa.Stats.UsedSize += -d.Stats.UsedSize
 			sa.BlobberAllocs[i] = addedBlobberAllocation
 			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
@@ -1514,12 +1491,10 @@ func replaceBlobber(
 		return nil, err
 	}
 
-	var removedBlobber *StorageNode
 	var found bool
 	for i, d := range blobbers {
 		dd := d.mustBase()
 		if dd.ID == blobberID {
-			removedBlobber = blobbers[i]
 			blobbers[i] = addedBlobber
 			found = true
 			break
@@ -1527,17 +1502,6 @@ func replaceBlobber(
 	}
 	if !found {
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
-	}
-
-	actErr := cstate.WithActivation(balances, "ares", func() error {
-		rbb := removedBlobber.mustBase()
-		if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-			return fmt.Errorf("saving blobber %v, error: %v", rbb.ID, err)
-		}
-		return nil
-	}, func() error { return nil })
-	if actErr != nil {
-		return nil, actErr
 	}
 
 	return blobbers, nil

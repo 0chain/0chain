@@ -1286,12 +1286,7 @@ func (c *Chain) storeEventsFunc(ssc cstate.StateContextI) func(e event.BlockEven
 		if !node.Self.IsSharder() {
 			return nil
 		}
-
-		return cstate.WithActivation(ssc, "artemis",
-			func() error { return nil },
-			func() error {
-				return c.storeLastNEvents(e)
-			})
+		return c.storeLastNEvents(e)
 	}
 }
 
