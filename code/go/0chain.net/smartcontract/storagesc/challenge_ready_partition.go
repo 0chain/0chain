@@ -37,10 +37,10 @@ func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions
 	// check if need to migrate from challenge ready blobber partitions,
 	// this should only be done once when apollo round hits
 	if partWeights.needSync {
-		logging.Logger.Debug("add_challenge - apollo hit - sync blobber weights!!")
+		logging.Logger.Debug("add_challenge - sync blobber weights!!")
 		err = partWeights.sync(balances, p)
 		if err != nil {
-			logging.Logger.Error("add_challenge - apollo hit - sync blobber weights failed", zap.Error(err))
+			logging.Logger.Error("add_challenge - sync blobber weights failed", zap.Error(err))
 			return nil, nil, err
 		}
 	}
@@ -95,23 +95,24 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 	crb := &ChallengeReadyBlobber{BlobberID: blobberID, UsedCapacity: usedCapacity, Stake: stake}
 
 	var exist bool
-	exist, err = parts.Exist(state, blobberID)
-	if err != nil {
-		return fmt.Errorf("could not check if blobber exists: %v", err)
+	exist, e := parts.Exist(state, blobberID)
+	if e != nil {
+		return fmt.Errorf("could not check if blobber exists: %v", e)
 	}
 
 	if exist {
 		// update
-		err = partsWeight.update(state, *crb)
-		if err != nil {
-			return fmt.Errorf("could not update blobber weight: %v", err)
+		e = partsWeight.update(state, *crb)
+		if e != nil {
+			return fmt.Errorf("could not update blobber weight: %v", e)
 		}
+		return nil
 	}
 
 	// add new item
-	err = partsWeight.add(state, *crb)
-	if err != nil {
-		return fmt.Errorf("could not add blobber to challenge ready partition: %v", err)
+	e = partsWeight.add(state, *crb)
+	if e != nil {
+		return fmt.Errorf("could not add blobber to challenge ready partition: %v", e)
 	}
 
 	return nil

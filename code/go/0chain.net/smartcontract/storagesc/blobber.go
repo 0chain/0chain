@@ -242,7 +242,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		b.IsRestricted = updateBlobber.IsRestricted
 		return nil
 	}); err != nil {
-		return fmt.Errorf("error updating blobber: %v", err)
+		return fmt.Errorf("error with activation: %v", err)
 	}
 
 	_, err = balances.InsertTrieNode(existingBlobber.GetKey(), existingBlobber)
