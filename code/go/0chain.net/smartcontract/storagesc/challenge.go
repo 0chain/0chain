@@ -785,6 +785,12 @@ func (sc *StorageSmartContract) processChallengeFailed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
+	// save allocation object
+	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
+	if err != nil {
+		return "", common.NewError("challenge_reward_error", err.Error())
+	}
+
 	return "Challenge Failed by Blobber", nil
 }
 
