@@ -1256,25 +1256,17 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 					"error removing offer: "+err.Error())
 			}
 
-			if isEnterpriseBlobber {
-				cost, err := sab.payCostForRdtuForReplaceEnterpriseBlobber(txn, sp, blobberID, balances)
-				logging.Logger.Info("payCostForRdtuForReplaceEnterpriseBlobber", zap.Any("cost", cost), zap.Any("err", err))
-				if err != nil {
-					return err
-				}
-			} else {
-				cp, err := sc.getChallengePool(sab.ID, balances)
-				if err != nil {
-					return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
-				}
+			cp, err := sc.getChallengePool(sab.ID, balances)
+			if err != nil {
+				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sab.ID, err)
+			}
 
-				if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
-					return fmt.Errorf("error paying challenge pool pass payments: %v", err)
-				}
+			if err = sab.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
+				return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+			}
 
-				if err = sab.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, txn.ClientID, d); err != nil {
-					return fmt.Errorf("3 error paying cancellation charge: %v", err)
-				}
+			if err = sab.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, txn.ClientID, d); err != nil {
+				return fmt.Errorf("3 error paying cancellation charge: %v", err)
 			}
 
 			actErr := cstate.WithActivation(balances, "demeter", func() (e error) { return },
@@ -1548,36 +1540,8 @@ func (sab *storageAllocationBase) validateEachBlobber(
 	for i, b := range blobbers {
 		sn := StorageNode{}
 
-		beforeHardfork := func() error {
-			snr := storageNodeResponseToStorageNodeV2(*b)
-			sn.SetEntity(snr)
-			return nil
-		}
-
-		electraHardfork := func() error {
-			if request.IsEnterprise && !b.IsEnterprise {
-				return fmt.Errorf("blobber %s is not enterprise", b.ID)
-			} else if !request.IsEnterprise && b.IsEnterprise {
-				return fmt.Errorf("blobber %s is enterprise", b.ID)
-			}
-
-			snr := storageNodeResponseToStorageNodeV3(*b)
-			sn.SetEntity(snr)
-			return nil
-		}
-
-		actErr := cstate.WithActivation(balances, "electra", beforeHardfork, electraHardfork)
-		if actErr != nil {
-			errs = append(errs, actErr.Error())
-			continue
-		}
-
-		_ = cstate.WithActivation(balances, "electra", func() error {
-			b.IsEnterprise = false
-			return nil
-		}, func() error {
-			return nil
-		})
+		snr := storageNodeResponseToStorageNodeV2(*b)
+		sn.SetEntity(snr)
 
 		snBase := sn.mustBase()
 		if (b.IsEnterprise) || (snBase.IsRestricted != nil && *snBase.IsRestricted) {

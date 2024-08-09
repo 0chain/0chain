@@ -147,15 +147,6 @@ func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *Stora
 		FileOptions:          sab.FileOptions,
 	}
 
-	_ = cstate.WithActivation(balances, "electra", func() error {
-		return nil
-	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil {
-			alloc.IsEnterprise = *v2.IsEnterprise
-		}
-		return nil
-	})
-
 	if sab.Stats != nil {
 		alloc.NumWrites = sab.Stats.NumWrites
 		alloc.NumReads = sab.Stats.NumReads
