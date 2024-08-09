@@ -95,23 +95,24 @@ func PartitionsChallengeReadyBlobberAddOrUpdate(state state.StateContextI, blobb
 	crb := &ChallengeReadyBlobber{BlobberID: blobberID, UsedCapacity: usedCapacity, Stake: stake}
 
 	var exist bool
-	exist, err = parts.Exist(state, blobberID)
-	if err != nil {
-		return fmt.Errorf("could not check if blobber exists: %v", err)
+	exist, e := parts.Exist(state, blobberID)
+	if e != nil {
+		return fmt.Errorf("could not check if blobber exists: %v", e)
 	}
 
 	if exist {
 		// update
-		err = partsWeight.update(state, *crb)
-		if err != nil {
-			return fmt.Errorf("could not update blobber weight: %v", err)
+		e = partsWeight.update(state, *crb)
+		if e != nil {
+			return fmt.Errorf("could not update blobber weight: %v", e)
 		}
+		return nil
 	}
 
 	// add new item
-	err = partsWeight.add(state, *crb)
-	if err != nil {
-		return fmt.Errorf("could not add blobber to challenge ready partition: %v", err)
+	e = partsWeight.add(state, *crb)
+	if e != nil {
+		return fmt.Errorf("could not add blobber to challenge ready partition: %v", e)
 	}
 
 	return nil

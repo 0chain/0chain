@@ -861,10 +861,20 @@ func DeepCopyBlobberAllocsMap(original map[string]*BlobberAllocation) map[string
 	return copyAllocation
 }
 
+func DeepCopyAlloc(original StorageAllocation) StorageAllocation {
+	var copyAllocation StorageAllocation
+	jsonData, _ := json.Marshal(original)
+	err := json.Unmarshal(jsonData, &copyAllocation)
+	if err != nil {
+		return StorageAllocation{}
+	}
+	return copyAllocation
+}
+
 func (f *formulaeFinalizeAllocation) setFinilizationPassRates(ssc *StorageSmartContract, balances cstate.StateContextI, scYaml Config, now common.Timestamp) {
 	f._passRates = []float64{}
 
-	alloc := f.allocation
+	alloc := DeepCopyAlloc(f.allocation)
 
 	blobberAllocMaps := DeepCopyBlobberAllocsMap(f.allocation.BlobberAllocsMap)
 
