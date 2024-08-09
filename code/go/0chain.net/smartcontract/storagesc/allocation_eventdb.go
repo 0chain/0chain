@@ -150,8 +150,10 @@ func storageAllocationToAllocationTable(balances cstate.StateContextI, sa *Stora
 	_ = cstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil {
-			alloc.IsEnterprise = *v2.IsEnterprise
+		if sa.Entity().GetVersion() == "v2" {
+			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil {
+				alloc.IsEnterprise = *v2.IsEnterprise
+			}
 		}
 		return nil
 	})

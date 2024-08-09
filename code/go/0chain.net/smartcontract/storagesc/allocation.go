@@ -1101,8 +1101,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	if actErr = chainstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
-			isEnterprise = true
+		if sa.Entity().GetVersion() == "v2" {
+			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+				isEnterprise = true
+			}
 		}
 		return nil
 	}); actErr != nil {
@@ -1459,8 +1461,10 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	if actErr := chainstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
-			isEnterprise = true
+		if sa.Entity().GetVersion() == "v2" {
+			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+				isEnterprise = true
+			}
 		}
 		return nil
 	}); actErr != nil {
@@ -1584,8 +1588,10 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 	if actErr := chainstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
-			isEnterprise = true
+		if sa.Entity().GetVersion() == "v2" {
+			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+				isEnterprise = true
+			}
 		}
 		return nil
 	}); actErr != nil {
