@@ -2621,8 +2621,10 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 	err := cstate.WithActivation(balances, "electra", func() error {
 		return nil
 	}, func() error {
-		if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
-			sr.IsEnterprise = *v3.IsEnterprise
+		if sn.Entity().GetVersion() == "v3" {
+			if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
+				sr.IsEnterprise = *v3.IsEnterprise
+			}
 		}
 		return nil
 	})
