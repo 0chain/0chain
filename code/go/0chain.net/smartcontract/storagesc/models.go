@@ -1202,13 +1202,18 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 
 	for i, d := range sab.BlobberAllocs {
 		if d.BlobberID == blobberID {
+			blobberIsKilled := false
 			blobber, e := sc.getBlobber(d.BlobberID, balances)
 			if e != nil {
 				return common.NewError("remove_blobber_failed",
-					"can't get blobber "+d.BlobberID+": "+e.Error())
+					"can't get blobber "+d.BlobberID+": "+err.Error())
 			}
 
-			if blobber.mustBase().IsKilled() || blobber.mustBase().IsShutDown() {
+			bb := blobber.mustBase()
+
+			if bb.IsKilled() || bb.IsShutDown() {
+				blobberIsKilled = true
+
 				var cp *challengePool
 				cp, e = sc.getChallengePool(sab.ID, balances)
 				if e != nil {
@@ -1223,18 +1228,20 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 
 				e = sab.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
 				if e != nil {
-					e = fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
+					return fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
 				}
-
-				sab.BlobberAllocs[i] = addedBlobberAllocation
-				sab.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
-				break
 			}
 
 			if d.Stats.UsedSize > 0 {
 				if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
 					return err
 				}
+			}
+
+			if blobberIsKilled {
+				sab.BlobberAllocs[i] = addedBlobberAllocation
+				sab.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
+				break
 			}
 
 			passRate, err := d.removeBlobberPassRates(sab, conf.MaxChallengeCompletionRounds, balances, sc)
@@ -1254,6 +1261,15 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 			if err := sp.reduceOffer(d.Offer()); err != nil {
 				return common.NewError("remove_blobber_failed",
 					"error removing offer: "+err.Error())
+			}
+
+			actErr := cstate.WithActivation(balances, "demeter", func() (e error) {
+				return sp.Save(spenum.Blobber, d.BlobberID, balances)
+			}, func() (e error) {
+				return nil
+			})
+			if actErr != nil {
+				return actErr
 			}
 
 			if isEnterpriseBlobber {
@@ -1277,7 +1293,8 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				}
 			}
 
-			actErr := cstate.WithActivation(balances, "demeter", func() (e error) { return },
+
+			actErr = cstate.WithActivation(balances, "demeter", func() (e error) { return },
 				func() (e error) {
 					return sp.Save(spenum.Blobber, d.BlobberID, balances)
 				})
@@ -1302,13 +1319,7 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 			// Update saved data on events_db
 			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
 
-			_ = cstate.WithActivation(balances, "artemis", func() error {
-				return nil
-			}, func() error {
-				sab.Stats.UsedSize += -d.Stats.UsedSize
-				return nil
-			})
-
+			sab.Stats.UsedSize += -d.Stats.UsedSize
 			sab.BlobberAllocs[i] = addedBlobberAllocation
 			sab.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
@@ -1330,12 +1341,10 @@ func replaceBlobber(
 		return nil, err
 	}
 
-	var removedBlobber *StorageNode
 	var found bool
 	for i, d := range blobbers {
 		dd := d.mustBase()
 		if dd.ID == blobberID {
-			removedBlobber = blobbers[i]
 			blobbers[i] = addedBlobber
 			found = true
 			break
@@ -1343,17 +1352,6 @@ func replaceBlobber(
 	}
 	if !found {
 		return nil, fmt.Errorf("cannot find blobber %s in allocation", blobberID)
-	}
-
-	actErr := cstate.WithActivation(balances, "ares", func() error {
-		rbb := removedBlobber.mustBase()
-		if _, err := balances.InsertTrieNode(removedBlobber.GetKey(), removedBlobber); err != nil {
-			return fmt.Errorf("saving blobber %v, error: %v", rbb.ID, err)
-		}
-		return nil
-	}, func() error { return nil })
-	if actErr != nil {
-		return nil, actErr
 	}
 
 	return blobbers, nil
@@ -1708,44 +1706,6 @@ func (sab *storageAllocationBase) IsValidFinalizer(id string) bool {
 	}
 	return false // unknown
 }
-
-//func (sn *StorageAllocation) Decode(input []byte) error {
-//	err := json.Unmarshal(input, sn)
-//	if err != nil {
-//		return err
-//	}
-//	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
-//	for _, blobberAllocation := range sn.BlobberAllocs {
-//		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
-//	}
-//	return nil
-//}
-
-//func (sn *StorageAllocation) Encode() []byte {
-//	buff, _ := json.Marshal(sn)
-//	return buff
-//}
-
-//func (sn *StorageAllocation) MarshalMsg(o []byte) ([]byte, error) {
-//	d := StorageAllocationDecode(*sn)
-//	return d.MarshalMsg(o)
-//}
-//
-//func (sn *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
-//	d := &StorageAllocationDecode{}
-//	o, err := d.UnmarshalMsg(data)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	*sn = StorageAllocation(*d)
-//
-//	sn.BlobberAllocsMap = make(map[string]*BlobberAllocation)
-//	for _, blobberAllocation := range sn.BlobberAllocs {
-//		sn.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
-//	}
-//	return o, nil
-//}
 
 // removeExpiredChallenges removes all expired challenges from the allocation,
 // return the expired challenge ids per blobber (maps blobber id to its expiredIDs), or error if any.

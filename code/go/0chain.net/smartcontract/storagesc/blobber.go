@@ -379,8 +379,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	logging.Logger.Info("Jayash", zap.Any("input", string(input)))
-
 	blobber := &StorageNode{}
 
 	beforeElectra := func() error {
@@ -1004,16 +1002,9 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error fetching blobber: %v", err)
 	}
 
-	actErr = cstate.WithActivation(balances, "athena", func() error { return nil },
-		func() error {
-			if blobber.IsKilled() || blobber.IsShutDown() {
-				return common.NewError("commit_connection_failed",
-					"blobber is killed or shutdown")
-			}
-			return nil
-		})
-	if actErr != nil {
-		return "", actErr
+	if blobber.IsKilled() || blobber.IsShutDown() {
+		return "", common.NewError("commit_connection_failed",
+			"blobber is killed or shutdown")
 	}
 
 	if blobAlloc.Stats.UsedSize == 0 {
@@ -1040,22 +1031,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		return nil
 	})
 
-	actErr = cstate.WithActivation(balances, "athena", func() error {
-		allocationWmSize := int64(float64(changeSize) * float64(alloc.DataShards) / float64(alloc.DataShards+alloc.ParityShards))
-		if alloc.Stats.UsedSize+allocationWmSize <= 0 {
-			alloc.Stats.UsedSize = 0
-		} else {
-			alloc.Stats.UsedSize += allocationWmSize
-		}
-		return nil
-	},
-		func() error {
-			alloc.RefreshAllocationUsedSize()
-			return nil
-		})
-	if actErr != nil {
-		return "", actErr
-	}
+	alloc.RefreshAllocationUsedSize()
 
 	alloc.Stats.NumWrites++
 
@@ -1103,19 +1079,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
 		}
 	} else if blobAlloc.Stats.UsedSize == 0 && commitMarkerBase.Size == 0 {
-		actErr := cstate.WithActivation(balances, "artemis", func() error { return nil }, func() error {
-			if err := removeAllocationFromBlobberPartitions(balances, bb.ID, alloc.ID); err != nil {
-				logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
-					zap.String("blobber", bb.ID),
-					zap.String("allocation", alloc.ID),
-					zap.Error(err))
-				return fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
-			}
-			return nil
-		})
-
-		if actErr != nil {
-			return "", actErr
+		if err := removeAllocationFromBlobberPartitions(balances, bb.ID, alloc.ID); err != nil {
+			logging.Logger.Error("remove_blobber_allocation_from_partitions_error",
+				zap.String("blobber", bb.ID),
+				zap.String("allocation", alloc.ID),
+				zap.Error(err))
+			return "", fmt.Errorf("could not remove blobber allocation from partitions: %v", err)
 		}
 	}
 
