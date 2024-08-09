@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -370,10 +371,11 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 	}
 	correctSignature, err := sigScheme.Verify(t.Signature, t.Hash)
 	if err != nil {
-		return err
+		// return err
+		return common.NewErrorf("invalid_signature", "err: %v, sig scheme: %v", err, reflect.TypeOf(sigScheme))
 	}
 	if !correctSignature {
-		return common.NewError("invalid_signature", "Invalid Signature")
+		return common.NewErrorf("invalid_signature", "Invalid Signature, sig scheme: %v", reflect.TypeOf(sigScheme))
 	}
 	return nil
 }

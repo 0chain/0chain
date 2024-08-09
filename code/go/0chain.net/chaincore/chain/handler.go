@@ -1396,7 +1396,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	err := txn.Validate(ctx)
 	if err != nil {
-		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
+		logging.Logger.Error("put transaction error",
+			zap.String("hash", txn.Hash),
+			zap.Any("txn", txn),
+			zap.Error(err))
 		return nil, err
 	}
 
