@@ -60,10 +60,7 @@ func Kill(
 				return err
 			}
 		}
-		err = AlreadyKilledError
-	}
-	if err != nil {
-		return err
+		return AlreadyKilledError
 	}
 
 	p.Kill()

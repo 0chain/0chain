@@ -37,10 +37,10 @@ func partitionsChallengeReadyBlobbers(balances state.StateContextI) (*partitions
 	// check if need to migrate from challenge ready blobber partitions,
 	// this should only be done once when apollo round hits
 	if partWeights.needSync {
-		logging.Logger.Debug("add_challenge - apollo hit - sync blobber weights!!")
+		logging.Logger.Debug("add_challenge - sync blobber weights!!")
 		err = partWeights.sync(balances, p)
 		if err != nil {
-			logging.Logger.Error("add_challenge - apollo hit - sync blobber weights failed", zap.Error(err))
+			logging.Logger.Error("add_challenge - sync blobber weights failed", zap.Error(err))
 			return nil, nil, err
 		}
 	}

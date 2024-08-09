@@ -40,19 +40,13 @@ func ShutDown(
 			}
 		}
 
-		err = AlreadyShutdownError
-	}
-	if err != nil {
-		return err
+		return AlreadyShutdownError
 	}
 
 	p.ShutDown()
 
 	if err = sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
-		err = fmt.Errorf("can't kill the stake pool: %v", err)
-	}
-	if err != nil {
-		return err
+		return fmt.Errorf("can't kill the stake pool: %v", err)
 	}
 
 	if err = sp.Save(p.Type(), clientId, balances); err != nil {

@@ -1354,9 +1354,8 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 	}
 
 	for i, d := range sa.BlobberAllocs {
-		blobberIsKilled := false
 		if d.BlobberID == blobberID {
-
+			blobberIsKilled := false
 			blobber, e := sc.getBlobber(d.BlobberID, balances)
 			if e != nil {
 				return common.NewError("remove_blobber_failed",
@@ -1382,99 +1381,99 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 
 				e = sa.moveFromChallengePool(cp, d.ChallengePoolIntegralValue)
 				if e != nil {
-					e = fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
+					return fmt.Errorf("failed to move challenge pool back to write pool: %v", e)
 				}
 			}
-		}
 
-		if d.Stats.UsedSize > 0 {
-			if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
-				return err
+			if d.Stats.UsedSize > 0 {
+				if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
+					return err
+				}
 			}
-		}
 
-		if blobberIsKilled {
+			if blobberIsKilled {
+				sa.BlobberAllocs[i] = addedBlobberAllocation
+				sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
+				break
+			}
+
+			passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc)
+			if err != nil {
+				logging.Logger.Info("error removing blobber pass rates",
+					zap.Any("allocation", sa.ID),
+					zap.Any("blobber", d.BlobberID),
+					zap.Error(err))
+				return fmt.Errorf("error removing blobber pass rates: %v", err)
+			}
+
+			sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
+			if err != nil {
+				return common.NewError("remove_blobber_failed",
+					"can't get stake pool of "+d.BlobberID+": "+err.Error())
+			}
+			if err := sp.reduceOffer(d.Offer()); err != nil {
+				return common.NewError("remove_blobber_failed",
+					"error removing offer: "+err.Error())
+			}
+
+			actErr := cstate.WithActivation(balances, "demeter", func() (e error) {
+				return sp.Save(spenum.Blobber, d.BlobberID, balances)
+			}, func() (e error) {
+				return nil
+			})
+			if actErr != nil {
+				return actErr
+			}
+
+			cp, err := sc.getChallengePool(sa.ID, balances)
+			if err != nil {
+				return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)
+			}
+
+			if err = sa.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
+				return fmt.Errorf("error paying challenge pool pass payments: %v", err)
+			}
+
+			if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
+				return fmt.Errorf("3 error paying cancellation charge: %v", err)
+			}
+
+			actErr = cstate.WithActivation(balances, "demeter", func() (e error) { return },
+				func() (e error) {
+					return sp.Save(spenum.Blobber, d.BlobberID, balances)
+				})
+			if actErr != nil {
+				return actErr
+			}
+
+			blobber, err = sc.getBlobber(d.BlobberID, balances)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"can't get blobber "+d.BlobberID+": "+err.Error())
+			}
+
+			//nolint:errcheck
+			blobber.mustUpdateBase(func(b *storageNodeBase) error {
+				b.SavedData += -d.Stats.UsedSize
+				b.Allocated += -d.Size
+				return nil
+			})
+
+			// Saving removed blobber to mpt here
+			_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+			if err != nil {
+				return common.NewError("fini_alloc_failed",
+					"saving blobber "+d.BlobberID+": "+err.Error())
+			}
+
+			// Update saved data on events_db
+			emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
+
+			sa.Stats.UsedSize += -d.Stats.UsedSize
 			sa.BlobberAllocs[i] = addedBlobberAllocation
 			sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
 			break
 		}
-
-		passRate, err := d.removeBlobberPassRates(sa, conf.MaxChallengeCompletionRounds, balances, sc)
-		if err != nil {
-			logging.Logger.Info("error removing blobber pass rates",
-				zap.Any("allocation", sa.ID),
-				zap.Any("blobber", d.BlobberID),
-				zap.Error(err))
-			return fmt.Errorf("error removing blobber pass rates: %v", err)
-		}
-
-		sp, err := sc.getStakePool(spenum.Blobber, d.BlobberID, balances)
-		if err != nil {
-			return common.NewError("remove_blobber_failed",
-				"can't get stake pool of "+d.BlobberID+": "+err.Error())
-		}
-		if err := sp.reduceOffer(d.Offer()); err != nil {
-			return common.NewError("remove_blobber_failed",
-				"error removing offer: "+err.Error())
-		}
-
-		actErr := cstate.WithActivation(balances, "demeter", func() (e error) {
-			return sp.Save(spenum.Blobber, d.BlobberID, balances)
-		}, func() (e error) {
-			return nil
-		})
-		if actErr != nil {
-			return actErr
-		}
-
-		cp, err := sc.getChallengePool(sa.ID, balances)
-		if err != nil {
-			return fmt.Errorf("could not get challenge pool of alloc: %s, err: %v", sa.ID, err)
-		}
-
-		if err = sa.payChallengePoolPassPaymentsToRemoveBlobber(sp, balances, cp, passRate, conf, sc, d, now); err != nil {
-			return fmt.Errorf("error paying challenge pool pass payments: %v", err)
-		}
-
-		if err = sa.payCancellationChargeToRemoveBlobber(sp, balances, passRate, conf, sc, clientID, d); err != nil {
-			return fmt.Errorf("3 error paying cancellation charge: %v", err)
-		}
-
-		actErr = cstate.WithActivation(balances, "demeter", func() (e error) { return },
-			func() (e error) {
-				return sp.Save(spenum.Blobber, d.BlobberID, balances)
-			})
-		if actErr != nil {
-			return actErr
-		}
-
-		blobber, err := sc.getBlobber(d.BlobberID, balances)
-		if err != nil {
-			return common.NewError("fini_alloc_failed",
-				"can't get blobber "+d.BlobberID+": "+err.Error())
-		}
-
-		//nolint:errcheck
-		blobber.mustUpdateBase(func(b *storageNodeBase) error {
-			b.SavedData += -d.Stats.UsedSize
-			b.Allocated += -d.Size
-			return nil
-		})
-
-		// Saving removed blobber to mpt here
-		_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
-		if err != nil {
-			return common.NewError("fini_alloc_failed",
-				"saving blobber "+d.BlobberID+": "+err.Error())
-		}
-
-		// Update saved data on events_db
-		emitUpdateBlobberAllocatedSavedHealth(blobber, balances)
-
-		sa.Stats.UsedSize += -d.Stats.UsedSize
-		sa.BlobberAllocs[i] = addedBlobberAllocation
-		sa.BlobberAllocsMap[addedBlobberAllocation.BlobberID] = addedBlobberAllocation
-		break
 	}
 
 	return nil
@@ -1674,9 +1673,18 @@ func (sa *StorageAllocation) validateEachBlobber(
 			success, err := verifyBlobberAuthTicket(balances, sa.Owner, blobberAuthTickets[i], snr.PublicKey)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error()).Error())
+				continue
 			} else if !success {
 				errs = append(errs, fmt.Errorf("blobber %s auth ticket verification failed", b.ID).Error())
+				continue
 			}
+		}
+
+		err := sa.isActive(&sn, b.TotalStake, b.TotalOffers, b.StakedCapacity, conf, creationDate)
+		if err != nil {
+			logging.Logger.Debug("error validating blobber", zap.String("id", b.ID), zap.Error(err))
+			errs = append(errs, err.Error())
+			continue
 		}
 
 		filtered = append(filtered, &sn)
