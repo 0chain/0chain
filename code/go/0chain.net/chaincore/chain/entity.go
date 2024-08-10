@@ -493,6 +493,10 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					// use state DB
 					pb.CreateState(c.GetStateDB(), ppb.ClientStateHash)
 					pb.SetStateStatus(block.StateSuccessful)
+					b.SetPreviousBlock(pb)
+					logging.Logger.Debug("process block, set previous block",
+						zap.String("prev hash", pb.Hash),
+						zap.String("block", b.Hash))
 				} else {
 					// process previous block
 					if err := c.processBlock(ctx, pb); err != nil {

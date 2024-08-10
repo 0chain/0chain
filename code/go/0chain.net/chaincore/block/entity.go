@@ -978,6 +978,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 				zap.String("block", b.Hash),
 				zap.String("client_state", util.ToHex(b.ClientStateHash)),
 				zap.String("prev_block", b.PrevHash),
+				zap.String("real prev block", pb.Hash),
 				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
 				zap.Error(err))
 			//rollback changes for the next attempt
